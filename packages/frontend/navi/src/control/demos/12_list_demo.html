@@ -361,8 +361,8 @@
               read-only content.
             </p>
             <List>
-              {FRUITS.slice(0, 5).map((fruit, i) => (
-                <ListItem key={fruit} index={i} id={fruit} value={fruit}>
+              {FRUITS.slice(0, 5).map((fruit) => (
+                <ListItem key={fruit} id={fruit} value={fruit}>
                   {fruit}
                 </ListItem>
               ))}
@@ -397,10 +397,9 @@
                 Simple — avec spacing
               </p>
               <List horizontal spacing="s">
-                {FRUITS.slice(0, 5).map((fruit, i) => (
+                {FRUITS.slice(0, 5).map((fruit) => (
                   <ListItem
                     key={fruit}
-                    index={i}
                     id={fruit}
                     value={fruit}
                     paddingX="m"
@@ -423,10 +422,9 @@
                 Tailles avec border
               </p>
               <List horizontal spacing="xs" borderWidth="0">
-                {SIZES.map((size, i) => (
+                {SIZES.map((size) => (
                   <ListItem
                     key={size}
-                    index={i}
                     id={size}
                     value={size}
                     paddingX="m"
@@ -507,10 +505,10 @@
                   Medium sentence
                 </strong>
                 <List>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {LONGER}
                   </ListItem>
                 </List>
@@ -520,10 +518,10 @@
                   Long sentence
                 </strong>
                 <List>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {LONG_SENTENCE}
                   </ListItem>
                 </List>
@@ -533,10 +531,10 @@
                   URL
                 </strong>
                 <List>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {URL}
                   </ListItem>
                 </List>
@@ -546,15 +544,10 @@
                   Long sentence + maxLines={1}
                 </strong>
                 <List>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: BG_SHORT }}
-                    maxLines={1}
-                  >
+                  <ListItem style={{ backgroundColor: BG_SHORT }} maxLines={1}>
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     maxLines={1}
                   >
@@ -568,7 +561,6 @@
                 </strong>
                 <List>
                   <ListItem
-                    index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
                     maxLines={1}
@@ -576,7 +568,6 @@
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
                     maxLines={1}
@@ -590,15 +581,10 @@
                   URL + maxLines={1}
                 </strong>
                 <List expandX>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: BG_SHORT }}
-                    maxLines={1}
-                  >
+                  <ListItem style={{ backgroundColor: BG_SHORT }} maxLines={1}>
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     maxLines={1}
                   >
@@ -612,7 +598,6 @@
                 </strong>
                 <List expandX>
                   <ListItem
-                    index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
                     maxLines={1}
@@ -620,7 +605,6 @@
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
                     maxLines={1}
@@ -641,10 +625,10 @@
                   }}
                 >
                   <List>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <ListItem style={{ backgroundColor: BG_CONTENT }}>
                       <PlaceItem />
                     </ListItem>
                   </List>
@@ -662,10 +646,10 @@
                   }}
                 >
                   <List expandX>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <ListItem style={{ backgroundColor: BG_CONTENT }}>
                       <PlaceItem maxLines={1} />
                     </ListItem>
                   </List>
@@ -684,13 +668,12 @@
                   }}
                 >
                   <List expandX>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
                     <ListItem
                       flex
                       spacing="xs"
-                      index={1}
                       style={{ backgroundColor: BG_CONTENT }}
                     >
                       <Box shrink={false}>Coucou</Box>
@@ -712,13 +695,12 @@
                   }}
                 >
                   <List expandX>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
                     <ListItem
                       flex
                       spacing="xs"
-                      index={1}
                       style={{ backgroundColor: BG_CONTENT }}
                     >
                       <Box shrink={false}>Coucou</Box>
@@ -740,10 +722,10 @@
                   }}
                 >
                   <List expandX>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <ListItem style={{ backgroundColor: BG_CONTENT }}>
                       <Box flex spacing="xs">
                         <Box shrink={false}>Coucou</Box>
                         <PlaceItem />
@@ -765,10 +747,10 @@
                   }}
                 >
                   <List expandX>
-                    <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                    <ListItem style={{ backgroundColor: BG_SHORT }}>
                       {SHORT}
                     </ListItem>
-                    <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                    <ListItem style={{ backgroundColor: BG_CONTENT }}>
                       <Box flex spacing="xs">
                         <Box shrink={false}>Coucou</Box>
                         <PlaceItem maxLines={1} />
@@ -801,10 +783,10 @@
                   Medium sentence
                 </strong>
                 <List expandX>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {LONGER}
                   </ListItem>
                 </List>
@@ -814,10 +796,10 @@
                   Long sentence
                 </strong>
                 <List expandX>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {LONG_SENTENCE}
                   </ListItem>
                 </List>
@@ -827,10 +809,10 @@
                   URL
                 </strong>
                 <List expandX>
-                  <ListItem index={0} style={{ backgroundColor: BG_SHORT }}>
+                  <ListItem style={{ backgroundColor: BG_SHORT }}>
                     {SHORT}
                   </ListItem>
-                  <ListItem index={1} style={{ backgroundColor: BG_CONTENT }}>
+                  <ListItem style={{ backgroundColor: BG_CONTENT }}>
                     {URL}
                   </ListItem>
                 </List>
@@ -840,15 +822,10 @@
                   Long sentence + maxLines={1}
                 </strong>
                 <List expandX>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: BG_SHORT }}
-                    maxLines={1}
-                  >
+                  <ListItem style={{ backgroundColor: BG_SHORT }} maxLines={1}>
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     maxLines={1}
                   >
@@ -862,7 +839,6 @@
                 </strong>
                 <List expandX>
                   <ListItem
-                    index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
                     maxLines={1}
@@ -870,7 +846,6 @@
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
                     maxLines={1}
@@ -884,15 +859,10 @@
                   URL + maxLines={1}
                 </strong>
                 <List expandX>
-                  <ListItem
-                    index={0}
-                    style={{ backgroundColor: BG_SHORT }}
-                    maxLines={1}
-                  >
+                  <ListItem style={{ backgroundColor: BG_SHORT }} maxLines={1}>
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     maxLines={1}
                   >
@@ -906,7 +876,6 @@
                 </strong>
                 <List expandX>
                   <ListItem
-                    index={0}
                     style={{ backgroundColor: BG_SHORT }}
                     noWrap
                     maxLines={1}
@@ -914,7 +883,6 @@
                     {SHORT}
                   </ListItem>
                   <ListItem
-                    index={1}
                     style={{ backgroundColor: BG_CONTENT }}
                     noWrap
                     maxLines={1}
@@ -942,8 +910,8 @@
 
       const SmallList = ({ expandY }) => (
         <List expandY={expandY} {...VISIBLE_LIST_PROPS}>
-          {FRUITS.slice(0, 2).map((fruit, i) => (
-            <ListItem key={fruit} index={i} id={fruit} value={fruit}>
+          {FRUITS.slice(0, 2).map((fruit) => (
+            <ListItem key={fruit} id={fruit} value={fruit}>
               {fruit}
             </ListItem>
           ))}
@@ -952,8 +920,8 @@
 
       const LargeList = ({ expandY }) => (
         <List expandY={expandY} {...VISIBLE_LIST_PROPS}>
-          {FRUITS.map((fruit, i) => (
-            <ListItem key={fruit} index={i} id={fruit} value={fruit}>
+          {FRUITS.map((fruit) => (
+            <ListItem key={fruit} id={fruit} value={fruit}>
               {fruit}
             </ListItem>
           ))}
@@ -1198,11 +1166,10 @@
                 expandX
                 maxHeight="200"
               >
-                {fruits.map((fruit, i) => {
+                {fruits.map((fruit) => {
                   return (
                     <ListItem
                       key={fruit}
-                      index={i}
                       id={fruit}
                       value={fruit}
                       matchInfo={getItemMatchInfo(fruit)}
@@ -1251,7 +1218,6 @@
           groupMap.get(letter).push(item);
         }
 
-        let index = 0;
         return (
           <Box flex="y" spacing="s" width="260px">
             <Input
@@ -1267,7 +1233,6 @@
                   {items.map((item) => (
                     <ListItem
                       key={item}
-                      index={index++}
                       id={item}
                       matchInfo={getItemMatchInfo(item)}
                       paddingX="m"
@@ -1344,10 +1309,9 @@
                   </Box>
                 }
               >
-                {matches.map((item, i) => (
+                {matches.map((item) => (
                   <ListItem
                     key={item}
-                    index={i}
                     id={item}
                     matchInfo={getItemMatchInfo(item)}
                     paddingX="m"
@@ -1373,14 +1337,8 @@
                     </Box>
                   }
                 >
-                  {nonMatches.map((item, i) => (
-                    <ListItem
-                      key={item}
-                      index={matches.length + i}
-                      id={item}
-                      paddingX="m"
-                      paddingY="xs"
-                    >
+                  {nonMatches.map((item) => (
+                    <ListItem key={item} id={item} paddingX="m" paddingY="xs">
                       {item}
                     </ListItem>
                   ))}
@@ -1418,10 +1376,9 @@
       // ── Loading state ──────────────────────────────────────────────────────────
 
       const renderFruitItems = (items, matchInfoOf, { paddingY = "s" } = {}) =>
-        items.map((fruit, i) => (
+        items.map((fruit) => (
           <ListItem
             key={fruit}
-            index={i}
             id={fruit}
             value={fruit}
             matchInfo={matchInfoOf ? matchInfoOf(fruit) : undefined}
@@ -1513,9 +1470,8 @@
         },
       ];
 
-      const PersonItem = ({ person, index }) => (
+      const PersonItem = ({ person }) => (
         <ListItem
-          index={index}
           id={person.name}
           value={person.name}
           paddingX="m"
@@ -1566,7 +1522,7 @@
             <LoadButton phase={phase} onLoad={load} />
             <List
               loading={loading}
-              count={SOME_FRUITS.length}
+              loadingSkeletonCount={SOME_FRUITS.length}
               renderSkeleton={() => (
                 <ListItem skeleton paddingX="m" paddingY="m" />
               )}
@@ -1585,12 +1541,12 @@
             <LoadButton phase={phase} onLoad={load} />
             <List
               loading={loading}
-              count={PEOPLE.length}
+              loadingSkeletonCount={PEOPLE.length}
               renderSkeleton={() => PERSON_SKELETON_TEMPLATE}
               expandX
             >
-              {PEOPLE.map((person, i) => (
-                <PersonItem key={person.name} person={person} index={i} />
+              {PEOPLE.map((person) => (
+                <PersonItem key={person.name} person={person} />
               ))}
             </List>
           </Box>
@@ -1605,12 +1561,12 @@
             <List
               separator
               loading={loading}
-              count={PEOPLE.length}
+              loadingSkeletonCount={PEOPLE.length}
               renderSkeleton={() => PERSON_SKELETON_TEMPLATE}
               expandX
             >
-              {PEOPLE.map((person, i) => (
-                <PersonItem key={person.name} person={person} index={i} />
+              {PEOPLE.map((person) => (
+                <PersonItem key={person.name} person={person} />
               ))}
             </List>
           </Box>
@@ -1725,11 +1681,10 @@
               { label: "Plain", props: {} },
               { label: "loading", props: { loading: true } },
               { label: "readOnly", props: { readOnly: true } },
-            ].map(({ label, props }, i) => (
+            ].map(({ label, props }) => (
               <ListItem
                 key={label}
                 id={`item-state-${label}`}
-                index={i}
                 flex="x"
                 alignY="center"
                 spacing="s"
@@ -1896,12 +1851,11 @@
             <p>Drag a row by its handle, or from anywhere on the row.</p>
             <Box width="320px">
               <List separator itemTransition>
-                {tasks.map((task, i) => (
+                {tasks.map((task) => (
                   <TaskRow
                     key={task.id}
                     listName="reorder"
                     task={task}
-                    index={i}
                     onPointerDown={startDrag}
                     data-drag-source
                   >
@@ -1950,14 +1904,12 @@
               <TaskRow
                 listName="add-preview"
                 task={{ id: "p1", label: "Book the court" }}
-                index={0}
               >
                 <Text expandX>Book the court</Text>
               </TaskRow>
               <TaskRow
                 listName="add-preview"
                 task={{ id: "p2", label: "Warm up" }}
-                index={1}
                 loading="adding"
               >
                 <Text expandX>Warm up</Text>
@@ -1966,7 +1918,6 @@
                 <TaskRow
                   listName="add-preview"
                   task={{ id: "p3", label: "Shower" }}
-                  index={2}
                   error="Le serveur a refusé l'enregistrement."
                   onErrorDismiss={() =>
                     startViewTransition(() => setDismissed(true))
@@ -1986,12 +1937,11 @@
             {[
               { id: "q1", label: "Book the court", loading: false },
               { id: "q2", label: "Warm up", loading: "removing" },
-            ].map((task, i) => (
+            ].map((task) => (
               <TaskRow
                 key={task.id}
                 listName="remove-preview"
                 task={task}
-                index={i}
                 loading={task.loading}
               >
                 <Text expandX>{task.label}</Text>
@@ -2074,14 +2024,13 @@
         return (
           <Box flex="y" spacing="m" width="320px">
             <List separator itemTransition>
-              {shownTasks.map((task, i) => {
+              {shownTasks.map((task) => {
                 const pending = pendingTask && pendingTask.id === task.id;
                 return (
                   <TaskRow
                     key={task.id}
                     listName="add"
                     task={task}
-                    index={i}
                     loading={pending && !task.error && "adding"}
                     // The error IS the row: what was typed never made it, so
                     // showing it as an item would be a lie. The row draws the
@@ -2169,14 +2118,13 @@
         return (
           <Box width="320px">
             <List separator itemTransition>
-              {tasks.map((task, i) => {
+              {tasks.map((task) => {
                 const pending = pendingId === task.id;
                 return (
                   <TaskRow
                     key={task.id}
                     listName="remove"
                     task={task}
-                    index={i}
                     loading={pending && "removing"}
                   >
                     <Text expandX>{task.label}</Text>

@@ -619,7 +619,6 @@ const ListUI = (props) => {
     virtualItemSize,
     startAt = "start",
     onPositionChange,
-    initialScrollToItem,
     scroller = "self",
     lockSize,
     columns,
@@ -717,7 +716,6 @@ const ListUI = (props) => {
     virtual,
     startAt,
     onPositionChange,
-    initialScrollToItem,
     scroller,
     searchText,
     horizontal,
@@ -912,11 +910,8 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
- *   onItemsMissing?: (detail: {start: number, end: number, count: number}) => void | Promise<any>,
- *   loadMargin?: number | string,
  *   startAt?: "start" | "end" | number | {id: string, offset?: number},
  *   onPositionChange?: (position: {id: string, index: number, offset: number}) => void,
- *   initialScrollToItem?: string | {id: string, block?: "start" | "center" | "end" | "nearest"},
  *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
@@ -952,17 +947,6 @@ const ListFirstResolver = (props) => {
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
  *   as skeletons in place, one per row, virtualized like the rest.
- * @param {(detail: {start: number, end: number, count: number}) => void|Promise<any>} [props.onItemsMissing]
- *   The user is about to look at rows the list stands for but does not have
- *   (see `<List.Items count>`): `start` and `end` are the indexes of that
- *   range in the collection, inclusive — so this fires just as well on
- *   reaching an edge as on jumping the scrollbar into the middle of a region
- *   that was never loaded. Returning a promise holds the next call until it
- *   settles; one range at a time, and the same range is never asked for twice
- *   in a row while nothing has been loaded.
- * @param {number|string} [props.loadMargin=5]
- *   How far outside the visible band `onItemsMissing` looks ahead: a number of
- *   rows, or an explicit distance (`"300px"`).
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.startAt="start"]
  *   Where the list opens. `"end"` is a thread read backwards — the last rows
  *   are the ones to show, and the ones asked for first. A number opens on that
@@ -978,10 +962,6 @@ const ListFirstResolver = (props) => {
  *   how far above the fold it sits. Keep it to come back to it later through
  *   `startAt` — an index would not do, since rows get inserted while a list is
  *   being read.
- * @param {string|{id: string, block?: string}} [props.initialScrollToItem]
- *   The row to open the list on, the first time it is displayed (the frontier
- *   between past and future in a timeline, for instance). Works on a row that
- *   is outside the initial render window: the window moves there first.
  * @param {"self"|"parent"} [props.scroller="self"]
  *   Which box scrolls. `"self"` gives the list a scroll box of its own;
  *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
@@ -1081,7 +1061,6 @@ const useListScrollSync = ({
   virtual,
   startAt,
   onPositionChange,
-  initialScrollToItem,
   scroller,
   searchText,
   horizontal,
@@ -1231,36 +1210,6 @@ const useListScrollSync = ({
       }
       hasBeenDisplayedRef.current = true;
       const items = tracker.itemsSignal.peek();
-      // Opening on a precise row (a timeline opening on the frontier between
-      // past and future, for instance) wins over the selected-item default:
-      // the caller named the row it wants to land on.
-      if (initialScrollToItem) {
-        const { id, block = "start" } =
-          typeof initialScrollToItem === "string"
-            ? { id: initialScrollToItem }
-            : initialScrollToItem;
-        const initialItem = items.find((i) => i.id === id);
-        if (initialItem) {
-          const scrollToInitialItem = () => {
-            scrollToItem(initialItem, {
-              event: new CustomEvent("navi_displayed", {
-                detail: { originalEvent: openEvent },
-              }),
-              reason: "initialScrollToItem",
-              block,
-            });
-          };
-          scrollToInitialItem();
-          // The room held for the rows around the loaded ones only takes its
-          // size once a row has been measured — one render later — and the
-          // fillers growing move everything below them. Asking again once that
-          // has happened is what actually lands on the row; a microtask still
-          // runs before the frame is painted, so nothing of the intermediate
-          // state is ever seen.
-          queueMicrotask(scrollToInitialItem);
-          return;
-        }
-      }
       const firstSelected = items.find((i) => {
         if (i.selected) {
           return true;
@@ -1635,7 +1584,11 @@ const useListScrollSync = ({
     const onScroll = () => {
       updateCurrentScroll();
       if (scrolledByListRef.current) {
+        // The window stays where it is — the position it would be re-derived
+        // from was chosen to keep the rows still — but where the list is has
+        // genuinely changed, and whoever keeps that position must hear it.
         scrolledByListRef.current = false;
+        reportPosition();
         return;
       }
       reportPosition();
@@ -2624,12 +2577,13 @@ const LIST_ITEM_PSEUDO_CLASSES = [];
 const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
- * ListItem — a trackable item that participates in virtualization.
+ * ListItem — one row of a list.
  *
- * Must be used inside <List>. Handles:
- * - Registration with item tracker (always runs, even when hidden)
- * - Early return when outside the render window
- * - Separator rendering between visible items
+ * Must be used inside <List>. Declared one by one, its place is where it is
+ * declared; drawn by a <List.Items>, the run gives it its place and its id.
+ * Either way the row registers itself with the list, which is what makes what
+ * it says about itself (its value, whether it is selected) the one description
+ * of it.
  *
  * Props:
  *   id        — HTML element id AND the stable identifier used by external commands
@@ -2647,8 +2601,6 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               is selected. Can be any type (string, number, object…).
  *   selected  — controlled selected state. Pass `selected === value` (single) or
  *               `selected.includes(value)` (multiple) from parent state.
- *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
- *               if omitted; prefer `id` for external addressing).
  *   error     — what this row stood for failed: the message replaces its
  *               content, styled like the list's own error. `true` shows a
  *               generic sentence.
@@ -2672,7 +2624,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *                               searchNoMatchMode ("remove" -> filtered,
  *                               "invisible_and_inert" -> hidden,
  *                               "muted" -> muted).
- *                 matchScore  — this item's search relevance score (higher =
+ *                 matchScore  — this row's search relevance score (higher =
  *                               more relevant). Only read for search-driven
  *                               scroll-to-top-match behavior.
  *                 matchRanges — array of [start, end] ranges to highlight via
@@ -2793,12 +2745,17 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   how many there are in all (`count`). Rows it does not have are drawn as
  *   skeletons until it does.
  *
+ * A row says what it is where it is drawn: `renderItem` returns a
+ * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
+ * and the row registers itself with the list from there — there is no second
+ * place describing the same row.
+ *
  * Several runs can live in one list, next to plain `<List.Item>` children and
  * inside `<List.Group>`s; each takes its place in declaration order.
  *
  * @type {import("preact").FunctionComponent<{
  *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
- *   itemsAction?: (range: {start: number, end: number}) => any,
+ *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number}) => any,
  *   items?: any[],
  *   count?: number,
  *   itemStart?: number,
@@ -2807,7 +2764,7 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
- *   itemProps?: (item: any, index: number) => object,
+ *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("preact").ComponentChildren,
  * }>}
  * @param {(item: any, index: number) => any} [props.groupBy]
  *   What tells rows that belong together apart from the others — the day of a
@@ -2827,9 +2784,14 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   same trade the render window makes with the DOM, one order of magnitude
  *   further out. `0` keeps everything.
  * @param {false|(index: number) => any} [props.renderSkeleton]
- *   What to draw for a row the run does not hold. Defaults to a
- *   `<List.Item skeleton>`; `false` leaves the row empty (its room is still
- *   held, or the list would jump as it loads).
+ *   What to draw for a row the run does not hold. Defaults to List's own
+ *   `renderSkeleton`, then to a bare `<List.Item skeleton>`; `false` leaves the
+ *   row empty (its room is still held, or the list would jump as it loads).
+ * @param {(failure: object) => any} [props.renderError]
+ *   What to draw where rows were asked for and never came: given the `error`,
+ *   a `retry` to call, and the `start`/`end` of the range that failed. Defaults
+ *   to an inline message with a retry button, drawn on the row the user is
+ *   looking at.
  */
 export const ListItems = ({
   renderItem,

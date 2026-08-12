@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>Messagerie (scroll infini vers le haut)</title>
+    <title>Listes infinies</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -26,18 +26,10 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
-      .stat-label {
-        color: #888;
+      .caption {
+        color: #555;
         font-size: 0.8rem;
         font-family: monospace;
-      }
-      .stat-value {
-        color: #2b7a5b;
-        font-size: 0.8rem;
-        font-family: monospace;
-      }
-      .stat-value[data-busy] {
-        color: #b5651d;
       }
       .bubble {
         max-width: 78%;
@@ -51,6 +43,12 @@
       .bubble:not([data-mine]) {
         color: #1a1a2e;
         background: #eceff4;
+      }
+      .bubble[data-loading] {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: #f2f4f7;
       }
       /* La ligne posée à l'offset sauvegardé, devant la liste. */
       .ruler-frame {
@@ -74,12 +72,6 @@
       .navi_list_item[data-marked] {
         box-shadow: inset 0 2px 0 #d33;
       }
-      .bubble[data-loading] {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        background: #f2f4f7;
-      }
     </style>
   </head>
   <body>
@@ -93,7 +85,6 @@
         Box,
         Button,
         List,
-        ListItem,
         SelectableInput,
         Text,
         Time,
@@ -101,12 +92,17 @@
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import { FakeBackend } from "../../../internal/fake_backend.jsx";
 
-      // La conversation entière vit "sur le serveur"; le front n'en tient que
-      // les pages qu'il a demandées. Un message garde son id quoi qu'il arrive
-      // — c'est ce qui permet de le retrouver quand d'autres se sont insérés
-      // avant lui et que sa place a changé.
+      /* ------------------------------------------------------------------
+         Le serveur: une conversation dont le front ne tient que des pages.
+         Un message garde son id quoi qu'il arrive — c'est ce qui permet de le
+         retrouver quand d'autres se sont insérés avant lui.
+         ------------------------------------------------------------------ */
       const INITIAL_COUNT = 200;
       const PAGE_MAX = 50;
+      const LATENCY = 500;
+      const MESSAGES_PER_DAY = 8;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const TODAY = new Date();
 
       const PHRASES = [
         "ok",
@@ -120,22 +116,12 @@
         "je te rappelle dans 10 min",
         "franchement bien joué pour hier, tout le monde en parle encore. On refait ça quand ?",
       ];
-
-      // Le serveur: une liste de messages, à laquelle on peut en ajouter au
-      // début (les plus anciens), ce qui décale la place de tous les autres.
-      // Une journée de conversation fait MESSAGES_PER_DAY messages, et le
-      // dernier message initial tombe aujourd'hui — de quoi voir "aujourd'hui"
-      // et "hier" en haut des groupes.
-      const MESSAGES_PER_DAY = 8;
-      const DAY_MS = 24 * 60 * 60 * 1000;
-      const TODAY = new Date();
-      const dayOfMessage = (number) =>
-        Math.floor(number / MESSAGES_PER_DAY) -
-        Math.floor((INITIAL_COUNT - 1) / MESSAGES_PER_DAY);
       const createMessages = (count, firstNumber) =>
         Array.from({ length: count }, (_, i) => {
           const number = firstNumber + i;
-          const day = dayOfMessage(number);
+          const day =
+            Math.floor(number / MESSAGES_PER_DAY) -
+            Math.floor((INITIAL_COUNT - 1) / MESSAGES_PER_DAY);
           const date = new Date(TODAY.getTime() + day * DAY_MS);
           date.setHours(
             9 + (number % MESSAGES_PER_DAY),
@@ -153,21 +139,24 @@
           };
         });
       const serverMessages = createMessages(INITIAL_COUNT, 0);
-      const insertOlder = (count) => {
+      const insertOlderMessages = (count) => {
         const first = serverMessages[0].number;
         serverMessages.unshift(...createMessages(count, first - count));
       };
 
-      const readPage = ({ start, end, around }) => {
+      // La réponse à un intervalle: jamais plus de PAGE_MAX messages, en
+      // disant où ça tombe et combien il y en a en tout. Un début négatif
+      // compte depuis la fin (Range: items=-30), et `around` demande la page
+      // qui contient un message nommé.
+      const readMessagePage = ({ start, end, around }) => {
         const total = serverMessages.length;
-        // Retrouver un message par son id: c'est ce qu'on demande au serveur
-        // quand on revient là où on s'était arrêté, puisque sa place, on ne la
-        // connaît plus.
         if (around !== undefined) {
           const index = serverMessages.findIndex((m) => m.id === around);
           const wanted = end - start + 1;
-          const from = index - Math.floor(wanted / 2);
-          start = from < 0 ? 0 : from;
+          start = index - Math.floor(wanted / 2);
+          if (start < 0) {
+            start = 0;
+          }
           end = start + wanted - 1;
         }
         let from = start < 0 ? total + start : start;
@@ -188,37 +177,13 @@
           count: total,
         };
       };
-
-      // Le vrai réseau: un délai qu'on subit, sans personne pour répondre à la
-      // place du serveur.
-      const LATENCY = 500;
-      const fetchPage = (range) => {
-        console.info("[ask]", JSON.stringify(range));
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const page = readPage(range);
-            console.info(
-              "[got]",
-              page.start,
-              "..",
-              page.start + page.items.length - 1,
-              "/",
-              page.count,
-            );
-            resolve(page);
-          }, LATENCY);
+      const fetchMessagePage = (range) =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(readMessagePage(range)), LATENCY);
         });
-      };
 
-      const Stat = ({ label, value }) => (
-        <span>
-          <span className="stat-label">{label} </span>
-          <span className="stat-value">{value}</span>
-        </span>
-      );
-
-      const MessageItem = ({ message, marked }) => (
-        <ListItem
+      const Message = ({ message, marked }) => (
+        <List.Item
           paddingX="m"
           paddingY="xs"
           data-marked={marked ? "" : undefined}
@@ -234,92 +199,183 @@
               </Time>
             </Text>
           </Box>
-        </ListItem>
+        </List.Item>
       );
 
-      // Une bulle qui n'est pas encore arrivée: même place, même côté, même
+      // Un message qui n'est pas encore arrivé: même place, même côté, même
       // gabarit — seul le texte manque. C'est cette hauteur-là que la liste
-      // réserve pour les 200 messages avant d'en avoir vu un seul.
-      const MessageSkeleton = ({ index }) => (
-        <ListItem skeleton paddingX="m" paddingY="xs">
+      // réserve pour les messages qu'elle n'a pas encore vus.
+      const MessagePlaceholder = ({ index }) => (
+        <List.Item skeleton paddingX="m" paddingY="xs">
           <Box flex="y" alignX={index % 3 === 0 ? "end" : "start"} expandX>
             <div className="bubble" data-loading="">
               <Text loading width={`${90 + ((index * 37) % 180)}px`}>
-                {"\u00a0"}
+                {" "}
               </Text>
               {index % 4 === 0 && (
                 <Text loading width={`${60 + ((index * 23) % 120)}px`}>
-                  {"\u00a0"}
+                  {" "}
                 </Text>
               )}
             </div>
             <Text size="xs" color="#999">
-              {"\u00a0"}
+              {" "}
             </Text>
           </Box>
-        </ListItem>
+        </List.Item>
       );
 
-      const Thread = ({
-        startAt,
-        itemsAction,
-        onPositionChange,
-        markedId,
-        grouped,
-      }) => (
-        <List
-          maxHeight="220px"
-          expandX
-          renderBudget={30}
-          startAt={startAt}
-          onPositionChange={onPositionChange}
-          renderSkeleton={(index) => <MessageSkeleton index={index} />}
-        >
-          <List.Items
-            itemsAction={itemsAction}
-            groupBy={grouped ? (message) => message.day : undefined}
-            renderGroupLabel={(message) => (
-              <Time type="date" dayLabel>
-                {message.date}
-              </Time>
-            )}
-            renderItem={(message) => (
-              <MessageItem message={message} marked={message.id === markedId} />
-            )}
-          />
-        </List>
+      const Section = ({ title, caption, children }) => (
+        <div className="demo-section">
+          <h2>{title}</h2>
+          <Box flex="y" spacing="m" style="margin-top: 8px">
+            {caption && <span className="caption">{caption}</span>}
+            {children}
+          </Box>
+        </div>
       );
 
-      const Section = ({ title, caption, children }) => {
+      /* ------------------------------------------------------------------ */
+
+      const LastMessagesSection = () => {
         const [key, setKey] = useState(0);
         return (
-          <div className="demo-section">
-            <h2>{title}</h2>
-            <Box flex="y" spacing="m" style="margin-top: 8px">
-              <Box flex alignY="center" spacing="m">
-                <Text size="s" color="#555">
-                  {caption}
-                </Text>
-                <Button onClick={() => setKey(key + 1)}>recharger</Button>
-              </Box>
-              {children(key)}
-            </Box>
-          </div>
+          <Section
+            title="On arrive sur le dernier message"
+            caption='startAt="end"'
+          >
+            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <List
+              key={key}
+              maxHeight="220px"
+              expandX
+              renderBudget={30}
+              startAt="end"
+              renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+            >
+              <List.Items
+                itemsAction={fetchMessagePage}
+                renderItem={(message) => <Message message={message} />}
+              />
+            </List>
+          </Section>
         );
       };
 
-      // Les parties de padel: des lignes qu'on choisit, pas qu'on lit.
+      /* ------------------------------------------------------------------ */
+
+      const GroupedByDaySection = () => {
+        const [key, setKey] = useState(0);
+        return (
+          <Section
+            title="Groupés par jour"
+            caption="groupBy + renderGroupLabel"
+          >
+            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <List
+              key={key}
+              maxHeight="220px"
+              expandX
+              renderBudget={30}
+              startAt="end"
+              renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+            >
+              <List.Items
+                itemsAction={fetchMessagePage}
+                groupBy={(message) => message.day}
+                renderGroupLabel={(message) => (
+                  <Time type="date" dayLabel>
+                    {message.date}
+                  </Time>
+                )}
+                renderItem={(message) => <Message message={message} />}
+              />
+            </List>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
+      const ResumeSection = () => {
+        const [position, setPosition] = useState(null);
+        const [saved, setSaved] = useState(null);
+        const [key, setKey] = useState(0);
+        const [insertedCount, setInsertedCount] = useState(0);
+
+        return (
+          <Section
+            title="On reprend là où on s'était arrêté"
+            caption="onPositionChange → startAt={{ id, offset }}"
+          >
+            <Box flex alignY="center" spacing="m">
+              <Button
+                onClick={() => {
+                  setSaved(position);
+                  setKey(key + 1);
+                }}
+              >
+                quitter et revenir
+              </Button>
+              <Button
+                onClick={() => {
+                  insertOlderMessages(5);
+                  setInsertedCount(insertedCount + 5);
+                }}
+              >
+                5 messages plus anciens arrivent
+              </Button>
+              <span className="caption">
+                {position
+                  ? `${position.id} @${Math.round(position.offset)}`
+                  : "—"}
+                {insertedCount ? ` · ${insertedCount} insérés` : ""}
+              </span>
+            </Box>
+            <div className="ruler-frame">
+              {saved && (
+                <div
+                  className="ruler"
+                  style={{ top: `${90 + saved.offset}px` }}
+                ></div>
+              )}
+              <List
+                key={key}
+                maxHeight="220px"
+                expandX
+                renderBudget={30}
+                startAt={saved || "end"}
+                onPositionChange={setPosition}
+                renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+              >
+                <List.Items
+                  itemsAction={fetchMessagePage}
+                  renderItem={(message) => (
+                    <Message
+                      message={message}
+                      marked={saved ? message.id === saved.id : false}
+                    />
+                  )}
+                />
+              </List>
+            </div>
+            {saved && (
+              <Text size="s" color="#555">
+                repris sur {saved.id}, {Math.round(saved.offset)}px sous le haut
+                de la vue
+              </Text>
+            )}
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------
+         Une autre collection, une autre liste: des parties de padel qu'on
+         choisit, pas des messages qu'on lit.
+         ------------------------------------------------------------------ */
+      const GAME_COUNT = 3000;
       const COURTS = ["Court 1", "Court 2", "Court couvert", "Court extérieur"];
       const NIVEAUX = ["P25", "P50", "P100", "P250"];
-      const GAME_COUNT = 3000;
-      const createGame = (index) => ({
-        index,
-        court: COURTS[index % COURTS.length],
-        level: NIVEAUX[index % NIVEAUX.length],
-        players: 1 + (index % 4),
-        day: `${1 + (index % 28)}/0${1 + (index % 9)}`,
-        hour: `${8 + (index % 12)}h${index % 2 ? "30" : "00"}`,
-      });
       const readGamePage = ({ start, end }) => {
         let from = start < 0 ? GAME_COUNT + start : start;
         let to = end < 0 ? GAME_COUNT + end : end;
@@ -332,148 +388,122 @@
         const items = [];
         let index = from;
         while (index <= to) {
-          items.push(createGame(index));
+          items.push({
+            id: `g${index}`,
+            number: index,
+            court: COURTS[index % COURTS.length],
+            level: NIVEAUX[index % NIVEAUX.length],
+            players: 1 + (index % 4),
+            day: `${1 + (index % 28)}/0${1 + (index % 9)}`,
+            hour: `${8 + (index % 12)}h${index % 2 ? "30" : "00"}`,
+          });
           index++;
         }
         return { items, start: from, count: GAME_COUNT };
       };
+      const fetchGamePage = (range) =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(readGamePage(range)), LATENCY);
+        });
 
-      const GameItem = ({ game, selected }) => (
-        <List.Item
-          selectable
-          value={game.index}
-          selected={selected}
-          flex
-          alignY="center"
-          spacing="s"
-          paddingX="m"
-          paddingY="s"
-        >
-          <SelectableInput />
-          <Text weight="bold">{game.level}</Text>
-          <Text>{game.court}</Text>
-          <Text size="s" color="#777">
-            {game.day} · {game.hour}
-          </Text>
-          <Text size="s" color={game.players === 4 ? "#a72" : "#2a7"}>
-            {game.players}/4 joueurs
-          </Text>
-        </List.Item>
-      );
-      const GameSkeleton = () => (
-        <List.Item
-          skeleton
-          flex
-          alignY="center"
-          spacing="s"
-          paddingX="m"
-          paddingY="s"
-        >
-          <Text loading width="60px">
-            {"\u00a0"}
-          </Text>
-          <Text loading width="180px">
-            {"\u00a0"}
-          </Text>
-        </List.Item>
-      );
-
-      const GameList = () => {
-        const [selected, setSelected] = useState(null);
+      const GameToJoinSection = () => {
+        const [chosen, setChosen] = useState(null);
         return (
-          <Box flex="y" spacing="s">
+          <Section
+            title="Une partie à rejoindre"
+            caption="3000 parties, une seule à choisir"
+          >
             <List
               selectable
               maxHeight="260px"
               expandX
               renderBudget={30}
               separator
-              action={(value) => setSelected(value)}
-              renderSkeleton={() => <GameSkeleton />}
+              action={(value) => setChosen(value)}
+              renderSkeleton={() => (
+                <List.Item
+                  skeleton
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  paddingX="m"
+                  paddingY="s"
+                >
+                  <Text loading width="60px">
+                    {" "}
+                  </Text>
+                  <Text loading width="180px">
+                    {" "}
+                  </Text>
+                </List.Item>
+              )}
             >
               <List.Items
-                count={GAME_COUNT}
-                itemsAction={(range) =>
-                  new Promise((resolve) => {
-                    setTimeout(() => resolve(readGamePage(range)), LATENCY);
-                  })
-                }
+                itemsAction={fetchGamePage}
                 renderItem={(game) => (
-                  <GameItem game={game} selected={selected === game.index} />
+                  <List.Item
+                    selectable
+                    value={game.number}
+                    selected={chosen === game.number}
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    <SelectableInput />
+                    <Text weight="bold">{game.level}</Text>
+                    <Text>{game.court}</Text>
+                    <Text size="s" color="#777">
+                      {game.day} · {game.hour}
+                    </Text>
+                    <Text size="s" color={game.players === 4 ? "#a72" : "#2a7"}>
+                      {game.players}/4 joueurs
+                    </Text>
+                  </List.Item>
                 )}
               />
             </List>
             <Text size="s" color="#555">
-              partie choisie: {selected === null ? "aucune" : `#${selected}`}
+              partie choisie: {chosen === null ? "aucune" : `#${chosen}`}
             </Text>
-          </Box>
+          </Section>
         );
       };
 
-      // Reprendre exactement là où on s'était arrêté. La ligne rouge est posée
-      // à l'offset sauvegardé: si la reprise est juste, le haut du message
-      // encadré vient s'y coller — que des messages se soient insérés avant lui
-      // entre-temps ou non.
-      const ResumeSection = () => {
-        const [position, setPosition] = useState(null);
-        const [saved, setSaved] = useState(null);
-        const [key, setKey] = useState(0);
-        const [insertedCount, setInsertedCount] = useState(0);
+      /* ------------------------------------------------------------------ */
 
+      const PageByPageSection = () => {
+        const [key, setKey] = useState(0);
         return (
-          <div className="demo-section">
-            <h2>On reprend là où on s'était arrêté</h2>
-            <Box flex="y" spacing="m" style="margin-top: 8px">
-              <Box flex alignY="center" spacing="m">
-                <Button
-                  onClick={() => {
-                    setSaved(position);
-                    setKey(key + 1);
-                  }}
-                >
-                  quitter et revenir
-                </Button>
-                <Button
-                  onClick={() => {
-                    insertOlder(5);
-                    setInsertedCount(insertedCount + 5);
-                  }}
-                >
-                  5 messages plus anciens arrivent
-                </Button>
-                <Stat
-                  label="position"
-                  value={
-                    position
-                      ? `${position.id} @${Math.round(position.offset)}`
-                      : "—"
-                  }
-                />
-                <Stat label="insérés" value={insertedCount} />
-              </Box>
-              <div className="ruler-frame">
-                {saved && (
-                  <div
-                    className="ruler"
-                    style={{ top: `${90 + saved.offset}px` }}
-                  ></div>
-                )}
-                <Thread
+          <Section
+            title="Chaque page, à la main"
+            caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
+          >
+            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <FakeBackend value={`${serverMessages.length} messages`}>
+              {({ action }) => (
+                <List
                   key={key}
-                  startAt={saved || "end"}
-                  itemsAction={fetchPage}
-                  onPositionChange={setPosition}
-                  markedId={saved ? saved.id : position ? position.id : null}
-                />
-              </div>
-              {saved && (
-                <Text size="s" color="#555">
-                  repris sur {saved.id}, {Math.round(saved.offset)}px sous le
-                  haut de la vue
-                </Text>
+                  maxHeight="220px"
+                  expandX
+                  renderBudget={30}
+                  startAt="end"
+                  renderSkeleton={(index) => (
+                    <MessagePlaceholder index={index} />
+                  )}
+                >
+                  <List.Items
+                    itemsAction={async (range) => {
+                      await action(range);
+                      return readMessagePage(range);
+                    }}
+                    renderItem={(message) => <Message message={message} />}
+                  />
+                </List>
               )}
-            </Box>
-          </div>
+            </FakeBackend>
+          </Section>
         );
       };
 
@@ -486,48 +516,11 @@
               label: "Adresse avec autocomplete",
             }}
           />
-          <Section
-            title="On arrive sur le dernier message"
-            caption='startAt="end"'
-          >
-            {(key) => (
-              <Thread key={key} startAt="end" itemsAction={fetchPage} />
-            )}
-          </Section>
-          <Section
-            title="Groupés par jour"
-            caption="groupBy={(message) => message.day}"
-          >
-            {(key) => (
-              <Thread key={key} startAt="end" itemsAction={fetchPage} grouped />
-            )}
-          </Section>
+          <LastMessagesSection />
+          <GroupedByDaySection />
           <ResumeSection />
-          <Section
-            title="Une partie à rejoindre"
-            caption="3000 parties, une seule à choisir"
-          >
-            {(key) => <GameList key={key} />}
-          </Section>
-          <Section
-            title="Chaque page, à la main"
-            caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
-          >
-            {(key) => (
-              <FakeBackend value={`${serverMessages.length} messages`}>
-                {({ action }) => (
-                  <Thread
-                    key={key}
-                    startAt="end"
-                    itemsAction={async (range) => {
-                      await action(range);
-                      return readPage(range);
-                    }}
-                  />
-                )}
-              </FakeBackend>
-            )}
-          </Section>
+          <GameToJoinSection />
+          <PageByPageSection />
         </Box>
       );
 
