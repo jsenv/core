@@ -139,6 +139,13 @@
         border-radius: 0 4px 4px 0;
       }
 
+      html.demo-roomy-confirm {
+        --navi-confirm-popup-padding: 24px;
+        --navi-confirm-popup-spacing: 20px;
+        --navi-confirm-popup-action-spacing: 16px;
+        --navi-confirm-popup-max-width: 460px;
+      }
+
       .demo-outer-padding .navi_button {
         --button-padding: 30px;
       }
@@ -164,6 +171,8 @@
         Form,
         Input,
         Icon,
+        Link,
+        Text,
         EyeSvg,
         EyeClosedSvg,
         NaviDebug,
@@ -558,6 +567,9 @@
 
       const ConfirmDemo = () => {
         const [entries, push, clear] = useCallLog();
+        // On <html>, not on this section: the popup mounts its own tree at the
+        // end of <body>, so the vars have to be set somewhere it inherits from.
+        const [roomy, setRoomy] = useState(false);
 
         return (
           <div class="demo-section" id="confirm">
@@ -668,6 +680,103 @@
               </fieldset>
 
               <CallLog entries={entries} onClear={clear} />
+            </div>
+
+            <div class="states-section">
+              <div class="states-title">confirm — JSX</div>
+
+              <fieldset>
+                <legend>confirm={"{jsx}"}</legend>
+                <Button
+                  confirm={
+                    <>
+                      Delete <strong>rapport-2024.pdf</strong>? It is still{" "}
+                      <Link href="#confirm">shared with 3 people</Link>.
+                    </>
+                  }
+                  action={() => {
+                    push("Delete action");
+                  }}
+                  onActionAborted={() => {
+                    push("Delete aborted");
+                  }}
+                >
+                  Delete
+                </Button>
+              </fieldset>
+            </div>
+
+            <div class="states-section">
+              <div class="states-title">confirmPopupContent</div>
+              <p class="states-description">
+                The popup body, buttons included. Answer with the{" "}
+                <code>--navi-confirm</code> and <code>--navi-cancel</code>{" "}
+                commands; closing any other way is a "no" too.
+              </p>
+
+              <fieldset>
+                <legend>Own layout, own labels</legend>
+                <Button
+                  confirmPopupContent={
+                    <Box flex="y" spacing="m" padding="m" maxWidth="360px">
+                      <Text bold>Delete rapport-2024.pdf?</Text>
+                      <Box flex="y" spacing="xs">
+                        <Text>Shared with 3 people.</Text>
+                        <Link href="#confirm">Review who has access</Link>
+                      </Box>
+                      <Box flex="x" spacing="s" alignX="end">
+                        <Button command="--navi-cancel">Keep the file</Button>
+                        <Button cta autoFocus command="--navi-confirm">
+                          Delete anyway
+                        </Button>
+                      </Box>
+                    </Box>
+                  }
+                  action={() => {
+                    push("Delete action");
+                  }}
+                  onActionAborted={() => {
+                    push("Delete aborted");
+                  }}
+                >
+                  Delete
+                </Button>
+              </fieldset>
+            </div>
+
+            <div class="states-section">
+              <div class="states-title">Theming</div>
+
+              <fieldset>
+                <legend>--navi-confirm-popup-*</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={roomy}
+                      onChange={(e) => {
+                        setRoomy(e.target.checked);
+                        document.documentElement.classList.toggle(
+                          "demo-roomy-confirm",
+                          e.target.checked,
+                        );
+                      }}
+                    />{" "}
+                    Roomy
+                  </label>
+                  <Button
+                    confirm="Delete this file?"
+                    action={() => {
+                      push("Delete action");
+                    }}
+                    onActionAborted={() => {
+                      push("Delete aborted");
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </fieldset>
             </div>
           </div>
         );

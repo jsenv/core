@@ -63,6 +63,16 @@ const css = /* css */ `
       --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
       --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
 
+      /* The popup an action's "confirm" asks its question in. Its own tokens
+         rather than the popup ones above: every confirmation in an app is
+         re-shaped together here, without touching the pickers and panels that
+         are also popups. */
+      --navi-confirm-popup-padding: 12px;
+      --navi-confirm-popup-spacing: 12px;
+      --navi-confirm-popup-action-spacing: 8px;
+      --navi-confirm-popup-min-width: 180px;
+      --navi-confirm-popup-max-width: 320px;
+
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
       /* Accent color — used for call-to-action buttons and selected list items.

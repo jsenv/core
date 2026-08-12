@@ -703,6 +703,26 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     },
   };
 });
+// "Yes, do it" — said inside the popup an action's `confirm` opened, by its own
+// confirm button or by whatever a caller put there instead (see
+// action/confirm_popup.jsx). Its counterpart is --navi-cancel: the popup closes
+// either way, and closing without this is the answer "no".
+registerNaviCommand("--navi-confirm", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      return dispatchCustomEvent(target, "navi_request_confirm", {
+        event,
+        source: resolveCommandProxySource(source),
+      });
+    },
+  };
+});
 registerNaviCommand("--navi-define", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);

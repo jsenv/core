@@ -19,6 +19,7 @@
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
+import { getConfirmParams } from "../../action/confirm.js";
 import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { dispatchRequestInteraction } from "./control_interaction.js";
@@ -127,16 +128,26 @@ export const tryActionAfterInteractionAllowed = (
     meta = {},
     reportOnInvalid,
     onInvalid,
-    // A question to ask before the action runs at all, read off the control
-    // that requested it rather than passed down from each call site: a
-    // confirmation belongs to the button the user pressed, and that button is
-    // the requester whichever route brought the request here (its own action,
-    // or a --navi-send that resolved it as the form's submitter).
-    confirmMessage = requester?.getAttribute?.("data-confirm") || undefined,
   },
 ) => {
   const controlHost = findControlHost(element) || element;
   const controller = controlHost.__uiStateController__;
+  // Whether the control being asked owns the work, or is only a way of asking
+  // for it. A button with no action of its own still comes through here (it
+  // gets a placeholder action so its own navi_action_* events exist), then
+  // hands the real request to its command's target — a submit button to the
+  // form around it, which comes back through here with that same button as
+  // requester.
+  const hasOwnAction = Boolean(controller?.props.action);
+
+  // What the requester asks before the action runs at all, read off it rather
+  // than passed down from each call site: a confirmation belongs to the button
+  // the user pressed, whichever route brought the request here. Only asked on
+  // the request that carries the real work, or the same press would ask twice.
+  const confirmParams =
+    hasOwnAction || requester !== controlHost
+      ? getConfirmParams(requester)
+      : undefined;
 
   // Resolve proxy so navi_action_* fires on the real control element.
   let elementForAction = controlHost;
@@ -154,7 +165,6 @@ export const tryActionAfterInteractionAllowed = (
   // the result and decide whether to report/prevent/allow.
   const cv = controller?.rules.validation;
   if (cv) {
-    const hasOwnAction = Boolean(controller.props.action);
     const isValid = cv.syncValidity(event, {
       report: reportOnInvalid ?? hasOwnAction,
       fromRequestAction: true,
@@ -194,7 +204,7 @@ export const tryActionAfterInteractionAllowed = (
       action,
       method,
       meta,
-      confirmMessage,
+      confirmParams,
     });
   }
   return true;

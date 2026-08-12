@@ -4,6 +4,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { useConfirmParams } from "../../action/confirm.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
@@ -14,12 +15,14 @@ const ButtonFirstResolver = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
 
-  // `confirm`: a question to answer before the action runs. Written onto the
-  // element rather than kept as a prop because the action is not always
-  // requested by this button's own React tree — a submit button hands the send
-  // to the form around it, and what asks the question there is the requester
-  // element (see tryActionAfterInteractionAllowed in control_action.js).
-  props["data-confirm"] = props.confirm;
+  // Attached to the element rather than kept as a prop: the action a button
+  // requests is not always run by the button (a submit button hands the send to
+  // the form around it), and what the request carries all the way there is this
+  // element — see confirm.js.
+  useConfirmParams(props.ref, {
+    message: props.confirm,
+    content: props.confirmPopupContent,
+  });
 
   return <Next {...props} />;
 };

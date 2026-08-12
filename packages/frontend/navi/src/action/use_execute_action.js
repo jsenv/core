@@ -125,7 +125,7 @@ export const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const { action, actionOrigin, requester, event, method, confirmMessage } =
+      const { action, actionOrigin, requester, event, method, confirmParams } =
         actionEvent.detail;
       const sharedActionEventDetail = {
         action,
@@ -241,7 +241,7 @@ export const useExecuteAction = (
         });
       };
 
-      if (confirmMessage) {
+      if (confirmParams) {
         // The question is asked in a popup, so the answer only comes back a
         // few frames later — everything the action does moves behind that
         // await. Fine here and nowhere else: "start" has already been
@@ -250,14 +250,12 @@ export const useExecuteAction = (
         // watchActionCompletion in control_action.js), so a dialog around it
         // already knows to stay open until the answer lands.
         return requestConfirmation({
-          message: confirmMessage,
+          ...confirmParams,
           anchor: requester,
         }).then((confirmed) => {
           if (!confirmed) {
             debugAction(event, `action aborted (via confirm popup)`);
-            triggerAbort(
-              `user cancelled on confirm message: "${confirmMessage}"`,
-            );
+            triggerAbort(`user did not confirm`);
             return undefined;
           }
           return runAction();
