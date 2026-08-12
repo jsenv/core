@@ -1153,6 +1153,11 @@ const useListScrollSync = ({
       const rowIndex = virtual.locateRow(scrolledWanted.id);
       if (rowIndex !== null) {
         wantedStart = rowIndex - half;
+      } else if (typeof scrolledWanted.index === "number") {
+        // The row has not come back yet, but where it stood is known: near
+        // enough to frame, and to put the scrollbar roughly where it will end
+        // up rather than at the top.
+        wantedStart = scrolledWanted.index - half;
       }
     }
     if (wantedStart === null) {
@@ -1493,11 +1498,21 @@ const useListScrollSync = ({
       // it has not drawn yet.
       const rowIndex = virtual.locateRow(scrolledWanted.id);
       if (rowIndex === null) {
-        // A page has come back and that row is not in it: it is gone (a
-        // message deleted, a game cancelled). Waiting for it forever would
-        // leave the list wherever the first page landed, which is nowhere in
-        // particular — open where the caller said to open when that happens.
+        // Not there yet. Where it stood is enough to be roughly right in the
+        // meantime — the scrollbar lands near its final place instead of at the
+        // top, and the exact position is taken once the row itself can be
+        // measured.
         if (virtual.pagesSignal.peek() === 0) {
+          if (typeof scrolledWanted.index === "number") {
+            const rowPosition =
+              scrolledWanted.index * virtualItemSizeSignal.peek();
+            anchorRef.current = null;
+            if (horizontal) {
+              getScroller().scrollLeft = rowPosition;
+            } else {
+              getScroller().scrollTop = rowPosition;
+            }
+          }
           return;
         }
         openAt = scrolledFallback;
@@ -3457,11 +3472,16 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           start = -budget;
           end = -1;
         } else if (scrolled && scrolled.id !== undefined) {
-          // The list cannot say where that row is — that is the whole point of
-          // naming it — so it asks for it by name and reads back where it
-          // landed (see the page's own `start`).
-          start = 0;
-          end = budget - 1;
+          // Asked for by name, since a place can have changed hands since it
+          // was written down — but the place it had is sent too, so a source
+          // that paginates by index has something to work with, and the answer
+          // says where it really landed (see the page's own `start`).
+          const from =
+            typeof scrolled.index === "number"
+              ? scrolled.index - Math.floor(budget / 2)
+              : 0;
+          start = from < 0 ? 0 : from;
+          end = start + budget - 1;
           around = scrolled.id;
         } else {
           const first =
@@ -3485,12 +3505,12 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           // what the list would draw. Once it is not, it is called off — and
           // whatever comes back anyway is kept all the same (see done): paid
           // for, and maybe useful when the user comes back this way.
-          // A range counted back from the end (the very first ask) says
-          // nothing the window can be compared to: it is what the list is
+          // Nothing to compare a request to while the run does not know how
+          // many rows it stands for: what the window frames then is a
+          // placeholder, not a place. The first answer is what the list is
           // waiting for to exist at all.
           const stillWanted =
-            request.start < 0 ||
-            request.end < 0 ||
+            pages.count === undefined ||
             (request.start <= windowTo && request.end >= windowFrom);
           if (stillWanted) {
             return;

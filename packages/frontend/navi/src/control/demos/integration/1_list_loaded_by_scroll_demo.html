@@ -347,7 +347,11 @@
       /* ------------------------------------------------------------------ */
 
       // Ce qu'on aurait gardé de la visite précédente (localStorage, url…).
-      const POSITION_FROM_LAST_VISIT = { id: "m120", offset: 24 };
+      // L'id dit quelle ligne, l'index dit à peu près où elle était, l'offset
+      // dit exactement où dans la vue — et le total permet à la barre de
+      // défilement d'avoir la bonne taille avant même la première réponse.
+      const POSITION_FROM_LAST_VISIT = { id: "m120", index: 120, offset: 24 };
+      const COUNT_FROM_LAST_VISIT = 200;
 
       const ResumeSection = () => {
         const [position, setPosition] = useState(null);
@@ -414,6 +418,7 @@
               >
                 <List.Items
                   itemsAction={fetchMessagePage}
+                  count={COUNT_FROM_LAST_VISIT}
                   renderItem={(message) => (
                     <Message
                       message={message}
@@ -589,8 +594,8 @@
             }}
           />
           <LastMessagesSection />
-          <GroupedByDaySection />
           <ResumeSection />
+          <GroupedByDaySection />
           <GameToJoinSection />
           <PageByPageSection />
         </Box>
