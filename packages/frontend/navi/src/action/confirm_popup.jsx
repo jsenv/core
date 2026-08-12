@@ -9,36 +9,35 @@
  * reaches that path through confirm.js rather than being imported by it (see
  * that file for why).
  *
- * A Popover anchored on whatever requested the action (the button that was
- * pressed), not a modal dialog: the question is about that one control, and
- * showing it right there keeps the answer attached to what it answers for.
- * With no anchor it falls back to the center of the viewport, which is what
- * Popover already does for an anchor it cannot resolve.
+ * By default a Popover anchored on whatever requested the action (the button
+ * that was pressed): the question is about that one control, and showing it
+ * right there keeps the answer attached to what it answers for. An app that
+ * wants every confirmation to be a modal dialog instead says so once, with
+ * defineNaviConfirmPopupOptions({ mode: "dialog" }).
  *
  * The answer always comes from the popup closing, never from the button that
  * was pressed: Escape, a click outside and the cancel button are the same
- * event, and a caller replacing the body entirely (`content`) then has one
- * protocol to follow — `--navi-confirm` for yes, anything that closes for no.
+ * event, and a caller replacing the body entirely then has one protocol to
+ * follow — `--navi-confirm` for yes, anything that closes for no.
  */
 
 import { render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Button } from "../control/input/button.jsx";
+import { Dialog } from "../layout/dialog.jsx";
 import { Popover } from "../layout/popover.jsx";
 import { naviI18n } from "../text/navi_i18n.js";
 import { registerConfirmImplementation } from "./confirm.js";
 
 const css = /* css */ `
-  @layer navi {
-    .navi_confirm_popup {
-      --popover-max-width: var(--navi-confirm-popup-max-width);
-      --popover-min-width: var(--navi-confirm-popup-min-width);
-    }
-  }
-
+  /* The width lives on the body rather than on the popup, so that custom
+     content (which replaces this body entirely) sizes itself instead of
+     inheriting a ceiling meant for a sentence-long question. */
   .navi_confirm_popup_body {
     display: flex;
+    min-width: var(--navi-confirm-popup-min-width);
+    max-width: var(--navi-confirm-popup-max-width);
     padding: var(--navi-confirm-popup-padding);
     flex-direction: column;
     gap: var(--navi-confirm-popup-spacing);
@@ -50,6 +49,75 @@ const css = /* css */ `
     gap: var(--navi-confirm-popup-action-spacing);
   }
 `;
+
+/**
+ * How every confirmation in this app looks and behaves. Paddings, gaps and
+ * widths are CSS instead (`--navi-confirm-popup-*`, see navi_css_vars.js) —
+ * what lives here is what CSS cannot say.
+ *
+ * @typedef {object} NaviConfirmPopupOptions
+ * @property {"popover"|"dialog"} [mode] - `"popover"` (default) points the
+ *   question at the control that raised it. `"dialog"` centers it and makes the
+ *   rest of the page inert — for apps where a confirmation is always a full
+ *   stop, or where the control asking is often off-screen by then.
+ * @property {import("preact").ComponentChildren} [confirmLabel] - What the
+ *   "yes" button reads. Defaults to the translated `"button.confirm"`.
+ * @property {import("preact").ComponentChildren} [cancelLabel] - What the "no"
+ *   button reads. Defaults to the translated `"button.cancel"`.
+ * @property {"confirm"|"cancel"|false} [autoFocus] - Which button the keyboard
+ *   lands on. `"cancel"` is the careful choice for an app whose confirmations
+ *   guard destructive work: a stray Enter then answers no.
+ * @property {boolean|"auto"|"fading"|"scaling"|"sliding"} [animation] - How the
+ *   popup enters. `false` for no animation at all.
+ * @property {string} [animationDuration] - e.g. `"0.4s"`.
+ * @property {string} [positionArea] - Where the popup sits: relative to the
+ *   control it points at in `"popover"` mode, relative to the viewport in
+ *   `"dialog"` mode. See Popover/Dialog's own `positionArea`.
+ * @property {"close"|"cancel"|"capture"|"none"} [pointerInteractionOutsideEffect]
+ *   - What a click outside does. `"capture"`/`"none"` force an explicit answer
+ *   by refusing to treat a click elsewhere as one.
+ * @property {boolean} [dockedOnTouch] - `"dialog"` mode only: turn the popup
+ *   into a bottom sheet under a finger.
+ * @property {(params: { message: import("preact").ComponentChildren }) => import("preact").ComponentChildren} [renderContent]
+ *   - Replaces the popup body — the question and the two buttons — for every
+ *   confirmation at once. The per-button `confirmPopupContent` prop is the same
+ *   thing for one button. Whatever is returned answers with the
+ *   `--navi-confirm` and `--navi-cancel` commands.
+ */
+
+/** @type {NaviConfirmPopupOptions} */
+const confirmPopupOptions = {
+  mode: "popover",
+  confirmLabel: undefined,
+  cancelLabel: undefined,
+  autoFocus: "confirm",
+  animation: true,
+  animationDuration: undefined,
+  positionArea: undefined,
+  pointerInteractionOutsideEffect: "close",
+  dockedOnTouch: false,
+  renderContent: undefined,
+};
+
+/**
+ * Sets how confirmations look and behave, for the whole app. Merges into what
+ * was defined before, so unrelated options can be set from wherever they are
+ * decided.
+ *
+ * @example
+ * defineNaviConfirmPopupOptions({ mode: "dialog", autoFocus: "cancel" });
+ *
+ * @param {NaviConfirmPopupOptions} options
+ */
+export const defineNaviConfirmPopupOptions = (options) => {
+  for (const key of Object.keys(options)) {
+    if (!Object.hasOwn(confirmPopupOptions, key)) {
+      console.warn(`defineNaviConfirmPopupOptions: unknown option "${key}"`);
+      continue;
+    }
+    confirmPopupOptions[key] = options[key];
+  }
+};
 
 /**
  * Asks the user to confirm, in a popup anchored on `anchor`.
@@ -95,46 +163,89 @@ const UNMOUNT_DELAY_MS = 1000;
 const ConfirmPopup = ({ message, content, anchor, onAnswer, onClosed }) => {
   import.meta.css = css;
 
-  // Mount closed, open on the next tick: an entrance animation plays on a
-  // change, and a popup that mounts already open is treated as something that
-  // was always there (see open_controller.js's own `silent` first open).
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    setOpen(true);
-  }, []);
+  const {
+    mode,
+    confirmLabel,
+    cancelLabel,
+    autoFocus,
+    animation,
+    animationDuration,
+    positionArea,
+    pointerInteractionOutsideEffect,
+    dockedOnTouch,
+    renderContent,
+  } = confirmPopupOptions;
 
-  // Read once the popup has actually closed, so every way out — the buttons,
-  // Escape, a click outside — goes through the same single answer.
+  // Written by --navi-confirm on its way out, read once the popup has actually
+  // closed — so every way out (the buttons, Escape, a click outside) goes
+  // through the same single answer.
   const answerRef = useRef(false);
 
+  // defaultOpen="interaction": this tree is mounted because the user just
+  // pressed something, so the popup opening IS the interaction and its entrance
+  // plays (see open_controller.js).
+  const popupProps = {
+    defaultOpen: "interaction",
+    animation,
+    animationDuration,
+    positionArea,
+    pointerInteractionOutsideEffect,
+    onnavi_request_confirm: () => {
+      answerRef.current = true;
+    },
+    onClose: () => {
+      onAnswer(answerRef.current);
+      setTimeout(onClosed, UNMOUNT_DELAY_MS);
+    },
+  };
+  const body =
+    content ??
+    renderContent?.({ message }) ??
+    defaultBody(message, {
+      confirmLabel,
+      cancelLabel,
+      autoFocus,
+    });
+
+  if (mode === "dialog") {
+    return (
+      <Dialog
+        className="navi_confirm_popup"
+        dockedOnTouch={dockedOnTouch}
+        {...popupProps}
+      >
+        {body}
+      </Dialog>
+    );
+  }
   return (
     <Popover
       className="navi_confirm_popup"
-      open={open}
       anchor={anchor}
-      animation
       focusCapture
-      pointerInteractionOutsideEffect="close"
-      onnavi_request_confirm={() => {
-        answerRef.current = true;
-        setOpen(false);
-      }}
-      onClose={() => {
-        onAnswer(answerRef.current);
-        setTimeout(onClosed, UNMOUNT_DELAY_MS);
-      }}
+      {...popupProps}
     >
-      {content ?? (
-        <div className="navi_confirm_popup_body">
-          <div>{message}</div>
-          <div className="navi_confirm_popup_actions">
-            <Button command="--navi-cancel">{naviI18n("button.cancel")}</Button>
-            <Button cta autoFocus command="--navi-confirm">
-              {naviI18n("button.confirm")}
-            </Button>
-          </div>
-        </div>
-      )}
+      {body}
     </Popover>
+  );
+};
+
+const defaultBody = (message, { confirmLabel, cancelLabel, autoFocus }) => {
+  return (
+    <div className="navi_confirm_popup_body">
+      <div>{message}</div>
+      <div className="navi_confirm_popup_actions">
+        <Button command="--navi-cancel" autoFocus={autoFocus === "cancel"}>
+          {cancelLabel ?? naviI18n("button.cancel")}
+        </Button>
+        <Button
+          cta
+          command="--navi-confirm"
+          autoFocus={autoFocus === "confirm"}
+        >
+          {confirmLabel ?? naviI18n("button.confirm")}
+        </Button>
+      </div>
+    </div>
   );
 };

@@ -173,6 +173,7 @@
         Icon,
         Link,
         Text,
+        defineNaviConfirmPopupOptions,
         EyeSvg,
         EyeClosedSvg,
         NaviDebug,
@@ -690,8 +691,12 @@
                 <Button
                   confirm={
                     <>
-                      Delete <strong>rapport-2024.pdf</strong>? It is still{" "}
-                      <Link href="#confirm">shared with 3 people</Link>.
+                      Delete <strong>rapport-2024.pdf</strong>? Deleted files
+                      leave no copy behind —{" "}
+                      <Link href="https://docs.example.com/files/deleting">
+                        how deletion works
+                      </Link>
+                      .
                     </>
                   }
                   action={() => {
@@ -722,7 +727,9 @@
                       <Text bold>Delete rapport-2024.pdf?</Text>
                       <Box flex="y" spacing="xs">
                         <Text>Shared with 3 people.</Text>
-                        <Link href="#confirm">Review who has access</Link>
+                        <Link href="https://docs.example.com/files/deleting">
+                          Read this before deleting a shared file
+                        </Link>
                       </Box>
                       <Box flex="x" spacing="s" alignX="end">
                         <Button command="--navi-cancel">Keep the file</Button>
@@ -741,6 +748,123 @@
                 >
                   Delete
                 </Button>
+              </fieldset>
+            </div>
+
+            <div class="states-section">
+              <div class="states-title">defineNaviConfirmPopupOptions</div>
+              <p class="states-description">
+                Set once for the whole app, from anywhere. Every button below
+                asks the same question.
+              </p>
+
+              <fieldset>
+                <legend>mode</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Box flex="x" spacing="s">
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({ mode: "popover" });
+                      }}
+                    >
+                      mode: "popover"
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({ mode: "dialog" });
+                      }}
+                    >
+                      mode: "dialog"
+                    </Button>
+                  </Box>
+                  <Button
+                    confirm="Delete this file?"
+                    action={() => {
+                      push("Delete action");
+                    }}
+                    onActionAborted={() => {
+                      push("Delete aborted");
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>autoFocus</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Box flex="x" spacing="s">
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({ autoFocus: "confirm" });
+                      }}
+                    >
+                      autoFocus: "confirm"
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({ autoFocus: "cancel" });
+                      }}
+                    >
+                      autoFocus: "cancel"
+                    </Button>
+                  </Box>
+                  <Button
+                    confirm="Delete this file?"
+                    action={() => {
+                      push("Delete action");
+                    }}
+                    onActionAborted={() => {
+                      push("Delete aborted");
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>labels, animation, click outside</legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Box flex="x" spacing="s">
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({
+                          confirmLabel: "Delete",
+                          cancelLabel: "Keep",
+                          animationDuration: "0.6s",
+                          pointerInteractionOutsideEffect: "capture",
+                        });
+                      }}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        defineNaviConfirmPopupOptions({
+                          confirmLabel: undefined,
+                          cancelLabel: undefined,
+                          animationDuration: undefined,
+                          pointerInteractionOutsideEffect: "close",
+                        });
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </Box>
+                  <Button
+                    confirm="Delete this file?"
+                    action={() => {
+                      push("Delete action");
+                    }}
+                    onActionAborted={() => {
+                      push("Delete aborted");
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
               </fieldset>
             </div>
 

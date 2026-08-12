@@ -345,7 +345,7 @@ export const useOpenController = (openHandler) => {
 
 // Nested popups that both mount already-open (`open`/`defaultOpen`) would
 // otherwise stack in the wrong order: Preact fires layout effects
-// child-first on mount, so a nested popup's own silent mount-open would call
+// child-first on mount, so a nested popup's own mount-open would call
 // showPopover() before its ancestor's — and the top layer stacks *later*
 // showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
 // comment) — leaving the ancestor on top instead of the nested popup, the
@@ -361,18 +361,18 @@ export const useOpenController = (openHandler) => {
 // unrelated (sibling) popups both mounting open also get reordered
 // relative to each other, but there's no meaningful "correct" order between
 // those anyway.
-let pendingSilentOpens = [];
-let silentOpenFlushScheduled = false;
-const scheduleSilentOpen = (run) => {
-  pendingSilentOpens.push(run);
-  if (silentOpenFlushScheduled) {
+let pendingMountOpens = [];
+let mountOpenFlushScheduled = false;
+const scheduleMountOpen = (run) => {
+  pendingMountOpens.push(run);
+  if (mountOpenFlushScheduled) {
     return;
   }
-  silentOpenFlushScheduled = true;
+  mountOpenFlushScheduled = true;
   queueMicrotask(() => {
-    const entries = pendingSilentOpens;
-    pendingSilentOpens = [];
-    silentOpenFlushScheduled = false;
+    const entries = pendingMountOpens;
+    pendingMountOpens = [];
+    mountOpenFlushScheduled = false;
     for (let i = entries.length - 1; i >= 0; i--) {
       entries[i]();
     }
@@ -389,7 +389,7 @@ const scheduleSilentOpen = (run) => {
  * `requestOpen`/`requestClose` wrappers).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ open?: boolean, defaultOpen?: boolean }} props
+ * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction" }} props
  */
 export const useOpenPropsEffectOnOpenController = (openController, props) => {
   const { open, defaultOpen } = props;
@@ -405,17 +405,23 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
     isFirstRunRef.current = false;
 
     if (isFirstRun) {
-      if (open || defaultOpen) {
-        // silent: true — nothing was ever shown as "closed" for the user to
-        // see transition away from, so this first open skips the entrance
-        // animation entirely (see popover.jsx's own openEffect for how).
-        // Deferred + batched (see scheduleSilentOpen above) rather than
-        // called directly, so nested popups that both mount already-open
-        // end up stacked ancestor-first instead of Preact's own child-first
-        // effect order.
-        scheduleSilentOpen(() =>
+      const mountOpenReason = open || defaultOpen;
+      if (mountOpenReason) {
+        // Whether this popup being open is something that just happened, or
+        // something that was already true when the page appeared. "interaction"
+        // says the mount IS the opening — the popup exists because the user
+        // just asked for it — so the entrance plays like any other open. Any
+        // other truthy value means it was simply already open: nothing was ever
+        // shown as "closed" for the user to see it transition away from, so the
+        // entrance is skipped (`silent`, see popover.jsx's own openEffect).
+        //
+        // Deferred + batched (see scheduleMountOpen above) rather than called
+        // directly, so nested popups that both mount already-open end up
+        // stacked ancestor-first instead of Preact's own child-first effect
+        // order.
+        scheduleMountOpen(() =>
           openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
-            silent: true,
+            silent: mountOpenReason !== "interaction",
           }),
         );
       }
