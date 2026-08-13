@@ -24,7 +24,7 @@ const css = /* css */ `
       --border-color: var(--navi-control-border-color);
       --background-color: white;
       --background-color-checked: var(--background-color);
-      --accent-color: light-dark(#4476ff, #3b82f6);
+      --accent-color: var(--navi-control-accent-color);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;

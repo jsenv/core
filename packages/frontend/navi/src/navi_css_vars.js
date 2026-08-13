@@ -40,6 +40,14 @@ const css = /* css */ `
         var(--navi-control-border-radius),
         0.25em
       );
+      /* The color a control uses to say "this one is on": a checked checkbox,
+         a checked radio, an enabled switch. Kept apart from --navi-accent-color
+         (the brand color for CTA and selection) because a control that is on
+         must stay readable as a control, which usually means a brighter, more
+         saturated color than a brand accent.
+         The light value matches the browser's own accent so a navi control and
+         a native one can sit side by side without reading as two blues. */
+      --navi-control-accent-color: light-dark(rgb(24, 117, 255), #3b82f6);
       --navi-control-border-width: 1px;
       --navi-control-border-color: light-dark(#767676, #8e8e93);
       --navi-control-padding-x-default: 2px;

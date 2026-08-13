@@ -27,7 +27,7 @@ const css = /* css */ `
       --font-family: var(--navi-control-font-family);
 
       --loader-color: var(--navi-loader-color);
-      --accent-color: rgb(24, 117, 255);
+      --accent-color: var(--navi-control-accent-color);
       --color-mix-light: black;
       --color-mix-dark: white;
       --color-mix: var(--color-mix-dark);

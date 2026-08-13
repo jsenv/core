@@ -54,7 +54,9 @@ export const jsenvPluginDirectoryReferenceEffect = (
       } else {
         const directoryRelativeUrl = urlToRelativeUrl(
           reference.url,
-          reference.ownerUrlInfo.originalUrl,
+          // the root url info has no originalUrl; it owns the reference
+          // created for an incoming request ("http_request")
+          reference.ownerUrlInfo.originalUrl || reference.ownerUrlInfo.url,
         );
         reference.filenameHint = directoryRelativeUrl;
       }

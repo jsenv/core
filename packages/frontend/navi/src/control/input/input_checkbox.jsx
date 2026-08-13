@@ -24,7 +24,7 @@ const css = /* css */ `
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
       --background-color: white;
-      --accent-color: light-dark(#4476ff, #3b82f6);
+      --accent-color: var(--navi-control-accent-color);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --checkmark-color: white;

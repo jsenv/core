@@ -317,6 +317,14 @@ export const devServerPluginServeSourceFiles = ({
               !inlineParentUrlInfo &&
               !urlInfo.response &&
               urlInfo.content !== undefined &&
+              // content can be defined while a cook is still in flight (a file
+              // watcher invalidation re-cooking in the background, for
+              // instance): at that point it holds the raw fetched content,
+              // transformations not applied yet. Serving that would send an
+              // html without any of the injected scripts. Only finalized
+              // content is a complete response; anything else must go through
+              // cook() below, which joins the pending cook (see debounceCook).
+              urlInfo.contentFinalized &&
               !cacheIsDisabledInResponseHeader(urlInfo) &&
               // a "?hot" request exists to bypass every cache, this one
               // included: it must be cooked, because cooking is what rewrites
@@ -361,7 +369,10 @@ export const devServerPluginServeSourceFiles = ({
             }
             response = {
               url: reference.url,
-              status: 200,
+              // a plugin can cook a complete response body for an url that is
+              // not a 200: the directory listing does this to answer a request
+              // for a file that does not exist with the explorer page
+              status: urlInfo.status,
               headers: {
                 // when we send eTag to the client the next request to the server
                 // will send etag in request headers.

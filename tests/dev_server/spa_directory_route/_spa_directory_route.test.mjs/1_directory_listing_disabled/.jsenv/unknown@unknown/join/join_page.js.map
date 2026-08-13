@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "names": [
+    "joinPage"
+  ],
+  "sources": [
+    "base/client/join/join_page.js"
+  ],
+  "sourcesContent": [
+    "export const joinPage = \"join\";\n"
+  ],
+  "mappings": "AAAA,OAAO,MAAMA,QAAQ,GAAG,MAAM",
+  "ignoreList": []
+}

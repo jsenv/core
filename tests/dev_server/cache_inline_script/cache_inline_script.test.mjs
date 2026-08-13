@@ -23,10 +23,11 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await launchBrowserPage(browser);
-  const responses = [];
-  page.on("response", (response) => {
-    responses.push(response);
-  });
+  const inlineJsFileUrl = `${devServer.origin}/main.html@L10C5-L14C14.js?foo`;
+  // the inline script is fetched by the supervisor, which can happen after
+  // the "load" event; waiting for the response explicitly avoids a race
+  // where page.reload() resolves before the request is even made
+  const waitForInlineJsResponse = () => page.waitForResponse(inlineJsFileUrl);
   await page.goto(`${devServer.origin}/main.html?foo`);
   const getResult = async () => {
     const result = await page.evaluate(
@@ -45,14 +46,9 @@ try {
 
   // now reload, expect 304
   {
-    responses.length = 0;
+    const inlineJsResponsePromise = waitForInlineJsResponse();
     await page.reload();
-    const responseForInlineJsFile = responses.find((response) => {
-      const urlCandidate = response.url();
-      return (
-        urlCandidate === `${devServer.origin}/main.html@L10C5-L14C14.js?foo`
-      );
-    });
+    const responseForInlineJsFile = await inlineJsResponsePromise;
     const inlineJsResponseStatus = responseForInlineJsFile.status();
     const answer = await getResult();
     const actual = {
@@ -69,7 +65,6 @@ try {
   // change original file content
   // then reload, expect 200 + correct content served
   {
-    responses.length = 0;
     htmlFileContent.update(
       String(htmlFileContent.beforeTest).replace(
         "window.resolveResultPromise(42);",
@@ -77,13 +72,9 @@ try {
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
+    const inlineJsResponsePromise = waitForInlineJsResponse();
     await page.reload();
-    const responseForInlineJsFile = responses.find((response) => {
-      const urlCandidate = response.url();
-      return (
-        urlCandidate === `${devServer.origin}/main.html@L10C5-L14C14.js?foo`
-      );
-    });
+    const responseForInlineJsFile = await inlineJsResponsePromise;
     const inlineJsResponseStatus = responseForInlineJsFile.status();
     const answer = await getResult();
     const actual = {

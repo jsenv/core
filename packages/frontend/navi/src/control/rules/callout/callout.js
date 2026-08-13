@@ -232,6 +232,25 @@ const css = /* css */ `
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
  * @param {boolean} [options.debug=false] - Enable debug logging
+ *
+ * Positioning is also driven by attributes read on the anchor element itself
+ * (so markup can tune a callout without going through this function):
+ * - `data-callout-arrow-x="start" | "center" | "end"`: where the arrow points
+ *   horizontally along the anchor — `start`/`end` target the left/right edge of
+ *   the anchor's text content (inside its borders and padding), `center` targets
+ *   the middle of the anchor. Without it the arrow follows the anchor's computed
+ *   `text-align` (`center` → center, `right`/`end` → end, anything else → start),
+ *   so it lands where the text visually begins. The arrow is always clamped to
+ *   stay within the callout's own rounded corners, so a value pointing outside
+ *   the callout's width sticks to the nearest side.
+ * - `data-callout-position="top" | "bottom" | …`: preferred side of the anchor
+ *   (defaults to `"bottom"`, flipped when there isn't enough space).
+ * - `data-callout-position-fixed`: opt out of that flipping.
+ * - `data-callout-anchor="<selector>"`: point at an inner element instead of the
+ *   anchor itself.
+ * - `data-callout-point-to-border-box` / `data-callout-point-to-content-box`:
+ *   which box the callout aligns to.
+ * - `data-callout-viewport-spacing="<number>"`: minimum gap with the viewport edges.
  * @returns {Object} - Callout object with properties:
  *   - {Function} close - Function to close the callout
  *   - {Function} update - Function to update message and options
