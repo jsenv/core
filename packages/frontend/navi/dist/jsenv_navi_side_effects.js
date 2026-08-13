@@ -136,6 +136,14 @@ const css = /* css */`
         var(--navi-control-border-radius),
         0.25em
       );
+      /* The color a control uses to say "this one is on": a checked checkbox,
+         a checked radio, an enabled switch. Kept apart from --navi-accent-color
+         (the brand color for CTA and selection) because a control that is on
+         must stay readable as a control, which usually means a brighter, more
+         saturated color than a brand accent.
+         The light value matches the browser's own accent so a navi control and
+         a native one can sit side by side without reading as two blues. */
+      --navi-control-accent-color: light-dark(rgb(24, 117, 255), #3b82f6);
       --navi-control-border-width: 1px;
       --navi-control-border-color: light-dark(#767676, #8e8e93);
       --navi-control-padding-x-default: 2px;
@@ -176,6 +184,19 @@ const css = /* css */`
       --navi-confirm-popup-action-spacing: var(--navi-s);
       --navi-confirm-popup-min-width: 180px;
       --navi-confirm-popup-max-width: 320px;
+
+      /* Link colors. They live here rather than only on .navi_link because a
+         var declared on the element itself always beats the same var inherited
+         from an ancestor: a page setting --link-color-pressed on :root would
+         never reach a link. These :root tokens are the theme-level surface;
+         --link-color-* stays the per-link (or per-subtree) override. */
+      --navi-link-color: rgb(0, 0, 238);
+      /* --navi-link-color-visited is intentionally left undefined: by default a
+         visited link is derived from whatever --link-color ended up being on
+         the link itself (see link.jsx), which a :root token cannot see. Set it
+         here from an app to pin one visited color for every link. */
+      --navi-link-color-pressed: red;
+      --navi-link-current-indicator-color: rgb(205, 52, 37);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;

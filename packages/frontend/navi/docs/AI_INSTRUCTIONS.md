@@ -36,6 +36,10 @@ consistency across the app, not from any single call site.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).
+- `docs/scroll.md` — where scrolling happens: what turns `Box`
+  `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, and
+  scroll inside a `Dialog`/`Popover`. Read it before writing CSS to make
+  something scroll — navi almost certainly already has the prop.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src

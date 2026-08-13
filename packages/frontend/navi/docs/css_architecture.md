@@ -32,14 +32,16 @@ Navi components are styled through a combination of CSS custom properties (varia
 
 CSS cascade layers are ordered below unlayered styles. Anything declared in `@layer navi` is automatically beaten by any unlayered rule from the page or a design system, without needing `!important`.
 
-This means an app can override a Navi default simply by setting the variable anywhere in its own unlayered CSS:
+This means an app can override a Navi default from its own unlayered CSS, without `!important`, as long as its selector targets the same element the default was declared on:
 
 ```css
 /* App CSS — no layer needed, automatically wins over @layer navi */
-:root {
+.navi_button {
   --button-height: 40px;
 }
 ```
+
+Targeting the same element is not a detail — see [`--navi-*` vs `--component-*`](#--navi-vs---component-where-the-override-has-to-go) below.
 
 ### Why actual rules stay outside any layer
 
@@ -71,11 +73,52 @@ When the same change applies to many components (e.g. a design token update), se
 /* Override Navi's default at the page or theme level */
 :root {
   --navi-s: 6px; /* spacing token */
-  --button-height: 40px;
 }
 ```
 
-Because Navi defaults live in `@layer navi`, this unlayered `:root` rule wins automatically.
+Because Navi's `--navi-*` defaults are themselves declared on `:root` inside `@layer navi`, this unlayered `:root` rule targets the same element and wins automatically.
+
+#### `--navi-*` vs `--component-*`: where the override has to go
+
+The two families are **not** interchangeable, and layers have nothing to do with it:
+
+| Token           | Declared on             | Overridable from `:root`?       |
+| --------------- | ----------------------- | ------------------------------- |
+| `--navi-*`      | `:root` (`@layer navi`) | Yes                             |
+| `--component-*` | `.navi_<component>`     | **No** — must match the element |
+
+For a custom property, a declaration made **on the element itself** always beats the same property **inherited** from an ancestor. The cascade (specificity, layers, `!important`) only arbitrates between declarations targeting the same element — it never lets an ancestor win over the element's own declaration.
+
+So this does nothing, because `.navi_link` declares `--link-color-pressed` on itself:
+
+```css
+:root {
+  --link-color-pressed: blue; /* ignored: never reaches .navi_link */
+}
+```
+
+Three ways to actually change it:
+
+```css
+/* 1. The theme-level token (preferred) — declared on :root, so :root wins */
+:root {
+  --navi-link-color-pressed: blue;
+}
+
+/* 2. An unlayered rule that matches the links themselves */
+.my-sidebar .navi_link {
+  --link-color-pressed: blue;
+}
+```
+
+```jsx
+/* 3. Per instance */
+<Link style={{ "--link-color-pressed": "blue" }} />
+```
+
+Note that scoping to an ancestor is not enough: `.my-sidebar { --link-color-pressed: blue }` fails for the same reason `:root` does. The selector has to reach the link element itself.
+
+When a component default deserves to be themed globally, promote it: declare a `--navi-<component>-<thing>` in [navi_css_vars.js](../src/navi_css_vars.js) and make the component default read `var(--navi-…)`.
 
 ### 3. Direct rule override (avoid unless necessary)
 
@@ -85,9 +128,9 @@ Overriding the actual CSS rules (not the variables) is intentionally hard — th
 
 ## Summary
 
-| What you want to change      | How to do it                           |
-| ---------------------------- | -------------------------------------- |
-| One component instance       | Component prop or `style` attribute    |
-| All instances of a component | CSS variable in unlayered app CSS      |
-| A global design token        | CSS variable on `:root`                |
-| A structural layout rule     | Expose a new CSS variable (contribute) |
+| What you want to change      | How to do it                                                               |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| One component instance       | Component prop or `style` attribute                                        |
+| All instances of a component | `--component-*` in unlayered app CSS, on a selector matching the component |
+| A global design token        | `--navi-*` on `:root`                                                      |
+| A structural layout rule     | Expose a new CSS variable (contribute)                                     |

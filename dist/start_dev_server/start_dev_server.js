@@ -4075,6 +4075,9 @@ const jsenvPluginFsRedirection = ({
       const { search, hash } = urlObject;
       urlObject.search = "";
       urlObject.hash = "";
+      // must be read before applyFsStatEffectsOnUrlObject which forces the
+      // trailing slash on directories
+      const specifierUsesTrailingSlash = urlObject.pathname.endsWith("/");
       applyFsStatEffectsOnUrlObject(urlObject, fsStat);
       const shouldApplyFilesystemMagicResolution =
         reference.type === "js_import";
@@ -4104,20 +4107,16 @@ const jsenvPluginFsRedirection = ({
             // url has an extension, we assume it's a file request -> let 404 happen
             return null;
           }
-          const { requestedUrl, rootDirectoryUrl, mainFilePath } =
-            reference.ownerUrlInfo.context;
-          if (!requestedUrl) {
-            // the SPA fallback answers a request; during build there is none
+          if (specifierUsesTrailingSlash) {
+            // the trailing slash asks for a directory and there is none here
+            // -> let 404 happen (same reasoning as the extension above)
             return null;
           }
-          const closestHtmlRootFile = getClosestHtmlRootFile(
-            requestedUrl,
-            rootDirectoryUrl,
-          );
-          if (closestHtmlRootFile) {
-            return closestHtmlRootFile;
+          const spaFallbackUrl = getSpaFallbackUrl(reference);
+          if (spaFallbackUrl) {
+            return spaFallbackUrl;
           }
-          return new URL(mainFilePath, rootDirectoryUrl);
+          return null;
         }
         if (fsStat.isDirectory()) {
           // When requesting a directory, check if we have an HTML entry file for that directory
@@ -4125,6 +4124,21 @@ const jsenvPluginFsRedirection = ({
           if (directoryEntryFileUrl) {
             reference.fsStat = readEntryStatSync(directoryEntryFileUrl);
             return directoryEntryFileUrl;
+          }
+          if (!specifierUsesTrailingSlash) {
+            // the trailing slash is what tells a directory apart from a route:
+            // "/join/" is the directory, "/join" is a route owned by the SPA
+            // even when "join/" exists in the source files.
+            // Without this a source directory would shadow the route having
+            // the same name and the SPA would be unreachable in dev while
+            // being perfectly fine once built
+            const spaFallbackUrl = getSpaFallbackUrl(reference);
+            if (spaFallbackUrl) {
+              reference.fsStat = readEntryStatSync(spaFallbackUrl, {
+                nullIfNotFound: true,
+              });
+              return spaFallbackUrl;
+            }
           }
         }
       }
@@ -4187,6 +4201,22 @@ const getDirectoryEntryFileUrl = (directoryUrl) => {
     return htmlFileUrlCandidate.href;
   }
   return null;
+};
+const getSpaFallbackUrl = (reference) => {
+  const { requestedUrl, rootDirectoryUrl, mainFilePath } =
+    reference.ownerUrlInfo.context;
+  if (!requestedUrl) {
+    // the SPA fallback answers a request; during build there is none
+    return null;
+  }
+  const closestHtmlRootFile = getClosestHtmlRootFile(
+    requestedUrl,
+    rootDirectoryUrl,
+  );
+  if (closestHtmlRootFile) {
+    return closestHtmlRootFile;
+  }
+  return String(new URL(mainFilePath, rootDirectoryUrl));
 };
 const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
   let directoryUrl = new URL("./", requestedUrl);
@@ -4995,7 +5025,9 @@ const jsenvPluginDirectoryReferenceEffect = (
       } else if (reference.specifierPathname.endsWith("./")) ; else {
         const directoryRelativeUrl = urlToRelativeUrl(
           reference.url,
-          reference.ownerUrlInfo.originalUrl,
+          // the root url info has no originalUrl; it owns the reference
+          // created for an incoming request ("http_request")
+          reference.ownerUrlInfo.originalUrl || reference.ownerUrlInfo.url,
         );
         reference.filenameHint = directoryRelativeUrl;
       }
@@ -11421,6 +11453,14 @@ const devServerPluginServeSourceFiles = ({
               !inlineParentUrlInfo &&
               !urlInfo.response &&
               urlInfo.content !== undefined &&
+              // content can be defined while a cook is still in flight (a file
+              // watcher invalidation re-cooking in the background, for
+              // instance): at that point it holds the raw fetched content,
+              // transformations not applied yet. Serving that would send an
+              // html without any of the injected scripts. Only finalized
+              // content is a complete response; anything else must go through
+              // cook() below, which joins the pending cook (see debounceCook).
+              urlInfo.contentFinalized &&
               !cacheIsDisabledInResponseHeader(urlInfo) &&
               // a "?hot" request exists to bypass every cache, this one
               // included: it must be cooked, because cooking is what rewrites
@@ -11465,7 +11505,10 @@ const devServerPluginServeSourceFiles = ({
             }
             response = {
               url: reference.url,
-              status: 200,
+              // a plugin can cook a complete response body for an url that is
+              // not a 200: the directory listing does this to answer a request
+              // for a file that does not exist with the explorer page
+              status: urlInfo.status,
               headers: {
                 // when we send eTag to the client the next request to the server
                 // will send etag in request headers.

@@ -7029,24 +7029,45 @@ const getScrollport = (scrollBox, scrollContainer) => {
   };
 };
 
-// https://davidwalsh.name/detect-scrollbar-width
+/**
+ * Returns [verticalScrollbarWidth, horizontalScrollbarHeight] as currently
+ * rendered by `scrollableElement`, in px. Returns zeros when the element has no
+ * classic scrollbar: no overflow, overlay scrollbars, `scrollbar-width: none`,
+ * or a `::-webkit-scrollbar { display: none }` rule.
+ *
+ * The measurement is taken on the element itself (its own border box versus its
+ * own content box) rather than on a probe node appended inside it. A probe
+ * cannot answer this question: `scrollbar-width` and `::-webkit-scrollbar` are
+ * not inherited, so a probe reports the platform default scrollbar size even
+ * when the element renders no scrollbar at all.
+ */
 const measureScrollbar = (scrollableElement) => {
-  const hasXScrollbar =
-    scrollableElement.scrollHeight > scrollableElement.clientHeight;
-  const hasYScrollbar =
-    scrollableElement.scrollWidth > scrollableElement.clientWidth;
-  if (!hasXScrollbar && !hasYScrollbar) {
-    return [0, 0];
+  if (
+    scrollableElement === document.documentElement ||
+    scrollableElement === document.scrollingElement
+  ) {
+    // documentElement.clientWidth/Height report the viewport minus its
+    // scrollbars, not this element's own box (which `max-width` can shrink), so
+    // the border box to compare against is the window itself.
+    return [
+      snapToPixel(window.innerWidth - document.documentElement.clientWidth),
+      snapToPixel(window.innerHeight - document.documentElement.clientHeight),
+    ];
   }
-  const scrollDiv = document.createElement("div");
-  scrollDiv.style.cssText = `position: absolute; width: 100px; height: 100px; overflow: scroll; pointer-events: none; visibility: hidden;`;
-  scrollableElement.appendChild(scrollDiv);
-  const scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
-  const scrollbarHeight = scrollDiv.offsetHeight - scrollDiv.clientHeight;
-  scrollableElement.removeChild(scrollDiv);
+  const { left, right, top, bottom } = getBorderSizes(scrollableElement);
+  const scrollbarWidth =
+    scrollableElement.offsetWidth -
+    scrollableElement.clientWidth -
+    left -
+    right;
+  const scrollbarHeight =
+    scrollableElement.offsetHeight -
+    scrollableElement.clientHeight -
+    top -
+    bottom;
   return [
-    hasXScrollbar ? snapToPixel(scrollbarWidth) : 0,
-    hasYScrollbar ? snapToPixel(scrollbarHeight) : 0,
+    scrollbarWidth > 0 ? snapToPixel(scrollbarWidth) : 0,
+    scrollbarHeight > 0 ? snapToPixel(scrollbarHeight) : 0,
   ];
 };
 

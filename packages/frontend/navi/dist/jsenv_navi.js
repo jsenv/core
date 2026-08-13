@@ -13764,6 +13764,25 @@ const css$V = /* css */`
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
  * @param {boolean} [options.debug=false] - Enable debug logging
+ *
+ * Positioning is also driven by attributes read on the anchor element itself
+ * (so markup can tune a callout without going through this function):
+ * - `data-callout-arrow-x="start" | "center" | "end"`: where the arrow points
+ *   horizontally along the anchor — `start`/`end` target the left/right edge of
+ *   the anchor's text content (inside its borders and padding), `center` targets
+ *   the middle of the anchor. Without it the arrow follows the anchor's computed
+ *   `text-align` (`center` → center, `right`/`end` → end, anything else → start),
+ *   so it lands where the text visually begins. The arrow is always clamped to
+ *   stay within the callout's own rounded corners, so a value pointing outside
+ *   the callout's width sticks to the nearest side.
+ * - `data-callout-position="top" | "bottom" | …`: preferred side of the anchor
+ *   (defaults to `"bottom"`, flipped when there isn't enough space).
+ * - `data-callout-position-fixed`: opt out of that flipping.
+ * - `data-callout-anchor="<selector>"`: point at an inner element instead of the
+ *   anchor itself.
+ * - `data-callout-point-to-border-box` / `data-callout-point-to-content-box`:
+ *   which box the callout aligns to.
+ * - `data-callout-viewport-spacing="<number>"`: minimum gap with the viewport edges.
  * @returns {Object} - Callout object with properties:
  *   - {Function} close - Function to close the callout
  *   - {Function} update - Function to update message and options
@@ -35842,10 +35861,13 @@ installImportMetaCssBuild(import.meta);const css$N = /* css */`
       --link-background: unset;
       --link-background-current: unset;
       --link-background-selected: light-dark(#bbdefb, #2563eb);
-      --link-color: rgb(0, 0, 238);
-      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
+      --link-color: var(--navi-link-color);
+      --link-color-visited: var(
+        --navi-link-color-visited,
+        color-mix(in srgb, var(--link-color), black 40%)
+      );
 
-      --link-color-pressed: red;
+      --link-color-pressed: var(--navi-link-color-pressed);
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
@@ -35854,7 +35876,7 @@ installImportMetaCssBuild(import.meta);const css$N = /* css */`
 
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;
-      --link-current-indicator-color: rgb(205, 52, 37);
+      --link-current-indicator-color: var(--navi-link-current-indicator-color);
     }
   }
 
@@ -38898,7 +38920,7 @@ installImportMetaCssBuild(import.meta);const css$F = /* css */`
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
       --background-color: white;
-      --accent-color: light-dark(#4476ff, #3b82f6);
+      --accent-color: var(--navi-control-accent-color);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --checkmark-color: white;
@@ -39638,7 +39660,7 @@ installImportMetaCssBuild(import.meta);const css$D = /* css */`
       --border-color: var(--navi-control-border-color);
       --background-color: white;
       --background-color-checked: var(--background-color);
-      --accent-color: light-dark(#4476ff, #3b82f6);
+      --accent-color: var(--navi-control-accent-color);
       --radiomark-color: var(--accent-color);
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
@@ -40150,7 +40172,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
       --font-family: var(--navi-control-font-family);
 
       --loader-color: var(--navi-loader-color);
-      --accent-color: rgb(24, 117, 255);
+      --accent-color: var(--navi-control-accent-color);
       --color-mix-light: black;
       --color-mix-dark: white;
       --color-mix: var(--color-mix-dark);
@@ -42983,6 +43005,13 @@ installImportMetaCssBuild(import.meta);/**
  * the map one would have drawn for a line, so it is drawn here and everything
  * below only ever knows about maps.
  *
+ * A travel is ONE BOX long, whatever the distance between the two slides on the
+ * map: the slide arriving is placed next to the one being left for the duration
+ * and put back where the map says afterwards, so a tab bar jumping from the
+ * first tab to the last shows those two and nothing else. Nobody wants to watch
+ * the slides in between fly past — least of all in a tab bar, where they are
+ * not a road one travels but places one goes straight to.
+ *
  * The slides live INSIDE the box, which is what makes this work for a popup: a
  * dialog and a popover are both promoted to the browser's top layer, so no
  * container of ours could ever hold two of them side by side and translate the
@@ -43085,6 +43114,18 @@ const css$z = /* css */`
            distance the track travels is exactly the distance between two
            slides. */
         translate: var(--slide-offset, 0);
+      }
+      /* Off stage: everything but the slide one is looking at and, while the
+         track moves, the slide one is leaving. A travel is one box long
+         whatever the distance on the map (the two are placed a box apart for
+         the occasion, see the layout effect), so the slides in between are
+         never crossed — but on a map wider than one box they would still sit
+         in the frame, and a tab bar jumping from the first tab to the last must
+         show those two and nothing else.
+         visibility, not display: this box is measured on its LARGEST slide, and
+         a slide taken out of the layout would take its size out with it. */
+      > [data-slide][data-slide-offstage] {
+        visibility: hidden;
       }
       /* Nothing here for a slide not on screen: [inert] (set from JS) already
          takes it out of reach of the pointer, of Tab and of a screen reader —
@@ -43317,6 +43358,25 @@ const SlideContainer = ({
   // mid-travel would read a moving value.
   const offsetRef = useRef();
   const trackAnimationRef = useRef(null);
+  // Where the slides are while the track moves, which is not where the map says
+  // they are: the one being left stays put and the one arriving is placed ONE
+  // BOX away from it, whichever way the travel goes and however far apart the
+  // two are on the map. So a jump from the first tab to the last is one box of
+  // travel and the tabs in between are never seen flying past — and everything
+  // not in this map is off stage for the duration. Null at rest, when the map
+  // is the whole truth again (see settleTravel).
+  const stageRef = useRef(null);
+  // Which slide the last drawing put on screen: the current one at rest, the
+  // one being travelled TO while the track moves. What the next travel departs
+  // from, because it is what one is looking at.
+  const drawnAreaRef = useRef(undefined);
+  // Which way the travel about to be drawn goes, when whatever asked for it
+  // knows: a window stepping off its last slide comes back on its first, and
+  // only the press says that is a step forward — the map, read between those
+  // two places, says the opposite. Undefined for a travel asked for by name
+  // (--navi-go-to-slide, --navi-back), where the map is the only thing that
+  // knows and is right.
+  const travelStepRef = useRef(null);
   // What to do once the travel now starting is over, handed to the animation as
   // soon as there is one.
   const rollBackRef = useRef(null);
@@ -43418,6 +43478,52 @@ const SlideContainer = ({
     }
   };
 
+  // The travel is over: the stage is struck and every slide goes back where the
+  // map says it is. Nothing is seen moving for it — the slide on screen sits at
+  // the same place whatever the arrangement (its own offset and the track's are
+  // opposites and cancel out), and the others are off stage — as long as the
+  // two are written in one go, which is why this is done here rather than left
+  // to a render.
+  const settleTravel = () => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    const {
+      slideElements,
+      placeOf
+    } = readMap();
+    const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current"));
+    if (!currentElement) {
+      return;
+    }
+    stageRef.current = null;
+    trackAnimationRef.current = null;
+    for (const slideElement of slideElements) {
+      const {
+        x,
+        y
+      } = placeOf.get(readArea(slideElement)) || {
+        x: 0,
+        y: 0
+      };
+      slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
+      slideElement.toggleAttribute("data-slide-offstage", slideElement !== currentElement);
+    }
+    const currentArea = readArea(currentElement);
+    drawnAreaRef.current = currentArea;
+    const {
+      x,
+      y
+    } = placeOf.get(currentArea) || {
+      x: 0,
+      y: 0
+    };
+    const offset = `${-x * 100}% ${-y * 100}%`;
+    offsetRef.current = offset;
+    track.style.setProperty("--slide-container-offset", offset);
+  };
+
   // Everything positional is decided here, from the DOM, once per render: where
   // each slide stands on the map, which one is current, and how far the track
   // must be for that one to be the one on screen. Reading the DOM is what makes
@@ -43435,10 +43541,59 @@ const SlideContainer = ({
     // Nothing named, or a name nothing answers to: the first slide is the one
     // shown, the way a stack of pages opens on its first page.
     slideElements[0];
-    const currentPlace = placeOf.get(readArea(currentElement)) || {
+    const currentArea = readArea(currentElement);
+    const realPlaceOf = area => placeOf.get(area) || {
       x: 0,
       y: 0
     };
+    const durationMs = durationToMs(duration);
+    // Nothing is travelling, so nothing is staged: the picture to paint is the
+    // map itself, and a stage left over from a travel that has just been given
+    // up on would be painted instead of it.
+    if (noTravel) {
+      stageRef.current = null;
+    }
+    let stage = stageRef.current;
+    const drawnArea = stage ? stage.area : drawnAreaRef.current;
+    const travelStarts = !noTravel && durationMs > 0 && drawnArea !== undefined && drawnArea !== currentArea && slideElements.some(slideElement => readArea(slideElement) === drawnArea);
+    if (travelStarts) {
+      // Where the slide being left IS — the place the stage gave it if a travel
+      // was already playing (a press landing mid-travel departs from where the
+      // eye is, not from the map), its own place otherwise.
+      const departurePlace = stage ? stage.placeByArea.get(drawnArea) ?? realPlaceOf(drawnArea) : realPlaceOf(drawnArea);
+      const step = travelStepRef.current || {
+        x: Math.sign(realPlaceOf(currentArea).x - realPlaceOf(drawnArea).x),
+        y: Math.sign(realPlaceOf(currentArea).y - realPlaceOf(drawnArea).y)
+      };
+      // Kept, not replaced: the slides a chain of quick presses has already
+      // left behind are still trailing off screen, and taking them off stage
+      // now would blink them out mid-travel.
+      const placeByArea = new Map(stage?.placeByArea);
+      placeByArea.set(drawnArea, departurePlace);
+      const arrivalPlace = {
+        x: departurePlace.x + step.x,
+        y: departurePlace.y + step.y
+      };
+      // The cell the arriving slide takes, taken back from whoever was left
+      // standing on it: a travel turned around mid-flight comes back over
+      // ground it has just covered, and the slide it left there would be
+      // underneath the one arriving — two pictures in one box.
+      for (const [stagedArea, stagedPlace] of placeByArea) {
+        if (stagedArea !== drawnArea && stagedArea !== currentArea && stagedPlace.x === arrivalPlace.x && stagedPlace.y === arrivalPlace.y) {
+          placeByArea.delete(stagedArea);
+        }
+      }
+      placeByArea.set(currentArea, arrivalPlace);
+      stage = stageRef.current = {
+        placeByArea,
+        area: currentArea
+      };
+    }
+    // Said about the travel now being drawn and about no other: a re-render in
+    // the middle of one reads the stage back, which already knows.
+    travelStepRef.current = null;
+    const placeOfArea = area => stage && stage.placeByArea.get(area) || realPlaceOf(area);
+    const currentPlace = placeOfArea(currentArea);
     // A transfer waiting for a travel that never happened — a controlled
     // `current` the caller chose not to move: dropped, the focus has no
     // business going anywhere. The one for a travel that DID happen stays,
@@ -43454,17 +43609,18 @@ const SlideContainer = ({
     // and that one knows what was pressed.
     const focusIsLeaving = !focusHandOverRef.current && slideElements.some(slideElement => slideElement !== currentElement && slideElement.contains(document.activeElement));
     for (const slideElement of slideElements) {
+      const area = readArea(slideElement);
       const {
         x,
         y
-      } = placeOf.get(readArea(slideElement)) || {
-        x: 0,
-        y: 0
-      };
+      } = placeOfArea(area);
       slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
       const isCurrent = slideElement === currentElement;
       slideElement.toggleAttribute("data-current", isCurrent);
       slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
+      // On stage: the two ends of the travel while there is one, and the slide
+      // being shown when there is not.
+      slideElement.toggleAttribute("data-slide-offstage", stage ? !stage.placeByArea.has(area) : !isCurrent);
       if (isCurrent) {
         // Reachable again first, so the focus below has somewhere to land: an
         // inert element cannot take it.
@@ -43491,7 +43647,6 @@ const SlideContainer = ({
     // Where the track ends up, always — the animation below only covers the way
     // there, and when it is over this is what holds.
     track.style.setProperty("--slide-container-offset", offset);
-    const durationMs = durationToMs(duration);
     const travels = !noTravel && durationMs > 0 && offsetBefore !== undefined && offsetBefore !== offset;
     if (travels) {
       // The time it takes is the distance it has left to cover: a travel picked
@@ -43522,6 +43677,18 @@ const SlideContainer = ({
       if (pendingRollsRef.current.length) {
         hurryTravel(trackAnimationRef.current);
       }
+      // Arrived: the map is the truth again (see settleTravel). Attached before
+      // the window's own roll back just below, so the stage is struck first and
+      // whatever that one renders is drawn from the map.
+      trackAnimationRef.current.finished.then(settleTravel, () => {
+        // cancelled by the next travel — that one carries the stage on
+      });
+    } else if (stage && trackAnimationRef.current?.playState !== "running") {
+      // Staged with nothing left to play: a travel that was drawn and then had
+      // its animation taken away (a duration set to 0, a re-render landing
+      // between the two). Struck at once rather than left standing, since the
+      // thing it was standing for is over.
+      settleTravel();
     }
     // A window waiting for its travel to be over (see goToArea's own loop
     // branch): the animation says when, and says it about the move that just
@@ -43557,6 +43724,13 @@ const SlideContainer = ({
     // leave the focus on nothing.
     for (const slideElement of slideElements) {
       slideElement.toggleAttribute("inert", slideElement !== currentElement);
+    }
+    // What is on screen now, for the travel after this one to depart from.
+    // While a travel is playing the stage is the one that knows (it holds the
+    // slide being travelled TO, which is what one is looking at), so this is
+    // only ever written at rest.
+    if (!stageRef.current) {
+      drawnAreaRef.current = currentArea;
     }
   });
 
@@ -43652,6 +43826,15 @@ const SlideContainer = ({
       ...cameFromRef.current,
       [area]: readArea(currentElement)
     };
+    // Which way this travel is drawn, said by what asked for it rather than
+    // read off the map: a window stepping off its last slide comes back on its
+    // first, and between those two places the map says "all the way back" when
+    // the press said "one forward". Nothing to say when the travel was asked
+    // for by name — there the map is the only one who knows.
+    travelStepRef.current = dx || dy ? {
+      x: Math.sign(dx),
+      y: Math.sign(dy)
+    } : null;
     if (loop) {
       // A window does not change slide, it rolls: the travel plays, and once it
       // is over the window is put back where it rests while whoever owns the

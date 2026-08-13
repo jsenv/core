@@ -89,6 +89,19 @@ const css = /* css */ `
       --navi-confirm-popup-min-width: 180px;
       --navi-confirm-popup-max-width: 320px;
 
+      /* Link colors. They live here rather than only on .navi_link because a
+         var declared on the element itself always beats the same var inherited
+         from an ancestor: a page setting --link-color-pressed on :root would
+         never reach a link. These :root tokens are the theme-level surface;
+         --link-color-* stays the per-link (or per-subtree) override. */
+      --navi-link-color: rgb(0, 0, 238);
+      /* --navi-link-color-visited is intentionally left undefined: by default a
+         visited link is derived from whatever --link-color ended up being on
+         the link itself (see link.jsx), which a :root token cannot see. Set it
+         here from an app to pin one visited color for every link. */
+      --navi-link-color-pressed: red;
+      --navi-link-current-indicator-color: rgb(205, 52, 37);
+
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
       /* Accent color — used for call-to-action buttons and selected list items.

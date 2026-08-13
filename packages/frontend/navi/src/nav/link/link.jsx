@@ -42,10 +42,13 @@ const css = /* css */ `
       --link-background: unset;
       --link-background-current: unset;
       --link-background-selected: light-dark(#bbdefb, #2563eb);
-      --link-color: rgb(0, 0, 238);
-      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
+      --link-color: var(--navi-link-color);
+      --link-color-visited: var(
+        --navi-link-color-visited,
+        color-mix(in srgb, var(--link-color), black 40%)
+      );
 
-      --link-color-pressed: red;
+      --link-color-pressed: var(--navi-link-color-pressed);
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
@@ -54,7 +57,7 @@ const css = /* css */ `
 
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;
-      --link-current-indicator-color: rgb(205, 52, 37);
+      --link-current-indicator-color: var(--navi-link-current-indicator-color);
     }
   }
 
