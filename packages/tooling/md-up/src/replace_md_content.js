@@ -280,7 +280,7 @@ export const generatePrevNextNav = (
       ${escapeHtml(currentTitle)}
     </td>
   </tr>
-<table></table>`;
+</table>`;
   }
   // between
   const currentTitle = extractMarkdownFileTitle(markdownFile);

@@ -343,17 +343,105 @@ With the overlay disabled, the browser devtools must be opened to see the error:
 
 ## 2.6 Autoreload
 
-The dev server automatically applies changes when files are saved. Some updates can be applied without reloading the page, while others trigger a full reload.
+The dev server watches source files and tells the browser to apply changes when a file is saved. There are two ways a change can be applied:
 
-TODO:
+- **Partial reload**: only the files that changed are replaced; the page is not reloaded and its state is preserved.
+- **Full reload**: the page is reloaded, as if pressing the reload button.
 
-- [ ] Explain what is "partial reload" + when it can be used (css for instance)
-- [ ] screenshots
-- [ ] explain `import.meta.hot` to unlock partial reload on js
-- [ ] Explain what is "full reload" + when it is used
-- [ ] screenshots
+When a file changes, the dev server looks for a file willing to handle the update: the changed file itself, or one of the files referencing it. Such a file is called a _boundary_. When a boundary is found the update is applied partially; when the search reaches a file with nothing to handle the update, the page is fully reloaded.
 
-### 2.6.1 Configure autoreload
+### 2.6.1 Partial reload
+
+Files referenced by HTML are partially reloaded according to the element referencing them:
+
+| Element                                        | Applied with   |
+| ---------------------------------------------- | -------------- |
+| `<link rel="stylesheet">`                      | Partial reload |
+| `<link rel="icon">`                            | Partial reload |
+| `<img>`, `<source>`, `<image>`, `<use>`, `<a>` | Partial reload |
+| `<iframe>`                                     | Partial reload |
+| `<script>`                                     | Full reload    |
+
+This is why editing a CSS file updates the page without reloading it: the stylesheet is replaced in place. Each partial reload is logged in the browser console, mentioning the file that was replaced and the change that caused it.
+
+The default can be overridden per element with the `hot-accept` and `hot-decline` attributes:
+
+```html
+<!-- Partially reloaded despite being a script -->
+<script src="./file.js" hot-accept></script>
+
+<!-- Fully reloaded despite being an image -->
+<img src="./image.png" hot-decline />
+```
+
+### 2.6.2 Full reload
+
+The page is fully reloaded when the update cannot be handled partially:
+
+- A JavaScript file changed and neither it nor any file importing it calls `import.meta.hot.accept()`
+- A file calls `import.meta.hot.decline()`
+- The HTML file currently displayed changed
+- A file referenced by `<script>` changed, unless it has the `hot-accept` attribute
+
+### 2.6.3 import.meta.hot
+
+`import.meta.hot` lets a JavaScript file handle its own updates, unlocking partial reload for JavaScript.
+
+```js
+export const count = 0;
+
+import.meta.hot.accept();
+```
+
+`accept()` can be called in several ways:
+
+```js
+// Re-execute this file when it changes
+import.meta.hot.accept();
+
+// Re-execute this file and receive its new namespace
+import.meta.hot.accept((namespace) => {
+  console.log(namespace);
+});
+
+// Handle updates of a specific dependency
+import.meta.hot.accept("./dependency.js", (namespace) => {
+  console.log(namespace);
+});
+
+// Handle updates of several dependencies
+import.meta.hot.accept(["./a.js", "./b.js"], (namespace) => {
+  console.log(namespace);
+});
+```
+
+Use `dispose` to clean up what the file created, such as timers or event listeners; it runs before the file is re-executed. The callback receives `import.meta.hot.data`, an object where values can be stored for that cleanup.
+
+```js
+const interval = setInterval(() => {
+  console.log("tick");
+}, 1000);
+
+import.meta.hot.dispose(() => {
+  clearInterval(interval);
+});
+import.meta.hot.accept();
+```
+
+The remaining methods give up on partial reload:
+
+- `import.meta.hot.decline()`: this file can never be partially reloaded, any change fully reloads the page
+- `import.meta.hot.invalidate()`: fully reload the page, to be called when the update cannot be handled after all
+
+During build `import.meta.hot` becomes `undefined`, so code kept out of production can be wrapped in a condition:
+
+```js
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}
+```
+
+### 2.6.4 Configure autoreload
 
 By default the following files can trigger a reload:
 
@@ -380,7 +468,7 @@ await startDevServer({
 });
 ```
 
-### 2.6.2 Disable autoreload
+### 2.6.5 Disable autoreload
 
 ```js
 import { startDevServer } from "@jsenv/core";

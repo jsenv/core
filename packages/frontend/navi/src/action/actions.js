@@ -557,6 +557,13 @@ const mergeActionParams = (currentParams, newParams) => {
   if (currentParams === NO_PARAMS) {
     return newParams;
   }
+  if (newParams === undefined) {
+    // Every control binds its action to its UI state signal; a control that carries
+    // no value (a button) has an undefined one. It contributes no params, which must
+    // not be confused with "the params are undefined" — the params bound by
+    // bindParams stay in place.
+    return currentParams;
+  }
   return mergeTwoJsValues(currentParams, newParams);
 };
 

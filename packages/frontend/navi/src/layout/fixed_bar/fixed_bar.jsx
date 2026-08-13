@@ -28,7 +28,11 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import { FIXED_BAR_SPACE_CSS, setFixedBarSpace } from "./fixed_bar_space.js";
+import {
+  FIXED_BAR_SPACE_CSS,
+  requestFixedBarSpace,
+  setFixedBarSpace,
+} from "./fixed_bar_space.js";
 
 const css = /* css */ `
   @layer navi {
@@ -179,23 +183,36 @@ export const FixedBar = ({
   // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
   // theme variable, the content itself — is reserved just the same, and each
   // `env()` inset stays the browser's business alone.
-  // And measured again whenever it changes: a ResizeObserver on the bar covers
-  // in one go a size prop that changes, content arriving or leaving, a font
-  // loading late, a rotation moving the notch.
   const vertical = area === "left" || area === "right";
   const { ref } = props;
 
+  const measureSpace = (barElement) => {
+    const { width, height } = barElement.getBoundingClientRect();
+    return vertical ? width : height;
+  };
+
+  // Anything a render can change — a size prop, the children, a theme variable
+  // — is measured in that same commit, before paint: no frame where the
+  // content sits under the bar, and nothing written from inside an observer.
+  useLayoutEffect(() => {
+    const barElement = ref.current;
+    if (!barElement) {
+      return;
+    }
+    setFixedBarSpace(area, barElement, measureSpace(barElement));
+  });
+
+  // What no render caused: a font loading late, content arriving from outside,
+  // a rotation moving the notch. Measuring here is safe; the write is what has
+  // to wait, and fixed_bar_space.js is the one that holds it back.
   useLayoutEffect(() => {
     const barElement = ref.current;
     if (!barElement) {
       return undefined;
     }
-    const publishSize = () => {
-      const { width, height } = barElement.getBoundingClientRect();
-      setFixedBarSpace(area, barElement, vertical ? width : height);
-    };
-    publishSize();
-    const resizeObserver = new ResizeObserver(publishSize);
+    const resizeObserver = new ResizeObserver(() => {
+      requestFixedBarSpace(area, barElement, measureSpace(barElement));
+    });
     resizeObserver.observe(barElement);
     return () => {
       resizeObserver.disconnect();
