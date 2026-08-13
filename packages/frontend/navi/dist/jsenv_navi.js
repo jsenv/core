@@ -37731,8 +37731,8 @@ const withPixelUnit = value => {
  * because the document is the scrollport in the common case and an anchor
  * landing under a bar is never what anyone wants.
  *
- * The variables hold the bar's measured size — see the comment where FixedBar
- * sets them.
+ * The variables hold the measured size of the bars on that edge — see the
+ * comment where FixedBar sets them.
  */
 
 const FIXED_BAR_SPACE_CSS = /* css */ `
@@ -37762,17 +37762,42 @@ const FIXED_BAR_SPACE_CSS = /* css */ `
   }
 `;
 
+// Several bars can share an edge — during a page transition the outgoing and
+// the incoming one are both mounted. They are all pinned to that same edge, so
+// they overlap: the room to give back is the largest of them, not their sum,
+// and one leaving must leave the others' room in place.
+const sizeMapByArea = new Map();
+
 /**
  * @param {"top"|"bottom"|"left"|"right"} area
- * @param {string|null} value - `null` gives the room back to the content.
+ * @param {Element} barElement - Which bar this size belongs to.
+ * @param {number|null} size - In px; `null` gives that bar's room back to the
+ *   content.
  */
-const setFixedBarSpace = (area, value) => {
+const setFixedBarSpace = (area, barElement, size) => {
+  let sizeMap = sizeMapByArea.get(area);
+  if (!sizeMap) {
+    sizeMap = new Map();
+    sizeMapByArea.set(area, sizeMap);
+  }
+  if (size === null) {
+    sizeMap.delete(barElement);
+  } else {
+    sizeMap.set(barElement, size);
+  }
+
+  let largestSize = 0;
+  for (const barSize of sizeMap.values()) {
+    if (barSize > largestSize) {
+      largestSize = barSize;
+    }
+  }
   const property = `--navi-fixed-bar-space-${area}`;
   const { style } = document.documentElement;
-  if (value === null) {
+  if (sizeMap.size === 0) {
     style.removeProperty(property);
   } else {
-    style.setProperty(property, value);
+    style.setProperty(property, `${largestSize}px`);
   }
 };
 
@@ -37949,6 +37974,9 @@ const FixedBar = ({
   // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
   // theme variable, the content itself — is reserved just the same, and each
   // `env()` inset stays the browser's business alone.
+  // And measured again whenever it changes: a ResizeObserver on the bar covers
+  // in one go a size prop that changes, content arriving or leaving, a font
+  // loading late, a rotation moving the notch.
   const vertical = area === "left" || area === "right";
   const {
     ref
@@ -37958,15 +37986,21 @@ const FixedBar = ({
     if (!barElement) {
       return undefined;
     }
-    const {
-      width,
-      height
-    } = barElement.getBoundingClientRect();
-    setFixedBarSpace(area, `${vertical ? width : height}px`);
-    return () => {
-      setFixedBarSpace(area, null);
+    const publishSize = () => {
+      const {
+        width,
+        height
+      } = barElement.getBoundingClientRect();
+      setFixedBarSpace(area, barElement, vertical ? width : height);
     };
-  }, [area]);
+    publishSize();
+    const resizeObserver = new ResizeObserver(publishSize);
+    resizeObserver.observe(barElement);
+    return () => {
+      resizeObserver.disconnect();
+      setFixedBarSpace(area, barElement, null);
+    };
+  }, [area, vertical]);
   return jsx(Box, {
     baseClassName: "navi_fixed_bar",
     "data-area": area,
@@ -38750,7 +38784,7 @@ const useCheckableProps = (props, options) => {
 installImportMetaCssBuild(import.meta);const css$F = /* css */`
   @layer navi {
     .navi_checkbox {
-      --border-radius: var(--navi-control-border-radius);
+      --border-radius: var(--navi-checkbox-border-radius);
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);

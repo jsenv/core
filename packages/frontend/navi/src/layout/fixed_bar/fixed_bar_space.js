@@ -22,8 +22,8 @@
  * because the document is the scrollport in the common case and an anchor
  * landing under a bar is never what anyone wants.
  *
- * The variables hold the bar's measured size — see the comment where FixedBar
- * sets them.
+ * The variables hold the measured size of the bars on that edge — see the
+ * comment where FixedBar sets them.
  */
 
 export const FIXED_BAR_SPACE_CSS = /* css */ `
@@ -53,16 +53,41 @@ export const FIXED_BAR_SPACE_CSS = /* css */ `
   }
 `;
 
+// Several bars can share an edge — during a page transition the outgoing and
+// the incoming one are both mounted. They are all pinned to that same edge, so
+// they overlap: the room to give back is the largest of them, not their sum,
+// and one leaving must leave the others' room in place.
+const sizeMapByArea = new Map();
+
 /**
  * @param {"top"|"bottom"|"left"|"right"} area
- * @param {string|null} value - `null` gives the room back to the content.
+ * @param {Element} barElement - Which bar this size belongs to.
+ * @param {number|null} size - In px; `null` gives that bar's room back to the
+ *   content.
  */
-export const setFixedBarSpace = (area, value) => {
+export const setFixedBarSpace = (area, barElement, size) => {
+  let sizeMap = sizeMapByArea.get(area);
+  if (!sizeMap) {
+    sizeMap = new Map();
+    sizeMapByArea.set(area, sizeMap);
+  }
+  if (size === null) {
+    sizeMap.delete(barElement);
+  } else {
+    sizeMap.set(barElement, size);
+  }
+
+  let largestSize = 0;
+  for (const barSize of sizeMap.values()) {
+    if (barSize > largestSize) {
+      largestSize = barSize;
+    }
+  }
   const property = `--navi-fixed-bar-space-${area}`;
   const { style } = document.documentElement;
-  if (value === null) {
+  if (sizeMap.size === 0) {
     style.removeProperty(property);
   } else {
-    style.setProperty(property, value);
+    style.setProperty(property, `${largestSize}px`);
   }
 };

@@ -179,6 +179,9 @@ export const FixedBar = ({
   // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
   // theme variable, the content itself — is reserved just the same, and each
   // `env()` inset stays the browser's business alone.
+  // And measured again whenever it changes: a ResizeObserver on the bar covers
+  // in one go a size prop that changes, content arriving or leaving, a font
+  // loading late, a rotation moving the notch.
   const vertical = area === "left" || area === "right";
   const { ref } = props;
 
@@ -187,12 +190,18 @@ export const FixedBar = ({
     if (!barElement) {
       return undefined;
     }
-    const { width, height } = barElement.getBoundingClientRect();
-    setFixedBarSpace(area, `${vertical ? width : height}px`);
-    return () => {
-      setFixedBarSpace(area, null);
+    const publishSize = () => {
+      const { width, height } = barElement.getBoundingClientRect();
+      setFixedBarSpace(area, barElement, vertical ? width : height);
     };
-  }, [area]);
+    publishSize();
+    const resizeObserver = new ResizeObserver(publishSize);
+    resizeObserver.observe(barElement);
+    return () => {
+      resizeObserver.disconnect();
+      setFixedBarSpace(area, barElement, null);
+    };
+  }, [area, vertical]);
 
   return (
     <Box

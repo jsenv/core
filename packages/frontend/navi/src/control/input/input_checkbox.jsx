@@ -9,7 +9,7 @@ import { useCheckableProps } from "./use_checkable_props.js";
 const css = /* css */ `
   @layer navi {
     .navi_checkbox {
-      --border-radius: var(--navi-control-border-radius);
+      --border-radius: var(--navi-checkbox-border-radius);
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);

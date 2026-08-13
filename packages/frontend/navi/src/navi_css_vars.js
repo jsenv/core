@@ -32,6 +32,14 @@ const css = /* css */ `
       --navi-control-font-family: ${controlDefaultFontFamily};
       --navi-control-font-size: ${controlDefaultFontSize};
       --navi-control-border-radius: 2px;
+      /* A checkbox is only ~1em wide: applying a control radius meant for
+         buttons/inputs (say 8px) would turn it into a circle and make it read
+         as a radio. So it follows the control radius but capped at a quarter
+         of its own size. Override this token alone to opt out of the cap. */
+      --navi-checkbox-border-radius: min(
+        var(--navi-control-border-radius),
+        0.25em
+      );
       --navi-control-border-width: 1px;
       --navi-control-border-color: light-dark(#767676, #8e8e93);
       --navi-control-padding-x-default: 2px;
