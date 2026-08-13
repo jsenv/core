@@ -25,6 +25,7 @@ When building packages, jsenv provides a special `mode: "package"` configuration
 - **No versioning** - Packages don't need cache-busting URLs
 - **Preserves comments** - Maintains JSDoc and other important comments
 - **Relative base URLs** - Uses `"./"` instead of `"/"` for better portability
+- **Sourcemap files** - Writes sourcemaps as separate files (`sourcemaps: "file"`)
 
 ## Package Build Types
 
@@ -91,7 +92,7 @@ This is particularly useful when:
 
 ## Building for Node.js
 
-Building packages for Node.js reduces the number of files, which improves performance. Fewer files means faster startup times and reduced I/O overhead. For example, @jsenv/core itself uses this approach, transforming thousands of source files into just 40 optimized files with intelligent code splitting.
+Building packages for Node.js reduces the number of files, which improves performance. Fewer files means faster startup times and reduced I/O overhead. For example, @jsenv/core itself uses this approach, transforming thousands of source files into a few dozen optimized files with intelligent code splitting.
 
 ### Basic Node.js Package Build
 
@@ -156,19 +157,19 @@ Universal packages work in both Node.js and browser environments. This requires 
 
 ### Dual Build Strategy
 
-Create separate builds for each environment:
+Create separate builds for each environment. A given entry point can only appear once per `entryPoints` object, so building the same file for two environments means calling `build` twice, each with its own build directory:
 
 ```js
 // build.mjs
 import { build } from "@jsenv/core";
 
+// Node.js build
 await build({
   sourceDirectoryUrl: import.meta.resolve("../"),
-  buildDirectoryUrl: import.meta.resolve("../dist/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/node/"),
   entryPoints: {
-    // Node.js build
     "./src/index.js": {
-      buildRelativeUrl: "./node.js",
+      buildRelativeUrl: "./index.js",
       mode: "package",
       runtimeCompat: {
         node: "18.0.0",
@@ -177,9 +178,16 @@ await build({
         "file://**/node_modules/": true,
       },
     },
-    // Browser build
+  },
+});
+
+// Browser build
+await build({
+  sourceDirectoryUrl: import.meta.resolve("../"),
+  buildDirectoryUrl: import.meta.resolve("../dist/browser/"),
+  entryPoints: {
     "./src/index.js": {
-      buildRelativeUrl: "./browser.js",
+      buildRelativeUrl: "./index.js",
       mode: "package",
       runtimeCompat: {
         chrome: "64",
@@ -205,13 +213,13 @@ Configure your package.json to support both environments:
   "type": "module",
   "exports": {
     ".": {
-      "node": "./dist/node.js",
-      "browser": "./dist/browser.js",
-      "default": "./dist/browser.js"
+      "node": "./dist/node/index.js",
+      "browser": "./dist/browser/index.js",
+      "default": "./dist/browser/index.js"
     }
   },
-  "main": "./dist/node.js",
-  "browser": "./dist/browser.js"
+  "main": "./dist/node/index.js",
+  "browser": "./dist/browser/index.js"
 }
 ```
 
@@ -229,8 +237,8 @@ entryPoints: {
     buildRelativeUrl: "./index.js",
     mode: "package", // Sets package-appropriate defaults
     // Override defaults when needed
-    minification: isProduction ? true : false,
-    sourceMap: !isProduction,
+    minification: isProduction,
+    sourcemaps: isProduction ? "none" : "file",
   },
 },
 ```

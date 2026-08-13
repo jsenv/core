@@ -25,7 +25,7 @@ Best parts of the jsenv dev server:
 - **Standard web server**: Complies with web standards, ensuring transparency and predictability.
 - **Auto-reload on save**: Automatically refreshes the browser when files are saved.
 - **Error resilient**: Remains functional even with syntax errors, allowing uninterrupted work.
-- Large browser support: Serves code compatible with majors browsers, including older versions.
+- **Large browser support**: Serves code compatible with major browsers, including older versions.
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
@@ -266,7 +266,7 @@ The main file can be configured with `sourceMainFilePath`:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   sourceMainFilePath: "./main.html",
 });
 ```
@@ -322,9 +322,9 @@ _Figure: The error overlay showing an error in the code._
 </html>
 ```
 
-A lot of examples are available at [tests/dev_server/errors/screenshots/](../../../tests/dev_server/errors/_dev_errors_snapshots.test.mjs/0_chromium/output/screenshots/).
+Many more examples are available in [the error overlay screenshots directory](../../../tests/dev_server/errors/_dev_errors_snapshots.test.mjs/0_chromium/output/screenshots/).
 
-Error overlay can be disabled as follow:
+The error overlay can be disabled as follows:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -337,7 +337,7 @@ await startDevServer({
 });
 ```
 
-In that case opening the same HTML file does not display error overlay. So devtools must be opened to see the error:
+With the overlay disabled, the browser devtools must be opened to see the error:
 
 ![image](https://github.com/jsenv/core/assets/443639/f2d9463c-b576-417b-8389-e0650df953f7)
 
@@ -360,7 +360,8 @@ By default the following files can trigger a reload:
 ```js
 {
   "**/*": true, // All files inside the source directory
-  "**/.*/": false, // Exclude directory starting with a dot
+  "**/.*": false, // Exclude files starting with a dot
+  "**/.*/": false, // Exclude directories starting with a dot
   "**/node_modules/": false, // Exclude node_modules
 }
 ```
@@ -408,7 +409,7 @@ See the full list of plugins in [G) Plugins](../g_plugins/g_plugins.md)
 
 ## 2.8 sourcemaps
 
-The dev server generates source mappings, helping browsers remap compiled code to its original source.
+The dev server generates source mappings, helping browsers remap compiled code to its original source. The behavior is controlled by the `sourcemaps` parameter:
 
 | Value      | Description                                      |
 | ---------- | ------------------------------------------------ |

@@ -1,7 +1,7 @@
-**Disclaimer:** This page is an advanced topic and concerns people who seeks information on jsenv plugin internals.
+**Disclaimer:** This page is an advanced topic and concerns people who seek information on jsenv plugin internals.
 
 Jsenv plugins are objects that can be used to hook into jsenv during dev and/or build.  
-They are given via `plugins` parameter to [startDevServer](../users/b_dev.md) and [build](../users/c_build.md).
+They are given via `plugins` parameter to [startDevServer](../users/b_dev/b_dev.md) and [build](../users/c_build/c_build.md).
 
 ```js
 // Example of a jsenv plugin
@@ -11,13 +11,13 @@ export const createAJsenvPlugin = () => {
     appliesDuring: "*",
     init: (context) => {},
     destroy: () => {},
-    resolveReference: (reference, context) => {},
-    redirectReference: (reference, context) => {},
-    transformReferenceSearchParams: (reference, context) => {},
-    formatReference: (reference, context) => {},
-    fetchUrlContent: async (urlInfo, context) => {},
-    transformUrlContent: async (urlInfo, context) => {},
-    optimizeBuildUrlContent: async (urlInfo, context) => {},
+    resolveReference: (reference) => {},
+    redirectReference: (reference) => {},
+    transformReferenceSearchParams: (reference) => {},
+    formatReference: (reference) => {},
+    fetchUrlContent: async (urlInfo) => {},
+    transformUrlContent: async (urlInfo) => {},
+    optimizeBuildUrlContent: async (urlInfo) => {},
     serverEvents: {
       myEvent: ({ sendServerEvent }) => {},
     },
@@ -25,7 +25,9 @@ export const createAJsenvPlugin = () => {
 };
 ```
 
-☝️ This plugin has no effect; it just shows all properties that have a special meaning for jsenv.
+☝️ This plugin has no effect; it just shows the main properties that have a special meaning for jsenv.
+
+Each hook receives a single argument: a [reference](#22-reference) or an [urlInfo](#23-urlinfo) depending on the hook. The [context](#21-context) is passed to `init` and is also accessible from the other hooks via `urlInfo.context` and `reference.ownerUrlInfo.context`.
 
 # 1. Properties
 
@@ -60,7 +62,7 @@ export const createMyPlugin = () => {
 ```
 
 In rare cases this logic depends on info available in [2.1 context](#21-context), such as `rootDirectoryUrl`.
-In that case the combination of `init` and `destroy` and be used as shown below:
+In that case the combination of `init` and `destroy` can be used as shown below:
 
 ```js
 export const createMyPlugin = () => {
@@ -82,7 +84,7 @@ export const createMyPlugin = () => {
 ```
 
 Finally when `init` returns `false` the plugin will be ignored.
-This allows to control if a plugin applies according to [2.1 context](#21-context).
+This allows controlling if a plugin applies according to [2.1 context](#21-context).
 
 ## 1.4 resolveReference
 
@@ -110,7 +112,7 @@ The resolved url will be updated in the code meaning the plugin above has the fo
 
 ## 1.5 redirectReference
 
-Allow to redirect a resolved url. Among other things, this is used internally to implement filesystem magic redirection (auto append file extension).
+Allows redirecting a resolved url. Among other things, this is used internally to implement filesystem magic redirection (auto append file extension).
 
 ```js
 export const createMyPlugin = () => {
@@ -134,7 +136,7 @@ The plugin above has the following effect on code:
 
 ## 1.6 transformReferenceSearchParams
 
-This hook allow to inject url search params into a reference.
+This hook allows injecting url search params into a reference.
 
 ```js
 export const createMyPlugin = () => {
@@ -160,7 +162,7 @@ Enabling the plugin above would transform code as follows:
 
 ## 1.7 formatReference
 
-This hook allow to control the final url that will be in the code.
+This hook allows controlling the final url that will be in the code.
 
 ```js
 export const createMyPlugin = () => {
@@ -184,7 +186,7 @@ Enabling the plugin above would transform code as follows:
 
 ## 1.8 fetchUrlContent
 
-Retrieve a content + contentType from an url. Among other things, this is used internally to read file from disk.
+Retrieves a content + contentType from an url. Among other things, this is used internally to read files from disk.
 
 ```js
 import { readFileSync } from "node:fs";
@@ -207,9 +209,9 @@ export const createMyPlugin = () => {
 };
 ```
 
-## 1.8 transformUrlContent
+## 1.9 transformUrlContent
 
-Allow to modify the original content fetched from an url.
+Allows modifying the original content fetched from an url.
 
 ```js
 export const createMyPlugin = () => {
@@ -245,7 +247,7 @@ The transformations in this hook should focus on content optimizations:
 
 ## 1.11 serverEvents
 
-This property allows send events from server to client. These events are sent using a websocket.
+This property allows sending events from server to client. These events are sent using a websocket.
 
 ```js
 export const createMyPlugin = () => {
@@ -262,7 +264,7 @@ export const createMyPlugin = () => {
 };
 ```
 
-Event can be listened by client as follows:
+Events can be listened to by the client as follows:
 
 ```js
 window.__server_events__.listenEvents({
@@ -303,7 +305,7 @@ export const createAJsenvPlugin = () => {
 
 ### 2.1.1 context.rootDirectoryUrl
 
-An url string that is sourceDirectoryUrl during dev and buildDirectoryUrl during build.
+An url string, the sourceDirectoryUrl during both dev and build.
 
 ## 2.2 reference
 
@@ -328,9 +330,11 @@ A corresponding reference object is created that looks like this:
   subtype: "import_static",
   expectedContentType: "text/javascript",
   expectedType: "js_module",
-  parentUrl: "file:///Users/dmail/demo/main.js",
+  ownerUrlInfo: { url: "file:///Users/dmail/demo/main.js" /* ... */ },
 }
 ```
+
+`ownerUrlInfo` is the [urlInfo](#23-urlinfo) of the file containing the reference.
 
 ### 2.2.1 reference.type
 
@@ -339,9 +343,9 @@ A string, each value map to a way to reference an url.
 | reference.type           | Scenario where it gets created                                                                                          |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `"http_request"`         | dev server receives a request                                                                                           |
-| `"entry_point"`          | build [entryPoints](<B)-JavaScript-API#23-entrypoints>)                                                                 |
+| `"entry_point"`          | build [entryPoints](../users/c_build/c_build.md#221-entry-points)                                                       |
 | `"link_href"`            | `<link href="./favicon.ico">`                                                                                           |
-| `"style"`                | `<style>body { background: red; }<style>`                                                                               |
+| `"style"`                | `<style>body { background: red; }</style>`                                                                              |
 | `"script"`               | `<script src="./file.js">`                                                                                              |
 | `"a_href"`               | `<a href="./file.pdf">`                                                                                                 |
 | `"iframe_src"`           | `<iframe src="./file.html">`                                                                                            |
@@ -390,7 +394,7 @@ return {
       console.log("js_url");
     },
     "*": (reference) => {
-      onsole.log("something else");
+      console.log("something else");
     },
   },
 };
@@ -400,8 +404,8 @@ return {
 
 An object representing a resource and its content.
 
-Resource content is populated by [1.6 fetchUrlContent](#16-fetchUrlContent).
-Content can be transformed during [1.7 transformUrlContent](#17-transformUrlContent).
+Resource content is populated by [1.8 fetchUrlContent](#18-fetchurlcontent).
+Content can be transformed during [1.9 transformUrlContent](#19-transformurlcontent).
 
 Example of an url info object:
 
@@ -413,8 +417,8 @@ Example of an url info object:
   isWatched: true,
   content: `import "./file.js"`,
   contentEtag: `"12-WVFjnh0qBV6Fmkl3MwQURkLdIwI"`,
-  dependencies: new Set(["file:///Users/dmail/demo/file.js"]),
-  dependents: new Set(["file:///Users/dmail/demo/main.html"]),
+  referenceToOthersSet: new Set(), // references to other urls (dependencies)
+  referenceFromOthersSet: new Set(), // references from other urls (dependents)
   sourcemap: null,
   originalContent: `import "./file.js"`,
   originalContentEtag: `"12-WVFjnh0qBV6Fmkl3MwQURkLdIwI"`,
@@ -435,7 +439,7 @@ A string, it categorize content that can be found in `urlInfo.content`.
 | `"json"`        | `new URL("file.json", import.meta.url)`                                                                           |
 | `"webmanifest"` | [`<link rel="manifest">`](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest)<sup>↗</sup> |
 
-Hooks receiving [2.3 urlInfo](#23-urlInfo) as first argument can use a special notation as shown below:
+Hooks receiving [2.3 urlInfo](#23-urlinfo) as first argument can use a special notation as shown below:
 
 ```js
 return {
@@ -484,10 +488,10 @@ A string or `undefined`.
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
-   <a href="./a_introduction_for_contributors.md">< A) Introduction</a>
+   <a href="./README.md">< A) Introduction</a>
   </td>
   <td width="2000px" align="right" nowrap>
-  
+
   </td>
  </tr>
-<table>
+</table>

@@ -25,8 +25,8 @@ The name "jsenv" stands for JavaScript environments.<br />
 
 # 2. Logo
 
-The logo is composed by the name at the center and two circles orbiting around it.
-One of the circle is web browsers, the other is Node.js.
+The logo is composed of the name at the center and two circles orbiting around it.
+One of the circles represents web browsers, the other Node.js.
 It represents the two JavaScript runtimes supported by jsenv.
 
 ![jsenv_logo_legend](https://github.com/jsenv/core/assets/443639/8317a70f-cd53-42c2-ba18-96c53669c2b4)

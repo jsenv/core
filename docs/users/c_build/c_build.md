@@ -42,9 +42,9 @@ Best parts of jsenv build:
 - `import.meta.url` and `import.meta.resolve` support.
 - Support for module scripts: `<script type="module" src="./file.js">`.
 - Support for inline module scripts: `<script type="module">console.log("hello");</script>`.
-- Support for classic scripts: `<scrit src="./file.js">`.
+- Support for classic scripts: `<script src="./file.js">`.
 - Support for inline classic script: `<script>console.log("hello");</script>`.
-- Support for inline style: `<style>body: { color: orange; }</style>`.
+- Support for inline style: `<style>body { color: orange; }</style>`.
 - Support for module workers: `new Worker("./file.js", { type: "module"});`.
 
 And many more features...
@@ -169,7 +169,7 @@ project/
   package.json
 </pre>
 
-After running a build, the structures changes to:
+After running a build, the structure changes to:
 
 ```diff
 project/
@@ -237,14 +237,13 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": {
-      buildRelativeUrl: "./index.html",
+    "./index.html": {
 +     runtimeCompat: {
-+      chrome: "55",
-+      edge: "15",
-+      firefox: "52",
-+      safari: "11",
-+    },
++       chrome: "55",
++       edge: "15",
++       firefox: "52",
++       safari: "11",
++     },
     },
   },
 });
@@ -275,7 +274,7 @@ When runtimeCompat includes browsers that do not support `<script type="module">
 For these reasons jsenv generates a single `<script>` tag:
 
 ```html
-<script src="/dist/main.nomodule.js"></script>
+<script src="/js/main.nomodule.js"></script>
 ```
 
 If you prefer, you can generate multiple sets of files by calling build multiple times with different `runtimeCompat` settings and `buildDirectoryUrl`.
@@ -305,7 +304,7 @@ These can be HTML, CSS, JS, etc. Each entry point value is an object configuring
 For example `buildRelativeUrl` configures the file name in the build directory:
 
 ```js
-import { build } from "@jsenv/build";
+import { build } from "@jsenv/core";
 
 await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
@@ -495,7 +494,7 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": {
+    "./index.html": {
       versioningMethod: "filename",
     },
   },
@@ -518,7 +517,7 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": {
+    "./index.html": {
       versioning: false,
     },
   },
@@ -543,7 +542,7 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": {
+    "./index.html": {
       base: "https://cdn.example.com",
     },
   },
@@ -571,13 +570,13 @@ The following browsers are supporting importmap:
 - Safari on IOS 16.4+
 - Samsung Internet 15+
 
-If the `runtimeCompat` doesn't support importmap, jsenv converts js modules to the [systemjs format](https://github.com/systemjs/systemjs). This allow to keep versioning without introducing cascading hash changes.
+If the `runtimeCompat` doesn't support importmap, jsenv converts js modules to the [systemjs format](https://github.com/systemjs/systemjs). This keeps versioning without introducing cascading hash changes.
 
 ## 2.7 Resource hints
 
 During the build process, any resource hints (like `<link rel="preload">`) in the source files are updated to reflect the built files. If necessary, the build will also inject or remove resource hints.
 
-### 2.7.2 Resource hint injection
+### 2.7.1 Resource hint injection
 
 For example, if your project contains preload links for `boot.js` and `app.js`:
 
@@ -608,7 +607,7 @@ The build might introduce new preloads to improve code reuse:
 <link rel="preload" href="/js/app.js?v=87654321" as="script" crossorigin="" />
 ```
 
-### 2.7.1 Resource hint removal
+### 2.7.2 Resource hint removal
 
 ```html
 <link rel="preload" href="./main.js" as="script" crossorigin="" />
@@ -675,12 +674,12 @@ self.addEventListener("install", (event) => {
 });
 ```
 
-1. The build detects `navigator.serviceWorker.register` and consider _sw.js_ as the service worker entry file.
+1. The build detects `navigator.serviceWorker.register` and considers _sw.js_ as the service worker entry file.
 2. The build injects the following code at the top of _sw.js_:
 
 ```diff
 + self.resourcesFromJsenvBuild = {
-+  "/main.html": {
++  "/index.html": {
 +    "version": "a3b3b305"
 +  },
 +  "/js/main.js": {
@@ -695,7 +694,7 @@ Thanks to this, the service worker becomes aware of all the files generated duri
 To accomplish this, the code inside sw.js needs to be adjusted as follows:
 
 ```diff
-  const urls = ["/'];
+  const urls = ["/"];
 
 + const resourcesFromJsenvBuild = self.resourcesFromJsenvBuild;
 + if (resourcesFromJsenvBuild) {

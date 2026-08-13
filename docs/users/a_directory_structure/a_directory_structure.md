@@ -24,7 +24,7 @@ Below is an example of a typical project structure:
 project/       -> root directory
   dist/        -> build files will be written here
   scripts/     -> executable files
-  src/         -> sources files
+  src/         -> source files
   package.json
 ```
 

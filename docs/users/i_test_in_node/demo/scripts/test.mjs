@@ -1,9 +1,9 @@
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
-    "./tests/**/*.test.mjs": {
+    "./src/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
       },

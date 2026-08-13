@@ -86,12 +86,12 @@ Jsenv relies on web standards for file referencing, so this guide focuses on sta
           </a>
         </li>
         <li>
-          <a href="#45-json-import">
+          <a href="#44-json-import">
             JSON import
           </a>
         </li>
         <li>
-          <a href="#46-text-import">
+          <a href="#45-text-import">
             Text import
           </a>
         </li>
@@ -240,7 +240,7 @@ body {
 
 # 4. JavaScript modules
 
-JavaScript modules refers to js executed in a context where is has access to `import` and `import.meta`.  
+JavaScript modules refers to js executed in a context where it has access to `import` and `import.meta`.  
 In these files the following is recognized:
 
 ## 4.1 CSS import
@@ -254,10 +254,13 @@ import sheetA from "./a.css" with { type: "css" };
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheetA];
 
 // And the dynamic import equivalent
-const sheetB = await import("./b.css", {
+const cssModuleB = await import("./b.css", {
   with: { type: "css" },
 });
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheetB];
+document.adoptedStyleSheets = [
+  ...document.adoptedStyleSheets,
+  cssModuleB.default,
+];
 ```
 
 **Tip**: When importing CSS with a side effect import the stylesheet is injected in the document for you.
@@ -279,7 +282,7 @@ const imageUrl = new URL("./image.png", import.meta.url);
 const textUrl = import.meta.resolve("./file.txt");
 ```
 
-The way you want to use that url afterwards is up to you; some prevalant uses cases:
+The way you want to use that url afterwards is up to you; some prevalent use cases:
 
 ```js
 // inject css in the document
@@ -298,7 +301,7 @@ document.body.appendChild(img);
 
 ## 4.3 Worker URLs
 
-Depending how the worker file is written one of the 2 solutions below must be used
+Depending on how the worker file is written, one of the 2 solutions below must be used:
 
 1. Classic worker
 
@@ -314,16 +317,16 @@ const worker = new Worker(new URL("/worker.js", import.meta.url), {
 });
 ```
 
-Jsenv also recognize [serviceWorker.register()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register)<sup>↗</sup> and [new SharedWorker()](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker)<sup>↗</sup>.
+Jsenv also recognizes [serviceWorker.register()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register)<sup>↗</sup> and [new SharedWorker()](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker)<sup>↗</sup>.
 
-Here again `import.meta.resolve` can be used
+Here again `import.meta.resolve` can be used:
 
 ```diff
 -   new URL("/worker.js", import.meta.url);
 +   import.meta.resolve("/worker.js");
 ```
 
-## 4.5 JSON import
+## 4.4 JSON import
 
 Import JSON files using the `type: "json"` attribute.
 
@@ -342,7 +345,7 @@ const jsonModule = await import("./data.json", {
 console.log(jsonModule.default);
 ```
 
-## 4.6 Text import
+## 4.5 Text import
 
 Import text files using the `type: "text"` attribute (non-standard, supported by Jsenv).
 

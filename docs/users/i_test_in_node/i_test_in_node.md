@@ -109,7 +109,6 @@ project/
   src/
     sum.mjs
 +   sum.test.mjs
-    index.html
   package.json
 ```
 
@@ -146,30 +145,30 @@ await executeTestPlan({
 });
 ```
 
-Before executing test, install dependencies with the following command
+Before executing tests, install dependencies with the following command
 
 ```console
 npm i --save-dev @jsenv/test
 ```
 
-Everything is ready, test can be executed with the following command:
+Everything is ready, tests can be executed with the following command:
 
 ```console
 node ./scripts/test.mjs
 ```
 
-It will display the following output in the terminal:
+It will display an output similar to the following in the terminal:
 
 ```console
-✔ execution 1 of 1 completed (all completed)
-file: src/sum.test.mjs
-runtime: node_worker_thread/16.14.2
-duration: 0.08 second
+------------- 1 execution ready --------------
+directory: /Users/you/project/
+----------------------------------------------
+✔ 1/1 src/sum.test.mjs [64ms]
 
--------------- summary -----------------
-1 execution: all completed
-total duration: 0.08 second
-----------------------------------------
+-------------- 1 execution done --------------
+status: all completed
+duration: 0.3s (setup: 0.06s, execution: 0.2s, teardown: 0.04s)
+----------------------------------------------
 ```
 
 # 4. Executing a single test
@@ -192,7 +191,7 @@ node ./src/sum.test.mjs
 ```
 
 Each test file can be debugged directly with tools listed in [Node.js debugging guide](https://nodejs.org/en/docs/guides/debugging-getting-started).  
-If you don't know which one to choose, VsCode integrated debugger is excellent.
+If you don't know which one to choose, VS Code integrated debugger is excellent.
 
 # 5. Features
 
@@ -206,7 +205,7 @@ The following code executes test files twice:
 ```js
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
-const testPlanReport = await executeTestPlan({
+await executeTestPlan({
   rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
@@ -225,7 +224,7 @@ const testPlanReport = await executeTestPlan({
 });
 ```
 
-See "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+The `env` values are added to the environment of the worker thread (or child process) executing the test file.
 
 If you need to execute a test relying on `process.env` directly with the `node` command, it must be configured accordingly:
 
@@ -239,7 +238,7 @@ If you need to execute a test relying on `process.env` directly with the `node` 
 ```js
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
-const testPlanReport = await executeTestPlan({
+await executeTestPlan({
   rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
@@ -264,7 +263,7 @@ If you need to execute a test relying on command line options directly with the 
 
 ## 5.3 child process
 
-`nodeWorkerThread` is the default Node.js runtime in this documentation. But there is also `nodeChildProcess` which can be used with the same API and will execute test in a child process instead of a worker thread.
+The examples in this page use `nodeWorkerThread`, which executes each test file in a [worker thread](https://nodejs.org/api/worker_threads.html). There is also `nodeChildProcess`, which has the same API and executes each test file in a child process.
 
 ```js
 import { executeTestPlan, nodeChildProcess } from "@jsenv/test";
@@ -283,7 +282,7 @@ await executeTestPlan({
 
 ## 5.4 importmap
 
-This section demonstrates how to remap import during test execution. The demo is remapping _src/sum.mjs_ to _src/sum_mock.mjs_
+This section demonstrates how to remap imports during test execution. The demo remaps _src/sum.mjs_ to _src/sum_mock.mjs_.
 
 ```diff
 project/
@@ -309,14 +308,14 @@ import {
   nodeWorkerThread,
 } from "@jsenv/test"
 
-const testPlanReport = await executeTestPlan({
+await executeTestPlan({
   rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
 -       runtime: nodeWorkerThread(),
 +       runtime: nodeWorkerThread({
-+         importMap: {
++         importmap: {
 +           imports: {
 +              "./src/sum.mjs": "./src/sum_mock.mjs"
 +           },
@@ -328,26 +327,25 @@ const testPlanReport = await executeTestPlan({
 })
 ```
 
-Executing code above would output the following
+Executing the code above would output the following
 
 ```console
-✖ execution 1 of 1 failed (all failed)
-file: src/sum.test.mjs
-runtime: node_worker_thread/16.14.2
-duration: 0.2 second
--------- error --------
+------------- 1 execution ready --------------
+directory: /Users/you/project/
+----------------------------------------------
+✖ 1/1 src/sum.test.mjs [98ms]
+--------------- error ----------------
 Error: sum(1,2) should return 3, got 42
-    at [...]src/sum.test.mjs:6:9
-    at [...]
--------------------------
+  at file:///Users/you/project/src/sum.test.mjs:6:9
+--------------------------------------
 
--------------- summary -----------------
-1 execution: all failed
-total duration: 0.2 second
-----------------------------------------
+-------------- 1 execution done --------------
+status: all failed
+duration: 0.4s (setup: 0.06s, execution: 0.3s, teardown: 0.04s)
+----------------------------------------------
 ```
 
-☝️ The test is now failing as "sum" exported in _sum_mock.mjs_ always return `42`.
+☝️ The test fails because "sum" exported by _sum_mock.mjs_ always returns `42`.
 
 If you need to execute a test relying on importmap directly with the `node` command, it must be configured accordingly:
 
@@ -360,7 +358,7 @@ You'll need to create an importmap file and install [node-loader-importmap](http
 
 ## 5.5 Code coverage
 
-Code coverage can be collected while executing test files.
+Code coverage can be collected while executing test files. The API is the same as for browser tests: pass `coverage: true` to `executeTestPlan`, then use `reportCoverageAsHtml` or `reportCoverageAsJson`; see [code coverage](../d_test/d_test.md#36-code-coverage).
 
 ![file js](https://github.com/jsenv/core/assets/443639/2bc5eb1d-c041-4f03-bd19-6a3db1a24883)
 

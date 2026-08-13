@@ -1,4 +1,4 @@
-import { sum } from "../src/sum.mjs";
+import { sum } from "./sum.mjs";
 
 const actual = sum(1, 2);
 const expect = 3;

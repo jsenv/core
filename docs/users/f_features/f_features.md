@@ -110,7 +110,7 @@ import "/node_modules/amazing-package/index.js?v=1.0.0";
 
 ☝️ Here _amazing-package/package.json_ contains `"version": "1.0.0"`
 
-It allows to put node modules files into the browser cache up to **1 year**.  
+This allows node module files to stay in the browser cache for up to **1 year**.  
 A nice bonus: the version of the package is easily identifiable.
 
 <!--
@@ -350,7 +350,7 @@ import "jquery";
 const jquery = window.$;
 ```
 
-For packages like `hls.js` that require this to be defined, use the as_js_module query parameter:
+For packages like `hls.js` that require `this` to be defined, use the `as_js_module` query parameter:
 
 **Example:**
 
@@ -377,7 +377,7 @@ module.exports = 42;
 Uncaught ReferenceError: module is not defined
 ```
 
-**Solution**: Use `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#21-commonjs).
+**Solution**: Use `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#commonjs).
 
 # 8. Loading js module with `<script>`
 
@@ -400,7 +400,7 @@ console.log(import.meta.url);
 Uncaught SyntaxError: Cannot use import statement outside a module
 ```
 
-**Solution:** Use `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
+**Solution:** Use `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#asjsclassic).
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 

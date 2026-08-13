@@ -102,7 +102,7 @@ In this example, we import jsenv’s core alongside the React plugin, then add i
 
 # 2. Ecosystem plugins
 
-Ecosystem plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
+Ecosystem plugins enhance jsenv's fundamental capabilities. These plugins provide support for specific features or frameworks.
 
 ## React
 
@@ -186,7 +186,7 @@ jsenvPluginCommonJs({
 
 ## asJsClassic
 
-The asJsClassic plugin allows to load files written as ES modules using a classic script tag. YES YOU CAN!
+The asJsClassic plugin allows loading files written as ES modules using a classic script tag. YES YOU CAN!
 
 **Example**
 
@@ -201,7 +201,7 @@ The following HTML file uses a script to load a js file:
 </html>
 ```
 
-This plugin applies on js files loaded with `?as_js_classic` query parameter. It could transforms theorical `main.js` file content as follow:
+This plugin applies to js files loaded with the `?as_js_classic` query parameter. It would transform a theoretical `main.js` file content as follows:
 
 ```diff
 - import { foo } from "./foo.js";
@@ -327,13 +327,13 @@ jsenvPluginExplorer({
 });
 ```
 
-The page now displays "main files" and "spec files":
+The page displays "main files" and "spec files":
 
 ![Exploring 2023-05-22 16-02-14](https://github.com/jsenv/core/assets/443639/b9d4c7d1-5db7-4cc5-b1b9-fcb3e138b7bb)
 
 ## Toolbar
 
-The Toolbar plugin adds an interactive toolbar to your application during development. Allow to temporarily disable autoreload on change for example.
+The Toolbar plugin adds an interactive toolbar to your application during development. It allows, for example, temporarily disabling autoreload on change.
 
 **Installation**
 
