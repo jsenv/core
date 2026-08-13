@@ -12,6 +12,15 @@ Routes are flexible: you can create route groups to share logic, state, or UI ac
 
 Actions are async operations with lifecycle management — pending, success, error. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring.
 
+## REST state
+
+`resource()` turns a REST endpoint into a reactive store: one action per verb, a
+shared signal store every component reads from, and automatic invalidation
+between related actions. Parent/child relations are first-class — `.one`,
+`.many`, `.scopedOne`, `.scopedMany` model a backend sub-resource such as
+`/games/:id/candidates` rather than leaving you to hand-roll it. See
+[docs/resource.md](./docs/resource.md).
+
 ## Layout & Typography
 
 **`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (no more guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.

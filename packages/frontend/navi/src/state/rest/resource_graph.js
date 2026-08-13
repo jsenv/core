@@ -17,93 +17,18 @@ import { getParamScope } from "./param_scope.js";
 
 const resourceLifecycleManager = createResourceLifecycleManager();
 
-/**
+/*
+ * REST resources backed by signal stores: `resource()` creates one, and the
+ * relationship methods on it (.one/.many/.scopedOne/.scopedMany) model
+ * parent/child relations. Each method carries its own JSDoc — read those, and
+ * docs/resource.md for how to choose between them.
+ *
  * Naming conventions used throughout this file:
  * - verb:            one of GET / POST / PUT / PATCH / DELETE
  * - restCallbackKey: one of GET / GET_MANY / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
  * - restCallback:    the user-provided callback function associated with a restCallbackKey
  * - restCallbacks:   object mapping { [restCallbackKey]: restCallback }
  * - isMany:          true when the action operates on a collection (restCallbackKey ends with _MANY)
- *
- * # resource(name, restCallbacks)
- *
- * Creates a reactive REST resource backed by a shared signal store.
- * Returns a `stateFacade` with REST actions and relationship methods.
- *
- * Each REST callback receives the params passed to the action call and must return
- * the data that will be upserted into the store:
- *   - GET / POST / PUT / PATCH → return the full item object  e.g. { id, name }
- *   - DELETE                   → return the id or { id } of the removed item
- *   - GET_MANY / POST_MANY … → return an array of item objects
- *
- * uniqueKeys allows the store to find an item by an alternate key (e.g. "username"),
- * and the callback can return a different `id` to rename the item's primary key.
- *
- * # .withParams(params)
- *
- * Returns a new resource instance where every action automatically merges `params`
- * into its call params. All `withParams` instances share the same underlying store,
- * so items loaded by one instance are visible to all others.
- *
- *   const ADMIN_USER = USER.withParams({ role: "admin" });
- *   await ADMIN_USER.GET_MANY.run();   // callback receives { role: "admin" }
- *   await ADMIN_USER.POST({ name: "Charlie" }); // callback receives { role: "admin", name: "Charlie" }
- *
- * # .one(propertyName, childResource, { GET, PUT, DELETE })
- *
- * Links a property on each item to a single item in an independent child store.
- * The property is reactive: updating the child item anywhere propagates immediately.
- * The child resource exists independently — it is not owned by or deleted with the parent.
- *
- * Callback format: return the parent object with the relationship nested inside:
- *   GET: async ({ id }) => ({ id, session: { id: 10, token: "abc" } })
- *
- * The backend may also embed the child inline in a parent GET/POST response —
- * the setter on the property will upsert the nested object into the child store.
- *
- * Chainable: USER_SESSION.one("device", DEVICE) adds a reactive .device property
- * to each session object.
- *
- * # .many(propertyName, childResource, restCallbacks)
- *
- * Links a property on each item to an array of items in an independent child store.
- * Items in the array are full entries in the shared child store — if the same item
- * is referenced by multiple parents, a single update propagates to all of them.
- *
- * GET_MANY callback format: return the parent object with the array nested inside:
- *   GET_MANY: async ({ id }) => ({ id, friends: [{ id: 2 }, { id: 3 }] })
- *
- * DELETE callback: return [parentId, childId] to remove the relationship.
- * DELETE_MANY callback: return [parentId, [childId, childId, ...]] to remove multiple.
- *
- * # .scopedOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })
- *
- * Attaches a single private sub-object to each item. Unlike .one(), the child has
- * no identity outside its owner and is not shared across items. Each owner gets its
- * own private signal.
- *
- * All callbacks must return [ownerId, props | null]:
- *   GET:   async ({ id }) => [id, { bio: "Hello", avatar: "alice.png" }]
- *   PATCH: async ({ id, bio }) => [id, { bio, avatar: "alice.png" }]
- *   DELETE: async ({ id }) => [id, null]
- *
- * The property is `null` until a callback provides data. Setting it to `null` clears it.
- * Chainable: USER_PROFILE.one("theme", THEME) adds a reactive .theme property on each profile.
- *
- * # .scopedMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, ... })
- *
- * Attaches a private ordered collection of sub-objects to each item. The child objects
- * have no identity outside their owner — two owners can have items with the same id
- * that are completely independent. Each owner gets its own private arraySignalStore.
- *
- * All callbacks must return [ownerId, ...rest]:
- *   GET_MANY: async ({ id }) => [id, [{ name: "id", type: "int" }, ...]]
- *   POST:     async ({ id, name, type }) => [id, { name, type }]
- *   PUT:      async ({ id, oldName, name, type }) => [id, oldName, { name, type }]  ← id rename
- *   DELETE:   async ({ id, name }) => [id, name]
- *
- * Chainable: TABLE_COLUMNS.one("dataType", DATA_TYPE) adds a reactive .dataType
- * property on each column item.
  */
 
 let DEBUG = false;
@@ -114,6 +39,36 @@ const debug = (args) => {
   console.debug(...args);
 };
 
+/**
+ * Creates a reactive REST resource backed by a shared signal store.
+ * Returns a `stateFacade` exposing one action per REST callback provided
+ * (`USER.GET`, `USER.GET_MANY`, `USER.POST`, …) plus `.withParams()` and the
+ * relationship methods `.one()`, `.many()`, `.scopedOne()`, `.scopedMany()`.
+ *
+ * Each REST callback receives the params passed to the action call and must return
+ * the data that will be upserted into the store:
+ * - GET / POST / PUT / PATCH → the full item object, e.g. `{ id, name }`
+ * - DELETE                   → the id or `{ id }` of the removed item
+ * - GET_MANY / POST_MANY / … → an array of item objects
+ *
+ * A sub-resource of the backend (`/games/:id/candidates`) must be modelled with a
+ * relationship method, never as an `op`/`type` discriminator dispatched inside one
+ * verb's callback.
+ *
+ * @param {string} name - resource name, used in action names and error messages
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"` (or the first `uniqueKeys` entry)
+ * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
+ * @see docs/resource.md — relationships, callback return contracts, decision table
+ *
+ * @example
+ * const USER = resource("user", {
+ *   GET: ({ id }) => fetchJson(`/users/${id}`),
+ *   GET_MANY: () => fetchJson(`/users`),
+ *   POST: (user) => fetchJson(`/users`, { method: "POST", body: user }),
+ *   DELETE: ({ id }) => fetchJson(`/users/${id}`, { method: "DELETE" }),
+ * });
+ */
 export const resource = (
   name,
   {
@@ -268,7 +223,7 @@ const createResource = (
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
+   * @see docs/resource_with_params.md for detailed documentation and examples
    *
    * @example
    * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
@@ -315,6 +270,31 @@ const createResource = (
   };
   stateFacade.withParams = withParams;
 
+  /**
+   * Links a property on each item to a single item in an independent child store.
+   * The property is reactive: updating the child item anywhere propagates immediately.
+   * The child resource exists independently — it is not owned by, nor deleted with, the parent.
+   *
+   * Use it when the child is a first-class entity with its own store, shared across
+   * parents (a user referenced by many games). When the child only exists inside its
+   * owner, use `.scopedOne()` instead.
+   *
+   * Callback return contracts:
+   * - GET / PUT → the parent object with the relationship nested inside:
+   *   `async ({ id }) => ({ id, session: { id: 10, token: "abc" } })`; `null` for no relationship
+   * - DELETE → the parent id (or `{ id }`); the property is set to `null`
+   *
+   * The backend may also embed the child inline in a parent GET/POST response — the
+   * setter on the property upserts the nested object into the child store.
+   *
+   * Returns the child relationship resource, itself chainable:
+   * `USER_SESSION.one("device", DEVICE)` adds a reactive `.device` property to each session.
+   *
+   * @param {string} propertyName - property holding the child on each parent item
+   * @param {Object} childResource - the independent resource created by `resource()`
+   * @param {Object} [restCallbacks] - `{ rerunOn, dependencies, GET, PUT, DELETE }`
+   * @see docs/resource.md
+   */
   stateFacade.one = (
     propertyName,
     childResource,
@@ -482,6 +462,29 @@ ${originalActionName} source location: ${locationInfo}`,
     });
   };
 
+  /**
+   * Links a property on each item to an array of items in an independent child store.
+   * Items in the array are full entries in the shared child store — if the same item is
+   * referenced by several parents, a single update propagates to all of them.
+   *
+   * Use it when children are first-class entities shared across parents (a game's players,
+   * who are users). When the children only exist inside their owner, or when the relation
+   * itself carries fields (`seen_at`, `slot`), use `.scopedMany()` instead.
+   *
+   * Callback return contracts:
+   * - GET_MANY → the parent object with the array nested inside:
+   *   `async ({ id }) => ({ id, friends: [{ id: 2 }, { id: 3 }] })` — a full-parent
+   *   response is absorbed as-is; the array replaces the relationship
+   * - GET / POST / PUT / PATCH → the child object; it is upserted into the child store
+   *   but does NOT join the parent's array, which only a GET_MANY refresh changes
+   * - DELETE → `[parentId, childId]`
+   * - DELETE_MANY → `[parentId, [childId, childId, …]]`
+   *
+   * @param {string} propertyName - property holding the child array on each parent item
+   * @param {Object} childResource - the independent resource created by `resource()`
+   * @param {Object} [restCallbacks] - `{ rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+   * @see docs/resource.md
+   */
   stateFacade.many = (
     propertyName,
     childResource,
@@ -784,6 +787,29 @@ ${originalActionName} source location: ${locationInfo}`,
     });
   };
 
+  /**
+   * Attaches a single private sub-object to each item. The child has no identity outside
+   * its owner and is not shared across items; each owner gets its own private signal.
+   *
+   * Use it for a sub-resource the backend exposes under the parent (`/users/:id/profile`)
+   * whose content is meaningless without that parent.
+   *
+   * All callbacks must return `[ownerId, props | null]`:
+   * - `GET:    async ({ id }) => [id, { bio: "Hello", avatar: "alice.png" }]`
+   * - `PATCH:  async ({ id, bio }) => [id, { bio, avatar: "alice.png" }]`
+   * - `DELETE: async ({ id }) => [id, null]`
+   *
+   * `ownerId` may also be `{ [uniqueKey]: value }` when the owner is known by an alternate key.
+   * The property is `null` until a callback provides data; setting it to `null` clears it.
+   * Mutations apply directly to the owner's signal, so the parent GET is never rerun.
+   *
+   * Returns the child relationship resource, itself chainable:
+   * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile.
+   *
+   * @param {string} propertyName - property holding the sub-object on each owner item
+   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, POST, PUT, PATCH, DELETE }`
+   * @see docs/resource.md
+   */
   stateFacade.scopedOne = (
     propertyName,
     {
@@ -905,6 +931,36 @@ ${originalActionName} source location: ${locationInfo}`,
     return childResource;
   };
 
+  /**
+   * Attaches a private ordered collection of sub-objects to each item. The child objects
+   * have no identity outside their owner — two owners can hold items with the same id that
+   * are completely independent. Each owner gets its own private arraySignalStore.
+   *
+   * This is the shape for a backend sub-route (`/games/:id/candidates`,
+   * `…/candidates/:userId/accept`) and for a relation carrying its own fields
+   * (`candidate_since`, `seen_at`): those fields belong to the pair, not to a shared child
+   * store where they would corrupt the entity for every other reader.
+   *
+   * All callbacks must return `[ownerId, ...rest]`:
+   * - `GET_MANY: async ({ id }) => [id, [{ name: "id", type: "int" }, …]]` — replaces the collection
+   * - `POST:     async ({ id, name, type }) => [id, { name, type }]`
+   * - `PUT:      async ({ id, oldName, name, type }) => [id, oldName, { name, type }]` (id rename)
+   * - `DELETE:   async ({ id, name }) => [id, name]`
+   * - `*_MANY:   [ownerId, itemArray]` — any plural verb replaces the whole collection,
+   *   which is how a backend answering a sub-route with the refreshed parent is absorbed
+   *
+   * `ownerId` may also be `{ [uniqueKey]: value }` when the owner is known by an alternate key.
+   * A singular POST upserts the child but does not append it to the collection; ordering is
+   * the backend's, so the owner's GET is rerun instead (only when its last response embedded
+   * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`.
+   *
+   * Returns the child relationship resource, itself chainable:
+   * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column.
+   *
+   * @param {string} propertyName - property holding the collection on each owner item
+   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+   * @see docs/resource.md
+   */
   stateFacade.scopedMany = (
     propertyName,
     {

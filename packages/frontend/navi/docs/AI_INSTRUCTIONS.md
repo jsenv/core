@@ -30,6 +30,9 @@ consistency across the app, not from any single call site.
 - `README.md` (package root) — high-level overview of what Navi provides:
   routing, actions, layout (`Box`), typography, icons, forms/validation,
   `Table`, dialogs, popovers.
+- `docs/resource.md` — REST state: `resource()`, relationships, callback return
+  contracts, autorerun rules. Companion files: `docs/actions.md`,
+  `docs/resource_with_params.md`, `docs/resource_dependencies.md`.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).
@@ -47,6 +50,12 @@ consistency across the app, not from any single call site.
 - **Actions** model async operations with lifecycle (idle/running/success/
   error). Components read an action's state via `useAsyncData`, not by
   manually tracking loading/error booleans.
+- **REST state is modelled with `resource()`**, and parent/child relations with
+  `.one` / `.many` / `.scopedOne` / `.scopedMany`. Never encode a backend
+  sub-resource (`/games/:id/candidates`) as an `op`/`type` discriminator inside
+  one verb's callback. Read `docs/resource.md` before writing a resource — the
+  callback return contracts differ per relationship method and are not
+  guessable.
 - **`Box`** is the layout primitive (Flexbox wrapper: `flex`, `flex="y"` for
   column, `grid`, `alignX`/`alignY`). Prefer it over raw CSS for layout inside
   Navi apps.
