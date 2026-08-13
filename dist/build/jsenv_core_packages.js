@@ -7205,15 +7205,15 @@ const inferRuntimeCompatFromClosestPackage = async (
   }
 
   if (runtimeType === "browser") {
-    const browserlist = packageJSON.browserlist;
-    if (!browserlist) {
+    const browserslistQuery = packageJSON.browserslist;
+    if (!browserslistQuery) {
       return null;
     }
     const namespace = await import("./browserslist_index/browserslist_index.js");
     const browserslist = namespace.default;
-    const browserslistConfig = browserslist(browserlist);
+    const browserslistResult = browserslist(browserslistQuery);
     const runtimeCompat = {};
-    for (const browserNameAndVersion of browserslistConfig) {
+    for (const browserNameAndVersion of browserslistResult) {
       let [name, version] = browserNameAndVersion.split(" ");
       if (name === "ios_saf") {
         name = "ios_safari";
