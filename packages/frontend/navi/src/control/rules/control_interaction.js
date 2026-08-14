@@ -24,6 +24,7 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
+import { preventClickToExpand } from "./click_to_expand.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
 import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
@@ -255,6 +256,9 @@ export const onRequestInteraction = (
   debugInteraction(event, `"${name}" allowed`);
   allowed?.();
   always?.();
+  // The click served this control; it must not serve a second time whatever
+  // unfolds around it (see click_to_expand.js).
+  preventClickToExpand(controlHost, event);
   return true;
 };
 

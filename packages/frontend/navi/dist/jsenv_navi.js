@@ -6490,6 +6490,10 @@ const POSITION_PROPS = {
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
   zIndex: PASS_THROUGH,
+  // Keeps the zIndex values used inside this box local to it — see
+  // docs/z_index.md: a z-index that opens no stacking context competes with
+  // the whole page, fixed bars included.
+  isolation: PASS_THROUGH,
   order: PASS_THROUGH,
   left: (value) => {
     return { left: value === true ? 0 : value };
@@ -8905,6 +8909,20 @@ import.meta.css = [/* css */`
      between them — and a control flush against the edge of a scrolling area
      overflows it (a focus outline is drawn outside the control it belongs to)
      and raises a scrollbar of its own. */
+  /* A control sitting right against the edge of what scrolls must keep its
+     loading outline within its own box: the outline is drawn a couple pixels
+     outside the control (see loading_outline.jsx), and that bleed alone is
+     enough to make the area scrollable — a scrollbar appearing and disappearing
+     as things load. Only what the scroller directly contains is against that
+     edge; anything nested deeper has room around it and keeps the outline it
+     asked for, hence the child combinators. Written on the outline itself
+     rather than on the control, because the var inherits: setting it on a
+     container would reach every control below it, edge or not. */
+  [data-scrollable] > .navi_loading_outline_wrapper,
+  [data-scrollable] > * > .navi_loading_outline_wrapper {
+    --loading-outline-min-inset: 0px;
+  }
+
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
 
@@ -10057,6 +10075,15 @@ const LoadingOutlineUI = props => {
   } = props;
   const shouldShowSpinner = useDebounceTrue(loading, debounce);
   const rectangleRef = useRef(null);
+
+  // Nothing in the DOM until something actually loads: the box below is
+  // absolutely positioned slightly outside the control, which is enough to
+  // make an ancestor scrollable (a 1px scrollbar on a control sitting against
+  // the edge of a scrolling area). A control that never loads must not pay for
+  // a decoration it will never draw.
+  if (!loading) {
+    return children;
+  }
   let insetTop = inset + spacingTop + marginTop;
   let insetRight = inset + spacingRight + marginRight;
   let insetBottom = inset + spacingBottom + marginBottom;
@@ -10087,7 +10114,7 @@ const LoadingOutlineUI = props => {
         "--loading-rectangle-bottom": `${insetBottom}px`,
         "--loading-rectangle-left": `${insetLeft}px`
       },
-      children: loading && jsx(LoadingIndicatorFluid, {
+      children: jsx(LoadingIndicatorFluid, {
         visuallyHidden: !shouldShowSpinner,
         radius: radius,
         color: color,
@@ -17794,6 +17821,104 @@ const useExecuteAction = (
   return executeAction;
 };
 
+/**
+ * A control placed inside a region that expands on click — a `<summary>`, an
+ * accordion header carrying `aria-expanded` — has its click read twice: once by
+ * the control it was aimed at, once by the region around it. The second reading
+ * is never wanted; a menu opened from a collapsed row should not also unfold the
+ * row.
+ *
+ * Cancelling the click is the only way to stop the region: a `<summary>` runs
+ * its default action after the propagation, so `stopPropagation` does not reach
+ * it. And it can only be done once the control has taken the click for itself —
+ * navi refuses an interaction on an already-cancelled event (see
+ * `onRequestInteraction`), so cancelling any earlier silences the control
+ * instead of the region.
+ *
+ * That moment — right after an interaction was allowed — only exists inside
+ * navi, which is why the cancellation lives here rather than in application code.
+ */
+
+const CLICK_TO_EXPAND_SELECTOR = "summary, [aria-expanded]";
+
+/**
+ * Cancels `event` when the control consumed a click that a surrounding
+ * click-to-expand region would otherwise read as "unfold me".
+ *
+ * Does nothing when cancelling the click would also cancel what the control
+ * itself does with it (a link navigating, a checkbox toggling): there, the two
+ * behaviours cannot be separated and the control's own comes first.
+ */
+const preventClickToExpand = (element, event) => {
+  if (!event || event.type !== "click") {
+    return;
+  }
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (!clickDefaultActionIsInert(element, event)) {
+    return;
+  }
+  const parentElement = element.parentElement;
+  if (!parentElement) {
+    return;
+  }
+  // From the parent: a control that opens something carries its own
+  // `aria-expanded` and would find itself.
+  const clickToExpandRegion = parentElement.closest(CLICK_TO_EXPAND_SELECTOR);
+  if (!clickToExpandRegion) {
+    return;
+  }
+  event.preventDefault();
+};
+
+const clickDefaultActionIsInert = (element, event) => {
+  if (!isInertOnClick(element)) {
+    return false;
+  }
+  // The activation belongs to what was clicked, which can be deeper than the
+  // control host (a button inside it) or above it (a label wrapping it).
+  const { target } = event;
+  if (target && target !== element && target.nodeType === 1) {
+    let ancestor = target;
+    while (ancestor) {
+      if (!isInertOnClick(ancestor)) {
+        return false;
+      }
+      ancestor = ancestor.parentElement;
+    }
+  }
+  return true;
+};
+
+const NON_INERT_INPUT_TYPE_SET = new Set([
+  "checkbox",
+  "radio",
+  "submit",
+  "reset",
+  "image",
+  "file",
+]);
+
+const isInertOnClick = (element) => {
+  const { tagName } = element;
+  if (tagName === "A" || tagName === "AREA") {
+    return !element.hasAttribute("href");
+  }
+  if (tagName === "LABEL") {
+    // A label forwards the click to its control, whose activation would be
+    // cancelled along with the click.
+    return false;
+  }
+  if (tagName === "INPUT") {
+    return !NON_INERT_INPUT_TYPE_SET.has(element.type);
+  }
+  if (tagName === "BUTTON") {
+    return element.type === "button";
+  }
+  return true;
+};
+
 const BUSY_CONSTRAINT = {
   name: "busy",
   messageAttribute: "data-busy-message",
@@ -18162,6 +18287,9 @@ const onRequestInteraction = (
   debugInteraction(event, `"${name}" allowed`);
   allowed?.();
   always?.();
+  // The click served this control; it must not serve a second time whatever
+  // unfolds around it (see click_to_expand.js).
+  preventClickToExpand(controlHost, event);
   return true;
 };
 
@@ -25732,8 +25860,8 @@ const css$T = /* css */`
  *   the screen and a centered box ends up both cramped and out of thumb
  *   reach, while under a mouse the centered box is already the right shape —
  *   hence a prop that only ever does something on touch. It supplies defaults
- *   for `positionArea`, `marginWithContainer` and `expandX`, so any of the
- *   three can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
+ *   for `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`,
+ *   so any of them can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
  *   input device, not a width breakpoint — a narrow desktop window is still a
  *   mouse) via `coarsePointerSignal`, so it re-resolves live.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
@@ -25770,7 +25898,7 @@ const css$T = /* css */`
  *   A `layer="local"` dialog always locks its own positioned ancestor's
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
- *   whole page.
+ *   whole page. Defaults to `true` for a dialog docked by `dockedOnTouch`.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -25939,7 +26067,11 @@ const DialogLocal = props => {
 const DOCKED = {
   positionArea: "bottom",
   marginWithContainer: 0,
-  expandX: true
+  expandX: true,
+  // A sheet resting on the bottom edge is dragged with a thumb, and a drag that
+  // runs past its own edge must not land on the page behind it: the same
+  // reasoning as "bottom" above, applied to the gesture instead of the shape.
+  scrollCapture: true
 };
 
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
@@ -25985,7 +26117,7 @@ const useDialogProps = props => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
-    scrollCapture,
+    scrollCapture: scrollCaptureProp,
     animation,
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
@@ -26020,6 +26152,7 @@ const useDialogProps = props => {
   const expandXUnset = expand === undefined && expandXProp === undefined;
   const expandX = expandXUnset ? isDocked && DOCKED.expandX : Boolean(expand) || Boolean(expandXProp);
   const expandY = Boolean(expand) || Boolean(expandYProp);
+  const scrollCapture = scrollCaptureProp ?? (isDocked ? DOCKED.scrollCapture : false);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
@@ -26579,8 +26712,13 @@ const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", 
 
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
+// borderRadius goes through --dialog-border-radius rather than the
+// border-radius property itself so the flush-corner rules above (a plain
+// stylesheet) can still square the corners that land on the container's own —
+// an inline border-radius would outrank them.
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  borderRadius: "--dialog-border-radius",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
   minHeight: "--dialog-min-height",
@@ -31540,12 +31678,30 @@ const useActionAsyncData = (action, {
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
   useEffect(() => {
-    return action.runningStateSignal.subscribe(state => {
+    const unsubscribeFromRunningState = action.runningStateSignal.subscribe(state => {
       if (state === RUNNING) {
         dismissedActionWeakSet.delete(action);
       }
       setTick(n => n + 1);
     });
+    // The data does not come from this action's runs alone: dataSignal is a
+    // computed over the resource store, so an other action writing that store
+    // (a PUT upserting an item that a GET_MANY list already holds) changes the
+    // data while this action stays COMPLETED. Subscribing here re-renders
+    // through the same controlled path as the run state, instead of `.value`.
+    let dataNotificationIsInitial = true;
+    const unsubscribeFromData = action.dataSignal.subscribe(() => {
+      if (dataNotificationIsInitial) {
+        // subscribe() calls back synchronously with the current value
+        dataNotificationIsInitial = false;
+        return;
+      }
+      setTick(n => n + 1);
+    });
+    return () => {
+      unsubscribeFromRunningState();
+      unsubscribeFromData();
+    };
   }, []);
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
@@ -48009,13 +48165,10 @@ const css$u = /* css */`
     font-size: 1em;
     line-height: 1.4;
   }
-  /* A control that IS the row — a direct child of the item, so it spans it —
-     must keep its loading outline within its own box: the scroll container is
-     overflow:auto, and the couple pixels the outline normally draws outside
-     the control are enough to make it scrollable, so a scrollbar would appear
-     and disappear as things load. Targeted on the outline itself rather than
-     inherited from the item, so a control nested deeper (which has room around
-     it, and does not reach the edges) keeps the outline it asked for. */
+  /* Same rule as [data-scrollable] in box.jsx, said again for this scroller:
+     what an item holds IS against the edge of the scroll container — the list
+     element between the two is markup, not spacing — so its loading outline
+     stays inside its own box rather than raising a scrollbar. */
   .navi_list_item > .navi_loading_outline_wrapper,
   .navi_list_item > * > .navi_loading_outline_wrapper,
   .navi_list_item_header > * > .navi_loading_outline_wrapper,
@@ -53769,6 +53922,18 @@ const css$n = /* css */`
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;
+      /* A placeholder must be readable in full before anything is typed: a
+         field that opens already scrolled reads as a field that already has
+         text in it. Its wrapped height is measured (see usePlaceholderHeight)
+         because it only exists once laid out, and it only raises the floor
+         while the placeholder is what is being shown — what is typed sizes the
+         box on its own. */
+      &:placeholder-shown {
+        min-height: max(
+          calc(var(--textarea-min-rows, 1.5) * 1lh),
+          var(--x-textarea-placeholder-height, 0px)
+        );
+      }
     }
     &[data-resizable] .navi_control_input {
       height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -53806,7 +53971,9 @@ const css$n = /* css */`
  * @param {number} [maxRows] Lines after which the control stops growing and
  *   scrolls instead. Without it the control grows with its content.
  * @param {boolean} [resizable] Give the browser's vertical resize handle back.
- *   A manual resize takes over from the automatic growth.
+ *   An exchange, not an addition: the hand takes over from the automatic
+ *   growth, so the control stops following what is typed and stays at the
+ *   height it was last dragged to (starting at `minRows`).
  * @param {number} [maxLength] The character limit, validated at submit. Pair
  *   with `maxLengthGuard` to block typing past it, and render a
  *   TextareaCharCount to show it.
@@ -53828,6 +53995,7 @@ const Textarea = ({
   import.meta.css = [inputCss + css$n, "@jsenv/navi/src/control/input/textarea.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  usePlaceholderHeight(props.ref, props.placeholder);
   const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
     controlType: "input"
   });
@@ -53907,6 +54075,61 @@ const TextareaCharCount = ({
     ...rest,
     children: maxLength === undefined ? length : `${length}/${maxLength}`
   });
+};
+
+// `field-sizing: content` sizes the box from the value, and an empty field has
+// none — the placeholder is text the browser refuses to make room for. So the
+// height it wraps to is measured and published as --x-textarea-placeholder-height
+// for the CSS above to use as a floor.
+const usePlaceholderHeight = (ref, placeholder) => {
+  useLayoutEffect(() => {
+    const textareaEl = ref.current;
+    if (!placeholder) {
+      textareaEl.style.removeProperty("--x-textarea-placeholder-height");
+      return null;
+    }
+    let widthMeasured;
+    const measure = () => {
+      // What is typed sizes the box itself; the placeholder is not displayed
+      // then, and scrollHeight would report the value's height instead.
+      if (textareaEl.value !== "") {
+        return;
+      }
+      const {
+        paddingTop,
+        paddingBottom
+      } = getComputedStyle(textareaEl);
+      // Cleared before reading: scrollHeight can never report less than the
+      // height already applied, so measuring on top of a previous measure could
+      // only ever grow the box, never let it shrink back on a wider viewport.
+      textareaEl.style.setProperty("--x-textarea-placeholder-height", "0px");
+      const contentHeight = textareaEl.scrollHeight - parseFloat(paddingTop) - parseFloat(paddingBottom);
+      widthMeasured = textareaEl.clientWidth;
+      textareaEl.style.setProperty("--x-textarea-placeholder-height", `${contentHeight}px`);
+    };
+    measure();
+    // The placeholder wraps against the available width, so a new width is a
+    // new number of lines. Height changes are ignored: this measure is what
+    // causes them, and reacting to them would be reacting to ourselves.
+    const resizeObserver = new ResizeObserver(() => {
+      if (textareaEl.clientWidth !== widthMeasured) {
+        measure();
+      }
+    });
+    resizeObserver.observe(textareaEl);
+    // The width may have changed while the field held a value, when measuring
+    // was impossible — emptying it is when the placeholder comes back.
+    const onInput = () => {
+      if (textareaEl.value === "") {
+        measure();
+      }
+    };
+    textareaEl.addEventListener("input", onInput);
+    return () => {
+      resizeObserver.disconnect();
+      textareaEl.removeEventListener("input", onInput);
+    };
+  }, [placeholder]);
 };
 const RealTextarea = ({
   maxLength,

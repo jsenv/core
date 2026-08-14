@@ -8802,7 +8802,7 @@ const createDragGestureController = (options = {}) => {
   };
   dragGestureController.grab = grab;
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
-    if (grabEvent.button !== undefined && grabEvent.button !== 0) {
+    if (!isPrimaryButtonEvent(grabEvent)) {
       return null;
     }
     const target = grabEvent.target;
@@ -8898,12 +8898,22 @@ const createDragGestureController = (options = {}) => {
   dragGestureController.grabViaPointer = grabViaPointer;
   return dragGestureController;
 };
+
+// Only the primary button drags: a right click (or any secondary button) opens
+// a context menu, it never grabs anything.
+const isPrimaryButtonEvent = event => event.button === undefined || event.button === 0;
 const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
+  if (!isPrimaryButtonEvent(grabEvent)) {
+    return;
+  }
   const target = grabEvent.target;
   const isDedicatedHandle = target.closest && target.closest("[data-drag-handle]");
   if (isDedicatedHandle) {
     // Element is dedicated to drag — skip the threshold and start immediately.
     const dragGesture = dragGestureInitializer();
+    if (!dragGesture) {
+      return;
+    }
     dragGesture.dragViaPointer(grabEvent);
     return;
   }
@@ -11039,6 +11049,10 @@ const startDragToReorder = (event, {
   // An area that opted out of dragging (a text one wants to select, a control
   // that owns the gesture): the press there is none of our business.
   if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+    return undefined;
+  }
+  // A secondary button (right click and friends) is a context menu, not a grab.
+  if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
   event.preventDefault();
