@@ -416,11 +416,20 @@ export const Spin = ({
   // and this reads the answer back. Nothing of that story is told twice.
   const controlRef = useRef();
   const middleRef = useRef();
+  const valueHeld = useControlUIState(
+    controlRef,
+    value ?? defaultValue ?? signalProp?.peek(),
+  );
+  // A spin always shows a value, and empty is not one: the calendar has an
+  // "erase" in it, and what comes back from it is "" rather than nothing —
+  // which is a value as far as `??` is concerned and is not one as far as
+  // `valueAtStep` is (a day made of an empty string is an invalid date, and
+  // stepping away from it writes NaN into the control). So the fallback is
+  // asked for here, once, for every kind of value a spin steps through.
   const valueShown =
-    useControlUIState(
-      controlRef,
-      value ?? defaultValue ?? signalProp?.peek(),
-    ) ?? fallbackValue;
+    valueHeld === undefined || valueHeld === null || valueHeld === ""
+      ? fallbackValue
+      : valueHeld;
 
   // …and the other way round when a signal was handed over: a bound signal is
   // the value, wherever it is moved from — the url, a back/forward, a button
