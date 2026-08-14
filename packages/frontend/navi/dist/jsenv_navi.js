@@ -3,11 +3,11 @@
  * using @jsenv/navi as intended.
  */
 import { windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, installImportMetaCssBuild, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { createContext, isValidElement, h, Fragment, toChildArray, render, cloneElement } from "preact";
+import { createContext, isValidElement, h, Fragment, toChildArray, render, options, cloneElement } from "preact";
 import { useContext, useLayoutEffect, useRef, useEffect, useCallback, useState, useMemo, useId, useErrorBoundary } from "preact/hooks";
 import { jsx, jsxs, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { computed, signal, effect, batch, useSignal } from "@preact/signals";
-import { createPubSub, normalizeStyle, mergeOneStyle, getPositionedParent, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, resolveCSSSize, measureLongestVisualLineWidth, hasCSSSizeUnit, resolveOklchLightness, contrastColor, createIterableWeakSet, dispatchCustomEvent, getElementSignature, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, createEventGroupLogger, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, activeElementSignal, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { createPubSub, normalizeStyle, mergeOneStyle, getPositionedParent, dispatchInternalCustomEvent, dispatchCustomEvent, findEvent, mergeTwoStyles, normalizeStyles, resolveCSSSize, measureLongestVisualLineWidth, hasCSSSizeUnit, resolveOklchLightness, contrastColor, createIterableWeakSet, getElementSignature, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, createEventGroupLogger, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, activeElementSignal, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
@@ -7267,6 +7267,367 @@ const findControlRoot = (el) => {
   return null;
 };
 
+const dispatchRequestSetUIState = (element, value, detail) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
+const dispatchRequestClearUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
+    event: e,
+  });
+};
+const dispatchRequestResetUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
+    event: e,
+  });
+};
+/**
+ * @param {Element} el
+ * @param {{ own?: boolean }} [options] `own`: what the element holds BY ITSELF.
+ *   Only a button ever answers differently — one with no value of its own
+ *   inherits the value of the control around it, which is what makes
+ *   `--navi-send` on a form's button be about that form. Something asking what
+ *   THIS element says (a travel command reading what the travel is about) wants
+ *   the own value and would otherwise be handed the surrounding control's.
+ */
+const getUIStateFromElement = (el, { own } = {}) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    own,
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};
+
+/**
+ * Converts a JS value into the form expected by the browser DOM property for a
+ * given control type/input type combination.
+ *
+ * For example:
+ * - `datetime-local` inputs expect a local datetime string without timezone
+ * - `number`/`range` inputs expect a numeric string or number
+ * - `color` inputs require a non-empty hex string (falls back to `#000000`)
+ * - All other inputs receive the value as-is (undefined → "")
+ *
+ * Returns either the converted value directly, or a converter function when the
+ * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
+ *
+ * @param {any} value - The JS value to convert.
+ * @param {{ controlType: string, type: string }} options
+ * @returns {any} The DOM-compatible value or a converter function.
+ */
+const asControlHostValue = (
+  jsValue,
+  { controlType, type, inputMode },
+) => {
+  if (controlType === "select") {
+    // A select holds one of its options, always a string; holding nothing is
+    // the empty option, which the element spells "".
+    return asInputValue(jsValue);
+  }
+  if (controlType === "input" || controlType === "picker") {
+    if (type === "datetime-local") {
+      return asDatetimeLocalString(jsValue);
+    }
+    if (
+      type === "number" ||
+      type === "range" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
+      return asNumberString(jsValue);
+    }
+    if (type === "color") {
+      return asColorString(jsValue);
+    }
+    return asInputValue(jsValue);
+  }
+  return jsValue;
+};
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const asDatetimeLocalString = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+const asNumberString = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
+// Browser requires a non-empty value for <input type="color">.
+// When our logical value is empty we give it #000000 so it doesn't choke.
+// The UI uses the original (possibly empty) value to show the checkerboard.
+const asColorString = (jsValue) => {
+  return jsValue || "#000000";
+};
+const asInputValue = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
+
+/**
+ * Reads the current logical JS value from a control host DOM element.
+ *
+ * Handles all navi control host element types:
+ * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
+ * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
+ * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
+ *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
+ * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
+ * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
+ * - All other inputs — returns `input.value` as a string
+ *
+ * @param {HTMLElement} controlHost - The control host DOM element to read from.
+ * @returns {any} The current logical value of the control.
+ */
+const readControlValue = (controlHost) => {
+  if (
+    controlHost.tagName === "BUTTON" ||
+    controlHost.getAttribute("role") === "button"
+  ) {
+    return readValueFromButton(controlHost);
+  }
+  if (controlHost.tagName === "INPUT") {
+    // important: input.type = "navi_js"; followed by input.type; returns "text"
+    // so use getAttribute
+    const type = controlHost.getAttribute("type");
+
+    if (
+      type === "number" ||
+      type === "range" ||
+      controlHost.inputMode === "numeric" ||
+      controlHost.inputMode === "decimal"
+    ) {
+      return readNumberFromInput(controlHost);
+    }
+    if (type === "color") {
+      return readValueFromControlHost(controlHost);
+    }
+    if (type === "checkbox" || type === "radio") {
+      return readValueFromCheckableInput(controlHost);
+    }
+    if (type === "datetime-local") {
+      return readDatetimeLocalFromInput(controlHost);
+    }
+    if (type === "navi_js") {
+      return getUIStateFromElement(controlHost);
+    }
+    return readValueFromInput(controlHost);
+  }
+  if (controlHost.hasAttribute("navi-control-host")) {
+    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
+    return readValueFromControlHost(controlHost);
+  }
+  return readValueFromElement(controlHost);
+};
+const readValueFromControlHost = (controlHost) => {
+  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+};
+const readValueFromButton = (button) => {
+  return readValueFromControlHost(button);
+};
+const readDatetimeLocalFromInput = (input) => {
+  const localDateTimeString = input.value;
+  if (localDateTimeString === "") {
+    return "";
+  }
+  const localDate = new Date(localDateTimeString);
+  if (isNaN(localDate.getTime())) {
+    return localDateTimeString;
+  }
+  return localDate.toISOString();
+};
+const readNumberFromInput = (input) => {
+  const numberString = input.value;
+  if (numberString === "") {
+    return "";
+  }
+  const asNumber = Number(numberString);
+  if (isNaN(asNumber)) {
+    return numberString;
+  }
+  return asNumber;
+};
+const readValueFromCheckableInput = (input) => {
+  const checked = input.checked;
+  if (!checked) {
+    return undefined;
+  }
+  return readValueFromControlHost(input);
+};
+const readValueFromInput = (input) => {
+  const value = input.value;
+  return value;
+};
+const readValueFromElement = (element) => {
+  const value = element.value;
+  return value;
+};
+const readValueFromNaviCustomEvent = (field, fallback) => {
+  // prefer the value given as prop (respect original type, browser would convert to string)
+  let responded;
+  let value;
+  dispatchCustomEvent(field, "navi_get_value", {
+    respondWith: (jsValue) => {
+      responded = true;
+      value = jsValue;
+    },
+  });
+  if (responded) {
+    return value;
+  }
+  return fallback;
+};
+
+// In-memory registry of all mounted ui state controllers keyed by their id.
+// Allows direct controller access without dispatching DOM events — used by external
+// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
+const controllersById = new Map();
+
+// In-memory registry for radio controllers, keyed by input name.
+// Allows radio sibling unchecking without querying the DOM — necessary when
+// items are virtualized and their DOM element may not exist at the time.
+// Form scoping is reproduced by comparing parentUIStateController references.
+const radioControllersByName = new Map();
+
+// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
+// When a value is an object/array, we store it here and write a reference string to the DOM
+// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
+// The controller id is used as key — if the controller has no id, the value is not registered.
+const naviJsRegistry = new Map();
+
+const getUIStateControllerById = (id) => controllersById.get(id);
+const getRadioSiblings = (radioUIStateController) => {
+  const siblings = radioControllersByName.get(radioUIStateController.name);
+  return siblings;
+};
+
+const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
+  const domValue = asControlHostValue(jsValue, {
+    controlType,
+    type,
+    inputMode,
+  });
+  if (isSerializableAsDomValue(domValue)) {
+    return domValue;
+  }
+  naviJsRegistry.set(id, domValue);
+  return `window.__navi_js('${id}')`;
+};
+
+window.__navi_js = (id) => naviJsRegistry.get(id);
+const isSerializableAsDomValue = (value) => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  const type = typeof value;
+  return type === "string" || type === "number" || type === "boolean";
+};
+
+const onUIStateControllerCreated = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    let proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (!proxySet) {
+      proxySet = new Set();
+      proxyControllersByRealInputId.set(proxyFor, proxySet);
+    }
+    proxySet.add(uiStateController);
+  }
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    let set = radioControllersByName.get(name);
+    if (!set) {
+      set = new Set();
+      radioControllersByName.set(name, set);
+    }
+    set.add(uiStateController);
+  }
+};
+const onUIStateControllerDestroyed = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.delete(id);
+    naviJsRegistry.delete(id);
+  }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    const proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (proxySet) {
+      proxySet.delete(uiStateController);
+      if (proxySet.size === 0) {
+        proxyControllersByRealInputId.delete(proxyFor);
+      }
+    }
+  }
+  if (
+    controlType === "input" &&
+    uiStateController.controlHostProps.type === "radio" &&
+    name
+  ) {
+    const set = radioControllersByName.get(name);
+    if (set) {
+      set.delete(uiStateController);
+      if (set.size === 0) {
+        radioControllersByName.delete(name);
+      }
+    }
+  }
+};
+
+/**
+ * Controller-based equivalent of findControlProxyTarget.
+ * Given a proxy controller, returns the real control's controller.
+ * Finds the target by walking the parent controller's children — no DOM queries.
+ * Returns `null` when the controller is not a proxy or the target is not found.
+ */
+const findControlProxyTargetController = (controller) => {
+  const proxyFor = controller.controlHostProps["navi-control-proxy-for"];
+  if (!proxyFor) {
+    return null;
+  }
+  return getUIStateControllerById(proxyFor) ?? null;
+};
+
+// Reverse-lookup map: real-input id → the proxy controllers that reference it
+// via `navi-control-proxy-for`. A single control can be represented by several
+// proxies (an "enable"/"disable" button pair for one radio, for instance), so
+// each id holds a set. Maintained on create/destroy so lookup is O(1).
+const proxyControllersByRealInputId = new Map();
+const findProxyControllers = (realInputId) => {
+  if (!realInputId) {
+    return null;
+  }
+  return proxyControllersByRealInputId.get(realInputId) ?? null;
+};
+
 /**
  * DOM utilities for the proxy control pattern.
  *
@@ -7298,6 +7659,7 @@ const findControlRoot = (el) => {
  * entirely. For now we keep the proxy pattern.
  */
 
+
 /**
  * Given a proxy element, returns the real control it represents.
  * Returns `null` when `el` is not a proxy.
@@ -7311,21 +7673,48 @@ const findControlProxyTarget = (el) => {
 };
 
 /**
+ * Given a real control element, returns every proxy that visually represents
+ * it — a control can have more than one (an "enable"/"disable" button pair for
+ * one radio, for instance).
+ *
+ * Answered from the controller registry rather than the document: every proxy
+ * declares itself through the `navi-control-proxy-for` prop, so the registry
+ * knows them all, while asking the document means walking it in full for each
+ * of the (overwhelmingly many) controls that have no proxy at all.
+ *
+ * Returns an empty array when no proxy exists for `el`.
+ */
+const findControlProxies = (el) => {
+  if (!el.id) {
+    return [];
+  }
+  const proxyControllerSet = findProxyControllers(el.id);
+  if (!proxyControllerSet) {
+    return [];
+  }
+  const proxyElements = [];
+  for (const proxyController of proxyControllerSet) {
+    const proxyElement = proxyController.ref.current;
+    if (proxyElement) {
+      proxyElements.push(proxyElement);
+    }
+  }
+  return proxyElements;
+};
+
+/**
  * Given a real control element, returns the proxy that visually represents it.
  *
- * Use when you need to update or recheck the proxy's visual state after the
- * real control's state changes, or when anchoring a callout to the visible
- * element rather than the hidden real input.
+ * Use when you need a single visible stand-in for the real control — anchoring
+ * a callout, for instance. Anything notifying proxies of a state change wants
+ * `findControlProxies` instead, so a control represented by several of them
+ * updates all of them.
  *
  * Returns `null` when no proxy exists for `el`.
  */
 const findControlProxy = (el) => {
-  if (!el.id) {
-    return null;
-  }
-  return document.querySelector(
-    `[navi-control-proxy-for="${CSS.escape(el.id)}"]`,
-  );
+  const [firstProxy = null] = findControlProxies(el);
+  return firstProxy;
 };
 
 const addInputEffect = (
@@ -7584,56 +7973,16 @@ const listenInputStateChange = (
   return teardown;
 };
 
-const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-const dispatchRequestClearUIState = (element, e) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
-    event: e,
-  });
-};
-const dispatchRequestResetUIState = (element, e) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
-    event: e,
-  });
-};
-/**
- * @param {Element} el
- * @param {{ own?: boolean }} [options] `own`: what the element holds BY ITSELF.
- *   Only a button ever answers differently — one with no value of its own
- *   inherits the value of the control around it, which is what makes
- *   `--navi-send` on a form's button be about that form. Something asking what
- *   THIS element says (a travel command reading what the travel is about) wants
- *   the own value and would otherwise be handed the surrounding control's.
- */
-const getUIStateFromElement = (el, { own } = {}) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    own,
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
-};
-
 const requestPseudoStateCheck = (element, detail) => {
   dispatchInternalCustomEvent(
     element,
     "navi_pseudo_state_request_check",
     detail,
   );
-  // When a control has a visible proxy mirroring its state (e.g. selectable
-  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
-  // in sync with the real control.
-  const proxy = findControlProxy(element);
-  if (proxy) {
+  // When a control has visible proxies mirroring its state (e.g. selectable
+  // radio with `navi-control-proxy-for`), re-check them too so they stay in
+  // sync with the real control.
+  for (const proxy of findControlProxies(element)) {
     dispatchInternalCustomEvent(
       proxy,
       "navi_pseudo_state_request_check",
@@ -7686,8 +8035,7 @@ definePseudoClass(":hover", {
       return () => {};
     }
     const recheckProxy = (e) => {
-      const proxy = findControlProxy(el);
-      if (proxy) {
+      for (const proxy of findControlProxies(el)) {
         requestPseudoStateCheck(proxy, { event: e });
       }
     };
@@ -7754,9 +8102,10 @@ definePseudoClass(":hover", {
     if (el.matches(":hover")) {
       return true;
     }
-    const proxy = findControlProxy(el);
-    if (proxy && proxy.matches(":hover")) {
-      return true;
+    for (const proxy of findControlProxies(el)) {
+      if (proxy.matches(":hover")) {
+        return true;
+      }
     }
     return false;
   },
@@ -8118,23 +8467,30 @@ const isKeyboardModality = () => keyboardNavigationUsed;
       requireFocusVisible
         ? isMatchingFocusVisible(target)
         : target.matches(":focus");
+    // Both branches of isFocusedTarget rest on :focus / :focus-visible, and only
+    // one element in the document can match those: document.activeElement. So
+    // the single controller worth testing is known upfront — asking the document
+    // for every [aria-controls] would collect candidates that cannot qualify,
+    // once per element and again on every re-check, on a document each new
+    // element makes bigger.
     const isControlledBy = (target) => {
       const id = target.id;
       if (!id) {
         return false;
       }
-      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-      for (const controller of controllers) {
-        // If the controller is inside the element it controls, focus is already
-        // native (:focus-within) — no need to inherit it.
-        if (target.contains(controller)) {
-          continue;
-        }
-        if (isFocusedTarget(controller)) {
-          return true;
-        }
+      const activeElement = document.activeElement;
+      if (!activeElement || activeElement === document.body) {
+        return false;
       }
-      return false;
+      if (!activeElement.matches(`[aria-controls~="${id}"]`)) {
+        return false;
+      }
+      // A controller inside the element it controls means focus is already
+      // native (:focus-within) — nothing to inherit.
+      if (target.contains(activeElement)) {
+        return false;
+      }
+      return isFocusedTarget(activeElement);
     };
     if (isControlledBy(el)) {
       return true;
@@ -8461,8 +8817,7 @@ const initPseudoStyles = (
     }
     // When this element's state changes, notify any proxy element that mirrors it
     // so it can re-check and visually reflect the new state.
-    const proxy = findControlProxy(element);
-    if (proxy) {
+    for (const proxy of findControlProxies(element)) {
       requestPseudoStateCheck(proxy, {});
     }
   };
@@ -9760,7 +10115,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$Y = /* css */`
+installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -9792,7 +10147,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -9997,7 +10352,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$X = /* css */`
+installImportMetaCssBuild(import.meta);const css$Y = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -10034,7 +10389,7 @@ installImportMetaCssBuild(import.meta);const css$X = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -10368,7 +10723,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$W = /* css */`
+const css$X = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -10874,7 +11229,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$W, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -13191,310 +13546,6 @@ const useActionStatus = (action) => {
   };
 };
 
-/**
- * Converts a JS value into the form expected by the browser DOM property for a
- * given control type/input type combination.
- *
- * For example:
- * - `datetime-local` inputs expect a local datetime string without timezone
- * - `number`/`range` inputs expect a numeric string or number
- * - `color` inputs require a non-empty hex string (falls back to `#000000`)
- * - All other inputs receive the value as-is (undefined → "")
- *
- * Returns either the converted value directly, or a converter function when the
- * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
- *
- * @param {any} value - The JS value to convert.
- * @param {{ controlType: string, type: string }} options
- * @returns {any} The DOM-compatible value or a converter function.
- */
-const asControlHostValue = (
-  jsValue,
-  { controlType, type, inputMode },
-) => {
-  if (controlType === "input" || controlType === "picker") {
-    if (type === "datetime-local") {
-      return asDatetimeLocalString(jsValue);
-    }
-    if (
-      type === "number" ||
-      type === "range" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
-      return asNumberString(jsValue);
-    }
-    if (type === "color") {
-      return asColorString(jsValue);
-    }
-    return asInputValue(jsValue);
-  }
-  return jsValue;
-};
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const asDatetimeLocalString = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-const asNumberString = (jsValue) => {
-  if (jsValue === undefined) {
-    return "";
-  }
-  return jsValue;
-};
-// Browser requires a non-empty value for <input type="color">.
-// When our logical value is empty we give it #000000 so it doesn't choke.
-// The UI uses the original (possibly empty) value to show the checkerboard.
-const asColorString = (jsValue) => {
-  return jsValue || "#000000";
-};
-const asInputValue = (jsValue) => {
-  if (jsValue === undefined) {
-    return "";
-  }
-  return jsValue;
-};
-
-/**
- * Reads the current logical JS value from a control host DOM element.
- *
- * Handles all navi control host element types:
- * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
- * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
- * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
- *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
- * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
- * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
- * - All other inputs — returns `input.value` as a string
- *
- * @param {HTMLElement} controlHost - The control host DOM element to read from.
- * @returns {any} The current logical value of the control.
- */
-const readControlValue = (controlHost) => {
-  if (
-    controlHost.tagName === "BUTTON" ||
-    controlHost.getAttribute("role") === "button"
-  ) {
-    return readValueFromButton(controlHost);
-  }
-  if (controlHost.tagName === "INPUT") {
-    // important: input.type = "navi_js"; followed by input.type; returns "text"
-    // so use getAttribute
-    const type = controlHost.getAttribute("type");
-
-    if (
-      type === "number" ||
-      type === "range" ||
-      controlHost.inputMode === "numeric" ||
-      controlHost.inputMode === "decimal"
-    ) {
-      return readNumberFromInput(controlHost);
-    }
-    if (type === "color") {
-      return readValueFromControlHost(controlHost);
-    }
-    if (type === "checkbox" || type === "radio") {
-      return readValueFromCheckableInput(controlHost);
-    }
-    if (type === "datetime-local") {
-      return readDatetimeLocalFromInput(controlHost);
-    }
-    if (type === "navi_js") {
-      return getUIStateFromElement(controlHost);
-    }
-    return readValueFromInput(controlHost);
-  }
-  if (controlHost.hasAttribute("navi-control-host")) {
-    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
-    return readValueFromControlHost(controlHost);
-  }
-  return readValueFromElement(controlHost);
-};
-const readValueFromControlHost = (controlHost) => {
-  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
-};
-const readValueFromButton = (button) => {
-  return readValueFromControlHost(button);
-};
-const readDatetimeLocalFromInput = (input) => {
-  const localDateTimeString = input.value;
-  if (localDateTimeString === "") {
-    return "";
-  }
-  const localDate = new Date(localDateTimeString);
-  if (isNaN(localDate.getTime())) {
-    return localDateTimeString;
-  }
-  return localDate.toISOString();
-};
-const readNumberFromInput = (input) => {
-  const numberString = input.value;
-  if (numberString === "") {
-    return "";
-  }
-  const asNumber = Number(numberString);
-  if (isNaN(asNumber)) {
-    return numberString;
-  }
-  return asNumber;
-};
-const readValueFromCheckableInput = (input) => {
-  const checked = input.checked;
-  if (!checked) {
-    return undefined;
-  }
-  return readValueFromControlHost(input);
-};
-const readValueFromInput = (input) => {
-  const value = input.value;
-  return value;
-};
-const readValueFromElement = (element) => {
-  const value = element.value;
-  return value;
-};
-const readValueFromNaviCustomEvent = (field, fallback) => {
-  // prefer the value given as prop (respect original type, browser would convert to string)
-  let responded;
-  let value;
-  dispatchCustomEvent(field, "navi_get_value", {
-    respondWith: (jsValue) => {
-      responded = true;
-      value = jsValue;
-    },
-  });
-  if (responded) {
-    return value;
-  }
-  return fallback;
-};
-
-// In-memory registry of all mounted ui state controllers keyed by their id.
-// Allows direct controller access without dispatching DOM events — used by external
-// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
-const controllersById = new Map();
-
-// In-memory registry for radio controllers, keyed by input name.
-// Allows radio sibling unchecking without querying the DOM — necessary when
-// items are virtualized and their DOM element may not exist at the time.
-// Form scoping is reproduced by comparing parentUIStateController references.
-const radioControllersByName = new Map();
-
-// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
-// When a value is an object/array, we store it here and write a reference string to the DOM
-// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
-// The controller id is used as key — if the controller has no id, the value is not registered.
-const naviJsRegistry = new Map();
-
-const getUIStateControllerById = (id) => controllersById.get(id);
-const getRadioSiblings = (radioUIStateController) => {
-  const siblings = radioControllersByName.get(radioUIStateController.name);
-  return siblings;
-};
-
-const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
-  const domValue = asControlHostValue(jsValue, {
-    controlType,
-    type,
-    inputMode,
-  });
-  if (isSerializableAsDomValue(domValue)) {
-    return domValue;
-  }
-  naviJsRegistry.set(id, domValue);
-  return `window.__navi_js('${id}')`;
-};
-
-window.__navi_js = (id) => naviJsRegistry.get(id);
-const isSerializableAsDomValue = (value) => {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  const type = typeof value;
-  return type === "string" || type === "number" || type === "boolean";
-};
-
-const onUIStateControllerCreated = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.set(id, uiStateController);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    proxyControllerByRealInputId.set(proxyFor, uiStateController);
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.props.type === "radio" &&
-    name
-  ) {
-    let set = radioControllersByName.get(name);
-    if (!set) {
-      set = new Set();
-      radioControllersByName.set(name, set);
-    }
-    set.add(uiStateController);
-  }
-};
-const onUIStateControllerDestroyed = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.delete(id);
-    naviJsRegistry.delete(id);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    proxyControllerByRealInputId.delete(proxyFor);
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.controlHostProps.type === "radio" &&
-    name
-  ) {
-    const set = radioControllersByName.get(name);
-    if (set) {
-      set.delete(uiStateController);
-      if (set.size === 0) {
-        radioControllersByName.delete(name);
-      }
-    }
-  }
-};
-
-/**
- * Controller-based equivalent of findControlProxyTarget.
- * Given a proxy controller, returns the real control's controller.
- * Finds the target by walking the parent controller's children — no DOM queries.
- * Returns `null` when the controller is not a proxy or the target is not found.
- */
-const findControlProxyTargetController = (controller) => {
-  const proxyFor = controller.controlHostProps["navi-control-proxy-for"];
-  if (!proxyFor) {
-    return null;
-  }
-  return getUIStateControllerById(proxyFor) ?? null;
-};
-
-// Reverse-lookup map: real-input id → proxy controller that references it via
-// `navi-control-proxy-for`. Maintained on create/destroy so lookup is O(1).
-const proxyControllerByRealInputId = new Map();
-const findProxyController = (realInputId) => {
-  if (!realInputId) {
-    return null;
-  }
-  return proxyControllerByRealInputId.get(realInputId) ?? null;
-};
-
 const CONSTRAINT_NAME_TO_PROP = {
   disabled: "disabledMessage",
   required: "requiredMessage",
@@ -13595,7 +13646,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$V = /* css */`
+const css$W = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -13834,7 +13885,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$W, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -14435,12 +14486,12 @@ const positionCallout = (calloutElement, anchorElement, {
     } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
       alignToAnchorBox = "content-box";
     } else {
-      // Smart default: inputs and buttons are tight boxes where border-box makes sense.
+      // Smart default: form controls and buttons are tight boxes where border-box makes sense.
       // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
       // the arrow points at visible text rather than the outer padding/border.
       const controHost = findControlHost(anchorElement) || anchorElement;
       const tagName = controHost.tagName;
-      if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+      if (tagName === "INPUT" || tagName === "SELECT" || tagName === "BUTTON" || tagName === "FIELDSET") {
         alignToAnchorBox = "border-box";
       } else {
         alignToAnchorBox = "content-box";
@@ -17916,6 +17967,10 @@ const isInertOnClick = (element) => {
   if (tagName === "BUTTON") {
     return element.type === "button";
   }
+  if (tagName === "SELECT") {
+    // The click opens the option list; cancelling it leaves the select shut.
+    return false;
+  }
   return true;
 };
 
@@ -19735,6 +19790,78 @@ const ActionContext = createContext();
 const ActionRequesterContext = createContext();
 
 /**
+ * How a control tells the labels pointing at it what it is (disabled, readOnly,
+ * required) and when it goes away.
+ *
+ * A label linked to its control by id has no DOM relationship to walk: the two
+ * only know each other's id. A non-native control has no `element.labels`
+ * either, so the only way to go from the control to its labels through the DOM
+ * is to ask the whole document for `label[for="…"]` — once per control, on a
+ * document that every mounted control makes bigger.
+ *
+ * The link is held here instead. The control publishes its state under its own
+ * id; a label subscribes to the id it points at. Order does not matter —
+ * whichever mounts second finds what the first left, so a label written after
+ * its control is told just as much as one written before it.
+ *
+ * A label that WRAPS its control has the native relationship already
+ * (`element.labels`) and is notified through a DOM event instead — see
+ * `getAssociatedLabels` in control_hooks.jsx. Both channels carry the same
+ * values and land on the same setters, so a control reachable through both is
+ * simply told twice.
+ */
+
+const stateByControlId = new Map();
+const callbackSetByControlId = new Map();
+
+const publishControlStateToLabels = (controlId, controlState) => {
+  if (!controlId) {
+    return;
+  }
+  stateByControlId.set(controlId, controlState);
+  const callbackSet = callbackSetByControlId.get(controlId);
+  if (callbackSet) {
+    for (const callback of callbackSet) {
+      callback(controlState);
+    }
+  }
+};
+
+const unpublishControlStateToLabels = (controlId) => {
+  if (!controlId) {
+    return;
+  }
+  stateByControlId.delete(controlId);
+  const callbackSet = callbackSetByControlId.get(controlId);
+  if (callbackSet) {
+    for (const callback of callbackSet) {
+      callback(null);
+    }
+  }
+};
+
+/**
+ * Subscribes to the state published by the control identified by `controlId`.
+ * The callback is called right away with the current state (or `null` when no
+ * such control is mounted), then on every change. Returns the teardown.
+ */
+const subscribeToControlState = (controlId, callback) => {
+  let callbackSet = callbackSetByControlId.get(controlId);
+  if (!callbackSet) {
+    callbackSet = new Set();
+    callbackSetByControlId.set(controlId, callbackSet);
+  }
+  callbackSet.add(callback);
+  callback(stateByControlId.get(controlId) ?? null);
+  return () => {
+    callbackSet.delete(callback);
+    if (callbackSet.size === 0) {
+      callbackSetByControlId.delete(controlId);
+    }
+  };
+};
+
+/**
  * Named presets for the `charGuard` prop.
  * Each value is a regex character class (including the [ ] delimiters).
  */
@@ -20337,15 +20464,17 @@ const useUIStateController = (
             // later through a React re-render — visible as e.g. two radios
             // appearing checked at once between the real input update and the
             // next render (radio_sibling_uncheck case).
-            const proxyController = findProxyController(s.id);
-            if (proxyController) {
-              // Find any mounted controller that declared itself as a proxy for this one.
-              // Communicates directly to the proxy controller — no DOM query needed.
-              const mirrorEvent = new CustomEvent("proxy_mirror_state", {
-                detail: {},
-              });
-              chainEvent(mirrorEvent, e);
-              proxyController.setUIState(newUIState, mirrorEvent);
+            // Every mounted controller that declared itself as a proxy for this
+            // one. Communicates directly to them — no DOM query needed.
+            const proxyControllerSet = findProxyControllers(s.id);
+            if (proxyControllerSet) {
+              for (const proxyController of proxyControllerSet) {
+                const mirrorEvent = new CustomEvent("proxy_mirror_state", {
+                  detail: {},
+                });
+                chainEvent(mirrorEvent, e);
+                proxyController.setUIState(newUIState, mirrorEvent);
+              }
             }
           }
           if (isInternalEvent(e)) {
@@ -20462,8 +20591,18 @@ const useUIStateController = (
                   );
                   syntheticInputFired = true;
                 }
+              } else if (el.tagName === "SELECT") {
+                debugUIState(
+                  e,
+                  `dispatching synthetic input event for select "${newUIState}"`,
+                );
+                // A plain Event, not an InputEvent: that is what the browser
+                // itself fires on a select, and input_effect reads the value off
+                // the element anyway.
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                syntheticInputFired = true;
               }
-              // TODO: select, textarea
+              // TODO: textarea
             }
           }
           if (!syntheticInputFired) {
@@ -21952,6 +22091,61 @@ const useControlProps = (props, {
           }
         };
       }
+      const enterToSend = e => {
+        const control = e.currentTarget;
+        return {
+          name: "enter to send closest control group",
+          bypassInteractivity: true,
+          // allow to dispatch --navi-send even if readonly
+          allowed: () => triggerNaviCommand(control, "--navi-send", e),
+          // prevent dispatching click as result of this enter
+          prevented: () => e.preventDefault()
+        };
+      };
+      if (controlType === "select") {
+        return {
+          keyDown: e => {
+            if (e.key === "Enter") {
+              return enterToSend(e);
+            }
+            if (getKeyboardEventDefaultAction(e) === "activate") {
+              // Space opens the list. Nothing has been chosen at that point, so
+              // there is no ui action to trigger — only whether the list is
+              // allowed to open at all.
+              return {
+                name: "keydown to open the option list",
+                prevented: () => e.preventDefault()
+              };
+            }
+            return null;
+          },
+          mouseDown: e => {
+            // Same as the keydown above: opening the list is the interaction to
+            // ask about, and refusing it is what keeps a read-only select shut.
+            return {
+              name: "mousedown to open the option list",
+              prevented: () => e.preventDefault()
+            };
+          },
+          input: e => {
+            return {
+              name: "input",
+              allowed: () => syncUIStateWithDOM(e),
+              // The keyboard moves the selection on a closed select, and the
+              // platform's own list can hand back a choice, both before anything
+              // was asked. A refused change puts the element back on the state it
+              // never left.
+              prevented: () => syncDomState(uiStateController.uiState, e)
+            };
+          },
+          naviChange: e => {
+            return {
+              name: "navi_change",
+              allowed: () => requestActionOnAllowed(e)
+            };
+          }
+        };
+      }
       const keyDownDefaultOnInput = e => {
         if (e.key === "Enter") {
           if (actionDebounce) {
@@ -21960,15 +22154,7 @@ const useControlProps = (props, {
             // Don't propagate to --navi-send, which would cause a double action call.
             return null;
           }
-          const input = e.currentTarget;
-          return {
-            name: "enter on input to send closest control group",
-            bypassInteractivity: true,
-            // allow to dispatch --navi-send even if input is readonly
-            allowed: () => triggerNaviCommand(input, "--navi-send", e),
-            // prevent dispatching click as result of this enter
-            prevented: () => e.preventDefault()
-          };
+          return enterToSend(e);
         }
         return keyDownDefault(e);
       };
@@ -22364,7 +22550,7 @@ const createControlInfo = (props, {
     defaultStatePropName = "defaultOpen";
     stateInitial = props.open || props.defaultOpen;
     value = props.value || "open";
-  } else if (controlType === "picker") {
+  } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
     if (Object.hasOwn(props, "value")) {
@@ -22383,7 +22569,10 @@ const createControlInfo = (props, {
       stateInitial = undefined;
     }
     disabledSupported = true;
-    readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
+    // A native <select> has no readonly attribute. What says it is read-only is
+    // aria-readonly plus a refused interaction — see the select reactions in
+    // getDefaultEventReactionDefinitions.
+    readOnlySupported = controlType === "picker" && INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
   return {
     controlType,
@@ -22709,39 +22898,47 @@ const useInteractiveProps = (props, {
         controlHostProps["inert"] = "";
       }
     }
-    // inform any associated label of our state (connected, disabled, readOnly,
+    // Inform any associated label of our state (connected, disabled, readOnly,
     // required — a Label with requiredIndicator marks itself from it rather
-    // than being told twice what the control already knows)
-    // dispatched directly on the label — works whether the label wraps the control
-    // (Field as label) or is a separate element linked via htmlFor (Label component)
+    // than being told twice what the control already knows), through both
+    // channels a label can be reached by: a DOM event on the labels the element
+    // itself hands over (a wrapping <label>, or a label[for] on a native form
+    // element), and a publication under this control's id for the labels that
+    // only know it by that (see control_label_state.js).
+    //
+    // The id is remembered rather than re-read at unmount time: ref.current is
+    // often already null by then, and the labels subscribed under that id would
+    // stay told about a control that no longer exists.
+    const publishedIdRef = useRef(null);
     useLayoutEffect(() => {
       const element = ref.current;
       if (!element) {
         return;
       }
-      const labels = getAssociatedLabels(element);
       const readOnlyForced = element.hasAttribute("data-readonly-forced");
       const readOnly = readOnlyForced ? false : readOnlyResolved;
-      for (const label of labels) {
+      const controlState = {
+        disabled: disabledResolved,
+        readOnly,
+        required: requiredResolved
+      };
+      for (const label of getAssociatedLabels(element)) {
         label.dispatchEvent(new CustomEvent("navi_control_state", {
-          detail: {
-            disabled: disabledResolved,
-            readOnly,
-            required: requiredResolved
-          }
+          detail: controlState
         }));
       }
+      publishedIdRef.current = element.id;
+      publishControlStateToLabels(element.id, controlState);
     }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
-        if (!element) {
-          return;
+        if (element) {
+          for (const label of getAssociatedLabels(element)) {
+            label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
+          }
         }
-        const labels = getAssociatedLabels(element);
-        for (const label of labels) {
-          label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
-        }
+        unpublishControlStateToLabels(publishedIdRef.current);
       };
     }, []);
   }
@@ -22991,29 +23188,19 @@ const splitControlProps = props => {
   }
   return [controlRootProps, controlHostProps];
 };
+
+// The labels the DOM itself can hand over: a wrapping <label>, or a label[for]
+// pointing at a native form element. Everything else — a label[for] on a
+// non-native control — goes through control_label_state.js instead, which knows
+// the pairing without asking the document for it.
 const getAssociatedLabels = element => {
-  if (!element) {
+  if (!element || !element.labels) {
     return [];
   }
-  // const closestPicker = element.closest('[navi-control="picker"]');
-  // const insidePicker = closestPicker && element !== closestPicker;
-  // const formElement = insidePicker ? closestPicker : element;
-  const formElement = element;
-  // Native form elements expose .labels directly
-  if (formElement.labels && formElement.labels.length > 0) {
-    return Array.from(formElement.labels);
-  }
-  const id = formElement.id;
-  if (id) {
-    const byId = Array.from(document.querySelectorAll(`label[for="${CSS.escape(id)}"]`));
-    if (byId.length > 0) {
-      return byId;
-    }
-  }
-  return [];
+  return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$U = /* css */`
+installImportMetaCssBuild(import.meta);const css$V = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -23406,7 +23593,7 @@ installImportMetaCssBuild(import.meta);const css$U = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$U, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -24818,6 +25005,10 @@ const createOpenController = (
   const controller = {
     opened: false,
     openEffect: null,
+    // Set by the controlled element (see popup_content_mount.js) when its
+    // content is still waiting for a first open to be built. Called below,
+    // before openEffect, so the popup measures and positions the real thing.
+    mountContent: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;
@@ -24871,6 +25062,10 @@ const createOpenController = (
           }
         };
       };
+      // After prepareFocusTransfer, which has to record what held the focus
+      // before anything inside the popup can claim it, and before openEffect,
+      // which measures the popup to place it.
+      controller.mountContent?.();
       const openEffectReturnValue =
         controller.openEffect(requestOpenEvent) || null;
       openEffectCleanup = (closeEvent) => {
@@ -25062,6 +25257,84 @@ const useOpenPropsEffectOnOpenController = (openController, props) => {
       );
     }
   }, [open]);
+};
+
+/**
+ * Runs `fn` and commits whatever it re-renders before returning, instead of
+ * letting Preact batch it into the next microtask. Layout effects of what gets
+ * mounted run inside the call too, exactly as they would on any other commit.
+ *
+ * For the caller that has to read the DOM it just asked for — measuring an
+ * element whose content it mounts in the same breath — and cannot wait a tick
+ * to do it, because what comes after is a browser event still in flight
+ * (preventDefault, focus placement) that no longer accepts being answered late.
+ *
+ * `options.debounceRendering` is Preact's own hook for deciding *when* the
+ * render queue drains; swapping it for "right now" for the duration of the call
+ * is exactly how preact/compat implements React's flushSync. Reserve it for the
+ * case above: rendering synchronously in the middle of an event gives up the
+ * batching that makes several state changes one commit.
+ */
+const flushSyncRendering = (fn) => {
+  const debounceRenderingPrevious = options.debounceRendering;
+  options.debounceRendering = (drainRenderQueue) => {
+    drainRenderQueue();
+  };
+  try {
+    fn();
+  } finally {
+    options.debounceRendering = debounceRenderingPrevious;
+  }
+};
+
+/**
+ * When a popup builds what it holds.
+ *
+ * A closed popup shows nothing, focuses nothing, and answers nothing: what it
+ * holds is out of reach until it opens. Building that content at mount time
+ * means a page carrying a handful of closed popups pays, on the very render
+ * that decides how fast it appears, for content nobody has asked for — and
+ * pays again on every subsequent measurement, since each of those nodes makes
+ * the document the rest of the page queries bigger.
+ *
+ * So the content is built when the popup first opens, and stays built from
+ * then on: closing is not throwing away, and a reopened popup finds its scroll
+ * position, its half-typed form and its list state where it left them.
+ *
+ * It is built synchronously, from inside `openController.open()` and before
+ * `openEffect` runs (see open_controller.js), so the popup still measures real
+ * content when it positions and animates itself, and so anything inside it
+ * still observes the opening the way it always did — mounted while the popup
+ * reads as closed, told it opened right after (see
+ * use_displayed_layout_effect.js).
+ *
+ * `mountWhenClosed` is for content something else depends on before any of
+ * this: a value the popup's owner reads off its own children, fields a form
+ * around it collects on submit, a size measured from outside.
+ */
+
+
+const usePopupContentMount = (
+  openController,
+  { children, mountWhenClosed },
+) => {
+  const [contentMounted, setContentMounted] = useState(
+    () => Boolean(mountWhenClosed) || openController.opened,
+  );
+  openController.mountContent = contentMounted
+    ? null
+    : () => {
+        flushSyncRendering(() => {
+          setContentMounted(true);
+        });
+      };
+  useLayoutEffect(() => {
+    if (mountWhenClosed) {
+      setContentMounted(true);
+    }
+  }, [mountWhenClosed]);
+
+  return contentMounted ? children : null;
 };
 
 /**
@@ -25534,7 +25807,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$T = /* css */`
+const css$U = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -25941,10 +26214,15 @@ const css$T = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`).
+ * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
+ *   instead of waiting for the first open (see popup_content_mount.js). For
+ *   content something depends on while the popup is still closed: a value read
+ *   off it, fields a surrounding form collects on submit, a size measured from
+ *   outside.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$T, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -26132,9 +26410,14 @@ const useDialogProps = props => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
-    children,
+    children: childrenProp,
+    mountWhenClosed,
     ...rest
   } = props;
+  const children = usePopupContentMount(openController, {
+    children: childrenProp,
+    mountWhenClosed
+  });
   const isModal = layer === "top";
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
@@ -26772,7 +27055,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$S = /* css */`
+const css$T = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -27139,10 +27422,15 @@ const css$S = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`/`side_panel.jsx`).
+ * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
+ *   instead of waiting for the first open (see popup_content_mount.js). For
+ *   content something depends on while the popup is still closed: a value read
+ *   off it, fields a surrounding form collects on submit, a size measured from
+ *   outside.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$S, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -27323,9 +27611,14 @@ const usePopoverProps = props => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
-    children,
+    children: childrenProp,
+    mountWhenClosed,
     ...rest
   } = props;
+  const children = usePopupContentMount(openController, {
+    children: childrenProp,
+    mountWhenClosed
+  });
   const isTopLayer = layer === "top";
   const ref = props.ref;
   const backdropRef = useRef();
@@ -28106,7 +28399,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$R = /* css */`
+const css$S = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -28243,7 +28536,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -28327,7 +28620,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
+installImportMetaCssBuild(import.meta);const css$R = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -28352,7 +28645,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -35547,7 +35840,7 @@ const PhoneSvg = () => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$P = /* css */`
+const css$Q = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -35582,7 +35875,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -35697,7 +35990,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$O = /* css */`
+installImportMetaCssBuild(import.meta);const css$P = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -35855,7 +36148,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -36008,7 +36301,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`
+installImportMetaCssBuild(import.meta);const css$O = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -36450,7 +36743,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$N, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -36685,7 +36978,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$M = /* css */`
+const css$N = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -36860,7 +37153,7 @@ const Nav = ({
   // "before" or "after": which side the panel sits on, turning the nav into folder tabs
   ...props
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -37252,7 +37545,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$L = /* css */`
+const css$M = /* css */`
   @layer navi {
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
@@ -37565,7 +37858,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$L, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -38091,7 +38384,7 @@ installImportMetaCssBuild(import.meta);/**
  *    into the size; a box-shadow draws the identical line and stays out of
  *    layout.
  */
-const css$K = /* css */`
+const css$L = /* css */`
   @layer navi {
     :root {
       --navi-fixed-bar-width: 56px;
@@ -38229,7 +38522,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$K, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Whichever of width/height crosses the edge the bar sits on is what the
@@ -38317,7 +38610,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$J = /* css */ `
+const css$K = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -38341,7 +38634,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$J;
+    styleEl.textContent = css$K;
     document.head.appendChild(styleEl);
   }
 
@@ -38497,7 +38790,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$I = /* css */`
+const css$J = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -38582,7 +38875,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -38636,7 +38929,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -38682,7 +38975,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -38938,7 +39231,7 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 0; /* Useful to reserve space for outline */
@@ -39016,7 +39309,7 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -39058,7 +39351,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-checkbox-border-radius);
@@ -39385,7 +39678,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -39507,7 +39800,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$E = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   @layer navi {
     .navi_label {
       --label-required-indicator-color: var(--navi-color-danger, #b42318);
@@ -39587,7 +39880,7 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -39622,7 +39915,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -39654,7 +39947,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const {
     children,
     // Marks the label when its control is required. Takes what to show, or
@@ -39677,6 +39970,25 @@ const Label = props => {
   if (!Object.hasOwn(props, "htmlFor") && controlId) {
     props.htmlFor = controlId;
   }
+  // A label pointing at its control by id is not inside it and does not contain
+  // it, so nothing in the DOM links the two — the control publishes its state
+  // under that id and this is where the label picks it up (see
+  // control_label_state.js). A label that wraps its control instead is told
+  // through the navi_control_state event below.
+  const {
+    htmlFor
+  } = props;
+  useLayoutEffect(() => {
+    if (!htmlFor) {
+      return undefined;
+    }
+    return subscribeToControlState(htmlFor, controlState => {
+      setConnected(Boolean(controlState));
+      setDisabled(Boolean(controlState?.disabled));
+      setReadOnly(Boolean(controlState?.readOnly));
+      setRequired(Boolean(controlState?.required));
+    });
+  }, [htmlFor]);
   const [messageProps, remainingProps] = extractMessageAndRemainingProps({
     ...props,
     requiredIndicator: undefined
@@ -39797,7 +40109,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+installImportMetaCssBuild(import.meta);const css$E = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -40160,7 +40472,7 @@ const InputRadioHeadless = props => {
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -40306,7 +40618,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$D = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -40561,7 +40873,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -42488,7 +42800,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$B = /* css */`
+const css$C = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -42537,7 +42849,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -42767,6 +43079,7 @@ const useFormGroup = props => {
   // against the state of the previous frame.
   uiStateController.shouldRequestAction = value => Boolean(props.canSendWhileUnchanged) || !compareTwoJsValues(withoutEmptyFields(value), uiStateController.sentUIState);
   useFirstUIStateAsSent(uiStateController);
+  useUnregisteredControlWarning(props.ref);
   const {
     basePseudoState,
     children
@@ -42915,6 +43228,15 @@ const useFirstUIStateAsSent = uiStateController => {
     uiStateController.sentUIState = readHeldUIState(uiStateController);
   }, [uiStateController]);
 };
+const useUnregisteredControlWarning = ref => {
+  // No dependency array: fields appear and disappear as the form re-renders,
+  // and a field rendered later is exactly the one worth catching.
+  useLayoutEffect(() => {
+    {
+      return;
+    }
+  });
+};
 const FormPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
@@ -42951,7 +43273,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_group {
     --group-border-width: 1px;
 
@@ -43047,7 +43369,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
@@ -43174,7 +43496,7 @@ installImportMetaCssBuild(import.meta);/**
  * pair. One popup holding slides of its own contents has no such problem — and
  * it is the same component in the document, in a dialog or in a popover.
  */
-const css$z = /* css */`
+const css$A = /* css */`
   /* Every slide in the same grid cell: the box then measures itself on the
      LARGEST of them, in both directions, without anything being measured by
      hand — which is also why nothing here resizes as the slides change. Each
@@ -43484,7 +43806,7 @@ const SlideContainer = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/layout/slide_container.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/layout/slide_container.jsx"];
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
   // The box itself: it is what takes the keyboard when what is on screen holds
@@ -45348,7 +45670,7 @@ installImportMetaCssBuild(import.meta);/**
  * pass through untouched via `...rest` to whichever of Popover/Dialog
  * actually renders.
  */
-const css$y = /* css */`
+const css$z = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -45439,10 +45761,15 @@ const css$y = /* css */`
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
+ * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
+ *   instead of waiting for the first open (see popup_content_mount.js). For
+ *   content something depends on while the popup is still closed: a value read
+ *   off it, fields a surrounding form collects on submit, a size measured from
+ *   outside.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/layout/popup.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -45585,7 +45912,7 @@ const commitSubtree = (controller, e) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -45697,7 +46024,7 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -45963,6 +46290,13 @@ const PickerCustom = props => {
     Object.assign(popupProps, {
       anchor: props.ref,
       openController,
+      // A picker whose value was never given to it reads it off the control in
+      // its popup (see useUIFacadeStateController): the trigger shows what the
+      // list inside says is selected, so that list has to exist before anyone
+      // opens anything. Told a value — even an empty one — the picker owns it
+      // and pushes it down instead, leaving the popup free to build its
+      // content only when it is first opened (see popup_content_mount.js).
+      mountWhenClosed: !Object.hasOwn(props, "value") && !Object.hasOwn(props, "defaultValue"),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -46342,7 +46676,7 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -46420,7 +46754,7 @@ const Separator = ({
   style,
   ...props
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -46913,7 +47247,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -47117,7 +47451,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$v, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -47712,7 +48046,7 @@ const ListVirtualContext = createContext(null);
 // that returning a component of one's own — instead of a bare <List.Item> —
 // works the same way.
 const ListRowContext = createContext(null);
-const css$u = /* css */`
+const css$v = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -48237,7 +48571,7 @@ const css$u = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -51340,7 +51674,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -51452,7 +51786,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -51504,7 +51838,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -51529,7 +51863,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$s, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -51604,7 +51938,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -51635,7 +51969,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$r, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -52090,7 +52424,7 @@ const PickerFileUI = () => {
   return String(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -52416,7 +52750,7 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -52879,7 +53213,7 @@ installImportMetaCssBuild(import.meta);/**
  * refuse it on purpose, which is what keeps the focus where the travel happens
  * instead of moving it into a slide that is about to leave.
  */
-const css$p = /* css */`
+const css$q = /* css */`
   @layer navi {
     .navi_picker_spin {
       /* A picker one steps through is still a picker: what themes every picker
@@ -53225,7 +53559,7 @@ const Spin = ({
   nextLabel,
   ...rest
 }) => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
   const containerId = `${id}_values`;
   const controlId = `${id}_control`;
@@ -53836,7 +54170,7 @@ const addDays = (day, count) => {
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$o = /* css */`
+const css$p = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -53856,7 +54190,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -53905,7 +54239,7 @@ installImportMetaCssBuild(import.meta);/**
  * shared sheet is registered here too — a page may render a Textarea without
  * any Input.
  */
-const css$n = /* css */`
+const css$o = /* css */`
   .navi_input.navi_textarea {
     .navi_control_input {
       min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -53992,7 +54326,7 @@ const Textarea = ({
   width = "35ch",
   ...props
 }) => {
-  import.meta.css = [inputCss + css$n, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [inputCss + css$o, "@jsenv/navi/src/control/input/textarea.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   usePlaceholderHeight(props.ref, props.placeholder);
@@ -54066,7 +54400,7 @@ const TextareaCharCount = ({
   maxLength,
   ...rest
 }) => {
-  import.meta.css = [css$n, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/control/input/textarea.jsx"];
   const resolvedValue = signal ? signal.value : value;
   const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
   return jsx(Box, {
@@ -54456,7 +54790,7 @@ const isTextInputElement = (el) => {
   );
 };
 
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
@@ -54523,7 +54857,7 @@ installImportMetaCssBuild(import.meta);const css$m = /* css */`
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 const InputDuration = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/control/input/input_duration.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
@@ -55025,7 +55359,7 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   .navi_radio_group {
     border-style: solid;
 
@@ -55045,7 +55379,7 @@ const RadioGroup = props => {
   return radioGroup;
 };
 const RadioGroupInterface = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/input/radio_group.jsx"];
   const {
     ref
   } = props;
@@ -55071,6 +55405,139 @@ const RadioGroupInterface = props => {
       ...childrenWrapperProps,
       children: props.children
     })
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A native `<select>` that is a navi control: its value enters the state of the
+ * `<Form>` around it, and it takes `signal`, `uiAction`, `action`, `command`,
+ * `value`/`defaultValue`, `readOnly`, `disabled`, `required` like every other
+ * control.
+ *
+ * Native on purpose, and not a Picker: on a phone a `<select>` opens the
+ * system's own full-screen list — the thing the thumb handles best and the user
+ * already knows — with no popup, no positioning and no focus trap to get wrong.
+ * That is the right control for a short closed list (a gender, an age bracket,
+ * "who sees this"). A long, searchable list with rich content in its options is
+ * Picker's problem, not this one.
+ *
+ * The options are the children, written as HTML: an `<optgroup>`, a `disabled`
+ * option, an `<hr>` between two groups need no support from this component.
+ *
+ * Two things the component absorbs, both traps met before:
+ * - a native `<select>` ignores `defaultValue` and reads `selected` off its
+ *   options instead; here `value`/`defaultValue` mean what they mean everywhere
+ *   else in navi, and the element is told what to show.
+ * - a native `<select>` has no `readonly`; `readOnly` here refuses the
+ *   interaction (the list does not open, a change from the keyboard is put
+ *   back) and says so with `aria-readonly`.
+ *
+ * Styled as a `.navi_input` box so a select and an input sitting next to each
+ * other are the same box. `appearance: none` only changes how the closed
+ * control is drawn — the list it opens stays the platform's own, which is the
+ * whole point of using a select.
+ */
+const css$l = /* css */`
+  .navi_input.navi_select {
+    .navi_control_input {
+      /* Room for the chevron, which sits over the padding rather than beside
+         the control — anything beside it would be a click that misses. */
+      padding-right: calc(var(--x-padding-right) + 1em);
+      /* A form control keeps a line of its own whatever the page is written in,
+         and lh units elsewhere in the box are resolved against a real number. */
+      line-height: normal;
+      /* The closed control is drawn by us so it matches the other fields; the
+         list it opens is untouched and stays the system's. */
+      appearance: none;
+      cursor: pointer;
+    }
+    &[data-readonly] .navi_control_input,
+    &[data-disabled] .navi_control_input {
+      cursor: inherit;
+    }
+
+    .navi_select_arrow {
+      position: absolute;
+      top: 50%;
+      right: var(--x-padding-right);
+      display: flex;
+      color: var(--color-dimmed);
+      translate: 0 -50%;
+      /* The arrow is drawn on top of the control it belongs to: a click on it
+         must reach the select and open the list. */
+      pointer-events: none;
+    }
+  }
+`;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   name?: string,
+ *   width?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The choice the control is GIVEN — what is already
+ *   saved. A form holding it considers that field as already sent.
+ * @param {string} [defaultValue] The choice the control PROPOSES, and what a
+ *   reset goes back to. Sending it back is an answer, so a form counts it as
+ *   something to send.
+ * @param {string} [width] The control's width. Left out, the box takes the
+ *   width of its widest option.
+ */
+const Select = ({
+  width,
+  multiple,
+  ...props
+}) => {
+  import.meta.css = [inputCss + css$l, "@jsenv/navi/src/control/input/select.jsx"];
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  seedDefaultValueFromSignal(props);
+  const [rootProps, hostProps] = useControlProps(props, {
+    controlType: "select"
+  });
+  const {
+    basePseudoState
+  } = hostProps;
+  // `type` on a <select> is the browser's own read-only "select-one".
+  delete hostProps.type;
+  const loading = basePseudoState[":-navi-loading"];
+  if (width !== undefined) {
+    // On the select, not on the box around it: the box is fit-content and the
+    // control is what has a width to give.
+    hostProps.width = width;
+  }
+  return jsxs(Box, {
+    as: "span",
+    inline: true,
+    flex: true,
+    baseClassName: "navi_input",
+    className: "navi_select",
+    ...rootProps,
+    basePseudoState: basePseudoState,
+    styleCSSVars: InputStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    "data-callout-anchor": ".navi_control_input",
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx(Box, {
+      ...hostProps,
+      as: "select",
+      baseClassName: "navi_control_input"
+    }), jsx("span", {
+      className: "navi_select_arrow",
+      children: jsx(Icon, {
+        lineOverflow: "allow",
+        children: jsx(ChevronDownSvg$1, {})
+      })
+    })]
   });
 };
 
@@ -63656,5 +64123,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
