@@ -1107,7 +1107,9 @@ window.__supervisor__ = (() => {
        * a warning, never the other way around.
        */
       class JsenvWarningOverlay extends HTMLElement {
-        constructor({ title, text, details = [] }) {
+        // "node" is for what a string cannot say: a live indicator, something
+        // animated, anything the code reporting the warning wants to render itself
+        constructor({ title, text, details = [], node }) {
           super();
           const root = this.attachShadow({ mode: "open" });
           root.innerHTML = `
@@ -1124,10 +1126,14 @@ window.__supervisor__ = (() => {
   <div class="details">
     ${details.map((detail) => `<p>${escapeHtml(detail)}</p>`).join("\n    ")}
   </div>
+  <div class="extra"></div>
   <div class="tip">
     Click outside to close.
   </div>
 </div>`;
+          if (node) {
+            root.querySelector(".extra").appendChild(node);
+          }
           enableCopyButton(root);
           root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
@@ -1158,6 +1164,14 @@ window.__supervisor__ = (() => {
           if (detailsNode) {
             for (const paragraph of detailsNode.querySelectorAll("p")) {
               parts.push(paragraph.textContent.trim());
+            }
+          }
+          // a node rendered by the warning reporter says which of its parts are
+          // worth pasting, the rest being decoration
+          const extraNode = overlay.querySelector(".extra");
+          if (extraNode) {
+            for (const line of extraNode.querySelectorAll("[data-copy-line]")) {
+              parts.push(line.textContent.trim().replace(/\s+/g, " "));
             }
           }
           const copied = await writeTextToClipboard(parts.join("\n"));
@@ -1376,6 +1390,13 @@ window.__supervisor__ = (() => {
           overflow: auto;
         }
 
+        .extra {
+          padding: 0 20px 16px;
+        }
+        .extra:empty {
+          display: none;
+        }
+
         .tip {
           padding-top: 12px;
           border-top: 1px solid #999;
@@ -1406,11 +1427,11 @@ window.__supervisor__ = (() => {
     }
 
     supervisor.createException = createException;
-    supervisor.reportWarning = ({ title, text, details }) => {
+    supervisor.reportWarning = ({ title, text, details, node }) => {
       if (!errorOverlay) {
         return () => {};
       }
-      return displayJsenvWarningOverlay({ title, text, details });
+      return displayJsenvWarningOverlay({ title, text, details, node });
     };
     supervisor.reportException = (exception) => {
       if (errorOverlay) {

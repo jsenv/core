@@ -265,6 +265,7 @@ export const startDevServer = async ({
       dependencyStatus: {
         dependencyProblemEventEmitter,
         getDependencyProblems: dependencyWatcher.getProblems,
+        getDependencyWatchInfo: dependencyWatcher.getWatchInfo,
       },
       cacheControl,
       ribbon,

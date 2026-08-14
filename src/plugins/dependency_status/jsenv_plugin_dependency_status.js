@@ -15,6 +15,7 @@ const clientFileUrl = import.meta.resolve("./client/dependency_status.js");
 export const jsenvPluginDependencyStatus = ({
   dependencyProblemEventEmitter,
   getDependencyProblems,
+  getDependencyWatchInfo = () => ({}),
 }) => {
   return {
     name: "jsenv:dependency_status",
@@ -51,7 +52,10 @@ export const jsenvPluginDependencyStatus = ({
           src: clientReference.generatedSpecifier,
           initCall: {
             callee: "initDependencyStatus",
-            params: { problems: getDependencyProblems() },
+            params: {
+              problems: getDependencyProblems(),
+              watchInfo: getDependencyWatchInfo(),
+            },
           },
           pluginName: "jsenv:dependency_status",
         });

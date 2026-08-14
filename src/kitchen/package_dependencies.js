@@ -12,6 +12,7 @@
  * would pick, which is way beyond what is needed here.
  */
 
+import { urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 
 const DEPENDENCY_FIELDS = [
@@ -93,11 +94,20 @@ const createStatus = (
     declaredVersion,
     declaredBy,
     installedVersion: null,
+    // the file telling this dependency apart; it is what an install rewrites and
+    // what the dev server looks at to know the dependency became the declared one
+    watchedPath: null,
     state: "missing",
   };
   const installedDirectoryUrl = findInstalledDirectoryUrl(
     declaringDirectoryUrl,
     packageName,
+  );
+  status.watchedPath = watchedPathFromDirectoryUrl(
+    packageDirectory,
+    // not installed yet: name the place where it is expected to appear
+    installedDirectoryUrl ||
+      `${declaringDirectoryUrl}node_modules/${packageName}/`,
   );
   if (!installedDirectoryUrl) {
     return status;
@@ -115,6 +125,14 @@ const createStatus = (
       ? "outdated"
       : "installed";
   return status;
+};
+
+const watchedPathFromDirectoryUrl = (packageDirectory, directoryUrl) => {
+  const packageJsonUrl = `${directoryUrl}package.json`;
+  if (!packageDirectory.url) {
+    return packageJsonUrl;
+  }
+  return urlToRelativeUrl(packageJsonUrl, packageDirectory.url);
 };
 
 const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {

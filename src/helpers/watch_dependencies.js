@@ -23,8 +23,13 @@ export const watchDependencies = (
   { onProblem, onInstalled, onChange, pollInterval = POLL_INTERVAL },
 ) => {
   let problemMap = new Map();
+  // every path given to the browser is relative to the package directory, the
+  // one holding the package.json being watched
+  const packageJsonPath = "package.json";
   const watcher = {
     getProblems: () => Array.from(problemMap.values()),
+    // what the browser needs to display the watching in progress
+    getWatchInfo: () => ({ packageJsonPath, pollInterval }),
     stop: () => {},
   };
   if (!packageDirectory.url) {
