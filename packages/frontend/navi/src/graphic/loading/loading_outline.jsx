@@ -86,6 +86,15 @@ const LoadingOutlineUI = (props) => {
   const shouldShowSpinner = useDebounceTrue(loading, debounce);
   const rectangleRef = useRef(null);
 
+  // Nothing in the DOM until something actually loads: the box below is
+  // absolutely positioned slightly outside the control, which is enough to
+  // make an ancestor scrollable (a 1px scrollbar on a control sitting against
+  // the edge of a scrolling area). A control that never loads must not pay for
+  // a decoration it will never draw.
+  if (!loading) {
+    return children;
+  }
+
   let insetTop = inset + spacingTop + marginTop;
   let insetRight = inset + spacingRight + marginRight;
   let insetBottom = inset + spacingBottom + marginBottom;
@@ -120,21 +129,16 @@ const LoadingOutlineUI = (props) => {
         }}
       >
         {/*
-        Here we depend on loading and NOT shouldShowSpinner because  
-        we want to start rendering the loading asap
-        so it can start to rotate as soon as we start to load.
-        This feels more natural when the loader finally appears with some initial rotation
-        correspondong to the time it took to display it.
-        It conveys it was busy
+        Rendered from the very start of the load, merely kept invisible until
+        the debounce is over: it then appears already rotating, by as much as
+        the load has taken so far. It conveys it was busy.
         */}
-        {loading && (
-          <LoadingIndicatorFluid
-            visuallyHidden={!shouldShowSpinner}
-            radius={radius}
-            color={color}
-            size={size}
-          />
-        )}
+        <LoadingIndicatorFluid
+          visuallyHidden={!shouldShowSpinner}
+          radius={radius}
+          color={color}
+          size={size}
+        />
       </span>
       {children}
     </>
