@@ -264,4 +264,6 @@ the actions this mutation should invalidate. See [actions.md](./actions.md).
   isolated lifecycles
 - [resource_dependencies.md](./resource_dependencies.md) — cross-resource
   autorerun
+- [list_refresh.md](./list_refresh.md) — what re-runs after a write, and what
+  stays on screen while it does
 - [actions.md](./actions.md) — action lifecycle, `bindParams`, `useAsyncData`

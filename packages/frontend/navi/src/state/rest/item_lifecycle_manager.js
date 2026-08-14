@@ -12,37 +12,14 @@ const getActionResultProperties = (action) => {
   return actionResultPropertiesMap.get(action);
 };
 
-/*
- * Default autorerun behavior explanation:
- *  GET: false (RECOMMENDED)
- *  What happens:
- *  - GET actions are reset by DELETE operations (not rerun)
- *  - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
- *  - PUT/PATCH operations update UI via signals, no rerun needed
- *  - This approach minimizes unnecessary API calls
- *
- *  How to handle:
- *  - Applications can provide custom UI for deleted items (e.g., "Item not found")
- *  - Or redirect users to appropriate pages (e.g., back to list view)
- *
- *  Alternative (NOT RECOMMENDED):
- *  - Use GET: ["DELETE"] to rerun and display 404 error received from backend
- *  - Poor UX: users expect immediate feedback, not loading + error state
- *
- *  GET_MANY: ["POST"]
- *  - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
- *    Backend determines visibility better than client-side logic
- *  - DELETE: Excluded by default because:
- *    • UI handles deletions via store signals (selectAll filters out deleted items)
- *    • DELETE operations rarely change list content beyond item removal
- *    • Avoids unnecessary API calls (can be overridden if needed)
- */
+// PUT/PATCH results update the UI through the store, and DELETE resets the GET
+// instead of rerunning it, so a GET rerun would only ever cost a request.
+// A POST is the one case the client cannot decide alone: whether a new item
+// belongs to a list depends on filters/pagination the backend owns.
+// Rationale in full, plus when to override: docs/list_refresh.md
 const defaultRerunOn = {
   GET: false,
-  GET_MANY: [
-    "POST",
-    // "DELETE"
-  ],
+  GET_MANY: ["POST"],
 };
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources

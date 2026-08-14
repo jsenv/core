@@ -12545,10 +12545,17 @@ const createAction = (callback, rootOptions = {}) => {
       action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "prerun", options);
     };
+    /**
+     * Requests the action's data. An action that is already RUNNING or
+     * COMPLETED already has it, so the request is a no-op there: use `rerun()`
+     * to force a fresh run ("refresh", "check now", any explicit user intent to
+     * go back to the network).
+     */
     const run = (options) => {
       action.debug(`${action}.run(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "run", options);
     };
+    /** Resets the action and runs it again, whatever state it is in. */
     const rerun = (options) => {
       action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
@@ -17945,6 +17952,10 @@ const useExecuteAction = (
  */
 
 const CLICK_TO_EXPAND_SELECTOR = "summary, [aria-expanded]";
+// A popup is written inside whatever opened it, but it is not part of it on
+// screen: a control inside a popup must not be read as a click on the region
+// the popup happens to be nested in.
+const POPUP_SELECTOR = "[navi-control='popover'], [navi-control='dialog']";
 
 /**
  * Cancels `event` when the control consumed a click that a surrounding
@@ -17970,11 +17981,27 @@ const preventClickToExpand = (element, event) => {
   }
   // From the parent: a control that opens something carries its own
   // `aria-expanded` and would find itself.
-  const clickToExpandRegion = parentElement.closest(CLICK_TO_EXPAND_SELECTOR);
+  const clickToExpandRegion = findClickToExpandRegion(parentElement);
   if (!clickToExpandRegion) {
     return;
   }
   event.preventDefault();
+};
+
+const findClickToExpandRegion = (element) => {
+  let ancestor = element;
+  while (ancestor) {
+    // Tested first: a popup carries `aria-expanded` of its own, so it would
+    // otherwise pass for the region containing its own content.
+    if (ancestor.matches(POPUP_SELECTOR)) {
+      return null;
+    }
+    if (ancestor.matches(CLICK_TO_EXPAND_SELECTOR)) {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
 };
 
 const clickDefaultActionIsInert = (element, event) => {
@@ -29822,37 +29849,14 @@ const getActionResultProperties = (action) => {
   return actionResultPropertiesMap.get(action);
 };
 
-/*
- * Default autorerun behavior explanation:
- *  GET: false (RECOMMENDED)
- *  What happens:
- *  - GET actions are reset by DELETE operations (not rerun)
- *  - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
- *  - PUT/PATCH operations update UI via signals, no rerun needed
- *  - This approach minimizes unnecessary API calls
- *
- *  How to handle:
- *  - Applications can provide custom UI for deleted items (e.g., "Item not found")
- *  - Or redirect users to appropriate pages (e.g., back to list view)
- *
- *  Alternative (NOT RECOMMENDED):
- *  - Use GET: ["DELETE"] to rerun and display 404 error received from backend
- *  - Poor UX: users expect immediate feedback, not loading + error state
- *
- *  GET_MANY: ["POST"]
- *  - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
- *    Backend determines visibility better than client-side logic
- *  - DELETE: Excluded by default because:
- *    • UI handles deletions via store signals (selectAll filters out deleted items)
- *    • DELETE operations rarely change list content beyond item removal
- *    • Avoids unnecessary API calls (can be overridden if needed)
- */
+// PUT/PATCH results update the UI through the store, and DELETE resets the GET
+// instead of rerunning it, so a GET rerun would only ever cost a request.
+// A POST is the one case the client cannot decide alone: whether a new item
+// belongs to a list depends on filters/pagination the backend owns.
+// Rationale in full, plus when to override: docs/list_refresh.md
 const defaultRerunOn = {
   GET: false,
-  GET_MANY: [
-    "POST",
-    // "DELETE"
-  ],
+  GET_MANY: ["POST"],
 };
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources

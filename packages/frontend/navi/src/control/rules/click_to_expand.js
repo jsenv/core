@@ -17,6 +17,10 @@
  */
 
 const CLICK_TO_EXPAND_SELECTOR = "summary, [aria-expanded]";
+// A popup is written inside whatever opened it, but it is not part of it on
+// screen: a control inside a popup must not be read as a click on the region
+// the popup happens to be nested in.
+const POPUP_SELECTOR = "[navi-control='popover'], [navi-control='dialog']";
 
 /**
  * Cancels `event` when the control consumed a click that a surrounding
@@ -42,11 +46,27 @@ export const preventClickToExpand = (element, event) => {
   }
   // From the parent: a control that opens something carries its own
   // `aria-expanded` and would find itself.
-  const clickToExpandRegion = parentElement.closest(CLICK_TO_EXPAND_SELECTOR);
+  const clickToExpandRegion = findClickToExpandRegion(parentElement);
   if (!clickToExpandRegion) {
     return;
   }
   event.preventDefault();
+};
+
+const findClickToExpandRegion = (element) => {
+  let ancestor = element;
+  while (ancestor) {
+    // Tested first: a popup carries `aria-expanded` of its own, so it would
+    // otherwise pass for the region containing its own content.
+    if (ancestor.matches(POPUP_SELECTOR)) {
+      return null;
+    }
+    if (ancestor.matches(CLICK_TO_EXPAND_SELECTOR)) {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
 };
 
 const clickDefaultActionIsInert = (element, event) => {

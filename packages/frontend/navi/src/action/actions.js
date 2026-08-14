@@ -624,10 +624,17 @@ export const createAction = (callback, rootOptions = {}) => {
       action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "prerun", options);
     };
+    /**
+     * Requests the action's data. An action that is already RUNNING or
+     * COMPLETED already has it, so the request is a no-op there: use `rerun()`
+     * to force a fresh run ("refresh", "check now", any explicit user intent to
+     * go back to the network).
+     */
     const run = (options) => {
       action.debug(`${action}.run(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "run", options);
     };
+    /** Resets the action and runs it again, whatever state it is in. */
     const rerun = (options) => {
       action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
