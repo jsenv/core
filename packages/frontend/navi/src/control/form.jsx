@@ -139,6 +139,7 @@ const useFormGroup = (props) => {
       uiStateController.sentUIState,
     );
   useFirstUIStateAsSent(uiStateController);
+  useUnregisteredControlWarning(props.ref);
 
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
@@ -281,6 +282,42 @@ const useFirstUIStateAsSent = (uiStateController) => {
   useLayoutEffect(() => {
     uiStateController.sentUIState = readHeldUIState(uiStateController);
   }, [uiStateController]);
+};
+
+// A named form element the form does not know about is worse than a field with
+// no value: the form reads the controls registered with it, never the DOM, so
+// that element is absent from the action AND absent from what makes the form
+// look changed. A form whose only edit was that field then submits nothing at
+// all — no request, no error, nothing to inspect. Say it out loud instead.
+const NAMED_FORM_ELEMENT_SELECTOR = "input[name], select[name], textarea[name]";
+const alreadyWarnedSet = new WeakSet();
+const useUnregisteredControlWarning = (ref) => {
+  // No dependency array: fields appear and disappear as the form re-renders,
+  // and a field rendered later is exactly the one worth catching.
+  useLayoutEffect(() => {
+    if (!import.meta.dev) {
+      return;
+    }
+    const root = ref.current;
+    if (!root) {
+      return;
+    }
+    for (const element of root.querySelectorAll(NAMED_FORM_ELEMENT_SELECTOR)) {
+      if (element.hasAttribute("navi-control-host")) {
+        continue;
+      }
+      if (alreadyWarnedSet.has(element)) {
+        continue;
+      }
+      alreadyWarnedSet.add(element);
+      console.warn(
+        `[navi] <${element.tagName.toLowerCase()} name="${element.name}"> is inside a <Form> but is not a navi control: ` +
+          `its value will not reach the action, and it will not make the form look changed (a submit may then do nothing at all). ` +
+          `Use the navi control for it (Input, Select, Textarea…).`,
+      );
+      console.log(element);
+    }
+  });
 };
 
 const FormPseudoClasses = [

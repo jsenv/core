@@ -431,6 +431,62 @@ export const useControlProps = (
         };
       }
 
+      const enterToSend = (e) => {
+        const control = e.currentTarget;
+        return {
+          name: "enter to send closest control group",
+          bypassInteractivity: true, // allow to dispatch --navi-send even if readonly
+          allowed: () => triggerNaviCommand(control, "--navi-send", e),
+          // prevent dispatching click as result of this enter
+          prevented: () => e.preventDefault(),
+        };
+      };
+
+      if (controlType === "select") {
+        return {
+          keyDown: (e) => {
+            if (e.key === "Enter") {
+              return enterToSend(e);
+            }
+            if (getKeyboardEventDefaultAction(e) === "activate") {
+              // Space opens the list. Nothing has been chosen at that point, so
+              // there is no ui action to trigger — only whether the list is
+              // allowed to open at all.
+              return {
+                name: "keydown to open the option list",
+                prevented: () => e.preventDefault(),
+              };
+            }
+            return null;
+          },
+          mouseDown: (e) => {
+            // Same as the keydown above: opening the list is the interaction to
+            // ask about, and refusing it is what keeps a read-only select shut.
+            return {
+              name: "mousedown to open the option list",
+              prevented: () => e.preventDefault(),
+            };
+          },
+          input: (e) => {
+            return {
+              name: "input",
+              allowed: () => syncUIStateWithDOM(e),
+              // The keyboard moves the selection on a closed select, and the
+              // platform's own list can hand back a choice, both before anything
+              // was asked. A refused change puts the element back on the state it
+              // never left.
+              prevented: () => syncDomState(uiStateController.uiState, e),
+            };
+          },
+          naviChange: (e) => {
+            return {
+              name: "navi_change",
+              allowed: () => requestActionOnAllowed(e),
+            };
+          },
+        };
+      }
+
       const keyDownDefaultOnInput = (e) => {
         if (e.key === "Enter") {
           if (actionDebounce) {
@@ -439,14 +495,7 @@ export const useControlProps = (
             // Don't propagate to --navi-send, which would cause a double action call.
             return null;
           }
-          const input = e.currentTarget;
-          return {
-            name: "enter on input to send closest control group",
-            bypassInteractivity: true, // allow to dispatch --navi-send even if input is readonly
-            allowed: () => triggerNaviCommand(input, "--navi-send", e),
-            // prevent dispatching click as result of this enter
-            prevented: () => e.preventDefault(),
-          };
+          return enterToSend(e);
         }
         return keyDownDefault(e);
       };
@@ -898,7 +947,7 @@ const createControlInfo = (props, { controlType }) => {
     defaultStatePropName = "defaultOpen";
     stateInitial = props.open || props.defaultOpen;
     value = props.value || "open";
-  } else if (controlType === "picker") {
+  } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
     if (Object.hasOwn(props, "value")) {
@@ -924,7 +973,12 @@ const createControlInfo = (props, { controlType }) => {
     }
 
     disabledSupported = true;
-    readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
+    // A native <select> has no readonly attribute. What says it is read-only is
+    // aria-readonly plus a refused interaction — see the select reactions in
+    // getDefaultEventReactionDefinitions.
+    readOnlySupported =
+      controlType === "picker" &&
+      INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
 
   return {

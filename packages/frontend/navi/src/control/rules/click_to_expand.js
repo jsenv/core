@@ -93,5 +93,9 @@ const isInertOnClick = (element) => {
   if (tagName === "BUTTON") {
     return element.type === "button";
   }
+  if (tagName === "SELECT") {
+    // The click opens the option list; cancelling it leaves the select shut.
+    return false;
+  }
   return true;
 };

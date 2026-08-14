@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 16px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { signal } from "@preact/signals";
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        Select,
+        Text,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const GenderOptions = () => (
+        <>
+          <option value="">Non renseigné</option>
+          <option value="female">Une femme</option>
+          <option value="male">Un homme</option>
+          <option value="other">Autre</option>
+        </>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Select"
+            previous={{
+              href: "./36_input_variant_text_demo.html",
+              label: "Input variant text",
+            }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <BasicsDemo />
+          <StatesDemo />
+          <OptionsDemo />
+          <ValueDemo />
+          <SignalDemo />
+          <ActionDemo />
+          <FormDemo />
+          <VisibilityDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <Field flex="y" spacingWithControl="xs">
+            <Label>Je suis</Label>
+            <Select name="gender" defaultValue="">
+              <GenderOptions />
+            </Select>
+          </Field>
+        </div>
+      );
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="readOnly">
+              <Select defaultValue="female" readOnly>
+                <GenderOptions />
+              </Select>
+            </Variant>
+            <Variant caption="disabled">
+              <Select defaultValue="female" disabled>
+                <GenderOptions />
+              </Select>
+            </Variant>
+            <Variant caption="loading">
+              <Select defaultValue="female" loading>
+                <GenderOptions />
+              </Select>
+            </Variant>
+            <Variant caption="focus visible">
+              <Select
+                defaultValue="female"
+                pseudoState={{ ":focus-visible": true }}
+              >
+                <GenderOptions />
+              </Select>
+            </Variant>
+            <Variant caption="required, vide : soumettre le formulaire plus bas montre le refus">
+              <Select defaultValue="" required>
+                <GenderOptions />
+              </Select>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Les options ───────────────────────────────────────────────────────
+
+      const AGES = [
+        { value: "", label: "Non renseignée" },
+        { value: "18-25", label: "18 à 25 ans" },
+        { value: "26-40", label: "26 à 40 ans" },
+        { value: "41+", label: "41 ans et plus" },
+      ];
+
+      const AgeOptions = () =>
+        AGES.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ));
+
+      const OptionsDemo = () => (
+        <div class="demo-section">
+          <Heading id="options">Les options</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="optgroup et option disabled">
+              <Select defaultValue="paris">
+                <option value="">Choisir une ville</option>
+                <optgroup label="France">
+                  <option value="paris">Paris</option>
+                  <option value="lyon">Lyon</option>
+                  <option value="brest" disabled>
+                    Brest (complet)
+                  </option>
+                </optgroup>
+                <optgroup label="Belgique">
+                  <option value="bruxelles">Bruxelles</option>
+                  <option value="gand">Gand</option>
+                </optgroup>
+              </Select>
+            </Variant>
+            <Variant caption="options construites depuis un tableau">
+              <Select defaultValue="">
+                <AgeOptions />
+              </Select>
+            </Variant>
+            <Variant caption='width="200px"'>
+              <Select defaultValue="" width="200px">
+                <AgeOptions />
+              </Select>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── value / defaultValue ──────────────────────────────────────────────
+
+      const ValueDemo = () => {
+        const [saved, setSaved] = useState("male");
+        return (
+          <div class="demo-section">
+            <Heading id="value">value / defaultValue</Heading>
+            <Box flex="y" spacing="l" alignX="start">
+              <Variant caption={`value="${saved}" avec action`}>
+                <Box flex spacing="s" alignY="center">
+                  <Select
+                    value={saved}
+                    action={(value) => {
+                      setSaved(value);
+                    }}
+                  >
+                    <GenderOptions />
+                  </Select>
+                  <Button
+                    action={() => {
+                      setSaved("other");
+                    }}
+                  >
+                    Mettre « Autre » depuis l'extérieur
+                  </Button>
+                </Box>
+              </Variant>
+              <Variant caption='defaultValue="male" : la proposition, sur laquelle un reset revient'>
+                <Form action={() => {}}>
+                  <Box flex spacing="s" alignY="center">
+                    <Select name="gender" defaultValue="male">
+                      <GenderOptions />
+                    </Select>
+                    <Button type="reset">Reset</Button>
+                  </Box>
+                </Form>
+              </Variant>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── signal ────────────────────────────────────────────────────────────
+
+      const colorSignal = signal("vert");
+
+      const ColorOptions = () => (
+        <>
+          <option value="rouge">rouge</option>
+          <option value="vert">vert</option>
+          <option value="bleu">bleu</option>
+        </>
+      );
+
+      const SignalDemo = () => (
+        <div class="demo-section">
+          <Heading id="signal">signal</Heading>
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex spacing="s" alignY="center">
+              <Select signal={colorSignal}>
+                <ColorOptions />
+              </Select>
+              <Select signal={colorSignal}>
+                <ColorOptions />
+              </Select>
+            </Box>
+            <Text size="s" color="#666">
+              signal.value : {colorSignal.value}
+            </Text>
+          </Box>
+        </div>
+      );
+
+      // ── uiAction / action ─────────────────────────────────────────────────
+
+      const ActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="actions">uiAction / action</Heading>
+            <Box flex="y" spacing="s" alignX="start">
+              <Select
+                defaultValue=""
+                uiAction={(value, event) => {
+                  push("uiAction", value, event);
+                }}
+                action={(value) => {
+                  push("action", value);
+                }}
+              >
+                <GenderOptions />
+              </Select>
+              <CallLog entries={entries} onClear={clear} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Dans un formulaire ────────────────────────────────────────────────
+
+      const FormDemo = () => (
+        <div class="demo-section">
+          <Heading id="form">Dans un formulaire</Heading>
+          <FakeBackend value={{ gender: "female", age: "26-40" }}>
+            {({ value, action }) => (
+              <Form name="profile_form" action={action}>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Je suis</Label>
+                    <Select name="gender" value={value.gender} required>
+                      <GenderOptions />
+                    </Select>
+                  </Field>
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Tranche d'âge</Label>
+                    <Select name="age" value={value.age}>
+                      <AgeOptions />
+                    </Select>
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+        </div>
+      );
+
+      // ── Un select seul modifié dans un formulaire ─────────────────────────
+
+      const VisibilityDemo = () => (
+        <div class="demo-section">
+          <Heading id="visibility">Un champ texte et un select</Heading>
+          <p class="desc">
+            Ne changer que la visibilité, sans toucher au texte, doit partir.
+          </p>
+          <FakeBackend value={{ note: "Une note", visibility: "private" }}>
+            {({ value, action }) => (
+              <Form name="note_form" action={action}>
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Note</Label>
+                    <Input name="note" value={value.note} />
+                  </Field>
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Qui voit cette note</Label>
+                    <Select name="visibility" value={value.visibility}>
+                      <option value="private">Moi seul</option>
+                      <option value="friends">Mes amis</option>
+                      <option value="public">Tout le monde</option>
+                    </Select>
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

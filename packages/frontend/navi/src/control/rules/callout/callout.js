@@ -946,13 +946,14 @@ const positionCallout = (
     ) {
       alignToAnchorBox = "content-box";
     } else {
-      // Smart default: inputs and buttons are tight boxes where border-box makes sense.
+      // Smart default: form controls and buttons are tight boxes where border-box makes sense.
       // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
       // the arrow points at visible text rather than the outer padding/border.
       const controHost = findControlHost(anchorElement) || anchorElement;
       const tagName = controHost.tagName;
       if (
         tagName === "INPUT" ||
+        tagName === "SELECT" ||
         tagName === "BUTTON" ||
         tagName === "FIELDSET"
       ) {

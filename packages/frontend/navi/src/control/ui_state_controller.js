@@ -497,8 +497,18 @@ export const useUIStateController = (
                   );
                   syntheticInputFired = true;
                 }
+              } else if (el.tagName === "SELECT") {
+                debugUIState(
+                  e,
+                  `dispatching synthetic input event for select "${newUIState}"`,
+                );
+                // A plain Event, not an InputEvent: that is what the browser
+                // itself fires on a select, and input_effect reads the value off
+                // the element anyway.
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+                syntheticInputFired = true;
               }
-              // TODO: select, textarea
+              // TODO: textarea
             }
           }
           if (!syntheticInputFired) {

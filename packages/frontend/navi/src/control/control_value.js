@@ -23,6 +23,11 @@ export const asControlHostValue = (
   jsValue,
   { controlType, type, inputMode },
 ) => {
+  if (controlType === "select") {
+    // A select holds one of its options, always a string; holding nothing is
+    // the empty option, which the element spells "".
+    return asInputValue(jsValue);
+  }
   if (controlType === "input" || controlType === "picker") {
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
