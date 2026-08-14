@@ -196,11 +196,20 @@ const createStatus = (
     declaredVersion,
     declaredBy,
     installedVersion: null,
+    // the file telling this dependency apart; it is what an install rewrites and
+    // what the dev server looks at to know the dependency became the declared one
+    watchedPath: null,
     state: "missing",
   };
   const installedDirectoryUrl = findInstalledDirectoryUrl(
     declaringDirectoryUrl,
     packageName,
+  );
+  status.watchedPath = watchedPathFromDirectoryUrl(
+    packageDirectory,
+    // not installed yet: name the place where it is expected to appear
+    installedDirectoryUrl ||
+      `${declaringDirectoryUrl}node_modules/${packageName}/`,
   );
   if (!installedDirectoryUrl) {
     return status;
@@ -218,6 +227,14 @@ const createStatus = (
       ? "outdated"
       : "installed";
   return status;
+};
+
+const watchedPathFromDirectoryUrl = (packageDirectory, directoryUrl) => {
+  const packageJsonUrl = `${directoryUrl}package.json`;
+  if (!packageDirectory.url) {
+    return packageJsonUrl;
+  }
+  return urlToRelativeUrl(packageJsonUrl, packageDirectory.url);
 };
 
 const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
@@ -9298,6 +9315,7 @@ const clientFileUrl = import.meta.resolve("../js/dependency_status.js");
 const jsenvPluginDependencyStatus = ({
   dependencyProblemEventEmitter,
   getDependencyProblems,
+  getDependencyWatchInfo = () => ({}),
 }) => {
   return {
     name: "jsenv:dependency_status",
@@ -9334,7 +9352,10 @@ const jsenvPluginDependencyStatus = ({
           src: clientReference.generatedSpecifier,
           initCall: {
             callee: "initDependencyStatus",
-            params: { problems: getDependencyProblems() },
+            params: {
+              problems: getDependencyProblems(),
+              watchInfo: getDependencyWatchInfo(),
+            },
           },
           pluginName: "jsenv:dependency_status",
         });

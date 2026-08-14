@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, composeTwoResponses, fetchDirectory, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
 import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
+import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
@@ -144,11 +144,20 @@ const createStatus = (
     declaredVersion,
     declaredBy,
     installedVersion: null,
+    // the file telling this dependency apart; it is what an install rewrites and
+    // what the dev server looks at to know the dependency became the declared one
+    watchedPath: null,
     state: "missing",
   };
   const installedDirectoryUrl = findInstalledDirectoryUrl(
     declaringDirectoryUrl,
     packageName,
+  );
+  status.watchedPath = watchedPathFromDirectoryUrl(
+    packageDirectory,
+    // not installed yet: name the place where it is expected to appear
+    installedDirectoryUrl ||
+      `${declaringDirectoryUrl}node_modules/${packageName}/`,
   );
   if (!installedDirectoryUrl) {
     return status;
@@ -166,6 +175,14 @@ const createStatus = (
       ? "outdated"
       : "installed";
   return status;
+};
+
+const watchedPathFromDirectoryUrl = (packageDirectory, directoryUrl) => {
+  const packageJsonUrl = `${directoryUrl}package.json`;
+  if (!packageDirectory.url) {
+    return packageJsonUrl;
+  }
+  return urlToRelativeUrl(packageJsonUrl, packageDirectory.url);
 };
 
 const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
@@ -232,8 +249,13 @@ const watchDependencies = (
   { onProblem, onInstalled, onChange, pollInterval = POLL_INTERVAL },
 ) => {
   let problemMap = new Map();
+  // every path given to the browser is relative to the package directory, the
+  // one holding the package.json being watched
+  const packageJsonPath = "package.json";
   const watcher = {
     getProblems: () => Array.from(problemMap.values()),
+    // what the browser needs to display the watching in progress
+    getWatchInfo: () => ({ packageJsonPath, pollInterval }),
     stop: () => {},
   };
   if (!packageDirectory.url) {
@@ -7122,6 +7144,7 @@ const clientFileUrl = import.meta.resolve("../js/dependency_status.js");
 const jsenvPluginDependencyStatus = ({
   dependencyProblemEventEmitter,
   getDependencyProblems,
+  getDependencyWatchInfo = () => ({}),
 }) => {
   return {
     name: "jsenv:dependency_status",
@@ -7158,7 +7181,10 @@ const jsenvPluginDependencyStatus = ({
           src: clientReference.generatedSpecifier,
           initCall: {
             callee: "initDependencyStatus",
-            params: { problems: getDependencyProblems() },
+            params: {
+              problems: getDependencyProblems(),
+              watchInfo: getDependencyWatchInfo(),
+            },
           },
           pluginName: "jsenv:dependency_status",
         });
@@ -11882,6 +11908,7 @@ const startDevServer = async ({
       dependencyStatus: {
         dependencyProblemEventEmitter,
         getDependencyProblems: dependencyWatcher.getProblems,
+        getDependencyWatchInfo: dependencyWatcher.getWatchInfo,
       },
       cacheControl,
       ribbon,
