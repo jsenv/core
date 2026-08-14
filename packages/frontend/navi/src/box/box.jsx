@@ -92,6 +92,20 @@ import.meta.css = /* css */ `
      between them — and a control flush against the edge of a scrolling area
      overflows it (a focus outline is drawn outside the control it belongs to)
      and raises a scrollbar of its own. */
+  /* A control sitting right against the edge of what scrolls must keep its
+     loading outline within its own box: the outline is drawn a couple pixels
+     outside the control (see loading_outline.jsx), and that bleed alone is
+     enough to make the area scrollable — a scrollbar appearing and disappearing
+     as things load. Only what the scroller directly contains is against that
+     edge; anything nested deeper has room around it and keeps the outline it
+     asked for, hence the child combinators. Written on the outline itself
+     rather than on the control, because the var inherits: setting it on a
+     container would reach every control below it, edge or not. */
+  [data-scrollable] > .navi_loading_outline_wrapper,
+  [data-scrollable] > * > .navi_loading_outline_wrapper {
+    --loading-outline-min-inset: 0px;
+  }
+
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
 

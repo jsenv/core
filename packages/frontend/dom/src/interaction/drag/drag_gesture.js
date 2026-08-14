@@ -485,7 +485,7 @@ export const createDragGestureController = (options = {}) => {
   dragGestureController.grab = grab;
 
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
-    if (grabEvent.button !== undefined && grabEvent.button !== 0) {
+    if (!isPrimaryButtonEvent(grabEvent)) {
       return null;
     }
     const target = grabEvent.target;
@@ -579,17 +579,28 @@ export const createDragGestureController = (options = {}) => {
   return dragGestureController;
 };
 
+// Only the primary button drags: a right click (or any secondary button) opens
+// a context menu, it never grabs anything.
+export const isPrimaryButtonEvent = (event) =>
+  event.button === undefined || event.button === 0;
+
 export const dragAfterThreshold = (
   grabEvent,
   dragGestureInitializer,
   threshold,
 ) => {
+  if (!isPrimaryButtonEvent(grabEvent)) {
+    return;
+  }
   const target = grabEvent.target;
   const isDedicatedHandle =
     target.closest && target.closest("[data-drag-handle]");
   if (isDedicatedHandle) {
     // Element is dedicated to drag — skip the threshold and start immediately.
     const dragGesture = dragGestureInitializer();
+    if (!dragGesture) {
+      return;
+    }
     dragGesture.dragViaPointer(grabEvent);
     return;
   }

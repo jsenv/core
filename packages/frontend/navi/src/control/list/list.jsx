@@ -538,13 +538,10 @@ const css = /* css */ `
     font-size: 1em;
     line-height: 1.4;
   }
-  /* A control that IS the row — a direct child of the item, so it spans it —
-     must keep its loading outline within its own box: the scroll container is
-     overflow:auto, and the couple pixels the outline normally draws outside
-     the control are enough to make it scrollable, so a scrollbar would appear
-     and disappear as things load. Targeted on the outline itself rather than
-     inherited from the item, so a control nested deeper (which has room around
-     it, and does not reach the edges) keeps the outline it asked for. */
+  /* Same rule as [data-scrollable] in box.jsx, said again for this scroller:
+     what an item holds IS against the edge of the scroll container — the list
+     element between the two is markup, not spacing — so its loading outline
+     stays inside its own box rather than raising a scrollbar. */
   .navi_list_item > .navi_loading_outline_wrapper,
   .navi_list_item > * > .navi_loading_outline_wrapper,
   .navi_list_item_header > * > .navi_loading_outline_wrapper,

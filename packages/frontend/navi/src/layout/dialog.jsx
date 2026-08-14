@@ -422,8 +422,8 @@ const css = /* css */ `
  *   the screen and a centered box ends up both cramped and out of thumb
  *   reach, while under a mouse the centered box is already the right shape —
  *   hence a prop that only ever does something on touch. It supplies defaults
- *   for `positionArea`, `marginWithContainer` and `expandX`, so any of the
- *   three can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
+ *   for `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`,
+ *   so any of them can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
  *   input device, not a width breakpoint — a narrow desktop window is still a
  *   mouse) via `coarsePointerSignal`, so it re-resolves live.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
@@ -460,7 +460,7 @@ const css = /* css */ `
  *   A `layer="local"` dialog always locks its own positioned ancestor's
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
- *   whole page.
+ *   whole page. Defaults to `true` for a dialog docked by `dockedOnTouch`.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -627,6 +627,10 @@ const DOCKED = {
   positionArea: "bottom",
   marginWithContainer: 0,
   expandX: true,
+  // A sheet resting on the bottom edge is dragged with a thumb, and a drag that
+  // runs past its own edge must not land on the page behind it: the same
+  // reasoning as "bottom" above, applied to the gesture instead of the shape.
+  scrollCapture: true,
 };
 
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
@@ -674,7 +678,7 @@ const useDialogProps = (props) => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
-    scrollCapture,
+    scrollCapture: scrollCaptureProp,
     animation,
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
@@ -717,6 +721,8 @@ const useDialogProps = (props) => {
     ? isDocked && DOCKED.expandX
     : Boolean(expand) || Boolean(expandXProp);
   const expandY = Boolean(expand) || Boolean(expandYProp);
+  const scrollCapture =
+    scrollCaptureProp ?? (isDocked ? DOCKED.scrollCapture : false);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
@@ -1328,8 +1334,13 @@ const DIALOG_PSEUDO_CLASSES = [
 
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
+// borderRadius goes through --dialog-border-radius rather than the
+// border-radius property itself so the flush-corner rules above (a plain
+// stylesheet) can still square the corners that land on the container's own —
+// an inline border-radius would outrank them.
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  borderRadius: "--dialog-border-radius",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
   minHeight: "--dialog-min-height",

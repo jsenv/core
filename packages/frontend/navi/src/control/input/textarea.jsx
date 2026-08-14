@@ -17,7 +17,7 @@
  * any Input.
  */
 
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -47,6 +47,18 @@ const css = /* css */ `
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;
+      /* A placeholder must be readable in full before anything is typed: a
+         field that opens already scrolled reads as a field that already has
+         text in it. Its wrapped height is measured (see usePlaceholderHeight)
+         because it only exists once laid out, and it only raises the floor
+         while the placeholder is what is being shown — what is typed sizes the
+         box on its own. */
+      &:placeholder-shown {
+        min-height: max(
+          calc(var(--textarea-min-rows, 1.5) * 1lh),
+          var(--x-textarea-placeholder-height, 0px)
+        );
+      }
     }
     &[data-resizable] .navi_control_input {
       height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -84,7 +96,9 @@ const css = /* css */ `
  * @param {number} [maxRows] Lines after which the control stops growing and
  *   scrolls instead. Without it the control grows with its content.
  * @param {boolean} [resizable] Give the browser's vertical resize handle back.
- *   A manual resize takes over from the automatic growth.
+ *   An exchange, not an addition: the hand takes over from the automatic
+ *   growth, so the control stops following what is typed and stays at the
+ *   height it was last dragged to (starting at `minRows`).
  * @param {number} [maxLength] The character limit, validated at submit. Pair
  *   with `maxLengthGuard` to block typing past it, and render a
  *   TextareaCharCount to show it.
@@ -106,6 +120,7 @@ export const Textarea = ({
   import.meta.css = inputCss + css;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  usePlaceholderHeight(props.ref, props.placeholder);
 
   const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
     controlType: "input",
@@ -182,6 +197,64 @@ export const TextareaCharCount = ({ value, signal, maxLength, ...rest }) => {
       {maxLength === undefined ? length : `${length}/${maxLength}`}
     </Box>
   );
+};
+
+// `field-sizing: content` sizes the box from the value, and an empty field has
+// none — the placeholder is text the browser refuses to make room for. So the
+// height it wraps to is measured and published as --x-textarea-placeholder-height
+// for the CSS above to use as a floor.
+const usePlaceholderHeight = (ref, placeholder) => {
+  useLayoutEffect(() => {
+    const textareaEl = ref.current;
+    if (!placeholder) {
+      textareaEl.style.removeProperty("--x-textarea-placeholder-height");
+      return null;
+    }
+    let widthMeasured;
+    const measure = () => {
+      // What is typed sizes the box itself; the placeholder is not displayed
+      // then, and scrollHeight would report the value's height instead.
+      if (textareaEl.value !== "") {
+        return;
+      }
+      const { paddingTop, paddingBottom } = getComputedStyle(textareaEl);
+      // Cleared before reading: scrollHeight can never report less than the
+      // height already applied, so measuring on top of a previous measure could
+      // only ever grow the box, never let it shrink back on a wider viewport.
+      textareaEl.style.setProperty("--x-textarea-placeholder-height", "0px");
+      const contentHeight =
+        textareaEl.scrollHeight -
+        parseFloat(paddingTop) -
+        parseFloat(paddingBottom);
+      widthMeasured = textareaEl.clientWidth;
+      textareaEl.style.setProperty(
+        "--x-textarea-placeholder-height",
+        `${contentHeight}px`,
+      );
+    };
+    measure();
+    // The placeholder wraps against the available width, so a new width is a
+    // new number of lines. Height changes are ignored: this measure is what
+    // causes them, and reacting to them would be reacting to ourselves.
+    const resizeObserver = new ResizeObserver(() => {
+      if (textareaEl.clientWidth !== widthMeasured) {
+        measure();
+      }
+    });
+    resizeObserver.observe(textareaEl);
+    // The width may have changed while the field held a value, when measuring
+    // was impossible — emptying it is when the placeholder comes back.
+    const onInput = () => {
+      if (textareaEl.value === "") {
+        measure();
+      }
+    };
+    textareaEl.addEventListener("input", onInput);
+    return () => {
+      resizeObserver.disconnect();
+      textareaEl.removeEventListener("input", onInput);
+    };
+  }, [placeholder]);
 };
 
 const RealTextarea = ({ maxLength, ...domProps }) => {

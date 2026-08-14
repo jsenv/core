@@ -103,12 +103,32 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
   useEffect(() => {
-    return action.runningStateSignal.subscribe((state) => {
-      if (state === RUNNING) {
-        dismissedActionWeakSet.delete(action);
+    const unsubscribeFromRunningState = action.runningStateSignal.subscribe(
+      (state) => {
+        if (state === RUNNING) {
+          dismissedActionWeakSet.delete(action);
+        }
+        setTick((n) => n + 1);
+      },
+    );
+    // The data does not come from this action's runs alone: dataSignal is a
+    // computed over the resource store, so an other action writing that store
+    // (a PUT upserting an item that a GET_MANY list already holds) changes the
+    // data while this action stays COMPLETED. Subscribing here re-renders
+    // through the same controlled path as the run state, instead of `.value`.
+    let dataNotificationIsInitial = true;
+    const unsubscribeFromData = action.dataSignal.subscribe(() => {
+      if (dataNotificationIsInitial) {
+        // subscribe() calls back synchronously with the current value
+        dataNotificationIsInitial = false;
+        return;
       }
       setTick((n) => n + 1);
     });
+    return () => {
+      unsubscribeFromRunningState();
+      unsubscribeFromData();
+    };
   }, []);
 
   if (runningState === COMPLETED) {

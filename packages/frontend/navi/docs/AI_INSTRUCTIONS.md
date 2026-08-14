@@ -40,6 +40,9 @@ consistency across the app, not from any single call site.
   `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, and
   scroll inside a `Dialog`/`Popover`. Read it before writing CSS to make
   something scroll — navi almost certainly already has the prop.
+- `docs/z_index.md` — stacking: why DOM order is the first tool, what a
+  `z-index` without `isolation: isolate` actually competes against, and the
+  values navi's own popups/bars/tables use. Read it before writing a `z-index`.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src

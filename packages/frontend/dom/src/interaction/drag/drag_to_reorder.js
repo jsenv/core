@@ -1,4 +1,4 @@
-import { dragAfterThreshold } from "./drag_gesture.js";
+import { dragAfterThreshold, isPrimaryButtonEvent } from "./drag_gesture.js";
 import { createDragToMoveGestureController } from "./drag_to_move.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
@@ -224,6 +224,10 @@ export const startDragToReorder = (
   // An area that opted out of dragging (a text one wants to select, a control
   // that owns the gesture): the press there is none of our business.
   if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+    return undefined;
+  }
+  // A secondary button (right click and friends) is a context menu, not a grab.
+  if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
   event.preventDefault();
