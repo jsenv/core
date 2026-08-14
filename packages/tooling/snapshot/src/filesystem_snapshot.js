@@ -18,7 +18,7 @@ import {
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { comparePngFiles } from "./compare_png_files.js";
+import { comparePngFilesDetailed } from "./compare_png_files.js";
 import {
   ExtraFileAssertionError,
   FileContentAssertionError,
@@ -27,12 +27,14 @@ import {
 } from "./errors.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 
-export const takeFileSnapshot = (fileUrl) => {
+export const takeFileSnapshot = (fileUrl, { png } = {}) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
-  const fileSnapshot = createFileSnapshot(fileUrl);
+  const fileSnapshot = createFileSnapshot(fileUrl, { png });
   removeFileSync(fileUrl, { allowUseless: true });
   const compare = (throwWhenDiff = process.env.CI) => {
-    fileSnapshot.compare(createFileSnapshot(fileUrl), { throwWhenDiff });
+    fileSnapshot.compare(createFileSnapshot(fileUrl, { png }), {
+      throwWhenDiff,
+    });
   };
   return {
     compare,
@@ -61,7 +63,7 @@ export const takeFileSnapshot = (fileUrl) => {
     },
   };
 };
-const createFileSnapshot = (fileUrl) => {
+const createFileSnapshot = (fileUrl, { png } = {}) => {
   const fileSnapshot = {
     type: "file",
     url: fileUrl,
@@ -93,12 +95,19 @@ ${fileUrl}`);
         if (nextFileContent.equals(fileContent)) {
           return;
         }
+        let reason = "content has changed";
         if (fileSnapshot.contentType === "image/png") {
-          if (comparePngFiles(fileContent, nextFileContent)) {
+          const pngComparison = comparePngFilesDetailed(
+            fileContent,
+            nextFileContent,
+            png,
+          );
+          if (pngComparison.same) {
             // restore old version to prevent git diff
             writeFileSync(fileUrl, fileContent);
             return;
           }
+          reason = describePngDiff(pngComparison);
         }
         if (!throwWhenDiff) {
           return;
@@ -106,7 +115,7 @@ ${fileUrl}`);
         const fileContentAssertionError =
           new FileContentAssertionError(`${failureMessage}
 --- reason ---
-content has changed
+${reason}
 --- file ---
 ${fileUrl}`);
         throw fileContentAssertionError;
@@ -167,6 +176,7 @@ export const takeDirectorySnapshot = (
     "**/*": true,
     "**/.*/": false,
   },
+  { png } = {},
 ) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   directoryUrl = new URL(directoryUrl);
@@ -205,6 +215,7 @@ export const takeDirectorySnapshot = (
     shouldVisitDirectory,
     shouldIncludeFile,
     shouldCompareFileContent,
+    png,
     clean: true,
   });
   return {
@@ -214,6 +225,7 @@ export const takeDirectorySnapshot = (
         shouldVisitDirectory,
         shouldIncludeFile,
         shouldCompareFileContent,
+        png,
       });
       directorySnapshot.compare(nextDirectorySnapshot, { throwWhenDiff });
     },
@@ -241,7 +253,13 @@ export const takeDirectorySnapshot = (
 };
 const createDirectorySnapshot = (
   directoryUrl,
-  { shouldVisitDirectory, shouldIncludeFile, shouldCompareFileContent, clean },
+  {
+    shouldVisitDirectory,
+    shouldIncludeFile,
+    shouldCompareFileContent,
+    png,
+    clean,
+  },
 ) => {
   const directorySnapshot = {
     type: "directory",
@@ -393,6 +411,7 @@ ${extraUrls.join("\n")}`);
           shouldVisitDirectory,
           shouldIncludeFile,
           shouldCompareFileContent,
+          png,
           clean,
         });
         contentSnapshotNaturalOrder[relativeUrl] = subdirSnapshot;
@@ -404,8 +423,10 @@ ${extraUrls.join("\n")}`);
       if (!shouldIncludeFile(directoryItemUrl.href)) {
         continue;
       }
-      contentSnapshotNaturalOrder[relativeUrl] =
-        createFileSnapshot(directoryItemUrl);
+      contentSnapshotNaturalOrder[relativeUrl] = createFileSnapshot(
+        directoryItemUrl,
+        { png },
+      );
       if (clean) {
         removeFileSync(directoryItemUrl, { allowUseless: true });
       }
@@ -423,4 +444,15 @@ ${extraUrls.join("\n")}`);
       contentSnapshotNaturalOrder[relativeUrl];
   });
   return directorySnapshot;
+};
+
+const describePngDiff = ({ reason, diffPixelCount, diffRatio }) => {
+  if (reason === "size") {
+    return "image dimensions have changed";
+  }
+  if (reason === "unreadable") {
+    return "image cannot be compared";
+  }
+  const diffPercentage = (diffRatio * 100).toFixed(3);
+  return `${diffPixelCount} pixels have changed (${diffPercentage}%)`;
 };

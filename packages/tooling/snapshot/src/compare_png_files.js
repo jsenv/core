@@ -1,49 +1,102 @@
-// https://github.com/image-size/image-size/blob/main/lib/types/png.ts
+/*
+ * Compare two PNG buffers visually: a screenshot re-generated on a different
+ * machine (or just a different run) is never byte-identical because of
+ * antialiasing, subpixel rounding and compression, so a byte comparison is
+ * useless as a regression signal.
+ *
+ * Two images that cannot be compared (different dimensions, unreadable data)
+ * are reported as different, never as an error: "the image changed" is a
+ * normal outcome, not a failure of the comparison itself.
+ */
 
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-export const comparePngFiles = (actualData, expectData) => {
-  const { width, height } = getPngDimensions(actualData);
-  const actualPng = PNG.sync.read(actualData);
-  const expectPng = PNG.sync.read(expectData);
-  const numberOfPixels = width * height;
-  const numberOfPixelsConsideredAsDiff = pixelmatch(
+/**
+ * @param {Buffer} actualData
+ * @param {Buffer} expectData
+ * @param {Object} [options]
+ * @param {number} [options.threshold] pixelmatch per pixel color sensitivity, from 0 (strict) to 1 (permissive)
+ * @param {number} [options.maxDiffRatio] ratio of differing pixels still considered as "same", from 0 to 1
+ * @param {boolean} [options.includeAA] count antialiased pixels as differences
+ * @param {boolean} [options.createDiff] generate a PNG highlighting the differing pixels
+ * @returns {{ same: boolean, reason: "size"|"pixels"|"unreadable"|undefined, width: number, height: number, diffPixelCount: number, diffRatio: number, diffFileContent: Buffer|undefined }}
+ */
+export const comparePngFilesDetailed = (
+  actualData,
+  expectData,
+  { threshold = 0.1, maxDiffRatio = 0.01, includeAA = false, createDiff } = {},
+) => {
+  let actualPng;
+  let expectPng;
+  try {
+    actualPng = PNG.sync.read(actualData);
+    expectPng = PNG.sync.read(expectData);
+  } catch {
+    return createResult({ same: false, reason: "unreadable" });
+  }
+  const { width, height } = actualPng;
+  if (width !== expectPng.width || height !== expectPng.height) {
+    return createResult({
+      same: false,
+      reason: "size",
+      width,
+      height,
+    });
+  }
+  const pixelCount = width * height;
+  // pngjs decodes some PNG (16 bits, exotic palettes) into something else than
+  // the RGBA buffer pixelmatch expects; there is nothing to compare then
+  if (
+    actualPng.data.length !== pixelCount * 4 ||
+    expectPng.data.length !== pixelCount * 4
+  ) {
+    return createResult({
+      same: false,
+      reason: "unreadable",
+      width,
+      height,
+    });
+  }
+  const diffPng = createDiff ? new PNG({ width, height }) : null;
+  const diffPixelCount = pixelmatch(
     actualPng.data,
     expectPng.data,
-    null,
+    diffPng ? diffPng.data : null,
     width,
     height,
-    {
-      threshold: 0.1,
-    },
+    { threshold, includeAA },
   );
-  const diffRatio = numberOfPixelsConsideredAsDiff / numberOfPixels;
-  const diffPercentage = diffRatio * 100;
-  return diffPercentage <= 1;
+  const diffRatio = diffPixelCount / pixelCount;
+  const same = diffRatio <= maxDiffRatio;
+  return createResult({
+    same,
+    reason: same ? undefined : "pixels",
+    width,
+    height,
+    diffPixelCount,
+    diffRatio,
+    diffFileContent: diffPng ? PNG.sync.write(diffPng) : undefined,
+  });
 };
 
-const getPngDimensions = (buffer) => {
-  if (toUTF8String(buffer, 12, 16) === pngFriedChunkName) {
-    return {
-      height: readUInt32BE(buffer, 36),
-      width: readUInt32BE(buffer, 32),
-    };
-  }
-  return {
-    height: readUInt32BE(buffer, 20),
-    width: readUInt32BE(buffer, 16),
-  };
-};
+export const comparePngFiles = (actualData, expectData, options) =>
+  comparePngFilesDetailed(actualData, expectData, options).same;
 
-const pngFriedChunkName = "CgBI";
-
-const decoder = new TextDecoder();
-const toUTF8String = (input, start = 0, end = input.length) =>
-  decoder.decode(input.slice(start, end));
-
-const readUInt32BE = (input, offset = 0) =>
-  input[offset] * 2 ** 24 +
-  input[offset + 1] * 2 ** 16 +
-  input[offset + 2] * 2 ** 8 +
-  input[offset + 3];
+const createResult = ({
+  same,
+  reason,
+  width = 0,
+  height = 0,
+  diffPixelCount = 0,
+  diffRatio = same ? 0 : 1,
+  diffFileContent,
+}) => ({
+  same,
+  reason,
+  width,
+  height,
+  diffPixelCount,
+  diffRatio,
+  diffFileContent,
+});

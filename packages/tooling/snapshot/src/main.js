@@ -1,4 +1,8 @@
 export {
+  comparePngFiles,
+  comparePngFilesDetailed,
+} from "./compare_png_files.js";
+export {
   takeDirectorySnapshot,
   takeFileSnapshot,
 } from "./filesystem_snapshot.js";
