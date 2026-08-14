@@ -65,20 +65,6 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
       dependencyUpdates,
     };
   }
-  if (toPublishPackageNames.length === 0) {
-    console.log(`${UNICODE.OK} packages are published on registry`);
-  } else {
-    console.log(
-      `${UNICODE.INFO} ${
-        toPublishPackageNames.length
-      } packages could be published
-  - ${toPublishPackageNames.map(
-    (name) => `${name}@${workspacePackages[name].packageObject.version}`,
-  ).join(`
-  - `)}`,
-    );
-  }
-
   const packageFilesToUpdate = {};
   const updateDependencyVersion = ({
     packageName,
@@ -204,8 +190,24 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
             packageInfo.packageUrl,
           ),
         });
+        if (!toPublishPackageNames.includes(packageName)) {
+          toPublishPackageNames.push(packageName);
+        }
       }
     });
+  }
+  if (toPublishPackageNames.length === 0) {
+    console.log(`${UNICODE.OK} packages are published on registry`);
+  } else {
+    console.log(
+      `${UNICODE.INFO} ${
+        toPublishPackageNames.length
+      } packages could be published
+  - ${toPublishPackageNames.map(
+    (name) => `${name}@${workspacePackages[name].packageObject.version}`,
+  ).join(`
+  - `)}`,
+    );
   }
   Object.keys(packageFilesToUpdate).forEach((packageName) => {
     const workspacePackage = workspacePackages[packageName];
