@@ -1,8 +1,15 @@
-import { useContext, useId, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
+import { subscribeToControlState } from "./control_label_state.js";
 import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
 
 const css = /* css */ `
@@ -182,6 +189,23 @@ export const Label = (props) => {
   if (!Object.hasOwn(props, "htmlFor") && controlId) {
     props.htmlFor = controlId;
   }
+  // A label pointing at its control by id is not inside it and does not contain
+  // it, so nothing in the DOM links the two — the control publishes its state
+  // under that id and this is where the label picks it up (see
+  // control_label_state.js). A label that wraps its control instead is told
+  // through the navi_control_state event below.
+  const { htmlFor } = props;
+  useLayoutEffect(() => {
+    if (!htmlFor) {
+      return undefined;
+    }
+    return subscribeToControlState(htmlFor, (controlState) => {
+      setConnected(Boolean(controlState));
+      setDisabled(Boolean(controlState?.disabled));
+      setReadOnly(Boolean(controlState?.readOnly));
+      setRequired(Boolean(controlState?.required));
+    });
+  }, [htmlFor]);
   const [messageProps, remainingProps] = extractMessageAndRemainingProps({
     ...props,
     requiredIndicator: undefined,

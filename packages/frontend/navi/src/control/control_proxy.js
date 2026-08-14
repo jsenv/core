@@ -29,6 +29,8 @@
  * entirely. For now we keep the proxy pattern.
  */
 
+import { findProxyControllers } from "./controller_registry.js";
+
 /**
  * Given a proxy element, returns the real control it represents.
  * Returns `null` when `el` is not a proxy.
@@ -42,19 +44,46 @@ export const findControlProxyTarget = (el) => {
 };
 
 /**
+ * Given a real control element, returns every proxy that visually represents
+ * it — a control can have more than one (an "enable"/"disable" button pair for
+ * one radio, for instance).
+ *
+ * Answered from the controller registry rather than the document: every proxy
+ * declares itself through the `navi-control-proxy-for` prop, so the registry
+ * knows them all, while asking the document means walking it in full for each
+ * of the (overwhelmingly many) controls that have no proxy at all.
+ *
+ * Returns an empty array when no proxy exists for `el`.
+ */
+export const findControlProxies = (el) => {
+  if (!el.id) {
+    return [];
+  }
+  const proxyControllerSet = findProxyControllers(el.id);
+  if (!proxyControllerSet) {
+    return [];
+  }
+  const proxyElements = [];
+  for (const proxyController of proxyControllerSet) {
+    const proxyElement = proxyController.ref.current;
+    if (proxyElement) {
+      proxyElements.push(proxyElement);
+    }
+  }
+  return proxyElements;
+};
+
+/**
  * Given a real control element, returns the proxy that visually represents it.
  *
- * Use when you need to update or recheck the proxy's visual state after the
- * real control's state changes, or when anchoring a callout to the visible
- * element rather than the hidden real input.
+ * Use when you need a single visible stand-in for the real control — anchoring
+ * a callout, for instance. Anything notifying proxies of a state change wants
+ * `findControlProxies` instead, so a control represented by several of them
+ * updates all of them.
  *
  * Returns `null` when no proxy exists for `el`.
  */
 export const findControlProxy = (el) => {
-  if (!el.id) {
-    return null;
-  }
-  return document.querySelector(
-    `[navi-control-proxy-for="${CSS.escape(el.id)}"]`,
-  );
+  const [firstProxy = null] = findControlProxies(el);
+  return firstProxy;
 };

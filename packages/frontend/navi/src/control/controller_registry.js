@@ -62,7 +62,12 @@ export const onUIStateControllerCreated = (uiStateController) => {
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
   if (proxyFor) {
-    proxyControllerByRealInputId.set(proxyFor, uiStateController);
+    let proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (!proxySet) {
+      proxySet = new Set();
+      proxyControllersByRealInputId.set(proxyFor, proxySet);
+    }
+    proxySet.add(uiStateController);
   }
   if (
     controlType === "input" &&
@@ -85,7 +90,13 @@ export const onUIStateControllerDestroyed = (uiStateController) => {
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
   if (proxyFor) {
-    proxyControllerByRealInputId.delete(proxyFor);
+    const proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (proxySet) {
+      proxySet.delete(uiStateController);
+      if (proxySet.size === 0) {
+        proxyControllersByRealInputId.delete(proxyFor);
+      }
+    }
   }
   if (
     controlType === "input" &&
@@ -116,12 +127,14 @@ export const findControlProxyTargetController = (controller) => {
   return getUIStateControllerById(proxyFor) ?? null;
 };
 
-// Reverse-lookup map: real-input id → proxy controller that references it via
-// `navi-control-proxy-for`. Maintained on create/destroy so lookup is O(1).
-const proxyControllerByRealInputId = new Map();
-export const findProxyController = (realInputId) => {
+// Reverse-lookup map: real-input id → the proxy controllers that reference it
+// via `navi-control-proxy-for`. A single control can be represented by several
+// proxies (an "enable"/"disable" button pair for one radio, for instance), so
+// each id holds a set. Maintained on create/destroy so lookup is O(1).
+const proxyControllersByRealInputId = new Map();
+export const findProxyControllers = (realInputId) => {
   if (!realInputId) {
     return null;
   }
-  return proxyControllerByRealInputId.get(realInputId) ?? null;
+  return proxyControllersByRealInputId.get(realInputId) ?? null;
 };

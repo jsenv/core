@@ -64,6 +64,10 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlHost } from "./control_dom.js";
+import {
+  publishControlStateToLabels,
+  unpublishControlStateToLabels,
+} from "./control_label_state.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import {
@@ -1363,41 +1367,47 @@ const useInteractiveProps = (
         controlHostProps["inert"] = "";
       }
     }
-    // inform any associated label of our state (connected, disabled, readOnly,
+    // Inform any associated label of our state (connected, disabled, readOnly,
     // required — a Label with requiredIndicator marks itself from it rather
-    // than being told twice what the control already knows)
-    // dispatched directly on the label — works whether the label wraps the control
-    // (Field as label) or is a separate element linked via htmlFor (Label component)
+    // than being told twice what the control already knows), through both
+    // channels a label can be reached by: a DOM event on the labels the element
+    // itself hands over (a wrapping <label>, or a label[for] on a native form
+    // element), and a publication under this control's id for the labels that
+    // only know it by that (see control_label_state.js).
+    //
+    // The id is remembered rather than re-read at unmount time: ref.current is
+    // often already null by then, and the labels subscribed under that id would
+    // stay told about a control that no longer exists.
+    const publishedIdRef = useRef(null);
     useLayoutEffect(() => {
       const element = ref.current;
       if (!element) {
         return;
       }
-      const labels = getAssociatedLabels(element);
       const readOnlyForced = element.hasAttribute("data-readonly-forced");
       const readOnly = readOnlyForced ? false : readOnlyResolved;
-      for (const label of labels) {
+      const controlState = {
+        disabled: disabledResolved,
+        readOnly,
+        required: requiredResolved,
+      };
+      for (const label of getAssociatedLabels(element)) {
         label.dispatchEvent(
-          new CustomEvent("navi_control_state", {
-            detail: {
-              disabled: disabledResolved,
-              readOnly,
-              required: requiredResolved,
-            },
-          }),
+          new CustomEvent("navi_control_state", { detail: controlState }),
         );
       }
+      publishedIdRef.current = element.id;
+      publishControlStateToLabels(element.id, controlState);
     }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
-        if (!element) {
-          return;
+        if (element) {
+          for (const label of getAssociatedLabels(element)) {
+            label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
+          }
         }
-        const labels = getAssociatedLabels(element);
-        for (const label of labels) {
-          label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
-        }
+        unpublishControlStateToLabels(publishedIdRef.current);
       };
     }, []);
   }
@@ -1650,26 +1660,13 @@ const splitControlProps = (props) => {
   return [controlRootProps, controlHostProps];
 };
 
+// The labels the DOM itself can hand over: a wrapping <label>, or a label[for]
+// pointing at a native form element. Everything else — a label[for] on a
+// non-native control — goes through control_label_state.js instead, which knows
+// the pairing without asking the document for it.
 const getAssociatedLabels = (element) => {
-  if (!element) {
+  if (!element || !element.labels) {
     return [];
   }
-  // const closestPicker = element.closest('[navi-control="picker"]');
-  // const insidePicker = closestPicker && element !== closestPicker;
-  // const formElement = insidePicker ? closestPicker : element;
-  const formElement = element;
-  // Native form elements expose .labels directly
-  if (formElement.labels && formElement.labels.length > 0) {
-    return Array.from(formElement.labels);
-  }
-  const id = formElement.id;
-  if (id) {
-    const byId = Array.from(
-      document.querySelectorAll(`label[for="${CSS.escape(id)}"]`),
-    );
-    if (byId.length > 0) {
-      return byId;
-    }
-  }
-  return [];
+  return Array.from(element.labels);
 };

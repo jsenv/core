@@ -73,6 +73,7 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
+import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
@@ -455,6 +456,11 @@ const css = /* css */ `
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`/`side_panel.jsx`).
+ * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
+ *   instead of waiting for the first open (see popup_content_mount.js). For
+ *   content something depends on while the popup is still closed: a value read
+ *   off it, fields a surrounding form collects on submit, a size measured from
+ *   outside.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {
@@ -638,9 +644,14 @@ const usePopoverProps = (props) => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
-    children,
+    children: childrenProp,
+    mountWhenClosed,
     ...rest
   } = props;
+  const children = usePopupContentMount(openController, {
+    children: childrenProp,
+    mountWhenClosed,
+  });
   const isTopLayer = layer === "top";
   const ref = props.ref;
   const backdropRef = useRef();

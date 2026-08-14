@@ -18,7 +18,7 @@ import {
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
 import {
-  findProxyController,
+  findProxyControllers,
   getRadioSiblings,
   getUIStateControllerById,
   onUIStateControllerCreated,
@@ -372,15 +372,17 @@ export const useUIStateController = (
             // later through a React re-render — visible as e.g. two radios
             // appearing checked at once between the real input update and the
             // next render (radio_sibling_uncheck case).
-            const proxyController = findProxyController(s.id);
-            if (proxyController) {
-              // Find any mounted controller that declared itself as a proxy for this one.
-              // Communicates directly to the proxy controller — no DOM query needed.
-              const mirrorEvent = new CustomEvent("proxy_mirror_state", {
-                detail: {},
-              });
-              chainEvent(mirrorEvent, e);
-              proxyController.setUIState(newUIState, mirrorEvent);
+            // Every mounted controller that declared itself as a proxy for this
+            // one. Communicates directly to them — no DOM query needed.
+            const proxyControllerSet = findProxyControllers(s.id);
+            if (proxyControllerSet) {
+              for (const proxyController of proxyControllerSet) {
+                const mirrorEvent = new CustomEvent("proxy_mirror_state", {
+                  detail: {},
+                });
+                chainEvent(mirrorEvent, e);
+                proxyController.setUIState(newUIState, mirrorEvent);
+              }
             }
           }
           if (isInternalEvent(e)) {

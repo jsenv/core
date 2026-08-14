@@ -6,7 +6,7 @@ import {
 
 import { findControlHost, isControlHost } from "../control/control_dom.js";
 import {
-  findControlProxy,
+  findControlProxies,
   findControlProxyTarget,
 } from "../control/control_proxy.js";
 import { addInputEffect } from "../control/input_effect.js";
@@ -18,11 +18,10 @@ const requestPseudoStateCheck = (element, detail) => {
     "navi_pseudo_state_request_check",
     detail,
   );
-  // When a control has a visible proxy mirroring its state (e.g. selectable
-  // radio with `navi-control-proxy-for`), re-check the proxy too so it stays
-  // in sync with the real control.
-  const proxy = findControlProxy(element);
-  if (proxy) {
+  // When a control has visible proxies mirroring its state (e.g. selectable
+  // radio with `navi-control-proxy-for`), re-check them too so they stay in
+  // sync with the real control.
+  for (const proxy of findControlProxies(element)) {
     dispatchInternalCustomEvent(
       proxy,
       "navi_pseudo_state_request_check",
@@ -75,8 +74,7 @@ definePseudoClass(":hover", {
       return () => {};
     }
     const recheckProxy = (e) => {
-      const proxy = findControlProxy(el);
-      if (proxy) {
+      for (const proxy of findControlProxies(el)) {
         requestPseudoStateCheck(proxy, { event: e });
       }
     };
@@ -143,9 +141,10 @@ definePseudoClass(":hover", {
     if (el.matches(":hover")) {
       return true;
     }
-    const proxy = findControlProxy(el);
-    if (proxy && proxy.matches(":hover")) {
-      return true;
+    for (const proxy of findControlProxies(el)) {
+      if (proxy.matches(":hover")) {
+        return true;
+      }
     }
     return false;
   },
@@ -507,23 +506,30 @@ focus_classes: {
       requireFocusVisible
         ? isMatchingFocusVisible(target)
         : target.matches(":focus");
+    // Both branches of isFocusedTarget rest on :focus / :focus-visible, and only
+    // one element in the document can match those: document.activeElement. So
+    // the single controller worth testing is known upfront — asking the document
+    // for every [aria-controls] would collect candidates that cannot qualify,
+    // once per element and again on every re-check, on a document each new
+    // element makes bigger.
     const isControlledBy = (target) => {
       const id = target.id;
       if (!id) {
         return false;
       }
-      const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
-      for (const controller of controllers) {
-        // If the controller is inside the element it controls, focus is already
-        // native (:focus-within) — no need to inherit it.
-        if (target.contains(controller)) {
-          continue;
-        }
-        if (isFocusedTarget(controller)) {
-          return true;
-        }
+      const activeElement = document.activeElement;
+      if (!activeElement || activeElement === document.body) {
+        return false;
       }
-      return false;
+      if (!activeElement.matches(`[aria-controls~="${id}"]`)) {
+        return false;
+      }
+      // A controller inside the element it controls means focus is already
+      // native (:focus-within) — nothing to inherit.
+      if (target.contains(activeElement)) {
+        return false;
+      }
+      return isFocusedTarget(activeElement);
     };
     if (isControlledBy(el)) {
       return true;
@@ -850,8 +856,7 @@ export const initPseudoStyles = (
     }
     // When this element's state changes, notify any proxy element that mirrors it
     // so it can re-check and visually reflect the new state.
-    const proxy = findControlProxy(element);
-    if (proxy) {
+    for (const proxy of findControlProxies(element)) {
       requestPseudoStateCheck(proxy, {});
     }
   };

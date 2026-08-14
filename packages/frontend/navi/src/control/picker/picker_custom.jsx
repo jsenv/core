@@ -414,6 +414,14 @@ const PickerCustom = (props) => {
     Object.assign(popupProps, {
       anchor: props.ref,
       openController,
+      // A picker whose value was never given to it reads it off the control in
+      // its popup (see useUIFacadeStateController): the trigger shows what the
+      // list inside says is selected, so that list has to exist before anyone
+      // opens anything. Told a value — even an empty one — the picker owns it
+      // and pushes it down instead, leaving the popup free to build its
+      // content only when it is first opened (see popup_content_mount.js).
+      mountWhenClosed:
+        !Object.hasOwn(props, "value") && !Object.hasOwn(props, "defaultValue"),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and

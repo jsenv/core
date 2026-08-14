@@ -117,6 +117,11 @@ const css = /* css */ `
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
+ * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
+ *   instead of waiting for the first open (see popup_content_mount.js). For
+ *   content something depends on while the popup is still closed: a value read
+ *   off it, fields a surrounding form collects on submit, a size measured from
+ *   outside.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popup = (props) => {

@@ -202,6 +202,10 @@ export const createOpenController = (
   const controller = {
     opened: false,
     openEffect: null,
+    // Set by the controlled element (see popup_content_mount.js) when its
+    // content is still waiting for a first open to be built. Called below,
+    // before openEffect, so the popup measures and positions the real thing.
+    mountContent: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;
@@ -255,6 +259,10 @@ export const createOpenController = (
           }
         };
       };
+      // After prepareFocusTransfer, which has to record what held the focus
+      // before anything inside the popup can claim it, and before openEffect,
+      // which measures the popup to place it.
+      controller.mountContent?.();
       const openEffectReturnValue =
         controller.openEffect(requestOpenEvent) || null;
       openEffectCleanup = (closeEvent) => {
