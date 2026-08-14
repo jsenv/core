@@ -16,6 +16,7 @@ import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
+import { isControlValueGivenByProps } from "../control_hooks.jsx";
 import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
@@ -420,8 +421,7 @@ const PickerCustom = (props) => {
       // opens anything. Told a value — even an empty one — the picker owns it
       // and pushes it down instead, leaving the popup free to build its
       // content only when it is first opened (see popup_content_mount.js).
-      mountWhenClosed:
-        !Object.hasOwn(props, "value") && !Object.hasOwn(props, "defaultValue"),
+      mountWhenClosed: !isControlValueGivenByProps(props),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and

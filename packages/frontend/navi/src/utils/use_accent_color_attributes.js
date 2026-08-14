@@ -1,7 +1,7 @@
 import { useLayoutEffect } from "preact/hooks";
 
 import { contrastColor, resolveOklchLightness } from "@jsenv/dom";
-import { NAVI_PSEUDO_STATE_CUSTOM_EVENT } from "../box/pseudo_styles.js";
+import { subscribeToPseudoState } from "../box/pseudo_styles.js";
 
 const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
 const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
@@ -89,9 +89,12 @@ export const useAccentColorAttributes = (
       }
     };
     updateAttributes();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+    const unsubscribeFromPseudoState = subscribeToPseudoState(
+      el,
+      updateAttributes,
+    );
     return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+      unsubscribeFromPseudoState();
       el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
       el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
       el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);

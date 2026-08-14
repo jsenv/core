@@ -860,6 +860,24 @@ export const useControlProps = (
 
   return [controlRootProps, controlHostProps, { uiStateController }];
 };
+/**
+ * Whether the caller has told this control what it holds. Three ways, and only
+ * three — the controlled `value`, the uncontrolled `defaultValue`, a bound
+ * `signal` — the same three createControlInfo below reads, in that precedence
+ * order, to seed the state.
+ *
+ * None of them and the control starts with nothing: whatever it ends up holding
+ * has to come from somewhere else — a parent form distributing its own value,
+ * or, for a picker, the control sitting in its popup (see
+ * useUIFacadeStateController). Anyone who needs to know whether a control can
+ * answer for itself before anything mounts asks this rather than re-listing the
+ * props, which is how `signal` came to be forgotten.
+ */
+export const isControlValueGivenByProps = (props) =>
+  Object.hasOwn(props, "value") ||
+  Object.hasOwn(props, "defaultValue") ||
+  Object.hasOwn(props, "signal");
+
 const createControlInfo = (props, { controlType }) => {
   let statePropName;
   let defaultStatePropName;

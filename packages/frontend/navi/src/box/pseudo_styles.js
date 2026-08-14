@@ -29,12 +29,40 @@ const requestPseudoStateCheck = (element, detail) => {
     );
   }
 };
-export const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const dispatchPseudoStateCustomEvent = (element, value, oldValue) => {
-  dispatchInternalCustomEvent(element, NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
-    pseudoState: value,
-    oldPseudoState: oldValue,
-  });
+/**
+ * Called back whenever `element`'s pseudo state changes.
+ *
+ * Kept beside the element rather than announced to the DOM: an element that
+ * changes state has at most one or two interested parties, each known by name
+ * (the box drawing it, the accent color reading its computed style), and a
+ * CustomEvent costs its allocation and its capture/bubble walk whether anyone
+ * listens or not — paid on every element, on every state change. A lookup that
+ * finds nothing costs nothing.
+ *
+ * @param {Element} element
+ * @param {(pseudoState: object, oldPseudoState: object) => void} callback
+ * @returns {() => void} teardown
+ */
+export const subscribeToPseudoState = (element, callback) => {
+  let subscriberSet = pseudoStateSubscriberSetWeakMap.get(element);
+  if (!subscriberSet) {
+    subscriberSet = new Set();
+    pseudoStateSubscriberSetWeakMap.set(element, subscriberSet);
+  }
+  subscriberSet.add(callback);
+  return () => {
+    subscriberSet.delete(callback);
+  };
+};
+const pseudoStateSubscriberSetWeakMap = new WeakMap();
+const notifyPseudoStateSubscribers = (element, value, oldValue) => {
+  const subscriberSet = pseudoStateSubscriberSetWeakMap.get(element);
+  if (!subscriberSet) {
+    return;
+  }
+  for (const subscriber of subscriberSet) {
+    subscriber(value, oldValue);
+  }
 };
 
 export const PSEUDO_CLASSES = {};
@@ -848,7 +876,7 @@ export const initPseudoStyles = (
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
     if (elementListeningPseudoState) {
-      dispatchPseudoStateCustomEvent(
+      notifyPseudoStateSubscribers(
         elementListeningPseudoState,
         value,
         oldValue,
@@ -931,11 +959,12 @@ export const initPseudoStyles = (
     onStateChange(state, oldState);
   };
 
-  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
-    const oldState = event.detail.oldPseudoState;
-    state = event.detail.pseudoState;
-    onStateChange(state, oldState);
-  });
+  addTeardown(
+    subscribeToPseudoState(element, (pseudoState, oldPseudoState) => {
+      state = pseudoState;
+      onStateChange(state, oldPseudoState);
+    }),
+  );
   element.addEventListener("navi_pseudo_state_request_check", () => {
     checkPseudoClasses();
   });
@@ -1062,18 +1091,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
       styleKeySetToApply = new Set(styleKeySet);
       styleKeySetToApply.delete("transition");
     }
-    requestAnimationFrame(() => {
-      if (elementTransitionWeakMap.has(element)) {
-        const transitionToRestore = elementTransitionWeakMap.get(element);
-        if (transitionToRestore === undefined) {
-          element.style.transition = "";
-        } else {
-          element.style.transition = transitionToRestore;
-        }
-        elementTransitionWeakMap.delete(element);
-      }
-      elementRenderedWeakSet.add(element);
-    });
+    afterFirstFrame(element);
   }
 
   // Apply all styles normally (excluding transition during anti-flicker)
@@ -1102,4 +1120,37 @@ const updateStyle = (element, style, preventInitialTransition) => {
   }
 
   styleKeySetWeakMap.set(element, styleKeySet);
+};
+
+// One frame for every element waiting for its first one, not one frame each.
+// What this owes each element — put back the transition suppressed above, and
+// remember it has now been painted once — is a few microseconds, while asking
+// the browser for a frame costs more than that, and a page mounting thousands of
+// boxes asks thousands of times in the same tick. A Set, so an element styled
+// twice before the frame arrives is still one entry.
+const elementSetWaitingFirstFrame = new Set();
+let firstFrameScheduled = false;
+const afterFirstFrame = (element) => {
+  elementSetWaitingFirstFrame.add(element);
+  if (firstFrameScheduled) {
+    return;
+  }
+  firstFrameScheduled = true;
+  requestAnimationFrame(() => {
+    firstFrameScheduled = false;
+    const elements = [...elementSetWaitingFirstFrame];
+    elementSetWaitingFirstFrame.clear();
+    for (const element of elements) {
+      if (elementTransitionWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionWeakMap.get(element);
+        if (transitionToRestore === undefined) {
+          element.style.transition = "";
+        } else {
+          element.style.transition = transitionToRestore;
+        }
+        elementTransitionWeakMap.delete(element);
+      }
+      elementRenderedWeakSet.add(element);
+    }
+  });
 };
