@@ -25,6 +25,11 @@ const dragStyleController = createStyleController("drag_to_move");
  *   If omitted, `element` is translated. The translate is read from `dragStyleController`
  *   at grab time so any pre-existing translate is accumulated rather than reset.
  *
+ * A `transform` already on the moved element (rotate, scale…) is preserved and does
+ * not disturb the movement. `rotate` and `scale` set as individual CSS properties do:
+ * they apply outside `transform`, where nothing the gesture writes can reach them —
+ * put those on a child element instead (a warning says so in dev).
+ *
  * @param {object} [options]
  * @param {boolean} [options.stickyFrontiers=true]
  *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
@@ -97,6 +102,9 @@ export const createDragToMoveGestureController = ({
     );
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
+    if (import.meta.dev) {
+      warnAboutTransformsOutsideTransform(elementImpacted);
+    }
 
     const cancelPosition = () => {
       dragStyleController.clear(elementImpacted);
@@ -326,7 +334,15 @@ export const createDragToMoveGestureController = ({
         // Build the transform to apply, preserving any transforms that were
         // already on the element before the grab (e.g. rotate from another
         // controller), and accumulating from the pre-grab translate baseline.
-        const transform = { ...transformAtGrab };
+        // The translate keys are seeded HERE, before the spread, and not merely
+        // assigned below: a transform object is serialized in key order, and in a
+        // transform list every function transforms the frame of the ones after it.
+        // A translate written after a rotate or a scale therefore travels rotated
+        // and scaled — the element drifts away from the pointer, proportionally to
+        // the distance covered. Dragging moves things on screen, so its translate
+        // has to come first, whatever else the element carries. The spread still
+        // wins on the value when the element already had a translate of its own.
+        const transform = { translateX: 0, translateY: 0, ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -386,4 +402,35 @@ export const createDragToMoveGestureController = ({
   };
 
   return dragGestureController;
+};
+
+/*
+ * `rotate` and `scale` set as individual properties are not part of `transform`:
+ * the element's matrix is translate, then rotate, then scale, then `transform`.
+ * The drag translate lives in `transform`, so it lands INSIDE them and comes out
+ * rotated and scaled — the element drifts away from the pointer, a bit more at
+ * every pixel travelled.
+ * Nothing written inside `transform` can compensate, and `getComputedStyle().transform`
+ * does not show these properties, so the gesture cannot even see what is happening
+ * to it: hence a warning, and the way out is to carry the decoration on a child
+ * (what the drag clone of startDragToReorder does).
+ * `translate` as an individual property is left alone — translations compose,
+ * whatever their order.
+ */
+const warnAboutTransformsOutsideTransform = (element) => {
+  const { rotate, scale } = getComputedStyle(element);
+  const propertiesInTheWay = [];
+  if (rotate !== "none") {
+    propertiesInTheWay.push(`rotate: ${rotate}`);
+  }
+  if (scale !== "none") {
+    propertiesInTheWay.push(`scale: ${scale}`);
+  }
+  if (propertiesInTheWay.length === 0) {
+    return;
+  }
+  console.warn(
+    `The element being dragged has ${propertiesInTheWay.join(" and ")} set as CSS ${propertiesInTheWay.length === 1 ? "property" : "properties"}, which applies outside "transform" and will distort the drag: the element will not follow the pointer. Put the rotation/scale on a child element, or express it inside "transform".`,
+    element,
+  );
 };
