@@ -69,7 +69,7 @@ export const createServiceWorkerHotReplacer = ({
       });
       if (typeof resourceUpdateHandler !== "object") {
         throw new TypeError(
-          `resource uupdate hanler must be an object, got ${resourceUpdateHandler}`,
+          `resource update handler must be an object, got ${resourceUpdateHandler}`,
         );
       }
     }
@@ -142,14 +142,6 @@ export const createServiceWorkerHotReplacer = ({
         toVersion: toUrlMeta.version || null,
       });
       if (!updateHandler) {
-        console.log({
-          fromScriptMeta,
-          toScriptMeta,
-          fromUrl,
-          fromResources,
-          toResources,
-          availableHandlers: Object.keys(resourceUpdateHandlers),
-        });
         pwaLogger.debug(`nothing capable to handle update of ${fromUrl}`);
         return null;
       }

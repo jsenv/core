@@ -1,4 +1,8 @@
-// tslint:disable:ordered-imports
+/*
+ * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
+ * using @jsenv/pwa as intended; ../docs/usage.md shows complete usage
+ * examples. Each export below carries JSDoc in its source file.
+ */
 
 export { pwaLogger } from "./pwa_logger.js";
 export { navigatorControllerRef } from "./navigator_controller_ref.js";

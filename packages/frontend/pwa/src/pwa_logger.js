@@ -2,6 +2,12 @@ let logLevel = "warn";
 let logBackgroundColor = "green";
 let logColor = "black";
 
+/**
+ * Logger used by every @jsenv/pwa feature. All log entries are prefixed with
+ * styled "jsenv pwa" badges. Silent by default except warnings/errors; call
+ * `pwaLogger.setOptions({ logLevel: "debug" })` to see what the package does
+ * ("debug" | "info" | "warn" | "error").
+ */
 export const pwaLogger = {
   setOptions: (options) => {
     logLevel = options.logLevel || logLevel;
@@ -36,12 +42,12 @@ export const pwaLogger = {
   },
   infoGroupCollapsed: (...args) => {
     if (logLevel === "debug" || logLevel === "info") {
-      console.group(...injectLogStyles(args));
+      console.groupCollapsed(...injectLogStyles(args));
     }
   },
   debugGroupCollapsed: (...args) => {
     if (logLevel === "debug") {
-      console.group(...injectLogStyles(args));
+      console.groupCollapsed(...injectLogStyles(args));
     }
   },
 

@@ -67,6 +67,25 @@ displayModeStandaloneRef.subscribe(() => {
   checkAvailabilityChange();
 });
 
+/**
+ * Add to home screen (PWA installation) helper.
+ *
+ * The page must capture the "beforeinstallprompt" event itself, as early as
+ * possible (in a classic inline script, before this module loads), and store
+ * it on `window.beforeinstallpromptEvent`:
+ *
+ *   window.addEventListener("beforeinstallprompt", (event) => {
+ *     event.preventDefault();
+ *     window.beforeinstallpromptEvent = event;
+ *   });
+ *
+ * - `availableRef`: reactive ref; `availableRef.value` is true when the
+ *   install prompt can be shown (browser fired "beforeinstallprompt", app not
+ *   already installed, not already running standalone).
+ *   `availableRef.subscribe(callback)` calls back immediately and on change.
+ * - `prompt()`: async, must be called from a user gesture (e.g. click);
+ *   resolves to true if the user accepted installation.
+ */
 export const addToHomescreen = {
   availableRef,
   prompt: async () => {

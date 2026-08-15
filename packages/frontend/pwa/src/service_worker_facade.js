@@ -17,6 +17,38 @@ import {
 import { createServiceWorkerHotReplacer } from "./internal/service_worker_hot_replacement.js";
 import { pwaLogger } from "./pwa_logger.js";
 
+/**
+ * Creates an object simplifying service worker registration, update detection,
+ * update activation and communication with the service worker script.
+ *
+ * The service worker script is expected to answer `{ action }` messages sent
+ * with a MessageChannel port ("inspect", "skipWaiting", "claim",
+ * "postReloadAfterUpdateToClients") — `@jsenv/service-worker` implements this
+ * protocol. With a plain service worker script everything still works but
+ * degrades: "inspect" times out after 1s so `state.meta` stays empty and every
+ * update requires a page reload.
+ *
+ * @param {Object} [options]
+ * @param {string} [options.scope] Registration scope used to find the service
+ *   worker registration; defaults to the whole origin.
+ * @param {boolean} [options.autoclaimOnFirstActivation=false] When the very
+ *   first service worker activates, ask it to claim the page immediately
+ *   instead of waiting for the next navigation.
+ * @returns {Object} facade with:
+ *   - `state`: reactive state object, see the shape passed to sigiAdvanced below
+ *   - `subscribe(callback)`: called immediately then on every state change;
+ *     returns an unsubscribe function
+ *   - `setRegistrationPromise(promise)`: give it the return value of
+ *     `navigator.serviceWorker.register(url)`
+ *   - `checkForUpdates()`: async, resolves to true if an update was found
+ *   - `activateUpdate()`: async, activates the installed update (skipWaiting +
+ *     claim) and resolves once it controls the page
+ *   - `unregister()`: async, unregisters the service worker
+ *   - `sendMessage(message)`: async, posts a message to the service worker and
+ *     resolves with its response
+ *   - `defineResourceUpdateHandler(url, handler)`: register how to hot-replace
+ *     a resource during an update instead of reloading the page
+ */
 export const createServiceWorkerFacade = ({
   scope,
   autoclaimOnFirstActivation = false,
@@ -122,7 +154,16 @@ export const createServiceWorkerFacade = ({
     toServiceWorker.addEventListener("statechange", applyUpdateStateEffects);
   };
 
+  // Two callers can legitimately reach the same registration: init() finds it
+  // via getRegistration() while setRegistrationPromise() receives it from
+  // navigator.serviceWorker.register(). Watching twice would duplicate every
+  // listener and state mutation, so the registration is watched only once.
+  let watchedRegistration = null;
   const watchRegistration = async (registration) => {
+    if (watchedRegistration === registration) {
+      return;
+    }
+    watchedRegistration = registration;
     const { installing, waiting, active } = registration;
     const fromServiceWorker = installing || waiting || active;
     registration.onupdatefound = () => {
@@ -335,7 +376,7 @@ export const createServiceWorkerFacade = ({
     defineResourceUpdateHandler: (url, handler) => {
       if (typeof handler !== "function" && typeof handler !== "object") {
         throw new TypeError(
-          `handle must be a function or an object, got ${handler}`,
+          `handler must be a function or an object, got ${handler}`,
         );
       }
       const urlResolved = new URL(url, document.location).href;
