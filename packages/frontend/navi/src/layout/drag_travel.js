@@ -40,6 +40,32 @@ import.meta.css = /* css */ `
        that bounces the rest of the time goes on bouncing. */
     overscroll-behavior: none;
   }
+  /* …and nothing inside a travelling box hands its leftovers to what is above
+     it: a list that reaches its end passes what is left of the gesture up the
+     chain, and the page moves behind a travel that is being dragged.
+
+     Written ONCE AND FOR ALL rather than while a finger is down, unlike
+     everything else here: a browser decides what a gesture may do when the
+     gesture BEGINS — at the touchstart, at the first wheel event — and a
+     property written after that decision arrives too late for the gesture it
+     was meant for. That is what "most of the time it does not move, sometimes
+     it does" is made of.
+
+     On the axis the box travels on, and that one only: the other axis is the
+     content's own scrolling and is left alone. Containing does not stop it from
+     scrolling anyway — it stops it from spilling over.
+
+     !important because this is not a preference: a box that travels cannot let
+     the page travel with it, and the rule has to win over whatever an
+     application says about its own scrollers. */
+  [data-drag-travel*="x"],
+  [data-drag-travel*="x"] * {
+    overscroll-behavior-x: contain !important;
+  }
+  [data-drag-travel*="y"],
+  [data-drag-travel*="y"] * {
+    overscroll-behavior-y: contain !important;
+  }
   :root[${WALKING_ATTRIBUTE}] {
     /* A drag over text selects it on the way, and the blue trail says the
        gesture was understood as something else. Not from the press: a press on
@@ -107,6 +133,21 @@ export const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
     element = element.parentElement;
   }
   return false;
+};
+
+// A gesture is over: does it carry on, or does everything go back? The distance
+// pulled says it, and the speed says it too — a short flick means "away" as
+// clearly as half a box does.
+const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
+  if (!towardsSomething) {
+    return false;
+  }
+  const sign = pulled > 0 ? 1 : -1;
+  const flicked =
+    Math.abs(velocity) > DRAG_FLICK_VELOCITY &&
+    Math.sign(velocity) === sign &&
+    Math.abs(pulled) > DRAG_FLICK_DISTANCE;
+  return flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO;
 };
 
 /**
@@ -307,17 +348,11 @@ export const startDragTravel = (
     // doing a moment earlier — so the speed only counts while it is still going.
     const velocity =
       pointerEvent.timeStamp - gesture.lastTime > 100 ? 0 : gesture.velocity;
-    const flicked =
-      Math.abs(velocity) > DRAG_FLICK_VELOCITY &&
-      Math.sign(velocity) === sign &&
-      Math.abs(pulled) > DRAG_FLICK_DISTANCE;
     // A gesture taken away rather than let go of (the browser scrolling
     // something else, a call coming in) said nothing: things go back.
     const cancelled = pointerEvent.type === "pointercancel";
     const travels =
-      !cancelled &&
-      Boolean(towardsSomething) &&
-      (flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO);
+      !cancelled && travelsAfter({ pulled, size, velocity, towardsSomething });
     onEnd({
       axis,
       pulled,
@@ -357,4 +392,147 @@ export const startDragTravel = (
   window.addEventListener("pointerup", onUp);
   window.addEventListener("pointercancel", onUp);
   return gesture;
+};
+
+// A trackpad gesture has no beginning and no end of its own: it is a stream of
+// wheel events that starts when two fingers move and stops some time after they
+// are lifted — the tail of it is the momentum the system keeps sending. So the
+// end is read from silence.
+// Long enough to survive a page that is busy: a trackpad sends an event every
+// few milliseconds, but the frames right after a travel sets off are the ones
+// where the main thread has the most to do (a navigation, a render, a picture
+// to take), and a silence read as "the fingers are gone" there would cut ONE
+// gesture into several travels.
+const WHEEL_TRAVEL_END_DELAY = 150;
+// Below this a wheel event is noise (a thumb resting, a mouse wheel's stray
+// horizontal step) rather than someone pushing a page sideways.
+const WHEEL_TRAVEL_START_DELTA = 2;
+
+/**
+ * The same travel, asked for with a trackpad.
+ *
+ * Two fingers swiping sideways is how one changes page on a laptop, and it is
+ * not a drag at all: no press, no release, no pointer — the browser sends
+ * `wheel` events and, left alone, answers them itself by bouncing the page or
+ * going back in history. Answering them here is what stops that: a gesture is
+ * either ours or the browser's, and half of each is what makes a page rock
+ * under a travel that is already moving.
+ *
+ * Reads the same way as a press (`onStart`/`onPull`/`onEnd`, same numbers, same
+ * answer at the end), so a caller drives one travel and not two.
+ *
+ * @param {Element} element
+ * @param {object} options - as in startDragTravel, plus nothing.
+ * @returns {() => void} stop listening.
+ */
+export const watchWheelTravel = (
+  element,
+  { axes = "xy", onStart, onPull, onEnd },
+) => {
+  let travel = null;
+  let endTimeout = null;
+
+  const endTravel = () => {
+    endTimeout = null;
+    if (!travel) {
+      return;
+    }
+    const { axis, size, pulled, velocity } = travel;
+    const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+    travel = null;
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+    onEnd({
+      axis,
+      pulled,
+      size,
+      sign: pulled > 0 ? 1 : -1,
+      travels: travelsAfter({ pulled, size, velocity, towardsSomething }),
+      cancelled: false,
+      event: null,
+    });
+  };
+
+  const onWheel = (wheelEvent) => {
+    const axis =
+      Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
+    const delta = axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY;
+    if (!travel) {
+      if (!axes.includes(axis) || Math.abs(delta) < WHEEL_TRAVEL_START_DELTA) {
+        return;
+      }
+      // Which way the pages go, said backwards: a wheel says how far the
+      // CONTENT scrolls, and pushing content to the left brings in what is on
+      // the right.
+      const sign = delta > 0 ? -1 : 1;
+      const started = onStart({
+        axis,
+        sign,
+        target: wheelEvent.target,
+        event: wheelEvent,
+      });
+      if (!started || !started.size) {
+        // Given up whole, so the browser still has it: nothing is prevented
+        // below and the page scrolls as it would have.
+        return;
+      }
+      travel = {
+        axis,
+        size: started.size,
+        travelBack: Boolean(started.travelBack),
+        travelOn: Boolean(started.travelOn),
+        pulled: started.slack || 0,
+        velocity: 0,
+        lastTime: wheelEvent.timeStamp,
+      };
+      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
+      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+    } else if (axis !== travel.axis) {
+      // The other axis, mid-gesture: a trackpad is never perfectly straight and
+      // the axis was decided when it set off (see startDragTravel).
+      wheelEvent.preventDefault();
+      return;
+    }
+    // Ours from here: whatever the browser would have done with it — bouncing
+    // the page, going back in history — is the gesture answered twice.
+    wheelEvent.preventDefault();
+    const { size } = travel;
+    let pulled = travel.pulled - delta;
+    const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+    if (!towardsSomething) {
+      pulled *= DRAG_RESISTANCE;
+    }
+    if (pulled > size) {
+      pulled = size;
+    } else if (pulled < -size) {
+      pulled = -size;
+    }
+    const elapsed = wheelEvent.timeStamp - travel.lastTime;
+    if (elapsed > 0) {
+      const instant = (pulled - travel.pulled) / elapsed;
+      travel.velocity = travel.velocity * 0.4 + instant * 0.6;
+    }
+    travel.pulled = pulled;
+    travel.lastTime = wheelEvent.timeStamp;
+    onPull({
+      axis: travel.axis,
+      pulled,
+      size,
+      progress: pulled / size,
+      event: wheelEvent,
+    });
+    // The gesture is over when it goes quiet — there is nothing else to say so.
+    clearTimeout(endTimeout);
+    endTimeout = setTimeout(endTravel, WHEEL_TRAVEL_END_DELAY);
+  };
+
+  element.addEventListener("wheel", onWheel, { passive: false });
+  return () => {
+    element.removeEventListener("wheel", onWheel);
+    clearTimeout(endTimeout);
+    endTimeout = null;
+    travel = null;
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+  };
 };

@@ -35,7 +35,11 @@
 
 import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
-import { startDragTravel, scrollRoomTowards } from "../layout/drag_travel.js";
+import {
+  scrollRoomTowards,
+  startDragTravel,
+  watchWheelTravel,
+} from "../layout/drag_travel.js";
 import { collectRoutes } from "./route.jsx";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 
@@ -245,6 +249,9 @@ export const RouteTravel = ({
   // left, the animations the finger drives, and what to do with them once the
   // browser has them ready. Null when no page is on its way anywhere.
   const travelRef = useRef(null);
+  // The latest way to answer a gesture, for a watcher that outlives every
+  // render (see the wheel effect below).
+  const travelHandlersRef = useRef(null);
 
   const routesFromChildren = useMemo(() => collectRoutes(children), [children]);
   const routes = routesProp || routesFromChildren;
@@ -408,6 +415,80 @@ export const RouteTravel = ({
     }
   };
 
+  // What a gesture is about, whichever hand made it: a thumb dragging the page
+  // and two fingers pushing it sideways on a trackpad ask for the same travel,
+  // so they are answered by the same three callbacks and only the reading of
+  // the input differs (see drag_travel.js).
+  const travelHandlers = {
+    onStart: ({ sign, target }) => {
+      // One travel at a time: a gesture setting off while another plays would
+      // take a picture of a page that is already halfway out.
+      if (travelRef.current) {
+        return false;
+      }
+      const box = elementRef.current.getBoundingClientRect();
+      const size = axis === "x" ? box.width : box.height;
+      // Dragging the page towards the end of the axis brings in what is
+      // BEFORE it, the way pushing a sheet to the right reveals its left.
+      const route =
+        sign > 0 ? routes[currentIndex - 1] : routes[currentIndex + 1];
+      if (
+        !route ||
+        !size ||
+        scrollRoomTowards(target, elementRef.current, axis, sign)
+      ) {
+        return false;
+      }
+      if (CAN_KEEP_PICTURE) {
+        beginTravel({
+          route,
+          fromRoute: routes[currentIndex],
+          direction: sign > 0 ? "back" : "forward",
+          scrub: true,
+          change: () => onTravel({ route, cause: "drag" }),
+        });
+      } else {
+        travelRef.current = { route, noPicture: true, ended: false };
+      }
+      return {
+        size,
+        travelBack: sign > 0,
+        travelOn: sign < 0,
+      };
+    },
+    onPull: ({ progress }) => {
+      const travel = travelRef.current;
+      if (!travel || travel.noPicture) {
+        return;
+      }
+      // Only what goes the way the gesture set off: a hand turning around
+      // mid-drag is putting the page back, and there is no second picture to
+      // show it anything else.
+      const ratio = travel.direction === "back" ? progress : -progress;
+      travel.ratio = ratio > 0 ? ratio : 0;
+      scrubTravel(travel, travel.ratio);
+    },
+    onEnd: ({ travels }) => {
+      gestureRef.current = null;
+      const travel = travelRef.current;
+      if (!travel) {
+        return;
+      }
+      if (travel.noPicture) {
+        travelRef.current = null;
+        if (travels) {
+          onTravel({ route: travel.route, cause: "drag" });
+        }
+        return;
+      }
+      if (travels) {
+        finishTravel(travel);
+        return;
+      }
+      revertTravel(travel);
+    },
+  };
+
   const onPointerDown = (pointerDownEvent) => {
     if (!travelByDrag || gestureRef.current || travelRef.current) {
       return;
@@ -418,74 +499,35 @@ export const RouteTravel = ({
     const gesture = startDragTravel(pointerDownEvent, {
       element: elementRef.current,
       axes: axis,
-      onStart: ({ sign, target }) => {
-        const box = elementRef.current.getBoundingClientRect();
-        const size = axis === "x" ? box.width : box.height;
-        // Dragging the page towards the end of the axis brings in what is
-        // BEFORE it, the way pushing a sheet to the right reveals its left.
-        const route =
-          sign > 0 ? routes[currentIndex - 1] : routes[currentIndex + 1];
-        if (
-          !route ||
-          !size ||
-          scrollRoomTowards(target, elementRef.current, axis, sign)
-        ) {
-          return false;
-        }
-        if (CAN_KEEP_PICTURE) {
-          beginTravel({
-            route,
-            fromRoute: routes[currentIndex],
-            direction: sign > 0 ? "back" : "forward",
-            scrub: true,
-            change: () => onTravel({ route, cause: "drag" }),
-          });
-        } else {
-          travelRef.current = { route, noPicture: true, ended: false };
-        }
-        return {
-          size,
-          travelBack: sign > 0,
-          travelOn: sign < 0,
-        };
-      },
-      onPull: ({ progress }) => {
-        const travel = travelRef.current;
-        if (!travel || travel.noPicture) {
-          return;
-        }
-        // Only what goes the way the gesture set off: a hand turning around
-        // mid-drag is putting the page back, and there is no second picture to
-        // show it anything else.
-        const ratio = travel.direction === "back" ? progress : -progress;
-        travel.ratio = ratio > 0 ? ratio : 0;
-        scrubTravel(travel, travel.ratio);
-      },
-      onEnd: ({ travels }) => {
-        gestureRef.current = null;
-        const travel = travelRef.current;
-        if (!travel) {
-          return;
-        }
-        if (travel.noPicture) {
-          travelRef.current = null;
-          if (travels) {
-            onTravel({ route: travel.route, cause: "drag" });
-          }
-          return;
-        }
-        if (travels) {
-          finishTravel(travel);
-          return;
-        }
-        revertTravel(travel);
-      },
+      ...travelHandlers,
       onGiveUp: () => {
         gestureRef.current = null;
       },
     });
     gestureRef.current = gesture;
   };
+
+  // Two fingers on a trackpad: the same travel, read from wheel events. Watched
+  // for the whole life of the box rather than started by a press, because such
+  // a gesture has no press — it begins with its first event.
+  //
+  // The handlers are reached through a ref, and the watcher is never rebuilt for
+  // them: a travel CHANGES the current page, so anything listening on
+  // `currentIndex` would be torn down halfway through the very gesture that is
+  // moving it — leaving the pages held, waiting for an end nobody can say
+  // anymore.
+  travelHandlersRef.current = travelHandlers;
+  useLayoutEffect(() => {
+    if (!travelByDrag || !CAN_KEEP_PICTURE) {
+      return undefined;
+    }
+    return watchWheelTravel(elementRef.current, {
+      axes: axis,
+      onStart: (detail) => travelHandlersRef.current.onStart(detail),
+      onPull: (detail) => travelHandlersRef.current.onPull(detail),
+      onEnd: (detail) => travelHandlersRef.current.onEnd(detail),
+    });
+  }, [travelByDrag, axis]);
 
   return (
     <div
@@ -495,6 +537,10 @@ export const RouteTravel = ({
         className ? `navi_route_travel ${className}` : "navi_route_travel"
       }
       data-axis={axis}
+      // What travels here, and on which axis: read by the shared gesture
+      // stylesheet, which keeps this box's scrolling from spilling onto the
+      // page (see drag_travel.js).
+      data-drag-travel={travelByDrag ? axis : undefined}
       onPointerDown={onPointerDown}
     >
       {children}

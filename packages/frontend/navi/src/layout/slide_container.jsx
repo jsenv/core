@@ -1681,6 +1681,10 @@ export const SlideContainer = ({
       // does with a finger is decided by CSS (touch-action) before any of this
       // has seen the gesture.
       data-travel-by-drag={dragAxes ?? undefined}
+      // The same fact, read by the shared gesture stylesheet: what scrolls
+      // inside a box that travels must not spill onto the page behind it (see
+      // drag_travel.js).
+      data-drag-travel={dragAxes ?? undefined}
       onPointerDown={(e) => {
         startDrag(e);
         rest.onPointerDown?.(e);
