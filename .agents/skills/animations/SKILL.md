@@ -165,10 +165,29 @@ The gesture then drives a transition instead of driving pixels:
 
 - **Scrub, do not translate.** How the two pictures move is written in CSS
   (keyframes on `::view-transition-old/new`); the finger only says how far in.
-  Take the animations on the pseudo-elements
-  (`document.getAnimations()`, `effect.pseudoElement`), **pause** them once
-  `ready` resolves, and set `currentTime = ratio * duration`. Nothing about the
-  movement is duplicated in JS, so it stays a CSS concern.
+  Take the animations on the pseudo-elements (`document.getAnimations()`,
+  `effect.pseudoElement`) and set `currentTime = ratio * duration`. Nothing
+  about the movement is duplicated in JS, so it stays a CSS concern.
+- **Hold them from the first frame, in CSS** — `animation-play-state: paused`
+  under an attribute set before the transition starts — and NOT by pausing them
+  in JS when `ready` resolves. JS cannot pause what does not exist: the
+  animations appear with the transition, a navigation and a render after it was
+  asked for, and those frames are the beginning of the gesture. Played at their
+  own pace meanwhile, a quick swipe is over before it is ever taken in hand —
+  the page arriving lands at once, and the only thing the finger still does is
+  cancel it. Ask again for the animations on each move until there are some,
+  rather than once at `ready`.
+- **Under a finger, the keyframes are linear.** The curve belongs to the hand
+  and is already in the pull: an eased scrub runs ahead of the finger through
+  the middle of the gesture and lags at the ends, and what one feels is the
+  page leaving on its own rather than being pushed — "I did not even see it
+  start". Keep it linear for what plays out after the release too: changing the
+  curve of an animation that is halfway through moves the picture without
+  anything having moved. An eased curve is for a travel nobody is holding.
+- **Write the keyframes with longhands, never the `animation` shorthand.** The
+  shorthand also writes `animation-play-state`, so a rule using it resets the
+  hold above to running and the pictures leave without the finger — the same
+  symptom as no hold at all, from a rule that looks unrelated.
 - **Cancelling is the same movement backwards**, not a second one:
   `playbackRate = -1` and play. A second transition would capture a picture of
   the wrong "before".

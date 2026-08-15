@@ -49,6 +49,13 @@ const CAN_KEEP_PICTURE = Boolean(
 const startViewTransition = ensureDocumentStartViewTransition();
 
 const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
+// While a finger holds the travel: the pictures stand still and go exactly
+// where it says (see the CSS, and scrubTravel).
+const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
+// A travel a finger set off, for its whole life — including what plays out
+// after the finger is gone. It moves by another law than one asked for by a
+// press (see the CSS).
+const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 
 const css = /* css */ `
   .navi_route_travel {
@@ -109,24 +116,60 @@ const css = /* css */ `
     }
   }
 
+  /* Held by a finger: nothing moves on its own, and where the pictures stand is
+     set by hand (scrubTravel). In CSS rather than paused in JS because JS
+     cannot pause what does not exist yet: a transition is ready several frames
+     after it is asked for — a navigation and a render later — and those frames
+     are the beginning of the gesture. Played at their own pace, a quick swipe
+     would be over before it was ever taken in hand, which is exactly what one
+     sees: the page arriving lands at once instead of following the thumb. */
+  :root[${HOLD_ATTRIBUTE}] {
+    &::view-transition-group(*),
+    &::view-transition-old(*),
+    &::view-transition-new(*) {
+      animation-play-state: paused;
+    }
+  }
+
+  /* Longhands, never the \`animation\` shorthand: the shorthand also writes
+     animation-play-state, so it would set these back to running and undo the
+     hold above — a finger would then watch the pages travel on their own. */
+  :root[${TRAVEL_ATTRIBUTE}] {
+    &::view-transition-old(navi-route-travel),
+    &::view-transition-new(navi-route-travel) {
+      animation-duration: var(--navi-route-travel-duration, 300ms);
+      animation-timing-function: ease;
+      animation-fill-mode: both;
+    }
+  }
+
+  /* Under a finger, the pace IS the finger: an eased travel would run ahead of
+     it in the middle of the gesture and lag behind it at the ends, and what one
+     feels then is the page leaving on its own rather than being pushed. The
+     curve of the movement is the hand's, and it is already in the pull. Kept
+     linear once it is let go of too: changing the curve of an animation that is
+     halfway through moves the picture without anything having moved. */
+  :root[${DRAGGED_ATTRIBUTE}] {
+    &::view-transition-group(navi-route-travel),
+    &::view-transition-old(navi-route-travel),
+    &::view-transition-new(navi-route-travel) {
+      animation-timing-function: linear;
+    }
+  }
   :root[${TRAVEL_ATTRIBUTE}="forward"] {
     &::view-transition-old(navi-route-travel) {
-      animation: navi-route-travel-leave-towards-start
-        var(--navi-route-travel-duration, 300ms) ease both;
+      animation-name: navi-route-travel-leave-towards-start;
     }
     &::view-transition-new(navi-route-travel) {
-      animation: navi-route-travel-enter-from-end
-        var(--navi-route-travel-duration, 300ms) ease both;
+      animation-name: navi-route-travel-enter-from-end;
     }
   }
   :root[${TRAVEL_ATTRIBUTE}="back"] {
     &::view-transition-old(navi-route-travel) {
-      animation: navi-route-travel-leave-towards-end
-        var(--navi-route-travel-duration, 300ms) ease both;
+      animation-name: navi-route-travel-leave-towards-end;
     }
     &::view-transition-new(navi-route-travel) {
-      animation: navi-route-travel-enter-from-start
-        var(--navi-route-travel-duration, 300ms) ease both;
+      animation-name: navi-route-travel-enter-from-start;
     }
   }
 
@@ -233,14 +276,18 @@ export const RouteTravel = ({
       direction,
       scrub,
       ratio: 0,
+      // The animations of the pictures, once the browser has them. Held still
+      // by CSS until then, so an empty hand here costs nothing: there is
+      // nothing to stop, only nowhere to put them yet.
       animations: null,
-      // What the finger asked for before the browser was ready to answer:
-      // taken up as soon as it is.
-      pendingEnd: null,
       ended: false,
     };
     travelRef.current = travel;
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
+    if (scrub) {
+      document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
+      document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
+    }
     const viewTransition = startViewTransition(async () => {
       if (change) {
         await change();
@@ -258,20 +305,12 @@ export const RouteTravel = ({
       }, ignoreSkipped);
       return travel;
     }
+    // The pictures exist from `ready` on, and the finger may have moved a long
+    // way by then — held at their start meanwhile, so this is where they catch
+    // up with it rather than where they set off.
     viewTransition.ready.then(() => {
-      if (travel !== travelRef.current) {
-        return;
-      }
-      const animations = collectTravelAnimations();
-      for (const animation of animations) {
-        animation.pause();
-      }
-      travel.animations = animations;
-      scrubTravel(travel, travel.ratio);
-      if (travel.pendingEnd) {
-        const pendingEnd = travel.pendingEnd;
-        travel.pendingEnd = null;
-        pendingEnd();
+      if (travel === travelRef.current) {
+        scrubTravel(travel, travel.ratio);
       }
     }, ignoreSkipped);
     return travel;
@@ -319,18 +358,14 @@ export const RouteTravel = ({
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
+  // Let go of far enough: the movement carries on from under the finger, at its
+  // own pace, to the end.
   const finishTravel = (travel) => {
-    if (!travel.animations) {
-      travel.pendingEnd = () => finishTravel(travel);
-      return;
-    }
-    for (const animation of travel.animations) {
-      animation.playbackRate = 1;
-      animation.play();
-    }
-    travel.viewTransition.finished.then(() => {
-      endTravel(travel);
-    }, ignoreSkipped);
+    releaseHold();
+    travel.viewTransition.finished.then(
+      () => endTravel(travel),
+      () => endTravel(travel),
+    );
   };
 
   // Let go of too early: the pages go back the way they came, and the URL with
@@ -339,17 +374,20 @@ export const RouteTravel = ({
   // the picture is dropped, so the two are the same thing at the moment they
   // are swapped and nothing is seen changing.
   const revertTravel = (travel) => {
-    if (!travel.animations) {
-      travel.pendingEnd = () => revertTravel(travel);
-      return;
-    }
-    for (const animation of travel.animations) {
+    const animations = travelAnimations(travel);
+    for (const animation of animations) {
       animation.playbackRate = -1;
-      animation.play();
     }
-    Promise.all(
-      travel.animations.map((animation) => animation.finished.catch(() => {})),
-    ).then(async () => {
+    releaseHold();
+    const backAtTheStart = animations.length
+      ? Promise.all(
+          animations.map((animation) => animation.finished.catch(() => {})),
+        )
+      : // Nothing to run backwards — a transition the browser skipped, or one
+        // that never became ready. There is no picture to undo either, so the
+        // way back is the state alone.
+        Promise.resolve();
+    backAtTheStart.then(async () => {
       await onTravel({ route: travel.fromRoute, cause: "revert" });
       await nextRender();
       travel.viewTransition.skipTransition();
@@ -364,7 +402,9 @@ export const RouteTravel = ({
     travel.ended = true;
     if (travelRef.current === travel) {
       travelRef.current = null;
+      releaseHold();
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
+      document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
     }
   };
 
@@ -462,21 +502,20 @@ export const RouteTravel = ({
   );
 };
 
-// Where the two pictures stand, said as a moment in the movement they would
-// have played on their own: the browser knows how they move (it is written in
-// CSS), so the finger only has to say how far in.
-const scrubTravel = (travel, ratio) => {
-  if (!travel.animations) {
-    return;
-  }
-  for (const animation of travel.animations) {
-    const timing = animation.effect.getComputedTiming();
-    const duration = timing.delay + timing.activeDuration;
-    animation.currentTime = ratio * duration;
-  }
+// Nobody holds the pictures anymore: whatever they were told (a time to stand
+// at, a direction to run in) is what they carry on from.
+const releaseHold = () => {
+  document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
 };
 
-const collectTravelAnimations = () => {
+// The animations of the pictures, asked for again until there are some: they
+// come into existence with the transition, several frames after it was asked
+// for, and the gesture has already begun by then. Kept once found — the set
+// does not change for the length of one travel.
+const travelAnimations = (travel) => {
+  if (travel.animations) {
+    return travel.animations;
+  }
   const animations = [];
   for (const animation of document.getAnimations()) {
     const pseudoElement = animation.effect?.pseudoElement;
@@ -484,7 +523,22 @@ const collectTravelAnimations = () => {
       animations.push(animation);
     }
   }
+  if (animations.length) {
+    travel.animations = animations;
+  }
   return animations;
+};
+
+// Where the two pictures stand, said as a moment in the movement they would
+// have played on their own: the browser knows how they move (it is written in
+// CSS), so the finger only has to say how far in. They are held still by CSS
+// while this lasts, so a time written here is a place they stay at.
+const scrubTravel = (travel, ratio) => {
+  for (const animation of travelAnimations(travel)) {
+    const timing = animation.effect.getComputedTiming();
+    const duration = timing.delay + timing.activeDuration;
+    animation.currentTime = ratio * duration;
+  }
 };
 
 // The render a route change sets off: a route matching is a signal changing,
