@@ -14,6 +14,7 @@ export {
 } from "./certificate_authority.js";
 export { requestCertificate } from "./certificate_request.js";
 export { verifyHostsFile } from "./hosts_file_verif.js";
+export { trustCertificateAuthority } from "./trust_certificate_authority.js";
 export {
   createValidityDurationOfXDays,
   createValidityDurationOfXYears,

@@ -42,6 +42,7 @@ const returnValue = await requestCertificate({
       `${UNICODE.OK} certificate authority restored from filesystem`,
       "Generating server certificate...",
       `${UNICODE.OK} server certificate generated, it will be valid for 1 year`,
+      `${UNICODE.OK} authority root certificate trusted by this process`,
     ],
     infos: [],
     warns: [],

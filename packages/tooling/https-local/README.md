@@ -19,6 +19,7 @@ Generate locally trusted HTTPS certificates for local development.
   - [Certificate Expiration](#certificate-expiration)
   - [JavaScript API](#javascript-api)
     - [requestCertificate](#requestcertificate)
+    - [trustCertificateAuthority](#trustcertificateauthority)
     - [verifyHostsFile](#verifyhostsfile)
       - [Auto Update Hosts](#auto-update-hosts)
     - [installCertificateAuthority](#installcertificateauthority)
@@ -175,6 +176,40 @@ const server = createServer(
 ```
 
 [`init`](#init) (or `installCertificateAuthority`) must be called once before using this function.
+
+It also makes the current process trust the certificate authority, as described in [trustCertificateAuthority](#trustcertificateauthority). Pass `trustAuthority: false` to keep the CA certificates of the process untouched:
+
+```js
+const { certificate, privateKey } = requestCertificate({
+  trustAuthority: false,
+});
+```
+
+### trustCertificateAuthority
+
+The root certificate authority is installed in the system keychain, which browsers read — but node does not: it uses its own CA list. A node process requesting a local HTTPS server signed by the authority therefore fails with `unable to verify the first certificate`, even on the machine that created the authority.
+
+`trustCertificateAuthority` adds the authority root certificate to the CA list of the current process:
+
+```js
+import { trustCertificateAuthority } from "@jsenv/https-local";
+
+trustCertificateAuthority();
+
+const response = await fetch("https://localhost:4000");
+```
+
+Only the authority root certificate is added; the CA certificates node trusts by default are preserved and the rest of the system keychain is left out. Calling it twice does nothing the second time.
+
+[requestCertificate](#requestcertificate) does this on its own, so this function is for processes acting only as a client — an integration test requesting a local HTTPS server started elsewhere, for instance.
+
+[`init`](#init) (or `installCertificateAuthority`) must be called once before using this function.
+
+> **Note:** it relies on [`tls.setDefaultCACertificates`](https://nodejs.org/api/tls.html#tlssetdefaultcacertificatescerts), available starting from node 22.19.0 and 24.5.0. On older versions the call logs a warning and does nothing; the alternative there is the `NODE_EXTRA_CA_CERTS` environment variable, pointing to the `rootCertificateFilePath` returned by [requestCertificate](#requestcertificate). It must be set before the process starts, which is why it does not replace this function:
+>
+> ```console
+> NODE_EXTRA_CA_CERTS="~/Library/Application Support/https_local/https_local_root_certificate.crt" node file.mjs
+> ```
 
 ### verifyHostsFile
 

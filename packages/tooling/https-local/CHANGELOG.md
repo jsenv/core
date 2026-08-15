@@ -1,3 +1,9 @@
+# 4.0.0
+
+- add `trustCertificateAuthority`, adding the authority root certificate to the CA certificates of the current node process, so that `fetch` towards a local https server works
+- `requestCertificate` does this too, controlled by `trustAuthority` which defaults to `true`. Pass `trustAuthority: false` to get back the previous behaviour
+- `trustCertificateAuthority` stays available on its own for processes acting only as a client, which never call `requestCertificate`
+
 # 3.0.6
 
 - Fix certutil command on windows

@@ -3,6 +3,7 @@ import { UNICODE, createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { readFileSync } from "node:fs";
 import { getAuthorityFileInfos } from "./internal/authority_file_infos.js";
 import { requestCertificateFromAuthority } from "./internal/certificate_generator.js";
+import { addCertificateToProcessCACertificates } from "./internal/process_ca_certificates.js";
 import { forge } from "./internal/forge.js";
 import { formatDuration } from "./internal/validity_formatting.js";
 import {
@@ -17,6 +18,7 @@ export const requestCertificate = ({
   altNames = ["localhost"],
   commonName = "https local server certificate",
   validityDurationInMs = createValidityDurationOfXDays(396),
+  trustAuthority = true,
 } = {}) => {
   if (typeof validityDurationInMs !== "number") {
     throw new TypeError(
@@ -104,6 +106,14 @@ npx @jsenv/https-local init`,
       validityDurationInMs,
     )}`,
   );
+
+  if (trustAuthority) {
+    addCertificateToProcessCACertificates({
+      logger,
+      certificate: rootCertificate,
+      certificateFilePath: rootCertificateFileInfo.path,
+    });
+  }
 
   return {
     certificate: serverCertificate,
