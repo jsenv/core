@@ -72,7 +72,7 @@ export const useComposeElementRef = (syncElement, externalRef) => {
     const refCallback = (el) => {
       elRef.current = el;
       // Keep .current in sync immediately so useEffect callbacks that read
-      // ref.current (e.g. usePartiallyHidden) see the element, not null.
+      // ref.current see the element, not null.
       refCallback.current = el;
       const currentExternalRef = externalRefRef.current;
       if (currentExternalRef) {

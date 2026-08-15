@@ -135,9 +135,9 @@ Facts worth knowing before reaching for one:
 
 - **A name must be unique in the document** — a duplicate aborts the
   transition. Scope names by list, by picker, by whatever makes them unique.
-- **Pass `viewTransitionName` as a Box prop, never through `style`** — the
-  prop drops the name while the element is clipped or off-screen, so it never
-  animates from a partial snapshot.
+- **Pass `viewTransitionName` as a Box prop, never through `style`** — it is
+  the prop the rest of the box reads (see `viewTransitionGroup` below), and a
+  name written into `style` is invisible to it.
 - **The layout changes at once.** A transition animates snapshots, not layout:
   the document height jumps the moment the callback runs. Wanting the layout
   itself to be seen moving means animating the real property (WAAPI), not a
@@ -152,6 +152,57 @@ Facts worth knowing before reaching for one:
   screen that is off screen animates nothing — and can cost a movement the
   user IS looking at (the rule above). Start one only when what changes is
   what the user is watching.
+
+## What moves inside a box stays inside the box
+
+The pictures a transition takes are drawn in the top layer, all of them side by
+side under `::view-transition`, a flat tree that has forgotten which element was
+inside which. **No `overflow` anywhere in the document reaches them.** So the
+moment something moves further than the box it lives in — a row travelling to a
+position scrolled out of the list, a page pulled in from beside the container —
+it is seen crossing the page, over whatever sits next to that box. Nothing about
+it looks like a bug in the animation; it looks like the layout broke.
+
+What we want is simply the box's edge, kept during the transition. Two ways to
+get it, and the choice is not a matter of taste:
+
+- **The box IS what moves** (its own pictures are bigger than it, the way two
+  pages sliding past each other are): clip the box's own group —
+  `::view-transition-group(name)` and `::view-transition-image-pair(name)`,
+  `overflow: clip`. _Reference: route_travel.jsx._
+- **Things move INSIDE the box** (rows of a list, slides of a container): the
+  box needs a picture of its own and the pictures of its contents must be drawn
+  inside it. That is a nested group:
+
+  1. the box gets a `view-transition-name` and `view-transition-group: contain`,
+     which makes it the group everything named inside it hangs under;
+  2. `::view-transition-group-children(name)` — the box's edge — is told
+     `overflow: clip`;
+  3. the box's own `::view-transition-old/new` are given `animation: none` and
+     `mix-blend-mode: normal`: only its contents moved, and cross-fading the box
+     onto itself is a flicker.
+
+  The rows themselves say nothing. `view-transition-group: nearest` on a child
+  is the other half of the same feature — the child chooses its ancestor instead
+  of the ancestor claiming every name inside it — and is what to reach for when
+  the box must contain _these_ elements and not everything an application may
+  have named under it.
+
+  _Reference: `itemTransition` in list.jsx (`.navi_list_transition`), demo
+  `src/control/demos/many/4_reorderable_list_demo.html`._
+
+Clipping is not the only thing nesting restores: a group drawn inside another
+also follows it. A row moving while the list itself moves is one movement, not
+two that must be kept in step by hand.
+
+**Nesting is Chrome/Edge 140+, and nothing else** (no Safari, no Firefox). Where
+a movement is only correct BECAUSE of the clipping, a browser without it gets
+**no transition at all** — the change just happens. What it would play instead is
+not a lesser animation, it is content flying across the page, and that is worse
+than no animation. Guard on `canNestViewTransitionGroups` (navi/src/transition):
+drop the names, or skip the `startViewTransition` call entirely. A pretty
+movement on recent browsers, bought with simpler code and better performance, is
+the deal being taken here — the others will follow.
 
 ## A movement a finger drives, when only the state has the second picture
 
@@ -217,10 +268,9 @@ Two ways to lose an afternoon on this, both seen:
   that cannot come, and the transition hangs with the page frozen. Waiting for
   the state to have rendered means waiting for **microtasks** (which is what a
   signal-driven render costs), never for a frame.
-- **Clip on the pseudo-elements, never on your own box.** The pictures are
-  drawn in the top layer: no `overflow` anywhere in the document reaches them,
-  so a page sliding in is seen crossing whatever sits beside the box until
-  `::view-transition-group(name)` (and its `image-pair`) is told to clip.
+- **Clip on the pseudo-elements, never on your own box** — see "What moves
+  inside a box stays inside the box" above; a travel between pages is the first
+  of the two cases described there.
 
 _Reference: `route_travel.jsx` (whole file), demo
 `src/nav/demos/route_travel/route_travel.html`._

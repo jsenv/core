@@ -27,6 +27,7 @@ import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { Text } from "../../text/text.jsx";
+import { canNestViewTransitionGroups } from "../../transition/view_transition_group_nesting.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -608,6 +609,21 @@ const css = /* css */ `
       display: none;
     }
   }
+
+  /* <List itemTransition>: the rows travel inside the list's own picture, and
+     this is the list's edge (see view_transition_group_nesting.js). Told to
+     clip, a row moving in from outside the visible part of the list is cut
+     where the list ends instead of crossing the page beside it. */
+  ::view-transition-group-children(.navi_list_transition) {
+    overflow: clip;
+  }
+  /* The list box is the same thing before and after — only its rows moved — and
+     a cross-fade of something onto itself is a flicker. */
+  ::view-transition-old(.navi_list_transition),
+  ::view-transition-new(.navi_list_transition) {
+    mix-blend-mode: normal;
+    animation: none;
+  }
 `;
 
 const ListUI = (props) => {
@@ -659,6 +675,21 @@ const ListUI = (props) => {
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
     );
   }
+
+  // <List itemTransition>: the rows are named AND drawn inside the list's own
+  // picture, so the list's edge cuts them (see the CSS above). A browser that
+  // cannot nest groups gets no row transition at all — the same movement
+  // without the nesting is rows flying across the page, not a lesser animation.
+  const listTransitionId = useId();
+  const itemTransitionEnabled =
+    Boolean(itemTransition) && canNestViewTransitionGroups;
+  const listTransitionProps = itemTransitionEnabled
+    ? {
+        viewTransitionName: `navi_list_${listTransitionId}`,
+        viewTransitionClass: "navi_list_transition",
+        viewTransitionGroup: "contain",
+      }
+    : null;
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -848,6 +879,7 @@ const ListUI = (props) => {
   return (
     <Box
       {...rest}
+      {...listTransitionProps}
       ref={ref}
       baseClassName="navi_list_container"
       popover={popover}
@@ -890,7 +922,7 @@ const ListUI = (props) => {
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
-        itemTransition={itemTransition}
+        itemTransition={itemTransitionEnabled}
         expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
@@ -954,6 +986,15 @@ const ListFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [props.itemTransition]
+ *   Names each row, so a change the application wraps in
+ *   `document.startViewTransition` is seen row by row — rows moving to their new
+ *   place, an arriving row appearing where it lands — instead of the list
+ *   cross-fading as a block. The rows are drawn inside the list's own picture,
+ *   so one coming from outside the visible part of the list is cut at the list's
+ *   edge like any other overflow. Requires nested view transition groups
+ *   (Chrome/Edge 140+): elsewhere the rows are left unnamed and the change
+ *   simply happens.
  * @param {false|((index: number) => any)} [props.renderSkeleton]
  *   What a row on its way looks like — a row of the shape the real ones will
  *   have, so nothing moves when they arrive. Used for the rows a `<List.Items>`
@@ -2789,10 +2830,9 @@ const ListItemReal = (props) => {
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
   // <List itemTransition>: the row is named, so a change wrapped in a view
-  // transition animates it rather than cross-fading the list. Through the Box
-  // prop and not through style, because Box turns the name off again while the
-  // row is only partly visible (see usePartiallyHidden) — a row half-scrolled
-  // out of its container would otherwise animate from a clipped snapshot.
+  // transition animates it rather than cross-fading the list. The list box
+  // holds the group these names hang under, which is what keeps a row moving
+  // from outside the visible part of the list inside the list (see ListUI).
   const itemTransition = useContext(ItemTransitionContext);
 
   // Pressing a row that is busy or read-only must say why nothing happens,

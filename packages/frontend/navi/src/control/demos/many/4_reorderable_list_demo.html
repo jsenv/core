@@ -7,9 +7,8 @@
     <title>Reorderable List Demo</title>
     <style>
       /* The rows are cut at the edge of the box they move in: their pictures
-         are drawn inside the box's own picture, so its border box clips them
-         the way overflow does the rest of the time. */
-      ::view-transition-group(scrollable-list) {
+         are drawn inside the box's own picture, and this is that box's edge. */
+      ::view-transition-group-children(scrollable-list) {
         overflow: clip;
       }
       /* The box itself is the same thing before and after; cross-fading it onto
@@ -29,6 +28,7 @@
       import { useRef, useState } from "preact/hooks";
       import {
         Box,
+        canNestViewTransitionGroups,
         moveArrayItemByIndex,
         startDragToReorder,
       } from "@jsenv/navi";
@@ -56,11 +56,21 @@
         { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
       ];
 
+      // Rows travel inside the list's own picture; a browser that cannot nest
+      // groups would show them crossing the page instead, so it just reorders.
+      const startReorder = (updateCallback) => {
+        if (!canNestViewTransitionGroups) {
+          updateCallback();
+          return { finished: Promise.resolve() };
+        }
+        return document.startViewTransition(updateCallback);
+      };
+
       const ReorderableList = ({ name }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const reorder = (fromIndex, toIndex) => {
-          document.startViewTransition(() => {
+          startReorder(() => {
             setOrder((prev) => moveArrayItemByIndex(prev, fromIndex, toIndex));
           });
         };
@@ -70,7 +80,7 @@
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
             onReorder: async (fromId, toId, syncClone) => {
-              const viewTransition = document.startViewTransition(() => {
+              const viewTransition = startReorder(() => {
                 syncClone();
                 setOrder((prev) => {
                   const fromIndex = prev.indexOf(fromId);
@@ -130,8 +140,11 @@
             }}
             className="list-item"
             data-id={item.id}
-            viewTransitionName={`${name}-item-${item.id}`}
-            viewTransitionGroup="nearest"
+            viewTransitionName={
+              canNestViewTransitionGroups
+                ? `${name}-item-${item.id}`
+                : undefined
+            }
             onPointerDown={onPointerDown}
           >
             {/* Drag handle */}

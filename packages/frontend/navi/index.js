@@ -64,6 +64,7 @@ export { Box } from "./src/box/box.jsx";
 
 // Transition
 export { ensureDocumentStartViewTransition } from "./src/transition/start_view_transition_polyfill.js";
+export { canNestViewTransitionGroups } from "./src/transition/view_transition_group_nesting.js";
 export { UITransition } from "./src/transition/ui_transition.jsx";
 
 // Navigation/routing
