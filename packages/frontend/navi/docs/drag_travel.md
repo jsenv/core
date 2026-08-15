@@ -29,6 +29,25 @@ read before the box moves:
    it has no room left, and only then hands the travel over — so a row that
    scrolls sideways inside a page still scrolls sideways.
 
+### The browser also wants to answer the gesture
+
+A gesture that is already answered — something is being dragged — must not be
+answered a second time by the browser. Two of its answers show up as "the whole
+page moved a little, and it looked wrong":
+
+- **the elastic bounce** at the end of a page, and the swipe that goes back in
+  history with it: `overscroll-behavior: none` on the document, **from the
+  press** (the browser starts answering before anything of ours has moved) and
+  only until the finger is up;
+- **the selection** a drag paints across the text it crosses: `user-select:
+none`, but only once the press has become a travel — a press on text IS how
+  one selects it, and nothing has said otherwise yet.
+
+Both are written by the gesture itself (`data-drag-travel-gesture` and
+`data-drag-travel-walking` on `:root`), so a page that bounces the rest of the
+time goes on bouncing. `preventDefault()` on each move says the same thing to
+the browser for what those two properties do not cover.
+
 ### A navi component that reads the pointer marks ITSELF
 
 `data-no-drag-travel` is written by the component that takes the pointer, never

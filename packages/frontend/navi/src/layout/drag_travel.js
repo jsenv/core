@@ -20,6 +20,35 @@
  *   keeps the gesture until it has none.
  */
 
+// While a pointer is on something that travels: said on the document, because
+// what has to be told is the document.
+const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
+
+// …and while one is actually travelling something, which is a later moment and
+// takes more away (see the CSS).
+const WALKING_ATTRIBUTE = "data-drag-travel-walking";
+
+import.meta.css = /* css */ `
+  :root[${GESTURE_ATTRIBUTE}] {
+    /* The bounce the browser plays when a gesture reaches the end of a page —
+       and the swipe that goes back in history with it. Both are the browser
+       answering a gesture that is already answered, here, by what the finger is
+       dragging: the page rocks under a travel that is doing its own moving, and
+       one gesture is seen twice. From the press, because the browser starts
+       answering from the press — waiting for the first pixel that travels would
+       let it happen once, every time. Only while a finger is down, so a page
+       that bounces the rest of the time goes on bouncing. */
+    overscroll-behavior: none;
+  }
+  :root[${WALKING_ATTRIBUTE}] {
+    /* A drag over text selects it on the way, and the blue trail says the
+       gesture was understood as something else. Not from the press: a press on
+       text IS how one selects it, and only a press that has become a travel has
+       said it was about something else. */
+    user-select: none;
+  }
+`;
+
 // How far a pointer goes before it is a travel rather than a click: below this
 // a press that wandered a pixel is still a press, and nothing budges.
 const DRAG_START_THRESHOLD = 10;
@@ -197,9 +226,16 @@ export const startDragTravel = (
       gesture.lastPosition =
         axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
       gesture.lastTime = pointerMoveEvent.timeStamp;
+      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       // Every move from here on, wherever the finger wanders — off the box, off
       // the window — and the release with it.
       element.setPointerCapture(gesture.pointerId);
+    }
+    // The gesture is taken, and the browser is told so on every move: what it
+    // would have done with it — panning the page, dragging the text under the
+    // finger, starting a selection — is exactly what would be seen twice.
+    if (pointerMoveEvent.cancelable) {
+      pointerMoveEvent.preventDefault();
     }
     const { axis, size } = gesture;
     const moved =
@@ -301,6 +337,8 @@ export const startDragTravel = (
   };
 
   gesture.stop = () => {
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
     element.removeEventListener("pointermove", onMove);
     element.removeEventListener("dragstart", preventNativeDrag);
     // On the window, not on the box: a pointer released outside it (or taken
@@ -309,6 +347,11 @@ export const startDragTravel = (
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
   };
+  // Said from the press rather than from the first pixel that travels: the
+  // browser answers a gesture from its very beginning (the page starts rocking
+  // before anything of ours has moved), so waiting for the axis would let the
+  // thing this prevents happen once, every time.
+  document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
   element.addEventListener("pointermove", onMove);
   element.addEventListener("dragstart", preventNativeDrag);
   window.addEventListener("pointerup", onUp);
