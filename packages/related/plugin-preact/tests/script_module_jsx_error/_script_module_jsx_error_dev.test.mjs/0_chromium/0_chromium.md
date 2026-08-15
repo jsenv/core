@@ -17,6 +17,8 @@ base/client/main.noeslint.html:15:16
 Unexpected token (6:15)
 --- first reference ---
 base/client/main.noeslint.html:10:5
+--- plugin name ---
+"jsenv:babel"
 ```
 
 # 2/4 write file "./.jsenv/chrome@149.0.0/main.noeslint.html"

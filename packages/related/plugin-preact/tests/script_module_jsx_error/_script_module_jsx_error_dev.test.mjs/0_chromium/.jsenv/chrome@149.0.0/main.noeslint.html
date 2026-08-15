@@ -48,7 +48,11 @@
         import { initDependencyStatus } from "/@fs@jsenv/core/src/plugins/dependency_status/client/dependency_status.js";
             
         initDependencyStatus({
-          "problems": []
+          "problems": [],
+          "watchInfo": {
+            "packageJsonPath": "package.json",
+            "pollInterval": 500
+          }
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
