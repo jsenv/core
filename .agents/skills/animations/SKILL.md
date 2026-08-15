@@ -260,7 +260,7 @@ The gesture then drives a transition instead of driving pixels:
   before `ensureDocumentStartViewTransition()` has installed the polyfill (it
   marks itself `isPolyfill`).
 
-Two ways to lose an afternoon on this, both seen:
+Three ways to lose an afternoon on this, all seen:
 
 - **Never wait for a frame inside the update callback.** The browser has
   stopped rendering while it runs — it is waiting for that very promise before
@@ -271,6 +271,12 @@ Two ways to lose an afternoon on this, both seen:
 - **Clip on the pseudo-elements, never on your own box** — see "What moves
   inside a box stays inside the box" above; a travel between pages is the first
   of the two cases described there.
+- **A press during a transition does not reach the element it looks like it
+  hit.** It goes to the document root, whatever the pseudo-elements are told
+  about `pointer-events`. So a gesture meant to grab what is still moving has to
+  be caught at the document and matched against the box's rectangle — otherwise
+  reaching for a page mid-flight does nothing, and the browser answers the
+  gesture instead (the page rocks under a travel that is already moving).
 
 _Reference: `route_travel.jsx` (whole file), demo
 `src/nav/demos/route_travel/route_travel.html`._

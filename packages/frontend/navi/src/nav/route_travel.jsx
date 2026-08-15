@@ -396,12 +396,6 @@ export const RouteTravel = ({
   // are swapped and nothing is seen changing.
   const revertTravel = (travel) => {
     const animations = travelAnimations(travel);
-    console.debug(
-      "DBG revert, animations",
-      animations.length,
-      "ended",
-      travel.ended,
-    );
     for (const animation of animations) {
       animation.playbackRate = -1;
     }
@@ -451,14 +445,6 @@ export const RouteTravel = ({
       const box = elementRef.current.getBoundingClientRect();
       const size = axis === "x" ? box.width : box.height;
       const travelInFlight = travelRef.current;
-      console.debug(
-        "DBG onStart",
-        sign,
-        "inFlight",
-        Boolean(travelInFlight),
-        travelInFlight?.direction,
-        travelInFlight?.ended,
-      );
       if (travelInFlight) {
         // A travel is already playing, and a second one cannot be started on
         // top of it: there is one picture of the page being left, and it is
@@ -550,11 +536,6 @@ export const RouteTravel = ({
   };
 
   const onPointerDown = (pointerDownEvent) => {
-    console.debug(
-      "DBG pointerdown",
-      Boolean(gestureRef.current),
-      Boolean(travelRef.current),
-    );
     if (!travelByDrag || gestureRef.current) {
       return;
     }

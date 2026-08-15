@@ -88,6 +88,24 @@ Both are written by the gesture itself (`data-drag-travel-gesture` and
 time goes on bouncing. `preventDefault()` on each move says the same thing to
 the browser for what those two properties do not cover.
 
+### A hand reaching for something still moving is reaching for THAT thing
+
+A gesture arriving while a travel is playing takes **that travel** over — it does
+not ask for a new one, and it is not refused. Refusing it is what makes a page
+rock: a gesture given back to the browser is answered by the browser, over a
+travel that is already moving.
+
+Taking over means the pictures stop where they are and answer the finger again,
+from where they stand (`slack`) rather than from zero. Only one box is in hand:
+further along it carries on, back past its start is a wall — leaving that way
+would be another travel, and it needs a picture this one is holding.
+
+One browser fact makes this harder than it reads: **while a view transition is
+playing, a press over the travelling box is delivered to the document root**, not
+to the box — whatever the pseudo-elements are told about `pointer-events`. So
+while a travel plays, the press is caught at the document and handed to the box
+when it fell inside its rectangle, which is where the hand thinks it pressed.
+
 ### On a touchscreen, the browser takes the gesture unless it is refused
 
 A `pointermove` is a report; a **`touchmove` is the decision**. Left alone, the
@@ -105,8 +123,16 @@ hold:
   touch keeps being dispatched at the node it started on, and a travel may
   replace the DOM under the finger (a page that travels navigates), after which
   that node no longer passes through the box on its way up;
-- the pointer is captured **before** the caller is told the gesture started, for
-  the same reason: what the caller does may take the target away.
+- the pointer is captured **before** the caller is told the gesture started, and
+  on the BOX rather than on what the finger landed on, for the same reason: what
+  the caller does may take that target away, and a capture whose element leaves
+  the document is a capture the browser drops.
+
+And the refusal has to be _listened for_ from the grab, even though it only
+refuses later: whether a touchmove can be refused at all is decided when the
+touch begins, from the non-passive listeners present at that moment. Registered
+afterwards, the listener is handed events that are already `cancelable: false` —
+it runs, it calls `preventDefault`, and nothing happens.
 
 ### A navi component that reads the pointer marks ITSELF
 
