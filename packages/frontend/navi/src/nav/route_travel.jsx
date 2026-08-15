@@ -90,6 +90,19 @@ const css = /* css */ `
        moment the travel is over. */
     view-transition-name: root;
 
+    /* The pictures are looked at, never touched: they are drawn in the top
+       layer, above everything, so a hand reaching for a page that is still
+       sliding would land on the picture of it and the box below would never
+       hear the press. Nothing here is interactive — what the finger is
+       reaching for is the travel underneath, and it must reach it. */
+    &::view-transition,
+    &::view-transition-group(*),
+    &::view-transition-image-pair(*),
+    &::view-transition-old(*),
+    &::view-transition-new(*) {
+      pointer-events: none;
+    }
+
     /* What is not the pages — a top bar, a tab row — is one still picture that
        must not fade: it is the same thing before and after, and a cross-fade of
        something onto itself is a flicker. */
@@ -252,6 +265,7 @@ export const RouteTravel = ({
   // The latest way to answer a gesture, for a watcher that outlives every
   // render (see the wheel effect below).
   const travelHandlersRef = useRef(null);
+  const pointerDownRef = useRef(null);
 
   const routesFromChildren = useMemo(() => collectRoutes(children), [children]);
   const routes = routesProp || routesFromChildren;
@@ -382,6 +396,12 @@ export const RouteTravel = ({
   // are swapped and nothing is seen changing.
   const revertTravel = (travel) => {
     const animations = travelAnimations(travel);
+    console.debug(
+      "DBG revert, animations",
+      animations.length,
+      "ended",
+      travel.ended,
+    );
     for (const animation of animations) {
       animation.playbackRate = -1;
     }
@@ -400,6 +420,13 @@ export const RouteTravel = ({
       travel.viewTransition.skipTransition();
       endTravel(travel);
     });
+  };
+
+  // Taken back in hand: the pictures stop where they are and answer the finger
+  // again (see the CSS hold).
+  const holdTravel = (travel) => {
+    travel.scrub = true;
+    document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
   };
 
   const endTravel = (travel) => {
@@ -421,13 +448,46 @@ export const RouteTravel = ({
   // the input differs (see drag_travel.js).
   const travelHandlers = {
     onStart: ({ sign, target }) => {
-      // One travel at a time: a gesture setting off while another plays would
-      // take a picture of a page that is already halfway out.
-      if (travelRef.current) {
-        return false;
-      }
       const box = elementRef.current.getBoundingClientRect();
       const size = axis === "x" ? box.width : box.height;
+      const travelInFlight = travelRef.current;
+      console.debug(
+        "DBG onStart",
+        sign,
+        "inFlight",
+        Boolean(travelInFlight),
+        travelInFlight?.direction,
+        travelInFlight?.ended,
+      );
+      if (travelInFlight) {
+        // A travel is already playing, and a second one cannot be started on
+        // top of it: there is one picture of the page being left, and it is
+        // taken. So the gesture takes over THIS travel instead of asking for
+        // another — which is what a hand reaching for a page still sliding is
+        // asking for anyway. It is refused only when there is nothing to take
+        // over (no picture at all).
+        //
+        // Never given up, even then: a gesture handed back to the browser is a
+        // page that rocks under a travel that is already moving.
+        if (travelInFlight.noPicture || travelInFlight.ended) {
+          return { size, travelBack: false, travelOn: false };
+        }
+        holdTravel(travelInFlight);
+        // Where the pictures stand right now, said as a pull: what the finger
+        // continues from, so nothing jumps when it takes them over.
+        const ratio = ratioOfTravel(travelInFlight);
+        travelInFlight.ratio = ratio;
+        const pulledSign = travelInFlight.direction === "back" ? 1 : -1;
+        return {
+          size,
+          slack: ratio * size * pulledSign,
+          // One box, the one being travelled: further along it carries on,
+          // back past its start is a wall — leaving that way is another travel,
+          // and it needs a picture this one is holding.
+          travelBack: travelInFlight.direction === "back",
+          travelOn: travelInFlight.direction === "forward",
+        };
+      }
       // Dragging the page towards the end of the axis brings in what is
       // BEFORE it, the way pushing a sheet to the right reveals its left.
       const route =
@@ -490,9 +550,17 @@ export const RouteTravel = ({
   };
 
   const onPointerDown = (pointerDownEvent) => {
-    if (!travelByDrag || gestureRef.current || travelRef.current) {
+    console.debug(
+      "DBG pointerdown",
+      Boolean(gestureRef.current),
+      Boolean(travelRef.current),
+    );
+    if (!travelByDrag || gestureRef.current) {
       return;
     }
+    // A travel already playing is not a reason to refuse the press: a hand
+    // reaching for a page that is still sliding is reaching for THAT page, and
+    // the gesture takes it over (see onStart).
     if (currentIndex === -1) {
       return;
     }
@@ -506,6 +574,40 @@ export const RouteTravel = ({
     });
     gestureRef.current = gesture;
   };
+
+  // A press that lands ON the box while a travel is playing does not reach it:
+  // the browser's transition covers the page and the press is delivered to the
+  // document root instead, whatever the pictures are told about pointer events.
+  // So while a travel plays, the press is caught at the document and handed to
+  // the box when it fell inside it — which is where the hand thinks it pressed.
+  pointerDownRef.current = onPointerDown;
+  useLayoutEffect(() => {
+    const onDocumentPointerDown = (pointerDownEvent) => {
+      if (!travelRef.current) {
+        return;
+      }
+      const boxElement = elementRef.current;
+      if (!boxElement || boxElement.contains(pointerDownEvent.target)) {
+        // It got there on its own.
+        return;
+      }
+      const { left, right, top, bottom } = boxElement.getBoundingClientRect();
+      const { clientX, clientY } = pointerDownEvent;
+      if (
+        clientX < left ||
+        clientX > right ||
+        clientY < top ||
+        clientY > bottom
+      ) {
+        return;
+      }
+      pointerDownRef.current(pointerDownEvent);
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDocumentPointerDown, true);
+    };
+  }, []);
 
   // Two fingers on a trackpad: the same travel, read from wheel events. Watched
   // for the whole life of the box rather than started by a press, because such
@@ -573,6 +675,22 @@ const travelAnimations = (travel) => {
     travel.animations = animations;
   }
   return animations;
+};
+
+// How far a travel has come, read off the pictures themselves rather than off
+// what the last gesture wrote: one let go of is still moving, and a hand
+// reaching for it must find it where it IS.
+const ratioOfTravel = (travel) => {
+  const [animation] = travelAnimations(travel);
+  if (!animation) {
+    return travel.ratio;
+  }
+  const timing = animation.effect.getComputedTiming();
+  const duration = timing.delay + timing.activeDuration;
+  if (!duration) {
+    return travel.ratio;
+  }
+  return animation.currentTime / duration;
 };
 
 // Where the two pictures stand, said as a moment in the movement they would

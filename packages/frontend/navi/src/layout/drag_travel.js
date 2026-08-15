@@ -1,16 +1,29 @@
 /**
- * The rules a pointer follows before what is under it travels.
+ * What a drag means when it TRAVELS: a whole screen pushed aside to bring in the
+ * next one — slides inside one box, pages that are URLs.
  *
- * They are the same wherever a travel can be dragged — slides inside one box,
- * pages that are URLs — and they live here so ONE place says what the gesture
- * means: how far a press wanders before it is a gesture at all, which axis it
- * walks, what else has a better claim on it, and what letting go says. Two
- * copies of these numbers would be two gestures, and a hand cannot be asked to
- * learn them twice.
+ * The pointer itself is not read here: reading a press, waiting for it to become
+ * a gesture, capturing it, measuring how fast it goes, swallowing the click it
+ * would have made is one gesture system for the whole codebase
+ * (@jsenv/dom's drag_gesture + drag_after_intent), and this asks it for the
+ * plain version — nothing carried, so no backdrop over the page, nothing made
+ * inert, no focus taken: a screen slides and the page keeps its scrolling and
+ * its keyboard.
+ *
+ * What IS here is everything that makes a travel a travel rather than a
+ * carry — and it is policy, not plumbing:
+ * - the axis is LOCKED by the first movement, instead of being constrained
+ *   ahead of time;
+ * - a press becomes a gesture by distance for every pointer, finger included:
+ *   a swipe is a travel, and asking a finger to hold still first (the rule for
+ *   picking an object up) would mean waiting before being allowed to swipe;
+ * - what travels walks ONE BOX, resists past its ends, and is measured from
+ *   where the finger is once it gets there;
+ * - letting go is a question with an answer: a third of a box, or a flick.
  *
  * What is NOT here is geometry: how big a box is, what lies one step that way,
  * what to paint while the finger moves. The caller knows those and nothing else
- * does — this reads the pointer and calls back.
+ * does — this reads the gesture and calls back.
  *
  * Who owns a gesture is decided in two places, and both are read here:
  * - what says so itself, with [data-no-drag-travel] or by being a field — a
@@ -19,6 +32,8 @@
  * - a scroller between the pointer and the box with room left that way, which
  *   keeps the gesture until it has none.
  */
+
+import { createDragGestureController, dragAfterIntent } from "@jsenv/dom";
 
 // While a pointer is on something that travels: said on the document, because
 // what has to be told is the document.
@@ -153,19 +168,20 @@ const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
 /**
  * Read a press, and tell the caller what the hand is doing with it.
  *
- * Called on pointerdown; returns the gesture in hand, or null when the press is
- * not one this can be about (a second finger, a right click, something that
- * reads the pointer itself).
+ * Called on pointerdown; returns a handle to stop the gesture, or null when the
+ * press is not one this can be about (a right click, something that reads the
+ * pointer itself).
  *
  * The gesture has no shape until the finger says which way it goes: `onStart`
- * is what turns a press into a travel, and it is asked LAST — everything
- * positional is read at that moment rather than when the finger landed, because
- * whatever was moving then may have arrived since.
+ * is what turns a press into a travel, and it is asked at that moment rather
+ * than when the finger landed, because whatever was moving then may have
+ * arrived since.
  *
  * @param {PointerEvent} pointerDownEvent
  * @param {object} options
- * @param {Element} options.element - where the moves are listened for and the
- *   pointer is captured: the box the gesture is about.
+ * @param {Element} options.element - the box the gesture is about, and what the
+ *   pointer is captured on: it outlives whatever the caller does about the
+ *   travel, which the element under the finger may not.
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel. A
  *   finger leaning on any other axis is given up on at once, whole, so whatever
  *   else wants it (a scroller, the page) gets it whole.
@@ -191,256 +207,200 @@ export const startDragTravel = (
   pointerDownEvent,
   { element, axes = "xy", onStart, onPull, onEnd, onGiveUp = () => {} },
 ) => {
-  if (pointerDownEvent.button !== 0) {
-    return null;
-  }
   const target = pointerDownEvent.target;
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
     return null;
   }
 
-  const gesture = {
-    pointerId: pointerDownEvent.pointerId,
-    target,
-    startX: pointerDownEvent.clientX,
-    startY: pointerDownEvent.clientY,
-    // Nothing but a press so far: the axis and the geometry it walks are read
-    // the moment the finger says which way it is going.
-    axis: null,
-    size: 0,
-    travelBack: false,
-    travelOn: false,
-    slack: 0,
-    pulled: 0,
-    velocity: 0,
-    lastPosition: 0,
-    lastTime: pointerDownEvent.timeStamp,
-    stop: null,
-  };
+  // The travel in hand: null until the finger has picked an axis and the caller
+  // has accepted it.
+  let travel = null;
+  let dragGesture = null;
+  let over = false;
 
-  const onMove = (pointerMoveEvent) => {
-    if (pointerMoveEvent.pointerId !== gesture.pointerId) {
+  const finish = () => {
+    if (over) {
       return;
     }
-    if (!gesture.axis) {
-      const reachX = Math.abs(pointerMoveEvent.clientX - gesture.startX);
-      const reachY = Math.abs(pointerMoveEvent.clientY - gesture.startY);
-      if (reachX < DRAG_START_THRESHOLD && reachY < DRAG_START_THRESHOLD) {
-        return;
-      }
-      // ONE axis, decided by the first few pixels and never revisited: a
-      // diagonal gesture would ask for two travels at once and only one thing
-      // can arrive — so the finger picks the axis it leans on, and the travel
-      // walks that one alone.
-      const axis = reachX >= reachY ? "x" : "y";
-      if (!axes.includes(axis)) {
-        gesture.stop();
-        onGiveUp();
-        return;
-      }
-      const sign =
-        axis === "x"
-          ? Math.sign(pointerMoveEvent.clientX - gesture.startX)
-          : Math.sign(pointerMoveEvent.clientY - gesture.startY);
-      // The pointer is taken over BEFORE the caller is told, and this order is
-      // the whole reason a travel survives on a touchscreen: what the caller
-      // does about the gesture may replace the DOM under the finger (a page
-      // that travels navigates, and a router unmounts the page being left).
-      // A touch whose target is taken away is a touch the browser CANCELS —
-      // the gesture dies at its first pixel, the finger holds nothing, and
-      // whatever it does next is not read at all. Captured first, every event
-      // is addressed to this box, which is not going anywhere.
-      element.setPointerCapture(gesture.pointerId);
-      const started = onStart({
-        axis,
-        sign,
-        target: gesture.target,
-        event: pointerMoveEvent,
-      });
-      if (!started || !started.size) {
-        element.releasePointerCapture(gesture.pointerId);
-        gesture.stop();
-        onGiveUp();
-        return;
-      }
-      gesture.axis = axis;
-      gesture.size = started.size;
-      gesture.travelBack = Boolean(started.travelBack);
-      gesture.travelOn = Boolean(started.travelOn);
-      gesture.slack = started.slack || 0;
-      gesture.pulled = gesture.slack;
-      // The pixels spent deciding are not pulled back: what travels starts
-      // moving from where the finger is now, so it follows it exactly rather
-      // than jumping the threshold it just crossed.
-      gesture.startX = pointerMoveEvent.clientX;
-      gesture.startY = pointerMoveEvent.clientY;
-      gesture.lastPosition =
-        axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
-      gesture.lastTime = pointerMoveEvent.timeStamp;
-      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
-    }
-    // The gesture is taken, and the browser is told so on every move: what it
-    // would have done with it — panning the page, dragging the text under the
-    // finger, starting a selection — is exactly what would be seen twice.
-    if (pointerMoveEvent.cancelable) {
-      pointerMoveEvent.preventDefault();
-    }
-    const { axis, size } = gesture;
-    const moved =
-      axis === "x"
-        ? pointerMoveEvent.clientX - gesture.startX
-        : pointerMoveEvent.clientY - gesture.startY;
-    // Measured from where the gesture took over, never from what the move
-    // before it painted: the resistance below would otherwise be applied again
-    // to a value it has already shrunk, and a finger going nowhere would see
-    // things creep back on their own.
-    let pulled = gesture.slack + moved;
-    // Which side is being pulled in: dragging to the right brings in what is on
-    // the left, which is what comes BEFORE.
-    const towardsSomething = pulled > 0 ? gesture.travelBack : gesture.travelOn;
-    if (!towardsSomething) {
-      pulled *= DRAG_RESISTANCE;
-    }
-    const beyondTheEnd = pulled > size || pulled < -size;
-    if (pulled > size) {
-      pulled = size;
-    } else if (pulled < -size) {
-      pulled = -size;
-    }
-    if (beyondTheEnd && towardsSomething) {
-      // A box travels one box, and the hand can go further than that. Those
-      // extra pixels are not owed back: the gesture is measured from where the
-      // finger IS once it has reached the end, so turning around moves the
-      // picture at once instead of first walking back over the distance the
-      // hand went too far — a finger that came in fast would otherwise push
-      // against a screen that does not answer, and the way back would look
-      // broken rather than firm.
-      const movedAtTheEnd = pulled - gesture.slack;
-      if (axis === "x") {
-        gesture.startX = pointerMoveEvent.clientX - movedAtTheEnd;
-      } else {
-        gesture.startY = pointerMoveEvent.clientY - movedAtTheEnd;
-      }
-    }
-    gesture.pulled = pulled;
-    onPull({
-      axis,
-      pulled,
-      size,
-      progress: pulled / size,
-      event: pointerMoveEvent,
-    });
-    // How fast the hand is going, so that letting go says something a distance
-    // cannot: a short flick travels, a long slow drag put back does not.
-    const position =
-      axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
-    const elapsed = pointerMoveEvent.timeStamp - gesture.lastTime;
-    if (elapsed > 0) {
-      const instant = (position - gesture.lastPosition) / elapsed;
-      gesture.velocity = gesture.velocity * 0.4 + instant * 0.6;
-    }
-    gesture.lastPosition = position;
-    gesture.lastTime = pointerMoveEvent.timeStamp;
-  };
-
-  const onUp = (pointerEvent) => {
-    if (pointerEvent.pointerId !== gesture.pointerId) {
-      return;
-    }
-    gesture.stop();
-    if (!gesture.axis) {
-      // A press that never became a gesture: nothing was set up, nothing moved.
-      onGiveUp();
-      return;
-    }
-    // The click the browser makes of a press that travelled: swallowed, or
-    // letting go over a button would press it. Capture, so it never reaches
-    // what it landed on, and dropped right after in case none comes.
-    const swallowClick = (clickEvent) => {
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-    };
-    document.addEventListener("click", swallowClick, { capture: true });
-    setTimeout(() => {
-      document.removeEventListener("click", swallowClick, { capture: true });
-    });
-    const { axis, size, pulled } = gesture;
-    const sign = pulled > 0 ? 1 : -1;
-    const towardsSomething = pulled > 0 ? gesture.travelBack : gesture.travelOn;
-    // A hand that stopped before letting go has said "here", whatever it was
-    // doing a moment earlier — so the speed only counts while it is still going.
-    const velocity =
-      pointerEvent.timeStamp - gesture.lastTime > 100 ? 0 : gesture.velocity;
-    // A gesture taken away rather than let go of (the browser scrolling
-    // something else, a call coming in) said nothing: things go back.
-    const cancelled = pointerEvent.type === "pointercancel";
-    const travels =
-      !cancelled && travelsAfter({ pulled, size, velocity, towardsSomething });
-    onEnd({
-      axis,
-      pulled,
-      size,
-      sign,
-      travels,
-      cancelled,
-      event: pointerEvent,
-    });
-  };
-
-  // The browser's own drag, which a mouse starts on a link or an image after a
-  // few pixels: it would take the pointer away mid-gesture and leave everything
-  // hanging.
-  const preventNativeDrag = (dragStartEvent) => {
-    dragStartEvent.preventDefault();
-  };
-
-  // The one event that decides whether a TOUCH belongs to the browser: a
-  // pointermove is a report, a touchmove is the decision. Left alone, the
-  // browser takes the touch to scroll with (touch-action allows the other axis,
-  // and it latches on the first move whatever direction it ends up scrolling),
-  // and a touch the browser has taken is a pointer stream it CANCELS — the
-  // gesture dies at its second pixel, and everything the finger does after that
-  // is read by nobody. Refused only once this gesture is ours, so a finger that
-  // means to scroll still scrolls.
-  //
-  // Listened for on the element the touch LANDED on as well as on the box: a
-  // travel may replace the DOM under the finger (a page that travels navigates)
-  // and a touch keeps being dispatched at the node it started on, even once
-  // that node is out of the document — where it no longer passes through the
-  // box on its way up.
-  const keepTouch = (touchMoveEvent) => {
-    if (gesture.axis && touchMoveEvent.cancelable) {
-      touchMoveEvent.preventDefault();
-    }
-  };
-
-  gesture.stop = () => {
+    over = true;
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
-    element.removeEventListener("pointermove", onMove);
-    element.removeEventListener("dragstart", preventNativeDrag);
-    element.removeEventListener("touchmove", keepTouch);
-    target.removeEventListener("touchmove", keepTouch);
-    // On the window, not on the box: a pointer released outside it (or taken
-    // away by the browser) must still end the gesture, or things would stay
-    // where the finger left them.
-    window.removeEventListener("pointerup", onUp);
-    window.removeEventListener("pointercancel", onUp);
+    window.removeEventListener("pointerup", onPressOver);
+    window.removeEventListener("pointercancel", onPressOver);
   };
-  // Said from the press rather than from the first pixel that travels: the
-  // browser answers a gesture from its very beginning (the page starts rocking
-  // before anything of ours has moved), so waiting for the axis would let the
-  // thing this prevents happen once, every time.
-  document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
-  element.addEventListener("pointermove", onMove);
-  element.addEventListener("dragstart", preventNativeDrag);
-  element.addEventListener("touchmove", keepTouch, { passive: false });
-  if (target !== element) {
-    target.addEventListener("touchmove", keepTouch, { passive: false });
-  }
-  window.addEventListener("pointerup", onUp);
-  window.addEventListener("pointercancel", onUp);
-  return gesture;
+  // A press that never became a travel: the intent never resolved, or the axis
+  // it leaned on is not one this box walks. Nothing was painted and nothing has
+  // to be put back — the caller is only told so it can forget the gesture.
+  const onPressOver = (pointerEvent) => {
+    if (pointerEvent.pointerId !== pointerDownEvent.pointerId || travel) {
+      return;
+    }
+    finish();
+    onGiveUp();
+  };
+  const giveUp = () => {
+    finish();
+    dragGesture?.release();
+    onGiveUp();
+  };
+
+  // Where the picture stands, from what the gesture reports: the distance the
+  // pointer has covered along the axis, less the pixels spent deciding — what
+  // travels starts moving from where the finger is at that moment rather than
+  // jumping the threshold it just crossed.
+  // How far the POINTER has come along an axis. The raw distance, not the
+  // layout the gesture computes for something being carried: nothing is being
+  // carried here, and a scroll happening meanwhile must not read as a finger
+  // that moved.
+  const coveredOn = (axis, gestureInfo) =>
+    axis === "x"
+      ? gestureInfo.dragX - gestureInfo.grabX
+      : gestureInfo.dragY - gestureInfo.grabY;
+  const pullOf = (gestureInfo) => {
+    const covered = coveredOn(travel.axis, gestureInfo);
+    return travel.slack + (covered - travel.origin);
+  };
+
+  const controller = createDragGestureController({
+    // The threshold is left at its default and never crossed: what says this
+    // press has become a gesture is the intent module below, which calls
+    // start() itself. Zero here would mean "started from the grab", and a
+    // gesture that starts on its own is never STARTED — the moment that
+    // installs the click it must swallow and the touch it must refuse would
+    // never come.
+    // Nothing is being carried: the page keeps its focus, its scrolling and its
+    // cursor while a screen slides under the finger. That is the whole
+    // difference with a drag that moves an object, and it is one option.
+    documentInteractions: "manual",
+    onDragStart: () => {
+      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
+    },
+    onDrag: (gestureInfo) => {
+      // Releasing a gesture reports one last move, so giving one up would come
+      // back through here and give it up again, forever.
+      if (over) {
+        return;
+      }
+      if (!travel) {
+        // ONE axis, decided by the first movement reported and never
+        // revisited: a diagonal would ask for two travels at once and only one
+        // thing can arrive.
+        const reachX = Math.abs(coveredOn("x", gestureInfo));
+        const reachY = Math.abs(coveredOn("y", gestureInfo));
+        const axis = reachX >= reachY ? "x" : "y";
+        const covered = coveredOn(axis, gestureInfo);
+        if (!axes.includes(axis) || !covered) {
+          giveUp();
+          return;
+        }
+        const sign = Math.sign(covered);
+        const started = onStart({
+          axis,
+          sign,
+          target,
+          event: gestureInfo.dragEvent,
+        });
+        if (!started || !started.size) {
+          giveUp();
+          return;
+        }
+        travel = {
+          axis,
+          size: started.size,
+          travelBack: Boolean(started.travelBack),
+          travelOn: Boolean(started.travelOn),
+          slack: started.slack || 0,
+          origin: covered,
+          pulled: started.slack || 0,
+        };
+        document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+      }
+      const { axis, size } = travel;
+      let pulled = pullOf(gestureInfo);
+      // Which side is being pulled in: dragging to the right brings in what is
+      // on the left, which is what comes BEFORE.
+      const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      if (!towardsSomething) {
+        pulled *= DRAG_RESISTANCE;
+      }
+      const beyondTheEnd = pulled > size || pulled < -size;
+      if (pulled > size) {
+        pulled = size;
+      } else if (pulled < -size) {
+        pulled = -size;
+      }
+      if (beyondTheEnd && towardsSomething) {
+        // A box travels one box, and the hand can go further than that. Those
+        // extra pixels are not owed back: the gesture is measured from where
+        // the finger IS once it has reached the end, so turning around moves
+        // the picture at once instead of first walking back over the distance
+        // the hand went too far.
+        travel.origin = coveredOn(axis, gestureInfo) - (pulled - travel.slack);
+      }
+      travel.pulled = pulled;
+      onPull({
+        axis,
+        pulled,
+        size,
+        progress: pulled / size,
+        event: gestureInfo.dragEvent,
+      });
+    },
+    onRelease: (gestureInfo) => {
+      if (over || !travel) {
+        return;
+      }
+      finish();
+      const { axis, size, pulled } = travel;
+      const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      const velocity =
+        axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
+      // A gesture taken away rather than let go of (the browser scrolling
+      // something else, a call coming in) said nothing: things go back.
+      const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
+      const cancelled = releaseEvent?.type === "pointercancel";
+      onEnd({
+        axis,
+        pulled,
+        size,
+        sign: pulled > 0 ? 1 : -1,
+        travels:
+          !cancelled &&
+          travelsAfter({ pulled, size, velocity, towardsSomething }),
+        cancelled,
+        event: releaseEvent,
+      });
+    },
+  });
+
+  // When a press becomes a gesture, and by which rule. A travel is a swipe, so
+  // the rule is the distance for EVERY pointer: the long press a finger is
+  // asked for elsewhere says "pick this up and carry it", and asking for it
+  // here would mean holding still before being allowed to swipe.
+  dragAfterIntent(
+    pointerDownEvent,
+    () => {
+      dragGesture = controller.grabViaPointer(pointerDownEvent, {
+        element,
+        // The box, not what the finger landed on: the caller's answer to this
+        // gesture may take that away (a page that travels navigates, and the
+        // router unmounts the page being left), and a capture whose element
+        // leaves the document is a capture the browser drops.
+        pointerCaptureElement: element,
+      });
+      return dragGesture;
+    },
+    { longPress: false, threshold: DRAG_START_THRESHOLD },
+  );
+  window.addEventListener("pointerup", onPressOver);
+  window.addEventListener("pointercancel", onPressOver);
+
+  return {
+    stop: () => {
+      finish();
+      dragGesture?.release();
+    },
+  };
 };
 
 // A trackpad gesture has no beginning and no end of its own: it is a stream of

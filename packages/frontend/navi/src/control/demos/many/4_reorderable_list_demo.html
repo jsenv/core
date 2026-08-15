@@ -5,6 +5,21 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reorderable List Demo</title>
+    <style>
+      /* The rows are cut at the edge of the box they move in: their pictures
+         are drawn inside the box's own picture, so its border box clips them
+         the way overflow does the rest of the time. */
+      ::view-transition-group(scrollable-list) {
+        overflow: clip;
+      }
+      /* The box itself is the same thing before and after; cross-fading it onto
+         itself is a flicker. */
+      ::view-transition-old(scrollable-list),
+      ::view-transition-new(scrollable-list) {
+        mix-blend-mode: normal;
+        animation: none;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
@@ -116,6 +131,7 @@
             className="list-item"
             data-id={item.id}
             viewTransitionName={`${name}-item-${item.id}`}
+            viewTransitionGroup="nearest"
             onPointerDown={onPointerDown}
           >
             {/* Drag handle */}
@@ -271,6 +287,8 @@
             </p>
             <Box
               ref={containerRef}
+              viewTransitionName="scrollable-list"
+              viewTransitionGroup="contain"
               style={{
                 "position": "relative",
                 "width": "360px",

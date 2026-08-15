@@ -557,6 +557,7 @@ export const createDragGestureController = (options = {}) => {
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
+      gestureInfo: dragGesture.gestureInfo,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
@@ -566,21 +567,81 @@ export const createDragGestureController = (options = {}) => {
 
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
-        const target = grabEvent.target;
-        target.setPointerCapture(grabEvent.pointerId);
-        target.addEventListener("lostpointercapture", onRelease);
-        target.addEventListener("pointercancel", onRelease);
-        target.addEventListener("pointermove", onMove);
-        target.addEventListener("pointerup", onRelease);
-        return () => {
-          target.releasePointerCapture(grabEvent.pointerId);
-          target.removeEventListener("lostpointercapture", onRelease);
-          target.removeEventListener("pointercancel", onRelease);
-          target.removeEventListener("pointermove", onMove);
-          target.removeEventListener("pointerup", onRelease);
-        };
-      });
+      return initDragByPointer(
+        grabEvent,
+        options,
+        ({ onMove, onRelease, gestureInfo }) => {
+          // Captured on something that will still be there at the end of the
+          // gesture: the browser releases the capture when its element leaves the
+          // document, and a gesture whose own effect replaces the DOM under the
+          // finger would lose the pointer at its first move. Callers whose target
+          // is stable have nothing to say and keep it.
+          const target = options?.pointerCaptureElement || grabEvent.target;
+          target.setPointerCapture(grabEvent.pointerId);
+          /*
+           * A touchmove left alone is the browser deciding the touch belongs to
+           * it: it takes it to scroll with, and a touch it has taken is a pointer
+           * stream it CANCELS — the gesture dies mid-move, the finger is still
+           * down, and nothing reads it anymore.
+           *
+           * Refused only once the gesture is established (a `touch-action: none`
+           * would take the touch from everyone who merely brushes past the
+           * element), but LISTENED FOR from the grab: whether a touchmove can be
+           * refused at all is decided when the touch begins, from the listeners
+           * present at that moment. Registered later, the listener is handed
+           * events that are already `cancelable: false` — refusing them does
+           * nothing, and the reason is invisible in the code that refuses.
+           *
+           * On the window in capture AND on the grabbed element: a touch keeps
+           * being dispatched at the node it started on, and a gesture may take
+           * that node out of the document (a page that travels navigates) — from
+           * then on the event never passes through the window on its way
+           * anywhere.
+           */
+          const preventTouchScroll = (touchMoveEvent) => {
+            if (gestureInfo.started && touchMoveEvent.cancelable) {
+              touchMoveEvent.preventDefault();
+            }
+          };
+          const grabTarget = grabEvent.target;
+          window.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
+            capture: true,
+          });
+          grabTarget.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
+          });
+          // Only OUR capture ending means this gesture is over:
+          // lostpointercapture bubbles, so a descendant giving up its own capture
+          // walks straight into this listener. That is not a rare shape — it is
+          // exactly what happens when a gesture hands over to another one (a
+          // press that becomes a drag releases its intermediate gesture, held on
+          // the pressed element, while the real one is being held on a container
+          // above it), and taken as our own it kills the new gesture one
+          // millisecond after it started.
+          const onCaptureLost = (pointerEvent) => {
+            if (pointerEvent.target !== target) {
+              return;
+            }
+            onRelease(pointerEvent);
+          };
+          target.addEventListener("lostpointercapture", onCaptureLost);
+          target.addEventListener("pointercancel", onRelease);
+          target.addEventListener("pointermove", onMove);
+          target.addEventListener("pointerup", onRelease);
+          return () => {
+            window.removeEventListener("touchmove", preventTouchScroll, {
+              capture: true,
+            });
+            grabTarget.removeEventListener("touchmove", preventTouchScroll);
+            target.releasePointerCapture(grabEvent.pointerId);
+            target.removeEventListener("lostpointercapture", onCaptureLost);
+            target.removeEventListener("pointercancel", onRelease);
+            target.removeEventListener("pointermove", onMove);
+            target.removeEventListener("pointerup", onRelease);
+          };
+        },
+      );
     }
     if (grabEvent.type === "mousedown") {
       console.warn(

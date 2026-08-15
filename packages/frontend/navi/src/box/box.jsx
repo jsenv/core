@@ -847,7 +847,13 @@ export const Box = (props) => {
       });
     }, styleDeps);
     finalRef = useComposeElementRef(syncBox, ref);
-    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
+    // viewTransitionGroup means the box takes part in a nested group: the
+    // clipping is then done by the ancestor group itself, which is exact where
+    // dropping the name is a rough approximation of it.
+    usePartiallyHidden(
+      finalRef,
+      Boolean(rest.viewTransitionName) && !rest.viewTransitionGroup,
+    );
   }
 
   let innerChildren = children;

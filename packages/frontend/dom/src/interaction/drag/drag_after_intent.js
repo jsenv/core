@@ -181,26 +181,9 @@ const dragAfterLongPress = (
   const timeout = setTimeout(() => {
     endCountdown();
     onPress?.(grabEvent);
-    /*
-     * Scrolling is taken away now that the object is held, not before: a
-     * `touch-action: none` on the element would take it from everyone who merely
-     * brushes past it. And it has to be preventDefault on a non-passive
-     * touchmove — `touch-action` is read when the touch begins, so setting it
-     * here would come too late to have any effect on the touch in progress.
-     */
-    const preventTouchMove = (touchMoveEvent) => {
-      touchMoveEvent.preventDefault();
-    };
-    window.addEventListener("touchmove", preventTouchMove, {
-      passive: false,
-      capture: true,
-    });
-    pressCleanupCallbacks.push(() => {
-      window.removeEventListener("touchmove", preventTouchMove, {
-        capture: true,
-      });
-    });
-
+    // Scrolling is taken away by the gesture itself, from the moment it starts
+    // (see markAsStarted in drag_gesture.js) — one place refuses the touchmove,
+    // for every way a drag can begin.
     const dragGesture = startDragGesture(dragGestureInitializer);
     if (!dragGesture) {
       endPress();
