@@ -229,7 +229,7 @@ is a trade, not a leak.
 own body) but never grows on its own. Growing is the caller's decision —
 `expandY`.
 
-Pass `keyboardTravel={false}` when the arrow keys belong to the content (a list
+Pass `travelByKeyboard={false}` when the arrow keys belong to the content (a list
 one walks through, a picker whose slides are steps): otherwise the right arrow
 changes screen mid-reading.
 

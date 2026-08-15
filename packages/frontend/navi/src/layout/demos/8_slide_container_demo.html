@@ -571,6 +571,24 @@
         );
       };
 
+      // The photos with nothing around them: no chevron, no bullet, no bar —
+      // the only way from one to the next is to push it.
+      const DragPhotos = ({ prefix, ...rest }) => (
+        <SlideContainer
+          duration={useSlideDuration()}
+          width="280px"
+          height="160px"
+          borderRadius="8px"
+          {...rest}
+        >
+          {PHOTOS.map((photo, index) => (
+            <Slide key={photo.name} id={`${prefix}_${index}`}>
+              <Photo index={index} />
+            </Slide>
+          ))}
+        </SlideContainer>
+      );
+
       // A full bar: the two ends, the two steps, and one button per photo. All
       // of them outside the box and driving it by name (commandFor), so nothing
       // in the bar travels with what it commands.
@@ -1212,7 +1230,7 @@
       // What a travel carries: a button says where to go AND what it is about
       // (`value`), and the slide arriving reads it back.
       const CarriedValueSlides = () => (
-        <SlideContainer duration={useSlideDuration()} keyboardTravel={false}>
+        <SlideContainer duration={useSlideDuration()} travelByKeyboard={false}>
           <Slide id="carried_pick" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>pick one</Text>
@@ -1802,6 +1820,36 @@
               directions.
             </p>
             <ThreeWays id="vertical" Content={TwoSlidesVertical} />
+          </section>
+
+          <section class="demo-section" id="drag">
+            <Heading id="drag">Dragging the slides</Heading>
+            <p>
+              Push them with the pointer: a flick travels, a hesitation puts
+              them back.
+            </p>
+            <Box flex="y" spacing="l" alignX="start">
+              <div class="demo-way">
+                <h3>Nothing but the gesture</h3>
+                <DragPhotos prefix="drag_row" />
+              </div>
+              <div class="demo-way">
+                <h3>
+                  <code>travelByDrag={"{false}"}</code>
+                </h3>
+                <DragPhotos prefix="drag_off" travelByDrag={false} />
+              </div>
+              <div class="demo-way">
+                <h3>
+                  <code>layout="column"</code>
+                </h3>
+                <DragPhotos prefix="drag_column" layout="column" />
+              </div>
+              <div class="demo-way">
+                <h3>On a map</h3>
+                <MapSlides />
+              </div>
+            </Box>
           </section>
 
           <section class="demo-section" id="scroll">

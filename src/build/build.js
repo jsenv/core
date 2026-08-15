@@ -134,6 +134,18 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        How URLs are versioned for this entry point (defaults to "search_param")
  * @param {('none'|'inline'|'file'|'programmatic')} [entryPoint.sourcemaps]
  *        Sourcemap generation strategy for this entry point (defaults to "none")
+ * @param {boolean|object} [entryPoint.ribbon=false]
+ *        Inject a ribbon marking the page as non-production. Disabled by default
+ *        because the ribbon ends up inside the build directory: enable it on the
+ *        builds meant for a preview/review app, not on the production build.
+ *
+ *          ribbon: {
+ *            text: "preview",
+ *            color: "#7c3aed",
+ *            href: "https://github.com/org/repo/pull/42",
+ *          }
+ *
+ *        See startDevServer "ribbon" param for the full list of options.
  * @param {object} [entryPoint.injections]
  *        Values to inject into files, as { urlPattern: getInjections }.
  *        Keys are url patterns relative to sourceDirectoryUrl ("./index.html", "**\/*.js"),
@@ -953,6 +965,7 @@ const entryPointDefaultParams = {
   magicDirectoryIndex: undefined,
   directoryReferenceEffect: undefined,
   scenarioPlaceholders: undefined,
+  ribbon: false,
   injections: undefined,
   transpilation: {},
   preserveComments: undefined,
@@ -1007,6 +1020,7 @@ const prepareEntryPointBuild = async (
     magicDirectoryIndex,
     directoryReferenceEffect,
     scenarioPlaceholders,
+    ribbon,
     injections,
     transpilation,
     preserveComments,
@@ -1183,6 +1197,7 @@ const prepareEntryPointBuild = async (
       inlining: false,
       http,
       scenarioPlaceholders,
+      ribbon,
       packageSideEffects,
     }),
   ]);

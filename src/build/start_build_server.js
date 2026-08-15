@@ -23,15 +23,22 @@ import {
   startServer,
 } from "@jsenv/server";
 
+import { injectRibbonIntoHtml } from "../plugins/ribbon/ribbon_html_injection.js";
+
 /**
  * Start a server for build files.
  * @param {Object} buildServerParameters
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
+ * @param {boolean|object} [buildServerParameters.ribbon=false] Inject a ribbon in the html responses,
+ *        marking the page as non-production. The build directory itself is left untouched.
+ *        As an object: `text`, `color`, `textColor`, `href`, `target`, `position`
+ *        (see startDevServer "ribbon" param).
  * @return {Object} A build server object
  */
 export const startBuildServer = async ({
   buildDirectoryUrl,
   buildDirectoryMainFileRelativeUrl = "index.html",
+  ribbon = false,
   port = 9779,
   routes = [],
   serverPlugins = [],
@@ -47,6 +54,9 @@ export const startBuildServer = async ({
   keepProcessAlive = true,
 }) => {
   const logger = createLogger({ logLevel });
+  if (ribbon === true) {
+    ribbon = {};
+  }
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -60,6 +70,9 @@ export const startBuildServer = async ({
     });
   }
 
+  const fileSystemFetch = createFileSystemFetch(buildDirectoryUrl, {
+    mainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
+  });
   const startBuildServerTask = createTaskLog("start build server", {
     disabled: !logger.levels.info,
   });
@@ -98,9 +111,9 @@ export const startBuildServer = async ({
       {
         endpoint: "GET /",
         description: "Serve build files",
-        fetch: createFileSystemFetch(buildDirectoryUrl, {
-          mainFileRelativeUrl: buildDirectoryMainFileRelativeUrl,
-        }),
+        fetch: ribbon
+          ? withRibbonInjectedInHtml(fileSystemFetch, ribbon)
+          : fileSystemFetch,
       },
     ],
   });
@@ -120,4 +133,44 @@ export const startBuildServer = async ({
       server.stop();
     },
   };
+};
+
+const withRibbonInjectedInHtml = (fetch, ribbon) => {
+  return async (request, helpers) => {
+    const response = await fetch(request, helpers);
+    if (!response || response.status !== 200) {
+      return response;
+    }
+    const contentType = response.headers?.["content-type"];
+    if (!contentType || !contentType.startsWith("text/html")) {
+      return response;
+    }
+    const html = await readResponseBodyAsString(response.body);
+    const htmlWithRibbon = injectRibbonIntoHtml(html, ribbon);
+    const bodyBuffer = Buffer.from(htmlWithRibbon);
+    const headers = {
+      ...response.headers,
+      "content-length": bodyBuffer.length,
+    };
+    // the body is generated per request; what the file on disk hashes to or when
+    // it was modified does not describe it
+    delete headers.etag;
+    delete headers["last-modified"];
+    return {
+      ...response,
+      headers,
+      body: bodyBuffer,
+    };
+  };
+};
+
+const readResponseBodyAsString = async (body) => {
+  if (typeof body === "string" || Buffer.isBuffer(body)) {
+    return String(body);
+  }
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return String(Buffer.concat(chunks));
 };

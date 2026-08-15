@@ -87,7 +87,7 @@ ${stringifyCall(initCall)};`,
       "children": content,
       ...attributes,
     });
-    insertHtmlNodeInside(jsenvScriptsNode, inlineScriptNode);
+    insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
     return;
   }
   if (src) {

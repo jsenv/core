@@ -5,6 +5,12 @@ import { asUrlWithoutSearch } from "@jsenv/urls";
 export const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
+  text,
+  color,
+  textColor,
+  href,
+  target,
+  position,
 }) => {
   const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
   const associations = URL_META.resolveAssociations(
@@ -17,7 +23,7 @@ export const jsenvPluginRibbon = ({
   );
   return {
     name: "jsenv:ribbon",
-    appliesDuring: "dev",
+    appliesDuring: "*",
     transformUrlContent: {
       html: (urlInfo) => {
         const jsenvToolbarHtmlClientFileUrl = urlInfo.context.getPluginMeta(
@@ -52,9 +58,19 @@ export const jsenvPluginRibbon = ({
           src: ribbonClientFileReference.generatedSpecifier,
           initCall: {
             callee: "injectRibbon",
-            params: {
-              text: urlInfo.context.dev ? "DEV" : "BUILD",
-            },
+            params: withoutUndefinedValues({
+              text:
+                text === undefined
+                  ? urlInfo.context.dev
+                    ? "DEV"
+                    : "BUILD"
+                  : text,
+              color,
+              textColor,
+              href,
+              target,
+              position,
+            }),
           },
           pluginName: "jsenv:ribbon",
         });
@@ -62,4 +78,14 @@ export const jsenvPluginRibbon = ({
       },
     },
   };
+};
+
+const withoutUndefinedValues = (object) => {
+  const objectWithoutUndefinedValues = {};
+  for (const key of Object.keys(object)) {
+    if (object[key] !== undefined) {
+      objectWithoutUndefinedValues[key] = object[key];
+    }
+  }
+  return objectWithoutUndefinedValues;
 };

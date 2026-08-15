@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ribbon</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        color: #1f2933;
+        font-family: sans-serif;
+        background: #f4f5f7;
+      }
+      header {
+        display: flex;
+        padding: 10px 14px;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff;
+        border-bottom: 1px solid #dfe3e8;
+      }
+      #notification_button {
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+        background: #ffffff;
+        border: 1px solid #dfe3e8;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      main {
+        padding: 24px;
+      }
+      footer {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        padding: 10px 14px;
+        background: #ffffff;
+        border-top: 1px solid #dfe3e8;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <strong>An app</strong>
+      <button id="notification_button">🔔</button>
+    </header>
+    <main>
+      <h1>Some content</h1>
+      <p id="notification_status">notifications not opened</p>
+    </main>
+    <footer>a status bar</footer>
+    <script>
+      document
+        .querySelector("#notification_button")
+        .addEventListener("click", () => {
+          document.querySelector("#notification_status").textContent =
+            "notifications opened";
+        });
+    </script>
+  </body>
+</html>
