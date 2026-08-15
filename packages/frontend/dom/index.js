@@ -112,10 +112,11 @@ export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";
 export { measureScrollbar } from "./src/interaction/scroll/scrollbar_size.js";
 export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
 // interaction/drag
+export { dragAfterIntent } from "./src/interaction/drag/drag_after_intent.js";
 export { getDragCoordinates } from "./src/interaction/drag/drag_element_positioner.js";
 export {
   createDragGestureController,
-  dragAfterThreshold,
+  isPrimaryButtonEvent,
 } from "./src/interaction/drag/drag_gesture.js";
 export { createDragToMoveGestureController } from "./src/interaction/drag/drag_to_move.js";
 export { startDragToReorder } from "./src/interaction/drag/drag_to_reorder.js";

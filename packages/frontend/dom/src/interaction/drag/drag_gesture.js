@@ -18,6 +18,9 @@ const css = /* css */ `
   .navi_drag_gesture_backdrop {
     position: fixed;
     inset: 0;
+    /* A finger dragging must not also pan the page under it. The backdrop is
+       the only element the finger can be over once the gesture is running. */
+    touch-action: none;
     user-select: none;
   }
 `;
@@ -130,6 +133,12 @@ export const createDragGestureController = (options = {}) => {
       intentGoingLeft: false,
       intentGoingRight: false,
 
+      // How fast the pointer is going, in px/ms, signed per axis
+      // (see measureVelocity)
+      velocityX: 0,
+      velocityY: 0,
+      velocity: 0,
+
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
@@ -144,6 +153,11 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
+
+    // Where the pointer IS is not where it is going: throwing something is a
+    // matter of speed, and the gesture is the only place that sees the timing of
+    // the events it receives.
+    const measureVelocity = createVelocityMeter(grabX, grabY);
 
     document_interactions: {
       if (documentInteractions === "manual") {
@@ -391,6 +405,39 @@ export const createDragGestureController = (options = {}) => {
       return dragData;
     };
 
+    const markAsStarted = () => {
+      dispatchPublicCustomEvent(element, "navi_drag_start", {
+        gestureInfo,
+      });
+      onDragStart?.(gestureInfo);
+      // Suppress the click that the browser fires after pointerup following a real drag.
+      // The capture phase runs before any element onClick handler.
+      const suppressClick = (clickEvent) => {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+        document.removeEventListener("click", suppressClick, {
+          capture: true,
+        });
+      };
+      document.addEventListener("click", suppressClick, { capture: true });
+      addReleaseCallback(() => {
+        document.removeEventListener("click", suppressClick, {
+          capture: true,
+        });
+      });
+    };
+
+    // Declares the gesture confirmed without waiting for the distance threshold,
+    // for callers who established the intent some other way (a dedicated handle,
+    // a long press).
+    const start = () => {
+      if (gestureInfo.started) {
+        return;
+      }
+      gestureInfo.started = true;
+      markAsStarted();
+    };
+
     const drag = (
       dragX = gestureInfo.dragX, // Scroll container relative X coordinate
       dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
@@ -406,10 +453,14 @@ export const createDragGestureController = (options = {}) => {
         dragEvent: event,
         isRelease,
       });
+      const [velocityX, velocityY] = measureVelocity(dragX, dragY);
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
+      gestureInfo.velocityX = velocityX;
+      gestureInfo.velocityY = velocityY;
+      gestureInfo.velocity = Math.hypot(velocityX, velocityY);
       if (gestureInfo.isGoingDown) {
         gestureInfo.intentGoingDown = true;
         gestureInfo.intentGoingUp = false;
@@ -425,25 +476,7 @@ export const createDragGestureController = (options = {}) => {
         gestureInfo.intentGoingRight = false;
       }
       if (!startedPrevious && gestureInfo.started) {
-        dispatchPublicCustomEvent(element, "navi_drag_start", {
-          gestureInfo,
-        });
-        onDragStart?.(gestureInfo);
-        // Suppress the click that the browser fires after pointerup following a real drag.
-        // The capture phase runs before any element onClick handler.
-        const suppressClick = (clickEvent) => {
-          clickEvent.stopPropagation();
-          clickEvent.preventDefault();
-          document.removeEventListener("click", suppressClick, {
-            capture: true,
-          });
-        };
-        document.addEventListener("click", suppressClick, { capture: true });
-        addReleaseCallback(() => {
-          document.removeEventListener("click", suppressClick, {
-            capture: true,
-          });
-        });
+        markAsStarted();
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       dispatchPublicCustomEvent(element, "navi_drag", {
@@ -477,6 +510,7 @@ export const createDragGestureController = (options = {}) => {
       addBeforeDragCallback,
       addDragCallback,
       addReleaseCallback,
+      start,
       drag,
       release,
     };
@@ -584,42 +618,34 @@ export const createDragGestureController = (options = {}) => {
 export const isPrimaryButtonEvent = (event) =>
   event.button === undefined || event.button === 0;
 
-export const dragAfterThreshold = (
-  grabEvent,
-  dragGestureInitializer,
-  threshold,
-) => {
-  if (!isPrimaryButtonEvent(grabEvent)) {
-    return;
-  }
-  const target = grabEvent.target;
-  const isDedicatedHandle =
-    target.closest && target.closest("[data-drag-handle]");
-  if (isDedicatedHandle) {
-    // Element is dedicated to drag — skip the threshold and start immediately.
-    const dragGesture = dragGestureInitializer();
-    if (!dragGesture) {
-      return;
+/*
+ * Speed over the last VELOCITY_WINDOW_MS rather than between the last two
+ * events: pointer events arrive irregularly, and the last one before a release
+ * often repeats the previous coordinates — measured on that pair alone, every
+ * throw would end at zero.
+ * A pointer held still keeps producing samples at the same place, so the window
+ * empties itself of movement and the speed falls back to zero on its own: put
+ * down slowly is not thrown.
+ */
+const VELOCITY_WINDOW_MS = 100;
+const createVelocityMeter = (grabX, grabY) => {
+  const samples = [{ time: performance.now(), x: grabX, y: grabY }];
+
+  const measureVelocity = (x, y) => {
+    const time = performance.now();
+    samples.push({ time, x, y });
+    while (samples.length > 2 && time - samples[1].time > VELOCITY_WINDOW_MS) {
+      samples.shift();
     }
-    dragGesture.dragViaPointer(grabEvent);
-    return;
-  }
-  const significantDragGestureController = createDragGestureController({
-    threshold,
-    // allow interaction for this intermediate gesture:
-    // user should still be able to scroll or interact with the document
-    // only once the gesture is significant we take control
-    documentInteractions: "manual",
-    onDragStart: (gestureInfo) => {
-      significantDragGesture.release(); // kill that gesture
-      const dragGesture = dragGestureInitializer();
-      dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    },
-  });
-  const significantDragGesture =
-    significantDragGestureController.grabViaPointer(grabEvent, {
-      element: grabEvent.target,
-    });
+    const oldestSample = samples[0];
+    const elapsed = time - oldestSample.time;
+    if (elapsed === 0) {
+      return [0, 0];
+    }
+    return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
+  };
+
+  return measureVelocity;
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {

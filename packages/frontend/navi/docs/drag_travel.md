@@ -17,6 +17,11 @@ a hand never has to learn two sets of numbers.
   travel into work.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
+- A hand can go further than one box, and those extra pixels are not owed back:
+  once the end is reached the gesture is measured from where the finger IS, so
+  turning around moves the picture at once. Measured from the origin instead, a
+  hand that came in fast would push against a screen that does not answer for as
+  many pixels as it went too far.
 
 ## Two inputs, one travel
 
@@ -82,6 +87,26 @@ Both are written by the gesture itself (`data-drag-travel-gesture` and
 `data-drag-travel-walking` on `:root`), so a page that bounces the rest of the
 time goes on bouncing. `preventDefault()` on each move says the same thing to
 the browser for what those two properties do not cover.
+
+### On a touchscreen, the browser takes the gesture unless it is refused
+
+A `pointermove` is a report; a **`touchmove` is the decision**. Left alone, the
+browser consumes the touch to scroll with — it latches on the first move, and a
+touch it has taken is a pointer stream it CANCELS. The gesture then dies at its
+second pixel: the finger is still down, nothing reads it anymore, and whatever
+travel had started finishes without anyone. It is invisible with a mouse, which
+is why it survives a whole session of desktop testing.
+
+So a travel that has become ours refuses the `touchmove` (`preventDefault`), and
+only then — a finger that means to scroll must still scroll. Two details make it
+hold:
+
+- the listener sits on the element the touch LANDED on as well as on the box: a
+  touch keeps being dispatched at the node it started on, and a travel may
+  replace the DOM under the finger (a page that travels navigates), after which
+  that node no longer passes through the box on its way up;
+- the pointer is captured **before** the caller is told the gesture started, for
+  the same reason: what the caller does may take the target away.
 
 ### A navi component that reads the pointer marks ITSELF
 

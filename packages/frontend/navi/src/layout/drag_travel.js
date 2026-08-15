@@ -242,6 +242,15 @@ export const startDragTravel = (
         axis === "x"
           ? Math.sign(pointerMoveEvent.clientX - gesture.startX)
           : Math.sign(pointerMoveEvent.clientY - gesture.startY);
+      // The pointer is taken over BEFORE the caller is told, and this order is
+      // the whole reason a travel survives on a touchscreen: what the caller
+      // does about the gesture may replace the DOM under the finger (a page
+      // that travels navigates, and a router unmounts the page being left).
+      // A touch whose target is taken away is a touch the browser CANCELS —
+      // the gesture dies at its first pixel, the finger holds nothing, and
+      // whatever it does next is not read at all. Captured first, every event
+      // is addressed to this box, which is not going anywhere.
+      element.setPointerCapture(gesture.pointerId);
       const started = onStart({
         axis,
         sign,
@@ -249,6 +258,7 @@ export const startDragTravel = (
         event: pointerMoveEvent,
       });
       if (!started || !started.size) {
+        element.releasePointerCapture(gesture.pointerId);
         gesture.stop();
         onGiveUp();
         return;
@@ -268,9 +278,6 @@ export const startDragTravel = (
         axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
       gesture.lastTime = pointerMoveEvent.timeStamp;
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
-      // Every move from here on, wherever the finger wanders — off the box, off
-      // the window — and the release with it.
-      element.setPointerCapture(gesture.pointerId);
     }
     // The gesture is taken, and the browser is told so on every move: what it
     // would have done with it — panning the page, dragging the text under the
@@ -294,10 +301,26 @@ export const startDragTravel = (
     if (!towardsSomething) {
       pulled *= DRAG_RESISTANCE;
     }
+    const beyondTheEnd = pulled > size || pulled < -size;
     if (pulled > size) {
       pulled = size;
     } else if (pulled < -size) {
       pulled = -size;
+    }
+    if (beyondTheEnd && towardsSomething) {
+      // A box travels one box, and the hand can go further than that. Those
+      // extra pixels are not owed back: the gesture is measured from where the
+      // finger IS once it has reached the end, so turning around moves the
+      // picture at once instead of first walking back over the distance the
+      // hand went too far — a finger that came in fast would otherwise push
+      // against a screen that does not answer, and the way back would look
+      // broken rather than firm.
+      const movedAtTheEnd = pulled - gesture.slack;
+      if (axis === "x") {
+        gesture.startX = pointerMoveEvent.clientX - movedAtTheEnd;
+      } else {
+        gesture.startY = pointerMoveEvent.clientY - movedAtTheEnd;
+      }
     }
     gesture.pulled = pulled;
     onPull({
@@ -371,11 +394,33 @@ export const startDragTravel = (
     dragStartEvent.preventDefault();
   };
 
+  // The one event that decides whether a TOUCH belongs to the browser: a
+  // pointermove is a report, a touchmove is the decision. Left alone, the
+  // browser takes the touch to scroll with (touch-action allows the other axis,
+  // and it latches on the first move whatever direction it ends up scrolling),
+  // and a touch the browser has taken is a pointer stream it CANCELS — the
+  // gesture dies at its second pixel, and everything the finger does after that
+  // is read by nobody. Refused only once this gesture is ours, so a finger that
+  // means to scroll still scrolls.
+  //
+  // Listened for on the element the touch LANDED on as well as on the box: a
+  // travel may replace the DOM under the finger (a page that travels navigates)
+  // and a touch keeps being dispatched at the node it started on, even once
+  // that node is out of the document — where it no longer passes through the
+  // box on its way up.
+  const keepTouch = (touchMoveEvent) => {
+    if (gesture.axis && touchMoveEvent.cancelable) {
+      touchMoveEvent.preventDefault();
+    }
+  };
+
   gesture.stop = () => {
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
     element.removeEventListener("pointermove", onMove);
     element.removeEventListener("dragstart", preventNativeDrag);
+    element.removeEventListener("touchmove", keepTouch);
+    target.removeEventListener("touchmove", keepTouch);
     // On the window, not on the box: a pointer released outside it (or taken
     // away by the browser) must still end the gesture, or things would stay
     // where the finger left them.
@@ -389,6 +434,10 @@ export const startDragTravel = (
   document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
   element.addEventListener("pointermove", onMove);
   element.addEventListener("dragstart", preventNativeDrag);
+  element.addEventListener("touchmove", keepTouch, { passive: false });
+  if (target !== element) {
+    target.addEventListener("touchmove", keepTouch, { passive: false });
+  }
   window.addEventListener("pointerup", onUp);
   window.addEventListener("pointercancel", onUp);
   return gesture;

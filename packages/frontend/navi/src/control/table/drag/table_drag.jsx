@@ -1,7 +1,7 @@
 import {
   createDragToMoveGestureController,
   createPubSub,
-  dragAfterThreshold,
+  dragAfterIntent,
   getDropTargetInfo,
   getScrollContainer,
   stickyAsRelativeCoords,
@@ -220,7 +220,7 @@ export const initDragTableColumnViaPointer = (
   pointerdownEvent,
   { tableDragCloneContainer, dropPreview, onGrab, onDrag, onRelease },
 ) => {
-  dragAfterThreshold(pointerdownEvent, () => {
+  dragAfterIntent(pointerdownEvent, () => {
     const [teardown, addTeardown] = createPubSub();
 
     const tableCell = pointerdownEvent.target.closest(".navi_table_cell");
