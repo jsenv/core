@@ -1,20 +1,26 @@
 # @jsenv/service-worker [![npm package](https://img.shields.io/npm/v/@jsenv/service-worker.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/service-worker)
 
-A powerful service worker implementation for seamless offline experiences.
+A ready-made service worker for seamless offline experiences.
 
 🔄 Smart caching with version-aware invalidation  
-🛠️ Compatible with build workflows (auto-detection of assets)  
-⚡ Optimized for performance and reliability  
-🔌 Simple configuration for any web project
+🛠️ Auto-detection of assets when building with @jsenv/core  
+🔌 Simple configuration for any web project  
+📨 Works with [@jsenv/pwa](https://github.com/jsenv/core/tree/main/packages/frontend/pwa) for update UI and hot resource replacement
+
+Complete usage examples live in [docs/usage.md](./docs/usage.md); the JSDoc on
+`sw.init` in [src/jsenv_service_worker.js](./src/jsenv_service_worker.js) is
+the API reference.
 
 ## Introduction
 
-Service workers enable web applications to work offline by caching resources. The @jsenv/service-worker package provides a simple yet powerful implementation that:
+Service workers enable web applications to work offline by caching resources.
+This package provides an implementation that:
 
-- Ensures cache is reused only when URLs are versioned
-- Connects to build tools to automatically discover cacheable resources
-- Allows manual configuration of URLs to cache
-- Provides smart cache invalidation strategies
+- Caches your resources during install and serves them from cache
+- Refetches only unversioned urls on update; versioned urls are cached once
+- Cleans up caches from previous worker versions on activate
+- Answers the message protocol used by `@jsenv/pwa` (inspect, skipWaiting,
+  claim, custom actions)
 
 ## Quick Start
 
@@ -27,14 +33,16 @@ npm install @jsenv/service-worker
 ### 2. Create a service worker file
 
 ```js
-// service_worker.js
-self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
+// sw.js
+self.importScripts(
+  "./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js",
+);
 
 self.__sw__.init({
   name: "my-app",
   resources: {
-    "/": {}, // Cache root URL
-    "https://fonts.googleapis.com/css2?family=Roboto": {}, // Cache external font
+    "/": {},
+    ...(self.resourcesFromJsenvBuild || {}),
   },
 });
 ```
@@ -42,95 +50,66 @@ self.__sw__.init({
 ### 3. Register the service worker
 
 ```js
-// In your main application code
 if ("serviceWorker" in navigator) {
-  window.navigator.serviceWorker.register("./service_worker.js");
+  navigator.serviceWorker.register("./sw.js");
 }
 ```
 
 ## Configuration
 
-Configure the service worker during the `__sw__.init()` call:
+All `init` options:
 
 ```js
 self.__sw__.init({
-  // Required: Used as prefix for cache storage
-  name: "my-app-name",
+  // Prefix identifying the caches created by this service worker,
+  // so a new version can delete the caches of the previous one
+  name: "my-app", // default "jsenv"
 
-  // Optional: Resources to cache (default: { "/": {} })
-  resources: {
-    "/": {}, // Root path
-    "/index.html": {}, // Specific file
-    "/assets/styles.css": {}, // CSS file
-    "/assets/app.js": { version: "1.0" }, // Versioned JavaScript file
-    "https://example.com/api": { maxAge: 3600 }, // External URL with max age
-  },
-
-  // Optional: Cache name prefix (default: value of "name")
-  cacheNamePrefix: "my-app-cache",
-
-  // Optional: Log level (default: "warn")
-  logLevel: "info", // "debug", "info", "warn", "error", or "off"
-});
-```
-
-## Smart Cache Invalidation
-
-When a service worker updates, it refetches all URLs from the network by default. However, for versioned resources that never change, you can optimize this process:
-
-```js
-self.__sw__.init({
-  name: "my-app",
-  resources: {
-    "/": {}, // Unversioned: will be refetched on service worker update
-    "/assets/main.a7b3c9d.js": { version: "a7b3c9d" }, // Versioned: won't be refetched
-    "/api/data.json": { maxAge: 3600 }, // Cache for 1 hour (3600 seconds)
-  },
-});
-```
-
-## Integration with Build Tools
-
-@jsenv/service-worker can automatically detect resources during build time. The build process injects discovered URLs at the top of your service worker file under `self.resourcesFromJsenvBuild`.
-
-```js
-// service_worker.js
-self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
-
-self.__sw__.init({
-  name: "my-app",
+  // Urls cached during install and served from cache.
+  // {} -> unversioned: refetched from network on every install
+  // { version, versionedUrl } -> immutable: fetched once
   resources: {
     "/": {},
-    // Combine manually specified resources with those from build
-    ...(self.resourcesFromJsenvBuild || {}),
+    "/assets/main.js": { version: "a7b3c9d" },
   },
+
+  // Bump when the new worker script must NOT be hot-updated by @jsenv/pwa
+  // (forces a full reload after update)
+  version: "1",
+
+  // Extra values returned to the page by the "inspect" action
+  meta: {},
+
+  // Extra { action: async fn } handlers callable from the page
+  actions: {},
+
+  // Extra work during lifecycle events (returned promises are awaited)
+  install: () => {},
+  activate: () => {},
+
+  // "debug" | "info" | "warn" | "error"
+  logLevel: "warn",
 });
 ```
 
-### Resource Detection
+Requests for urls not listed in `resources` are untouched: the browser handles
+them as usual.
 
-Jsenv will automatically detect URLs referenced in your files:
+## Integration with jsenv build
 
-```html
-<!-- In HTML -->
-<link rel="preload" href="./assets/image.png" as="image" />
-```
+When building with [@jsenv/core](https://github.com/jsenv/core), the build
+detects the `navigator.serviceWorker.register(...)` call, bundles the worker
+script and prepends `self.resourcesFromJsenvBuild` to it — every resource of
+the build with its version and versioned url. Spreading it into `resources`
+(as in the Quick Start) is the whole integration:
 
-```css
-/* In CSS */
-body {
-  background-image: url("./assets/background.png");
-}
-```
+- versioned urls (`/css/style.css?v=0e312d1c`) are cached once and survive
+  updates untouched
+- unversioned urls (like `/main.html`) get a computed `version`, so the worker
+  script bytes change — and the browser detects an update — whenever their
+  content changes
 
-```js
-// In JavaScript
-new URL("./assets/icon.svg", import.meta.url);
-```
-
-### External Resources
-
-External resources (from different origins) must be added manually:
+Resources from other origins are not part of the build; add them manually:
 
 ```js
 self.__sw__.init({
@@ -138,68 +117,13 @@ self.__sw__.init({
   resources: {
     "/": {},
     ...(self.resourcesFromJsenvBuild || {}),
-    // External resources must be added manually
     "https://fonts.googleapis.com/css2?family=Roboto": {},
-    "https://cdn.example.com/library.js": { version: "2.0" },
   },
 });
 ```
 
-## Advanced Usage
+## Update UI on the page
 
-### Custom Fetch Handling
-
-```js
-self.__sw__.init({
-  name: "my-app",
-  resources: {
-    "/": {},
-    "/api/data": {
-      // Custom fetch handler for API responses
-      fetchHandler: async (request) => {
-        try {
-          // Try network first
-          const networkResponse = await fetch(request);
-          if (networkResponse.ok) {
-            return networkResponse;
-          }
-          throw new Error("Network response not ok");
-        } catch (error) {
-          // Fall back to cache
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Return a custom offline response
-          return new Response(JSON.stringify({ error: "You are offline" }), {
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-      },
-    },
-  },
-});
-```
-
-### Precaching Strategies
-
-```js
-self.__sw__.init({
-  name: "my-app",
-  resources: {
-    "/": {},
-    // Core assets (always precached)
-    "/assets/critical.js": { importance: "high" },
-    // Non-critical assets (precached when idle)
-    "/assets/non-critical.js": { importance: "low" },
-  },
-});
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-[MIT](./LICENSE)
+Pair with `@jsenv/pwa` to display "an update is available", activate it on
+click, and hot-replace changed resources without reloading when possible — see
+[docs/usage.md](./docs/usage.md#update-flow).

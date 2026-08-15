@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/service-worker",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "type": "module",
   "description": "Service worker that can be integrated with jsenv build",
   "repository": {
@@ -24,6 +24,7 @@
     "./*": "./*"
   },
   "files": [
+    "/docs/",
     "/src/"
   ],
   "devDependencies": {

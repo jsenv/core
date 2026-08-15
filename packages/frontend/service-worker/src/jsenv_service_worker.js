@@ -1,18 +1,23 @@
-/**
+/*
+ * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
+ * using @jsenv/service-worker as intended; ../docs/usage.md shows complete
+ * usage examples.
+ *
+ * This is a classic worker script (not a module): a service worker file loads
+ * it with self.importScripts() then calls self.__sw__.init(). It caches the
+ * given resources during "install", serves them from cache in "fetch", and
+ * answers the { action } message protocol used by @jsenv/pwa
+ * ("inspect", "skipWaiting", "claim", "postReloadAfterUpdateToClients", ...).
+ *
+ * Background reading:
  * https://web.dev/service-worker-caching-and-http-caching/
- * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
- * https://gomakethings.com/how-to-set-an-expiration-date-for-items-in-a-service-worker-cache/
- * https://phyks.me/2019/01/manage-expiration-of-cached-assets-with-service-worker-caching.html
-
  * https://developers.google.com/web/fundamentals/primers/service-workers/lifecycle
- * https://github.com/deanhume/pwa-update-available
- * https://deanhume.com/displaying-a-new-version-available-progressive-web-app/
- * https://raw.githubusercontent.com/GoogleChromeLabs/sw-precache/master/service-worker.tmpl
+ * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
  *
  * Do not use relative self.importScripts in there because
- * They are resolved against self.location. It means
+ * they are resolved against self.location. It means
  * ./file.js would be resolved against the project root
-*/
+ */
 
 self.__sw__ = {};
 
@@ -50,41 +55,45 @@ const sw = self.__sw__;
 
 // define self.__sw__.init()
 {
+  /**
+   * Initializes the service worker: caches `resources` during "install",
+   * serves them from cache in "fetch", deletes previous caches during
+   * "activate" and answers the `{ action }` message protocol.
+   *
+   * @param {Object} [options]
+   * @param {string} [options.name="jsenv"] Prefix identifying the caches
+   *   created by this service worker, so a new version can delete the caches
+   *   of the previous one during "activate".
+   * @param {string} [options.version="1"] Version of the service worker
+   *   implementation. Bump it when the new script must NOT be hot-updated by
+   *   @jsenv/pwa (a version change forces a full reload after update).
+   * @param {Object} [options.meta={}] Extra values returned to the page by the
+   *   "inspect" action (merged with name, version and resources).
+   * @param {string} [options.logLevel="warn"] "debug" | "info" | "warn" | "error"
+   * @param {string} [options.logBackgroundColor]
+   * @param {string} [options.logColor]
+   * @param {Object} [options.resources={ "/": {} }] Urls to put into the
+   *   browser cache during "install", and to serve from cache in "fetch".
+   *   Keys are urls (resolved against the service worker location); values are
+   *   `{}` for unversioned urls (refetched with cache: "reload" on every
+   *   install) or `{ version, versionedUrl }` for build-versioned urls.
+   *   When built by jsenv, `self.resourcesFromJsenvBuild` holds this object
+   *   pre-filled with every resource of the build.
+   * @param {Object} [options.actions={}] Extra `{ action: async fn }` handlers
+   *   callable from the page via @jsenv/pwa `sendMessage({ action, payload })`.
+   * @param {Function} [options.install] Called during the "install" event.
+   * @param {Function} [options.activate] Called during the "activate" event.
+   */
   sw.init = ({
-    /*
-     * name will be used to generate a unique cache name in the navigator such as:
-     * "jsenv_jld2cjxh0000qzrmn831i7rn"
-     * The prefix is used to identify which cache have been created by this service worker
-     * so that the next service worker can cleanup cache.
-     */
     name = "jsenv",
-    /*
-     * Version is useful in case hot update is enabled but the new version of the script
-     * does not want to be hot-updated. This new version want to control navigator from the start.
-     * In that case the version must be updated (incremented for instance)
-     * to ensure hot update is cancelled.
-     */
     version = "1",
     meta = {},
-    /**
-     * logLevel can be "debug", "info", "warn", "error"
-     */
     logLevel = "warn",
     logBackgroundColor = "#ffdc00", // nice yellow
     logColor = "#000000",
-    /*
-     * When installed, service worker will try to put a list of urls into browser cache.
-     * This is done in "install" function
-     * Urls will be cached as long as service worker is alive.
-     */
     resources = {
       "/": {},
     },
-
-    /**
-     * actions can be used to create code that can be executed in the service worker
-     * when parent page ask him to do so. It's for super advanced use cases.
-     */
     actions = {},
     install = () => {},
     activate = () => {},
@@ -99,7 +108,7 @@ const sw = self.__sw__;
       throw new TypeError(`name must not be empty`);
     }
     if (typeof logLevel !== "string") {
-      throw new TypeError(`logLevel should be a boolean, got ${logLevel}`);
+      throw new TypeError(`logLevel should be a string, got ${logLevel}`);
     }
     if (typeof logBackgroundColor !== "string") {
       throw new TypeError(
@@ -110,10 +119,10 @@ const sw = self.__sw__;
       throw new TypeError(`logColor should be a string, got ${logColor}`);
     }
 
-    const cacheName = createCacheName(name);
-    const label = cacheName;
     const logger = createLogger({ logLevel, logBackgroundColor, logColor });
     resources = resolveResources(resources);
+    const cacheName = createCacheName(name, { version, resources });
+    const label = cacheName;
 
     // --- init phase ---
     {
@@ -243,16 +252,12 @@ const sw = self.__sw__;
     // --- fetch implementation ---
     {
       self.addEventListener("fetch", (fetchEvent) => {
-        fetchEvent.waitUntil(handleFetchEvent(fetchEvent));
-      });
-      const handleFetchEvent = async (fetchEvent) => {
         const request = fetchEvent.request;
         if (request.method !== "GET" && request.method !== "HEAD") {
-          return self.fetch(request);
+          return;
         }
         let requestWasCachedOnInstall = false;
-        const resource = resources[request.url];
-        if (resource) {
+        if (resources[request.url]) {
           requestWasCachedOnInstall = true;
         } else {
           for (const url of Object.keys(resources)) {
@@ -263,8 +268,14 @@ const sw = self.__sw__;
           }
         }
         if (!requestWasCachedOnInstall) {
-          return self.fetch(request);
+          // not returning a response -> browser handles the request as usual
+          return;
         }
+        // respondWith must be called synchronously inside the "fetch" listener
+        fetchEvent.respondWith(handleFetchEvent(fetchEvent));
+      });
+      const handleFetchEvent = async (fetchEvent) => {
+        const request = fetchEvent.request;
         const relativeUrl = asRelativeUrl(request.url);
         logger.debug(`fetch "${relativeUrl}" (${label})`);
         if (request.mode === "navigate") {
@@ -284,7 +295,6 @@ const sw = self.__sw__;
           }
         }
         try {
-          const request = fetchEvent.request;
           logger.debug(`open ${cacheName} cache`);
           const cache = await self.caches.open(cacheName);
           logger.debug(`search response matching this request in cache`);
@@ -319,37 +329,26 @@ const sw = self.__sw__;
   };
 }
 
-const createCacheName = (() => {
-  const base = 36;
-  const blockSize = 4;
-  const discreteValues = Math.pow(base, blockSize);
-  const pad = (number, size) => {
-    var s = `000000000${number}`;
-    return s.substr(s.length - size);
-  };
-  const getRandomValue = (() => {
-    const { crypto } = self;
-    if (crypto) {
-      const lim = Math.pow(2, 32) - 1;
-      return () => {
-        return Math.abs(crypto.getRandomValues(new Uint32Array(1))[0] / lim);
-      };
-    }
-    return Math.random;
-  })();
-  const randomBlock = () => {
-    return pad(
-      ((getRandomValue() * discreteValues) << 0).toString(base),
-      blockSize,
-    );
-  };
+// The cache name must be deterministic: the navigator kills the service worker
+// whenever it's idle and re-executes this whole script on the next event, so a
+// name derived from randomness/time would designate a different (empty) cache
+// on every wake-up, making the cache filled during "install" unreachable.
+// It must still change when the service worker script changes, so that each
+// worker version gets its own cache and "activate" can delete the previous
+// ones — hashing version + resources gives exactly that.
+const createCacheName = (name, { version, resources }) => {
+  const hash = hashString(JSON.stringify({ version, resources }));
+  return `${name}_${hash}`;
+};
 
-  return (cachePrefix) => {
-    const timestamp = new Date().getTime().toString(base);
-    const random = `${randomBlock()}${randomBlock()}`;
-    return `${cachePrefix}_${timestamp}${random}`;
-  };
-})();
+const hashString = (string) => {
+  let hash = 5381;
+  let i = string.length;
+  while (i--) {
+    hash = (hash * 33) ^ string.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+};
 
 const createLogger = ({ logLevel, logBackgroundColor, logColor }) => {
   const injectLogStyles = (args) => {
