@@ -1,250 +1,117 @@
-/\*\*
+# Actions
 
-- # Actions System - Declarative Resource Management for Frontend Applications
--
-- This module provides a comprehensive system for managing asynchronous resources (API calls, data fetching)
-- in a declarative, signal-based architecture. It's designed for complex frontend applications that need
-- fine-grained control over loading states, caching, and resource lifecycle management.
--
-- ## Core Concepts
--
-- ### 🔧 **Action Templates**
-- Factory functions that define how to load resources. Templates are pure and reusable.
-- ```js
+An action is an async callback plus the state of its last run, held in signals:
+running or not, the error it failed with, the data it produced. Components read
+that state instead of keeping their own.
 
-  ```
+```js
+import { createAction } from "@jsenv/navi";
 
-- const getUserTemplate = createActionTemplate(async ({ userId }) => {
-- const response = await fetch(`/api/users/${userId}`);
-- return response.json();
-- });
-- ```
+const getUser = createAction(async ({ id }, { signal }) => {
+  const response = await fetch(`/users/${id}`, { signal });
+  return response.json();
+});
+```
 
-  ```
+The callback receives `(params, { reason, event, signal, isPrerun })`. `signal`
+is aborted when the run is called off — pass it to `fetch`.
 
--
-- ### 🎯 **Action Instances**
-- Stateful objects created from templates with specific parameters. Each unique parameter set
-- gets its own cached instance (automatic memoization).
-- ```js
+`resource()` creates one action per REST callback rather than having you write
+them by hand — see [resource.md](./resource.md).
 
-  ```
+## Params: `bindParams`, and calling the action
 
-- const userAction = getUserTemplate.instantiate({ userId: 123 });
-- const status = useActionStatus(userAction); // { pending, data, error, ... }
-- ```
+`createAction` gives one action for the callback; the params make instances of
+it, each with its own state:
 
-  ```
+```js
+const getUser123 = getUser.bindParams({ id: 123 });
+await getUser123.run();
+```
 
--
-- ### 🔄 **Action Proxies**
-- Dynamic actions that react to signal changes, automatically reloading when parameters change.
-- ```js
+Two `bindParams` with equal params give **the same instance** (deep equality),
+which is what makes state shared between two components asking for the same
+thing, and what deduplicates their requests.
 
-  ```
+An action is callable, and calling it is the short way to bind and run in one
+go:
 
-- const userProxy = createActionProxy(getUserTemplate, {
-- userId: userIdSignal, // Signal - reactive
-- includeProfile: true // Static - not reactive
-- });
-- // Automatically reloads when userIdSignal changes
-- ```
+```js
+getUser({ id: 123 }); // getUser.bindParams({ id: 123 }).rerun()
+getUser(); // getUser.rerun()
+```
 
-  ```
+Use it wherever a run is a **gesture** — a click handler, an event, a step in a
+flow — where the params are known at that moment and the run is the point:
 
--
-- ## Loading States & Lifecycle
--
-- ### 📊 **State Management**
-- Each action has a well-defined state machine:
-- - `IDLE` → `LOADING` → `LOADED` (success)
-- - `IDLE` → `LOADING` → `FAILED` (error)
-- - `IDLE` → `LOADING` → `ABORTED` (cancelled)
--
-- ### ⚡ **Load Types**
-- - **`.load()`** - Load with user intent (sets `loadRequested: true`)
-- - **`.preload()`** - Background loading (sets `loadRequested: false`)
-- - **`.reload()`** - Force reload even if already loaded
-- - **`.unload()`** - Cancel loading and reset state
--
-- ### 🛡️ **Preload Protection**
-- Preloaded actions are protected from garbage collection for 5 minutes to ensure
-- they remain available for components that may load later (e.g., via dynamic imports).
--
-- ## Key Features
--
-- ### 🧠 **Intelligent Memoization**
-- - Actions with identical parameters share the same instance
-- - Uses deep equality comparison with `compareTwoJsValues`
-- - Supports `SYMBOL_IDENTITY` for fast recognition of "conceptually same" objects
-- - Memory-efficient with automatic garbage collection
--
-- ### 🔗 **Parameter Binding & Composition**
-- ```js
+```js
+const deleteGame = (game) => GAME.DELETE({ id: game.id });
+```
 
-  ```
+Use `bindParams` when what you need is the **instance**, not the run: to hand it
+to a component that will run it and read its state
+(`<Button action={GAME.DELETE.bindParams({ id })}>`), or to keep a handle on it.
+Note that calling the action `rerun()`s it — the run happens even if that
+instance already holds data, which is what you want from a gesture and not what
+you want from a component asking for data.
 
-- const baseAction = getUserTemplate.instantiate({ userId: 123 });
-- const enrichedAction = baseAction.bindParams({ includeProfile: true });
-- // Result: { userId: 123, includeProfile: true }
--
-- // Supports objects, primitives, and signals
-- const dynamicAction = baseAction.bindParams(filtersSignal);
-- ```
+Params may be signals, and then the action follows them:
 
-  ```
+```js
+const userAction = getUser.bindParams({ id: userIdSignal });
+// a new params value reruns it
+```
 
--
-- ### 🎮 **Concurrent Loading Control**
-- - Prevents duplicate requests for same resource
-- - Smart request deduplication and racing condition handling
-- - Coordinated loading/unloading of multiple actions via `updateActions()`
--
-- ### 🔧 **Side Effects & Cleanup**
-- ```js
+## Running: `run`, `rerun`, `prerun`, `reset`
 
-  ```
+| Method     | Does                                                                     |
+| ---------- | ------------------------------------------------------------------------ |
+| `run()`    | Asks for the data. An action already running or completed has it: no-op. |
+| `rerun()`  | Runs again whatever state it is in — a refresh, an explicit "check now". |
+| `prerun()` | Same as `run()`, in the background: nothing asked for it on screen yet.  |
+| `reset()`  | Aborts what is running and puts the action back to idle, data and all.   |
+| `abort()`  | Calls off the run in flight, keeping the data it had.                    |
 
-- const actionTemplate = createActionTemplate(callback, {
-- sideEffect: (params, loadParams) => {
--     // Setup logic (analytics, subscriptions, etc.)
--     return () => {
--       // Cleanup logic - called on unload/abort
--     };
-- }
-- });
-- ```
+## Reading an action
 
-  ```
+```jsx
+const [user] = useAsyncData(userAction);
+```
 
--
-- ## Usage Patterns
--
-- ### 🏗️ **Basic Resource Loading**
-- ```js
+`useAsyncData` suspends until the data is there and throws on failure, leaving
+both to the nearest `<Loading>` and `<ErrorBoundary>`; pass `{ loading: true }`
+or `{ error: true }` to handle either inside the component (stale data stays
+available while a rerun is in flight). `useActionStatus(action)` gives the whole
+state at once — `{ idle, loading, completed, aborted, error, data, params }` —
+for a component that needs to look at it rather than render it.
 
-  ```
+Controls take the action itself and wire the rest: `<Button action>` runs it on
+click, shows its loading state, and puts its error where the user can see it.
+That is the reason to pass an action instance rather than an arrow calling the
+callback:
 
-- const getUserAction = createActionTemplate(async ({ userId }) => {
-- return await api.getUser(userId);
-- });
--
-- // In component
-- const userAction = getUserAction.instantiate({ userId: 123 });
-- const { pending, data, error } = useActionStatus(userAction);
--
-- useEffect(() => {
-- userAction.load();
-- }, []);
-- ```
+```jsx
+// ✓ loading, error and disabled states come from the action
+<Button action={GAME_CANDIDATES.POST.bindParams({ id: game.id, user_id })}>
+  Accept
+</Button>
+```
 
-  ```
+## Reruns
 
--
-- ### 🔄 **Reactive Data Loading**
-- ```js
+Actions do not stay stale on their own: a resource's `POST` reruns the
+`GET_MANY` that lists it, a `DELETE` resets the `GET` that loaded the item, and
+`dependencies`/`rerunOn` declare the rest. What re-runs after a write, and what
+stays on screen while it does, is in [list_refresh.md](./list_refresh.md) and
+[resource_dependencies.md](./resource_dependencies.md).
 
-  ```
+`rerunActions(actions)` / `updateActions(actions)` drive several at once (route
+changes do exactly that).
 
-- const searchProxy = createActionProxy(searchTemplate, {
-- query: searchSignal,
-- filters: filtersSignal
-- });
-- // Automatically reloads when signals change
-- ```
+## See also
 
-  ```
-
--
-- ### 📋 **Master-Detail Pattern**
-- ```js
-
-  ```
-
-- const usersAction = getUsersTemplate.instantiate();
-- const selectedUser = signal(null);
--
-- const userDetailsProxy = createActionProxy(getUserTemplate, {
-- userId: computed(() => selectedUser.value?.id)
-- });
-- ```
-
-  ```
-
--
-- ### 🏃 **Progressive Loading**
-- ```js
-
-  ```
-
-- // Preload on hover, load on click
-- <button
-- onMouseEnter={() => action.preload()}
-- onClick={() => action.load()}
-- >
-- Load User
-- </button>
-- ```
-
-  ```
-
--
-- ## Advanced Features
--
-- ### 🎭 **Custom Data Transformation**
-- ```js
-
-  ```
-
-- const actionTemplate = createActionTemplate(fetchUser, {
-- computedDataSignal: computed(() => {
--     const rawData = dataSignal.value;
--     return rawData ? transformUser(rawData) : null;
-- })
-- });
-- ```
-
-  ```
-
--
-- ### 🎨 **Async Rendering Support**
-- ```js
-
-  ```
-
-- const actionTemplate = createActionTemplate(fetchData, {
-- renderLoadedAsync: async () => {
--     const { UserComponent } = await import('./UserComponent.js');
--     return (user) => <UserComponent user={user} />;
-- }
-- });
-- ```
-
-  ```
-
--
-- ### 🛠️ **Debugging & Observability**
-- Built-in debug mode with detailed logging of state transitions, loading coordination,
-- and memory management. Enable with `debug = true`.
--
-- ## Integration Points
--
-- - **Signals**: Built on @preact/signals for reactive state management
-- - **Navigation**: Integrates with navigation systems for route-based loading
-- - **Components**: Use `useActionStatus()` hook for component integration
-- - **Memory Management**: Automatic cleanup with WeakMap-based private properties
--
-- ## Performance Characteristics
--
-- - **Memory Efficient**: Weak references prevent memory leaks
-- - **Request Deduplication**: Identical requests are automatically merged
-- - **Minimal Re-renders**: Signal-based updates only trigger when data actually changes
-- - **Lazy Loading**: Actions only created when needed, with intelligent memoization
--
-- This system is particularly well-suited for:
-- - SPAs with complex data fetching requirements
-- - Applications needing fine-grained loading state control
-- - Systems requiring request coordination and deduplication
-- - Progressive loading and preloading scenarios
-- - Master-detail interfaces with dynamic parameter binding
-    \*/
+- [resource.md](./resource.md) — actions created from REST callbacks, and the
+  store behind them
+- [resource_with_params.md](./resource_with_params.md) — `withParams()` and
+  isolated rerun scopes
+- [list_refresh.md](./list_refresh.md) — what a write refreshes

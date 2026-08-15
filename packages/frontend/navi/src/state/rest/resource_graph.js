@@ -14,6 +14,7 @@ import {
   recordGetResultProperties,
 } from "./item_lifecycle_manager.js";
 import { getParamScope } from "./param_scope.js";
+import { createPageReader } from "./resource_page_reader.js";
 
 const resourceLifecycleManager = createResourceLifecycleManager();
 
@@ -25,7 +26,8 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  *
  * Naming conventions used throughout this file:
  * - verb:            one of GET / POST / PUT / PATCH / DELETE
- * - restCallbackKey: one of GET / GET_MANY / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
+ * - restCallbackKey: one of GET / GET_MANY / GET_PAGE / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
+ *                    (GET_PAGE is the odd one out: a reader, not an action — see resource_page_reader.js)
  * - restCallback:    the user-provided callback function associated with a restCallbackKey
  * - restCallbacks:   object mapping { [restCallbackKey]: restCallback }
  * - isMany:          true when the action operates on a collection (restCallbackKey ends with _MANY)
@@ -50,13 +52,18 @@ const debug = (args) => {
  * - GET / POST / PUT / PATCH → the full item object, e.g. `{ id, name }`
  * - DELETE                   → the id or `{ id }` of the removed item
  * - GET_MANY / POST_MANY / … → an array of item objects
+ * - GET_PAGE                 → `{ items, start, count }`, one slice of the collection
+ *
+ * `GET_PAGE` is a reader rather than an action: it keeps no value and takes no place in
+ * the rerun graph, so a `<List.Items>` can feed on it slice by slice
+ * (`itemsAction={USER.GET_PAGE.bindParams({ team })}`).
  *
  * A sub-resource of the backend (`/games/:id/candidates`) must be modelled with a
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
  * verb's callback.
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_PAGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"` (or the first `uniqueKeys` entry)
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
  * @see docs/resource.md — relationships, callback return contracts, decision table
@@ -80,6 +87,7 @@ export const resource = (
 
     GET,
     GET_MANY,
+    GET_PAGE,
     POST,
     POST_MANY,
     PUT,
@@ -145,6 +153,7 @@ export const resource = (
     restCallbacks: {
       GET,
       GET_MANY,
+      GET_PAGE,
       POST,
       POST_MANY,
       PUT,
@@ -1230,6 +1239,16 @@ ${originalActionName} source location: ${locationInfo}`,
   // expose rest actions on the stateFacade
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
     if (restCallback === undefined) {
+      continue;
+    }
+    if (restCallbackKey === "GET_PAGE") {
+      // A page is read, never kept: no action, no place in the rerun graph
+      // (see resource_page_reader.js).
+      stateFacade.GET_PAGE = createPageReader(
+        `${name}.GET_PAGE`,
+        restCallback,
+        { store, params },
+      );
       continue;
     }
     const isMany = restCallbackKey.endsWith("_MANY");

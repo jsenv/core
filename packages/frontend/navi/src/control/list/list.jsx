@@ -3177,6 +3177,12 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * carries a `signal`, aborted when the list stops wanting those rows (the
  * window has moved on) — pass it to fetch to call the request off.
  *
+ * A resource answers through its page reader:
+ * `itemsAction={GAME.GET_PAGE.bindParams({ radar })}` — the rows are upserted
+ * into the store on their way in, so the list draws store items rather than
+ * copies of the JSON. The list holds the pages, the store holds the objects
+ * (see docs/resource.md).
+ *
  * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
  * What it gives back is kept, so a collection that changes as a whole (a search
  * reordering it) is a different collection: give the run a `key` that changes
@@ -3755,6 +3761,11 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
         };
         let result;
         try {
+          if (typeof itemsAction !== "function") {
+            throw new TypeError(
+              `itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its page reader: itemsAction={RESOURCE.GET_PAGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`,
+            );
+          }
           result = itemsAction(range);
         } catch (e) {
           failed(e);

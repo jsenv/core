@@ -30198,6 +30198,109 @@ const getParamScope = (params) => {
   return newParamScope;
 };
 
+/*
+ * GET_PAGE: reading a resource one slice at a time, for a list that draws its
+ * rows as it goes (`<List.Items itemsAction>`).
+ *
+ * It is on purpose not an action. An action keeps the one response it got and
+ * replays it, and takes a place in the rerun graph — two things a slice must
+ * not do: the list already holds the slices it received and glues them back
+ * together, and a mutation would otherwise send every slice ever loaded back to
+ * the network at once. So the reader keeps nothing. It runs the callback with
+ * the range the list asks for, writes what comes back into the store, and hands
+ * the rows back as store items — never a copy of the JSON, so the relations a
+ * row reads are the shared ones and a request sent from a row is read back on
+ * it. A row following its own fields through a write reads them from the store
+ * (`RESOURCE.useById(id)`): an update replaces the item object, and the one the
+ * list is holding is the one it was given.
+ *
+ * The reader is a function, so a list feeds on it the way it feeds on any other
+ * source: `itemsAction={GAME.GET_PAGE.bindParams({ radar })}`.
+ */
+
+
+const createPageReader = (
+  actionName,
+  callback,
+  { store, params: boundParams },
+) => {
+  const readPage = async (range = {}) => {
+    const { signal, ...rangeParams } = range;
+    const paramsResolved = { ...resolveParams(boundParams), ...rangeParams };
+    const result = await callback(paramsResolved, { signal });
+    if (!result || !Array.isArray(result.items)) {
+      throw new TypeError(
+        `${actionName} must return { items, start, count }, received ${describeResult(result)}.`,
+      );
+    }
+    const items = store.upsert(result.items);
+    let { start, count } = result;
+    if (start === undefined) {
+      const startAsked = rangeParams.start;
+      if (startAsked === undefined || startAsked < 0) {
+        throw new TypeError(
+          `${actionName} must say where the page lands (start), it was asked for ${describeRangeAsked(rangeParams)}.`,
+        );
+      }
+      start = startAsked;
+    }
+    if (count === undefined) {
+      count = start + items.length;
+    }
+    return { items, start, count };
+  };
+  Object.defineProperty(readPage, "name", { value: actionName });
+  readPage.isPageReader = true;
+  readPage.bindParams = (paramsToBind) => {
+    return createPageReader(actionName, callback, {
+      store,
+      params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
+    });
+  };
+  return readPage;
+};
+
+// Params bound to a reader may be signals (the radar currently on screen); the
+// value they hold when the page is asked for is the one the page is about.
+const resolveParams = (params) => {
+  if (!params) {
+    return {};
+  }
+  const paramsResolved = {};
+  for (const key of Object.keys(params)) {
+    const value = params[key];
+    paramsResolved[key] = isSignal(value) ? value.value : value;
+  }
+  return paramsResolved;
+};
+
+const describeResult = (result) => {
+  if (Array.isArray(result)) {
+    return `an array of ${result.length} item${result.length === 1 ? "" : "s"}`;
+  }
+  if (result && typeof result === "object") {
+    return `an object holding ${Object.keys(result).join(", ") || "nothing"}`;
+  }
+  return `${result}`;
+};
+
+const describeRangeAsked = (rangeParams) => {
+  const { start, limit, around, before, after } = rangeParams;
+  if (around !== undefined) {
+    return `the rows around "${around}"`;
+  }
+  if (before !== undefined) {
+    return `the ${limit} rows before "${before}"`;
+  }
+  if (after !== undefined) {
+    return `the ${limit} rows after "${after}"`;
+  }
+  if (start < 0) {
+    return `the last ${limit} rows`;
+  }
+  return `${limit} rows from ${start}`;
+};
+
 const resourceLifecycleManager = createResourceLifecycleManager();
 const debug$2 = (args) => {
   {
@@ -30216,13 +30319,18 @@ const debug$2 = (args) => {
  * - GET / POST / PUT / PATCH → the full item object, e.g. `{ id, name }`
  * - DELETE                   → the id or `{ id }` of the removed item
  * - GET_MANY / POST_MANY / … → an array of item objects
+ * - GET_PAGE                 → `{ items, start, count }`, one slice of the collection
+ *
+ * `GET_PAGE` is a reader rather than an action: it keeps no value and takes no place in
+ * the rerun graph, so a `<List.Items>` can feed on it slice by slice
+ * (`itemsAction={USER.GET_PAGE.bindParams({ team })}`).
  *
  * A sub-resource of the backend (`/games/:id/candidates`) must be modelled with a
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
  * verb's callback.
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_PAGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"` (or the first `uniqueKeys` entry)
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
  * @see docs/resource.md — relationships, callback return contracts, decision table
@@ -30246,6 +30354,7 @@ const resource = (
 
     GET,
     GET_MANY,
+    GET_PAGE,
     POST,
     POST_MANY,
     PUT,
@@ -30311,6 +30420,7 @@ const resource = (
     restCallbacks: {
       GET,
       GET_MANY,
+      GET_PAGE,
       POST,
       POST_MANY,
       PUT,
@@ -31390,6 +31500,16 @@ ${originalActionName} source location: ${locationInfo}`,
   // expose rest actions on the stateFacade
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
     if (restCallback === undefined) {
+      continue;
+    }
+    if (restCallbackKey === "GET_PAGE") {
+      // A page is read, never kept: no action, no place in the rerun graph
+      // (see resource_page_reader.js).
+      stateFacade.GET_PAGE = createPageReader(
+        `${name}.GET_PAGE`,
+        restCallback,
+        { store, params },
+      );
       continue;
     }
     const isMany = restCallbackKey.endsWith("_MANY");
@@ -51571,6 +51691,12 @@ const VISIBILITY_HIDDEN_STYLE = {
  * carries a `signal`, aborted when the list stops wanting those rows (the
  * window has moved on) — pass it to fetch to call the request off.
  *
+ * A resource answers through its page reader:
+ * `itemsAction={GAME.GET_PAGE.bindParams({ radar })}` — the rows are upserted
+ * into the store on their way in, so the list draws store items rather than
+ * copies of the JSON. The list holds the pages, the store holds the objects
+ * (see docs/resource.md).
+ *
  * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
  * What it gives back is kept, so a collection that changes as a whole (a search
  * reordering it) is a different collection: give the run a `key` that changes
@@ -52102,6 +52228,9 @@ const useItemStore = ({
         };
         let result;
         try {
+          if (typeof itemsAction !== "function") {
+            throw new TypeError(`itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its page reader: itemsAction={RESOURCE.GET_PAGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`);
+          }
           result = itemsAction(range);
         } catch (e) {
           failed(e);

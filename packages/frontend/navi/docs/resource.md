@@ -25,9 +25,93 @@ Each callback returns the data to upsert into the store:
 | GET / POST / PUT / PATCH | the full item object, `{ id, … }` |
 | DELETE                   | the id, or `{ id }`               |
 | GET_MANY / POST_MANY / … | an array of item objects          |
+| GET_PAGE                 | `{ items, start, count }` (below) |
 
 Actions are read in components through the action system (`useAsyncData`,
 `<Button action>`, …) — see [actions.md](./actions.md).
+
+## `store.upsert()` is not how data enters the store
+
+navi writes the store. Declare the resource and its relations, return the shape
+each callback owes (tables above and below), and the write happens. A hand
+written `store.upsert()` in the path of a normal request of the resource is the
+sign that something is missing: a relation that is not declared, or a callback
+that does not return what it should.
+
+`store` is exposed for what is **not** a request of the resource, where writing
+it yourself is the point:
+
+- seeding it with data that came from elsewhere — state rendered by the server,
+  a local cache, a websocket message;
+- absorbing the parent object a relation route answered with: the relation
+  callback only writes the relation, so the parent's own fields have nowhere
+  else to land (see [When the backend answers a sub-route with the whole
+  parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)).
+
+A list that loads its rows page by page is **not** one of those cases — that is
+`GET_PAGE`, right below.
+
+## `GET_PAGE`: feeding a list that loads as it scrolls
+
+A `<List.Items>` asks for the rows it is about to draw and keeps what it gets.
+`GET_PAGE` is the resource's answer to that question — one slice at a time:
+
+```js
+const GAME = resource("game", {
+  GET: ({ id }) => fetchJson(`/games/${id}`),
+  GET_PAGE: ({ radar, start, limit }) =>
+    fetchJson(`/radars/${radar.id}/games?start=${start}&limit=${limit}`),
+  // { items: [{ id, … }, …], start: 20, count: 137 }
+});
+```
+
+```jsx
+<List.Items
+  count={radar.match_count}
+  itemsAction={GAME.GET_PAGE.bindParams({ radar })}
+  renderItem={(game) => <GameCard game={game} />}
+/>
+```
+
+The callback receives the bound params merged with the range the list asks for
+(`start`, `end`, `limit`, `before`, `after`, `around`, `count`), and a `signal`
+as second argument — aborted when the list stops wanting those rows. It returns
+a page the way a `Content-Range` does: **`{ items, start, count }`** — these
+rows, at this place, out of that many. `start` may be omitted when the list
+asked for a positive one; `count` defaults to `start + items.length` (a source
+that does not know its total). The items are upserted on their way in, so the
+list draws store items — never copies of the JSON — and a request sent from a
+row is read back on that row.
+
+A row that must follow its **own fields** through a write reads them from the
+store rather than from the object it was handed:
+
+```jsx
+const GameCard = ({ id }) => {
+  const game = GAME.useById(id); // the item as it is now
+  …
+};
+```
+
+An update replaces the item object (the store holds values, and that is what
+makes a change detectable), so the one the list is holding is the one it was
+given. Relations are not concerned: they are keyed by owner, and a row reading
+`game.candidates` reads the shared collection whatever object carries it.
+
+`GET_PAGE` is a **reader, not an action**. It keeps no value and takes no place
+in the rerun graph, which is what makes it usable per slice:
+
+- the list already holds the pages it received and glues them back together —
+  a second memory holding one of them would fight it;
+- a `POST` invalidating "the collection" would otherwise send every page ever
+  loaded back to the network at once.
+
+What it does not give is membership: an item that leaves the collection stays on
+screen until the rows are asked for again. Give the screen its own way to ask
+(a refresh gesture, a `key` on the run).
+
+It reads a collection, so it lives on the resource itself (or on a
+`withParams()` of it), not on a relation.
 
 ## Relations: pick one of the four methods
 
@@ -257,6 +341,10 @@ own state. Pass that instance to a component:
 The arrow works, but nothing tracks it: no per-row spinner, no error surfaced on
 the button that caused it, no deduplication of concurrent runs, no autorerun of
 the actions this mutation should invalidate. See [actions.md](./actions.md).
+
+Away from a component, where the run is a gesture and not something to render,
+an action is callable: `GAME.DELETE({ id })` is
+`GAME.DELETE.bindParams({ id }).rerun()`.
 
 ## See also
 
