@@ -1066,16 +1066,22 @@ window.__supervisor__ = (() => {
        * a warning, never the other way around.
        */
       class JsenvWarningOverlay extends HTMLElement {
+        // "node" is for what a string cannot say: a live indicator, something
+        // animated, anything the code reporting the warning wants to render itself
         constructor({
           title,
           text,
-          details = []
+          details = [],
+          node
         }) {
           super();
           const root = this.attachShadow({
             mode: "open"
           });
-          root.innerHTML = "\n<style>\n  ".concat(overlayCSS, "\n</style>\n<div class=\"backdrop\"></div>\n<div class=\"overlay\" data-theme=\"dark\" data-level=\"warning\">\n  <button class=\"copy\" type=\"button\">Copy</button>\n  <h1 class=\"title\">\n    ").concat(escapeHtml(title), "\n  </h1>\n  <pre class=\"text\">").concat(escapeHtml(text), "</pre>\n  <div class=\"details\">\n    ").concat(details.map(detail => "<p>".concat(escapeHtml(detail), "</p>")).join("\n    "), "\n  </div>\n  <div class=\"tip\">\n    Click outside to close.\n  </div>\n</div>");
+          root.innerHTML = "\n<style>\n  ".concat(overlayCSS, "\n</style>\n<div class=\"backdrop\"></div>\n<div class=\"overlay\" data-theme=\"dark\" data-level=\"warning\">\n  <button class=\"copy\" type=\"button\">Copy</button>\n  <h1 class=\"title\">\n    ").concat(escapeHtml(title), "\n  </h1>\n  <pre class=\"text\">").concat(escapeHtml(text), "</pre>\n  <div class=\"details\">\n    ").concat(details.map(detail => "<p>".concat(escapeHtml(detail), "</p>")).join("\n    "), "\n  </div>\n  <div class=\"extra\"></div>\n  <div class=\"tip\">\n    Click outside to close.\n  </div>\n</div>");
+          if (node) {
+            root.querySelector(".extra").appendChild(node);
+          }
           enableCopyButton(root);
           root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
@@ -1100,6 +1106,14 @@ window.__supervisor__ = (() => {
           if (detailsNode) {
             for (const paragraph of detailsNode.querySelectorAll("p")) {
               parts.push(paragraph.textContent.trim());
+            }
+          }
+          // a node rendered by the warning reporter says which of its parts are
+          // worth pasting, the rest being decoration
+          const extraNode = overlay.querySelector(".extra");
+          if (extraNode) {
+            for (const line of extraNode.querySelectorAll("[data-copy-line]")) {
+              parts.push(line.textContent.trim().replace(/\s+/g, " "));
             }
           }
           const copied = await writeTextToClipboard(parts.join("\n"));
@@ -1232,13 +1246,14 @@ window.__supervisor__ = (() => {
       if (customElements && !customElements.get(JSENV_WARNING_OVERLAY_TAGNAME)) {
         customElements.define(JSENV_WARNING_OVERLAY_TAGNAME, JsenvWarningOverlay);
       }
-      const overlayCSS = /* css */"\n        :host {\n          position: fixed;\n          top: 0;\n          left: 0;\n          z-index: 99999;\n          width: 100%;\n          height: 100%;\n          /* overflow-y: scroll; */\n          margin: 0;\n          background: rgba(0, 0, 0, 0.66);\n        }\n\n        .backdrop {\n          position: absolute;\n          top: 0;\n          right: 0;\n          bottom: 0;\n          left: 0;\n        }\n\n        .overlay {\n          position: relative;\n          box-sizing: border-box;\n          width: 800px;\n          /* keep a margin visible on every side, the content scrolls rather\n             than the overlay growing edge to edge */\n          max-width: 98dvw;\n          max-height: calc(100dvh - 60px);\n          margin: 30px auto;\n          padding: 25px 40px;\n          padding-top: 0;\n          font-family: monospace;\n          direction: ltr;\n          background: rgba(0, 0, 0, 0.95);\n          border-radius: 4px 8px;\n          box-shadow:\n            0 20px 40px rgb(0 0 0 / 30%),\n            0 15px 12px rgb(0 0 0 / 20%);\n          overflow: auto; /* creates a block formatting context, for h1 margins */\n        }\n\n        h1 {\n          color: red;\n          text-align: center;\n        }\n\n        [data-level=\"warning\"] h1 {\n          color: #ffab40;\n        }\n\n        .copy {\n          position: absolute;\n          top: 12px;\n          right: 12px;\n          padding: 4px 10px;\n          color: inherit;\n          font-size: 12px;\n          font-family: inherit;\n          background: transparent;\n          border: 1px solid currentColor;\n          border-radius: 4px;\n          opacity: 0.7;\n          cursor: pointer;\n        }\n        .copy:hover {\n          opacity: 1;\n        }\n\n        .details {\n          padding: 0 20px 16px;\n          line-height: 1.5;\n        }\n        .details p {\n          margin: 0 0 8px;\n        }\n        .details p:last-child {\n          margin-bottom: 0;\n        }\n\n        pre {\n          max-width: 100%;\n          /* padding is nice + prevents scrollbar from hiding the text behind it */\n          /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */\n          padding: 20px;\n          overflow: auto;\n        }\n\n        .tip {\n          padding-top: 12px;\n          border-top: 1px solid #999;\n        }\n\n        [data-theme=\"dark\"] {\n          color: #999;\n        }\n        [data-theme=\"dark\"] pre {\n          color: #eee;\n          background: #111;\n          border: 1px solid #333;\n        }\n\n        [data-theme=\"light\"] {\n          color: #eeeeee;\n        }\n        [data-theme=\"light\"] pre {\n          color: #eeeeee;\n          background: #1e1e1e;\n          border: 1px solid white;\n        }\n\n        pre a {\n          color: inherit;\n        }\n      ";
+      const overlayCSS = /* css */"\n        :host {\n          position: fixed;\n          top: 0;\n          left: 0;\n          z-index: 99999;\n          width: 100%;\n          height: 100%;\n          /* overflow-y: scroll; */\n          margin: 0;\n          background: rgba(0, 0, 0, 0.66);\n        }\n\n        .backdrop {\n          position: absolute;\n          top: 0;\n          right: 0;\n          bottom: 0;\n          left: 0;\n        }\n\n        .overlay {\n          position: relative;\n          box-sizing: border-box;\n          width: 800px;\n          /* keep a margin visible on every side, the content scrolls rather\n             than the overlay growing edge to edge */\n          max-width: 98dvw;\n          max-height: calc(100dvh - 60px);\n          margin: 30px auto;\n          padding: 25px 40px;\n          padding-top: 0;\n          font-family: monospace;\n          direction: ltr;\n          background: rgba(0, 0, 0, 0.95);\n          border-radius: 4px 8px;\n          box-shadow:\n            0 20px 40px rgb(0 0 0 / 30%),\n            0 15px 12px rgb(0 0 0 / 20%);\n          overflow: auto; /* creates a block formatting context, for h1 margins */\n        }\n\n        h1 {\n          color: red;\n          text-align: center;\n        }\n\n        [data-level=\"warning\"] h1 {\n          color: #ffab40;\n        }\n\n        .copy {\n          position: absolute;\n          top: 12px;\n          right: 12px;\n          padding: 4px 10px;\n          color: inherit;\n          font-size: 12px;\n          font-family: inherit;\n          background: transparent;\n          border: 1px solid currentColor;\n          border-radius: 4px;\n          opacity: 0.7;\n          cursor: pointer;\n        }\n        .copy:hover {\n          opacity: 1;\n        }\n\n        .details {\n          padding: 0 20px 16px;\n          line-height: 1.5;\n        }\n        .details p {\n          margin: 0 0 8px;\n        }\n        .details p:last-child {\n          margin-bottom: 0;\n        }\n\n        pre {\n          max-width: 100%;\n          /* padding is nice + prevents scrollbar from hiding the text behind it */\n          /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */\n          padding: 20px;\n          overflow: auto;\n        }\n\n        .extra {\n          padding: 0 20px 16px;\n        }\n        .extra:empty {\n          display: none;\n        }\n\n        .tip {\n          padding-top: 12px;\n          border-top: 1px solid #999;\n        }\n\n        [data-theme=\"dark\"] {\n          color: #999;\n        }\n        [data-theme=\"dark\"] pre {\n          color: #eee;\n          background: #111;\n          border: 1px solid #333;\n        }\n\n        [data-theme=\"light\"] {\n          color: #eeeeee;\n        }\n        [data-theme=\"light\"] pre {\n          color: #eeeeee;\n          background: #1e1e1e;\n          border: 1px solid white;\n        }\n\n        pre a {\n          color: inherit;\n        }\n      ";
     }
     supervisor.createException = createException;
     supervisor.reportWarning = ({
       title,
       text,
-      details
+      details,
+      node
     }) => {
       if (!errorOverlay) {
         return () => {};
@@ -1246,7 +1261,8 @@ window.__supervisor__ = (() => {
       return displayJsenvWarningOverlay({
         title,
         text,
-        details
+        details,
+        node
       });
     };
     supervisor.reportException = exception => {
