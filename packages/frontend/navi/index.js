@@ -85,6 +85,7 @@ export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_
 export { Head } from "./src/nav/head.jsx";
 export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route } from "./src/nav/route.jsx";
+export { RouteTravel } from "./src/nav/route_travel.jsx";
 export { anyMatchingRouteSignal, routeAction } from "./src/nav/route_action.js";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components

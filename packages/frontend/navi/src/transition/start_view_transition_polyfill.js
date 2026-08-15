@@ -23,7 +23,7 @@
  */
 export const ensureDocumentStartViewTransition = () => {
   if (!document.startViewTransition) {
-    document.startViewTransition = (updateCallback) => {
+    const startViewTransitionPolyfill = (updateCallback) => {
       updateCallback();
       return {
         updateCallbackDone: Promise.resolve(),
@@ -32,6 +32,12 @@ export const ensureDocumentStartViewTransition = () => {
         skipTransition: () => {},
       };
     };
+    // Said out loud, because the difference matters to whoever needs the
+    // transition itself rather than the change: there is no picture of the
+    // state being left here, so nothing can be animated between the two — and
+    // once this is installed, asking the document is no longer a way to know.
+    startViewTransitionPolyfill.isPolyfill = true;
+    document.startViewTransition = startViewTransitionPolyfill;
   }
   return startViewTransition;
 };

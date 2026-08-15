@@ -84,6 +84,44 @@ export const Route = (props) => {
   }
   return <RouteLeaf {...props} />;
 };
+/**
+ * The routes a tree of <Route> children is made of, in the order they are
+ * written. Reading them is what turns a router into a row one can walk: "one
+ * step that way" is a fact about the order the branches were declared in, and
+ * nothing in a URL says it.
+ *
+ * The same walk the container does to find the active branch (collectBranches),
+ * except that it keeps every leaf rather than the one that matches — and reads
+ * no signal, so asking does not subscribe the asker to anything.
+ */
+export const collectRoutes = (children) => {
+  const routes = [];
+  const visit = (child) => {
+    if (!child || child === true || child === false) {
+      return;
+    }
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        visit(item);
+      }
+      return;
+    }
+    if (child.type !== Route) {
+      return;
+    }
+    const { children: nodeChildren, route } = child.props;
+    if (nodeChildren) {
+      visit(nodeChildren);
+      return;
+    }
+    if (route) {
+      routes.push(route);
+    }
+  };
+  visit(children);
+  return routes;
+};
+
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No effects, no signals, no contexts needed: reads route signals directly.

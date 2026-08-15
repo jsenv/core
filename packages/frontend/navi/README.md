@@ -8,6 +8,8 @@ Routing is signal-based, which means URL state — including search params — c
 
 Routes are flexible: you can create route groups to share logic, state, or UI across multiple routes. Nested routing is supported, and the structure naturally maps to how your application is organized.
 
+When the tabs of a page are URLs, `RouteTravel` lets a thumb drag from one to the next without ever mounting a route that does not match — see [src/nav/route_ui.md](./src/nav/route_ui.md).
+
 ## Actions
 
 Actions are async operations with lifecycle management — pending, success, error. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring.

@@ -33,7 +33,9 @@
  * carries on to the one being pulled in or puts the current one back — the
  * gesture decides, not the distance alone. It walks ONE AXIS, chosen from the
  * first few pixels: a diagonal would ask for two travels at once and only one
- * slide can arrive.
+ * slide can arrive. What a gesture IS — how far it has to go, who else may
+ * claim it, what letting go says — is read in drag_travel.js; what is here is
+ * where the slides stand while it happens.
  *
  * The slides live INSIDE the box, which is what makes this work for a popup: a
  * dialog and a popover are both promoted to the browser's top layer, so no
@@ -55,6 +57,7 @@ import {
   useState,
 } from "preact/hooks";
 import { Box } from "../box/box.jsx";
+import { scrollRoomTowards, startDragTravel } from "./drag_travel.js";
 import { onNaviCommand } from "../control/commands.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
@@ -70,6 +73,18 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
 
 const css = /* css */ `
+  /* Where the picture stands relative to the slide that is current, in boxes
+     (see paintTravelProgress). Declared, so that it is a NUMBER the browser can
+     interpolate: the trait an indicator draws has to travel with the slides,
+     and an undeclared custom property only ever jumps from one value to the
+     next. Inherited, so anything drawn inside the box can read it, and 0 by
+     default — at rest there is nothing to lean towards. */
+  @property --slide-travel-progress {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+
   /* Every slide in the same grid cell: the box then measures itself on the
      LARGEST of them, in both directions, without anything being measured by
      hand — which is also why nothing here resizes as the slides change. Each
@@ -259,63 +274,6 @@ const hurryTravel = (animation) => {
   animation.playbackRate = rate > HURRY_RATE_MAX ? HURRY_RATE_MAX : rate;
 };
 
-// How far a pointer goes before it is a travel rather than a click: below this
-// a press that wandered a pixel is still a press, and the slides do not budge.
-const DRAG_START_THRESHOLD = 10;
-// How much of a box has to be pulled for letting go to carry on rather than put
-// the slide back. Under half, because a gesture that has clearly begun is an
-// intention: asking for the slide to be dragged all the way across turns a
-// travel into work.
-const DRAG_COMMIT_RATIO = 0.3;
-// A flick travels whatever the distance: the hand said "away" quickly, which is
-// the whole gesture — px/ms of pointer, and a few pixels to tell it from a tap
-// that shook.
-const DRAG_FLICK_VELOCITY = 0.4;
-const DRAG_FLICK_DISTANCE = 8;
-// Pulling towards nothing: the track follows at a fraction of the finger, so
-// the gesture is answered (something moves) while saying there is nothing that
-// way. Let go and it comes back — a wall one can lean on, never walk through.
-const DRAG_RESISTANCE = 0.3;
-// What a drag must not start on: something that reads the pointer itself. A
-// button or a link is not in the list — dragging from one travels, and the
-// click it would have made is swallowed on the way out (see onDragEnd).
-const DRAG_EXCLUDED_SELECTOR = [
-  "input",
-  "textarea",
-  "select",
-  '[contenteditable=""]',
-  '[contenteditable="true"]',
-  "[data-no-slide-drag]",
-].join(",");
-
-// A scroller between the pointer and the slide it is in, with room left the way
-// the gesture goes: it gets the gesture, and the slides stay where they are —
-// dragging a row that scrolls sideways scrolls that row, and only a row with
-// nowhere left to go hands the travel over.
-const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
-  let element = fromElement;
-  while (element && element !== stopElement && element.nodeType === 1) {
-    const size = axis === "x" ? element.clientWidth : element.clientHeight;
-    const scrollSize =
-      axis === "x" ? element.scrollWidth : element.scrollHeight;
-    if (scrollSize > size + 1) {
-      const { overflowX, overflowY } = getComputedStyle(element);
-      const overflow = axis === "x" ? overflowX : overflowY;
-      if (overflow === "auto" || overflow === "scroll") {
-        const position = axis === "x" ? element.scrollLeft : element.scrollTop;
-        // Dragging the content one way reveals what is on the other side of
-        // it: to the right means going back up the scroll.
-        const room = sign > 0 ? position : scrollSize - size - position;
-        if (room > 1) {
-          return true;
-        }
-      }
-    }
-    element = element.parentElement;
-  }
-  return false;
-};
-
 // Which axes the map has anything on, read from the layout alone: it is what
 // says which way a touch may travel, and a touch is answered before any of the
 // DOM below has been looked at.
@@ -428,6 +386,24 @@ const durationToMs = (duration) => {
   return String(duration).trimEnd().endsWith("ms") ? number : number * 1000;
 };
 
+// What asked for a travel, read off the event that carried it: the hand said
+// "somewhere over there" (a gesture one browses with), or it said a name (a tab
+// pressed, a key, a command — a place aimed at). Nothing at all when the travel
+// came from code, which has no interaction to speak of.
+const causeOfEvent = (event) => {
+  if (!event) {
+    return "code";
+  }
+  const { type } = event;
+  if (type === "pointerup" || type === "pointercancel") {
+    return "drag";
+  }
+  if (type === "keydown" || type === "keyup") {
+    return "keyboard";
+  }
+  return "command";
+};
+
 const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
@@ -456,7 +432,21 @@ const readArea = (slideElement) =>
  *   it says where one starts, not where one is — say `current` for that.
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
- * @param {(area: string) => void} [props.onCurrentChange]
+ * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
+ *   - the slide being shown has changed. `cause` says what asked for it, which
+ *   is what tells a place browsed past from a place aimed at: a caller writing
+ *   this into the URL pushes a history entry for a tab that was pressed and
+ *   replaces the current one for a slide that was dragged, so three swipes back
+ *   and forth do not bury the way out of the page.
+ *   Answer `false` to REFUSE the change and the slide goes back where it came
+ *   from — a guard that says no, a session that is gone. A promise refuses it
+ *   late, once whatever it had to ask has answered; the travel plays meanwhile
+ *   and is undone if the answer is no.
+ * @param {"now"|"rest"} [props.commit="now"] - when the change is told.
+ *   "rest" waits for the travel to be over, and lets the container hold the
+ *   slide it is going to meanwhile: the picture moves with the finger and the
+ *   caller is told once, at the end. For a change that costs something or shows
+ *   somewhere — the URL, a server — and cannot be asked for per frame.
  * @param {boolean} [props.loop] - the slides are a window over something
  *   endless (days, months, a carousel) rather than places one stays at. A
  *   travel plays as usual and then the window comes back to the slide it rests
@@ -487,6 +477,7 @@ export const SlideContainer = ({
   current: currentProp,
   defaultCurrent,
   onCurrentChange,
+  commit = "now",
   loop,
   onLoop,
   travelByKeyboard = true,
@@ -504,6 +495,15 @@ export const SlideContainer = ({
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
   const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
+  // The slide this container is travelling to while its controller has not been
+  // told yet (commit="rest"): for the length of that travel the container is
+  // ahead of whoever holds `current`, and this is where it keeps its own answer
+  // — dropped as soon as the controller has caught up, or the change was
+  // refused.
+  const [provisionalArea, setProvisionalArea] = useState(null);
+  // The change waiting for the travel to be over: what to tell the caller, and
+  // what to put back if they refuse it.
+  const commitAtRestRef = useRef(null);
   // Where the window is while it rolls, and nothing more: a looping container
   // rests where it rested before (below), so this is the travel itself rather
   // than a change of slide.
@@ -557,7 +557,13 @@ export const SlideContainer = ({
   // track rests: a slide let go of halfway carries on from under the finger.
   // Read and dropped by the layout effect, which is the one drawing it.
   const travelFromRef = useRef(null);
-  const current = rollingArea ?? currentProp ?? currentAreaState;
+  // The same fact for the indicator (--slide-travel-progress): how far the
+  // picture is from the slide ARRIVING when the travel starts, in boxes. Null
+  // for a travel nobody dragged, where a whole box is what is left to close.
+  const travelProgressFromRef = useRef(null);
+  const progressAnimationRef = useRef(null);
+  const current =
+    rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
   const dragAxes = useMemo(
     () => (travelByDrag ? dragAxesOf(layout) : null),
@@ -580,6 +586,19 @@ export const SlideContainer = ({
   // state: nothing on screen depends on it, and a travel must read what the
   // one before it wrote, not what the last render saw.
   const cameFromRef = useRef({});
+
+  // The controller has caught up with the slide the container went to on its
+  // own (commit="rest"): there are no longer two answers to give, so the
+  // container gives its own up rather than holding a copy that can go stale.
+  useLayoutEffect(() => {
+    if (provisionalArea === null) {
+      return;
+    }
+    const heldOutside = currentProp ?? currentAreaState;
+    if (heldOutside === provisionalArea) {
+      setProvisionalArea(null);
+    }
+  }, [provisionalArea, currentProp, currentAreaState]);
 
   // The travel is given back as soon as the picture it must not animate has
   // been painted: one frame with it off is all it takes.
@@ -684,6 +703,9 @@ export const SlideContainer = ({
     }
     stageRef.current = null;
     trackAnimationRef.current = null;
+    // At rest the picture IS the current slide, whatever the last gesture wrote
+    // there: an indicator has nothing left to lean towards.
+    paintTravelProgress(0);
     for (const slideElement of slideElements) {
       const { x, y } = placeOf.get(readArea(slideElement)) || { x: 0, y: 0 };
       slideElement.style.setProperty(
@@ -701,6 +723,20 @@ export const SlideContainer = ({
     const offset = `${-x * 100}% ${-y * 100}%`;
     offsetRef.current = offset;
     track.style.setProperty("--slide-container-offset", offset);
+    // Arrived, so the change can be told (commit="rest"): the picture is at
+    // rest and whatever the caller does with it — write the URL, ask a server —
+    // costs the gesture nothing anymore.
+    const commitAtRest = commitAtRestRef.current;
+    if (commitAtRest && commitAtRest.area === currentArea) {
+      commitAtRestRef.current = null;
+      answerCurrentChange(
+        onCurrentChange(commitAtRest.area, {
+          cause: commitAtRest.cause,
+          event: commitAtRest.event,
+        }),
+        commitAtRest.leftArea,
+      );
+    }
   };
 
   // Everything positional is decided here, from the DOM, once per render: where
@@ -730,6 +766,9 @@ export const SlideContainer = ({
       stageRef.current = null;
     }
     let stage = stageRef.current;
+    // Which way this travel goes, kept for the indicator: a whole box lies
+    // between the picture and the slide arriving, on the axis it walks.
+    let travelStep = null;
     const drawnArea = stage ? stage.area : drawnAreaRef.current;
     const travelStarts =
       !noTravel &&
@@ -750,6 +789,7 @@ export const SlideContainer = ({
         x: Math.sign(realPlaceOf(currentArea).x - realPlaceOf(drawnArea).x),
         y: Math.sign(realPlaceOf(currentArea).y - realPlaceOf(drawnArea).y),
       };
+      travelStep = step;
       // Kept, not replaced: the slides a chain of quick presses has already
       // left behind are still trailing off screen, and taking them off stage
       // now would blink them out mid-travel.
@@ -886,6 +926,13 @@ export const SlideContainer = ({
         [{ translate: offsetBefore }, { translate: offset }],
         { duration: durationMs * travelRatio, easing },
       );
+      // The trait travels with the slides: from where the gesture left it when
+      // there was one, from a whole box away when the travel was asked for.
+      const progressFrom =
+        travelProgressFromRef.current ??
+        (travelStep ? travelStep.x || travelStep.y : 0);
+      travelProgressFromRef.current = null;
+      animateTravelProgress(progressFrom, durationMs * travelRatio, easing);
       // Presses still waiting behind this one: it is already late, so it is
       // sent home at once rather than played out at the pace of someone who
       // has stopped pressing. Someone pressing → four times is asking to be
@@ -1069,9 +1116,52 @@ export const SlideContainer = ({
       };
       return true;
     }
+    const leftArea = readArea(currentElement);
     setCurrentAreaState(area);
-    onCurrentChange?.(area);
+    if (!onCurrentChange) {
+      return true;
+    }
+    // What asked for this, read off the interaction rather than carried down
+    // from every caller: it is a fact about the event, and the event is here.
+    // A caller writing the change somewhere that keeps a trace — the URL, a
+    // history — needs it to know whether a place was aimed at or browsed past.
+    const cause = causeOfEvent(event);
+    if (commit === "rest") {
+      // The travel first, the change once it is over: a caller putting it
+      // somewhere expensive or visible (the URL, the address bar, a server)
+      // must not be asked for it sixty times a second, and the picture must not
+      // wait for it either. The container holds the slide it is travelling to
+      // until the answer comes — being ahead of its controller for the length of
+      // one travel is the whole point.
+      setProvisionalArea(area);
+      commitAtRestRef.current = { area, leftArea, cause, event };
+      return true;
+    }
+    answerCurrentChange(onCurrentChange(area, { cause, event }), leftArea);
     return true;
+  };
+
+  // What a caller says back about a change it was told about: nothing, or a
+  // refusal. `false` refuses it — a guard that says no, a session that is gone —
+  // and a promise refuses it late, once whatever it had to ask has answered. A
+  // refused change is undone here, so what one sees never disagrees with what
+  // the caller holds: the slide goes back where it came from.
+  const answerCurrentChange = (answer, leftArea) => {
+    if (answer === false) {
+      goBackToRefusedArea(leftArea);
+      return;
+    }
+    if (answer && typeof answer.then === "function") {
+      answer.then((value) => {
+        if (value === false) {
+          goBackToRefusedArea(leftArea);
+        }
+      });
+    }
+  };
+  const goBackToRefusedArea = (leftArea) => {
+    setProvisionalArea(null);
+    setCurrentAreaState(leftArea);
   };
 
   // The press kept during a roll, taken once the window rests and the travel is
@@ -1246,6 +1336,58 @@ export const SlideContainer = ({
     const y = drag.baseOffset.y + drag.pull.y;
     drag.offset = `${x}px ${y}px`;
     track.style.setProperty("--slide-container-offset", drag.offset);
+    paintTravelProgress(drag.progress, drag.areaPulled);
+  };
+
+  // Where the picture stands relative to the slide that is CURRENT, in boxes:
+  // 0 on it, +1 one whole box before it, -1 one box after. Written on the
+  // container so an indicator drawn inside the box — a tab bar, a dot row, a
+  // trait — follows the finger in CSS alone, with nothing measured and no
+  // render per frame. Said about the current slide rather than about the
+  // gesture, so the number stays continuous when the travel commits and the
+  // current slide changes under it.
+  const paintTravelProgress = (progress, area) => {
+    const containerEl = containerRef.current;
+    if (!containerEl) {
+      return;
+    }
+    if (!progress) {
+      containerEl.style.removeProperty("--slide-travel-progress");
+      containerEl.removeAttribute("data-slide-travel-to");
+      return;
+    }
+    containerEl.style.setProperty("--slide-travel-progress", progress);
+    if (area) {
+      containerEl.setAttribute("data-slide-travel-to", area);
+    } else {
+      containerEl.removeAttribute("data-slide-travel-to");
+    }
+  };
+
+  // The indicator, brought home at the pace of the travel it belongs to: the
+  // same duration and the same easing as the track, so the trait and the slides
+  // are one movement. The value it lands on is the one nothing writes (0), so
+  // the animation is left to fall away on its own.
+  const animateTravelProgress = (from, durationMs, easing) => {
+    const containerEl = containerRef.current;
+    progressAnimationRef.current?.cancel();
+    progressAnimationRef.current = null;
+    paintTravelProgress(0);
+    if (!containerEl || !from || !durationMs) {
+      return;
+    }
+    progressAnimationRef.current = containerEl.animate(
+      [{ "--slide-travel-progress": from }, { "--slide-travel-progress": 0 }],
+      { duration: durationMs, easing },
+    );
+    progressAnimationRef.current.finished.then(
+      () => {
+        progressAnimationRef.current = null;
+      },
+      () => {
+        // cancelled by the next travel — that one says where the trait goes
+      },
+    );
   };
 
   // The two slides the gesture can bring in, placed one box either side of the
@@ -1300,9 +1442,15 @@ export const SlideContainer = ({
     trackAnimationRef.current = null;
     track.style.setProperty("--slide-container-offset", restOffset);
     if (!durationMs || !pulled) {
+      paintTravelProgress(0);
       settleTravel();
       return;
     }
+    animateTravelProgress(
+      drag.progress,
+      durationMs * (pulled / size),
+      "ease-out",
+    );
     const animation = track.animate(
       [{ translate: drag.offset }, { translate: restOffset }],
       { duration: durationMs * (pulled / size), easing: "ease-out" },
@@ -1313,209 +1461,11 @@ export const SlideContainer = ({
     });
   };
 
-  const onDragMove = (pointerMoveEvent) => {
-    const drag = dragRef.current;
-    if (!drag || pointerMoveEvent.pointerId !== drag.pointerId) {
-      return;
-    }
-    if (!drag.axis) {
-      const reachX = Math.abs(pointerMoveEvent.clientX - drag.startX);
-      const reachY = Math.abs(pointerMoveEvent.clientY - drag.startY);
-      if (reachX < DRAG_START_THRESHOLD && reachY < DRAG_START_THRESHOLD) {
-        return;
-      }
-      // ONE axis, decided by the first few pixels and never revisited: a
-      // diagonal gesture would ask for two travels at once and only one slide
-      // can arrive — so the finger picks the axis it leans on, and the slides
-      // walk that one alone.
-      const axis = reachX >= reachY ? "x" : "y";
-      const sign =
-        axis === "x"
-          ? Math.sign(pointerMoveEvent.clientX - drag.startX)
-          : Math.sign(pointerMoveEvent.clientY - drag.startY);
-      const areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
-      const areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
-      // Everything positional is read HERE rather than when the pointer landed:
-      // the travel that was playing then may have arrived since, and it is what
-      // the slides are doing at the moment the gesture takes them over that the
-      // gesture must carry on from.
-      const track = trackRef.current;
-      const { slideElements, placeOf } = readMap();
-      const currentElement =
-        slideElements.find((slideElement) =>
-          slideElement.hasAttribute("data-current"),
-        ) || slideElements[0];
-      const box = track.getBoundingClientRect();
-      if (
-        (!areaBack && !areaOn) ||
-        !currentElement ||
-        !box.width ||
-        !box.height ||
-        scrollRoomTowards(drag.target, currentElement, axis, sign)
-      ) {
-        // Nothing that way, or something else with a better claim on the
-        // gesture: given up rather than half-taken, so whatever else wants it
-        // (a scroller, the page) gets it whole.
-        drag.stop();
-        dragRef.current = null;
-        return;
-      }
-      const area = readArea(currentElement);
-      // Where the slide being dragged stands: where the stage put it while a
-      // travel is playing, its place on the map otherwise.
-      const stage = stageRef.current;
-      const basePlace = stage?.placeByArea.get(area) ||
-        placeOf.get(area) || { x: 0, y: 0 };
-      const baseOffset = {
-        x: -basePlace.x * box.width,
-        y: -basePlace.y * box.height,
-      };
-      // Where the track IS, taken over from whatever was playing: a travel
-      // grabbed mid-flight carries on from under the finger, so the animation
-      // is dropped and its position kept.
-      const onScreen =
-        trackAnimationRef.current?.playState === "running"
-          ? offsetToPx(getComputedStyle(track).translate, box)
-          : baseOffset;
-      trackAnimationRef.current?.cancel();
-      trackAnimationRef.current = null;
-      drag.axis = axis;
-      drag.areaBack = areaBack;
-      drag.areaOn = areaOn;
-      drag.area = area;
-      drag.box = box;
-      drag.basePlace = basePlace;
-      drag.baseOffset = baseOffset;
-      // Where the track was when the gesture took it over — nowhere, unless it
-      // was travelling. Every pull is measured from it.
-      drag.slack = {
-        x: onScreen.x - baseOffset.x,
-        y: onScreen.y - baseOffset.y,
-      };
-      drag.pull = { ...drag.slack };
-      // The pixels spent deciding are not pulled back: the slide starts moving
-      // from where the finger is now, so it follows it exactly rather than
-      // jumping the threshold it just crossed.
-      drag.startX = pointerMoveEvent.clientX;
-      drag.startY = pointerMoveEvent.clientY;
-      stageDrag(drag);
-      drag.lastPosition =
-        axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
-      drag.lastTime = pointerMoveEvent.timeStamp;
-      containerRef.current.toggleAttribute("data-slide-dragging", true);
-      // Every move from here on, wherever the finger wanders — off the box, off
-      // the window — and the release with it.
-      containerRef.current.setPointerCapture(drag.pointerId);
-    }
-    const { axis } = drag;
-    const size = axis === "x" ? drag.box.width : drag.box.height;
-    const moved =
-      axis === "x"
-        ? pointerMoveEvent.clientX - drag.startX
-        : pointerMoveEvent.clientY - drag.startY;
-    // Measured from where the gesture took the track over, never from what the
-    // move before it painted: the resistance below would otherwise be applied
-    // again to a value it has already shrunk, and a finger going nowhere would
-    // see the slide creep back on its own.
-    let pulled = drag.slack[axis] + moved;
-    // Which slide is being pulled in: dragging the track to the right brings in
-    // the one on the left, which is the one BEFORE it.
-    const areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
-    if (!areaPulled) {
-      pulled *= DRAG_RESISTANCE;
-    }
-    if (pulled > size) {
-      pulled = size;
-    } else if (pulled < -size) {
-      pulled = -size;
-    }
-    drag.pull = { ...drag.pull, [axis]: pulled };
-    paintDrag();
-    // How fast the hand is going, so that letting go says something a distance
-    // cannot: a short flick travels, a long slow drag put back does not.
-    const position =
-      axis === "x" ? pointerMoveEvent.clientX : pointerMoveEvent.clientY;
-    const elapsed = pointerMoveEvent.timeStamp - drag.lastTime;
-    if (elapsed > 0) {
-      const instant = (position - drag.lastPosition) / elapsed;
-      drag.velocity = drag.velocity * 0.4 + instant * 0.6;
-    }
-    drag.lastPosition = position;
-    drag.lastTime = pointerMoveEvent.timeStamp;
-  };
-
-  const onDragEnd = (pointerEvent) => {
-    const drag = dragRef.current;
-    if (!drag || pointerEvent.pointerId !== drag.pointerId) {
-      return;
-    }
-    drag.stop();
-    dragRef.current = null;
-    containerRef.current?.removeAttribute("data-slide-dragging");
-    if (!drag.axis) {
-      // A press that never became a gesture: nothing was staged, nothing moved.
-      return;
-    }
-    // The click the browser makes of a press that travelled: swallowed, or
-    // letting go over a button would press it. Capture, so it never reaches
-    // what it landed on, and dropped right after in case none comes.
-    const swallowClick = (clickEvent) => {
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-    };
-    document.addEventListener("click", swallowClick, { capture: true });
-    setTimeout(() => {
-      document.removeEventListener("click", swallowClick, { capture: true });
-    });
-    const { axis } = drag;
-    const size = axis === "x" ? drag.box.width : drag.box.height;
-    const pulled = drag.pull[axis];
-    const sign = pulled > 0 ? 1 : -1;
-    const areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
-    // A hand that stopped before letting go has said "here", whatever it was
-    // doing a moment earlier — so the speed only counts while it is still going.
-    const velocity =
-      pointerEvent.timeStamp - drag.lastTime > 100 ? 0 : drag.velocity;
-    const flicked =
-      Math.abs(velocity) > DRAG_FLICK_VELOCITY &&
-      Math.sign(velocity) === sign &&
-      Math.abs(pulled) > DRAG_FLICK_DISTANCE;
-    const travels =
-      // A gesture taken away rather than let go of (the browser scrolling
-      // something else, a call coming in) said nothing: the slide goes back.
-      pointerEvent.type !== "pointercancel" &&
-      areaPulled &&
-      (flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO);
-    if (!travels) {
-      returnToRest(drag);
-      return;
-    }
-    // Where the slide is being left, for the travel to depart from instead of
-    // from the map.
-    travelFromRef.current = drag.offset;
-    const moved =
-      axis === "x"
-        ? move(-sign, 0, pointerEvent)
-        : move(0, -sign, pointerEvent);
-    if (!moved) {
-      // Nowhere to go after all — a slide holding on to the user (preventNav).
-      travelFromRef.current = null;
-      returnToRest(drag);
-      return;
-    }
-    // A container whose `current` is held outside and was not moved: nothing
-    // rendered, so nothing drew the travel and the track is still under where
-    // the finger left it. One frame is all it takes to know.
-    requestAnimationFrame(() => {
-      if (travelFromRef.current) {
-        travelFromRef.current = null;
-        returnToRest(drag);
-      }
-    });
-  };
-
+  // A press on the box, handed to the one thing that knows what a drag-travel
+  // is (see drag_travel.js): the rules of the gesture are read there, the
+  // geometry of the slides here.
   const startDrag = (pointerDownEvent) => {
-    if (!travelByDrag || dragRef.current || pointerDownEvent.button !== 0) {
+    if (!travelByDrag || dragRef.current) {
       return;
     }
     // A window mid-roll has nothing to drag yet: it is on its way somewhere and
@@ -1523,62 +1473,152 @@ export const SlideContainer = ({
     if (rollingRef.current) {
       return;
     }
-    const target = pointerDownEvent.target;
-    if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
-      return;
-    }
-    const containerEl = containerRef.current;
-    const onMove = (pointerMoveEvent) => {
-      onDragMove(pointerMoveEvent);
-    };
-    const onEnd = (pointerEvent) => {
-      onDragEnd(pointerEvent);
-    };
-    // The browser's own drag, which a mouse starts on a link or an image after
-    // a few pixels: it would take the pointer away mid-gesture and leave the
-    // slides hanging.
-    const preventNativeDrag = (dragStartEvent) => {
-      dragStartEvent.preventDefault();
-    };
-    const stop = () => {
-      containerEl.removeEventListener("pointermove", onMove);
-      containerEl.removeEventListener("dragstart", preventNativeDrag);
-      window.removeEventListener("pointerup", onEnd);
-      window.removeEventListener("pointercancel", onEnd);
-    };
-    dragRef.current = {
-      pointerId: pointerDownEvent.pointerId,
-      target,
-      startX: pointerDownEvent.clientX,
-      startY: pointerDownEvent.clientY,
-      // Nothing but a press so far: the axis, the slides either side of the one
-      // being dragged and where they all stand are read the moment the finger
-      // says which way it is going (see onDragMove).
+    // The travel in hand, as the slides see it: where the one being dragged
+    // stands, what is either side of it, and how far the finger has taken it.
+    const drag = {
       axis: null,
+      area: null,
       areaBack: null,
       areaOn: null,
-      slack: { x: 0, y: 0 },
+      areaPulled: null,
+      box: null,
+      basePlace: null,
+      baseOffset: null,
       pull: { x: 0, y: 0 },
+      progress: 0,
       offset: null,
-      velocity: 0,
-      lastPosition: 0,
-      lastTime: pointerDownEvent.timeStamp,
-      stop,
+      gesture: null,
     };
-    containerEl.addEventListener("pointermove", onMove);
-    containerEl.addEventListener("dragstart", preventNativeDrag);
-    // On the window, not on the box: a pointer released outside it (or taken
-    // away by the browser) must still end the gesture, or the slides would stay
-    // where the finger left them.
-    window.addEventListener("pointerup", onEnd);
-    window.addEventListener("pointercancel", onEnd);
+    const gesture = startDragTravel(pointerDownEvent, {
+      element: containerRef.current,
+      axes: dragAxes,
+      onStart: ({ axis, sign, target }) => {
+        const areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
+        const areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
+        // Everything positional is read HERE rather than when the pointer
+        // landed: the travel that was playing then may have arrived since, and
+        // it is what the slides are doing at the moment the gesture takes them
+        // over that the gesture must carry on from.
+        const track = trackRef.current;
+        const { slideElements, placeOf } = readMap();
+        const currentElement =
+          slideElements.find((slideElement) =>
+            slideElement.hasAttribute("data-current"),
+          ) || slideElements[0];
+        const box = track.getBoundingClientRect();
+        if (
+          (!areaBack && !areaOn) ||
+          !currentElement ||
+          !box.width ||
+          !box.height ||
+          // Something else with a better claim on the gesture: a scroller
+          // between the finger and the slide, with room left that way.
+          scrollRoomTowards(target, currentElement, axis, sign)
+        ) {
+          return false;
+        }
+        const area = readArea(currentElement);
+        // Where the slide being dragged stands: where the stage put it while a
+        // travel is playing, its place on the map otherwise.
+        const stage = stageRef.current;
+        const basePlace = stage?.placeByArea.get(area) ||
+          placeOf.get(area) || { x: 0, y: 0 };
+        const baseOffset = {
+          x: -basePlace.x * box.width,
+          y: -basePlace.y * box.height,
+        };
+        // Where the track IS, taken over from whatever was playing: a travel
+        // grabbed mid-flight carries on from under the finger, so the animation
+        // is dropped and its position kept.
+        const onScreen =
+          trackAnimationRef.current?.playState === "running"
+            ? offsetToPx(getComputedStyle(track).translate, box)
+            : baseOffset;
+        trackAnimationRef.current?.cancel();
+        trackAnimationRef.current = null;
+        progressAnimationRef.current?.cancel();
+        progressAnimationRef.current = null;
+        drag.axis = axis;
+        drag.areaBack = areaBack;
+        drag.areaOn = areaOn;
+        drag.area = area;
+        drag.box = box;
+        drag.basePlace = basePlace;
+        drag.baseOffset = baseOffset;
+        const size = axis === "x" ? box.width : box.height;
+        // Where the track was when the gesture took it over — nowhere, unless
+        // it was travelling. Every pull is measured from it.
+        const slack =
+          axis === "x" ? onScreen.x - baseOffset.x : onScreen.y - baseOffset.y;
+        drag.pull = { x: 0, y: 0, [axis]: slack };
+        drag.progress = slack / size;
+        stageDrag(drag);
+        containerRef.current.toggleAttribute("data-slide-dragging", true);
+        return {
+          size,
+          slack,
+          travelBack: Boolean(areaBack),
+          travelOn: Boolean(areaOn),
+        };
+      },
+      onPull: ({ axis, pulled, progress }) => {
+        drag.pull = { ...drag.pull, [axis]: pulled };
+        drag.progress = progress;
+        drag.areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
+        paintDrag();
+      },
+      onEnd: ({ axis, sign, travels, event }) => {
+        dragRef.current = null;
+        containerRef.current?.removeAttribute("data-slide-dragging");
+        if (!travels) {
+          returnToRest(drag);
+          return;
+        }
+        // Where the slide is being left, for the travel to depart from instead
+        // of from the map.
+        travelFromRef.current = drag.offset;
+        // …and where the indicator is being left, said about the slide that is
+        // ARRIVING: the picture is `sign` of a box short of it, and that is
+        // what the travel about to be drawn has to close.
+        travelProgressFromRef.current = drag.progress - sign;
+        const moved =
+          axis === "x" ? move(-sign, 0, event) : move(0, -sign, event);
+        if (!moved) {
+          // Nowhere to go after all — a slide holding on to the user
+          // (preventNav), or a caller that refused the change.
+          travelFromRef.current = null;
+          travelProgressFromRef.current = null;
+          returnToRest(drag);
+          return;
+        }
+        // A container whose `current` is held outside and was not moved:
+        // nothing rendered, so nothing drew the travel and the track is still
+        // under where the finger left it. One frame is all it takes to know.
+        requestAnimationFrame(() => {
+          if (travelFromRef.current) {
+            travelFromRef.current = null;
+            travelProgressFromRef.current = null;
+            returnToRest(drag);
+          }
+        });
+      },
+      onGiveUp: () => {
+        dragRef.current = null;
+      },
+    });
+    if (!gesture) {
+      return;
+    }
+    drag.gesture = gesture;
+    dragRef.current = drag;
   };
 
   // A gesture is listening on things that outlive this component.
   useLayoutEffect(() => {
     return () => {
-      dragRef.current?.stop();
+      dragRef.current?.gesture?.stop();
       dragRef.current = null;
+      progressAnimationRef.current?.cancel();
     };
   }, []);
 

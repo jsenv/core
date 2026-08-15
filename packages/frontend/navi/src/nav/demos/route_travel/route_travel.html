@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RouteTravel Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .phone {
+        display: flex;
+        width: 360px;
+        height: 560px;
+        flex-direction: column;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .top_bar {
+        position: relative;
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .tab_row {
+        display: flex;
+      }
+      .tab {
+        padding: 12px 8px;
+        flex: 1;
+        color: #444;
+        font-size: 14px;
+        text-align: center;
+        text-decoration: none;
+      }
+      .tab[data-href-current] {
+        color: #0a58ca;
+        font-weight: 600;
+      }
+      .tab_underline {
+        position: absolute;
+        bottom: 0;
+        height: 3px;
+        background: #0a58ca;
+        /* Named, so it slides from one tab to the other on the same clock as
+           the pages — under the finger while it drags them. */
+        view-transition-name: demo-tab-underline;
+      }
+      .page {
+        height: 100%;
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        border-radius: 8px;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .demo-section {
+        max-width: 700px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import {
+        Link,
+        Route,
+        RouteTravel,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const UPCOMING_ROUTE = route("/upcoming");
+      const REQUESTS_ROUTE = route("/requests");
+      const FINISHED_ROUTE = route("/finished");
+      const TABS = [
+        { route: UPCOMING_ROUTE, label: "À venir", color: "#e8f0fe" },
+        { route: REQUESTS_ROUTE, label: "Mes demandes", color: "#fdf0e8" },
+        { route: FINISHED_ROUTE, label: "Terminées", color: "#eaf7ec" },
+      ];
+      setupRoutes(TABS.map(({ route }) => route));
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // The page has no tab of its own: it goes to the first one, the way a
+      // section opens on its first page.
+      const TabIndex = () => {
+        useLayoutEffect(() => {
+          UPCOMING_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const Page = ({ label, color, rows }) => (
+        <div className="page" style={{ background: color }}>
+          {Array.from({ length: rows }, (_, index) => (
+            <div
+              key={index}
+              className="page_row"
+              style={{ background: "rgba(255,255,255,0.75)" }}
+            >
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const TabRow = () => {
+        const currentIndex = TABS.findIndex(
+          ({ route }) => route.matchingSignal.value,
+        );
+        return (
+          <div className="top_bar">
+            <div className="tab_row">
+              {TABS.map(({ route, label }) => (
+                <Link key={label} className="tab" route={route}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <div
+              className="tab_underline"
+              style={{
+                width: `${100 / TABS.length}%`,
+                left: `${(100 / TABS.length) * currentIndex}%`,
+              }}
+            />
+          </div>
+        );
+      };
+
+      const Phone = () => (
+        <div className="phone">
+          <TabRow />
+          <RouteTravel className="travel_box">
+            <Route>
+              {TABS.map(({ route, label, color }) => (
+                <Route
+                  key={label}
+                  route={route}
+                  element={Page}
+                  elementProps={{
+                    label,
+                    color,
+                    rows: label === "Terminées" ? 40 : 6,
+                  }}
+                />
+              ))}
+              <Route fallback element={TabIndex} />
+            </Route>
+          </RouteTravel>
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <DemoHeader title="RouteTravel" />
+          <div className="demo-section">
+            <h2>Table of contents</h2>
+            <DocumentToc />
+          </div>
+          <div className="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <Phone />
+          </div>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

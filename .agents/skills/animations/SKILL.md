@@ -106,12 +106,17 @@ slower.
 ## View transitions
 
 `document.startViewTransition` takes a callback that **makes the DOM change**,
-so it can only be called by whoever owns the state:
+so it can only be called by whoever owns the change:
 
-- **navi never starts one.** A component sees the change only once the DOM
-  already holds it — too late to capture the "before". navi declares what an
-  element does in a transition (names, keyframes); the application wraps its
-  own state change. _Reference: `itemTransition` on List._
+- **A component that does not own the change never starts one.** It sees the
+  change only once the DOM already holds it — too late to capture the "before".
+  It declares instead what an element does in a transition (names, keyframes),
+  and the application wraps its own state change. That is most of navi.
+  _Reference: `itemTransition` on List._
+- **A component that DOES own the change starts it itself**, and that is not an
+  exception to the rule above but the same rule read the other way. A component
+  that navigates — it is the one calling the router — holds the "before" until
+  it decides to leave it. _Reference: `beginTravel` in route_travel.jsx._
 - **Call it through `ensureDocumentStartViewTransition()`**
   (navi/src/transition): installs the API where missing, runs the update
   whatever happens, and swallows the rejection a _skipped_ transition produces
@@ -120,7 +125,11 @@ so it can only be called by whoever owns the state:
 - **Keep the page out of it**: `:root { view-transition-name: none }`. The UA
   names the root `root`, so by default the whole document is replaced by a
   picture for the duration — the page stops rendering live under it. Opted
-  out, only the named elements are captured.
+  out, only the named elements are captured. The reverse is true of a
+  transition that moves whole screens past each other (below): there the page
+  MUST be a picture, or it renders live beside the pictures being moved — so
+  such a transition asks for the root back while it plays rather than assuming
+  either rule.
 
 Facts worth knowing before reaching for one:
 
@@ -144,15 +153,69 @@ Facts worth knowing before reaching for one:
   user IS looking at (the rule above). Start one only when what changes is
   what the user is watching.
 
+## A movement a finger drives, when only the state has the second picture
+
+Some movements show two states at once while only one of them can exist in the
+DOM: a router mounts the page that matches the URL and nothing else, and a
+swipe between two of them needs both. The way out is not to mount what does not
+exist — it is to let the **state lead and the picture follow**: change the state
+first, and hand the picture the browser kept of the "before" to the finger.
+
+The gesture then drives a transition instead of driving pixels:
+
+- **Scrub, do not translate.** How the two pictures move is written in CSS
+  (keyframes on `::view-transition-old/new`); the finger only says how far in.
+  Take the animations on the pseudo-elements
+  (`document.getAnimations()`, `effect.pseudoElement`), **pause** them once
+  `ready` resolves, and set `currentTime = ratio * duration`. Nothing about the
+  movement is duplicated in JS, so it stays a CSS concern.
+- **Cancelling is the same movement backwards**, not a second one:
+  `playbackRate = -1` and play. A second transition would capture a picture of
+  the wrong "before".
+- **Put the state back UNDER the picture before dropping the picture.** When a
+  cancelled gesture has run the animations back to 0, what is on screen is the
+  old state; undo the state change, let it render, and only then skip the
+  transition. The two are identical at the instant they are swapped, so nothing
+  is seen changing. Dropping the picture first shows the state nobody asked for,
+  for one frame.
+- **The change is a `replace`, not a `push`.** A gesture browses; three swipes
+  back and forth must not bury the way out of the page under six history
+  entries. What is aimed at (a tab pressed) is the one that pushes.
+- **What must follow the gesture is NAMED, not told.** A trait under a tab row,
+  a header: give it its own `view-transition-name` and the browser animates it
+  from where it was to where it is, on the same clock. Nothing measures
+  anything, and it works for elements outside the box that travels.
+- **A browser with no view transitions has no "before"**, so there is nothing to
+  drag: read the gesture anyway and apply the change on release. Detect it
+  before `ensureDocumentStartViewTransition()` has installed the polyfill (it
+  marks itself `isPolyfill`).
+
+Two ways to lose an afternoon on this, both seen:
+
+- **Never wait for a frame inside the update callback.** The browser has
+  stopped rendering while it runs — it is waiting for that very promise before
+  taking its picture — so a `requestAnimationFrame` in there waits for a frame
+  that cannot come, and the transition hangs with the page frozen. Waiting for
+  the state to have rendered means waiting for **microtasks** (which is what a
+  signal-driven render costs), never for a frame.
+- **Clip on the pseudo-elements, never on your own box.** The pictures are
+  drawn in the top layer: no `overflow` anywhere in the document reaches them,
+  so a page sliding in is seen crossing whatever sits beside the box until
+  `::view-transition-group(name)` (and its `image-pair`) is told to clip.
+
+_Reference: `route_travel.jsx` (whole file), demo
+`src/nav/demos/route_travel/route_travel.html`._
+
 ## Which tool for which movement
 
-| What moves                             | Tool                        | Why                                                                                                                     |
-| -------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| A track between two positions (slides) | `element.animate()`         | Needs to be interruptible, and to report when it is over (`finished`) — a CSS transition has to be watched from outside |
-| A wheel gliding to a row               | rAF loop + spring           | The target moves while it plays; a fixed-duration animation cannot be re-aimed                                          |
-| Rows appearing/leaving/reordering      | View transitions            | The change is a DOM mutation; nothing else animates a row that stops existing                                           |
-| A dragged clone                        | `position: fixed` + popover | The top layer puts it over everything without bidding on z-index                                                        |
-| A state flip (colour, opacity, frost)  | CSS transition              | Nothing to interrupt, nothing to await                                                                                  |
+| What moves                                           | Tool                        | Why                                                                                                                     |
+| ---------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| A track between two positions (slides)               | `element.animate()`         | Needs to be interruptible, and to report when it is over (`finished`) — a CSS transition has to be watched from outside |
+| A wheel gliding to a row                             | rAF loop + spring           | The target moves while it plays; a fixed-duration animation cannot be re-aimed                                          |
+| Rows appearing/leaving/reordering                    | View transitions            | The change is a DOM mutation; nothing else animates a row that stops existing                                           |
+| A dragged clone                                      | `position: fixed` + popover | The top layer puts it over everything without bidding on z-index                                                        |
+| Two states only one of which can be mounted (routes) | Scrubbed view transition    | The picture of the "before" is the only place the second state exists                                                   |
+| A state flip (colour, opacity, frost)                | CSS transition              | Nothing to interrupt, nothing to await                                                                                  |
 
 ## First paint
 
