@@ -42,7 +42,31 @@ export const ensureDocumentStartViewTransition = () => {
   return startViewTransition;
 };
 
+// A transition a finger is holding still (see route_travel.jsx): it has to be
+// let go of before any other one starts, and this is the only place that knows
+// a new one is about to. There is a single transition per document — starting
+// one SKIPS the one in flight — and the hold that keeps pictures under a finger
+// is written against whatever transition is running, because everything the
+// gesture must carry along (a trait under a tab row) belongs to that same
+// transition and has no name of its own here. Left on, it takes hold of the
+// transition that has just replaced ours: born paused, held by nobody, it never
+// finishes, and its pictures stand over a page that cannot be touched anymore.
+let releaseHeldViewTransition = null;
+export const holdViewTransition = (release) => {
+  releaseHeldViewTransition = release;
+  return () => {
+    if (releaseHeldViewTransition === release) {
+      releaseHeldViewTransition = null;
+    }
+  };
+};
+
 const startViewTransition = (updateCallback) => {
+  if (releaseHeldViewTransition) {
+    const release = releaseHeldViewTransition;
+    releaseHeldViewTransition = null;
+    release();
+  }
   const viewTransition = document.startViewTransition(updateCallback);
   viewTransition.updateCallbackDone.catch(ignoreSkip);
   viewTransition.ready.catch(ignoreSkip);

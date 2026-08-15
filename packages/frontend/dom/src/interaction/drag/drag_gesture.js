@@ -630,15 +630,26 @@ export const createDragGestureController = (options = {}) => {
           target.addEventListener("pointermove", onMove);
           target.addEventListener("pointerup", onRelease);
           return () => {
+            // Listeners first, capture last: giving the pointer back is the
+            // one thing here that can throw, and a gesture that fails to clean
+            // up half way is worse than one that never cleaned up at all — its
+            // listeners stay on the element and answer the NEXT gesture, from
+            // a gesture whose pointer is long gone.
             window.removeEventListener("touchmove", preventTouchScroll, {
               capture: true,
             });
             grabTarget.removeEventListener("touchmove", preventTouchScroll);
-            target.releasePointerCapture(grabEvent.pointerId);
             target.removeEventListener("lostpointercapture", onCaptureLost);
             target.removeEventListener("pointercancel", onRelease);
             target.removeEventListener("pointermove", onMove);
             target.removeEventListener("pointerup", onRelease);
+            // Asked for only while there is something to give back: a pointer
+            // that is up no longer exists, the browser has already dropped the
+            // capture with it, and asking again throws ("No active pointer with
+            // the given id is found") — on the most ordinary release there is.
+            if (target.hasPointerCapture(grabEvent.pointerId)) {
+              target.releasePointerCapture(grabEvent.pointerId);
+            }
           };
         },
       );

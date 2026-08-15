@@ -41,7 +41,10 @@ import {
   watchWheelTravel,
 } from "../layout/drag_travel.js";
 import { collectRoutes } from "./route.jsx";
-import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
+import {
+  ensureDocumentStartViewTransition,
+  holdViewTransition,
+} from "../transition/start_view_transition_polyfill.js";
 
 // A browser with no view transitions of its own has no picture of the page
 // being left, so there is nothing to drag: the gesture is still read (it is how
@@ -318,6 +321,25 @@ export const RouteTravel = ({
       await nextRender();
     });
     travel.viewTransition = viewTransition;
+    if (scrub) {
+      // Said only now: the release has to have something to let go of, and the
+      // transition did not exist a line above.
+      travel.dropHold = holdViewTransition(() => {
+        viewTransition.skipTransition();
+        endTravel(travel);
+      });
+    }
+    // Another transition starting SKIPS this one — there is only ever one in a
+    // document. That must end the travel here and now, and above all lift the
+    // hold: the hold is written in CSS against whatever transition is running
+    // (it has to be, so that everything named — a trait under a tab row —
+    // follows the same finger), so left on it would take hold of the transition
+    // that has just replaced ours. Born paused, with nobody holding it, that
+    // one never finishes: its pictures stand over a page that cannot be
+    // touched anymore.
+    viewTransition.finished.catch(() => {
+      endTravel(travel);
+    });
     if (!scrub) {
       // Nobody is holding it: it plays as any transition does, and is over when
       // the browser says so.
@@ -395,6 +417,7 @@ export const RouteTravel = ({
   // the picture is dropped, so the two are the same thing at the moment they
   // are swapped and nothing is seen changing.
   const revertTravel = (travel) => {
+    travel.reverting = true;
     const animations = travelAnimations(travel);
     for (const animation of animations) {
       animation.playbackRate = -1;
@@ -409,18 +432,37 @@ export const RouteTravel = ({
         // way back is the state alone.
         Promise.resolve();
     backAtTheStart.then(async () => {
-      await onTravel({ route: travel.fromRoute, cause: "revert" });
-      await nextRender();
-      travel.viewTransition.skipTransition();
-      endTravel(travel);
+      try {
+        await onTravel({ route: travel.fromRoute, cause: "revert" });
+        await nextRender();
+        travel.viewTransition.skipTransition();
+      } finally {
+        // A travel ENDS, whatever happened on the way back: put the state back,
+        // fail to drop the picture, be interrupted by something else — the one
+        // thing that must not happen is a travel that stays "in flight"
+        // forever. Nothing would lift the hold, the pictures would stand where
+        // they are over a page that cannot be touched, and every gesture after
+        // this one would find the box busy.
+        endTravel(travel);
+      }
     });
   };
 
   // Taken back in hand: the pictures stop where they are and answer the finger
   // again (see the CSS hold).
   const holdTravel = (travel) => {
+    if (travel.ended || travel.reverting) {
+      return;
+    }
     travel.scrub = true;
     document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
+    // Whatever asks for a transition next takes ours away (there is one per
+    // document): it must find this one already let go of, or it inherits a hold
+    // nobody is holding.
+    travel.dropHold = holdViewTransition(() => {
+      travel.viewTransition?.skipTransition();
+      endTravel(travel);
+    });
   };
 
   const endTravel = (travel) => {
@@ -428,6 +470,8 @@ export const RouteTravel = ({
       return;
     }
     travel.ended = true;
+    travel.dropHold?.();
+    travel.dropHold = null;
     if (travelRef.current === travel) {
       travelRef.current = null;
       releaseHold();
@@ -455,7 +499,16 @@ export const RouteTravel = ({
         //
         // Never given up, even then: a gesture handed back to the browser is a
         // page that rocks under a travel that is already moving.
-        if (travelInFlight.noPicture || travelInFlight.ended) {
+        // A travel being undone is not up for grabs either: it is already on
+        // its way back and its end is decided. Held again mid-revert, its
+        // animations would never finish — and the wait for them never resolves,
+        // so the pictures stay where they are, over a page that cannot be
+        // touched anymore.
+        if (
+          travelInFlight.noPicture ||
+          travelInFlight.ended ||
+          travelInFlight.reverting
+        ) {
           return { size, travelBack: false, travelOn: false };
         }
         holdTravel(travelInFlight);
@@ -518,6 +571,10 @@ export const RouteTravel = ({
       gestureRef.current = null;
       const travel = travelRef.current;
       if (!travel) {
+        // The travel this gesture was holding ended under it. Nothing left to
+        // decide, but the hold is this gesture's own doing and nobody else will
+        // take it off — a hold nobody lifts is a page nobody can touch.
+        releaseHold();
         return;
       }
       if (travel.noPicture) {

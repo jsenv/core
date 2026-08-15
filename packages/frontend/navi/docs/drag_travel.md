@@ -100,6 +100,23 @@ from where they stand (`slack`) rather than from zero. Only one box is in hand:
 further along it carries on, back past its start is a wall — leaving that way
 would be another travel, and it needs a picture this one is holding.
 
+Two things a travel in hand must never lose:
+
+- **a travel being undone is not up for grabs.** Its end is already decided;
+  held again mid-revert, its animations never finish, the wait for them never
+  resolves — and the pictures stand where they are, over a page that cannot be
+  touched anymore;
+- **a held travel is let go of before anything else animates.** A hold is
+  written in CSS against whatever transition is running (see the animations
+  skill), so a transition starting while a finger holds ours would be born
+  paused with nobody holding it — it never finishes, and the page freezes under
+  its pictures. Every transition navi starts passes through one funnel, which
+  releases the hold first;
+- **a travel ENDS, whatever happened on the way.** Whoever set the hold lifts it,
+  and the "a travel is playing" state is cleared in a `finally`. A travel left in
+  flight is not a small leak: it freezes the page under its own pictures, and
+  every gesture after it finds the box busy.
+
 One browser fact makes this harder than it reads: **while a view transition is
 playing, a press over the travelling box is delivered to the document root**, not
 to the box — whatever the pseudo-elements are told about `pointer-events`. So

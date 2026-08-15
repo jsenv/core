@@ -271,6 +271,17 @@ Three ways to lose an afternoon on this, all seen:
 - **Clip on the pseudo-elements, never on your own box** — see "What moves
   inside a box stays inside the box" above; a travel between pages is the first
   of the two cases described there.
+- **A hold is not yours, it is the document's.** Pausing a transition from CSS
+  means pausing whatever transition is running — there is no way to name "mine",
+  and naming only your own elements would leave everything else the gesture
+  carries (a trait under a tab row) playing on its own. So a held transition
+  MUST be let go of before any other one starts: only one exists per document,
+  starting a second skips the first, and the second is then born paused with
+  nobody holding it. It never finishes, its pictures stand over the page, and
+  the page cannot be touched again. Release at the single place that knows a
+  transition is about to start — for navi, `holdViewTransition` in
+  `start_view_transition_polyfill.js`, which every transition it starts goes
+  through.
 - **A press during a transition does not reach the element it looks like it
   hit.** It goes to the document root, whatever the pseudo-elements are told
   about `pointer-events`. So a gesture meant to grab what is still moving has to
