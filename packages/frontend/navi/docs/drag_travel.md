@@ -119,9 +119,35 @@ must stop on the frame the finger lands, not on the one where the axis is
 decided.
 
 Taking over means the pictures stop where they are and answer the finger again,
-from where they stand (`slack`) rather than from zero. Only one box is in hand:
-further along it carries on, back past its start is a wall — leaving that way
-would be another travel, and it needs a picture this one is holding.
+from where they stand (`slack`) rather than from zero. Only one box is in hand,
+and walking out of either of its ends is a travel of its own — see below.
+
+### A hand that does not stop at the end of a page is asking for the next one
+
+One travel brings in one neighbour, but a gesture is not over because a travel
+is: reaching an end and carrying on says "and the one after that", and being
+made to let go and press again to say it is a wall in the middle of a movement.
+So the gesture asks for another box at the end it reached (`onEdge`), and the
+pixels past that end are the new box's first ones — nothing is spent twice.
+
+The two ends cost differently, and it is worth knowing which one is being felt:
+
+- **out the far end** — the page arrived, and the page it was leaving is gone:
+  there is no pair left to travel with, so the next travel wants pictures of its
+  own. A navigation, a render, a snapshot — and over those frames nothing
+  follows the finger before catching up with it. At the start of a gesture that
+  gap is invisible, the hand has barely moved; here the hand is at full speed;
+- **back out of the start** — the pair in hand is already the right one: the
+  still it starts from is the same page, and what is being brought in is LIVE,
+  so pointing the router at the other neighbour is enough for it to show that
+  one instead. The travel turns around where it stands, on the same transition,
+  and there is no gap at all.
+
+What the browser will not turn around with it is everything else it is
+animating: the group animations of the named elements a travel carries along (a
+trait under a tab row) were built when the transition began and keep the ends
+they were built with. They go on towards a page the travel has stopped going
+to.
 
 Two things a travel in hand must never lose:
 

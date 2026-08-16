@@ -207,12 +207,13 @@ const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
  *   - the finger has moved. `pulled` is in px from the resting place, `progress`
  *   the same as a fraction of the box, signed the same way.
  * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} [options.onEdge]
- *   - a box has been walked whole and the finger is still going. Answer with the
- *   geometry of the next one to hand the gesture over to it — the pixels beyond
- *   the edge become its first ones, so nothing is spent twice and the hand feels
- *   one continuous movement. Answer `false` (or leave it out) for a wall: the
- *   gesture stays on the box it has, as it did before there was anything past
- *   it.
+ *   - the hand has reached an end of the box it holds and keeps going: `sign`
+ *   says which one — the far edge, a box walked whole, or its start, a box
+ *   walked back to where it began. Answer with the geometry of the box that
+ *   lies that way to hand the gesture over to it: the pixels past the end
+ *   become its first ones, so nothing is spent twice and the hand feels one
+ *   continuous movement. Answer `false` (or leave it out) for a wall — the
+ *   gesture stays on the box it has and leans on it.
  * @param {(detail: {axis: string, pulled: number, size: number, sign: number, travels: boolean, cancelled: boolean, event: PointerEvent}) => void} options.onEnd
  *   - the finger is off. `travels` is the gesture's answer: carry on to what was
  *   being pulled in, or put things back.
@@ -288,6 +289,34 @@ export const startDragTravel = (
     return travel.slack + (covered - travel.origin);
   };
 
+  // Another box under the same hand, at either end of the one it holds. The
+  // distance already covered on that side becomes the new box's own, measured
+  // from where the finger IS: nothing is spent twice, and the gesture is one
+  // movement rather than a wall the hand had to let go of to cross.
+  // Returns where the new box stands, or null when there is nothing that way.
+  const relayTo = (sign, distance, gestureInfo) => {
+    const next = onEdge({
+      axis: travel.axis,
+      sign,
+      event: gestureInfo.dragEvent,
+    });
+    if (!next || !next.size) {
+      return null;
+    }
+    travel.size = next.size;
+    travel.travelBack = Boolean(next.travelBack);
+    travel.travelOn = Boolean(next.travelOn);
+    travel.slack = 0;
+    let pulled = distance;
+    if (pulled > next.size) {
+      pulled = next.size;
+    } else if (pulled < -next.size) {
+      pulled = -next.size;
+    }
+    travel.origin = coveredOn(travel.axis, gestureInfo) - pulled;
+    return pulled;
+  };
+
   const controller = createDragGestureController({
     // The threshold is left at its default and never crossed: what says this
     // press has become a gesture is the intent module below, which calls
@@ -355,47 +384,49 @@ export const startDragTravel = (
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       }
       const { axis } = travel;
-      let size = travel.size;
       let pulled = pullOf(gestureInfo);
       // Which side is being pulled in: dragging to the right brings in what is
       // on the left, which is what comes BEFORE.
-      const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      // Past the start of the box in hand, and the caller has a box that way:
+      // the hand is not leaning on a wall, it is walking into the next one
+      // backwards. Asked before the resistance, so what it is handed is the
+      // hand's own distance rather than a damped one.
+      if (!towardsSomething && pulled) {
+        const relayed = relayTo(pulled > 0 ? 1 : -1, pulled, gestureInfo);
+        if (relayed !== null) {
+          pulled = relayed;
+          towardsSomething = true;
+        }
+      }
+      let size = travel.size;
       if (!towardsSomething) {
         pulled *= DRAG_RESISTANCE;
       }
-      const beyondTheEnd = pulled > size || pulled < -size;
-      if (beyondTheEnd) {
+      if (pulled > size || pulled < -size) {
         const sign = pulled > 0 ? 1 : -1;
         // How far past the edge the hand has gone. Its own number, because it
         // is what the next box is owed if there is one.
-        let overshoot = pulled - sign * size;
+        const overshoot = pulled - sign * size;
         pulled = sign * size;
         if (towardsSomething) {
           // A box walked whole, and the finger still going: the caller may have
           // another one to put under it. Then the gesture WALKS ON — the pixels
           // past the edge are its first ones, so the hand feels one movement
           // and not a wall it had to let go of to cross.
-          const next = onEdge({ axis, sign, event: gestureInfo.dragEvent });
-          if (next && next.size) {
-            travel.size = size = next.size;
-            travel.travelBack = Boolean(next.travelBack);
-            travel.travelOn = Boolean(next.travelOn);
-            travel.slack = 0;
-            if (overshoot > size) {
-              overshoot = size;
-            } else if (overshoot < -size) {
-              overshoot = -size;
-            }
-            pulled = overshoot;
+          const relayed = relayTo(sign, overshoot, gestureInfo);
+          if (relayed === null) {
+            // A box travels one box, and the hand can go further than that.
+            // Those extra pixels are not owed back: the gesture is measured
+            // from where the finger IS once it has reached the end, so turning
+            // around moves the picture at once instead of first walking back
+            // over the distance the hand went too far.
+            travel.origin =
+              coveredOn(axis, gestureInfo) - (pulled - travel.slack);
+          } else {
+            pulled = relayed;
+            size = travel.size;
           }
-          // A box travels one box, and the hand can go further than that. Those
-          // extra pixels are not owed back: the gesture is measured from where
-          // the finger IS once it has reached the end, so turning around moves
-          // the picture at once instead of first walking back over the distance
-          // the hand went too far. Said for the new box as much as for the old
-          // one — from here on the two are read the same way.
-          travel.origin =
-            coveredOn(axis, gestureInfo) - (pulled - travel.slack);
         }
       }
       travel.pulled = pulled;
@@ -574,33 +605,50 @@ export const watchWheelTravel = (
     // Ours from here: whatever the browser would have done with it — bouncing
     // the page, going back in history — is the gesture answered twice.
     wheelEvent.preventDefault();
-    let size = travel.size;
+    // Another box under the same fingers, at either end of the one they hold:
+    // the same relay as under a finger, so two fingers pushing steadily across
+    // several pages are one gesture rather than a wall between each.
     let relayed = false;
+    const relayTo = (sign, distance) => {
+      const next = onEdge({ axis: travel.axis, sign, event: wheelEvent });
+      if (!next || !next.size) {
+        return null;
+      }
+      relayed = true;
+      travel.size = next.size;
+      travel.travelBack = Boolean(next.travelBack);
+      travel.travelOn = Boolean(next.travelOn);
+      if (distance > next.size) {
+        return next.size;
+      }
+      if (distance < -next.size) {
+        return -next.size;
+      }
+      return distance;
+    };
+
     let pulled = travel.pulled - delta;
-    const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+    let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+    if (!towardsSomething && pulled) {
+      const backwards = relayTo(pulled > 0 ? 1 : -1, pulled);
+      if (backwards !== null) {
+        pulled = backwards;
+        towardsSomething = true;
+      }
+    }
+    let size = travel.size;
     if (!towardsSomething) {
       pulled *= DRAG_RESISTANCE;
     }
     if (pulled > size || pulled < -size) {
       const sign = pulled > 0 ? 1 : -1;
-      let overshoot = pulled - sign * size;
+      const overshoot = pulled - sign * size;
       pulled = sign * size;
-      // The same relay as under a finger: a box walked whole hands the rest of
-      // the gesture to the next one, and two fingers pushing steadily across
-      // several pages are one gesture rather than a wall between each.
       if (towardsSomething) {
-        const next = onEdge({ axis: travel.axis, sign, event: wheelEvent });
-        if (next && next.size) {
-          relayed = true;
-          travel.size = size = next.size;
-          travel.travelBack = Boolean(next.travelBack);
-          travel.travelOn = Boolean(next.travelOn);
-          if (overshoot > size) {
-            overshoot = size;
-          } else if (overshoot < -size) {
-            overshoot = -size;
-          }
-          pulled = overshoot;
+        const onwards = relayTo(sign, overshoot);
+        if (onwards !== null) {
+          pulled = onwards;
+          size = travel.size;
         }
       }
     }

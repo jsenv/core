@@ -491,6 +491,20 @@ export const RouteTravel = ({
     });
   };
 
+  // The same travel, going the other way from where it began: the still it
+  // starts from does not change, only what is being brought in against it.
+  const turnTravelAround = (travel, route, direction) => {
+    travel.route = route;
+    travel.direction = direction;
+    travel.ratio = 0;
+    // The other way round is another pair of keyframes, and naming another
+    // animation builds another Animation: whatever was collected answers to
+    // nobody now.
+    travel.animations = null;
+    document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
+    routeAskedForRef.current = route;
+  };
+
   const endTravel = (travel) => {
     if (travel.ended) {
       return;
@@ -512,10 +526,14 @@ export const RouteTravel = ({
   // and two fingers pushing it sideways on a trackpad ask for the same travel,
   // so they are answered by the same three callbacks and only the reading of
   // the input differs (see drag_travel.js).
+  const boxSizeOnAxis = () => {
+    const box = elementRef.current.getBoundingClientRect();
+    return axis === "x" ? box.width : box.height;
+  };
+
   const travelHandlers = {
     onStart: ({ sign, target }) => {
-      const box = elementRef.current.getBoundingClientRect();
-      const size = axis === "x" ? box.width : box.height;
+      const size = boxSizeOnAxis();
       const travelInFlight = travelRef.current;
       if (travelInFlight) {
         // A travel is already playing, and a second one cannot be started on
@@ -549,9 +567,10 @@ export const RouteTravel = ({
         return {
           size,
           slack: ratio * size * pulledSign,
-          // One box, the one being travelled: further along it carries on,
-          // back past its start is a wall — leaving that way is another travel,
-          // and it needs a picture this one is holding.
+          // One box, the one being travelled. Either of its ends can be walked
+          // out of and the hand carries on into the next page, but that is a
+          // travel of its own and the gesture asks for it when it gets there
+          // (see onEdge) — from here there is one page on its way.
           travelBack: travelInFlight.direction === "back",
           travelOn: travelInFlight.direction === "forward",
         };
@@ -596,19 +615,11 @@ export const RouteTravel = ({
       travel.ratio = ratio > 0 ? ratio : 0;
       scrubTravel(travel, travel.ratio);
     },
-    // A page walked all the way across and the finger still going: what it is
-    // asking for is the NEXT one, and it has said so by not stopping. The
-    // travel in hand is finished where it stands — its pictures are already at
-    // their end, so letting go of them there changes nothing on screen — and a
-    // new one sets off under the same gesture, from its first pixel.
-    //
-    // The only thing that cannot be made continuous is time: the next pair of
-    // pictures does not exist yet (a navigation, a render, a snapshot), so for
-    // a few frames the page arriving does not follow the finger and then
-    // catches up with it (see `ready` in beginTravel). At the beginning of a
-    // gesture that gap is invisible — the hand has barely moved; here the hand
-    // is at full speed, and this is what a relay costs.
-    onEdge: () => {
+    // A page walked all the way to one of its ends and the finger still going:
+    // what it asks for is the page past that end, and it has said so by not
+    // stopping. Which end decides how it is answered, and the two are not the
+    // same amount of work.
+    onEdge: ({ sign }) => {
       const travel = travelRef.current;
       if (
         !travel ||
@@ -619,44 +630,66 @@ export const RouteTravel = ({
       ) {
         return false;
       }
-      // Where we are is what THIS travel was bringing in, not what the page
-      // showed when the gesture set off: the URL changed at the first pixel and
-      // `currentIndex` is the one of a render this gesture is older than.
-      const fromIndex = routes.indexOf(travel.route);
-      if (fromIndex === -1) {
-        return false;
+      // Where the page in hand is coming from, said the way the gesture says
+      // it: dragging towards the end of the axis brings in what comes BEFORE.
+      const pulledSign = travel.direction === "back" ? 1 : -1;
+      const direction = sign > 0 ? "back" : "forward";
+      if (sign === pulledSign) {
+        // Walked whole. What the pictures show is the page that has arrived,
+        // and the one leaving is gone: there is no pair left to travel with, so
+        // the next travel needs pictures of its own — a navigation, a render, a
+        // snapshot, and for those few frames the page does not follow the
+        // finger before catching up with it (see `ready` in beginTravel). At
+        // the start of a gesture that gap is invisible, the hand has barely
+        // moved; here the hand is at full speed, and this is what it costs.
+        //
+        // Where we are is what THIS travel was bringing in — the URL changed at
+        // the first pixel, so `currentIndex` belongs to a render this gesture
+        // is older than.
+        const fromIndex = routes.indexOf(travel.route);
+        const route =
+          direction === "back" ? routes[fromIndex - 1] : routes[fromIndex + 1];
+        if (fromIndex === -1 || !route) {
+          return false;
+        }
+        // At their very end before they are let go of: what ends the travel in
+        // hand is the next transition starting (there is one per document, and
+        // the funnel skips ours), and a picture skipped short of its end is a
+        // page seen jumping the last few pixels.
+        scrubTravel(travel, 1);
+        travel.ratio = 1;
+        beginTravel({
+          route,
+          fromRoute: travel.route,
+          direction,
+          scrub: true,
+          change: () => onTravel({ route, cause: "drag" }),
+        });
+        return {
+          size: boxSizeOnAxis(),
+          travelBack: sign > 0,
+          travelOn: sign < 0,
+        };
       }
+      // Walked back to where it began, and out the other side. Nothing has to
+      // be built here: the pictures in hand are ALREADY the pair this new
+      // travel needs — the still of the page it starts from is the same one,
+      // and the picture being brought in is live, so pointing the router at the
+      // other neighbour is enough for it to show that one instead. The travel
+      // turns around where it stands, on the same transition and under the same
+      // hand, and there is no gap at all.
+      const fromIndex = routes.indexOf(travel.fromRoute);
       const route =
-        travel.direction === "back"
-          ? routes[fromIndex - 1]
-          : routes[fromIndex + 1];
-      if (!route) {
+        direction === "back" ? routes[fromIndex - 1] : routes[fromIndex + 1];
+      if (fromIndex === -1 || !route) {
         return false;
       }
-      const box = elementRef.current.getBoundingClientRect();
-      const size = axis === "x" ? box.width : box.height;
-      if (!size) {
-        return false;
-      }
-      // At their very end before they are let go of: what ends the travel in
-      // hand is the next transition starting (there is one per document, and
-      // the funnel skips ours), and a picture skipped anywhere short of its end
-      // is a page seen jumping the last few pixels.
-      scrubTravel(travel, 1);
-      travel.ratio = 1;
-      beginTravel({
-        route,
-        fromRoute: travel.route,
-        direction: travel.direction,
-        scrub: true,
-        change: () => onTravel({ route, cause: "drag" }),
-      });
+      turnTravelAround(travel, route, direction);
+      onTravel({ route, cause: "drag" });
       return {
-        size,
-        // As for a travel caught in flight: one box is in hand, and turning
-        // back past its start is a wall rather than a third travel.
-        travelBack: travel.direction === "back",
-        travelOn: travel.direction === "forward",
+        size: boxSizeOnAxis(),
+        travelBack: sign > 0,
+        travelOn: sign < 0,
       };
     },
     onEnd: ({ travels }) => {
