@@ -6,15 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reorderable List Demo</title>
     <style>
-      /* The rows are cut at the edge of the box they move in: their pictures
-         are drawn inside the box's own picture, and this is that box's edge. */
-      ::view-transition-group-children(scrollable-list) {
+      /* Whether the rows animate at all is decided here: a row that is named
+         without being drawn inside the box travels over the page instead of
+         being cut at the box's edge, so a browser with no nested groups gets no
+         name and the reorder simply happens. */
+      @supports (view-transition-group: contain) {
+        .list-item[data-view-transition-name] {
+          view-transition-name: attr(
+            data-view-transition-name type(<custom-ident>)
+          );
+        }
+        .scrollable-list {
+          view-transition-name: match-element;
+          view-transition-class: scrollable-list;
+          view-transition-group: contain;
+        }
+      }
+
+      /* The box's edge, during the transition. */
+      ::view-transition-group-children(.scrollable-list) {
         overflow: clip;
       }
       /* The box itself is the same thing before and after; cross-fading it onto
          itself is a flicker. */
-      ::view-transition-old(scrollable-list),
-      ::view-transition-new(scrollable-list) {
+      ::view-transition-old(.scrollable-list),
+      ::view-transition-new(.scrollable-list) {
         mix-blend-mode: normal;
         animation: none;
       }
@@ -28,7 +44,6 @@
       import { useRef, useState } from "preact/hooks";
       import {
         Box,
-        canNestViewTransitionGroups,
         moveArrayItemByIndex,
         startDragToReorder,
       } from "@jsenv/navi";
@@ -56,21 +71,11 @@
         { id: 20, label: "Pomegranate", bg: "#fce4ec", color: "#b71c1c" },
       ];
 
-      // Rows travel inside the list's own picture; a browser that cannot nest
-      // groups would show them crossing the page instead, so it just reorders.
-      const startReorder = (updateCallback) => {
-        if (!canNestViewTransitionGroups) {
-          updateCallback();
-          return { finished: Promise.resolve() };
-        }
-        return document.startViewTransition(updateCallback);
-      };
-
       const ReorderableList = ({ name }) => {
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const reorder = (fromIndex, toIndex) => {
-          startReorder(() => {
+          document.startViewTransition(() => {
             setOrder((prev) => moveArrayItemByIndex(prev, fromIndex, toIndex));
           });
         };
@@ -80,7 +85,7 @@
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
             onReorder: async (fromId, toId, syncClone) => {
-              const viewTransition = startReorder(() => {
+              const viewTransition = document.startViewTransition(() => {
                 syncClone();
                 setOrder((prev) => {
                   const fromIndex = prev.indexOf(fromId);
@@ -140,11 +145,7 @@
             }}
             className="list-item"
             data-id={item.id}
-            viewTransitionName={
-              canNestViewTransitionGroups
-                ? `${name}-item-${item.id}`
-                : undefined
-            }
+            data-view-transition-name={`${name}-item-${item.id}`}
             onPointerDown={onPointerDown}
           >
             {/* Drag handle */}
@@ -300,8 +301,7 @@
             </p>
             <Box
               ref={containerRef}
-              viewTransitionName="scrollable-list"
-              viewTransitionGroup="contain"
+              className="scrollable-list"
               style={{
                 "position": "relative",
                 "width": "360px",

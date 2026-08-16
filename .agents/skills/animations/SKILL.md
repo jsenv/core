@@ -135,9 +135,10 @@ Facts worth knowing before reaching for one:
 
 - **A name must be unique in the document** — a duplicate aborts the
   transition. Scope names by list, by picker, by whatever makes them unique.
-- **Pass `viewTransitionName` as a Box prop, never through `style`** — it is
-  the prop the rest of the box reads (see `viewTransitionGroup` below), and a
-  name written into `style` is invisible to it.
+- **A name that depends on browser support is written in CSS, not in JS** — see
+  "Where a browser cannot nest, it must not animate" below. Box's
+  `viewTransitionName` prop (and inline styles in general) cannot be put behind
+  an `@supports`, so it only fits a name every browser may have.
 - **The layout changes at once.** A transition animates snapshots, not layout:
   the document height jumps the moment the callback runs. Wanting the layout
   itself to be seen moving means animating the real property (WAAPI), not a
@@ -174,8 +175,9 @@ get it, and the choice is not a matter of taste:
   box needs a picture of its own and the pictures of its contents must be drawn
   inside it. That is a nested group:
 
-  1. the box gets a `view-transition-name` and `view-transition-group: contain`,
-     which makes it the group everything named inside it hangs under;
+  1. the box gets a `view-transition-name` (`match-element` will do) and
+     `view-transition-group: contain`, which makes it the group everything named
+     inside it hangs under;
   2. `::view-transition-group-children(name)` — the box's edge — is told
      `overflow: clip`;
   3. the box's own `::view-transition-old/new` are given `animation: none` and
@@ -195,14 +197,75 @@ Clipping is not the only thing nesting restores: a group drawn inside another
 also follows it. A row moving while the list itself moves is one movement, not
 two that must be kept in step by hand.
 
-**Nesting is Chrome/Edge 140+, and nothing else** (no Safari, no Firefox). Where
+### Where a browser cannot nest, it must not animate
+
+Nesting is **Chrome/Edge 140+, and nothing else** (no Safari, no Firefox). Where
 a movement is only correct BECAUSE of the clipping, a browser without it gets
 **no transition at all** — the change just happens. What it would play instead is
 not a lesser animation, it is content flying across the page, and that is worse
-than no animation. Guard on `canNestViewTransitionGroups` (navi/src/transition):
-drop the names, or skip the `startViewTransition` call entirely. A pretty
-movement on recent browsers, bought with simpler code and better performance, is
-the deal being taken here — the others will follow.
+than no animation. A pretty movement on recent browsers, bought with simpler code
+and better performance, is the deal being taken here — the others will follow.
+
+**The support test belongs in the CSS, not in the JS.** The whole movement is
+written in CSS already; a flag read in JS to decide whether to call
+`startViewTransition`, or to decide whether to pass a name, splits one decision
+across two languages and leaves JS knowing about browsers. Put the names
+themselves inside `@supports (view-transition-group: contain)`: nothing is named,
+so nothing is captured, so the call — made unconditionally — animates nothing.
+
+```css
+@supports (view-transition-group: contain) {
+  .box[data-item-transition] {
+    view-transition-name: match-element; /* a name it does not have to choose */
+    view-transition-class: my_box;
+    view-transition-group: contain;
+
+    [data-view-transition-name] {
+      view-transition-name: attr(
+        data-view-transition-name type(<custom-ident>)
+      );
+    }
+  }
+}
+::view-transition-group-children(.my_box) {
+  overflow: clip;
+}
+```
+
+The two ways a name gets written from a stylesheet, and when each is right:
+
+- **`match-element`** — the browser makes up a name, unique by construction, and
+  pairs old with new by the ELEMENT. For a box that is still itself across the
+  change (the list, the container), where the name is only needed so a group
+  exists, and where inventing a unique one in JS is pure ceremony.
+- **`attr(data-… type(<custom-ident>))`** — pairs by whatever the attribute says.
+  For anything whose identity is its data and not its element: rows are recycled
+  as a list scrolls, so `match-element` there pairs the wrong two. JS writes the
+  attribute (an id, always, on every browser) and stays out of the decision.
+
+**"Nothing is named" is not "nothing happens": the UA still names the root.** So
+on a browser left out, an unconditional `startViewTransition` cross-fades the
+whole page — the change is not seen travelling anywhere, it is seen fading. It is
+a decent default and it is why the call can stay unconditional. Where it is not
+wanted, what turns it off is one line:
+
+```css
+@supports not (view-transition-group: contain) {
+  :root {
+    view-transition-name: none;
+  }
+}
+```
+
+**That line belongs to the application, never to a component.** It speaks for the
+whole document, and only whoever owns the page knows whether a fade is a
+downgrade or a glitch there — a list or a route travel writing it would be
+deciding for every other transition on the page. So navi documents it where the
+transition is turned on (`itemTransition`, RouteTravel) and leaves it to the
+caller, case by case.
+
+What is left in JS is the `startViewTransition` call and an attribute. Nothing
+tests a browser.
 
 ## A movement a finger drives, when only the state has the second picture
 

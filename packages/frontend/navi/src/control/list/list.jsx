@@ -27,7 +27,6 @@ import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { Text } from "../../text/text.jsx";
-import { canNestViewTransitionGroups } from "../../transition/view_transition_group_nesting.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -610,10 +609,37 @@ const css = /* css */ `
     }
   }
 
-  /* <List itemTransition>: the rows travel inside the list's own picture, and
-     this is the list's edge (see view_transition_group_nesting.js). Told to
-     clip, a row moving in from outside the visible part of the list is cut
-     where the list ends instead of crossing the page beside it. */
+  /* <List itemTransition>: the rows are named — a change the application wraps
+     in a view transition is then seen row by row — and the pictures of the rows
+     are drawn INSIDE the picture of the list, which is what lets the list's edge
+     cut them.
+
+     Whether any of it happens is decided HERE and not in JS: rows that are named
+     without being contained animate across the page (the pictures live in the
+     top layer, where no overflow of the document reaches them), which is worse
+     than not animating at all. So a browser with no nested groups gets no name
+     either, and the change simply happens. */
+  @supports (view-transition-group: contain) {
+    .navi_list_container[data-item-transition] {
+      /* The list needs a name to be a group at all; which name does not matter,
+         only that no other element in the document carries it. */
+      view-transition-name: match-element;
+      view-transition-class: navi_list_transition;
+      view-transition-group: contain;
+
+      /* A row is paired across the change by the id of the item it holds, never
+         by the element that happens to hold it: rows are recycled as the list
+         scrolls, and pairing on the element would pair the wrong two. */
+      [data-view-transition-name] {
+        view-transition-name: attr(
+          data-view-transition-name type(<custom-ident>)
+        );
+        view-transition-class: navi_list_item;
+      }
+    }
+  }
+
+  /* The list's edge, during the transition. */
   ::view-transition-group-children(.navi_list_transition) {
     overflow: clip;
   }
@@ -675,21 +701,6 @@ const ListUI = (props) => {
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
     );
   }
-
-  // <List itemTransition>: the rows are named AND drawn inside the list's own
-  // picture, so the list's edge cuts them (see the CSS above). A browser that
-  // cannot nest groups gets no row transition at all — the same movement
-  // without the nesting is rows flying across the page, not a lesser animation.
-  const listTransitionId = useId();
-  const itemTransitionEnabled =
-    Boolean(itemTransition) && canNestViewTransitionGroups;
-  const listTransitionProps = itemTransitionEnabled
-    ? {
-        viewTransitionName: `navi_list_${listTransitionId}`,
-        viewTransitionClass: "navi_list_transition",
-        viewTransitionGroup: "contain",
-      }
-    : null;
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -879,9 +890,9 @@ const ListUI = (props) => {
   return (
     <Box
       {...rest}
-      {...listTransitionProps}
       ref={ref}
       baseClassName="navi_list_container"
+      data-item-transition={itemTransition ? "" : undefined}
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
       data-scroller={getScrollerAttribute(scroller)}
@@ -922,7 +933,7 @@ const ListUI = (props) => {
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
-        itemTransition={itemTransitionEnabled}
+        itemTransition={itemTransition}
         expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
@@ -994,7 +1005,14 @@ const ListFirstResolver = (props) => {
  *   so one coming from outside the visible part of the list is cut at the list's
  *   edge like any other overflow. Requires nested view transition groups
  *   (Chrome/Edge 140+): elsewhere the rows are left unnamed and the change
- *   simply happens.
+ *   simply happens — but the browser still names the document root, so the page
+ *   cross-fades as a whole unless the application says otherwise, which is its
+ *   call and not the list's:
+ *   ```css
+ *   @supports not (view-transition-group: contain) {
+ *     :root { view-transition-name: none; }
+ *   }
+ *   ```
  * @param {false|((index: number) => any)} [props.renderSkeleton]
  *   What a row on its way looks like — a row of the shape the real ones will
  *   have, so nothing moves when they arrive. Used for the rows a `<List.Items>`
@@ -2829,10 +2847,9 @@ const ListItemReal = (props) => {
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
-  // <List itemTransition>: the row is named, so a change wrapped in a view
-  // transition animates it rather than cross-fading the list. The list box
-  // holds the group these names hang under, which is what keeps a row moving
-  // from outside the visible part of the list inside the list (see ListUI).
+  // <List itemTransition>: the row carries the name it is to be paired by, and
+  // the stylesheet turns it into a view-transition-name where a browser can
+  // draw it inside the list (see the @supports block in the css above).
   const itemTransition = useContext(ItemTransitionContext);
 
   // Pressing a row that is busy or read-only must say why nothing happens,
@@ -2920,11 +2937,8 @@ const ListItemReal = (props) => {
       aria-busy={loading ? "true" : undefined}
       aria-readonly={readOnly ? "true" : undefined}
       navi-error={error ? "" : undefined}
-      viewTransitionName={
-        itemTransition ? `navi_list_item_${id}` : rest.viewTransitionName
-      }
-      viewTransitionClass={
-        itemTransition ? "navi_list_item" : rest.viewTransitionClass
+      data-view-transition-name={
+        itemTransition ? `navi_list_item_${id}` : undefined
       }
       onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
       onClickCapture={

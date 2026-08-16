@@ -253,6 +253,18 @@ const css = /* css */ `
  *   aimed at, and three swipes back and forth must not bury the way out of the
  *   page under six entries. A tab pressed is the other case and pushes, which
  *   is what its <Link> already does.
+ *
+ * The pages are cut at the edge of this box while they travel, which is written
+ * on the transition's own pseudo-elements — no overflow of the document reaches
+ * pictures drawn in the top layer. It needs nothing of the browser beyond view
+ * transitions themselves: a browser without them (Firefox) navigates without the
+ * movement, and the gesture applies its change on release instead of dragging a
+ * picture that does not exist.
+ *
+ * While a travel plays, the rest of the page is taken as a picture too — this
+ * box asks for `view-transition-name: root` back for that time, so an
+ * application that opts the document out for its own transitions gets its rule
+ * back the moment the travel is over.
  */
 export const RouteTravel = ({
   routes: routesProp,

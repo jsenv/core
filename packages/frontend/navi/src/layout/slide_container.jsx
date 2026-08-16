@@ -615,19 +615,10 @@ export const SlideContainer = ({
     rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
-  const mapAxes = useMemo(() => travelAxesOf(layout), [layout]);
-  const dragAxes = useMemo(
-    () => axesAllowedBy(travelByDrag, mapAxes),
-    [travelByDrag, mapAxes],
-  );
-  const scrollAxes = useMemo(
-    () => axesAllowedBy(travelByScroll, mapAxes),
-    [travelByScroll, mapAxes],
-  );
-  const keyboardAxes = useMemo(
-    () => axesAllowedBy(travelByKeyboard, mapAxes),
-    [travelByKeyboard, mapAxes],
-  );
+  const mapAxes = travelAxesOf(layout);
+  const dragAxes = axesAllowedBy(travelByDrag, mapAxes);
+  const scrollAxes = axesAllowedBy(travelByScroll, mapAxes);
+  const keyboardAxes = axesAllowedBy(travelByKeyboard, mapAxes);
   // What must not spill onto the page behind the box: every axis a gesture of
   // ours can take, whichever gesture it is.
   const travelAxes =

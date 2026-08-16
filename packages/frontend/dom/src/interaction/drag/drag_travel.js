@@ -545,18 +545,13 @@ export const startDragTravel = (
 // to do, and a silence read there as "the hand is gone" would cut one gesture
 // into several.
 const WHEEL_GESTURE_END_DELAY = 150;
-// What a gesture has to add up to before the FIRST screen moves. Low, because a
-// light push is still a push: a hand that moved and saw nothing move reads it as
-// the thing being broken, and pushes harder next time.
-const WHEEL_FIRST_STEP_DELTA = 40;
-// …and what each FURTHER screen costs inside the same gesture. Several at once
-// is allowed, but it has to be meant — insisted on, not stumbled into.
-const WHEEL_NEXT_STEP_DELTA = 350;
-// Two events further apart than this were not made by one movement. A mouse
-// notch stands alone with tens of milliseconds around it, so each of them
-// starts afresh and moves one screen; a trackpad sends every frame or so,
-// fingers or no fingers, and pays the full price for its second screen.
-const WHEEL_PUSH_GAP = 30;
+// What each screen AFTER the first costs inside one gesture. Deliberately
+// steep: reconstructing "how much did that flick mean" from a stream nobody
+// agrees on is guesswork, and a guess that overshoots leaves someone three
+// screens from where they were with no idea how they got there. Under-shooting
+// costs one more push. So the door is open for a gesture that insists, and shut
+// the rest of the time.
+const WHEEL_NEXT_STEP_DELTA = 600;
 // A stream that keeps getting weaker is momentum, not a hand: the system goes
 // on sending long after the fingers are gone. Counted, one flick becomes five
 // slides. Two events in a row are asked for rather than one, because a hand
@@ -579,10 +574,19 @@ const WHEEL_FADE_RUN = 2;
  * one push moves one slide — and the travel that follows plays at its own pace,
  * exactly as it would from a tab pressed or an arrow key.
  *
- * Segmenting the stream into pushes is the whole difficulty, because momentum
- * keeps arriving with the fingers gone. What tells them apart is that momentum
- * only ever WEAKENS: a stream that is fading is the same push still landing,
- * and a number that grows again is a hand asking for more.
+ * A gesture therefore moves ONE screen the moment it begins, on its first event
+ * and whatever that event is worth: a hand that moved and saw nothing happen
+ * does not wait, it pushes harder. Everything a threshold there would have
+ * bought is bought instead by what the SECOND screen costs, which is a lot —
+ * "how much did that flick mean" cannot be reconstructed from a stream nobody
+ * agrees on, and a guess that overshoots leaves someone three screens away with
+ * no idea how they got there. Under-shooting costs one more push, so that is
+ * the side to be wrong on.
+ *
+ * The rest of the stream is mostly momentum, still arriving with the fingers
+ * gone, and it must not be counted. What gives it away is that momentum only
+ * ever WEAKENS: a stream that keeps shrinking is a push already answered, and a
+ * number that grows again is a hand asking for more.
  *
  * @param {Element} element
  * @param {object} options
@@ -667,7 +671,6 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
         sign,
         pushed: 0,
         lastMagnitude: 0,
-        lastTime: wheelEvent.timeStamp,
         fadeRun: 0,
         stepped: false,
       };
@@ -693,36 +696,31 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
       gesture.fadeRun = 0;
       gesture.stepped = false;
     }
+    if (!gesture.stepped) {
+      // The first event of a gesture moves a screen, whatever it is worth —
+      // a pixel is a hand that moved, and a hand that moved and saw nothing
+      // happen pushes harder rather than waiting. Everything a threshold could
+      // buy here is bought by what a screen AFTER this one costs.
+      gesture.stepped = true;
+      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
+      return;
+    }
     const magnitude = Math.abs(delta);
-    // A movement of its own, or the same one still arriving? A hand lifts
-    // between two notches; a stream that never pauses is one gesture, and its
-    // second screen has to be paid for.
-    const apart = wheelEvent.timeStamp - gesture.lastTime > WHEEL_PUSH_GAP;
     if (magnitude < gesture.lastMagnitude) {
       gesture.fadeRun += 1;
-    } else if (magnitude > gesture.lastMagnitude || apart) {
+    } else if (magnitude > gesture.lastMagnitude) {
       // Back up again — a hand asking for more. Momentum never does this.
       gesture.fadeRun = 0;
     }
     gesture.lastMagnitude = magnitude;
-    gesture.lastTime = wheelEvent.timeStamp;
     if (gesture.fadeRun >= WHEEL_FADE_RUN) {
       return;
     }
-    // Added up across the whole gesture, never thrown away between events: a
-    // device that reports every few pixels moves a screen by arriving there
-    // little by little, and a hand that felt itself move must see something
-    // move.
     gesture.pushed += magnitude;
-    const stepCosts =
-      gesture.stepped && !apart
-        ? WHEEL_NEXT_STEP_DELTA
-        : WHEEL_FIRST_STEP_DELTA;
-    if (gesture.pushed < stepCosts) {
+    if (gesture.pushed < WHEEL_NEXT_STEP_DELTA) {
       return;
     }
     gesture.pushed = 0;
-    gesture.stepped = true;
     onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
   };
 

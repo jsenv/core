@@ -113,7 +113,6 @@ const OUTER_PROPS = {
   pointerEvents: PASS_THROUGH,
   viewTransitionName: PASS_THROUGH,
   viewTransitionClass: PASS_THROUGH,
-  viewTransitionGroup: PASS_THROUGH,
 };
 const INNER_PROPS = {
   // expanded into longhands for the same reason as "margin" above: the
