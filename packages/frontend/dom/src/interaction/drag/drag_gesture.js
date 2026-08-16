@@ -23,7 +23,19 @@ const css = /* css */ `
     touch-action: none;
     user-select: none;
   }
+  /* Chrome matches :focus-visible on a programmatic focus, so focusing what the
+     gesture holds draws a ring around an object the user already has under the
+     pointer — a frame blinking for the length of the gesture, saying something
+     the finger knows. The ring stays whole where it earns its place: at the
+     keyboard, outside any gesture.
+     focus({ focusVisible: false }) would say the intent better but does not
+     hold — Chrome's heuristic does not always obey the option (see
+     isMatchingFocusVisible). */
+  [data-drag-focus]:focus-visible {
+    outline: none;
+  }
 `;
+import.meta.css = css;
 
 export const createDragGestureController = (options = {}) => {
   const {
@@ -194,7 +206,6 @@ export const createDragGestureController = (options = {}) => {
 
       // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
-        import.meta.css = css;
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.ariaHidden = "true";
@@ -229,10 +240,12 @@ export const createDragGestureController = (options = {}) => {
       // This also ensure any keydown event listened by the currently focused element
       // won't be available during drag
       const elementToFocus = focusableElement || document.body;
+      elementToFocus.setAttribute("data-drag-focus", "");
       elementToFocus.focus({
         preventScroll: true,
       });
       addReleaseCallback(() => {
+        elementToFocus.removeAttribute("data-drag-focus");
         // Restore original focus on release
         activeElement.focus({
           preventScroll: true,

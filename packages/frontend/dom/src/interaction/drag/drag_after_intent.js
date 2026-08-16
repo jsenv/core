@@ -22,18 +22,47 @@ import {
   isPrimaryButtonEvent,
 } from "./drag_gesture.js";
 
-/* iOS shows its callout (Copy / Look Up) and selects the text under the finger
-   on a long press, and does not always route that through an event that can be
-   refused — see preventContextMenu below for the half that is an event.
-   At module scope, and on the markers rather than on the pressed element: it has
-   to be true before the finger lands. */
+/* At module scope, and on the markers rather than on the pressed element: both
+   rules below have to be true BEFORE the finger lands — a stylesheet, never a
+   line of JS in the pointerdown.
+
+   -webkit-touch-callout: iOS shows its callout (Copy / Look Up) and selects the
+   text under the finger on a long press, and does not always route that through
+   an event that can be refused — see preventContextMenu below for the half that
+   is an event.
+
+   touch-action: a touchmove can only be refused if the region was out of the
+   compositor's fast path when the touch BEGAN (see preventTouchScroll in
+   drag_gesture.js, which does the refusing). Left at `auto`, Chrome has already
+   decided the touch is its own by the time a long press turns into a grab, and
+   every preventDefault from then on is a "Unable to preventDefault inside
+   passive event listener" intervention — on Android, a scroll that runs away
+   with the object. Any explicit value other than `auto` is enough: `pan-y` still
+   lets the page scroll and still makes the refusal effective. */
 const css = /* css */ `
   [data-drag-handle],
   [data-drag-source] {
     -webkit-touch-callout: none;
   }
+  [data-drag-handle] {
+    /* A dedicated handle has nothing to share: it takes the gesture on contact. */
+    touch-action: none;
+  }
+  [data-drag-source] {
+    /* A source taken by long press must let the scroll through until the grab —
+       which is exactly what the long press is there to tell apart. Zoom has
+       nothing to do with the gesture and nobody should lose it by resting a
+       finger on a word. */
+    touch-action: pan-y pinch-zoom;
+  }
+  [data-drag-source="x"] {
+    /* The axis is the one thing the caller has to say, being the only one who
+       knows which way what surrounds the source scrolls. */
+    touch-action: pan-x pinch-zoom;
+  }
   [data-drag-ignore] {
     -webkit-touch-callout: default;
+    touch-action: auto;
   }
 `;
 import.meta.css = css;
