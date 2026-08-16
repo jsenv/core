@@ -1,5 +1,6 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { MAX_LENGTH_CONSTRAINT } from "../validation/standard_constraints.js";
 
 export const READONLY_CONSTRAINT = {
   name: "readonly",
@@ -11,6 +12,23 @@ export const READONLY_CONSTRAINT = {
     );
     if (!readOnly) {
       return null;
+    }
+
+    // A selection guarding its length (see maxLengthGuard) is what holds this
+    // one back, so max_length is what refuses it: same name, same message, same
+    // `maxLengthMessage` to say it in the caller's own words. Read-only is only
+    // how it is expressed on the item.
+    const parent = field.parentUIStateController;
+    if (parent?.isChildBlockedByMaxLengthGuard?.(field)) {
+      return {
+        name: MAX_LENGTH_CONSTRAINT.name,
+        constraint: MAX_LENGTH_CONSTRAINT,
+        message: naviI18n("constraint.guard.max_length.selection", {
+          max: String(parent.props.maxLengthGuard),
+        }),
+        status: "info",
+        ignoredByParents: true,
+      };
     }
 
     // A readonly element does not block its parent from submitting — mirrors

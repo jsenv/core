@@ -19,6 +19,26 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   maxLength?: number,
+ *   maxLengthGuard?: number,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [props.maxLength]
+ *   How many boxes the group accepts — the same word, and the same behaviour,
+ *   as `maxLength` on a text field: a rule the group is judged against, not a
+ *   wall. More checked boxes than that is allowed to exist and reported as
+ *   invalid, which is what lets a value coming from elsewhere be shown and then
+ *   corrected.
+ * @param {number} [props.maxLengthGuard]
+ *   The same limit, enforced as the boxes are checked: while the group holds as
+ *   many as it accepts, the unchecked ones go read-only — still focusable and
+ *   pressable, answering `"[max] max."` instead of checking — and `uiAction` is
+ *   not called. The checked ones can always be unchecked, so a value that
+ *   arrived too long can always be brought back under the limit. Implies
+ *   `maxLength` for validity.
+ */
 export const CheckboxGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;

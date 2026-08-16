@@ -257,6 +257,31 @@ export const MAX_LENGTH_CONSTRAINT = {
   messageAttribute: "data-max-length-message",
   check: (field) => {
     const type = field.controlHostProps.type ?? "text";
+    // A multiple selection has a length the way a string has one — how many
+    // items it holds — so it wears the same constraint under the same name. The
+    // group answers for it: a checkbox on its own holds one value, not a count.
+    if (field.controlType === "checkbox_group") {
+      const maxLength =
+        field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+      if (maxLength === undefined) {
+        return null;
+      }
+      const uiState = field.uiState;
+      if (!Array.isArray(uiState)) {
+        return null;
+      }
+      const count = uiState.length;
+      if (count <= maxLength) {
+        return null;
+      }
+      return {
+        message: naviI18n("constraint.max_length.selection", {
+          max: String(maxLength),
+          count: String(count),
+        }),
+        target: field.ref.current,
+      };
+    }
     const isInput =
       field.controlType === "input" || field.controlType === "picker";
     const isTextarea =

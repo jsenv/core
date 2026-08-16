@@ -964,6 +964,9 @@ const ListFirstResolver = (props) => {
  *
  * @type {import("preact").FunctionComponent<{
  *   selectable?: boolean,
+ *   multiple?: boolean,
+ *   maxLength?: number,
+ *   maxLengthGuard?: number,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
@@ -1066,6 +1069,19 @@ const ListFirstResolver = (props) => {
  *   scroll once it fills up is picked up then. When that is still not the box
  *   you mean, say so: `"document"`, or the element itself (a ref works) —
  *   nothing is guessed then.
+ * @param {number} [props.maxLength]
+ *   How many items a `selectable multiple` list accepts — the same word, and
+ *   the same behaviour, as `maxLength` on a text field: a rule the list is
+ *   judged against, not a wall. A longer selection is allowed to exist and is
+ *   reported as invalid, which is what lets a value coming from elsewhere (an
+ *   API, a URL) be shown and then corrected.
+ * @param {number} [props.maxLengthGuard]
+ *   The same limit, enforced as the selection is made: while the list holds as
+ *   many items as it accepts, the ones not selected go read-only — still
+ *   pointable, focusable and pressable, answering `"[max] max."` instead of
+ *   taking — and `uiAction` is not called. The selected ones stay takeable
+ *   back, so a selection that arrived too long can always be brought back
+ *   under the limit. Implies `maxLength` for validity.
  */
 export const List = createComponentResolver([
   ListFirstResolver,

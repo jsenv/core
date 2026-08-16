@@ -400,7 +400,18 @@ const ListSelectable = (props) => {
           event: e,
           name: "select",
           prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
-          allowed: () => childController.setUIState(childController.value, e),
+          // Asked of the item too, not only of the list: an item can be the one
+          // refusing (the list already holds all it accepts, see maxLength), and
+          // it is the one that then says why.
+          allowed: () => {
+            dispatchRequestInteraction(childController.ref.current, {
+              event: e,
+              name: "select",
+              prevented: () => e.preventDefault(),
+              allowed: () =>
+                childController.setUIState(childController.value, e),
+            });
+          },
         });
       }}
       onnavi_request_unselect={(e) => {
