@@ -315,7 +315,12 @@ mid-slide. The travel in flight is simply aimed somewhere else, and where it is
 aimed decides what that costs:
 
 - **back where it set off from** — that is not another travel, it is this one
-  undone: the same pictures, run backwards. Nothing has to be asked of the
+  undone: the same pictures, run backwards. Backwards over the DISTANCE, not
+  over the time: the way in is eased, so at half of its time a travel has
+  covered ~80% of its distance — rewound at -1, nearly the whole visible way
+  back collapses into the steep end of the curve and reads as a snap. The
+  pictures are walked home over how far they LOOK from home instead, at the
+  travel's own pace (see revertWalkTime). Nothing has to be asked of the
   router either, since the press has already put the page back — and that is
   exactly what makes this one delicate. The picture being brought in is LIVE, so
   the moment the press lands it shows the page one is going back TO, on both

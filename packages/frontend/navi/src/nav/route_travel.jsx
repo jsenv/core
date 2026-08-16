@@ -539,8 +539,19 @@ export const RouteTravel = ({
     // may go on rendering, and a tab row beside the box keeps answering.
     const releaseRendering = freezeRouteRender();
     const animations = travelAnimations(travel);
+    // The way back is paid for in DISTANCE, not in time. The way in is eased:
+    // at half of its TIME the pictures have covered ~80% of their distance, so
+    // a travel caught "half-way" by the eye has barely begun by the clock.
+    // Rewound at -1 it plays those few milliseconds back through the steep end
+    // of the curve — nearly the whole visible distance collapses into two
+    // frames, and what one sees is a snap, not a return. So the pictures are
+    // walked home over `how far they LOOK from home`, at the travel's own
+    // pace, each animation at the rate that gets it there in that time.
+    const wallTime = revertWalkTime(animations, boxSizeOnAxis(), axis);
     for (const animation of animations) {
-      animation.playbackRate = -1;
+      const timeLeft = animation.currentTime;
+      animation.playbackRate =
+        wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
     }
     releaseHold(travel);
     const backAtTheStart = animations.length
@@ -1129,6 +1140,41 @@ const ratioOfTravel = (travel) => {
     return travel.ratio;
   }
   return animation.currentTime / duration;
+};
+
+// How long the way back should take: the distance the pictures visibly are
+// from home, converted to time at the travel's own pace. Read off the incoming
+// picture itself — its translate goes from one box-width to zero, so what is
+// left of that translation IS how far the eye says the travel has come.
+// Falls back to the clock ratio when the pseudo-element cannot be read (no
+// transition ready yet, another browser): worse pacing, same destination.
+const revertWalkTime = (animations, size, axis) => {
+  const animation = animations.find((candidate) =>
+    candidate.effect?.pseudoElement?.includes("navi-route-travel"),
+  );
+  if (!animation) {
+    return 0;
+  }
+  const timing = animation.effect.getComputedTiming();
+  const duration = timing.delay + timing.activeDuration;
+  if (!duration) {
+    return 0;
+  }
+  let visibleRatio = animation.currentTime / duration;
+  if (size) {
+    const { translate } = getComputedStyle(
+      document.documentElement,
+      "::view-transition-new(navi-route-travel)",
+    );
+    const parts = translate.split(" ");
+    const translatePx = Math.abs(
+      parseFloat(axis === "y" ? parts[1] || parts[0] : parts[0]),
+    );
+    if (!Number.isNaN(translatePx) && translatePx <= size) {
+      visibleRatio = 1 - translatePx / size;
+    }
+  }
+  return visibleRatio * duration;
 };
 
 // Where the two pictures stand, said as a moment in the movement they would
