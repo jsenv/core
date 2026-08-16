@@ -22,9 +22,12 @@
  * in under the finger, which is honest about what is happening (it is being
  * fetched) and is the only thing that can happen without a second router.
  *
- * What travels is decided at the first pixel, like the axis: one gesture brings
- * in ONE neighbour, and turning the hand around mid-drag puts the current page
- * back rather than fetching the other side.
+ * What travels is decided at the first pixel, like the axis: a travel brings in
+ * ONE neighbour, and turning the hand around mid-drag puts the current page
+ * back rather than fetching the other side. A hand that walks a whole page
+ * across and keeps going is not turning around though — it is asking for the
+ * next one, and the gesture relays into a second travel without being let go
+ * of (see onEdge).
  *
  * Anything else that must follow the gesture — the trait under a tab bar, a
  * header — follows by being NAMED, not by being told: give it a
@@ -593,6 +596,69 @@ export const RouteTravel = ({
       travel.ratio = ratio > 0 ? ratio : 0;
       scrubTravel(travel, travel.ratio);
     },
+    // A page walked all the way across and the finger still going: what it is
+    // asking for is the NEXT one, and it has said so by not stopping. The
+    // travel in hand is finished where it stands — its pictures are already at
+    // their end, so letting go of them there changes nothing on screen — and a
+    // new one sets off under the same gesture, from its first pixel.
+    //
+    // The only thing that cannot be made continuous is time: the next pair of
+    // pictures does not exist yet (a navigation, a render, a snapshot), so for
+    // a few frames the page arriving does not follow the finger and then
+    // catches up with it (see `ready` in beginTravel). At the beginning of a
+    // gesture that gap is invisible — the hand has barely moved; here the hand
+    // is at full speed, and this is what a relay costs.
+    onEdge: () => {
+      const travel = travelRef.current;
+      if (
+        !travel ||
+        travel.noPicture ||
+        travel.ended ||
+        travel.reverting ||
+        !CAN_KEEP_PICTURE
+      ) {
+        return false;
+      }
+      // Where we are is what THIS travel was bringing in, not what the page
+      // showed when the gesture set off: the URL changed at the first pixel and
+      // `currentIndex` is the one of a render this gesture is older than.
+      const fromIndex = routes.indexOf(travel.route);
+      if (fromIndex === -1) {
+        return false;
+      }
+      const route =
+        travel.direction === "back"
+          ? routes[fromIndex - 1]
+          : routes[fromIndex + 1];
+      if (!route) {
+        return false;
+      }
+      const box = elementRef.current.getBoundingClientRect();
+      const size = axis === "x" ? box.width : box.height;
+      if (!size) {
+        return false;
+      }
+      // At their very end before they are let go of: what ends the travel in
+      // hand is the next transition starting (there is one per document, and
+      // the funnel skips ours), and a picture skipped anywhere short of its end
+      // is a page seen jumping the last few pixels.
+      scrubTravel(travel, 1);
+      travel.ratio = 1;
+      beginTravel({
+        route,
+        fromRoute: travel.route,
+        direction: travel.direction,
+        scrub: true,
+        change: () => onTravel({ route, cause: "drag" }),
+      });
+      return {
+        size,
+        // As for a travel caught in flight: one box is in hand, and turning
+        // back past its start is a wall rather than a third travel.
+        travelBack: travel.direction === "back",
+        travelOn: travel.direction === "forward",
+      };
+    },
     onEnd: ({ travels }) => {
       gestureRef.current = null;
       caughtAtPressRef.current = null;
@@ -718,6 +784,7 @@ export const RouteTravel = ({
       axes: axis,
       onStart: (detail) => travelHandlersRef.current.onStart(detail),
       onPull: (detail) => travelHandlersRef.current.onPull(detail),
+      onEdge: (detail) => travelHandlersRef.current.onEdge(detail),
       onEnd: (detail) => travelHandlersRef.current.onEnd(detail),
     });
   }, [travelByDrag, axis]);

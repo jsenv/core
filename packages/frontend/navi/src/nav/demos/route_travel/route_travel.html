@@ -94,10 +94,16 @@
       const A_ROUTE = route("/a");
       const B_ROUTE = route("/b");
       const C_ROUTE = route("/c");
+      const D_ROUTE = route("/d");
+      const E_ROUTE = route("/e");
+      // Five, so a single gesture can walk several of them: a relay is only
+      // felt from the second one on.
       const TABS = [
         { route: A_ROUTE, label: "A", color: "#e8f0fe" },
         { route: B_ROUTE, label: "B", color: "#fdf0e8" },
         { route: C_ROUTE, label: "C", color: "#eaf7ec" },
+        { route: D_ROUTE, label: "D", color: "#f3e8fe" },
+        { route: E_ROUTE, label: "E", color: "#fee8ee" },
       ];
       setupRoutes(TABS.map(({ route }) => route));
 
