@@ -62,9 +62,23 @@
  * ```
  */
 
+import { createPubSub } from "@jsenv/dom";
 import { h } from "preact";
+import { useLayoutEffect } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+
+/**
+ * A container has put its page on screen.
+ *
+ * A route matching is a signal changing, and the page it selects reaches the
+ * DOM only once Preact has rendered — an unknown number of passes later, in an
+ * unknown number of microtasks. Anyone who needs the page as it IS rather than
+ * as it has been decided (a travel about to have its picture taken by the
+ * browser, see route_travel.jsx) waits for this instead of counting.
+ */
+const [publishRouteRender, observeRouteRender] = createPubSub();
+export { observeRouteRender };
 
 const DEBUG = false;
 const debug = (...args) => {
@@ -124,9 +138,16 @@ export const collectRoutes = (children) => {
 
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
-// No effects, no signals, no contexts needed: reads route signals directly.
+// No contexts, no state of its own: it reads the route signals directly, and
+// its one effect only tells the outside what it has just done.
 const RouteContainer = ({ id, element, elementProps, children }) => {
   const { activeBranch } = collectBranches(children);
+
+  // The one effect here, and it says the only thing this component knows that
+  // nobody outside can find out: the branch it chose is now in the DOM.
+  useLayoutEffect(() => {
+    publishRouteRender();
+  });
 
   debug(
     `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,

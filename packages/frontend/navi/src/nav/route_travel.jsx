@@ -36,6 +36,7 @@
  * can stay where it is, outside this box, and still move with the finger.
  */
 
+import { options } from "preact";
 import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import {
@@ -43,7 +44,8 @@ import {
   startDragTravel,
   watchWheelTravel,
 } from "../layout/drag_travel.js";
-import { collectRoutes } from "./route.jsx";
+import { observeBeforeRouting } from "./browser_integration/before_routing.js";
+import { collectRoutes, observeRouteRender } from "./route.jsx";
 import {
   ensureDocumentStartViewTransition,
   holdViewTransition,
@@ -324,14 +326,20 @@ export const RouteTravel = ({
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     routeAskedForRef.current = route;
-    const viewTransition = startViewTransition(async () => {
-      if (change) {
-        await change();
-      }
-      // The picture the browser is about to take must be of the page that was
-      // asked for, and a route matching is not yet a page rendered.
-      await nextRender();
-    });
+    // The hold a navigation already took, if this travel is the answer to one:
+    // taking another would be taking a hold on a page that is holding still.
+    const releaseRendering = renderingHeldForRouting || holdRendering();
+    renderingHeldForRouting = null;
+    // The picture the browser is about to take must be of the page that was
+    // asked for, and a route matching is not yet a page rendered.
+    const viewTransition = startViewTransition(() =>
+      whileRouteRenders(route, async () => {
+        releaseRendering();
+        if (change) {
+          await change();
+        }
+      }),
+    );
     travel.viewTransition = viewTransition;
     if (scrub) {
       // Said only now: the release has to have something to let go of, and the
@@ -350,6 +358,9 @@ export const RouteTravel = ({
     // one never finishes: its pictures stand over a page that cannot be
     // touched anymore.
     viewTransition.finished.catch(() => {
+      // A transition that fails before it ever calls back leaves the page held:
+      // whoever asked for the hold gives it back, here as everywhere else.
+      releaseRendering();
       endTravel(travel);
     });
     if (!scrub) {
@@ -420,6 +431,28 @@ export const RouteTravel = ({
     };
   }, [routes]);
 
+  // Rendering is held for the length of a navigation, so that whatever picture
+  // this box is about to take is of the page being LEFT (see holdRendering).
+  // Held from before the navigation's first write, because by the time a route
+  // announces that it matches, Preact has already been told and the render is
+  // queued — a hold taken then is a hold taken too late.
+  useLayoutEffect(() => {
+    return observeBeforeRouting(() => {
+      renderingHeldForRouting = holdRendering();
+      // Nobody may have a picture to take: this navigation is not always one
+      // this box travels, and a page held for a change it does not animate is
+      // a page that stutters for nothing. Whoever wants it takes it over
+      // (beginTravel) before this runs.
+      queueMicrotask(() => {
+        const release = renderingHeldForRouting;
+        renderingHeldForRouting = null;
+        if (release) {
+          release();
+        }
+      });
+    });
+  }, []);
+
   // What the next announcement will compare itself against: written after the
   // render that shows it, so it is always the page one is looking at.
   useLayoutEffect(() => {
@@ -459,8 +492,12 @@ export const RouteTravel = ({
     backAtTheStart.then(async () => {
       try {
         routeAskedForRef.current = travel.fromRoute;
-        await onTravel({ route: travel.fromRoute, cause: "revert" });
-        await nextRender();
+        // The page that was left is put back UNDER the picture before the
+        // picture is dropped, so the two are the same thing at the moment they
+        // are swapped: that only holds once the page is really back.
+        await whileRouteRenders(travel.fromRoute, () =>
+          onTravel({ route: travel.fromRoute, cause: "revert" }),
+        );
         travel.viewTransition.skipTransition();
       } finally {
         // A travel ENDS, whatever happened on the way back: put the state back,
@@ -748,8 +785,8 @@ export const RouteTravel = ({
       element: elementRef.current,
       axes: axis,
       // Caught in flight: the hand is already in the gesture (see above), so it
-      // is answered from its first pixel.
-      immediate: Boolean(caughtAtPressRef.current),
+      // is answered from its first pixel, on the axis the pages travel.
+      immediate: caughtAtPressRef.current ? axis : false,
       ...travelHandlers,
       onGiveUp: () => {
         gestureRef.current = null;
@@ -862,6 +899,52 @@ const releaseHold = (travel) => {
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
 };
 
+// The browser does not take the picture of the page being left when a
+// transition is ASKED for — it takes it at the next frame, just before running
+// the update callback. Preact renders sooner than that, in a microtask: so a
+// change nobody here asked for (a tab pressed, the back button) has already
+// reached the DOM when the picture is taken, and the picture is of the page
+// ARRIVING. Both sides of the travel then show it, and one watches a page slide
+// onto itself.
+//
+// So what Preact has queued waits until the update callback, which is the
+// moment the API is built around — the change belongs inside it. The whole
+// document is held, for the one frame the browser needs: it is about to be
+// frozen under a picture anyway.
+let renderingHold = null;
+// The hold a navigation took on its way in, until a travel takes it over or the
+// navigation turns out to be one nobody here animates.
+let renderingHeldForRouting = null;
+const holdRendering = () => {
+  if (renderingHold) {
+    return renderingHold.release;
+  }
+  const debounceRenderingBefore = options.debounceRendering;
+  const hold = {
+    render: null,
+    release: () => {
+      // Only the hold that is still standing may be given back: a travel
+      // ending after another has taken over must not let go of what it does
+      // not hold.
+      if (renderingHold !== hold) {
+        return;
+      }
+      renderingHold = null;
+      options.debounceRendering = debounceRenderingBefore;
+      const { render } = hold;
+      hold.render = null;
+      if (render) {
+        render();
+      }
+    },
+  };
+  renderingHold = hold;
+  options.debounceRendering = (render) => {
+    hold.render = render;
+  };
+  return hold.release;
+};
+
 // The animations of the pictures, asked for again until there are some: they
 // come into existence with the transition, several frames after it was asked
 // for, and the gesture has already begun by then. Kept once found — the set
@@ -920,18 +1003,31 @@ const scrubTravel = (travel, ratio) => {
   }
 };
 
-// The render a route change sets off: a route matching is a signal changing,
-// and Preact answers it in a microtask of its own — so the DOM holds the new
-// page a few microtasks later, never in the same one.
+// A route change, carried out and then waited for until the page it selects is
+// really on screen. The container doing the swapping is the only one who knows
+// when that is (observeRouteRender): a route matching is a signal changing, and
+// how many passes Preact takes to answer it is its own business.
 //
-// Microtasks, and NOT a frame: this is awaited inside the callback of a view
-// transition, and the browser has stopped rendering by then — it is waiting for
-// this very promise to take its picture. A requestAnimationFrame in there waits
-// for a frame that cannot come until it resolves, and the transition hangs.
-const nextRender = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
+// Nothing is waited for when the change did not take — a route refused, a
+// redirect somewhere else. There is no page on its way then, and this runs
+// inside the callback of a view transition: the browser has stopped rendering
+// and is waiting on this very promise to take its picture, so a wait that never
+// ends is a page frozen under a transition that never became ready.
+const whileRouteRenders = async (route, change) => {
+  let stopListening;
+  const rendered = new Promise((resolve) => {
+    // Listened for before the change, or a render landing while the change is
+    // being awaited is a render nobody heard.
+    stopListening = observeRouteRender(resolve);
+  });
+  try {
+    await change();
+    if (route.matchingSignal.peek()) {
+      await rendered;
+    }
+  } finally {
+    stopListening();
+  }
 };
 
 // A transition skipped by another one starting is an outcome, not a failure.

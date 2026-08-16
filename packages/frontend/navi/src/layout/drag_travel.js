@@ -154,9 +154,17 @@ export const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
 // A gesture is over: does it carry on, or does everything go back? The distance
 // pulled says it, and the speed says it too — a short flick means "away" as
 // clearly as half a box does.
-const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
+const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
   if (!towardsSomething) {
     return false;
+  }
+  // Caught in flight and let go of again without a word: what was on its way
+  // carries on. Answered on the distance alone, a travel a hand merely touched
+  // is undone BY the touch — it was stopped where it stood, and where it stood
+  // is not far enough to count as an intention. Nobody asked it to stop; it was
+  // asked to wait.
+  if (slack && Math.abs(pulled - slack) < DRAG_START_THRESHOLD) {
+    return true;
   }
   const sign = pulled > 0 ? 1 : -1;
   const goingFast = Math.abs(velocity) > DRAG_FLICK_VELOCITY;
@@ -196,6 +204,12 @@ const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel. A
  *   finger leaning on any other axis is given up on at once, whole, so whatever
  *   else wants it (a scroller, the page) gets it whole.
+ * @param {false|"x"|"y"} [options.immediate=false] - the axis this press is
+ *   already on, for a press that landed on something moving: the gesture is
+ *   then read from its first pixel instead of waiting for an intent, and every
+ *   pixel since the grab is owed to the hand. The axis comes from the caller
+ *   rather than from the movement, because there is nothing to decide — what
+ *   was caught is travelling on one already.
  * @param {(detail: {axis: string, sign: number, target: Element, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
  *   - the finger has picked its axis. Answer `false` to give the gesture up, or
  *   with the geometry it walks: `size` (one box along that axis), `slack` (how
@@ -338,20 +352,39 @@ export const startDragTravel = (
         return;
       }
       if (!travel) {
-        // ONE axis, decided by the first movement reported and never
-        // revisited: a diagonal would ask for two travels at once and only one
-        // thing can arrive.
-        const reachX = Math.abs(coveredOn("x", gestureInfo));
-        const reachY = Math.abs(coveredOn("y", gestureInfo));
-        if (!reachX && !reachY) {
-          // Grabbed without the pointer having moved yet (see immediate): there
-          // is no axis in a movement of nothing, and nothing to give up on
-          // either — the next report will say.
-          return;
+        let axis;
+        if (immediate) {
+          // The axis is not up for decision: what this press caught is already
+          // travelling on one, and the caller said which. The first pixel of a
+          // hand landing on something moving is a tremor as often as it is a
+          // direction — read as a lean across the axis, it gives the gesture up
+          // and lets go of what was caught, under a finger that has not asked
+          // for anything yet.
+          axis = immediate;
+        } else {
+          // ONE axis, decided by the first movement reported and never
+          // revisited: a diagonal would ask for two travels at once and only
+          // one thing can arrive.
+          const reachX = Math.abs(coveredOn("x", gestureInfo));
+          const reachY = Math.abs(coveredOn("y", gestureInfo));
+          if (!reachX && !reachY) {
+            return;
+          }
+          axis = reachX >= reachY ? "x" : "y";
+          if (!axes.includes(axis)) {
+            giveUp();
+            return;
+          }
         }
-        const axis = reachX >= reachY ? "x" : "y";
         const covered = coveredOn(axis, gestureInfo);
-        if (!axes.includes(axis) || !covered) {
+        if (!covered) {
+          // Nothing said on that axis yet: a grab without a movement, or one
+          // straight across it. There is no gesture in that and nothing to give
+          // up on either — whatever the caller caught at the press stays
+          // caught, and the next report will say.
+          if (immediate) {
+            return;
+          }
           giveUp();
           return;
         }
@@ -443,7 +476,7 @@ export const startDragTravel = (
         return;
       }
       finish();
-      const { axis, size, pulled } = travel;
+      const { axis, size, pulled, slack } = travel;
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
       const velocity =
         axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
@@ -458,7 +491,7 @@ export const startDragTravel = (
         sign: pulled > 0 ? 1 : -1,
         travels:
           !cancelled &&
-          travelsAfter({ pulled, size, velocity, towardsSomething }),
+          travelsAfter({ pulled, slack, size, velocity, towardsSomething }),
         cancelled,
         event: releaseEvent,
       });
@@ -546,7 +579,7 @@ export const watchWheelTravel = (
     if (!travel) {
       return;
     }
-    const { axis, size, pulled, velocity } = travel;
+    const { axis, size, pulled, slack, velocity } = travel;
     const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
     travel = null;
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
@@ -556,7 +589,13 @@ export const watchWheelTravel = (
       pulled,
       size,
       sign: pulled > 0 ? 1 : -1,
-      travels: travelsAfter({ pulled, size, velocity, towardsSomething }),
+      travels: travelsAfter({
+        pulled,
+        slack,
+        size,
+        velocity,
+        towardsSomething,
+      }),
       cancelled: false,
       event: null,
     });
@@ -590,6 +629,7 @@ export const watchWheelTravel = (
         size: started.size,
         travelBack: Boolean(started.travelBack),
         travelOn: Boolean(started.travelOn),
+        slack: started.slack || 0,
         pulled: started.slack || 0,
         velocity: 0,
         lastTime: wheelEvent.timeStamp,
@@ -618,6 +658,9 @@ export const watchWheelTravel = (
       travel.size = next.size;
       travel.travelBack = Boolean(next.travelBack);
       travel.travelOn = Boolean(next.travelOn);
+      // A box handed over is a box nothing was caught in flight on: what this
+      // gesture has done to it, it did whole.
+      travel.slack = 0;
       if (distance > next.size) {
         return next.size;
       }

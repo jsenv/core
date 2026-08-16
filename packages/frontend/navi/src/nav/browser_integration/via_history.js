@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -57,6 +58,10 @@ export const setupBrowserIntegrationViaHistory = ({
 
   let abortController = null;
   const handleRoutingTask = (url, options) => {
+    // Before anything is written: the visited set, the URL and every route are
+    // about to change, and this is the last moment the page still stands as it
+    // was.
+    publishBeforeRouting({ url, ...options });
     const isSameUrl = url === window.location.href;
     const {
       reason,
