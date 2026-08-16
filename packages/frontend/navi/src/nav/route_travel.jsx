@@ -547,7 +547,7 @@ export const RouteTravel = ({
     // frames, and what one sees is a snap, not a return. So the pictures are
     // walked home over `how far they LOOK from home`, at the travel's own
     // pace, each animation at the rate that gets it there in that time.
-    const wallTime = revertWalkTime(animations, boxSizeOnAxis(), axis);
+    const wallTime = revertWalkTime(animations);
     for (const animation of animations) {
       const timeLeft = animation.currentTime;
       const rate = wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
@@ -1149,13 +1149,34 @@ const ratioOfTravel = (travel) => {
   return animation.currentTime / duration;
 };
 
+// CSS `ease`, evaluated: time in, distance out. Solved numerically because
+// the curve is parametric — two cubics sharing a parameter, with no closed
+// form for one against the other. Twenty halvings put the answer well under
+// a pixel of a screen-wide travel.
+const CSS_EASE = [0.25, 0.1, 0.25, 1];
+const bezierAxis = (s, a, b) =>
+  3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
+const easedProgress = (x, [x1, y1, x2, y2]) => {
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 20; i++) {
+    const mid = (low + high) / 2;
+    if (bezierAxis(mid, x1, x2) < x) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return bezierAxis((low + high) / 2, y1, y2);
+};
+
 // How long the way back should take: the distance the pictures visibly are
-// from home, converted to time at the travel's own pace. Read off the incoming
-// picture itself — its translate goes from one box-width to zero, so what is
-// left of that translation IS how far the eye says the travel has come.
-// Falls back to the clock ratio when the pseudo-element cannot be read (no
-// transition ready yet, another browser): worse pacing, same destination.
-const revertWalkTime = (animations, size, axis) => {
+// from home, converted to time at the travel's own pace. The distance is
+// computed from the clock THROUGH the easing curve, never read off the
+// pseudo-elements: getComputedStyle on them answers with the un-animated
+// value — the animated one lives on the compositor, where no reading from
+// here reaches (the same trap as the playbackRate setter above).
+const revertWalkTime = (animations) => {
   const animation = animations.find((candidate) =>
     candidate.effect?.pseudoElement?.includes("navi-route-travel"),
   );
@@ -1167,20 +1188,14 @@ const revertWalkTime = (animations, size, axis) => {
   if (!duration) {
     return 0;
   }
-  let visibleRatio = animation.currentTime / duration;
-  if (size) {
-    const { translate } = getComputedStyle(
-      document.documentElement,
-      "::view-transition-new(navi-route-travel)",
-    );
-    const parts = translate.split(" ");
-    const translatePx = Math.abs(
-      parseFloat(axis === "y" ? parts[1] || parts[0] : parts[0]),
-    );
-    if (!Number.isNaN(translatePx) && translatePx <= size) {
-      visibleRatio = 1 - translatePx / size;
-    }
-  }
+  const temporal = animation.currentTime / duration;
+  // The easing sits on the keyframes, where a CSS animation's
+  // animation-timing-function ends up. "ease" is what our travels play;
+  // anything else (linear under a finger, see the DRAGGED attribute) maps
+  // time to distance one for one.
+  const easing = animation.effect.getKeyframes()[0]?.easing;
+  const visibleRatio =
+    easing === "ease" ? easedProgress(temporal, CSS_EASE) : temporal;
   return visibleRatio * duration;
 };
 
