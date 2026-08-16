@@ -46,13 +46,13 @@ const App = () => {
 
       <h3>Navigation</h3>
       <Nav>
-        <Link route={HOME_ROUTE} appearance="tab" padding="s" currentIndicator>
+        <Link route={HOME_ROUTE} variant="tab" padding="s" currentIndicator>
           Home
         </Link>
         <Link
           route={COLOR_ROUTE}
           routeParams={{ color: undefined }}
-          appearance="tab"
+          variant="tab"
           padding="s"
           currentIndicator
         >
@@ -61,7 +61,7 @@ const App = () => {
         <Link
           route={COLOR_ROUTE}
           routeParams={{ color: "red" }}
-          appearance="tab"
+          variant="tab"
           padding="s"
           currentIndicator
         >
@@ -70,7 +70,7 @@ const App = () => {
         <Link
           route={COLOR_ROUTE}
           routeParams={{ color: "green" }}
-          appearance="tab"
+          variant="tab"
           padding="s"
           currentIndicator
         >
@@ -79,7 +79,7 @@ const App = () => {
         <Link
           route={COLOR_ROUTE}
           routeParams={{ color: "purple" }}
-          appearance="tab"
+          variant="tab"
           padding="s"
           currentIndicator
         >

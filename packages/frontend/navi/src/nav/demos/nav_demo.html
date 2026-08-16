@@ -119,17 +119,17 @@
             <Caption>List of links as tab</Caption>
             <Nav spacing="s">
               <Link
-                appearance="tab"
+                variant="tab"
                 pseudoState={{ ":-navi-href-current": true }}
                 currentIndicator
                 currentEffectBold
               >
                 Home
               </Link>
-              <Link appearance="tab" currentIndicator>
+              <Link variant="tab" currentIndicator>
                 Profile
               </Link>
-              <Link appearance="tab" currentIndicator>
+              <Link variant="tab" currentIndicator>
                 Settings
               </Link>
             </Nav>
@@ -158,7 +158,7 @@
                   {tabs.map((name) => (
                     <Link
                       key={name}
-                      appearance="tab"
+                      variant="tab"
                       currentIndicator
                       currentEffectBold
                       onClick={() => setActive(name)}
@@ -184,7 +184,7 @@
                   {tabs.map((name) => (
                     <Link
                       key={name}
-                      appearance="tab"
+                      variant="tab"
                       currentIndicator="top"
                       currentEffectBold
                       onClick={() => setActive(name)}
@@ -220,7 +220,7 @@
                 >
                   {tabs.map((name) => (
                     <Link
-                      appearance="tab"
+                      variant="tab"
                       key={name}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
@@ -359,7 +359,7 @@
               <div className="caption">Interactive — click to select</div>
               <Nav border="10px solid blue" borderRadius="100px">
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#F3E8FF"
                   paddingX="m"
                   onClick={() => setActive("0-0")}
@@ -370,7 +370,7 @@
                   0-0
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#C4B5FD"
                   paddingX="m"
                   onClick={() => setActive("1-3")}
@@ -381,7 +381,7 @@
                   1-3
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#8B5CF6"
                   paddingX="m"
                   onClick={() => setActive("3-6")}
@@ -392,7 +392,7 @@
                   3-6
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#7C3AED"
                   paddingX="m"
                   onClick={() => setActive("6+")}
@@ -411,21 +411,21 @@
               </div>
               <Nav border="10px solid blue" borderRadius="100px" spacing="0">
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#F3E8FF"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
                 >
                   0-0
                 </Link>
-                <Link appearance="tab" background="#C4B5FD" paddingX="m">
+                <Link variant="tab" background="#C4B5FD" paddingX="m">
                   1-3
                 </Link>
-                <Link appearance="tab" background="#8B5CF6" paddingX="m">
+                <Link variant="tab" background="#8B5CF6" paddingX="m">
                   3-6
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#7C3AED"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
@@ -438,17 +438,17 @@
             <div className="example-block">
               <div className="caption">Same design with last tab selected</div>
               <Nav border="10px solid blue" borderRadius="100px">
-                <Link appearance="tab" background="#F3E8FF" paddingX="m">
+                <Link variant="tab" background="#F3E8FF" paddingX="m">
                   0-0
                 </Link>
-                <Link appearance="tab" background="#C4B5FD" paddingX="m">
+                <Link variant="tab" background="#C4B5FD" paddingX="m">
                   1-3
                 </Link>
-                <Link appearance="tab" background="#8B5CF6" paddingX="m">
+                <Link variant="tab" background="#8B5CF6" paddingX="m">
                   3-6
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#7C3AED"
                   paddingX="m"
                   pseudoState={{ ":-navi-href-current": true }}
@@ -467,7 +467,7 @@
                 padding="15"
               >
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#F3E8FF"
                   paddingX="m"
                   onClick={() => setActive("0-0")}
@@ -478,7 +478,7 @@
                   0-0
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#C4B5FD"
                   paddingX="m"
                   onClick={() => setActive("1-3")}
@@ -489,7 +489,7 @@
                   1-3
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#8B5CF6"
                   paddingX="m"
                   onClick={() => setActive("3-6")}
@@ -500,7 +500,7 @@
                   3-6
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   background="#7C3AED"
                   paddingX="m"
                   onClick={() => setActive("6+")}
@@ -539,7 +539,7 @@
                           key={name}
                           onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
-                          appearance="tab"
+                          variant="tab"
                           currentIndicator="left"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
@@ -564,7 +564,7 @@
                       {navLinks.map((name) => (
                         <Link
                           key={name}
-                          appearance="tab"
+                          variant="tab"
                           onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -592,7 +592,7 @@
                       {navLinks.map((name) => (
                         <Link
                           key={name}
-                          appearance="tab"
+                          variant="tab"
                           currentIndicator="left"
                           alignX="end"
                           onClick={() => setActiveLink(name)}
@@ -619,7 +619,7 @@
                       {navLinks.map((name) => (
                         <Link
                           key={name}
-                          appearance="tab"
+                          variant="tab"
                           onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -654,7 +654,7 @@
                       {navLinks.map((name) => (
                         <Link
                           key={name}
-                          appearance="tab"
+                          variant="tab"
                           selected={name === activeLink}
                           onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
@@ -695,7 +695,7 @@
                       {navLinks.map((name) => (
                         <Link
                           key={name}
-                          appearance="tab"
+                          variant="tab"
                           onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -750,7 +750,7 @@
                         flex
                         expandX
                         spacing="xs"
-                        appearance="tab"
+                        variant="tab"
                         paddingX="m"
                         alignY="center"
                         currentIndicator="right"
@@ -776,7 +776,7 @@
                         flex
                         expandX
                         spacing="xs"
-                        appearance="tab"
+                        variant="tab"
                         paddingX="m"
                         alignY="center"
                         currentIndicator="right"
@@ -799,7 +799,7 @@
                         </BadgeCount>
                       </Link>
                       <Link
-                        appearance="tab"
+                        variant="tab"
                         currentIndicator="right"
                         currentEffectBold
                         paddingX="m"
@@ -814,7 +814,7 @@
                         Settings
                       </Link>
                       <Link
-                        appearance="tab"
+                        variant="tab"
                         currentIndicator="right"
                         currentEffectBold
                         paddingX="m"
@@ -840,7 +840,7 @@
                   <Box border="1px dashed violet" width="fit-content">
                     <Nav vertical spacing="xs" lineHeight="1">
                       <Link
-                        appearance="icon"
+                        variant="icon"
                         onClick={() => setActiveIconTab("home")}
                         aria-controls="icon-panel-home"
                         title="Home"
@@ -855,7 +855,7 @@
                         </Icon>
                       </Link>
                       <Link
-                        appearance="icon"
+                        variant="icon"
                         onClick={() => setActiveIconTab("profile")}
                         aria-controls="icon-panel-profile"
                         title="Profile"
@@ -870,7 +870,7 @@
                         </Icon>
                       </Link>
                       <Link
-                        appearance="icon"
+                        variant="icon"
                         onClick={() => setActiveIconTab("settings")}
                         aria-controls="icon-panel-settings"
                         title="Settings"
@@ -1001,13 +1001,13 @@
                   "--link-color-hover": "#1e293b",
                 }}
               >
-                <Link appearance="tab" currentIndicator current>
+                <Link variant="tab" currentIndicator current>
                   One
                 </Link>
-                <Link appearance="tab" currentIndicator>
+                <Link variant="tab" currentIndicator>
                   Two
                 </Link>
-                <Link appearance="tab" currentIndicator>
+                <Link variant="tab" currentIndicator>
                   Three
                 </Link>
               </Nav>
@@ -1022,14 +1022,14 @@
                   "--link-color-hover": "white",
                 }}
               >
-                <Link appearance="tab" currentIndicator current>
+                <Link variant="tab" currentIndicator current>
                   Alpha
                 </Link>
-                <Link appearance="tab" currentIndicator>
+                <Link variant="tab" currentIndicator>
                   Beta
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   currentIndicator
                   style={{
                     "--link-background": "#0d47a1",
@@ -1052,13 +1052,13 @@
                   "--link-current-indicator-color": "#f59e0b",
                 }}
               >
-                <Link appearance="tab" currentIndicator="bottom" current>
+                <Link variant="tab" currentIndicator="bottom" current>
                   Day
                 </Link>
-                <Link appearance="tab" currentIndicator="bottom">
+                <Link variant="tab" currentIndicator="bottom">
                   Week
                 </Link>
-                <Link appearance="tab" currentIndicator="bottom">
+                <Link variant="tab" currentIndicator="bottom">
                   Month
                 </Link>
               </Nav>
@@ -1077,11 +1077,11 @@
                   "--link-color-current": "#ffdd57",
                 }}
               >
-                <Link appearance="tab" current>
+                <Link variant="tab" current>
                   Code
                 </Link>
-                <Link appearance="tab">Design</Link>
-                <Link appearance="tab">Docs</Link>
+                <Link variant="tab">Design</Link>
+                <Link variant="tab">Docs</Link>
               </Nav>
             </div>
             <div className="example-block">
@@ -1097,14 +1097,14 @@
                   "--link-current-indicator-color": "#0ea5e9",
                 }}
               >
-                <Link appearance="tab" currentIndicator current>
+                <Link variant="tab" currentIndicator current>
                   General
                 </Link>
-                <Link appearance="tab" currentIndicator>
+                <Link variant="tab" currentIndicator>
                   Advanced
                 </Link>
                 <Link
-                  appearance="tab"
+                  variant="tab"
                   currentIndicator
                   style={{
                     "--link-background": "#fee2e2",
@@ -1200,7 +1200,7 @@
             {BINDER_TABS.map(({ id, label, count, countColor }) => (
               <Link
                 key={id}
-                appearance="tab"
+                variant="tab"
                 column
                 spacing="xs"
                 alignY="center"

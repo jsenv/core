@@ -294,15 +294,15 @@ const css = /* css */ `
       margin-left: -0.1em;
     }
 
-    &[data-appearance="text"] {
+    &[data-variant="text"] {
       --link-color: unset;
       --link-text-decoration: none;
     }
-    &[data-appearance="icon"] {
+    &[data-variant="icon"] {
       --link-color: unset;
       --link-text-decoration: none;
     }
-    &[data-appearance="tab"] {
+    &[data-variant="tab"] {
       --link-background-hover: color-mix(
         in srgb,
         var(--link-background, transparent),
@@ -457,15 +457,15 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
- * @param {"text"|"icon"|"tab"} [props.appearance] - Visual variant
- *   (`data-appearance`); `"text"`/`"icon"` drop the link color/underline,
+ * @param {"text"|"icon"|"tab"} [props.variant] - Visual variant
+ *   (`data-variant`); `"text"`/`"icon"` drop the link color/underline,
  *   `"tab"` renders a tab-like affordance.
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
  *   bar drawn on the given edge (or bottom when `true`) while current.
  * @param {boolean} [props.currentEffectBold] - Bold the text while current
  *   (reserving the bold width so layout doesn't shift).
  * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
- *   current (used with `appearance="tab"`).
+ *   current (used with `variant="tab"`).
  * @param {boolean|import("preact").ComponentChild} [props.startIcon] - Icon
  *   placed before the text.
  * @param {boolean|import("preact").ComponentChild} [props.endIcon] - Icon
@@ -528,7 +528,7 @@ const LinkPlain = (props) => {
     value = href,
 
     // visual
-    appearance,
+    variant,
     current,
     currentIndicator,
     currentEffectBold,
@@ -695,7 +695,7 @@ const LinkPlain = (props) => {
       // before it and leave it alone under a link long enough to wrap.
       attachLastChild={Boolean(endIconEl)}
       // Visual
-      data-appearance={appearance}
+      data-variant={variant}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
       data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}

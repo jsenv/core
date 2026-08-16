@@ -292,10 +292,29 @@ const hurryTravel = (animation) => {
   animation.playbackRate = rate > HURRY_RATE_MAX ? HURRY_RATE_MAX : rate;
 };
 
+// Which axes an option opens, from a prop that says either yes/no or the axes
+// themselves — and never more than the map has: a `travelByScroll="y"` on a row
+// of slides opens nothing, because there is nothing that way to open.
+const axesAllowedBy = (option, mapAxes) => {
+  if (!option || !mapAxes) {
+    return null;
+  }
+  if (option === true) {
+    return mapAxes;
+  }
+  let allowed = "";
+  for (const axis of mapAxes) {
+    if (option.includes(axis)) {
+      allowed += axis;
+    }
+  }
+  return allowed || null;
+};
+
 // Which axes the map has anything on, read from the layout alone: it is what
 // says which way a touch may travel, and a touch is answered before any of the
 // DOM below has been looked at.
-const dragAxesOf = (layout) => {
+const travelAxesOf = (layout) => {
   if (typeof layout === "string") {
     return layout === "column" ? "y" : "x";
   }
@@ -477,17 +496,28 @@ const readArea = (slideElement) =>
  *   one that just travelled there. Called once the travel is over, and in the
  *   same render as the return to rest — anything later shows the old content
  *   for a frame.
- * @param {boolean} [props.travelByKeyboard=true] - whether the arrows (and
- *   Home/End) walk the map. On by default: a map one can see is a map one
- *   expects to walk. Off when the arrows mean something else where these slides
- *   are — a list of choices one moves through, a picker whose screens are
- *   steps rather than places — so the keys keep the meaning the content gives
- *   them, and travelling stays something one asks for (a button, a command).
- * @param {boolean} [props.travelByDrag=true] - whether a pointer dragging the
- *   slides travels. On by default: slides side by side are something one
- *   expects to push around with a thumb. Off where the gesture belongs to the
- *   content (a canvas one draws on, a map one pans), or where the slides are
- *   steps of a form rather than a row one browses.
+ * Each way of travelling can be shut off, or narrowed to one axis: `true`
+ * (every axis the map has), `false`, `"x"`, `"y"`, `"xy"`.
+ *
+ * @param {boolean|"x"|"y"|"xy"} [props.travelByKeyboard=true] - whether the
+ *   arrows (and Home/End) walk the map. On by default: a map one can see is a
+ *   map one expects to walk. Off when the arrows mean something else where
+ *   these slides are — a list of choices one moves through, a picker whose
+ *   screens are steps rather than places — so the keys keep the meaning the
+ *   content gives them, and travelling stays something one asks for (a button,
+ *   a command).
+ * @param {boolean|"x"|"y"|"xy"} [props.travelByDrag=true] - whether a pointer
+ *   dragging the slides travels. On by default: slides side by side are
+ *   something one expects to push around with a thumb. Off where the gesture
+ *   belongs to the content (a canvas one draws on, a map one pans), or where
+ *   the slides are steps of a form rather than a row one browses.
+ * @param {boolean|"x"|"y"|"xy"} [props.travelByScroll="x"] - whether a wheel
+ *   pushing the box travels, one slide per push. Sideways only by default,
+ *   because a page is hardly ever scrollable that way: a sideways scroll over
+ *   the box can only have been meant for the box. Down the page it is the
+ *   page's OWN gesture, and taking it would move a slide under someone who was
+ *   scrolling the document — so a map that travels vertically has to be told
+ *   (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
  */
 export const SlideContainer = ({
@@ -500,6 +530,7 @@ export const SlideContainer = ({
   onLoop,
   travelByKeyboard = true,
   travelByDrag = true,
+  travelByScroll = "x",
   duration = "300ms",
   children,
   ...rest
@@ -583,10 +614,26 @@ export const SlideContainer = ({
   const current =
     rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
+  // What the map has, and what each way of asking is allowed to use of it.
+  const mapAxes = useMemo(() => travelAxesOf(layout), [layout]);
   const dragAxes = useMemo(
-    () => (travelByDrag ? dragAxesOf(layout) : null),
-    [travelByDrag, layout],
+    () => axesAllowedBy(travelByDrag, mapAxes),
+    [travelByDrag, mapAxes],
   );
+  const scrollAxes = useMemo(
+    () => axesAllowedBy(travelByScroll, mapAxes),
+    [travelByScroll, mapAxes],
+  );
+  const keyboardAxes = useMemo(
+    () => axesAllowedBy(travelByKeyboard, mapAxes),
+    [travelByKeyboard, mapAxes],
+  );
+  // What must not spill onto the page behind the box: every axis a gesture of
+  // ours can take, whichever gesture it is.
+  const travelAxes =
+    dragAxes && scrollAxes
+      ? axesAllowedBy(`${dragAxes}${scrollAxes}`, mapAxes)
+      : dragAxes || scrollAxes;
   // Which required slides have been answered (see Slide's own `required`). Held
   // here rather than in each slide because answering one says something about
   // the others: the steps after it were answered about a state that has just
@@ -1701,7 +1748,7 @@ export const SlideContainer = ({
   // mid-roll has nothing to drag yet — it is on its way somewhere and the
   // content that goes with it has not moved (see goToArea).
   const canStartTravel = () =>
-    travelByDrag && !dragRef.current && !rollingRef.current;
+    dragAxes && !dragRef.current && !rollingRef.current;
 
   const startDrag = (pointerDownEvent) => {
     if (!canStartTravel()) {
@@ -1749,14 +1796,14 @@ export const SlideContainer = ({
     }
   };
   useLayoutEffect(() => {
-    if (!travelByDrag || !dragAxes) {
+    if (!scrollAxes) {
       return undefined;
     }
     return watchWheelTravel(containerRef.current, {
-      axes: dragAxes,
+      axes: scrollAxes,
       onStep: (detail) => travelOneStepRef.current(detail),
     });
-  }, [travelByDrag, dragAxes]);
+  }, [scrollAxes]);
 
   // A gesture is listening on things that outlive this component.
   useLayoutEffect(() => {
@@ -1788,27 +1835,27 @@ export const SlideContainer = ({
     // `enabled` leaves the key to whatever else wants it (see
     // keyboard_shortcuts.js), rather than swallowing it here.
     arrowright: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes?.includes("x")),
       handler: (e) => travelled(move(1, 0, e)),
     },
     arrowleft: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes?.includes("x")),
       handler: (e) => travelled(move(-1, 0, e)),
     },
     arrowdown: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes?.includes("y")),
       handler: (e) => travelled(move(0, 1, e)),
     },
     arrowup: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes?.includes("y")),
       handler: (e) => travelled(move(0, -1, e)),
     },
     home: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes),
       handler: (e) => travelled(goToEnd(false, e)),
     },
     end: {
-      enabled: travelByKeyboard,
+      enabled: Boolean(keyboardAxes),
       handler: (e) => travelled(goToEnd(true, e)),
     },
   });
@@ -1829,7 +1876,7 @@ export const SlideContainer = ({
       // The same fact, read by the shared gesture stylesheet: what scrolls
       // inside a box that travels must not spill onto the page behind it (see
       // drag_travel.js).
-      data-drag-travel={dragAxes ?? undefined}
+      data-drag-travel={travelAxes ?? undefined}
       onPointerDown={(e) => {
         startDrag(e);
         rest.onPointerDown?.(e);

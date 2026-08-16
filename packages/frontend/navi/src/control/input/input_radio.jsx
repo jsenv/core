@@ -204,8 +204,8 @@ const css = /* css */ `
       }
     }
 
-    /* Radio appearance */
-    &[data-appearance="radio"] {
+    /* Radio variant */
+    &[data-variant="radio"] {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -252,16 +252,16 @@ const css = /* css */ `
       }
     }
 
-    /* Icon appearance */
-    &[data-appearance="icon"] {
+    /* Icon variant */
+    &[data-variant="icon"] {
       --width: auto;
       --height: auto;
       --outline-offset: 2px;
       --outline-width: 2px;
     }
 
-    /* Button appearance */
-    &[data-appearance="button"] {
+    /* Button variant */
+    &[data-variant="button"] {
       --margin: 0;
       --outline-offset: 0px;
       --width: auto;
@@ -367,17 +367,17 @@ const InputRadioHeadless = (props) => {
     />
   );
 };
-const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
+const VARIANT_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = (props) => {
   import.meta.css = css;
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
-  const { icon, appearance } = props;
-  let appearanceResolved = appearance || (icon ? "icon" : "radio");
-  if (appearance && !APPEARANCE_SET.has(appearance)) {
+  const { icon, variant } = props;
+  let variantResolved = variant || (icon ? "icon" : "radio");
+  if (variant && !VARIANT_SET.has(variant)) {
     console.warn(
-      `InputRadio: unsupported appearance "${appearance}". Falling back to "radio".`,
+      `InputRadio: unsupported variant "${variant}". Falling back to "radio".`,
     );
-    appearanceResolved = "radio";
+    variantResolved = "radio";
   }
   const { basePseudoState, checked } = radioHostProps;
   const loading = basePseudoState[":-navi-loading"];
@@ -386,10 +386,10 @@ const InputRadioFieldInterface = (props) => {
     elementSelector: ".navi_radio_accent_probe",
   });
   let visualVNode;
-  if (appearanceResolved === "icon" || icon) {
+  if (variantResolved === "icon" || icon) {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
-    // appearanceResolved === "radio"
+    // variantResolved === "radio"
     visualVNode = <RadioSvg />;
   }
 
@@ -398,17 +398,17 @@ const InputRadioFieldInterface = (props) => {
       as="span"
       // Radio displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
-      square={appearanceResolved === "button" ? true : undefined}
+      square={variantResolved === "button" ? true : undefined}
       {...radioRootProps}
       ref={boxRef}
       icon={undefined}
-      appearance={undefined}
-      data-appearance={appearanceResolved}
+      variant={undefined}
+      data-variant={variantResolved}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_control_input"
       basePseudoState={basePseudoState}
       styleCSSVars={
-        appearanceResolved === "button"
+        variantResolved === "button"
           ? RadioButtonStyleCSSVars
           : RadioStyleCSSVars
       }

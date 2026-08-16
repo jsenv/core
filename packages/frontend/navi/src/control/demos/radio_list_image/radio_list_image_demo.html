@@ -107,7 +107,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { RadioFieldset, Radio, Label, Box, Icon, Image } from "@jsenv/navi";
+      import {
+        RadioFieldset,
+        Radio,
+        Label,
+        Box,
+        Icon,
+        Image,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -126,7 +133,7 @@
             <p className="description">
               Select a map visualization style using image-based radio buttons.
               Each option shows a preview of the map style with{" "}
-              <code>appearance="button"</code>
+              <code>variant="button"</code>
               and images in the <code>icon</code> prop.
             </p>
 
@@ -142,7 +149,7 @@
               >
                 <Radio
                   value="street"
-                  appearance="button"
+                  variant="button"
                   borderRadius="8"
                   icon={
                     <Icon width="40" height="40">
@@ -155,7 +162,7 @@
                 />
                 <Radio
                   value="satellite"
-                  appearance="button"
+                  variant="button"
                   borderRadius="8"
                   icon={
                     <img
@@ -168,7 +175,7 @@
                 />
                 <Radio
                   value="discrete"
-                  appearance="button"
+                  variant="button"
                   borderRadius="8"
                   icon={
                     <Image
