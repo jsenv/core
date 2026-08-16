@@ -516,6 +516,17 @@ export const RouteTravel = ({
   // are swapped and nothing is seen changing.
   const revertTravel = (travel) => {
     travel.reverting = true;
+    // A revert somebody ASKED for — a press on the tab this travel came from —
+    // has a problem the others do not: that page is already back, and the
+    // picture being brought in is LIVE, so it shows the page one is going back
+    // to. Both sides then show the same thing and the way back is invisible:
+    // one presses, and one is simply there.
+    // So the render that navigation is holding (see holdRendering) is taken
+    // over here and kept until the pictures are back at their start. The page
+    // being left stays on screen while it is brought back, which is the rule
+    // below applied one step earlier.
+    const releaseRendering = renderingHeldForRouting;
+    renderingHeldForRouting = null;
     const animations = travelAnimations(travel);
     for (const animation of animations) {
       animation.playbackRate = -1;
@@ -535,18 +546,21 @@ export const RouteTravel = ({
         // The page that was left is put back UNDER the picture before the
         // picture is dropped, so the two are the same thing at the moment they
         // are swapped: that only holds once the page is really back.
-        //
-        // Unless it never left: a press on the tab one came from is what sets
-        // this revert off, and that press has already put the page back. There
-        // is nothing to ask for then, and nothing to wait for — waiting anyway
-        // is a render that never comes and a page frozen under its pictures.
-        if (!travel.fromRoute.matchingSignal.peek()) {
+        if (travel.fromRoute.matchingSignal.peek()) {
+          // It never left: the press that set this revert off put it back
+          // there, and its render has been waiting for the pictures to finish
+          // going back. Nothing to ask for, and nothing to wait for — waiting
+          // anyway is a render that never comes and a page frozen under its
+          // own pictures.
+          releaseRendering?.();
+        } else {
           await whileRouteRenders(travel.fromRoute, () =>
             onTravel({ route: travel.fromRoute, cause: "revert" }),
           );
         }
         travel.viewTransition.skipTransition();
       } finally {
+        releaseRendering?.();
         // A travel ENDS, whatever happened on the way back: put the state back,
         // fail to drop the picture, be interrupted by something else — the one
         // thing that must not happen is a travel that stays "in flight"

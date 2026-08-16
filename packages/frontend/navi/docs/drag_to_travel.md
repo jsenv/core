@@ -299,7 +299,14 @@ aimed decides what that costs:
 
 - **back where it set off from** — that is not another travel, it is this one
   undone: the same pictures, run backwards. Nothing has to be asked of the
-  router either, since the press has already put the page back;
+  router either, since the press has already put the page back — and that is
+  exactly what makes this one delicate. The picture being brought in is LIVE, so
+  the moment the press lands it shows the page one is going back TO, on both
+  sides at once, and the way back becomes invisible: one presses, and one is
+  simply there. So the render that navigation is holding is held a while
+  longer, until the pictures are at their start. The page being left stays on
+  screen while it is brought back, which is the rule this file states about
+  reverts, one step earlier;
 - **further the same way** — the picture being brought in is LIVE, so pointing
   the router at another page is all it takes for it to show that one instead.
   Nothing moves, and it costs nothing. Two tabs along or five makes no
