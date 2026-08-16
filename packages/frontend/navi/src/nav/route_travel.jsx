@@ -648,6 +648,9 @@ export const RouteTravel = ({
     const gesture = startDragTravel(pointerDownEvent, {
       element: elementRef.current,
       axes: axis,
+      // Caught in flight: the hand is already in the gesture (see above), so it
+      // is answered from its first pixel.
+      immediate: Boolean(caughtAtPressRef.current),
       ...travelHandlers,
       onGiveUp: () => {
         gestureRef.current = null;
@@ -784,7 +787,16 @@ const travelAnimations = (travel) => {
 // what the last gesture wrote: one let go of is still moving, and a hand
 // reaching for it must find it where it IS.
 const ratioOfTravel = (travel) => {
-  const [animation] = travelAnimations(travel);
+  const animations = travelAnimations(travel);
+  // The pages' own animation, not the first that comes: everything the travel
+  // carries along is animated too (a trait under a tab row, the page behind),
+  // each with a duration of its own. A time read on one of those and turned
+  // into a fraction of ANOTHER lands anywhere — over 1 more often than not,
+  // which reads as a travel already over and jumps the pictures to their end.
+  const animation =
+    animations.find((candidate) =>
+      candidate.effect?.pseudoElement?.includes("navi-route-travel"),
+    ) || animations[0];
   if (!animation) {
     return travel.ratio;
   }

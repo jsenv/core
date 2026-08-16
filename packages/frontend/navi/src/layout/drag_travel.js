@@ -215,7 +215,15 @@ const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
  */
 export const startDragTravel = (
   pointerDownEvent,
-  { element, axes = "xy", onStart, onPull, onEnd, onGiveUp = () => {} },
+  {
+    element,
+    axes = "xy",
+    immediate = false,
+    onStart,
+    onPull,
+    onEnd,
+    onGiveUp = () => {},
+  },
 ) => {
   const target = pointerDownEvent.target;
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
@@ -297,6 +305,12 @@ export const startDragTravel = (
         // thing can arrive.
         const reachX = Math.abs(coveredOn("x", gestureInfo));
         const reachY = Math.abs(coveredOn("y", gestureInfo));
+        if (!reachX && !reachY) {
+          // Grabbed without the pointer having moved yet (see immediate): there
+          // is no axis in a movement of nothing, and nothing to give up on
+          // either — the next report will say.
+          return;
+        }
         const axis = reachX >= reachY ? "x" : "y";
         const covered = coveredOn(axis, gestureInfo);
         if (!axes.includes(axis) || !covered) {
@@ -320,7 +334,13 @@ export const startDragTravel = (
           travelBack: Boolean(started.travelBack),
           travelOn: Boolean(started.travelOn),
           slack: started.slack || 0,
-          origin: covered,
+          // The pixels spent deciding the axis are not pulled back — what
+          // travels sets off from where the finger is at that moment rather
+          // than jumping the threshold it just crossed. Except when the intent
+          // was established before the press (see immediate): there was no
+          // threshold to cross, so every pixel since the grab is the hand's and
+          // is owed to it.
+          origin: immediate ? 0 : covered,
           pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
@@ -387,21 +407,29 @@ export const startDragTravel = (
   // the rule is the distance for EVERY pointer: the long press a finger is
   // asked for elsewhere says "pick this up and carry it", and asking for it
   // here would mean holding still before being allowed to swipe.
-  dragAfterIntent(
-    pointerDownEvent,
-    () => {
-      dragGesture = controller.grabViaPointer(pointerDownEvent, {
-        element,
-        // The box, not what the finger landed on: the caller's answer to this
-        // gesture may take that away (a page that travels navigates, and the
-        // router unmounts the page being left), and a capture whose element
-        // leaves the document is a capture the browser drops.
-        pointerCaptureElement: element,
-      });
-      return dragGesture;
-    },
-    { longPress: false, threshold: DRAG_START_THRESHOLD },
-  );
+  const grab = () => {
+    dragGesture = controller.grabViaPointer(pointerDownEvent, {
+      element,
+      // The box, not what the finger landed on: the caller's answer to this
+      // gesture may take that away (a page that travels navigates, and the
+      // router unmounts the page being left), and a capture whose element
+      // leaves the document is a capture the browser drops.
+      pointerCaptureElement: element,
+    });
+    return dragGesture;
+  };
+  if (immediate) {
+    // Already in the gesture: what this press landed on was moving, and a hand
+    // that reaches for something in motion has said what it wants by reaching.
+    // Asking it to prove it over ten pixels is asking twice — and over those
+    // pixels the thing it is holding answers to nobody.
+    grab()?.start();
+  } else {
+    dragAfterIntent(pointerDownEvent, grab, {
+      longPress: false,
+      threshold: DRAG_START_THRESHOLD,
+    });
+  }
   window.addEventListener("pointerup", onPressOver);
   window.addEventListener("pointercancel", onPressOver);
 

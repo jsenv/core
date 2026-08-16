@@ -9,7 +9,11 @@ a hand never has to learn two sets of numbers.
 ## What the rules are
 
 - A press is not a gesture until it has wandered ~10px, and the axis it leans on
-  then is the axis it walks, for good. A diagonal would ask for two travels at
+  then is the axis it walks, for good. **Except on something already moving**:
+  there the hand said what it wanted by reaching for it, so the gesture answers
+  from its first pixel and owes it every one of them — asking it to cross a
+  threshold is asking twice, and over those pixels the thing it is holding
+  answers to nobody. A diagonal would ask for two travels at
   once and only one screen can arrive.
 - Letting go carries on when about a third of a box has been pulled, or on a
   flick, whatever the distance — a gesture that has clearly begun is an
@@ -100,12 +104,19 @@ not ask for a new one, and it is not refused. Refusing it is what makes a page
 rock: a gesture given back to the browser is answered by the browser, over a
 travel that is already moving.
 
-**Touching it stops it, at the press** — not at the first pixels that decide an
-axis. A hand landing on something that is moving expects it to obey at once;
+**Touching it stops it, at the press** — in both consumers — and not at the first
+pixels that decide an axis. A hand landing on something that is moving expects it to obey at once;
 waiting for a threshold lets the pages travel on under a finger already resting
 on them, which is the one moment a gesture must not ask for proof. A press that
 turns out to be nothing lets go again and the travel carries on from where it
-was caught.
+was caught, over what is left of it.
+
+Position alone does not say it is working: caught late, the picture is already
+where the finger is and nothing looks wrong. What gives it away is SPEED — a
+travel that keeps its pace under a resting finger, then is pinned to a hand
+moving at another one. Measure the position frame by frame across the press: it
+must stop on the frame the finger lands, not on the one where the axis is
+decided.
 
 Taking over means the pictures stop where they are and answer the finger again,
 from where they stand (`slack`) rather than from zero. Only one box is in hand:

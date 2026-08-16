@@ -243,6 +243,20 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
 // A translate ("-100% 0%", "-260px 0px", "none") as two numbers of pixels.
 // Percentages are the size of the box, which is what a translate resolves them
 // against — so an offset written either way can be measured against another.
+// Where the track stands right now, in pixels, read off the box it draws in
+// rather than off the value that moves it: mid-animation the browser reports
+// that value as a calc() of a percentage and a length ("calc(-43% - 119px)"),
+// which no simple parse survives — read as 0, it puts the gesture a whole
+// travel away from what the eye is looking at.
+const trackOffsetPx = (track, containerElement) => {
+  const trackRect = track.getBoundingClientRect();
+  const containerRect = containerElement.getBoundingClientRect();
+  return {
+    x: trackRect.x - containerRect.x,
+    y: trackRect.y - containerRect.y,
+  };
+};
+
 const offsetToPx = (offset, box) => {
   if (!offset || offset === "none") {
     return { x: 0, y: 0 };
@@ -1473,6 +1487,32 @@ export const SlideContainer = ({
     if (rollingRef.current) {
       return;
     }
+    // Touching a travel that is playing STOPS it, right there, before the
+    // gesture has said anything about itself. Not at the first pixels that
+    // decide an axis: over those the slides go on at their own speed under a
+    // finger already resting on them, and when the gesture finally takes them
+    // they are pinned to a hand moving at a quite different pace — the slide
+    // does not jump, it stops dead, which is what a hand reads as a jolt and as
+    // "it got away from me".
+    // A press that turns out to be nothing lets the travel carry on from where
+    // it was caught (see caughtTravel below).
+    let caughtTravel = null;
+    const trackCaught = trackRef.current;
+    const travelCaught = trackAnimationRef.current;
+    if (travelCaught && travelCaught.playState === "running") {
+      const onScreenPx = trackOffsetPx(trackCaught, containerRef.current);
+      const offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
+      travelCaught.cancel();
+      // Where it was, held: cancelling an animation puts the track back on the
+      // value underneath it, which is the far end of the travel — the very jump
+      // this is about.
+      trackCaught.style.setProperty("--slide-container-offset", offsetOnScreen);
+      caughtTravel = {
+        onScreenPx,
+        offsetOnScreen,
+        offsetTarget: offsetRef.current,
+      };
+    }
     // The travel in hand, as the slides see it: where the one being dragged
     // stands, what is either side of it, and how far the finger has taken it.
     const drag = {
@@ -1492,6 +1532,10 @@ export const SlideContainer = ({
     const gesture = startDragTravel(pointerDownEvent, {
       element: containerRef.current,
       axes: dragAxes,
+      // Caught in flight: the hand is already in the gesture, so it is answered
+      // from its first pixel rather than after a threshold it has no reason to
+      // cross twice.
+      immediate: Boolean(caughtTravel),
       onStart: ({ axis, sign, target }) => {
         const areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
         const areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
@@ -1527,13 +1571,11 @@ export const SlideContainer = ({
           x: -basePlace.x * box.width,
           y: -basePlace.y * box.height,
         };
-        // Where the track IS, taken over from whatever was playing: a travel
-        // grabbed mid-flight carries on from under the finger, so the animation
-        // is dropped and its position kept.
-        const onScreen =
-          trackAnimationRef.current?.playState === "running"
-            ? offsetToPx(getComputedStyle(track).translate, box)
-            : baseOffset;
+        // Where the track IS: a travel grabbed mid-flight was already stopped
+        // where the eye saw it, at the press — this only reads that place, so
+        // the gesture starts from it rather than from where the map rests.
+        const onScreen = caughtTravel ? caughtTravel.onScreenPx : baseOffset;
+        caughtTravel = null;
         trackAnimationRef.current?.cancel();
         trackAnimationRef.current = null;
         progressAnimationRef.current?.cancel();
@@ -1604,6 +1646,41 @@ export const SlideContainer = ({
       },
       onGiveUp: () => {
         dragRef.current = null;
+        // A press that never became a gesture: what it stopped goes on its way,
+        // from where the finger caught it and over what is left of the travel.
+        if (!caughtTravel || !trackCaught) {
+          return;
+        }
+        const {
+          offsetOnScreen,
+          offsetTarget,
+          onScreenPx: caughtOnScreenPx,
+        } = caughtTravel;
+        caughtTravel = null;
+        if (offsetOnScreen === offsetTarget) {
+          settleTravel();
+          return;
+        }
+        const durationMs = durationToMs(duration);
+        // What is LEFT of it, at the pace it had: a travel caught nine tenths
+        // of the way there and let go of does not start its duration again.
+        const boxRect = trackCaught.getBoundingClientRect();
+        const targetPx = offsetToPx(offsetTarget, boxRect);
+        const leftToCover = Math.abs(
+          drag.axis === "y"
+            ? targetPx.y - caughtOnScreenPx.y
+            : targetPx.x - caughtOnScreenPx.x,
+        );
+        const size = drag.axis === "y" ? boxRect.height : boxRect.width;
+        const travelRatio = size ? leftToCover / size : 1;
+        trackCaught.style.setProperty("--slide-container-offset", offsetTarget);
+        trackAnimationRef.current = trackCaught.animate(
+          [{ translate: offsetOnScreen }, { translate: offsetTarget }],
+          { duration: durationMs * travelRatio, easing: "ease-out" },
+        );
+        trackAnimationRef.current.finished.then(settleTravel, () => {
+          // taken over by a travel asked for since
+        });
       },
     });
     if (!gesture) {
