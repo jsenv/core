@@ -620,12 +620,14 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     if (element.contains(target)) {
       return true;
     }
-    // The document itself, which is where a wheel lands while a transition
-    // covers the page — and the only case worth measuring for. Asked this way
-    // round rather than by reading the box on every event: a page can hold many
-    // travelling boxes, and every one of them would answer a wheel anywhere
-    // with a layout read.
-    if (target !== document.documentElement && target !== document.body) {
+    // Something the box is INSIDE, which is what a wheel lands on while a view
+    // transition has taken the box's rendering away: the hit falls through to
+    // the nearest ancestor still being painted. That is the only case worth
+    // measuring for, and asking it this way round costs a walk up the tree
+    // rather than a layout read — a page can hold many travelling boxes, and
+    // every one of them would otherwise measure itself on every wheel event
+    // anywhere.
+    if (!target.contains(element)) {
       return false;
     }
     const { left, right, top, bottom } = element.getBoundingClientRect();

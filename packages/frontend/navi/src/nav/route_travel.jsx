@@ -94,14 +94,19 @@ const css = /* css */ `
      document animates, and the document belongs to the application the rest of
      the time. */
   :root[${TRAVEL_ATTRIBUTE}] {
-    /* The rest of the page is taken as a picture too, said here rather than
-       relied upon: an application that animates its own lists has good reason
-       to opt the document out (view-transition-name: none), and under that
-       rule the page would keep rendering LIVE under the two pictures being
-       dragged — the page arriving would show through beside itself. Written
-       while the attribute is on, so the application gets its own rule back the
-       moment the travel is over. */
-    view-transition-name: root;
+    /* The page around the box is NOT taken as a picture, against the browser's
+       own default: an element that has been captured is not painted where it
+       was and cannot be pointed at either — every press lands on the document
+       root instead. Capturing the whole page therefore freezes it in both
+       senses at once, and a tab row beside a travel is dead for the length of
+       every travel: nothing highlights, the cursor is an arrow, a press on the
+       tab one changed one's mind about goes nowhere.
+
+       Left live, the page around answers as it always did, and nothing shows
+       through where the pages are: the box IS captured (it is named below), so
+       it paints nothing of its own, and the two pictures cover its rectangle
+       between them at every moment of the travel. */
+    view-transition-name: none;
 
     /* The pictures are looked at, never touched: they are drawn in the top
        layer, above everything, so a hand reaching for a page that is still
@@ -116,14 +121,6 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    /* What is not the pages — a top bar, a tab row — is one still picture that
-       must not fade: it is the same thing before and after, and a cross-fade of
-       something onto itself is a flicker. */
-    &::view-transition-old(root),
-    &::view-transition-new(root) {
-      mix-blend-mode: normal;
-      animation: none;
-    }
     &::view-transition-old(navi-route-travel),
     &::view-transition-new(navi-route-travel) {
       height: 100%;
@@ -188,9 +185,8 @@ const css = /* css */ `
     &::view-transition-group(*) {
       display: none;
     }
-    /* …except the two this travel is actually about. Listed after, so they win
-       on order rather than on a specificity war. */
-    &::view-transition-group(root),
+    /* …except the pages, which are what a travel is about. Listed after, so it
+       wins on order rather than on a specificity war. */
     &::view-transition-group(navi-route-travel) {
       display: block;
     }

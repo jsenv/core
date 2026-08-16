@@ -681,9 +681,24 @@ const LinkPlain = (props) => {
       color={anchor && !innerChildren ? "inherit" : undefined}
       {...controlRootProps}
       {...controlHostProps}
+      // Everything this component reads for itself is taken off the way out:
+      // what is left goes on the element, and a prop that means something here
+      // means nothing to an <a>. Written one by one rather than pulled out of
+      // props with a rest, because props is also what the control layer above
+      // was handed.
       preventDefault={undefined}
       anchor={undefined}
       revealOnInteraction={undefined}
+      variant={undefined}
+      current={undefined}
+      currentIndicator={undefined}
+      currentEffectBold={undefined}
+      currentEffectShadow={undefined}
+      blankTargetIcon={undefined}
+      anchorIcon={undefined}
+      startIcon={undefined}
+      endIcon={undefined}
+      hrefFallback={undefined}
       onClick={(e) => {
         onClick?.(e);
         if (preventDefault) {

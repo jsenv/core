@@ -197,12 +197,22 @@ Two things a travel in hand must never lose:
   flight is not a small leak: it freezes the page under its own pictures, and
   every gesture after it finds the box busy.
 
-One browser fact makes this harder than it reads: **while a view transition is
-playing, what happens over the travelling box is delivered to the document
-root**, not to the box — whatever the pseudo-elements are told about
+One browser fact makes this harder than it reads: **an element captured in a
+view transition cannot be pointed at.** It is not painted where it stands
+anymore, so nothing hit-tests to it — the press falls through to the nearest
+ancestor still being painted, whatever the pseudo-elements are told about
 `pointer-events`. Both readings answer it the same way: the event is caught at
 the document and handed to the box when it fell inside its rectangle, which is
 where the hand thinks it is.
+
+The same fact decides something bigger: **`RouteTravel` opts the page OUT of the
+transition** (`view-transition-name: none` on the root, against the browser's
+default). Captured, the whole page would be unpointable for the length of every
+travel — a tab row beside the box stops highlighting, the cursor goes back to an
+arrow, and a press on the tab one has just changed one's mind about goes
+nowhere. Left live it answers as it always did, and nothing shows through where
+the pages are: the box itself IS captured, so it paints nothing, and the two
+pictures cover its rectangle between them at every moment of the travel.
 
 It costs more for a wheel than for a press, because a press is one event and a
 wheel gesture is a stream: heard on the box alone, a wheel that sets a travel

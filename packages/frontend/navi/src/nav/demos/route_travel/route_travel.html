@@ -160,7 +160,13 @@
         <div className="top_bar">
           <Nav className="tab_row" expand currentIndicator>
             {TABS.map(({ route, label }) => (
-              <Link key={label} variant="tab" route={route} padding="m">
+              <Link
+                key={label}
+                variant="tab"
+                route={route}
+                padding="m"
+                textAlign="center"
+              >
                 {label}
               </Link>
             ))}
