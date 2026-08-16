@@ -98,6 +98,47 @@ const sectionSignal = stateSignal("to_come", {
 export const GAMES_SECTION_ROUTE = route(`/games/:section=${sectionSignal}`);
 ```
 
+#### Declaring the sections is what makes them places
+
+Both forms can be written together, and they say different things — which is
+why declaring the literals is not decoration:
+
+```js
+export const MY_GAMES_ROUTE = route(`/games/me/:section=${sectionSignal}`);
+export const MY_GAMES_TO_COME_ROUTE = route("/games/me"); // the default: no segment
+export const MY_GAMES_CANDIDATE_ROUTE = route("/games/me/candidate");
+export const MY_GAMES_DONE_ROUTE = route("/games/me/done");
+```
+
+Standing on `/games/me/done`:
+
+- `MY_GAMES_ROUTE.buildUrl()` → `/games/me/done`. The parameterized route reads
+  its signal, so a link to "my games" from the bottom bar **reopens the section
+  you were looking at**. That is what the signal is for, and `persists` makes it
+  survive the night;
+- `MY_GAMES_TO_COME_ROUTE.buildUrl()` → `/games/me`, always. A tab must point at
+  its own section, never at the one already open — a tab pointing at the current
+  page is a tab that cannot be clicked.
+
+The default section is the delicate one: it has no segment of its own, so its
+literal route is the **parent** of the parameterized one. It still means the
+default section and does not inherit the param.
+
+What tells navi these values name pages rather than qualify one is precisely
+that the literal routes exist. Where no literal is declared, the value stays a
+qualifier and an ancestor url keeps it:
+
+```js
+const tabSignal = stateSignal("general", { id: "settings_tab" });
+export const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+export const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+// nobody declared /admin/settings/advanced, so on tab "advanced":
+// ADMIN_ROUTE.buildUrl() → /admin/settings/advanced — "admin, where you left it"
+```
+
+So the rule is the one you would want: name a section and it becomes a place;
+leave it unnamed and it stays a setting carried along.
+
 ### Search params
 
 A param that qualifies a page rather than naming it — a zoom level, a sort, a

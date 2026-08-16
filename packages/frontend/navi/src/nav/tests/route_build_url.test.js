@@ -1173,4 +1173,69 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  // A tab row where the default section has no segment of its own: the literal
+  // route for it is the PARENT of the parameterized one. It must keep meaning
+  // the default section — a tab that points at the section currently open is a
+  // tab that cannot be clicked back to.
+  // The parameterized route keeps remembering (that is what the bottom bar
+  // links to), and both live side by side.
+  test("literal routes naming a section keep the parent literal on the default", () => {
+    const sectionSignal = stateSignal("to_come", {
+      id: "tabs_section",
+      oneOf: ["to_come", "candidate", "done"],
+      autoFix: true,
+    });
+    const GAMES_ROUTE = route("/games");
+    const MY_GAMES_ROUTE = route(`/games/me/:section=${sectionSignal}`);
+    const MY_GAMES_TO_COME_ROUTE = route("/games/me");
+    const MY_GAMES_CANDIDATE_ROUTE = route("/games/me/candidate");
+    const MY_GAMES_DONE_ROUTE = route("/games/me/done");
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      GAMES_ROUTE,
+      MY_GAMES_ROUTE,
+      MY_GAMES_TO_COME_ROUTE,
+      MY_GAMES_CANDIDATE_ROUTE,
+      MY_GAMES_DONE_ROUTE,
+    ]);
+    try {
+      const urlsOn = (relativeUrl) => {
+        updateRoutes(`${baseUrl}${relativeUrl}`);
+        return {
+          remembering: MY_GAMES_ROUTE.buildUrl(),
+          to_come_tab: MY_GAMES_TO_COME_ROUTE.buildUrl(),
+          candidate_tab: MY_GAMES_CANDIDATE_ROUTE.buildUrl(),
+          done_tab: MY_GAMES_DONE_ROUTE.buildUrl(),
+        };
+      };
+      return {
+        on_default_section: urlsOn("/games/me"),
+        on_candidate_section: urlsOn("/games/me/candidate"),
+        on_done_section: urlsOn("/games/me/done"),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  // The counterpart: a tab nobody declared a route for is a qualifier, not a
+  // name, so the ancestor url still descends into it to keep it.
+  test("undeclared tab values let the ancestor url keep the current one", () => {
+    const sectionSignal = stateSignal("settings", { id: "undeclared_section" });
+    const tabSignal = stateSignal("general", { id: "undeclared_tab" });
+    const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+    const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+    const { clearRoutes } = setupRoutes([ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE]);
+    try {
+      tabSignal.value = "advanced";
+      return {
+        admin_url: ADMIN_ROUTE.buildUrl(),
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

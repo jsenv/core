@@ -2775,6 +2775,32 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       return false;
     }
 
+    // Descending into a child path param means "this URL keeps the value you
+    // are on" — right for a param that QUALIFIES a position (a tab, a mode),
+    // wrong for one that NAMES a page. Two things must both hold for it to be
+    // a name:
+    //
+    // - literal routes are declared for its other values ("/games/me/done").
+    //   Declaring them is the developer saying these values are places; a tab
+    //   nobody named a route after stays a qualifier;
+    // - it has a default value, which makes THIS url the url of that default:
+    //   "/games/me" IS section=a-venir. Descending would leave the default
+    //   unaddressable — two states, one url. Without a default ("/map" is not
+    //   a panel, it is the absence of one) this url means nothing yet and
+    //   stays free to remember where you were.
+    const thisUrlAlreadyMeansAParamValue = (connection) => {
+      if (connection.paramType !== "path") {
+        return false;
+      }
+      if (pathConnectionMap.has(connection.paramName)) {
+        return false; // we carry that param ourselves, we are not its default
+      }
+      if (!connection.namedByLiteralRoutes) {
+        return false;
+      }
+      return connection.getDefaultValue() !== undefined;
+    };
+
     // Check if child has active non-default signal values
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
@@ -2801,7 +2827,10 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         if (signalValue !== undefined) {
           // No explicit override - use signal value
           childParams[paramName] = signalValue;
-          if (connection.isCustomValue(signalValue)) {
+          if (
+            connection.isCustomValue(signalValue) &&
+            !thisUrlAlreadyMeansAParamValue(connection)
+          ) {
             hasActiveParams = true;
           }
         }
@@ -5322,6 +5351,57 @@ const setupRoutePatterns = (routePatterns) => {
     };
     collectDescendantPathSignals(routePattern);
     routePattern.descendantPathSignals = descendantPathSignalsByIndex;
+  }
+  // Phase 5b: Flag path params whose values are ALSO declared as literal routes
+  // ("/games/me/done" next to "/games/me/:section"). That declaration is the
+  // only reliable statement that the param names pages rather than qualifying
+  // one — read by shouldUseChildRoute to decide whether an ancestor url may
+  // descend into it.
+  for (const routePattern of routePatternSet) {
+    for (const connection of routePattern.connections) {
+      if (connection.paramType !== "path") {
+        continue;
+      }
+      const paramSegment = routePattern.pattern.segments.find(
+        (seg) => seg.type === "param" && seg.name === connection.paramName,
+      );
+      if (!paramSegment) {
+        continue;
+      }
+      const { index } = paramSegment;
+      const sharesPathUpTo = (otherSegments) => {
+        for (let i = 0; i < index; i++) {
+          const seg = routePattern.pattern.segments[i];
+          const otherSeg = otherSegments[i];
+          if (!otherSeg) {
+            return false;
+          }
+          if (seg.type === "literal" && otherSeg.type === "literal") {
+            if (seg.value !== otherSeg.value) {
+              return false;
+            }
+          } else if (seg.type !== otherSeg.type) {
+            return false;
+          }
+        }
+        return true;
+      };
+      for (const otherPattern of routePatternSet) {
+        if (otherPattern === routePattern) {
+          continue;
+        }
+        const otherSegments = otherPattern.pattern.segments;
+        const otherSegment = otherSegments[index];
+        if (!otherSegment || otherSegment.type !== "literal") {
+          continue;
+        }
+        if (!sharesPathUpTo(otherSegments)) {
+          continue;
+        }
+        connection.namedByLiteralRoutes = true;
+        break;
+      }
+    }
   }
   // Phase 6: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
