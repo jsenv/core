@@ -68,6 +68,11 @@ const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
 // after the finger is gone. It moves by another law than one asked for by a
 // press (see the CSS).
 const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
+// A travel that changed its mind about where it was going (see
+// turnTravelAround). Only the pages can be turned around: everything else the
+// transition carries was measured once, at the start, against a destination
+// this travel is no longer going to.
+const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 
 const css = /* css */ `
   .navi_route_travel {
@@ -165,6 +170,29 @@ const css = /* css */ `
       animation-duration: var(--navi-route-travel-duration, 300ms);
       animation-timing-function: ease;
       animation-fill-mode: both;
+    }
+  }
+
+  /* A travel that turned around takes its pages with it and nothing else. Every
+     other thing the transition carries — a bar under a tab row, a header — was
+     PHOTOGRAPHED when the transition began: where it stood, and where it was
+     going to stand. Both are fixed, and the second one is now a place nobody is
+     going to. Worse, the thing itself has moved on in the live page (the bar is
+     already under the tab one is heading for), so the picture and the thing are
+     in two places at once — and two bars is what one sees.
+
+     So the pictures of everything that is not the pages are dropped, and those
+     things are simply left where they are, live. A jump rather than a slide, on
+     the one gesture that cannot have both. */
+  :root[${TURNED_ATTRIBUTE}] {
+    &::view-transition-group(*) {
+      display: none;
+    }
+    /* …except the two this travel is actually about. Listed after, so they win
+       on order rather than on a specificity war. */
+    &::view-transition-group(root),
+    &::view-transition-group(navi-route-travel) {
+      display: block;
     }
   }
 
@@ -551,6 +579,7 @@ export const RouteTravel = ({
     // nobody now.
     travel.animations = null;
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
+    document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
     routeAskedForRef.current = route;
   };
 
@@ -568,6 +597,7 @@ export const RouteTravel = ({
       travelRef.current = null;
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
+      document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
     }
   };
 

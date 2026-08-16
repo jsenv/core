@@ -4,9 +4,15 @@
  */
 
 import { toChildArray } from "preact";
+import { useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { NavContext } from "./nav_context.js";
+
+// A name of its own for the bar under the current tab, one per nav on the page:
+// two bars answering to the same name are two elements claiming one picture,
+// and the browser refuses the whole transition rather than pick.
+let navCount = 0;
 
 const css = /* css */ `
   @layer navi {
@@ -173,6 +179,22 @@ const NavStyleCSSVars = {
   paddingLeft: "--nav-padding-left",
   background: "--nav-background",
 };
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   currentIndicator?: boolean|"top"|"bottom"|"left"|"right",
+ *   currentIndicatorSlides?: boolean,
+ * }>}
+ * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
+ *   bar that says which tab one is on, said once here rather than on every
+ *   `<Link>`. A link may still say otherwise for itself.
+ * @param {boolean} [props.currentIndicatorSlides=true] - whether that bar
+ *   travels from the tab it was under to the tab it is under now, instead of
+ *   going out on one and coming back on the other. It does so by being NAMED,
+ *   which is all the browser needs: any change played as a view transition
+ *   animates it on the same clock as everything else in that transition. Inside
+ *   a `RouteTravel` that means it follows the pages, and the thumb dragging
+ *   them, without either of them being told about the other.
+ */
 export const Nav = ({
   children,
   spacing,
@@ -180,10 +202,26 @@ export const Nav = ({
   expand,
   expandX,
   linkBorderRadiusInherit,
+  currentIndicator,
+  currentIndicatorSlides = true,
   panelPosition, // "before" or "after": which side the panel sits on, turning the nav into folder tabs
   ...props
 }) => {
   import.meta.css = css;
+
+  const indicatorNameRef = useRef(null);
+  if (indicatorNameRef.current === null) {
+    indicatorNameRef.current = `navi-nav-indicator-${++navCount}`;
+  }
+  const navContextValue = useMemo(
+    () => ({
+      currentIndicator,
+      // Read by the link that is current, and by it alone: a name belongs to
+      // one element at a time, and the bar exists in every tab.
+      indicatorName: currentIndicatorSlides ? indicatorNameRef.current : null,
+    }),
+    [currentIndicator, currentIndicatorSlides],
+  );
 
   children = toChildArray(children);
 
@@ -203,7 +241,9 @@ export const Nav = ({
       {...props}
       styleCSSVars={NavStyleCSSVars}
     >
-      <NavContext.Provider value={true}>{children}</NavContext.Provider>
+      <NavContext.Provider value={navContextValue}>
+        {children}
+      </NavContext.Provider>
     </Box>
   );
 };

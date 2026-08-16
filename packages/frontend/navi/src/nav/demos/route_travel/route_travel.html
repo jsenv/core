@@ -23,33 +23,18 @@
         overflow: hidden;
       }
       .top_bar {
-        position: relative;
         flex: none;
         background: white;
         border-bottom: 1px solid #ddd;
       }
       .tab_row {
-        display: flex;
+        width: 100%;
       }
-      .tab {
-        padding: 12px 8px;
+      /* Every tab the same width, so the bar under the current one travels a
+         predictable distance. */
+      .tab_row .navi_link {
         flex: 1;
-        color: #444;
-        font-size: 14px;
-        text-align: center;
-        text-decoration: none;
-      }
-      .tab[data-href-current] {
-        color: #0a58ca;
-      }
-      .tab_underline {
-        position: absolute;
-        bottom: 0;
-        height: 3px;
-        background: #0a58ca;
-        /* Named, so it slides from one tab to the other on the same clock as
-           the pages — under the finger while it drags them. */
-        view-transition-name: demo-tab-underline;
+        justify-content: center;
       }
       .page {
         height: 100%;
@@ -106,6 +91,7 @@
       import { useLayoutEffect, useState } from "preact/hooks";
       import {
         Link,
+        Nav,
         Route,
         RouteTravel,
         route,
@@ -165,29 +151,22 @@
         </div>
       );
 
-      const TabRow = () => {
-        const currentIndex = TABS.findIndex(
-          ({ route }) => route.matchingSignal.value,
-        );
-        return (
-          <div className="top_bar">
-            <div className="tab_row">
-              {TABS.map(({ route, label }) => (
-                <Link key={label} className="tab" route={route}>
-                  {label}
-                </Link>
-              ))}
-            </div>
-            <div
-              className="tab_underline"
-              style={{
-                width: `${100 / TABS.length}%`,
-                left: `${(100 / TABS.length) * currentIndex}%`,
-              }}
-            />
-          </div>
-        );
-      };
+      // Nothing here says anything about the pages below, and nothing below
+      // says anything about this row: the bar under the current tab travels
+      // because Nav gives it a name of its own, and the browser then moves it
+      // on the same clock as whatever transition is playing — a thumb dragging
+      // the pages included.
+      const TabRow = () => (
+        <div className="top_bar">
+          <Nav className="tab_row" expand currentIndicator>
+            {TABS.map(({ route, label }) => (
+              <Link key={label} variant="tab" route={route} padding="m">
+                {label}
+              </Link>
+            ))}
+          </Nav>
+        </div>
+      );
 
       // The pace of a travel, so a gesture can be tried against one slow enough
       // to be caught in flight.

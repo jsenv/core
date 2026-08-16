@@ -272,3 +272,25 @@ what draws an indicator differs: `SlideContainer` writes
 interpolates) for anything drawn inside it; `RouteTravel` leaves it to the
 browser — give the indicator a `view-transition-name` of its own and it is
 animated from where it was to where it is, even from outside the box.
+
+A `<Nav>` does that for its own bar without being told anything about the box
+below it, which is why a tab row put beside a `RouteTravel` follows the thumb
+with no wiring at all: the bar is named, so the browser recognises it from one
+page to the next, and any transition moves it on the same clock as everything
+else in that transition.
+
+### One gesture that bar cannot follow
+
+A travel that turns around mid-gesture (out of the start of the box it was
+holding, into the page the other way) keeps its pages by pointing the router
+elsewhere while the same transition plays — that is what makes it seamless. But
+everything ELSE the transition carries was photographed when it began: where it
+stood, and where it was going to stand. That second place is now one nobody is
+going to, and the thing itself has already moved on in the live page — so the
+picture and the thing are in two places at once, and one sees two bars.
+
+So on that one gesture the pictures of everything that is not the pages are
+dropped, and those things are left where they are, live: the bar jumps to the
+tab one is heading for instead of sliding to a tab one is not. A slide would be
+nicer, and it is not available — the browser measured both of its ends before
+the hand changed its mind, and neither can be asked for again.

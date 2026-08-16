@@ -21,6 +21,7 @@ import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
+import { NavContext } from "./nav_context.js";
 import { assertRoute, useRouteStatus } from "../route.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
@@ -547,6 +548,7 @@ const LinkPlain = (props) => {
   }
 
   const selectionContext = useContext(SelectionContext);
+  const nav = useContext(NavContext);
   const visited = useIsVisited(href);
   const { selection, selectionController } = selectionContext || {};
   const { selected } = useSelectableElement(props.ref, {
@@ -652,14 +654,23 @@ const LinkPlain = (props) => {
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
 
+  // Where the bar goes: said here, or once for the whole row by the <Nav>
+  // around this link.
+  const currentIndicatorAsked = currentIndicator ?? nav?.currentIndicator;
   const currentIndicatorPosition =
-    currentIndicator === true ? "bottom" : currentIndicator;
+    currentIndicatorAsked === true ? "bottom" : currentIndicatorAsked;
   const currentIndicatorEl =
     currentIndicatorPosition === "left" ||
     currentIndicatorPosition === "right" ||
     currentIndicatorPosition === "top" ||
     currentIndicatorPosition === "bottom" ? (
-      <LinkCurrentIndicator />
+      <LinkCurrentIndicator
+        // Only the bar one can actually see carries the row's name, because a
+        // name belongs to one element at a time and every tab holds a bar. The
+        // browser then has the same thing in two places from one page to the
+        // next, and moves it — which is the whole of "the bar slides".
+        viewTransitionName={innerCurrent ? nav?.indicatorName : null}
+      />
     ) : null;
 
   const { onClick, preventDefault } = props;
@@ -724,7 +735,12 @@ const LinkPlain = (props) => {
   );
 };
 
-const LinkCurrentIndicator = () => {
-  return <span className="navi_current_indicator" />;
+const LinkCurrentIndicator = ({ viewTransitionName }) => {
+  return (
+    <span
+      className="navi_current_indicator"
+      style={viewTransitionName ? { viewTransitionName } : undefined}
+    />
+  );
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);
