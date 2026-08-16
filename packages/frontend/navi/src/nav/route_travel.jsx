@@ -550,8 +550,15 @@ export const RouteTravel = ({
     const wallTime = revertWalkTime(animations, boxSizeOnAxis(), axis);
     for (const animation of animations) {
       const timeLeft = animation.currentTime;
-      animation.playbackRate =
-        wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
+      const rate = wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
+      // updatePlaybackRate, never the playbackRate setter: these animations
+      // run on the compositor, and the setter is a non-seamless change there —
+      // on screen the pictures jump straight to their end state while the
+      // Animation object ticks backwards unseen. What one sees then is the
+      // travel SNAPPING home instead of returning, and no reading of
+      // getAnimations() will say so: only the compositor knows, and
+      // updatePlaybackRate is how a new rate is handed to it in flight.
+      animation.updatePlaybackRate(rate);
     }
     releaseHold(travel);
     const backAtTheStart = animations.length

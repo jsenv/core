@@ -320,7 +320,14 @@ aimed decides what that costs:
   covered ~80% of its distance — rewound at -1, nearly the whole visible way
   back collapses into the steep end of the curve and reads as a snap. The
   pictures are walked home over how far they LOOK from home instead, at the
-  travel's own pace (see revertWalkTime). Nothing has to be asked of the
+  travel's own pace (see revertWalkTime). And the new rate is handed over with
+  `updatePlaybackRate`, never the `playbackRate` setter: these animations run
+  on the COMPOSITOR, and the setter is a non-seamless change there — on screen
+  the pictures jump straight to their end while the Animation object ticks
+  backwards unseen. Nothing read from JS will say so; screenshots re-rasterized
+  off the main thread show the reversal playing while the screen shows a snap.
+  Only a compositor capture (a screencast, a human eye) tells the truth about
+  this one. Nothing has to be asked of the
   router either, since the press has already put the page back — and that is
   exactly what makes this one delicate. The picture being brought in is LIVE, so
   the moment the press lands it shows the page one is going back TO, on both
