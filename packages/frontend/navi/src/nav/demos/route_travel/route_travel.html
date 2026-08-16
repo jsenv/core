@@ -14,7 +14,7 @@
       }
       .phone {
         display: flex;
-        width: 360px;
+        width: 540px;
         height: 560px;
         flex-direction: column;
         border: 1px solid #ccc;
@@ -40,7 +40,6 @@
       }
       .tab[data-href-current] {
         color: #0a58ca;
-        font-weight: 600;
       }
       .tab_underline {
         position: absolute;
@@ -65,6 +64,11 @@
         min-height: 0;
         flex: 1;
       }
+      .speed_picker {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
       .demo-section {
         max-width: 700px;
         margin: 24px auto;
@@ -76,7 +80,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useLayoutEffect } from "preact/hooks";
+      import { useLayoutEffect, useState } from "preact/hooks";
       import {
         Link,
         Route,
@@ -87,13 +91,13 @@
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import { DocumentToc } from "../../../internal/document_toc.jsx";
 
-      const UPCOMING_ROUTE = route("/upcoming");
-      const REQUESTS_ROUTE = route("/requests");
-      const FINISHED_ROUTE = route("/finished");
+      const A_ROUTE = route("/a");
+      const B_ROUTE = route("/b");
+      const C_ROUTE = route("/c");
       const TABS = [
-        { route: UPCOMING_ROUTE, label: "À venir", color: "#e8f0fe" },
-        { route: REQUESTS_ROUTE, label: "Mes demandes", color: "#fdf0e8" },
-        { route: FINISHED_ROUTE, label: "Terminées", color: "#eaf7ec" },
+        { route: A_ROUTE, label: "A", color: "#e8f0fe" },
+        { route: B_ROUTE, label: "B", color: "#fdf0e8" },
+        { route: C_ROUTE, label: "C", color: "#eaf7ec" },
       ];
       setupRoutes(TABS.map(({ route }) => route));
 
@@ -113,7 +117,7 @@
       // section opens on its first page.
       const TabIndex = () => {
         useLayoutEffect(() => {
-          UPCOMING_ROUTE.redirectTo();
+          A_ROUTE.redirectTo();
         }, []);
         return null;
       };
@@ -156,6 +160,35 @@
         );
       };
 
+      // The pace of a travel, so a gesture can be tried against one slow enough
+      // to be caught in flight.
+      const SPEEDS = [
+        { label: "normale (300ms)", value: "300ms" },
+        { label: "lente (1s)", value: "1000ms" },
+        { label: "très lente (2,5s)", value: "2500ms" },
+      ];
+      const SpeedPicker = () => {
+        const [speed, setSpeed] = useState(SPEEDS[0].value);
+        useLayoutEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-route-travel-duration",
+            speed,
+          );
+        }, [speed]);
+        return (
+          <label className="speed_picker">
+            Durée du voyage{" "}
+            <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
+              {SPEEDS.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      };
+
       const Phone = () => (
         <div className="phone">
           <TabRow />
@@ -169,7 +202,7 @@
                   elementProps={{
                     label,
                     color,
-                    rows: label === "Terminées" ? 40 : 6,
+                    rows: label === "C" ? 40 : 6,
                   }}
                 />
               ))}
@@ -188,6 +221,7 @@
           </div>
           <div className="demo-section">
             <Heading id="nominal">Cas nominal</Heading>
+            <SpeedPicker />
             <Phone />
           </div>
         </div>

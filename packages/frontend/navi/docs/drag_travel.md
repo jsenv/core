@@ -15,6 +15,11 @@ a hand never has to learn two sets of numbers.
   flick, whatever the distance — a gesture that has clearly begun is an
   intention, and asking for a screen to be dragged all the way across turns a
   travel into work.
+- **A hand still moving says where it is going, and it says it both ways.** Away
+  from what was being brought in, it means "put it back" whatever the distance
+  already covered — otherwise a screen caught in flight and thrown back still
+  arrives, because the picture alone decided. A slow nudge is not a throw: there
+  the distance decides, as usual.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
 - A hand can go further than one box, and those extra pixels are not owed back:

@@ -158,10 +158,20 @@ const travelsAfter = ({ pulled, size, velocity, towardsSomething }) => {
     return false;
   }
   const sign = pulled > 0 ? 1 : -1;
-  const flicked =
-    Math.abs(velocity) > DRAG_FLICK_VELOCITY &&
-    Math.sign(velocity) === sign &&
-    Math.abs(pulled) > DRAG_FLICK_DISTANCE;
+  const goingFast = Math.abs(velocity) > DRAG_FLICK_VELOCITY;
+  // A hand that is still moving says where it is going, and it says it about
+  // BOTH answers. Going away from what it was bringing in is "put it back",
+  // whatever the distance already covered — which is the whole of what one asks
+  // for when catching something in flight and throwing it back the other way.
+  // Without this the picture alone decides, and a screen caught at two thirds
+  // and thrown back still arrives: the gesture was read as the place it was let
+  // go of rather than as a movement.
+  if (goingFast && Math.sign(velocity) !== sign) {
+    return false;
+  }
+  // …and going towards it travels whatever the distance: the hand said "away"
+  // quickly, which is the whole gesture.
+  const flicked = goingFast && Math.abs(pulled) > DRAG_FLICK_DISTANCE;
   return flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO;
 };
 
