@@ -3,7 +3,7 @@
 A drag-travel is a pointer pushing a whole screen aside to bring in the next
 one: slides inside a box (`SlideContainer`), pages that are URLs
 (`RouteTravel`). One module answers what such a gesture IS —
-[src/layout/drag_travel.js](../src/layout/drag_travel.js) — and both read it, so
+[@jsenv/dom's drag_travel.js](../../dom/src/interaction/drag/drag_travel.js) — and both read it, so
 a hand never has to learn two sets of numbers.
 
 ## What the rules are
@@ -34,23 +34,41 @@ a hand never has to learn two sets of numbers.
 
 ## Two inputs, one travel
 
-A thumb dragging the page and two fingers pushing it sideways on a trackpad ask
-for the same thing, so they are read by the same module and answered by the same
-three callbacks (`onStart`/`onPull`/`onEnd`) — a caller drives one travel, not
-two.
+A thumb dragging the page and a wheel pushing it sideways both ask to travel,
+and both consumers take both. But they do not ask for the same thing, and this
+is the one place where the two really part:
 
-They are not read the same way, because a trackpad gesture has **no press and no
-release**: it is a stream of `wheel` events that begins with its first event and
-ends in silence — a gap long enough to mean the fingers are gone, and long
-enough to survive the busiest frames of the travel (a navigation, a render, a
-picture being taken), or one gesture is cut into several travels.
+- **a hand HOLDS a screen** and says where to put it. It is owed every pixel, it
+  may change its mind halfway, and letting go is a question with an answer
+  (`onStart`/`onPull`/`onEnd`);
+- **a wheel POINTS at the next screen** and says "that one". What travels is a
+  row of slides, not a long strip one stops in the middle of, so one push moves
+  one slide — `onStep`, and the travel that follows plays at its own pace,
+  exactly as it would from a tab pressed or an arrow key.
+
+A wheel gesture also has **no press and no release**: it is a stream that begins
+with its first event and ends in silence — a gap long enough to mean the hand is
+gone, and long enough to survive the busiest frames of a travel (a navigation, a
+render, a picture being taken).
+
+Cutting that stream into pushes is the whole difficulty, because momentum keeps
+arriving with the fingers gone, and counted it turns one flick into five slides.
+Two things say "the hand asked again", and a stream only ever has one of them:
+
+- **a gap.** A mouse spends tens of milliseconds between two notches; a
+  trackpad, which sends whether or not the fingers are still there, never does.
+  So a notch is a step, however fast the wheel is spun;
+- **a number that grows after having shrunk.** Momentum only ever weakens, so a
+  trackpad picking up again is a hand pushing again. One flick — rise, peak,
+  decay — is therefore one step, and a second flick over the tail of the first
+  is heard as its own.
 
 Taking it is also the only way to stop the browser from answering it: on a
 laptop a horizontal two-finger swipe IS the back-navigation gesture, and a
 region that neither takes it nor lets it go is the worst of the three — the page
 rocks and nothing happens.
 
-Not the same thing as `@jsenv/dom`'s drag gesture
+Not the same thing as the drag gesture it sits beside
 ([drag_gesture.js](../../dom/src/interaction/drag/drag_gesture.js)): that one is
 for **carrying an object** across the page — it lays a backdrop over the
 document, makes everything else `inert`, takes the focus and blocks the scroll
@@ -180,10 +198,17 @@ Two things a travel in hand must never lose:
   every gesture after it finds the box busy.
 
 One browser fact makes this harder than it reads: **while a view transition is
-playing, a press over the travelling box is delivered to the document root**, not
-to the box — whatever the pseudo-elements are told about `pointer-events`. So
-while a travel plays, the press is caught at the document and handed to the box
-when it fell inside its rectangle, which is where the hand thinks it pressed.
+playing, what happens over the travelling box is delivered to the document
+root**, not to the box — whatever the pseudo-elements are told about
+`pointer-events`. Both readings answer it the same way: the event is caught at
+the document and handed to the box when it fell inside its rectangle, which is
+where the hand thinks it is.
+
+It costs more for a wheel than for a press, because a press is one event and a
+wheel gesture is a stream: heard on the box alone, a wheel that sets a travel
+off loses every event after the first. What one sees then is a page nudged a
+few pixels, going quiet, being put back — and scrolling behind the travel with
+everything that was not taken.
 
 ### On a touchscreen, the browser takes the gesture unless it is refused
 
@@ -239,6 +264,7 @@ table whose columns can be dragged._
 | what the finger moves   | a translated track                 | the pictures of a view transition  |
 | letting go too early    | the track comes back               | the transition is played backwards |
 | what says the order     | the layout map                     | the `<Route>` children, in order   |
+| what one wheel push is  | `move(±1)`, as an arrow key        | one travel, as a tab pressed       |
 
 Both expose how far the travel has come, and the way to read it differs because
 what draws an indicator differs: `SlideContainer` writes

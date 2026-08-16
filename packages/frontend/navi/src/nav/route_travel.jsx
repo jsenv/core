@@ -43,7 +43,7 @@ import {
   scrollRoomTowards,
   startDragTravel,
   watchWheelTravel,
-} from "../layout/drag_travel.js";
+} from "@jsenv/dom";
 import { observeBeforeRouting } from "./browser_integration/before_routing.js";
 import { collectRoutes, observeRouteRender } from "./route.jsx";
 import {
@@ -247,7 +247,7 @@ const css = /* css */ `
  * @param {"x"|"y"} [props.axis="x"] - which way the pages are laid out.
  * @param {boolean} [props.travelByDrag=true] - whether a pointer dragging the
  *   page travels. Off where the gesture belongs to the content.
- * @param {(detail: {route: object, cause: "drag"|"revert"}) => void|Promise<void>} [props.onTravel]
+ * @param {(detail: {route: object, cause: "drag"|"wheel"|"revert"}) => void|Promise<void>} [props.onTravel]
  *   - how to go to a route. The default REPLACES the current history entry
  *   rather than pushing one: a swipe is how one browses a page, not a place one
  *   aimed at, and three swipes back and forth must not bury the way out of the
@@ -836,26 +836,57 @@ export const RouteTravel = ({
     };
   }, []);
 
-  // Two fingers on a trackpad: the same travel, read from wheel events. Watched
-  // for the whole life of the box rather than started by a press, because such
-  // a gesture has no press — it begins with its first event.
-  //
-  // The handlers are reached through a ref, and the watcher is never rebuilt for
-  // them: a travel CHANGES the current page, so anything listening on
-  // `currentIndex` would be torn down halfway through the very gesture that is
-  // moving it — leaving the pages held, waiting for an end nobody can say
-  // anymore.
+  // A wheel pushing the box sideways asks for a PAGE, not for a place between
+  // two: one push, one neighbour — the same thing a tab pressed asks for, and
+  // it plays at its own pace rather than under a hand (see watchWheelTravel).
+  const travelOneStep = (sign) => {
+    const travelInFlight = travelRef.current;
+    if (travelInFlight?.scrub) {
+      // A hand is holding the pages. They are its until it lets go.
+      return;
+    }
+    // Where the box is going, which is not where it is: a step asked for while
+    // a travel plays is the page after the one on its way.
+    const fromRoute = travelInFlight
+      ? travelInFlight.route
+      : routes[currentIndex];
+    const fromIndex = routes.indexOf(fromRoute);
+    if (fromIndex === -1) {
+      return;
+    }
+    const route = sign > 0 ? routes[fromIndex - 1] : routes[fromIndex + 1];
+    if (!route) {
+      return;
+    }
+    if (travelInFlight) {
+      // Finished where it stands before the next one sets off: what ends it is
+      // that transition starting, and a picture dropped short of its end is a
+      // page seen jumping the last few pixels.
+      scrubTravel(travelInFlight, 1);
+      travelInFlight.ratio = 1;
+    }
+    beginTravel({
+      route,
+      fromRoute,
+      direction: sign > 0 ? "back" : "forward",
+      scrub: false,
+      change: () => onTravel({ route, cause: "wheel" }),
+    });
+  };
+
+  // Reached through a ref, and the watcher is never rebuilt for it: a travel
+  // CHANGES the current page, so anything listening on `currentIndex` would be
+  // torn down halfway through the very gesture that is moving it.
   travelHandlersRef.current = travelHandlers;
+  const travelOneStepRef = useRef(null);
+  travelOneStepRef.current = travelOneStep;
   useLayoutEffect(() => {
-    if (!travelByDrag || !CAN_KEEP_PICTURE) {
+    if (!travelByDrag) {
       return undefined;
     }
     return watchWheelTravel(elementRef.current, {
       axes: axis,
-      onStart: (detail) => travelHandlersRef.current.onStart(detail),
-      onPull: (detail) => travelHandlersRef.current.onPull(detail),
-      onEdge: (detail) => travelHandlersRef.current.onEdge(detail),
-      onEnd: (detail) => travelHandlersRef.current.onEnd(detail),
+      onStep: ({ sign }) => travelOneStepRef.current(sign),
     });
   }, [travelByDrag, axis]);
 

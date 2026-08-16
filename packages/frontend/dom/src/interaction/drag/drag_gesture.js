@@ -406,25 +406,46 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const markAsStarted = () => {
-      dispatchPublicCustomEvent(element, "navi_drag_start", {
-        gestureInfo,
-      });
-      onDragStart?.(gestureInfo);
       // Suppress the click that the browser fires after pointerup following a real drag.
       // The capture phase runs before any element onClick handler.
       const suppressClick = (clickEvent) => {
         clickEvent.stopPropagation();
         clickEvent.preventDefault();
+        stopSuppressingClick();
+      };
+      // That click is dispatched AFTER the pointerup that ends the drag, so
+      // this cannot be taken down with the gesture — it would be gone one event
+      // too early, and the drag would end on the link it started from being
+      // followed. It goes once it has swallowed the click, or at the next press
+      // if the drag produced none: a click is always preceded by a press, so a
+      // suppressor that outlives one press can never reach the click of
+      // another.
+      const stopSuppressingClick = () => {
         document.removeEventListener("click", suppressClick, {
+          capture: true,
+        });
+        document.removeEventListener("pointerdown", stopSuppressingClick, {
           capture: true,
         });
       };
       document.addEventListener("click", suppressClick, { capture: true });
       addReleaseCallback(() => {
-        document.removeEventListener("click", suppressClick, {
+        document.addEventListener("pointerdown", stopSuppressingClick, {
           capture: true,
         });
       });
+      // Everything this gesture puts on the document is in place, and undoable,
+      // BEFORE anybody is told it started: a listener may end the gesture from
+      // inside this very notification — that is how a press becomes a drag (see
+      // dragAfterIntent, where the gesture that measured the distance releases
+      // itself the moment it is confirmed). Set up afterwards, a listener would
+      // be registering its own removal with a gesture that is already over, and
+      // would then outlive it: what one sees is a click swallowed long after
+      // the drag it belonged to.
+      dispatchPublicCustomEvent(element, "navi_drag_start", {
+        gestureInfo,
+      });
+      onDragStart?.(gestureInfo);
     };
 
     // Declares the gesture confirmed without waiting for the distance threshold,

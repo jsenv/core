@@ -57,7 +57,11 @@ import {
   useState,
 } from "preact/hooks";
 import { Box } from "../box/box.jsx";
-import { scrollRoomTowards, startDragTravel } from "./drag_travel.js";
+import {
+  scrollRoomTowards,
+  startDragTravel,
+  watchWheelTravel,
+} from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
@@ -1475,46 +1479,55 @@ export const SlideContainer = ({
     });
   };
 
-  // A press on the box, handed to the one thing that knows what a drag-travel
-  // is (see drag_travel.js): the rules of the gesture are read there, the
-  // geometry of the slides here.
-  const startDrag = (pointerDownEvent) => {
-    if (!travelByDrag || dragRef.current) {
-      return;
-    }
-    // A window mid-roll has nothing to drag yet: it is on its way somewhere and
-    // the content that goes with it has not moved (see goToArea).
-    if (rollingRef.current) {
-      return;
-    }
-    // Touching a travel that is playing STOPS it, right there, before the
-    // gesture has said anything about itself. Not at the first pixels that
-    // decide an axis: over those the slides go on at their own speed under a
-    // finger already resting on them, and when the gesture finally takes them
-    // they are pinned to a hand moving at a quite different pace — the slide
-    // does not jump, it stops dead, which is what a hand reads as a jolt and as
-    // "it got away from me".
-    // A press that turns out to be nothing lets the travel carry on from where
-    // it was caught (see caughtTravel below).
-    let caughtTravel = null;
-    const trackCaught = trackRef.current;
+  // A travel that is playing when a gesture arrives is STOPPED where it stands,
+  // before the gesture has said anything about itself. Not at the first pixels
+  // that decide an axis: over those the slides go on at their own speed under a
+  // hand already resting on them, and when the gesture finally takes them they
+  // are pinned to a hand moving at a quite different pace — the slide does not
+  // jump, it stops dead, which is what one reads as a jolt and as "it got away
+  // from me".
+  // A gesture that turns out to be nothing lets the travel carry on from where
+  // it was caught (see onGiveUp).
+  const catchTravelInFlight = () => {
+    const trackElement = trackRef.current;
     const travelCaught = trackAnimationRef.current;
-    if (travelCaught && travelCaught.playState === "running") {
-      const onScreenPx = trackOffsetPx(trackCaught, containerRef.current);
-      const offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
-      travelCaught.cancel();
-      // Where it was, held: cancelling an animation puts the track back on the
-      // value underneath it, which is the far end of the travel — the very jump
-      // this is about.
-      trackCaught.style.setProperty("--slide-container-offset", offsetOnScreen);
-      caughtTravel = {
-        onScreenPx,
-        offsetOnScreen,
-        offsetTarget: offsetRef.current,
-      };
+    if (!travelCaught || travelCaught.playState !== "running") {
+      return null;
     }
+    const onScreenPx = trackOffsetPx(trackElement, containerRef.current);
+    const offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
+    travelCaught.cancel();
+    // Where it was, held: cancelling an animation puts the track back on the
+    // value underneath it, which is the far end of the travel — the very jump
+    // this is about.
+    trackElement.style.setProperty("--slide-container-offset", offsetOnScreen);
+    return {
+      trackElement,
+      onScreenPx,
+      offsetOnScreen,
+      offsetTarget: offsetRef.current,
+    };
+  };
+  // Which way a caught travel was going: a hand reaching for something moving
+  // has no axis left to decide, and a first pixel of tremor read as one gives
+  // the gesture up — and lets go of what it just caught.
+  const axisOfCaughtTravel = (caught) => {
+    const boxRect = caught.trackElement.getBoundingClientRect();
+    const targetPx = offsetToPx(caught.offsetTarget, boxRect);
+    const towardsX = Math.abs(targetPx.x - caught.onScreenPx.x);
+    const towardsY = Math.abs(targetPx.y - caught.onScreenPx.y);
+    return towardsX >= towardsY ? "x" : "y";
+  };
+
+  // What a travel gesture does to the slides, whoever asked for it: a pointer
+  // dragging the box and a wheel pushing it sideways ask for the same travel,
+  // so they are answered by the same callbacks and only the reading of the
+  // input differs (see drag_travel.js). The rules of the gesture are read
+  // there, the geometry of the slides here.
+  const createTravelHandlers = (caughtAtStart) => {
+    let caughtTravel = caughtAtStart;
     // The travel in hand, as the slides see it: where the one being dragged
-    // stands, what is either side of it, and how far the finger has taken it.
+    // stands, what is either side of it, and how far the gesture has taken it.
     const drag = {
       axis: null,
       area: null,
@@ -1529,13 +1542,8 @@ export const SlideContainer = ({
       offset: null,
       gesture: null,
     };
-    const gesture = startDragTravel(pointerDownEvent, {
-      element: containerRef.current,
-      axes: dragAxes,
-      // Caught in flight: the hand is already in the gesture, so it is answered
-      // from its first pixel rather than after a threshold it has no reason to
-      // cross twice.
-      immediate: Boolean(caughtTravel),
+    return {
+      drag,
       onStart: ({ axis, sign, target }) => {
         const areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
         const areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
@@ -1596,6 +1604,9 @@ export const SlideContainer = ({
         drag.progress = slack / size;
         stageDrag(drag);
         containerRef.current.toggleAttribute("data-slide-dragging", true);
+        // From here the box is busy, whichever input asked: a wheel gesture and
+        // a press must not both be moving the same track.
+        dragRef.current = drag;
         return {
           size,
           slack,
@@ -1648,10 +1659,11 @@ export const SlideContainer = ({
         dragRef.current = null;
         // A press that never became a gesture: what it stopped goes on its way,
         // from where the finger caught it and over what is left of the travel.
-        if (!caughtTravel || !trackCaught) {
+        if (!caughtTravel) {
           return;
         }
         const {
+          trackElement: trackCaught,
           offsetOnScreen,
           offsetTarget,
           onScreenPx: caughtOnScreenPx,
@@ -1682,13 +1694,69 @@ export const SlideContainer = ({
           // taken over by a travel asked for since
         });
       },
+    };
+  };
+
+  // Whether a gesture may begin at all: one travel at a time, and a window
+  // mid-roll has nothing to drag yet — it is on its way somewhere and the
+  // content that goes with it has not moved (see goToArea).
+  const canStartTravel = () =>
+    travelByDrag && !dragRef.current && !rollingRef.current;
+
+  const startDrag = (pointerDownEvent) => {
+    if (!canStartTravel()) {
+      return;
+    }
+    const caughtTravel = catchTravelInFlight();
+    const caughtAxis = caughtTravel ? axisOfCaughtTravel(caughtTravel) : null;
+    const handlers = createTravelHandlers(caughtTravel);
+    const gesture = startDragTravel(pointerDownEvent, {
+      element: containerRef.current,
+      axes: dragAxes,
+      // Caught in flight: the hand is already in the gesture, so it is answered
+      // from its first pixel rather than after a threshold it has no reason to
+      // cross twice — on the axis what it caught is travelling on.
+      immediate:
+        caughtAxis && dragAxes.includes(caughtAxis) ? caughtAxis : false,
+      ...handlers,
     });
     if (!gesture) {
       return;
     }
-    drag.gesture = gesture;
-    dragRef.current = drag;
+    handlers.drag.gesture = gesture;
+    dragRef.current = handlers.drag;
   };
+
+  // A wheel pushing the box sideways asks for a SLIDE, not for a place between
+  // two: one push, one slide — the same thing an arrow key asks for, and it
+  // plays at its own pace rather than under a hand (see watchWheelTravel).
+  // Watched for the whole life of the box because such a gesture has no press
+  // to start it: it begins with its first event.
+  //
+  // Reached through a ref and never rebuilt for it: a travel CHANGES which
+  // slide is current, so a watcher listening on that would be torn down halfway
+  // through the very gesture moving it.
+  const travelOneStepRef = useRef(null);
+  travelOneStepRef.current = ({ axis, sign, event }) => {
+    if (dragRef.current) {
+      // A hand is holding the slides. They are its until it lets go.
+      return;
+    }
+    if (axis === "x") {
+      move(-sign, 0, event);
+    } else {
+      move(0, -sign, event);
+    }
+  };
+  useLayoutEffect(() => {
+    if (!travelByDrag || !dragAxes) {
+      return undefined;
+    }
+    return watchWheelTravel(containerRef.current, {
+      axes: dragAxes,
+      onStep: (detail) => travelOneStepRef.current(detail),
+    });
+  }, [travelByDrag, dragAxes]);
 
   // A gesture is listening on things that outlive this component.
   useLayoutEffect(() => {
