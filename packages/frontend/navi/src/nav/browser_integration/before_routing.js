@@ -11,8 +11,13 @@
  * So this is the one moment where nothing has moved yet. It is published
  * synchronously, from the top of the navigation, and whoever listens runs
  * before the URL, the visited set, or any route has changed.
+ *
+ * The other end is published too, and for the same kind of reader: whoever
+ * held something across the change and has nobody to hand it to gets a moment
+ * to let go of it that does not depend on guessing how long the change takes.
  */
 
 import { createPubSub } from "@jsenv/dom";
 
 export const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
+export const [publishAfterRouting, observeAfterRouting] = createPubSub();

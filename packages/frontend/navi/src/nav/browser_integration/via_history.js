@@ -2,7 +2,7 @@ import { signal } from "@preact/signals";
 
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
-import { publishBeforeRouting } from "./before_routing.js";
+import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -60,8 +60,17 @@ export const setupBrowserIntegrationViaHistory = ({
   const handleRoutingTask = (url, options) => {
     // Before anything is written: the visited set, the URL and every route are
     // about to change, and this is the last moment the page still stands as it
-    // was.
+    // was. And after, whichever way the change went out — so that whoever took
+    // something at the first announcement has a definite place to give it back.
     publishBeforeRouting({ url, ...options });
+    try {
+      return applyRoutingTask(url, options);
+    } finally {
+      publishAfterRouting({ url, ...options });
+    }
+  };
+
+  const applyRoutingTask = (url, options) => {
     const isSameUrl = url === window.location.href;
     const {
       reason,

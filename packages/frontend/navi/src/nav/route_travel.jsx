@@ -44,8 +44,15 @@ import {
   startDragToTravel,
   watchWheelTravel,
 } from "@jsenv/dom";
-import { observeBeforeRouting } from "./browser_integration/before_routing.js";
-import { collectRoutes, observeRouteRender } from "./route.jsx";
+import {
+  observeAfterRouting,
+  observeBeforeRouting,
+} from "./browser_integration/before_routing.js";
+import {
+  collectRoutes,
+  freezeRouteRender,
+  observeRouteRender,
+} from "./route.jsx";
 import {
   ensureDocumentStartViewTransition,
   holdViewTransition,
@@ -477,20 +484,24 @@ export const RouteTravel = ({
   // announces that it matches, Preact has already been told and the render is
   // queued — a hold taken then is a hold taken too late.
   useLayoutEffect(() => {
-    return observeBeforeRouting(() => {
+    const stopWatchingStart = observeBeforeRouting(() => {
       renderingHeldForRouting = holdRendering();
-      // Nobody may have a picture to take: this navigation is not always one
-      // this box travels, and a page held for a change it does not animate is
-      // a page that stutters for nothing. Whoever wants it takes it over
-      // (beginTravel) before this runs.
-      queueMicrotask(() => {
-        const release = renderingHeldForRouting;
-        renderingHeldForRouting = null;
-        if (release) {
-          release();
-        }
-      });
     });
+    // Nobody may have had a picture to take: this navigation is not always one
+    // this box travels, and a page held for a change it does not animate is a
+    // page that stutters for nothing. Whoever wanted it took it over
+    // (beginTravel) while the change was being applied, and left nothing here.
+    const stopWatchingEnd = observeAfterRouting(() => {
+      const release = renderingHeldForRouting;
+      renderingHeldForRouting = null;
+      if (release) {
+        release();
+      }
+    });
+    return () => {
+      stopWatchingStart();
+      stopWatchingEnd();
+    };
   }, []);
 
   // What the next announcement will compare itself against: written after the
@@ -521,12 +532,12 @@ export const RouteTravel = ({
     // picture being brought in is LIVE, so it shows the page one is going back
     // to. Both sides then show the same thing and the way back is invisible:
     // one presses, and one is simply there.
-    // So the render that navigation is holding (see holdRendering) is taken
-    // over here and kept until the pictures are back at their start. The page
-    // being left stays on screen while it is brought back, which is the rule
-    // below applied one step earlier.
-    const releaseRendering = renderingHeldForRouting;
-    renderingHeldForRouting = null;
+    //
+    // So the pages are held where they are until the pictures have finished
+    // going back. Only the pages: unlike the hold a navigation takes to have
+    // its picture taken, nothing is being photographed here — everything else
+    // may go on rendering, and a tab row beside the box keeps answering.
+    const releaseRendering = freezeRouteRender();
     const animations = travelAnimations(travel);
     for (const animation of animations) {
       animation.playbackRate = -1;
@@ -548,11 +559,10 @@ export const RouteTravel = ({
         // are swapped: that only holds once the page is really back.
         if (travel.fromRoute.matchingSignal.peek()) {
           // It never left: the press that set this revert off put it back
-          // there, and its render has been waiting for the pictures to finish
-          // going back. Nothing to ask for, and nothing to wait for — waiting
-          // anyway is a render that never comes and a page frozen under its
-          // own pictures.
-          releaseRendering?.();
+          // there, and the pages have been held where they were until now.
+          // Nothing to ask for, and nothing to wait for — waiting anyway is a
+          // render that never comes and a page frozen under its own pictures.
+          releaseRendering();
         } else {
           await whileRouteRenders(travel.fromRoute, () =>
             onTravel({ route: travel.fromRoute, cause: "revert" }),
@@ -560,7 +570,7 @@ export const RouteTravel = ({
         }
         travel.viewTransition.skipTransition();
       } finally {
-        releaseRendering?.();
+        releaseRendering();
         // A travel ENDS, whatever happened on the way back: put the state back,
         // fail to drop the picture, be interrupted by something else — the one
         // thing that must not happen is a travel that stays "in flight"

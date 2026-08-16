@@ -205,8 +205,25 @@ ancestor still being painted, whatever the pseudo-elements are told about
 the document and handed to the box when it fell inside its rectangle, which is
 where the hand thinks it is.
 
-The same fact decides something bigger: **`RouteTravel` opts the page OUT of the
-transition** (`view-transition-name: none` on the root, against the browser's
+### Two ways of holding a render still, and why only one is global
+
+Nothing may reach the DOM between the moment a transition is asked for and the
+moment the browser photographs the page — the photograph is taken a frame later,
+and Preact renders sooner than that. So a navigation holds rendering from its
+very first write until the transition's own callback: **all of it**, because a
+view transition photographs the whole document. Hold only the routes and the tab
+row updates first — the bar is then photographed already under the tab one is
+going to, and it has nowhere to slide from. It lasts one frame.
+
+The other hold is the revert above, and it can last a whole travel. There
+nothing is being photographed: the pictures exist, and the only thing that must
+not change is what the LIVE one shows. So only the pages are held
+(`freezeRouteRender`), by the containers themselves — a route container keeps
+returning the branch it returned last time — and the rest of the document goes
+on rendering.
+
+The same browser fact decides something bigger: **`RouteTravel` opts the page
+OUT of the transition** (`view-transition-name: none` on the root, against the browser's
 default). Captured, the whole page would be unpointable for the length of every
 travel — a tab row beside the box stops highlighting, the cursor goes back to an
 arrow, and a press on the tab one has just changed one's mind about goes
@@ -303,10 +320,11 @@ aimed decides what that costs:
   exactly what makes this one delicate. The picture being brought in is LIVE, so
   the moment the press lands it shows the page one is going back TO, on both
   sides at once, and the way back becomes invisible: one presses, and one is
-  simply there. So the render that navigation is holding is held a while
-  longer, until the pictures are at their start. The page being left stays on
-  screen while it is brought back, which is the rule this file states about
-  reverts, one step earlier;
+  simply there. So the PAGES are held where they are until the pictures are at
+  their start — only the pages, because nothing is being photographed here and
+  everything else may go on rendering. The page being left stays on screen
+  while it is brought back, which is the rule this file states about reverts,
+  one step earlier;
 - **further the same way** — the picture being brought in is LIVE, so pointing
   the router at another page is all it takes for it to show that one instead.
   Nothing moves, and it costs nothing. Two tabs along or five makes no
