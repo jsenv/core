@@ -25,6 +25,11 @@ const dragStyleController = createStyleController("drag_to_move");
  *   If omitted, `element` is translated. The translate is read from `dragStyleController`
  *   at grab time so any pre-existing translate is accumulated rather than reset.
  *
+ * A `transform` already on the moved element (rotate, scale…) is preserved and does
+ * not disturb the movement. `rotate` and `scale` set as individual CSS properties do:
+ * they apply outside `transform`, where nothing the gesture writes can reach them —
+ * put those on a child element instead (a warning says so in dev).
+ *
  * @param {object} [options]
  * @param {boolean} [options.stickyFrontiers=true]
  *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
@@ -46,13 +51,24 @@ const dragStyleController = createStyleController("drag_to_move");
  *   Renders a visual line when the pointer deviates from the element due to constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
- * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
+ * @param {"commit"|"cancel"|"cancel-animated"|"manual"} [options.releasePositionEffect="commit"]
  *   Controls what happens to the translated position on release.
  *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
  *   - `"cancel"`: discards the translate so the element snaps back to its original position.
+ *   - `"cancel-animated"`: same, travelling back to it over `cancelAnimationDuration`.
  *   - `"manual"`: does nothing — the caller is responsible for clearing or committing
  *     the transform via `dragStyleController`.
+ * @param {number} [options.cancelAnimationDuration=200]
+ *   Duration (ms) of the way back for `"cancel-animated"`.
+ * @param {string} [options.cancelAnimationEasing="ease-out"]
+ *   Easing of the way back for `"cancel-animated"`.
  * @returns {object} Drag gesture controller with augmented `grab()` / `grabViaPointer()` methods.
+ *
+ * `gestureInfo` gains `cancelPosition()`, `commitPosition()` and
+ * `cancelPositionAnimated({duration, easing})` — the last returns the `Animation`
+ * playing the way back (`null` when the element was already home), so a caller
+ * on `"manual"` can decide between thrown and put back, and still await the
+ * landing.
  */
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
@@ -63,6 +79,8 @@ export const createDragToMoveGestureController = ({
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
   releasePositionEffect = "commit",
+  cancelAnimationDuration = 200,
+  cancelAnimationEasing = "ease-out",
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -84,19 +102,46 @@ export const createDragToMoveGestureController = ({
     );
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
+    if (import.meta.dev) {
+      warnAboutTransformsOutsideTransform(elementImpacted);
+    }
 
     const cancelPosition = () => {
       dragStyleController.clear(elementImpacted);
+    };
+    // Reading the transform on either side of the clear is what lets this work
+    // without knowing anything about the element: how it looked while held and
+    // how it looks once let go are both just computed transforms, and the
+    // animation has only to bridge the two.
+    const cancelPositionAnimated = ({
+      duration = cancelAnimationDuration,
+      easing = cancelAnimationEasing,
+    } = {}) => {
+      const transformWhileHeld = getComputedStyle(elementImpacted).transform;
+      cancelPosition();
+      const transformAtRest = getComputedStyle(elementImpacted).transform;
+      if (transformWhileHeld === transformAtRest) {
+        return null;
+      }
+      // No fill: the element already sits at its resting transform, the
+      // animation only replays the way back to it.
+      return elementImpacted.animate(
+        [{ transform: transformWhileHeld }, { transform: transformAtRest }],
+        { duration, easing },
+      );
     };
     const commitPosition = () => {
       dragStyleController.commit(elementImpacted);
     };
     dragGesture.gestureInfo.cancelPosition = cancelPosition;
+    dragGesture.gestureInfo.cancelPositionAnimated = cancelPositionAnimated;
     dragGesture.gestureInfo.commitPosition = commitPosition;
 
     dragGesture.addReleaseCallback(() => {
       if (releasePositionEffect === "cancel") {
         cancelPosition();
+      } else if (releasePositionEffect === "cancel-animated") {
+        cancelPositionAnimated();
       } else if (releasePositionEffect === "commit") {
         commitPosition();
       }
@@ -289,7 +334,15 @@ export const createDragToMoveGestureController = ({
         // Build the transform to apply, preserving any transforms that were
         // already on the element before the grab (e.g. rotate from another
         // controller), and accumulating from the pre-grab translate baseline.
-        const transform = { ...transformAtGrab };
+        // The translate keys are seeded HERE, before the spread, and not merely
+        // assigned below: a transform object is serialized in key order, and in a
+        // transform list every function transforms the frame of the ones after it.
+        // A translate written after a rotate or a scale therefore travels rotated
+        // and scaled — the element drifts away from the pointer, proportionally to
+        // the distance covered. Dragging moves things on screen, so its translate
+        // has to come first, whatever else the element carries. The spread still
+        // wins on the value when the element already had a translate of its own.
+        const transform = { translateX: 0, translateY: 0, ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -349,4 +402,35 @@ export const createDragToMoveGestureController = ({
   };
 
   return dragGestureController;
+};
+
+/*
+ * `rotate` and `scale` set as individual properties are not part of `transform`:
+ * the element's matrix is translate, then rotate, then scale, then `transform`.
+ * The drag translate lives in `transform`, so it lands INSIDE them and comes out
+ * rotated and scaled — the element drifts away from the pointer, a bit more at
+ * every pixel travelled.
+ * Nothing written inside `transform` can compensate, and `getComputedStyle().transform`
+ * does not show these properties, so the gesture cannot even see what is happening
+ * to it: hence a warning, and the way out is to carry the decoration on a child
+ * (what the drag clone of startDragToReorder does).
+ * `translate` as an individual property is left alone — translations compose,
+ * whatever their order.
+ */
+const warnAboutTransformsOutsideTransform = (element) => {
+  const { rotate, scale } = getComputedStyle(element);
+  const propertiesInTheWay = [];
+  if (rotate !== "none") {
+    propertiesInTheWay.push(`rotate: ${rotate}`);
+  }
+  if (scale !== "none") {
+    propertiesInTheWay.push(`scale: ${scale}`);
+  }
+  if (propertiesInTheWay.length === 0) {
+    return;
+  }
+  console.warn(
+    `The element being dragged has ${propertiesInTheWay.join(" and ")} set as CSS ${propertiesInTheWay.length === 1 ? "property" : "properties"}, which applies outside "transform" and will distort the drag: the element will not follow the pointer. Put the rotation/scale on a child element, or express it inside "transform".`,
+    element,
+  );
 };

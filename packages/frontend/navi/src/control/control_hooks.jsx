@@ -1181,6 +1181,10 @@ export const useControlgroupProps = (
       ...controlgroupProps,
       "name": undefined, // useful to children, not the the group itself
       "required": undefined, // useful to children, not the the group itself
+      // How many items the group accepts, read by its controller and by the
+      // children asking whether there is still room for them. Not an attribute
+      // any element wears: a <fieldset maxlength> means nothing.
+      "maxLength": undefined,
       "onnavi_action_allowed": (e) => {
         setActionRequester(e.detail.requester);
         controlgroupProps.onnavi_action_allowed(e);
@@ -1348,10 +1352,20 @@ const useInteractiveProps = (
       controlLoading && parentActionRequester === ref.current,
     );
     const loadingBase = loading || loadingFromParent;
+    // Read-only because the selection above guards its length
+    // (`maxLengthGuard`) and this one would make it longer: it can be pointed
+    // at, focused and pressed — and answers why (see readonly_constraint.js) —
+    // but cannot be taken.
+    const readOnlyFromParentMaxLengthGuard = Boolean(
+      uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(
+        uiStateController,
+      ),
+    );
     const readOnlyBase =
       readOnly ||
       controlReadOnly ||
       loadingBase ||
+      readOnlyFromParentMaxLengthGuard ||
       controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;

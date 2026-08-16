@@ -62,9 +62,47 @@
  * ```
  */
 
+import { createPubSub } from "@jsenv/dom";
+import { signal } from "@preact/signals";
 import { h } from "preact";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+
+/**
+ * A container has put its page on screen.
+ *
+ * A route matching is a signal changing, and the page it selects reaches the
+ * DOM only once Preact has rendered — an unknown number of passes later, in an
+ * unknown number of microtasks. Anyone who needs the page as it IS rather than
+ * as it has been decided (a travel about to have its picture taken by the
+ * browser, see route_travel.jsx) waits for this instead of counting.
+ */
+const [publishRouteRender, observeRouteRender] = createPubSub();
+export { observeRouteRender };
+
+/**
+ * Keep every container showing the page it is showing, whatever the routes say.
+ *
+ * For a caller whose picture of a page is LIVE and must not follow the router:
+ * a travel being undone shows the page it is going back to on both sides at
+ * once if the router is allowed to swap under it (see route_travel.jsx). Only
+ * the pages are held still — the rest of the document goes on rendering, which
+ * is the whole reason this lives here rather than in Preact's own scheduler.
+ */
+let routeRenderFrozen = false;
+const routeRenderFrozenSignal = signal(0);
+export const freezeRouteRender = () => {
+  routeRenderFrozen = true;
+  return () => {
+    if (!routeRenderFrozen) {
+      return;
+    }
+    routeRenderFrozen = false;
+    // Read during every container's render, so letting go brings them all back.
+    routeRenderFrozenSignal.value++;
+  };
+};
 
 const DEBUG = false;
 const debug = (...args) => {
@@ -84,17 +122,70 @@ export const Route = (props) => {
   }
   return <RouteLeaf {...props} />;
 };
+/**
+ * The routes a tree of <Route> children is made of, in the order they are
+ * written. Reading them is what turns a router into a row one can walk: "one
+ * step that way" is a fact about the order the branches were declared in, and
+ * nothing in a URL says it.
+ *
+ * The same walk the container does to find the active branch (collectBranches),
+ * except that it keeps every leaf rather than the one that matches — and reads
+ * no signal, so asking does not subscribe the asker to anything.
+ */
+export const collectRoutes = (children) => {
+  const routes = [];
+  const visit = (child) => {
+    if (!child || child === true || child === false) {
+      return;
+    }
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        visit(item);
+      }
+      return;
+    }
+    if (child.type !== Route) {
+      return;
+    }
+    const { children: nodeChildren, route } = child.props;
+    if (nodeChildren) {
+      visit(nodeChildren);
+      return;
+    }
+    if (route) {
+      routes.push(route);
+    }
+  };
+  visit(children);
+  return routes;
+};
+
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
-// No effects, no signals, no contexts needed: reads route signals directly.
+// No contexts, no state of its own: it reads the route signals directly, and
+// its one effect only tells the outside what it has just done.
 const RouteContainer = ({ id, element, elementProps, children }) => {
   const { activeBranch } = collectBranches(children);
 
-  debug(
-    `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,
-  );
+  // Told to hold still: what is on screen stays on screen. Kept as the very
+  // vnode that was rendered last time, which is how Preact is told there is
+  // nothing to look at in that subtree.
+  const frozen = routeRenderFrozenSignal.value >= 0 && routeRenderFrozen;
+  const shownBranchRef = useRef(null);
+  if (!frozen) {
+    shownBranchRef.current = activeBranch;
+  }
+  const branch = shownBranchRef.current || activeBranch;
 
-  const content = activeBranch ? activeBranch.node : null;
+  // The one effect here, and it says the only thing this component knows that
+  // nobody outside can find out: the branch it chose is now in the DOM.
+  useLayoutEffect(() => {
+    publishRouteRender();
+  });
+
+  debug(`[container "${id}"] RENDER, active=${branch ? branch.type : "none"}`);
+
+  const content = branch ? branch.node : null;
   if (!content) {
     return null;
   }

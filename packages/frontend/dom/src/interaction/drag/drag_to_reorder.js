@@ -1,4 +1,5 @@
-import { dragAfterThreshold, isPrimaryButtonEvent } from "./drag_gesture.js";
+import { dragAfterIntent } from "./drag_after_intent.js";
+import { isPrimaryButtonEvent } from "./drag_gesture.js";
 import { createDragToMoveGestureController } from "./drag_to_move.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
@@ -76,9 +77,9 @@ const css = /* css */ `
 
   /* WHO CAN START A DRAG, said in the cursor.
      A handle drags on the spot, so it shows the hand. A source only drags once
-     the pointer has travelled a few pixels — a plain click stays a click — but
-     the text inside it can no longer be selected (the gesture takes the
-     pointer), so an I-beam over it would promise something that does not
+     the intent shows (a few pixels of travel, or a long press) — a plain click
+     stays a click — but the text inside it cannot be selected (the gesture takes
+     the pointer), so an I-beam over it would promise something that does not
      happen: it reads as a plain surface instead. An opted-out area keeps both
      its cursor and its selection, and never starts a drag (see the check in
      startDragToReorder).
@@ -161,7 +162,9 @@ const dragCSSVars = [
  * Starts a drag-to-reorder interaction on a list item.
  *
  * Handles the full reorder UX:
- * - Activates only after a short movement threshold (avoids accidental reorders on clicks).
+ * - Activates only once the intent is established — a short movement with a mouse, a long
+ *   press with a finger (see `dragAfterIntent`), so that neither a click nor a scroll
+ *   reorders anything by accident.
  * - Clones the grabbed element and moves the clone while the original stays hidden in place
  *   (keeps the layout intact so other items don't shift during the drag).
  * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
@@ -184,30 +187,48 @@ const dragCSSVars = [
  * - Virtual lists render fewer DOM nodes than the total item count, so
  *   DOM-index-based counting would be wrong.
  *
+ * Any option not listed below is forwarded to `createDragToMoveGestureController`
+ * (`areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`…), except
+ * `releasePositionEffect`, always `"manual"` here: what moves is the clone, and it
+ * is removed on release, so there is no position to commit or cancel.
+ *
  * @param {PointerEvent} event
- *   The `pointerdown` event from the drag handle.
- * @param {Element} draggedElement
- *   The list item element to drag. Typically `event.currentTarget`.
+ *   The `pointerdown` event that may become a reorder.
  * @param {object} options
+ * @param {Element} [options.draggedElement=event.currentTarget]
+ *   The list item to drag.
+ * @param {Element} [options.containerElement=draggedElement.parentElement]
+ *   Element searched with `itemSelector` to find the items to drop between.
  * @param {string} options.itemSelector
- *   CSS selector that matches all list items inside the scroll container.
+ *   CSS selector that matches all list items inside `containerElement`.
  *   Used for drop-target detection and no-op filtering.
  * @param {function} options.getItemId
  *   Returns the stable ID for a given DOM element.
  *   Signature: `getItemId(element) → id`.
  * @param {function} options.onReorder
  *   Called when the user drops the item in a new position.
- *   Signature: `onReorder(fromId, toId)`.
+ *   Signature: `onReorder(fromId, toId, syncCloneWithDropTarget)`.
  *   - `fromId`: stable ID of the dragged item.
  *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
- *   Called inside `document.startViewTransition` so the resulting DOM mutation is
- *   animated by the View Transitions API.
+ *   - `syncCloneWithDropTarget`: call it synchronously inside a
+ *     `document.startViewTransition` callback, next to the DOM mutation, so the
+ *     clone is captured at its landing position.
  * @param {object} [options.direction={ x: false, y: true }]
  *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
- * @param {...*} [options]
- *   Any remaining options are forwarded to `createDragToMoveGestureController`
- *   (e.g. `areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`).
- *   `releasePositionEffect` is always set to `"manual"` internally and cannot be overridden.
+ * @param {number} [options.threshold=5]
+ *   Distance (px) a mouse must travel before the press becomes a drag.
+ * @param {boolean|"if-touch"} [options.longPress="if-touch"]
+ *   Which pointers start the drag by holding still instead of by travelling.
+ * @param {number} [options.longPressDelay=400]
+ *   How long (ms) such a pointer must stay down.
+ * @param {number} [options.longPressSlop=8]
+ *   How far (px) it may drift during that wait before the press is abandoned.
+ * @param {function} [options.onPressStart]
+ *   The pointer went down and the wait began (a cue that the press counts).
+ * @param {function} [options.onPressCancel]
+ *   The pointer moved or lifted before the wait was over.
+ * @param {function} [options.onPress]
+ *   The wait completed and the item is now held (haptics, scale…).
  */
 export const startDragToReorder = (
   event,
@@ -218,6 +239,13 @@ export const startDragToReorder = (
     getItemId,
     onReorder,
     direction = { x: false, y: true },
+    threshold,
+    longPress,
+    longPressDelay,
+    longPressSlop,
+    onPressStart,
+    onPressCancel,
+    onPress,
     ...options
   },
 ) => {
@@ -231,160 +259,175 @@ export const startDragToReorder = (
     return undefined;
   }
   event.preventDefault();
-  return dragAfterThreshold(event, () => {
-    const cloneWrapper = createDragClone(draggedElement, event);
-    draggedElement.setAttribute("navi-drag-clone-source", "");
-    // Move drag related CSS vars from the element to the document
-    // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
-    const restoreCSSVars = moveCSSVars(
-      dragCSSVars,
-      draggedElement,
-      document.documentElement,
-    );
+  return dragAfterIntent(
+    event,
+    () => {
+      const cloneWrapper = createDragClone(draggedElement, event);
+      draggedElement.setAttribute("navi-drag-clone-source", "");
+      // Move drag related CSS vars from the element to the document
+      // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
+      const restoreCSSVars = moveCSSVars(
+        dragCSSVars,
+        draggedElement,
+        document.documentElement,
+      );
 
-    const gestureController = createDragToMoveGestureController({
-      direction,
-      releasePositionEffect: "manual",
-      ...options,
-    });
-    const dragGesture = gestureController.grabViaPointer(event, {
-      element: draggedElement,
-      elementToMove: cloneWrapper,
-    });
-    // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
-    // Point it at the clone so drop detection tracks the clone's current position.
-    dragGesture.gestureInfo.elementImpacted = cloneWrapper;
-
-    const dropHintEl = createDropHint();
-    document.body.appendChild(dropHintEl);
-    // The hint first, the clone second: that order is what stacks them in the
-    // top layer.
-    dropHintEl.showPopover();
-    cloneWrapper.showPopover();
-
-    // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
-    // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
-    let currentBeforeElement;
-    let currentReleaseElement;
-
-    const clearDropHintDOM = () => {
-      dropHintEl.removeAttribute("data-drop-edge");
-      dropHintEl.style.removeProperty("--drop-target-top");
-      dropHintEl.style.removeProperty("--drop-target-bottom");
-      dropHintEl.style.removeProperty("--drop-target-left");
-      dropHintEl.style.removeProperty("--drop-target-width");
-    };
-
-    const clearDropHint = () => {
-      currentBeforeElement = undefined;
-      currentReleaseElement = undefined;
-      clearDropHintDOM();
-    };
-
-    dragGesture.addDragCallback((gestureInfo) => {
-      const allItems = [];
-      const items = [];
-      for (const el of containerElement.querySelectorAll(itemSelector)) {
-        allItems.push(el);
-        if (el !== draggedElement) {
-          items.push(el);
-        }
-      }
-
-      const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
-        fallbackToEdge: true,
+      const gestureController = createDragToMoveGestureController({
+        direction,
+        releasePositionEffect: "manual",
+        ...options,
       });
-      gestureInfo.dropTargetInfo = dropTargetInfo || null;
-      if (!dropTargetInfo) {
-        clearDropHint();
-        return;
-      }
-      // Convert {element, edge} to a beforeElement using the items array
-      // (not nextElementSibling, which breaks if non-item elements exist between items).
-      //   edge "start" → insert before the hovered element
-      //   edge "end"   → insert before the next item (null = append at end)
-      const edge = dropTargetInfo.elementSide.y;
-      const hoveredIndex = items.indexOf(dropTargetInfo.element);
-      const beforeElement =
-        edge === "start"
-          ? dropTargetInfo.element
-          : (items[hoveredIndex + 1] ?? null);
-      // Detect no-op: result would leave the grabbed element in the same position.
-      const elementIndex = allItems.indexOf(draggedElement);
-      const elementNextItem = allItems[elementIndex + 1] ?? null;
-      const isNoop = beforeElement === elementNextItem;
-      if (isNoop) {
-        clearDropHint();
-        return;
-      }
-      // Early return if nothing changed.
-      const releaseElement = dropTargetInfo.element;
-      if (
-        beforeElement === currentBeforeElement &&
-        releaseElement === currentReleaseElement
-      ) {
-        return;
-      }
-      currentBeforeElement = beforeElement;
-      currentReleaseElement = releaseElement;
-      // Update drop hint CSS vars.
-      // beforeElement = null → insert at end (hint after last item)
-      // beforeElement = X    → insert before X (hint at top edge of X)
-      const anchorEl = beforeElement || items[items.length - 1];
-      const anchorEdge = beforeElement !== null ? "top" : "bottom";
-      // Viewport coordinates, straight from the anchor row: the hint is fixed
-      // in the page (see its CSS), so there is no container box to be relative
-      // to and no scroll offset to add back.
-      const anchorRect = anchorEl.getBoundingClientRect();
-      dropHintEl.setAttribute("data-drop-edge", anchorEdge);
-      dropHintEl.style.setProperty("--drop-target-top", `${anchorRect.top}px`);
-      dropHintEl.style.setProperty(
-        "--drop-target-bottom",
-        `${anchorRect.bottom}px`,
-      );
-      dropHintEl.style.setProperty(
-        "--drop-target-left",
-        `${anchorRect.left}px`,
-      );
-      dropHintEl.style.setProperty(
-        "--drop-target-width",
-        `${anchorRect.width}px`,
-      );
-    });
+      const dragGesture = gestureController.grabViaPointer(event, {
+        element: draggedElement,
+        elementToMove: cloneWrapper,
+      });
+      // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
+      // Point it at the clone so drop detection tracks the clone's current position.
+      dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
-    dragGesture.addReleaseCallback(async (gestureInfo) => {
-      clearDropHintDOM();
-      dropHintEl.remove();
-      restoreCSSVars();
+      const dropHintEl = createDropHint();
+      document.body.appendChild(dropHintEl);
+      // The hint first, the clone second: that order is what stacks them in the
+      // top layer.
+      dropHintEl.showPopover();
+      cloneWrapper.showPopover();
 
-      if (currentBeforeElement !== undefined) {
-        const clone = cloneWrapper.firstElementChild;
-        // Bake the current visual position (transform included) into the CSS vars
-        // so the clone stays where the user released it when we clear the transform.
-        setCloneViewportRect(cloneWrapper, cloneWrapper);
-        gestureInfo.cancelPosition();
-        const fromId = getItemId(draggedElement);
-        const toId = currentBeforeElement
-          ? getItemId(currentBeforeElement)
-          : null;
-        // provide onReorder a way to synchronously move the clone to the drop target
-        // (meant to be used inside a startViewTransition callback)
-        const syncCloneWithDropTarget = () => {
-          // Snap the CSS-var position to the drop target rect so the browser
-          // captures the "new" state at the landing position.
-          setCloneViewportRect(cloneWrapper, currentReleaseElement);
-          // Removing this attr drops the CSS scale(1.15), so the browser
-          // captures the clone at scale 1 as the "new" state.
-          clone.removeAttribute("navi-drag-clone");
-        };
-        await onReorder(fromId, toId, syncCloneWithDropTarget);
-      }
-      draggedElement.removeAttribute("navi-drag-clone-source");
-      cloneWrapper.remove();
-    });
+      // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
+      // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
+      let currentBeforeElement;
+      let currentReleaseElement;
 
-    return dragGesture;
-  });
+      const clearDropHintDOM = () => {
+        dropHintEl.removeAttribute("data-drop-edge");
+        dropHintEl.style.removeProperty("--drop-target-top");
+        dropHintEl.style.removeProperty("--drop-target-bottom");
+        dropHintEl.style.removeProperty("--drop-target-left");
+        dropHintEl.style.removeProperty("--drop-target-width");
+      };
+
+      const clearDropHint = () => {
+        currentBeforeElement = undefined;
+        currentReleaseElement = undefined;
+        clearDropHintDOM();
+      };
+
+      dragGesture.addDragCallback((gestureInfo) => {
+        const allItems = [];
+        const items = [];
+        for (const el of containerElement.querySelectorAll(itemSelector)) {
+          allItems.push(el);
+          if (el !== draggedElement) {
+            items.push(el);
+          }
+        }
+
+        const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
+          fallbackToEdge: true,
+        });
+        gestureInfo.dropTargetInfo = dropTargetInfo || null;
+        if (!dropTargetInfo) {
+          clearDropHint();
+          return;
+        }
+        // Convert {element, edge} to a beforeElement using the items array
+        // (not nextElementSibling, which breaks if non-item elements exist between items).
+        //   edge "start" → insert before the hovered element
+        //   edge "end"   → insert before the next item (null = append at end)
+        const edge = dropTargetInfo.elementSide.y;
+        const hoveredIndex = items.indexOf(dropTargetInfo.element);
+        const beforeElement =
+          edge === "start"
+            ? dropTargetInfo.element
+            : (items[hoveredIndex + 1] ?? null);
+        // Detect no-op: result would leave the grabbed element in the same position.
+        const elementIndex = allItems.indexOf(draggedElement);
+        const elementNextItem = allItems[elementIndex + 1] ?? null;
+        const isNoop = beforeElement === elementNextItem;
+        if (isNoop) {
+          clearDropHint();
+          return;
+        }
+        // Early return if nothing changed.
+        const releaseElement = dropTargetInfo.element;
+        if (
+          beforeElement === currentBeforeElement &&
+          releaseElement === currentReleaseElement
+        ) {
+          return;
+        }
+        currentBeforeElement = beforeElement;
+        currentReleaseElement = releaseElement;
+        // Update drop hint CSS vars.
+        // beforeElement = null → insert at end (hint after last item)
+        // beforeElement = X    → insert before X (hint at top edge of X)
+        const anchorEl = beforeElement || items[items.length - 1];
+        const anchorEdge = beforeElement !== null ? "top" : "bottom";
+        // Viewport coordinates, straight from the anchor row: the hint is fixed
+        // in the page (see its CSS), so there is no container box to be relative
+        // to and no scroll offset to add back.
+        const anchorRect = anchorEl.getBoundingClientRect();
+        dropHintEl.setAttribute("data-drop-edge", anchorEdge);
+        dropHintEl.style.setProperty(
+          "--drop-target-top",
+          `${anchorRect.top}px`,
+        );
+        dropHintEl.style.setProperty(
+          "--drop-target-bottom",
+          `${anchorRect.bottom}px`,
+        );
+        dropHintEl.style.setProperty(
+          "--drop-target-left",
+          `${anchorRect.left}px`,
+        );
+        dropHintEl.style.setProperty(
+          "--drop-target-width",
+          `${anchorRect.width}px`,
+        );
+      });
+
+      dragGesture.addReleaseCallback(async (gestureInfo) => {
+        clearDropHintDOM();
+        dropHintEl.remove();
+        restoreCSSVars();
+
+        if (currentBeforeElement !== undefined) {
+          const clone = cloneWrapper.firstElementChild;
+          // Bake the current visual position (transform included) into the CSS vars
+          // so the clone stays where the user released it when we clear the transform.
+          setCloneViewportRect(cloneWrapper, cloneWrapper);
+          gestureInfo.cancelPosition();
+          const fromId = getItemId(draggedElement);
+          const toId = currentBeforeElement
+            ? getItemId(currentBeforeElement)
+            : null;
+          // provide onReorder a way to synchronously move the clone to the drop target
+          // (meant to be used inside a startViewTransition callback)
+          const syncCloneWithDropTarget = () => {
+            // Snap the CSS-var position to the drop target rect so the browser
+            // captures the "new" state at the landing position.
+            setCloneViewportRect(cloneWrapper, currentReleaseElement);
+            // Removing this attr drops the CSS scale(1.15), so the browser
+            // captures the clone at scale 1 as the "new" state.
+            clone.removeAttribute("navi-drag-clone");
+          };
+          await onReorder(fromId, toId, syncCloneWithDropTarget);
+        }
+        draggedElement.removeAttribute("navi-drag-clone-source");
+        cloneWrapper.remove();
+      });
+
+      return dragGesture;
+    },
+    {
+      threshold,
+      longPress,
+      longPressDelay,
+      longPressSlop,
+      onPressStart,
+      onPressCancel,
+      onPress,
+    },
+  );
 };
 
 // Viewport coordinates, as getBoundingClientRect gives them: the clone is a

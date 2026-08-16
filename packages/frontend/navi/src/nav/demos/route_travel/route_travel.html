@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RouteTravel Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        user-select: none;
+      }
+      .phone {
+        display: flex;
+        width: 540px;
+        height: 560px;
+        flex-direction: column;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .top_bar {
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      /* Every tab the same width, so the bar under the current one travels a
+         predictable distance. */
+      .tab_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .page {
+        height: 100%;
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        border-radius: 8px;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .speed_picker {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+      .demo-section {
+        max-width: 700px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      .phone_row {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      /* Beside the phone, so that a page travelling further than the box it
+         travels in would be seen crossing something. */
+      .beside_phone {
+        width: 140px;
+        padding: 12px;
+        color: #666;
+        font-size: 13px;
+        background: repeating-linear-gradient(
+          45deg,
+          #eee,
+          #eee 10px,
+          #e0e0e0 10px,
+          #e0e0e0 20px
+        );
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect, useState } from "preact/hooks";
+      import {
+        Link,
+        Nav,
+        Route,
+        RouteTravel,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const A_ROUTE = route("/a");
+      const B_ROUTE = route("/b");
+      const C_ROUTE = route("/c");
+      const D_ROUTE = route("/d");
+      const E_ROUTE = route("/e");
+      // Five, so a single gesture can walk several of them: a relay is only
+      // felt from the second one on.
+      const TABS = [
+        { route: A_ROUTE, label: "A", color: "#e8f0fe" },
+        { route: B_ROUTE, label: "B", color: "#fdf0e8" },
+        { route: C_ROUTE, label: "C", color: "#eaf7ec" },
+        { route: D_ROUTE, label: "D", color: "#f3e8fe" },
+        { route: E_ROUTE, label: "E", color: "#fee8ee" },
+      ];
+      setupRoutes(TABS.map(({ route }) => route));
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // The page has no tab of its own: it goes to the first one, the way a
+      // section opens on its first page.
+      const TabIndex = () => {
+        useLayoutEffect(() => {
+          A_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const Page = ({ label, color, rows }) => (
+        <div className="page" style={{ background: color }}>
+          {Array.from({ length: rows }, (_, index) => (
+            <div
+              key={index}
+              className="page_row"
+              style={{ background: "rgba(255,255,255,0.75)" }}
+            >
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      // Nothing here says anything about the pages below, and nothing below
+      // says anything about this row: the bar under the current tab travels
+      // because Nav gives it a name of its own, and the browser then moves it
+      // on the same clock as whatever transition is playing — a thumb dragging
+      // the pages included.
+      const TabRow = () => (
+        <div className="top_bar">
+          <Nav className="tab_row" expand currentIndicator>
+            {TABS.map(({ route, label }) => (
+              <Link
+                key={label}
+                variant="tab"
+                route={route}
+                padding="m"
+                textAlign="center"
+              >
+                {label}
+              </Link>
+            ))}
+          </Nav>
+        </div>
+      );
+
+      // The pace of a travel, so a gesture can be tried against one slow enough
+      // to be caught in flight.
+      const SPEEDS = [
+        { label: "normale (300ms)", value: "300ms" },
+        { label: "lente (1s)", value: "1000ms" },
+        { label: "très lente (2,5s)", value: "2500ms" },
+      ];
+      const SPEED_STORAGE_KEY = "route_travel_demo_speed";
+      const SpeedPicker = () => {
+        const [speed, setSpeed] = useState(
+          () => localStorage.getItem(SPEED_STORAGE_KEY) || SPEEDS[0].value,
+        );
+        useLayoutEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-route-travel-duration",
+            speed,
+          );
+          localStorage.setItem(SPEED_STORAGE_KEY, speed);
+        }, [speed]);
+        return (
+          <label className="speed_picker">
+            Durée du voyage{" "}
+            <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
+              {SPEEDS.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      };
+
+      const Phone = () => (
+        <div className="phone">
+          <TabRow />
+          <RouteTravel className="travel_box">
+            <Route>
+              {TABS.map(({ route, label, color }) => (
+                <Route
+                  key={label}
+                  route={route}
+                  element={Page}
+                  elementProps={{
+                    label,
+                    color,
+                    rows: label === "C" ? 40 : 6,
+                  }}
+                />
+              ))}
+              <Route fallback element={TabIndex} />
+            </Route>
+          </RouteTravel>
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <DemoHeader title="RouteTravel" />
+          <div className="demo-section">
+            <h2>Table of contents</h2>
+            <DocumentToc />
+          </div>
+          <div className="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <SpeedPicker />
+            <div className="phone_row">
+              <Phone />
+              <aside className="beside_phone">Voisin</aside>
+            </div>
+          </div>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

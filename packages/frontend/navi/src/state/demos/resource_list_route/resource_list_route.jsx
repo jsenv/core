@@ -12,10 +12,10 @@ const ITEM_GET_MANY_ACTION = routeAction(LIST_ROUTE, ITEM.GET_MANY);
 const App = () => (
   <div>
     <Nav spacing="m">
-      <Link route={HOME_ROUTE} appearance="tab" currentIndicator padding="s">
+      <Link route={HOME_ROUTE} variant="tab" currentIndicator padding="s">
         Home
       </Link>
-      <Link route={LIST_ROUTE} appearance="tab" currentIndicator padding="s">
+      <Link route={LIST_ROUTE} variant="tab" currentIndicator padding="s">
         List
       </Link>
     </Nav>

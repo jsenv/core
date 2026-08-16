@@ -18,6 +18,9 @@ const css = /* css */ `
   .navi_drag_gesture_backdrop {
     position: fixed;
     inset: 0;
+    /* A finger dragging must not also pan the page under it. The backdrop is
+       the only element the finger can be over once the gesture is running. */
+    touch-action: none;
     user-select: none;
   }
 `;
@@ -130,6 +133,12 @@ export const createDragGestureController = (options = {}) => {
       intentGoingLeft: false,
       intentGoingRight: false,
 
+      // How fast the pointer is going, in px/ms, signed per axis
+      // (see measureVelocity)
+      velocityX: 0,
+      velocityY: 0,
+      velocity: 0,
+
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
@@ -144,6 +153,11 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
+
+    // Where the pointer IS is not where it is going: throwing something is a
+    // matter of speed, and the gesture is the only place that sees the timing of
+    // the events it receives.
+    const measureVelocity = createVelocityMeter(grabX, grabY);
 
     document_interactions: {
       if (documentInteractions === "manual") {
@@ -391,6 +405,60 @@ export const createDragGestureController = (options = {}) => {
       return dragData;
     };
 
+    const markAsStarted = () => {
+      // Suppress the click that the browser fires after pointerup following a real drag.
+      // The capture phase runs before any element onClick handler.
+      const suppressClick = (clickEvent) => {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+        stopSuppressingClick();
+      };
+      // That click is dispatched AFTER the pointerup that ends the drag, so
+      // this cannot be taken down with the gesture — it would be gone one event
+      // too early, and the drag would end on the link it started from being
+      // followed. It goes once it has swallowed the click, or at the next press
+      // if the drag produced none: a click is always preceded by a press, so a
+      // suppressor that outlives one press can never reach the click of
+      // another.
+      const stopSuppressingClick = () => {
+        document.removeEventListener("click", suppressClick, {
+          capture: true,
+        });
+        document.removeEventListener("pointerdown", stopSuppressingClick, {
+          capture: true,
+        });
+      };
+      document.addEventListener("click", suppressClick, { capture: true });
+      addReleaseCallback(() => {
+        document.addEventListener("pointerdown", stopSuppressingClick, {
+          capture: true,
+        });
+      });
+      // Everything this gesture puts on the document is in place, and undoable,
+      // BEFORE anybody is told it started: a listener may end the gesture from
+      // inside this very notification — that is how a press becomes a drag (see
+      // dragAfterIntent, where the gesture that measured the distance releases
+      // itself the moment it is confirmed). Set up afterwards, a listener would
+      // be registering its own removal with a gesture that is already over, and
+      // would then outlive it: what one sees is a click swallowed long after
+      // the drag it belonged to.
+      dispatchPublicCustomEvent(element, "navi_drag_start", {
+        gestureInfo,
+      });
+      onDragStart?.(gestureInfo);
+    };
+
+    // Declares the gesture confirmed without waiting for the distance threshold,
+    // for callers who established the intent some other way (a dedicated handle,
+    // a long press).
+    const start = () => {
+      if (gestureInfo.started) {
+        return;
+      }
+      gestureInfo.started = true;
+      markAsStarted();
+    };
+
     const drag = (
       dragX = gestureInfo.dragX, // Scroll container relative X coordinate
       dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
@@ -406,10 +474,14 @@ export const createDragGestureController = (options = {}) => {
         dragEvent: event,
         isRelease,
       });
+      const [velocityX, velocityY] = measureVelocity(dragX, dragY);
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
+      gestureInfo.velocityX = velocityX;
+      gestureInfo.velocityY = velocityY;
+      gestureInfo.velocity = Math.hypot(velocityX, velocityY);
       if (gestureInfo.isGoingDown) {
         gestureInfo.intentGoingDown = true;
         gestureInfo.intentGoingUp = false;
@@ -425,25 +497,7 @@ export const createDragGestureController = (options = {}) => {
         gestureInfo.intentGoingRight = false;
       }
       if (!startedPrevious && gestureInfo.started) {
-        dispatchPublicCustomEvent(element, "navi_drag_start", {
-          gestureInfo,
-        });
-        onDragStart?.(gestureInfo);
-        // Suppress the click that the browser fires after pointerup following a real drag.
-        // The capture phase runs before any element onClick handler.
-        const suppressClick = (clickEvent) => {
-          clickEvent.stopPropagation();
-          clickEvent.preventDefault();
-          document.removeEventListener("click", suppressClick, {
-            capture: true,
-          });
-        };
-        document.addEventListener("click", suppressClick, { capture: true });
-        addReleaseCallback(() => {
-          document.removeEventListener("click", suppressClick, {
-            capture: true,
-          });
-        });
+        markAsStarted();
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       dispatchPublicCustomEvent(element, "navi_drag", {
@@ -477,6 +531,7 @@ export const createDragGestureController = (options = {}) => {
       addBeforeDragCallback,
       addDragCallback,
       addReleaseCallback,
+      start,
       drag,
       release,
     };
@@ -523,6 +578,7 @@ export const createDragGestureController = (options = {}) => {
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
+      gestureInfo: dragGesture.gestureInfo,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
@@ -532,21 +588,111 @@ export const createDragGestureController = (options = {}) => {
 
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
-        const target = grabEvent.target;
-        target.setPointerCapture(grabEvent.pointerId);
-        target.addEventListener("lostpointercapture", onRelease);
-        target.addEventListener("pointercancel", onRelease);
-        target.addEventListener("pointermove", onMove);
-        target.addEventListener("pointerup", onRelease);
-        return () => {
-          target.releasePointerCapture(grabEvent.pointerId);
-          target.removeEventListener("lostpointercapture", onRelease);
-          target.removeEventListener("pointercancel", onRelease);
-          target.removeEventListener("pointermove", onMove);
-          target.removeEventListener("pointerup", onRelease);
-        };
-      });
+      return initDragByPointer(
+        grabEvent,
+        options,
+        ({ onMove, onRelease, gestureInfo }) => {
+          // Captured on something that will still be there at the end of the
+          // gesture: the browser releases the capture when its element leaves the
+          // document, and a gesture whose own effect replaces the DOM under the
+          // finger would lose the pointer at its first move. Callers whose target
+          // is stable have nothing to say and keep it.
+          const target = options?.pointerCaptureElement || grabEvent.target;
+          target.setPointerCapture(grabEvent.pointerId);
+          /*
+           * A touchmove left alone is the browser deciding the touch belongs to
+           * it: it takes it to scroll with, and a touch it has taken is a pointer
+           * stream it CANCELS — the gesture dies mid-move, the finger is still
+           * down, and nothing reads it anymore.
+           *
+           * Refused only once the gesture is established (a `touch-action: none`
+           * would take the touch from everyone who merely brushes past the
+           * element), but LISTENED FOR from the grab: whether a touchmove can be
+           * refused at all is decided when the touch begins, from the listeners
+           * present at that moment. Registered later, the listener is handed
+           * events that are already `cancelable: false` — refusing them does
+           * nothing, and the reason is invisible in the code that refuses.
+           *
+           * On the window in capture AND on the grabbed element: a touch keeps
+           * being dispatched at the node it started on, and a gesture may take
+           * that node out of the document (a page that travels navigates) — from
+           * then on the event never passes through the window on its way
+           * anywhere.
+           */
+          const preventTouchScroll = (touchMoveEvent) => {
+            if (gestureInfo.started && touchMoveEvent.cancelable) {
+              touchMoveEvent.preventDefault();
+            }
+          };
+          const grabTarget = grabEvent.target;
+          window.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
+            capture: true,
+          });
+          grabTarget.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
+          });
+          // Only OUR capture ending means this gesture is over:
+          // lostpointercapture bubbles, so a descendant giving up its own capture
+          // walks straight into this listener. That is not a rare shape — it is
+          // exactly what happens when a gesture hands over to another one (a
+          // press that becomes a drag releases its intermediate gesture, held on
+          // the pressed element, while the real one is being held on a container
+          // above it), and taken as our own it kills the new gesture one
+          // millisecond after it started.
+          const onCaptureLost = (pointerEvent) => {
+            if (pointerEvent.target !== target) {
+              return;
+            }
+            onRelease(pointerEvent);
+          };
+          target.addEventListener("lostpointercapture", onCaptureLost);
+          target.addEventListener("pointercancel", onRelease);
+          target.addEventListener("pointermove", onMove);
+          target.addEventListener("pointerup", onRelease);
+          // The end of the pointer is also listened for on the window, because
+          // the end is the one event a gesture cannot afford to miss and the
+          // element it is captured on is not always on its way: a pointer can
+          // be delivered somewhere else entirely (a browser view transition
+          // sends presses to the document root), and a cancel dispatched there
+          // never passes through this element. Missed, the gesture never ends —
+          // whatever it was holding stays held.
+          let released = false;
+          const onPointerEnd = (pointerEvent) => {
+            if (pointerEvent.pointerId !== grabEvent.pointerId || released) {
+              return;
+            }
+            released = true;
+            onRelease(pointerEvent);
+          };
+          window.addEventListener("pointerup", onPointerEnd, true);
+          window.addEventListener("pointercancel", onPointerEnd, true);
+          return () => {
+            // Listeners first, capture last: giving the pointer back is the
+            // one thing here that can throw, and a gesture that fails to clean
+            // up half way is worse than one that never cleaned up at all — its
+            // listeners stay on the element and answer the NEXT gesture, from
+            // a gesture whose pointer is long gone.
+            window.removeEventListener("touchmove", preventTouchScroll, {
+              capture: true,
+            });
+            grabTarget.removeEventListener("touchmove", preventTouchScroll);
+            target.removeEventListener("lostpointercapture", onCaptureLost);
+            target.removeEventListener("pointercancel", onRelease);
+            target.removeEventListener("pointermove", onMove);
+            target.removeEventListener("pointerup", onRelease);
+            window.removeEventListener("pointerup", onPointerEnd, true);
+            window.removeEventListener("pointercancel", onPointerEnd, true);
+            // Asked for only while there is something to give back: a pointer
+            // that is up no longer exists, the browser has already dropped the
+            // capture with it, and asking again throws ("No active pointer with
+            // the given id is found") — on the most ordinary release there is.
+            if (target.hasPointerCapture(grabEvent.pointerId)) {
+              target.releasePointerCapture(grabEvent.pointerId);
+            }
+          };
+        },
+      );
     }
     if (grabEvent.type === "mousedown") {
       console.warn(
@@ -584,42 +730,34 @@ export const createDragGestureController = (options = {}) => {
 export const isPrimaryButtonEvent = (event) =>
   event.button === undefined || event.button === 0;
 
-export const dragAfterThreshold = (
-  grabEvent,
-  dragGestureInitializer,
-  threshold,
-) => {
-  if (!isPrimaryButtonEvent(grabEvent)) {
-    return;
-  }
-  const target = grabEvent.target;
-  const isDedicatedHandle =
-    target.closest && target.closest("[data-drag-handle]");
-  if (isDedicatedHandle) {
-    // Element is dedicated to drag — skip the threshold and start immediately.
-    const dragGesture = dragGestureInitializer();
-    if (!dragGesture) {
-      return;
+/*
+ * Speed over the last VELOCITY_WINDOW_MS rather than between the last two
+ * events: pointer events arrive irregularly, and the last one before a release
+ * often repeats the previous coordinates — measured on that pair alone, every
+ * throw would end at zero.
+ * A pointer held still keeps producing samples at the same place, so the window
+ * empties itself of movement and the speed falls back to zero on its own: put
+ * down slowly is not thrown.
+ */
+const VELOCITY_WINDOW_MS = 100;
+const createVelocityMeter = (grabX, grabY) => {
+  const samples = [{ time: performance.now(), x: grabX, y: grabY }];
+
+  const measureVelocity = (x, y) => {
+    const time = performance.now();
+    samples.push({ time, x, y });
+    while (samples.length > 2 && time - samples[1].time > VELOCITY_WINDOW_MS) {
+      samples.shift();
     }
-    dragGesture.dragViaPointer(grabEvent);
-    return;
-  }
-  const significantDragGestureController = createDragGestureController({
-    threshold,
-    // allow interaction for this intermediate gesture:
-    // user should still be able to scroll or interact with the document
-    // only once the gesture is significant we take control
-    documentInteractions: "manual",
-    onDragStart: (gestureInfo) => {
-      significantDragGesture.release(); // kill that gesture
-      const dragGesture = dragGestureInitializer();
-      dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    },
-  });
-  const significantDragGesture =
-    significantDragGestureController.grabViaPointer(grabEvent, {
-      element: grabEvent.target,
-    });
+    const oldestSample = samples[0];
+    const elapsed = time - oldestSample.time;
+    if (elapsed === 0) {
+      return [0, 0];
+    }
+    return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
+  };
+
+  return measureVelocity;
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {

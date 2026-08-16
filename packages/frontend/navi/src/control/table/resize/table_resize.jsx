@@ -225,6 +225,7 @@ const TableColumnLeftResizeHandle = ({
   return (
     <div
       className="navi_table_cell_resize_handle"
+      data-no-drag-travel=""
       data-left=""
       onPointerDown={(e) => {
         if (e.button !== 0) {
@@ -263,6 +264,7 @@ const TableColumnRightResizeHandle = ({
   return (
     <div
       className="navi_table_cell_resize_handle"
+      data-no-drag-travel=""
       data-right=""
       onPointerDown={(e) => {
         if (e.button !== 0) {
@@ -558,6 +560,7 @@ const TableRowTopResizeHandle = ({
   return (
     <div
       className="navi_table_cell_resize_handle"
+      data-no-drag-travel=""
       data-top=""
       onPointerDown={(e) => {
         if (e.button !== 0) {
@@ -596,6 +599,7 @@ const TableRowBottomResizeHandle = ({
   return (
     <div
       className="navi_table_cell_resize_handle"
+      data-no-drag-travel=""
       data-bottom=""
       onPointerDown={(e) => {
         if (e.button !== 0) {

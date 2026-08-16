@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Selectable list maxLength demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 16px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        CheckboxGroup,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        List,
+        SelectableInput,
+        Text,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const LEVELS = [
+        "Débutant",
+        "Novice",
+        "Intermédiaire",
+        "Confirmé",
+        "Avancé",
+        "Expert",
+      ];
+
+      const SendableForm = ({ children }) => {
+        const [sent, setSent] = useState(undefined);
+        return (
+          <Form
+            canSendWhileUnchanged
+            action={async ({ levels }) => {
+              await new Promise((resolve) => {
+                setTimeout(resolve, 500);
+              });
+              setSent(levels ?? []);
+            }}
+          >
+            <Box flex="y" spacing="s" alignX="start">
+              {children}
+              <Button type="submit">Envoyer</Button>
+              <Text size="s" color="#666">
+                {sent === undefined
+                  ? "rien d'envoyé"
+                  : `envoyé : ${sent.join(", ") || "(aucun)"}`}
+              </Text>
+            </Box>
+          </Form>
+        );
+      };
+
+      const LevelList = ({ log, ...props }) => (
+        <List
+          selectable
+          multiple
+          name="levels"
+          uiAction={(v) => {
+            log((v ?? []).join(", ") || "(aucun)");
+          }}
+          width="260px"
+          {...props}
+        >
+          {LEVELS.map((level, i) => (
+            <List.Item
+              selectable
+              key={level}
+              index={i}
+              value={level}
+              flex
+              spacing="s"
+            >
+              <SelectableInput />
+              {level}
+            </List.Item>
+          ))}
+        </List>
+      );
+
+      const LevelCheckboxes = (props) => (
+        <CheckboxGroup name="levels" {...props}>
+          {LEVELS.map((level) => (
+            <Field key={level} as="label" flex alignY="center" spacing="s">
+              <Input type="checkbox" value={level} />
+              {level}
+            </Field>
+          ))}
+        </CheckboxGroup>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="Liste sélectionnable : maxLength" />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <MaxLengthDemo />
+          <MaxLengthGuardDemo />
+          <TooManyDemo />
+          <CheckboxGroupDemo />
+        </Box>
+      );
+
+      // ── maxLength ─────────────────────────────────────────────────────────
+
+      const MaxLengthDemo = () => {
+        const [log, pushLog] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="max-length">maxLength=2</Heading>
+            <SendableForm>
+              <Field flex="y" spacingWithControl="xs">
+                <Label>Niveaux</Label>
+                <LevelList
+                  maxLength={2}
+                  defaultValue={["Débutant", "Novice"]}
+                  log={(v) => pushLog("uiAction", v)}
+                />
+              </Field>
+            </SendableForm>
+            <CallLog entries={log} />
+          </div>
+        );
+      };
+
+      // ── maxLengthGuard ────────────────────────────────────────────────────
+
+      const MaxLengthGuardDemo = () => {
+        const [log, pushLog] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="max-length-guard">maxLengthGuard=2</Heading>
+            <SendableForm>
+              <Field flex="y" spacingWithControl="xs">
+                <Label>Niveaux</Label>
+                <LevelList
+                  maxLengthGuard={2}
+                  defaultValue={["Débutant", "Novice"]}
+                  log={(v) => pushLog("uiAction", v)}
+                />
+              </Field>
+            </SendableForm>
+            <CallLog entries={log} />
+          </div>
+        );
+      };
+
+      // ── Une valeur déjà trop longue ───────────────────────────────────────
+
+      const TooManyDemo = () => {
+        const [log, pushLog] = useCallLog();
+        const [guardLog, pushGuardLog] = useCallLog();
+        const threeLevels = ["Débutant", "Novice", "Intermédiaire"];
+        return (
+          <div class="demo-section">
+            <Heading id="too-many">
+              Trois choix reçus pour deux acceptés
+            </Heading>
+            <Box flex="y" spacing="l" alignX="start">
+              <Variant caption="maxLength=2">
+                <SendableForm>
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Niveaux</Label>
+                    <LevelList
+                      maxLength={2}
+                      defaultValue={threeLevels}
+                      log={(v) => pushLog("uiAction", v)}
+                    />
+                  </Field>
+                </SendableForm>
+                <CallLog entries={log} />
+              </Variant>
+              <Variant caption="maxLengthGuard=2">
+                <SendableForm>
+                  <Field flex="y" spacingWithControl="xs">
+                    <Label>Niveaux</Label>
+                    <LevelList
+                      maxLengthGuard={2}
+                      defaultValue={threeLevels}
+                      log={(v) => pushGuardLog("uiAction", v)}
+                    />
+                  </Field>
+                </SendableForm>
+                <CallLog entries={guardLog} />
+              </Variant>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── CheckboxGroup ─────────────────────────────────────────────────────
+
+      const CheckboxGroupDemo = () => (
+        <div class="demo-section">
+          <Heading id="checkbox-group">CheckboxGroup</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="maxLength=2">
+              <SendableForm>
+                <LevelCheckboxes
+                  maxLength={2}
+                  defaultValue={["Débutant", "Novice"]}
+                />
+              </SendableForm>
+            </Variant>
+            <Variant caption="maxLengthGuard=2">
+              <SendableForm>
+                <LevelCheckboxes
+                  maxLengthGuard={2}
+                  defaultValue={["Débutant", "Novice"]}
+                />
+              </SendableForm>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

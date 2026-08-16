@@ -1285,7 +1285,7 @@
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Field column alignY="center" borderRadius="50%">
-                    <Input type="checkbox" appearance="switch" />
+                    <Input type="checkbox" variant="switch" />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1294,7 +1294,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="switch"
+                      variant="switch"
                       pseudoState={{ ":focus-visible": true }}
                     />
                     <Label>Label</Label>
@@ -1303,7 +1303,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Field column alignY="center">
-                    <Input type="checkbox" appearance="switch" disabled />
+                    <Input type="checkbox" variant="switch" disabled />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1312,7 +1312,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Field column alignY="center">
-                    <Input type="checkbox" appearance="switch" defaultChecked />
+                    <Input type="checkbox" variant="switch" defaultChecked />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1322,7 +1322,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="switch"
+                      variant="switch"
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
@@ -1335,7 +1335,7 @@
                   <Field column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="switch"
+                      variant="switch"
                       disabled
                       defaultChecked
                     />
@@ -1357,14 +1357,14 @@
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Field column alignY="center" spacing="s">
-                    <Input type="checkbox" appearance="switch" readOnly />
+                    <Input type="checkbox" variant="switch" readOnly />
                     <Label>Label</Label>
                   </Field>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Field column alignY="center" spacing="s">
-                    <Input type="checkbox" appearance="switch" loading />
+                    <Input type="checkbox" variant="switch" loading />
                     <Label>Label</Label>
                   </Field>
                 </Box>
@@ -1375,7 +1375,7 @@
                   <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      appearance="switch"
+                      variant="switch"
                       readOnly
                       defaultChecked
                     />
@@ -1387,7 +1387,7 @@
                   <Field column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      appearance="switch"
+                      variant="switch"
                       loading
                       defaultChecked
                     />
@@ -1418,7 +1418,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#f39c12"
                       />
                       <Label>Label</Label>
@@ -1426,7 +1426,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#f39c12"
                         defaultChecked
                       />
@@ -1447,7 +1447,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#2ecc71"
                       />
                       <Label>Label</Label>
@@ -1455,7 +1455,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#2ecc71"
                         defaultChecked
                       />
@@ -1476,7 +1476,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#34495e"
                       />
                       <Label>Label</Label>
@@ -1484,7 +1484,7 @@
                     <Field column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="#34495e"
                         defaultChecked
                       />
@@ -1510,7 +1510,7 @@
                     >
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="white"
                       />
                       Label
@@ -1523,7 +1523,7 @@
                     >
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         accentColor="white"
                         defaultChecked
                       />
@@ -1573,15 +1573,11 @@
                   <legend>m</legend>
                   <Box flex="y" spacing="s" alignX="start" alignY="center">
                     <Field column alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" />
+                      <Input type="checkbox" variant="switch" />
                       Label
                     </Field>
                     <Field column alignY="center" spacing="s">
-                      <Input
-                        type="checkbox"
-                        appearance="switch"
-                        defaultChecked
-                      />
+                      <Input type="checkbox" variant="switch" defaultChecked />
                       Label
                     </Field>
                   </Box>
@@ -1644,15 +1640,11 @@
                   <legend>Default Width</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" />
+                      <Input type="checkbox" variant="switch" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
-                      <Input
-                        type="checkbox"
-                        appearance="switch"
-                        defaultChecked
-                      />
+                      <Input type="checkbox" variant="switch" defaultChecked />
                       Label
                     </Field>
                   </Box>
@@ -1661,13 +1653,13 @@
                   <legend>Custom Width (50px)</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" width="50" />
+                      <Input type="checkbox" variant="switch" width="50" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         width="50"
                         defaultChecked
                       />
@@ -1679,13 +1671,13 @@
                   <legend>Big Width (80px)</legend>
                   <Box flex spacing="s" alignX="start" alignY="center">
                     <Field flex alignY="center" spacing="s">
-                      <Input type="checkbox" appearance="switch" width="80" />
+                      <Input type="checkbox" variant="switch" width="80" />
                       Label
                     </Field>
                     <Field flex alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        appearance="switch"
+                        variant="switch"
                         width="80"
                         defaultChecked
                       />
@@ -1839,7 +1831,7 @@
                 <li>
                   Can be JSX elements, components, or any renderable content
                 </li>
-                <li>Automatically sets appearance="icon" unless overridden</li>
+                <li>Automatically sets variant="icon" unless overridden</li>
               </ul>
             </div>
           </div>
@@ -1860,7 +1852,7 @@
               <Field as="label" flex spacing="s" alignY="center">
                 <Input
                   type="checkbox"
-                  appearance="button"
+                  variant="button"
                   checked={eyeChecked}
                   action={(checked) => {
                     setEyeChecked(checked);
@@ -1880,7 +1872,7 @@
               <Field as="label" flex spacing="s" alignY="center">
                 <Input
                   type="checkbox"
-                  appearance="button"
+                  variant="button"
                   flex
                   align="center"
                   circle

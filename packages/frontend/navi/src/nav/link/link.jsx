@@ -21,6 +21,7 @@ import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
+import { NavContext } from "./nav_context.js";
 import { assertRoute, useRouteStatus } from "../route.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
@@ -294,15 +295,15 @@ const css = /* css */ `
       margin-left: -0.1em;
     }
 
-    &[data-appearance="text"] {
+    &[data-variant="text"] {
       --link-color: unset;
       --link-text-decoration: none;
     }
-    &[data-appearance="icon"] {
+    &[data-variant="icon"] {
       --link-color: unset;
       --link-text-decoration: none;
     }
-    &[data-appearance="tab"] {
+    &[data-variant="tab"] {
       --link-background-hover: color-mix(
         in srgb,
         var(--link-background, transparent),
@@ -457,15 +458,15 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
- * @param {"text"|"icon"|"tab"} [props.appearance] - Visual variant
- *   (`data-appearance`); `"text"`/`"icon"` drop the link color/underline,
+ * @param {"text"|"icon"|"tab"} [props.variant] - Visual variant
+ *   (`data-variant`); `"text"`/`"icon"` drop the link color/underline,
  *   `"tab"` renders a tab-like affordance.
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
  *   bar drawn on the given edge (or bottom when `true`) while current.
  * @param {boolean} [props.currentEffectBold] - Bold the text while current
  *   (reserving the bold width so layout doesn't shift).
  * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
- *   current (used with `appearance="tab"`).
+ *   current (used with `variant="tab"`).
  * @param {boolean|import("preact").ComponentChild} [props.startIcon] - Icon
  *   placed before the text.
  * @param {boolean|import("preact").ComponentChild} [props.endIcon] - Icon
@@ -528,7 +529,7 @@ const LinkPlain = (props) => {
     value = href,
 
     // visual
-    appearance,
+    variant,
     current,
     currentIndicator,
     currentEffectBold,
@@ -547,6 +548,7 @@ const LinkPlain = (props) => {
   }
 
   const selectionContext = useContext(SelectionContext);
+  const nav = useContext(NavContext);
   const visited = useIsVisited(href);
   const { selection, selectionController } = selectionContext || {};
   const { selected } = useSelectableElement(props.ref, {
@@ -652,14 +654,23 @@ const LinkPlain = (props) => {
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
 
+  // Where the bar goes: said here, or once for the whole row by the <Nav>
+  // around this link.
+  const currentIndicatorAsked = currentIndicator ?? nav?.currentIndicator;
   const currentIndicatorPosition =
-    currentIndicator === true ? "bottom" : currentIndicator;
+    currentIndicatorAsked === true ? "bottom" : currentIndicatorAsked;
   const currentIndicatorEl =
     currentIndicatorPosition === "left" ||
     currentIndicatorPosition === "right" ||
     currentIndicatorPosition === "top" ||
     currentIndicatorPosition === "bottom" ? (
-      <LinkCurrentIndicator />
+      <LinkCurrentIndicator
+        // Only the bar one can actually see carries the row's name, because a
+        // name belongs to one element at a time and every tab holds a bar. The
+        // browser then has the same thing in two places from one page to the
+        // next, and moves it — which is the whole of "the bar slides".
+        viewTransitionName={innerCurrent ? nav?.indicatorName : null}
+      />
     ) : null;
 
   const { onClick, preventDefault } = props;
@@ -670,9 +681,24 @@ const LinkPlain = (props) => {
       color={anchor && !innerChildren ? "inherit" : undefined}
       {...controlRootProps}
       {...controlHostProps}
+      // Everything this component reads for itself is taken off the way out:
+      // what is left goes on the element, and a prop that means something here
+      // means nothing to an <a>. Written one by one rather than pulled out of
+      // props with a rest, because props is also what the control layer above
+      // was handed.
       preventDefault={undefined}
       anchor={undefined}
       revealOnInteraction={undefined}
+      variant={undefined}
+      current={undefined}
+      currentIndicator={undefined}
+      currentEffectBold={undefined}
+      currentEffectShadow={undefined}
+      blankTargetIcon={undefined}
+      anchorIcon={undefined}
+      startIcon={undefined}
+      endIcon={undefined}
+      hrefFallback={undefined}
       onClick={(e) => {
         onClick?.(e);
         if (preventDefault) {
@@ -695,7 +721,7 @@ const LinkPlain = (props) => {
       // before it and leave it alone under a link long enough to wrap.
       attachLastChild={Boolean(endIconEl)}
       // Visual
-      data-appearance={appearance}
+      data-variant={variant}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
       data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
@@ -724,7 +750,12 @@ const LinkPlain = (props) => {
   );
 };
 
-const LinkCurrentIndicator = () => {
-  return <span className="navi_current_indicator" />;
+const LinkCurrentIndicator = ({ viewTransitionName }) => {
+  return (
+    <span
+      className="navi_current_indicator"
+      style={viewTransitionName ? { viewTransitionName } : undefined}
+    />
+  );
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);

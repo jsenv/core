@@ -188,8 +188,8 @@ const css = /* css */ `
       --color-mix: var(--color-mix-light);
     }
 
-    /* Checkbox appearance */
-    &[data-appearance="checkbox"] {
+    /* Checkbox variant */
+    &[data-variant="checkbox"] {
       .navi_checkbox_marker {
         width: 100%;
         height: 100%;
@@ -219,8 +219,8 @@ const css = /* css */ `
       }
     }
 
-    /* Switch appearance */
-    &[data-appearance="switch"] {
+    /* Switch variant */
+    &[data-variant="switch"] {
       --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
       --margin: var(--switch-margin);
       --width: var(--switch-outer-width);
@@ -252,7 +252,7 @@ const css = /* css */ `
       border-color: transparent;
     }
 
-    &[data-appearance="icon"] {
+    &[data-variant="icon"] {
       --margin: 0;
       --width: auto;
       --height: auto;
@@ -261,7 +261,7 @@ const css = /* css */ `
       border: none;
     }
 
-    &[data-appearance="button"] {
+    &[data-variant="button"] {
       --margin: 0;
       --width: auto;
       --height: auto;
@@ -340,7 +340,7 @@ const InputCheckboxFieldInterface = (props) => {
   const {
     icon,
     switch: switchProp,
-    appearance = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
+    variant = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
     accentColor,
   } = props;
   const { basePseudoState, checked } = checkboxHostProps;
@@ -350,13 +350,13 @@ const InputCheckboxFieldInterface = (props) => {
     elementSelector: ".navi_checkbox_accent_probe",
   });
   let visualVnode;
-  if (appearance === "icon" || icon) {
+  if (variant === "icon" || icon) {
     visualVnode = (
       <div className="navi_checkbox_icon" aria-hidden="true">
         {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
       </div>
     );
-  } else if (appearance === "switch") {
+  } else if (variant === "switch") {
     visualVnode = <SwitchUI />;
   } else {
     visualVnode = (
@@ -376,19 +376,19 @@ const InputCheckboxFieldInterface = (props) => {
       as="span"
       // Checkbox displayed as button are usually squarish
       // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
-      square={appearance === "button" ? true : undefined}
+      square={variant === "button" ? true : undefined}
       {...checkboxRootProps}
       ref={boxRef}
-      appearance={undefined}
+      variant={undefined}
       switch={undefined}
       icon={undefined}
-      data-appearance={appearance}
+      data-variant={variant}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_control_input"
       styleCSSVars={
-        appearance === "switch"
+        variant === "switch"
           ? CheckboxSwitchStyleCSSVars
-          : appearance === "button"
+          : variant === "button"
             ? CheckboxButtonStyleCSSVars
             : CheckboxStyleCSSVars
       }

@@ -71,7 +71,6 @@ import {
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
 import { useComposeElementRef } from "./ref_composition/use_element_ref.js";
-import { usePartiallyHidden } from "./use_partially_hidden.js";
 
 export const BoxForwardedPropsContext = createContext({});
 
@@ -253,12 +252,6 @@ import.meta.css = /* css */ `
   */
   [hidden] {
     display: none !important;
-  }
-
-  /* Partially hidden (or fully hidden) element should not participate in view transition no matter what */
-  /* Otherwise they appear immedatly and fully visible from a fully/partially hidden state */
-  [navi-partially-hidden] {
-    view-transition-name: none !important;
   }
 `;
 
@@ -847,7 +840,6 @@ export const Box = (props) => {
       });
     }, styleDeps);
     finalRef = useComposeElementRef(syncBox, ref);
-    usePartiallyHidden(finalRef, Boolean(rest.viewTransitionName));
   }
 
   let innerChildren = children;

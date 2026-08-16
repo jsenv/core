@@ -1253,6 +1253,25 @@ export const useUIGroupStateController = (
         onActionError: (e) => {
           controller.rules.validation.syncValidity(e, { report: true });
         },
+        // Whether `maxLengthGuard` stands between this child and the selection.
+        // A guard on the gesture only: what the group already holds is left
+        // alone, however long, and a selected child is never blocked — it must
+        // stay takeable back. Read off the signal so the other children learn
+        // about the group filling up and emptying again.
+        isChildBlockedByMaxLengthGuard: (childUIStateController) => {
+          const { maxLengthGuard } = controller.props;
+          if (maxLengthGuard === undefined) {
+            return false;
+          }
+          if (childUIStateController.uiState !== undefined) {
+            return false;
+          }
+          const uiState = uiStateSignal.value;
+          if (!Array.isArray(uiState)) {
+            return false;
+          }
+          return uiState.length >= maxLengthGuard;
+        },
         findChildById: (searchId) => {
           for (const c of childUIStateControllerArray) {
             if (c.id === searchId) return c;

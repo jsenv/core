@@ -45,10 +45,10 @@ const App = () => {
       }}
     >
       <Nav spacing="s">
-        <Link appearance="tab" currentIndicator padding="s" route={HOME_ROUTE}>
+        <Link variant="tab" currentIndicator padding="s" route={HOME_ROUTE}>
           Home
         </Link>
-        <Link appearance="tab" currentIndicator padding="s" route={ADMIN_ROUTE}>
+        <Link variant="tab" currentIndicator padding="s" route={ADMIN_ROUTE}>
           Admin
         </Link>
       </Nav>
@@ -112,7 +112,7 @@ const DashboardPage = () => {
 
           <Nav vertical expandX spacing="s">
             <Link
-              appearance="tab"
+              variant="tab"
               currentIndicator="right"
               route={ADMIN_SETTINGS_ROUTE}
               expandX
@@ -122,7 +122,7 @@ const DashboardPage = () => {
               ⚙️ Settings
             </Link>
             <Link
-              appearance="tab"
+              variant="tab"
               currentIndicator="right"
               route={ADMIN_ANALYTICS_ROUTE}
               expandX
@@ -156,7 +156,7 @@ const SettingsPanel = () => {
       {/* Horizontal Tabs */}
       <Nav marginBottom="20px" spacing="s">
         <Link
-          appearance="tab"
+          variant="tab"
           currentIndicator
           route={ADMIN_SETTINGS_ROUTE}
           routeParams={{ tab: "general" }}
@@ -165,7 +165,7 @@ const SettingsPanel = () => {
           General
         </Link>
         <Link
-          appearance="tab"
+          variant="tab"
           currentIndicator
           route={ADMIN_SETTINGS_ROUTE}
           routeParams={{ tab: "advanced" }}
@@ -328,7 +328,7 @@ const AnalyticsPanel = () => {
       {/* Horizontal Tabs */}
       <Nav marginBottom="20" spacing="s">
         <Link
-          appearance="tab"
+          variant="tab"
           currentIndicator
           padding="s"
           route={ADMIN_ANALYTICS_ROUTE}
@@ -337,7 +337,7 @@ const AnalyticsPanel = () => {
           Overview
         </Link>
         <Link
-          appearance="tab"
+          variant="tab"
           currentIndicator
           padding="s"
           route={ADMIN_ANALYTICS_ROUTE}

@@ -488,6 +488,10 @@ naviI18n.addAll({
     fr: "Ce champ doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
     en: "This field must contain at most [max] characters (it currently contains [count] characters).",
   },
+  "constraint.max_length.selection": {
+    fr: "Sélectionnez au maximum [max] choix ([count] actuellement).",
+    en: "Select at most [max] choices ([count] currently).",
+  },
   "constraint.type.number.default": {
     fr: "Ce champ doit être un nombre.",
     en: "This field must be a number.",
@@ -739,6 +743,11 @@ naviI18n.addAll({
   "constraint.guard.max_length.value": {
     fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
     en: "This field cannot contain more than [max] character[s]; the value was truncated.",
+  },
+  // maxLengthGuard on a multiple selection: one more item would exceed the limit
+  "constraint.guard.max_length.selection": {
+    fr: "[max] max.",
+    en: "[max] max.",
   },
 });
 

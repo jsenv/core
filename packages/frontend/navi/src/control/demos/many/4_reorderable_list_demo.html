@@ -5,6 +5,36 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reorderable List Demo</title>
+    <style>
+      /* Whether the rows animate at all is decided here: a row that is named
+         without being drawn inside the box travels over the page instead of
+         being cut at the box's edge, so a browser with no nested groups gets no
+         name and the reorder simply happens. */
+      @supports (view-transition-group: contain) {
+        .list-item[data-view-transition-name] {
+          view-transition-name: attr(
+            data-view-transition-name type(<custom-ident>)
+          );
+        }
+        .scrollable-list {
+          view-transition-name: match-element;
+          view-transition-class: scrollable-list;
+          view-transition-group: contain;
+        }
+      }
+
+      /* The box's edge, during the transition. */
+      ::view-transition-group-children(.scrollable-list) {
+        overflow: clip;
+      }
+      /* The box itself is the same thing before and after; cross-fading it onto
+         itself is a flicker. */
+      ::view-transition-old(.scrollable-list),
+      ::view-transition-new(.scrollable-list) {
+        mix-blend-mode: normal;
+        animation: none;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
@@ -115,7 +145,7 @@
             }}
             className="list-item"
             data-id={item.id}
-            viewTransitionName={`${name}-item-${item.id}`}
+            data-view-transition-name={`${name}-item-${item.id}`}
             onPointerDown={onPointerDown}
           >
             {/* Drag handle */}
@@ -271,6 +301,7 @@
             </p>
             <Box
               ref={containerRef}
+              className="scrollable-list"
               style={{
                 "position": "relative",
                 "width": "360px",
