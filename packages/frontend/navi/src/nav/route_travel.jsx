@@ -130,7 +130,14 @@ const css = /* css */ `
 
     &::view-transition-old(navi-route-travel),
     &::view-transition-new(navi-route-travel) {
-      height: 100%;
+      /* Each picture at the size it was taken at: a page is not resized by the
+         page it crosses. Told to fill a box whose height is being animated, a
+         picture is STRETCHED with it — the page leaving is then seen squashing
+         upwards, or zooming, over the length of the travel, when all it is
+         doing is walking off the edge. */
+      height: auto;
+      object-fit: none;
+      object-position: top left;
       /* The default cross-fade, dropped: two pages sliding past each other are
          two solid things, and seeing through one to the other says they are the
          same page changing its mind. */
@@ -146,7 +153,21 @@ const css = /* css */ `
       overflow: clip;
     }
     &::view-transition-group(navi-route-travel) {
+      /* The window the two pictures are seen through, held still for the whole
+         travel at the taller of the two boxes (see holdTravelHeight): the group
+         is what CLIPS, and the browser animates its height from the box being
+         left to the box arriving — so the window shrinks under the pictures and
+         cuts the page leaving from the bottom, progressively. The box does end
+         up at the arriving page's height, and that is right; what must not
+         happen is the user watching it get there.
+
+         The height is held by dropping the group's animation rather than by
+         winning against it with !important — which also drops its position
+         animation, fine while a travel box stands in the same place from one
+         route to the next. */
+      height: var(--navi-route-travel-height);
       animation-duration: var(--navi-route-travel-duration, 300ms);
+      animation-name: none;
     }
   }
 
@@ -369,20 +390,26 @@ export const RouteTravel = ({
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     routeAskedForRef.current = route;
+    // The box as it stands before anything moves: rendering is held, so this is
+    // still the page being left (see holdTravelHeight).
+    const heightBefore = elementRef.current.getBoundingClientRect().height;
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = renderingHeldForRouting || holdRendering();
     renderingHeldForRouting = null;
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered.
-    const viewTransition = startViewTransition(() =>
-      whileRouteRenders(route, async () => {
+    const viewTransition = startViewTransition(async () => {
+      await whileRouteRenders(route, async () => {
         releaseRendering();
         if (change) {
           await change();
         }
-      }),
-    );
+      });
+      // The page arriving is in the DOM and the transition has not started
+      // playing: the one moment both boxes can be known.
+      holdTravelHeight(elementRef.current, heightBefore);
+    });
     travel.viewTransition = viewTransition;
     if (scrub) {
       // Said only now: the release has to have something to let go of, and the
@@ -682,6 +709,7 @@ export const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
+      releaseTravelHeight();
     }
   };
 
@@ -1055,6 +1083,28 @@ const releaseHold = (travel) => {
   }
   travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
+};
+
+const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
+// The height the group is held at for the whole travel: the taller of the two
+// boxes, so neither picture is ever cut. It cannot be said in CSS — neither box
+// is knowable there — and it cannot be measured from one side alone: a page
+// arriving shorter than the one it replaces would cut the one leaving, a page
+// arriving taller would be cut itself.
+const holdTravelHeight = (element, heightBefore) => {
+  const heightAfter = element.getBoundingClientRect().height;
+  const height = heightBefore > heightAfter ? heightBefore : heightAfter;
+  document.documentElement.style.setProperty(
+    TRAVEL_HEIGHT_PROPERTY,
+    `${height}px`,
+  );
+};
+// The live layout takes the box back. A discontinuity by construction — the
+// group stands at the held height, the box is at the new one — and an invisible
+// one: the page arriving is fully in place, and the strip below it that the
+// group still covers shows the page leaving only while it is still on screen.
+const releaseTravelHeight = () => {
+  document.documentElement.style.removeProperty(TRAVEL_HEIGHT_PROPERTY);
 };
 
 // The browser does not take the picture of the page being left when a

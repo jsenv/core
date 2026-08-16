@@ -810,11 +810,21 @@ const ListUI = (props) => {
   const searchFallbackShown =
     (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
   const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+  // A loading state only holds the list on screen when it has something to
+  // draw. A count of 0 (or no loadingFallback at all) says the list is known to
+  // be empty before the response arrives, so the empty state can already be
+  // shown — nothing jumps when the response lands, exactly as three skeletons
+  // become three rows.
+  const loadingPlaceholderShown =
+    Boolean(loading) &&
+    Boolean(loadingFallback) &&
+    (loadingFallback !== "skeleton" || loadingSkeletonCount > 0);
   // Hide the whole list — border included — when there is genuinely nothing to
-  // show: no visible items AND no fallback message. Never while loading or in
-  // error (the placeholder / error message ARE the content to display).
+  // show: no visible items AND no fallback message. Never while a loading
+  // placeholder or an error message is on screen (they ARE the content to
+  // display).
   const nothingToDisplay =
-    !loading &&
+    !loadingPlaceholderShown &&
     !error &&
     noVisibleItems &&
     !searchFallbackShown &&
@@ -929,7 +939,7 @@ const ListUI = (props) => {
         fallbackShown={emptyFallbackShown}
         searchFallback={searchFallback}
         searchFallbackShown={searchFallbackShown}
-        loading={loading}
+        loadingPlaceholderShown={loadingPlaceholderShown}
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
@@ -1030,6 +1040,10 @@ const ListFirstResolver = (props) => {
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
  *   as skeletons in place, one per row, virtualized like the rest.
+ * @param {number} [props.loadingSkeletonCount=3]
+ *   How many placeholder rows `loadingFallback="skeleton"` draws. `0` says the
+ *   list is already known to be empty: the empty `fallback` shows right away
+ *   rather than an empty frame, so nothing moves when the response arrives.
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll. `"end"` is a
  *   thread read backwards — the last rows are the ones to show, and the ones
@@ -1094,7 +1108,7 @@ const ListContent = ({
   fallbackShown,
   searchFallback,
   searchFallbackShown,
-  loading,
+  loadingPlaceholderShown,
   error,
   searchNoMatchMode,
   separator,
@@ -1118,7 +1132,7 @@ const ListContent = ({
         fallbackShown={fallbackShown}
         searchFallback={searchFallback}
         searchFallbackShown={searchFallbackShown}
-        loading={loading}
+        loadingPlaceholderShown={loadingPlaceholderShown}
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
@@ -2503,7 +2517,7 @@ const UnorderedList = ({
   fallbackShown,
   searchFallback,
   searchFallbackShown,
-  loading,
+  loadingPlaceholderShown,
   error,
   searchNoMatchMode,
   separator,
@@ -2514,9 +2528,11 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
-  // No empty/no-match message while loading or in error — the placeholder /
-  // error message is the content, even though no items are tracked yet.
-  const suppressFallback = loading || Boolean(error);
+  // No empty/no-match message while a loading placeholder or an error message
+  // is on screen — that IS the content, even though no items are tracked yet.
+  // A loading state drawing nothing keeps the message: an announced count of 0
+  // already tells us the list is empty (see ListUI's loadingPlaceholderShown).
+  const suppressFallback = loadingPlaceholderShown || Boolean(error);
 
   return (
     <Box
