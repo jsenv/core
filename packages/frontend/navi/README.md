@@ -47,6 +47,8 @@ A capable `Table` component that handles what you'd expect from a spreadsheet-li
 
 Dialogs, badges, details/collapsible, separators, keyboard shortcuts, popovers, copy-to-clipboard, and other utilities.
 
+A `Dialog`/`Popover` owns whether it is open; what varies is the trigger — a button, a gesture, a piece of application state. Which one to use, and what each costs, is in [docs/popup_open.md](./docs/popup_open.md).
+
 ---
 
 Named after Navi, the fairy guide from Zelda — it helps you navigate through the complexities of building modern web applications.

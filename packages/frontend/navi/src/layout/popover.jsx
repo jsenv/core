@@ -474,6 +474,11 @@ const css = /* css */ `
  *   content something depends on while the popup is still closed: a value read
  *   off it, fields a surrounding form collects on submit, a size measured from
  *   outside.
+ * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
+ *   popup has finished closing (see popup_content_mount.js). For content whose
+ *   fresh state is its initial state: an uncontrolled field seeded from a
+ *   `defaultValue` that changed while the popup was closed. Ignored when
+ *   `mountWhenClosed` is set.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {
@@ -662,11 +667,13 @@ const usePopoverProps = (props) => {
     onKeyDown,
     children: childrenProp,
     mountWhenClosed,
+    unmountWhenClosed,
     ...rest
   } = props;
-  const children = usePopupContentMount(openController, {
+  const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
     mountWhenClosed,
+    unmountWhenClosed,
   });
   const isTopLayer = layer === "top";
   const ref = props.ref;

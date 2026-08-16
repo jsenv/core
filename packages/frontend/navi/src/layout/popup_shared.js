@@ -7,33 +7,34 @@
 import { findEvent } from "@jsenv/dom";
 
 /**
- * Disables pointer-events on `el` until its current CSS transition settles
- * (via `transitionend`, with a safety `setTimeout` fallback matching the
- * longest `transition-duration` in case nothing actually transitions or an
- * event is missed) — avoids the cursor changing/something becoming
- * clickable while the popup is still visually moving into or out of place.
+ * Calls `onSettled` once `el`'s current CSS transition is over — via
+ * `transitionend`, with a safety `setTimeout` fallback matching the longest
+ * `transition-duration`, in case nothing actually transitions or an event is
+ * missed.
  *
- * Returns a "cancel" function: doesn't restore pointer-events (a fresh call
- * for the next open/close is about to set its own state) — only prevents
- * this stale instance's `transitionend` listener/timeout from firing later
- * and clobbering that fresh state.
+ * Returns a "cancel" function, so a caller whose instance has been superseded
+ * (a fresh open/close about to set its own state) can keep this stale one from
+ * firing later. Cancelling only stops `onSettled`: undoing whatever the caller
+ * did up front is that fresh call's business, not this one's.
  */
-export const suppressPointerEventsDuringTransition = (el) => {
-  el.style.pointerEvents = "none";
+export const whenTransitionSettles = (el, onSettled) => {
   let settled = false;
   const onTransitionEnd = (transitionEvent) => {
     if (transitionEvent.target === el) {
       finish();
     }
   };
+  const stopWatching = () => {
+    settled = true;
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
   const finish = () => {
     if (settled) {
       return;
     }
-    settled = true;
-    el.style.pointerEvents = "";
-    el.removeEventListener("transitionend", onTransitionEnd);
-    clearTimeout(safetyTimeoutId);
+    stopWatching();
+    onSettled();
   };
   el.addEventListener("transitionend", onTransitionEnd);
   const durationsInSeconds = getComputedStyle(el)
@@ -45,10 +46,24 @@ export const suppressPointerEventsDuringTransition = (el) => {
     if (settled) {
       return;
     }
-    settled = true;
-    el.removeEventListener("transitionend", onTransitionEnd);
-    clearTimeout(safetyTimeoutId);
+    stopWatching();
   };
+};
+
+/**
+ * Disables pointer-events on `el` until its current CSS transition settles —
+ * avoids the cursor changing/something becoming clickable while the popup is
+ * still visually moving into or out of place.
+ *
+ * Returns whenTransitionSettles' own "cancel" function: it doesn't restore
+ * pointer-events, since a fresh call for the next open/close is about to set
+ * its own state.
+ */
+export const suppressPointerEventsDuringTransition = (el) => {
+  el.style.pointerEvents = "none";
+  return whenTransitionSettles(el, () => {
+    el.style.pointerEvents = "";
+  });
 };
 
 /**

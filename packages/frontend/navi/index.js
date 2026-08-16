@@ -97,6 +97,14 @@ export { FixedBar } from "./src/layout/fixed_bar/fixed_bar.jsx";
 export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
 export { detectHorizontalOverflow } from "./src/layout/detect_horizontal_overflow.js";
 
+// Commands
+// The JS counterpart of the `command`/`commandfor` attributes, for when what
+// triggers a command is not a click on an element that could carry them: a
+// gesture, a keyboard shortcut, a server answer, an observer. It resolves the
+// target and dispatches exactly like the attribute path, so a popup driven this
+// way stays uncontrolled and keeps its own say over closing.
+export { triggerNaviCommand } from "./src/control/commands.js";
+
 // Details (in between navigation/interaction and fields)
 export { Details } from "./src/control/details/details.jsx";
 export { SummaryMarker } from "./src/control/details/summary_marker.jsx";

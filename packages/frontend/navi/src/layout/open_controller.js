@@ -198,6 +198,9 @@ export const createOpenController = (
     openEffectCleanup = null;
     closeHandlers?.onClose?.(closeEvent);
     closeHandlers = null;
+    // Last: the close effects above are what starts the exit transition the
+    // content must outlive (see popup_content_mount.js).
+    controller.unmountContent?.();
   };
   const controller = {
     opened: false,
@@ -206,6 +209,9 @@ export const createOpenController = (
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
     mountContent: null,
+    // The counterpart, set only when the popup was told to throw its content
+    // away on close (`unmountWhenClosed`). Called from performClose above.
+    unmountContent: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;

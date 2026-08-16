@@ -1,5 +1,5 @@
 /**
- * When a popup builds what it holds.
+ * When a popup builds what it holds, and when it throws it away.
  *
  * A closed popup shows nothing, focuses nothing, and answers nothing: what it
  * holds is out of reach until it opens. Building that content at mount time
@@ -22,15 +22,22 @@
  * `mountWhenClosed` is for content something else depends on before any of
  * this: a value the popup's owner reads off its own children, fields a form
  * around it collects on submit, a size measured from outside.
+ *
+ * `unmountWhenClosed` is the opposite end: content that must be rebuilt from
+ * scratch every time, because what it shows is read once at build time and can
+ * change while the popup is closed — an uncontrolled field seeded from a
+ * `defaultValue`, a form whose fresh state is its initial state.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
+import { whenTransitionSettles } from "./popup_shared.js";
 
 export const usePopupContentMount = (
   openController,
-  { children, mountWhenClosed },
+  ref,
+  { children, mountWhenClosed, unmountWhenClosed },
 ) => {
   const [contentMounted, setContentMounted] = useState(
     () => Boolean(mountWhenClosed) || openController.opened,
@@ -42,6 +49,27 @@ export const usePopupContentMount = (
           setContentMounted(true);
         });
       };
+  openController.unmountContent =
+    unmountWhenClosed && !mountWhenClosed
+      ? () => {
+          const element = ref?.current;
+          if (!element) {
+            setContentMounted(false);
+            return;
+          }
+          // The popup is still on screen while it plays its exit transition;
+          // emptying it right away would show that transition running on a
+          // blank surface.
+          whenTransitionSettles(element, () => {
+            if (openController.opened) {
+              // reopened while it was leaving — the content it holds is the
+              // one that open just asked for
+              return;
+            }
+            setContentMounted(false);
+          });
+        }
+      : null;
   useLayoutEffect(() => {
     if (mountWhenClosed) {
       setContentMounted(true);
