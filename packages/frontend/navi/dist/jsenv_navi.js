@@ -25120,6 +25120,9 @@ const createOpenController = (
     openEffectCleanup = null;
     closeHandlers?.onClose?.(closeEvent);
     closeHandlers = null;
+    // Last: the close effects above are what starts the exit transition the
+    // content must outlive (see popup_content_mount.js).
+    controller.unmountContent?.();
   };
   const controller = {
     opened: false,
@@ -25128,6 +25131,9 @@ const createOpenController = (
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
     mountContent: null,
+    // The counterpart, set only when the popup was told to throw its content
+    // away on close (`unmountWhenClosed`). Called from performClose above.
+    unmountContent: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;
@@ -25407,7 +25413,166 @@ const flushSyncRendering = (fn) => {
 };
 
 /**
- * When a popup builds what it holds.
+ * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
+ * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
+ * of which of the two owns it.
+ */
+
+
+/**
+ * Calls `onSettled` once `el`'s current CSS transition is over — via
+ * `transitionend`, with a safety `setTimeout` fallback matching the longest
+ * `transition-duration`, in case nothing actually transitions or an event is
+ * missed.
+ *
+ * Returns a "cancel" function, so a caller whose instance has been superseded
+ * (a fresh open/close about to set its own state) can keep this stale one from
+ * firing later. Cancelling only stops `onSettled`: undoing whatever the caller
+ * did up front is that fresh call's business, not this one's.
+ */
+const whenTransitionSettles = (el, onSettled) => {
+  let settled = false;
+  const onTransitionEnd = (transitionEvent) => {
+    if (transitionEvent.target === el) {
+      finish();
+    }
+  };
+  const stopWatching = () => {
+    settled = true;
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+  const finish = () => {
+    if (settled) {
+      return;
+    }
+    stopWatching();
+    onSettled();
+  };
+  el.addEventListener("transitionend", onTransitionEnd);
+  const durationsInSeconds = getComputedStyle(el)
+    .transitionDuration.split(",")
+    .map((value) => parseFloat(value) || 0);
+  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
+  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
+  return () => {
+    if (settled) {
+      return;
+    }
+    stopWatching();
+  };
+};
+
+/**
+ * Disables pointer-events on `el` until its current CSS transition settles —
+ * avoids the cursor changing/something becoming clickable while the popup is
+ * still visually moving into or out of place.
+ *
+ * Returns whenTransitionSettles' own "cancel" function: it doesn't restore
+ * pointer-events, since a fresh call for the next open/close is about to set
+ * its own state.
+ */
+const suppressPointerEventsDuringTransition = (el) => {
+  el.style.pointerEvents = "none";
+  return whenTransitionSettles(el, () => {
+    el.style.pointerEvents = "";
+  });
+};
+
+/**
+ * Hides the backdrop, deferring until the browser's matching "click" fires
+ * when `closeEvent` was triggered by a mousedown (see popover.jsx's top
+ * comment for why) — same capture-phase-on-document pattern as
+ * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
+ * can't safely replace: mouseup (and the click that follows it) can land an
+ * arbitrarily long time after mousedown (the user is still holding the
+ * button down), so a short timeout can fire first and hide the backdrop
+ * before its own click ever arrives. A capture-phase listener on document
+ * fires for every click regardless of what any bubble-phase handler does
+ * downstream, so no fallback timer is needed.
+ *
+ * `hide` is the caller's own way to actually hide the backdrop
+ * (`hidePopover()` for a top-layer backdrop, a plain `style.display = "none"`
+ * for a plain div) — this helper only owns the mousedown/click timing.
+ *
+ * Returns a disarm function (or undefined if hidden immediately), so a
+ * fresh open can cancel a pending hide it's about to make redundant.
+ */
+const armPointerDownOutsideClose = (closeEvent, hide) => {
+  const mousedownEvent = findEvent(closeEvent, "mousedown");
+  if (!mousedownEvent) {
+    hide();
+    return undefined;
+  }
+  const onClick = () => {
+    document.removeEventListener("click", onClick, { capture: true });
+    hide();
+  };
+  document.addEventListener("click", onClick, { capture: true });
+  return () => {
+    document.removeEventListener("click", onClick, { capture: true });
+  };
+};
+
+/**
+ * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
+ * `prefix` plus a direction word), or `null` if both axes overlap the anchor
+ * (no direction at all — that's `resolvedAnimationKind === "scaling"`
+ * territory instead, see resolveAutoAnimationKind below).
+ *
+ * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
+ * when docked) keeps the word as the compass direction the popup comes
+ * from: placed "top" (a point/corner), it slides in from the top.
+ * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
+ * direction instead, the opposite compass point: placed "top" of the
+ * anchor, it moves/grows up, away from the anchor (which sits below it).
+ *
+ * "inset-*"/"center" contribute no direction on their axis either way.
+ */
+const resolveDirectionValue = (y, x, { prefix }) => {
+  const yWord =
+    y === "top"
+      ? prefix === "expand"
+        ? "up"
+        : "top"
+      : y === "bottom"
+        ? prefix === "expand"
+          ? "down"
+          : "bottom"
+        : null;
+  const xWord = x === "left" ? "left" : x === "right" ? "right" : null;
+  if (!yWord && !xWord) {
+    return null;
+  }
+  return yWord && xWord
+    ? `${prefix}-${yWord}-${xWord}`
+    : `${prefix}-${yWord || xWord}`;
+};
+
+/**
+ * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
+ * — picked for any real anchor, or for a point/corner placed dead-center
+ * (both positionArea axes overlapping — there's no sensible direction to
+ * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
+ * for any no-anchor/docked case (Dialog always, Popover's own custom
+ * renderer when there's no real anchor), so this collapses to "scaling"
+ * there only for the dead-center case, "sliding" otherwise. The two
+ * "overlapping" booleans below describe the *positionArea* itself (a bare
+ * word vs. "inset-"/"center"), not anything about the anchor — they'd
+ * mean exactly the same thing even with no anchor at all, since it's the
+ * position strategy, not the anchor, that decides whether there's a
+ * direction to slide from.
+ */
+const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
+  const yIsOverlapping =
+    parsedPositionArea.y !== "top" && parsedPositionArea.y !== "bottom";
+  const xIsOverlapping =
+    parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
+  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
+};
+
+/**
+ * When a popup builds what it holds, and when it throws it away.
  *
  * A closed popup shows nothing, focuses nothing, and answers nothing: what it
  * holds is out of reach until it opens. Building that content at mount time
@@ -25430,12 +25595,18 @@ const flushSyncRendering = (fn) => {
  * `mountWhenClosed` is for content something else depends on before any of
  * this: a value the popup's owner reads off its own children, fields a form
  * around it collects on submit, a size measured from outside.
+ *
+ * `unmountWhenClosed` is the opposite end: content that must be rebuilt from
+ * scratch every time, because what it shows is read once at build time and can
+ * change while the popup is closed — an uncontrolled field seeded from a
+ * `defaultValue`, a form whose fresh state is its initial state.
  */
 
 
 const usePopupContentMount = (
   openController,
-  { children, mountWhenClosed },
+  ref,
+  { children, mountWhenClosed, unmountWhenClosed },
 ) => {
   const [contentMounted, setContentMounted] = useState(
     () => Boolean(mountWhenClosed) || openController.opened,
@@ -25447,6 +25618,27 @@ const usePopupContentMount = (
           setContentMounted(true);
         });
       };
+  openController.unmountContent =
+    unmountWhenClosed && !mountWhenClosed
+      ? () => {
+          const element = ref?.current;
+          if (!element) {
+            setContentMounted(false);
+            return;
+          }
+          // The popup is still on screen while it plays its exit transition;
+          // emptying it right away would show that transition running on a
+          // blank surface.
+          whenTransitionSettles(element, () => {
+            if (openController.opened) {
+              // reopened while it was leaving — the content it holds is the
+              // one that open just asked for
+              return;
+            }
+            setContentMounted(false);
+          });
+        }
+      : null;
   useLayoutEffect(() => {
     if (mountWhenClosed) {
       setContentMounted(true);
@@ -25758,150 +25950,6 @@ const freezeSize = (el) => {
 const unfreezeSize = (el) => {
   el.style.width = "";
   el.style.height = "";
-};
-
-/**
- * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
- * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
- * of which of the two owns it.
- */
-
-
-/**
- * Disables pointer-events on `el` until its current CSS transition settles
- * (via `transitionend`, with a safety `setTimeout` fallback matching the
- * longest `transition-duration` in case nothing actually transitions or an
- * event is missed) — avoids the cursor changing/something becoming
- * clickable while the popup is still visually moving into or out of place.
- *
- * Returns a "cancel" function: doesn't restore pointer-events (a fresh call
- * for the next open/close is about to set its own state) — only prevents
- * this stale instance's `transitionend` listener/timeout from firing later
- * and clobbering that fresh state.
- */
-const suppressPointerEventsDuringTransition = (el) => {
-  el.style.pointerEvents = "none";
-  let settled = false;
-  const onTransitionEnd = (transitionEvent) => {
-    if (transitionEvent.target === el) {
-      finish();
-    }
-  };
-  const finish = () => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    el.style.pointerEvents = "";
-    el.removeEventListener("transitionend", onTransitionEnd);
-    clearTimeout(safetyTimeoutId);
-  };
-  el.addEventListener("transitionend", onTransitionEnd);
-  const durationsInSeconds = getComputedStyle(el)
-    .transitionDuration.split(",")
-    .map((value) => parseFloat(value) || 0);
-  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
-  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
-  return () => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    el.removeEventListener("transitionend", onTransitionEnd);
-    clearTimeout(safetyTimeoutId);
-  };
-};
-
-/**
- * Hides the backdrop, deferring until the browser's matching "click" fires
- * when `closeEvent` was triggered by a mousedown (see popover.jsx's top
- * comment for why) — same capture-phase-on-document pattern as
- * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
- * can't safely replace: mouseup (and the click that follows it) can land an
- * arbitrarily long time after mousedown (the user is still holding the
- * button down), so a short timeout can fire first and hide the backdrop
- * before its own click ever arrives. A capture-phase listener on document
- * fires for every click regardless of what any bubble-phase handler does
- * downstream, so no fallback timer is needed.
- *
- * `hide` is the caller's own way to actually hide the backdrop
- * (`hidePopover()` for a top-layer backdrop, a plain `style.display = "none"`
- * for a plain div) — this helper only owns the mousedown/click timing.
- *
- * Returns a disarm function (or undefined if hidden immediately), so a
- * fresh open can cancel a pending hide it's about to make redundant.
- */
-const armPointerDownOutsideClose = (closeEvent, hide) => {
-  const mousedownEvent = findEvent(closeEvent, "mousedown");
-  if (!mousedownEvent) {
-    hide();
-    return undefined;
-  }
-  const onClick = () => {
-    document.removeEventListener("click", onClick, { capture: true });
-    hide();
-  };
-  document.addEventListener("click", onClick, { capture: true });
-  return () => {
-    document.removeEventListener("click", onClick, { capture: true });
-  };
-};
-
-/**
- * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
- * `prefix` plus a direction word), or `null` if both axes overlap the anchor
- * (no direction at all — that's `resolvedAnimationKind === "scaling"`
- * territory instead, see resolveAutoAnimationKind below).
- *
- * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
- * when docked) keeps the word as the compass direction the popup comes
- * from: placed "top" (a point/corner), it slides in from the top.
- * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
- * direction instead, the opposite compass point: placed "top" of the
- * anchor, it moves/grows up, away from the anchor (which sits below it).
- *
- * "inset-*"/"center" contribute no direction on their axis either way.
- */
-const resolveDirectionValue = (y, x, { prefix }) => {
-  const yWord =
-    y === "top"
-      ? prefix === "expand"
-        ? "up"
-        : "top"
-      : y === "bottom"
-        ? prefix === "expand"
-          ? "down"
-          : "bottom"
-        : null;
-  const xWord = x === "left" ? "left" : x === "right" ? "right" : null;
-  if (!yWord && !xWord) {
-    return null;
-  }
-  return yWord && xWord
-    ? `${prefix}-${yWord}-${xWord}`
-    : `${prefix}-${yWord || xWord}`;
-};
-
-/**
- * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
- * — picked for any real anchor, or for a point/corner placed dead-center
- * (both positionArea axes overlapping — there's no sensible direction to
- * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
- * for any no-anchor/docked case (Dialog always, Popover's own custom
- * renderer when there's no real anchor), so this collapses to "scaling"
- * there only for the dead-center case, "sliding" otherwise. The two
- * "overlapping" booleans below describe the *positionArea* itself (a bare
- * word vs. "inset-"/"center"), not anything about the anchor — they'd
- * mean exactly the same thing even with no anchor at all, since it's the
- * position strategy, not the anchor, that decides whether there's a
- * direction to slide from.
- */
-const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
-  const yIsOverlapping =
-    parsedPositionArea.y !== "top" && parsedPositionArea.y !== "bottom";
-  const xIsOverlapping =
-    parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
-  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -26384,6 +26432,11 @@ const css$V = /* css */`
  *   content something depends on while the popup is still closed: a value read
  *   off it, fields a surrounding form collects on submit, a size measured from
  *   outside.
+ * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
+ *   popup has finished closing (see popup_content_mount.js). For content whose
+ *   fresh state is its initial state: an uncontrolled field seeded from a
+ *   `defaultValue` that changed while the popup was closed. Ignored when
+ *   `mountWhenClosed` is set.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
@@ -26580,11 +26633,13 @@ const useDialogProps = props => {
     onKeyDown,
     children: childrenProp,
     mountWhenClosed,
+    unmountWhenClosed,
     ...rest
   } = props;
-  const children = usePopupContentMount(openController, {
+  const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
-    mountWhenClosed
+    mountWhenClosed,
+    unmountWhenClosed
   });
   const isModal = layer === "top";
   const ref = props.ref;
@@ -27632,6 +27687,11 @@ const css$U = /* css */`
  *   content something depends on while the popup is still closed: a value read
  *   off it, fields a surrounding form collects on submit, a size measured from
  *   outside.
+ * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
+ *   popup has finished closing (see popup_content_mount.js). For content whose
+ *   fresh state is its initial state: an uncontrolled field seeded from a
+ *   `defaultValue` that changed while the popup was closed. Ignored when
+ *   `mountWhenClosed` is set.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
@@ -27821,11 +27881,13 @@ const usePopoverProps = props => {
     onKeyDown,
     children: childrenProp,
     mountWhenClosed,
+    unmountWhenClosed,
     ...rest
   } = props;
-  const children = usePopupContentMount(openController, {
+  const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
-    mountWhenClosed
+    mountWhenClosed,
+    unmountWhenClosed
   });
   const isTopLayer = layer === "top";
   const ref = props.ref;
@@ -34884,7 +34946,14 @@ const css$R = /* css */`
 
     &::view-transition-old(navi-route-travel),
     &::view-transition-new(navi-route-travel) {
-      height: 100%;
+      /* Each picture at the size it was taken at: a page is not resized by the
+         page it crosses. Told to fill a box whose height is being animated, a
+         picture is STRETCHED with it — the page leaving is then seen squashing
+         upwards, or zooming, over the length of the travel, when all it is
+         doing is walking off the edge. */
+      height: auto;
+      object-fit: none;
+      object-position: top left;
       /* The default cross-fade, dropped: two pages sliding past each other are
          two solid things, and seeing through one to the other says they are the
          same page changing its mind. */
@@ -34900,7 +34969,21 @@ const css$R = /* css */`
       overflow: clip;
     }
     &::view-transition-group(navi-route-travel) {
+      /* The window the two pictures are seen through, held still for the whole
+         travel at the taller of the two boxes (see holdTravelHeight): the group
+         is what CLIPS, and the browser animates its height from the box being
+         left to the box arriving — so the window shrinks under the pictures and
+         cuts the page leaving from the bottom, progressively. The box does end
+         up at the arriving page's height, and that is right; what must not
+         happen is the user watching it get there.
+
+         The height is held by dropping the group's animation rather than by
+         winning against it with !important — which also drops its position
+         animation, fine while a travel box stands in the same place from one
+         route to the next. */
+      height: var(--navi-route-travel-height);
       animation-duration: var(--navi-route-travel-duration, 300ms);
+      animation-name: none;
     }
   }
 
@@ -35130,18 +35213,26 @@ const RouteTravel = ({
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     routeAskedForRef.current = route;
+    // The box as it stands before anything moves: rendering is held, so this is
+    // still the page being left (see holdTravelHeight).
+    const heightBefore = elementRef.current.getBoundingClientRect().height;
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = renderingHeldForRouting || holdRendering();
     renderingHeldForRouting = null;
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered.
-    const viewTransition = startViewTransition(() => whileRouteRenders(route, async () => {
-      releaseRendering();
-      if (change) {
-        await change();
-      }
-    }));
+    const viewTransition = startViewTransition(async () => {
+      await whileRouteRenders(route, async () => {
+        releaseRendering();
+        if (change) {
+          await change();
+        }
+      });
+      // The page arriving is in the DOM and the transition has not started
+      // playing: the one moment both boxes can be known.
+      holdTravelHeight(elementRef.current, heightBefore);
+    });
     travel.viewTransition = viewTransition;
     if (scrub) {
       // Said only now: the release has to have something to let go of, and the
@@ -35435,6 +35526,7 @@ const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
+      releaseTravelHeight();
     }
   };
 
@@ -35815,6 +35907,24 @@ const releaseHold = travel => {
   }
   travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
+};
+const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
+// The height the group is held at for the whole travel: the taller of the two
+// boxes, so neither picture is ever cut. It cannot be said in CSS — neither box
+// is knowable there — and it cannot be measured from one side alone: a page
+// arriving shorter than the one it replaces would cut the one leaving, a page
+// arriving taller would be cut itself.
+const holdTravelHeight = (element, heightBefore) => {
+  const heightAfter = element.getBoundingClientRect().height;
+  const height = heightBefore > heightAfter ? heightBefore : heightAfter;
+  document.documentElement.style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
+};
+// The live layout takes the box back. A discontinuity by construction — the
+// group stands at the held height, the box is at the new one — and an invisible
+// one: the page arriving is fully in place, and the strip below it that the
+// group still covers shows the page leaving only while it is still on screen.
+const releaseTravelHeight = () => {
+  document.documentElement.style.removeProperty(TRAVEL_HEIGHT_PROPERTY);
 };
 
 // The browser does not take the picture of the page being left when a
@@ -48329,6 +48439,11 @@ const css$z = /* css */`
  *   content something depends on while the popup is still closed: a value read
  *   off it, fields a surrounding form collects on submit, a size measured from
  *   outside.
+ * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
+ *   popup has finished closing (see popup_content_mount.js). For content whose
+ *   fresh state is its initial state: an uncontrolled field seeded from a
+ *   `defaultValue` that changed while the popup was closed. Ignored when
+ *   `mountWhenClosed` is set.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
@@ -51323,10 +51438,17 @@ const ListUI = props => {
   // search fallback), otherwise an empty list is the "empty" state.
   const searchFallbackShown = (allNoMatch || searching && itemCount === 0) && !searchFallbackDisabled;
   const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+  // A loading state only holds the list on screen when it has something to
+  // draw. A count of 0 (or no loadingFallback at all) says the list is known to
+  // be empty before the response arrives, so the empty state can already be
+  // shown — nothing jumps when the response lands, exactly as three skeletons
+  // become three rows.
+  const loadingPlaceholderShown = Boolean(loading) && Boolean(loadingFallback) && (loadingFallback !== "skeleton" || loadingSkeletonCount > 0);
   // Hide the whole list — border included — when there is genuinely nothing to
-  // show: no visible items AND no fallback message. Never while loading or in
-  // error (the placeholder / error message ARE the content to display).
-  const nothingToDisplay = !loading && !error && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
+  // show: no visible items AND no fallback message. Never while a loading
+  // placeholder or an error message is on screen (they ARE the content to
+  // display).
+  const nothingToDisplay = !loadingPlaceholderShown && !error && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
 
   // Placeholder content replaces the real children: an error message when the
   // load failed (takes precedence), otherwise — while loading — whatever
@@ -51421,7 +51543,7 @@ const ListUI = props => {
       fallbackShown: emptyFallbackShown,
       searchFallback: searchFallback,
       searchFallbackShown: searchFallbackShown,
-      loading: loading,
+      loadingPlaceholderShown: loadingPlaceholderShown,
       error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
@@ -51521,6 +51643,10 @@ const ListFirstResolver = props => {
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
  *   as skeletons in place, one per row, virtualized like the rest.
+ * @param {number} [props.loadingSkeletonCount=3]
+ *   How many placeholder rows `loadingFallback="skeleton"` draws. `0` says the
+ *   list is already known to be empty: the empty `fallback` shows right away
+ *   rather than an empty frame, so nothing moves when the response arrives.
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll. `"end"` is a
  *   thread read backwards — the last rows are the ones to show, and the ones
@@ -51581,7 +51707,7 @@ const ListContent = ({
   fallbackShown,
   searchFallback,
   searchFallbackShown,
-  loading,
+  loadingPlaceholderShown,
   error,
   searchNoMatchMode,
   separator,
@@ -51605,7 +51731,7 @@ const ListContent = ({
       fallbackShown: fallbackShown,
       searchFallback: searchFallback,
       searchFallbackShown: searchFallbackShown,
-      loading: loading,
+      loadingPlaceholderShown: loadingPlaceholderShown,
       error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
@@ -52893,7 +53019,7 @@ const UnorderedList = ({
   fallbackShown,
   searchFallback,
   searchFallbackShown,
-  loading,
+  loadingPlaceholderShown,
   error,
   searchNoMatchMode,
   separator,
@@ -52904,9 +53030,11 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
-  // No empty/no-match message while loading or in error — the placeholder /
-  // error message is the content, even though no items are tracked yet.
-  const suppressFallback = loading || Boolean(error);
+  // No empty/no-match message while a loading placeholder or an error message
+  // is on screen — that IS the content, even though no items are tracked yet.
+  // A loading state drawing nothing keeps the message: an announced count of 0
+  // already tells us the list is empty (see ListUI's loadingPlaceholderShown).
+  const suppressFallback = loadingPlaceholderShown || Boolean(error);
   return jsxs(Box, {
     as: "ul",
     flex: columns ? undefined : horizontal ? "x" : "y",
@@ -66817,5 +66945,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
