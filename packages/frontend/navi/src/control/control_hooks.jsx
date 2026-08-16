@@ -1353,10 +1353,9 @@ const useInteractiveProps = (
     );
     const loadingBase = loading || loadingFromParent;
     // Read-only because the selection above guards its length
-    // (`maxLengthGuard`), holds all it accepts, and this one is not part of it:
-    // it can be pointed at, focused and pressed — and answers why (see
-    // readonly_constraint.js) — but cannot be taken. The ones already selected
-    // stay takeable back.
+    // (`maxLengthGuard`) and this one would make it longer: it can be pointed
+    // at, focused and pressed — and answers why (see readonly_constraint.js) —
+    // but cannot be taken.
     const readOnlyFromParentMaxLengthGuard = Boolean(
       uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(
         uiStateController,

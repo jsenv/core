@@ -1253,44 +1253,24 @@ export const useUIGroupStateController = (
         onActionError: (e) => {
           controller.rules.validation.syncValidity(e, { report: true });
         },
-        // Whether `maxLengthGuard` stands between this child and the selection:
-        // the group holds all it accepts and this one is not part of it, so
-        // taking it would only make the answer longer. Asked by the child while
-        // it renders (see control_hooks' control_state_props, which turns it
-        // read-only) and by READONLY_CONSTRAINT, which says why.
-        //
-        // `maxLength` alone never blocks anything — it makes the group invalid,
-        // exactly as it does on a text field, and the guard is the opt-in that
-        // stops the gesture instead of judging it afterwards.
-        //
-        // The state is read off the signal so the children that are not the one
-        // being toggled learn about the group filling up and emptying again. A
-        // child already in the selection is never blocked: it must stay takeable
-        // back, or a selection that is already too long could never be shortened.
+        // Whether `maxLengthGuard` stands between this child and the selection.
+        // A guard on the gesture only: what the group already holds is left
+        // alone, however long, and a selected child is never blocked — it must
+        // stay takeable back. Read off the signal so the other children learn
+        // about the group filling up and emptying again.
         isChildBlockedByMaxLengthGuard: (childUIStateController) => {
           const { maxLengthGuard } = controller.props;
           if (maxLengthGuard === undefined) {
+            return false;
+          }
+          if (childUIStateController.uiState !== undefined) {
             return false;
           }
           const uiState = uiStateSignal.value;
           if (!Array.isArray(uiState)) {
             return false;
           }
-          if (uiState.length < maxLengthGuard) {
-            return false;
-          }
-          // Asked of the group's state and not only of the child: a child that
-          // has not registered yet — a row scrolled back into view — does not
-          // know it is part of the selection, and would draw itself refused for
-          // the render it takes to find out.
-          if (childUIStateController.uiState !== undefined) {
-            return false;
-          }
-          const childState = resolvedDistributeChildUIState(
-            uiState,
-            childUIStateController,
-          );
-          return childState === CANNOT_DERIVE || childState === undefined;
+          return uiState.length >= maxLengthGuard;
         },
         findChildById: (searchId) => {
           for (const c of childUIStateControllerArray) {
