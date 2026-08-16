@@ -265,6 +265,14 @@ export const RouteTravel = ({
   // left, the animations the finger drives, and what to do with them once the
   // browser has them ready. Null when no page is on its way anywhere.
   const travelRef = useRef(null);
+  // The route this box has ASKED for and is still waiting to see arrive.
+  // Routing is asynchronous: a travel's own navigation lands well after the
+  // travel decided anything about it — sometimes after the travel was undone —
+  // and read back as "the route changed" it would start a second travel nobody
+  // asked for, over pictures that are already showing something else.
+  const routeAskedForRef = useRef(null);
+  // What a press stopped in flight, until the gesture says what it is about.
+  const caughtAtPressRef = useRef(null);
   // The latest way to answer a gesture, for a watcher that outlives every
   // render (see the wheel effect below).
   const travelHandlersRef = useRef(null);
@@ -312,6 +320,7 @@ export const RouteTravel = ({
       holdPictures(travel);
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
+    routeAskedForRef.current = route;
     const viewTransition = startViewTransition(async () => {
       if (change) {
         await change();
@@ -373,6 +382,19 @@ export const RouteTravel = ({
         if (travelRef.current) {
           return;
         }
+        // …and so is one this box asked for and had given up waiting on: what
+        // arrives here is the answer to a question already answered, not
+        // somebody going somewhere.
+        if (routeAskedForRef.current === route) {
+          routeAskedForRef.current = null;
+          currentIndexRef.current = index;
+          return;
+        }
+        // Somewhere else arrived first: whatever this box was still waiting for
+        // is not coming, or no longer means anything. Forgotten here rather
+        // than kept, or the next press on that very tab would be taken for the
+        // late answer to a question nobody remembers asking.
+        routeAskedForRef.current = null;
         const fromIndex = currentIndexRef.current;
         currentIndexRef.current = index;
         if (fromIndex === -1 || fromIndex === index) {
@@ -433,6 +455,7 @@ export const RouteTravel = ({
         Promise.resolve();
     backAtTheStart.then(async () => {
       try {
+        routeAskedForRef.current = travel.fromRoute;
         await onTravel({ route: travel.fromRoute, cause: "revert" });
         await nextRender();
         travel.viewTransition.skipTransition();
@@ -513,6 +536,7 @@ export const RouteTravel = ({
         ) {
           return { size, travelBack: false, travelOn: false };
         }
+        caughtAtPressRef.current = null;
         holdTravel(travelInFlight);
         // Where the pictures stand right now, said as a pull: what the finger
         // continues from, so nothing jumps when it takes them over.
@@ -571,6 +595,7 @@ export const RouteTravel = ({
     },
     onEnd: ({ travels }) => {
       gestureRef.current = null;
+      caughtAtPressRef.current = null;
       const travel = travelRef.current;
       if (!travel) {
         // The travel this gesture was holding ended under it. Nothing left to
@@ -598,6 +623,22 @@ export const RouteTravel = ({
     if (!travelByDrag || gestureRef.current) {
       return;
     }
+    // Touching something that is moving STOPS it, right there, before the
+    // gesture has said anything about itself. Waiting for the first pixels that
+    // decide an axis would let the pages travel on under a finger that has
+    // already landed on them, which is the one moment a hand expects to be
+    // obeyed without asking. If the press turns out to be nothing, the travel
+    // is let go of again and carries on (see onGiveUp).
+    const travelToCatch = travelRef.current;
+    if (
+      travelToCatch &&
+      !travelToCatch.noPicture &&
+      !travelToCatch.ended &&
+      !travelToCatch.reverting
+    ) {
+      holdTravel(travelToCatch);
+      caughtAtPressRef.current = travelToCatch;
+    }
     // A travel already playing is not a reason to refuse the press: a hand
     // reaching for a page that is still sliding is reaching for THAT page, and
     // the gesture takes it over (see onStart).
@@ -610,6 +651,13 @@ export const RouteTravel = ({
       ...travelHandlers,
       onGiveUp: () => {
         gestureRef.current = null;
+        // A press that never became a gesture: whatever it stopped goes on its
+        // way, from where the finger caught it.
+        const caught = caughtAtPressRef.current;
+        caughtAtPressRef.current = null;
+        if (caught && !caught.ended) {
+          releaseHold(caught);
+        }
       },
     });
     gestureRef.current = gesture;

@@ -167,13 +167,17 @@
         { label: "lente (1s)", value: "1000ms" },
         { label: "très lente (2,5s)", value: "2500ms" },
       ];
+      const SPEED_STORAGE_KEY = "route_travel_demo_speed";
       const SpeedPicker = () => {
-        const [speed, setSpeed] = useState(SPEEDS[0].value);
+        const [speed, setSpeed] = useState(
+          () => localStorage.getItem(SPEED_STORAGE_KEY) || SPEEDS[0].value,
+        );
         useLayoutEffect(() => {
           document.documentElement.style.setProperty(
             "--navi-route-travel-duration",
             speed,
           );
+          localStorage.setItem(SPEED_STORAGE_KEY, speed);
         }, [speed]);
         return (
           <label className="speed_picker">

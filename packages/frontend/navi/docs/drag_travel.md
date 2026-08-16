@@ -100,6 +100,13 @@ not ask for a new one, and it is not refused. Refusing it is what makes a page
 rock: a gesture given back to the browser is answered by the browser, over a
 travel that is already moving.
 
+**Touching it stops it, at the press** — not at the first pixels that decide an
+axis. A hand landing on something that is moving expects it to obey at once;
+waiting for a threshold lets the pages travel on under a finger already resting
+on them, which is the one moment a gesture must not ask for proof. A press that
+turns out to be nothing lets go again and the travel carries on from where it
+was caught.
+
 Taking over means the pictures stop where they are and answer the finger again,
 from where they stand (`slack`) rather than from zero. Only one box is in hand:
 further along it carries on, back past its start is a wall — leaving that way
@@ -124,6 +131,12 @@ Two things a travel in hand must never lose:
   cancelled somewhere the box is not on the path (the document root, during a
   transition): missed, the gesture never ends, and whatever it was holding stays
   held. The end is listened for on the window too, filtered by pointer id;
+- **a box's own navigations are not somebody changing the route.** Routing is
+  asynchronous: a travel's navigation lands well after the travel decided
+  anything about it — sometimes after it was undone. Read back as "the route
+  changed", it starts a second travel nobody asked for, over pictures already
+  showing something else. So the box remembers what it asked for and recognises
+  its own answer when it arrives;
 - **a travel ENDS, whatever happened on the way.** Whoever set the hold lifts it,
   and the "a travel is playing" state is cleared in a `finally`. A travel left in
   flight is not a small leak: it freezes the page under its own pictures, and
