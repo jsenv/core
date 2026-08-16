@@ -7628,6 +7628,1168 @@ const applyWheelScrollThrough = (element, wheelEvent) => {
   });
 };
 
+const installImportMetaCssBuild = (importMeta) => {
+  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+
+  const stylesheetMap = new Map();
+  const adopt = (url, value) => {
+    const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+    stylesheet.replaceSync(value);
+    stylesheetMap.set(url, stylesheet);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  };
+  const update = (url, value) => {
+    stylesheetMap.get(url).replaceSync(value);
+  };
+  const remove = (url) => {
+    const stylesheet = stylesheetMap.get(url);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
+    stylesheetMap.delete(url);
+  };
+
+  const currentCssSourceMap = new Map();
+  Object.defineProperty(importMeta, "css", {
+    configurable: true,
+    get() {
+      return IMPORT_META_CSS_BUILD;
+    },
+    set([value, url]) {
+      if (value === undefined) {
+        if (stylesheetMap.has(url)) {
+          remove(url);
+          currentCssSourceMap.delete(url);
+        }
+        return;
+      }
+      if (!stylesheetMap.has(url)) {
+        adopt(url, value);
+        currentCssSourceMap.set(url, value);
+      } else if (currentCssSourceMap.get(url) !== value) {
+        update(url, value);
+        currentCssSourceMap.set(url, value);
+      }
+    },
+  });
+};
+
+/**
+ * Isolates user interactions to only the specified elements, making everything else non-interactive.
+ *
+ * This creates a controlled interaction environment where only the target elements (and their ancestors)
+ * can receive user input like clicks, keyboard events, focus, etc. All other DOM elements become
+ * non-interactive, preventing conflicting or unwanted interactions during critical operations
+ * like drag gestures, modal dialogs, or complex UI states.
+ *
+ * The function uses the `inert` attribute to achieve this isolation, applying it strategically
+ * to parts of the DOM tree while preserving the interactive elements and their ancestor chains.
+ *
+ * Example DOM structure and inert application:
+ *
+ * Before calling isolateInteractions:
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>
+ *       <span>some content</span>
+ *       <div class="modal">modal content</div>
+ *       <span>more content</span>
+ *     </div>
+ *     <aside inert>already inert</aside>
+ *     <div class="dropdown">dropdown menu</div>
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling isolateInteractions([modal, dropdown]):
+ * ```
+ * <body>
+ *   <header inert>...</header>  ← made inert (no active descendants)
+ *   <main> ← not inert because it contains active elements
+ *     <div> ← not inert because it contains .modal
+ *       <span inert>some content</span> ← made inert selectively
+ *       <div class="modal">modal content</div> ← stays active
+ *       <span inert>more content</span> ← made inert selectively
+ *     </div>
+ *     <aside inert>already inert</aside>
+ *     <div class="dropdown">dropdown menu</div> ← stays active
+ *   </main>
+ *   <footer inert>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling cleanup():
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>
+ *       <span>some content</span>
+ *       <div class="modal">modal content</div>
+ *       <span>more content</span>
+ *     </div>
+ *     <aside inert>already inert</aside> ← [inert] preserved
+ *     <div class="dropdown">dropdown menu</div>
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * @param {Array<Element>} elements - Array of elements to keep interactive (non-inert)
+ * @returns {Function} cleanup - Function to restore original inert states
+ */
+const isolateInteractions = (elements) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+
+  const toKeepInteractiveSet = new Set();
+  const keepSelfAndAncestors = (el) => {
+    if (toKeepInteractiveSet.has(el)) {
+      return;
+    }
+    const associatedElements = getAssociatedElements(el);
+    if (associatedElements) {
+      for (const associatedElement of associatedElements) {
+        keepSelfAndAncestors(associatedElement);
+      }
+    }
+
+    // Add the element itself
+    toKeepInteractiveSet.add(el);
+    // Add all its ancestors up to document.body
+    let ancestor = el.parentNode;
+    while (ancestor && ancestor !== document.body) {
+      toKeepInteractiveSet.add(ancestor);
+      ancestor = ancestor.parentNode;
+    }
+  };
+
+  // Build set of elements to keep interactive
+  for (const element of elements) {
+    keepSelfAndAncestors(element);
+  }
+  // backdrop elements are meant to control interactions happening at document level
+  // and should stay interactive
+  const backdropElements = document.querySelectorAll("[data-backdrop]");
+  for (const backdropElement of backdropElements) {
+    keepSelfAndAncestors(backdropElement);
+  }
+
+  const setInert = (el) => {
+    if (toKeepInteractiveSet.has(el)) {
+      // element should stay interactive
+      return;
+    }
+    const restoreAttributes = setAttributes(el, {
+      inert: "",
+    });
+    cleanupCallbackSet.add(() => {
+      restoreAttributes();
+    });
+  };
+
+  const makeElementInertSelectivelyOrCompletely = (el) => {
+    // If this element should stay interactive, keep it active
+    if (toKeepInteractiveSet.has(el)) {
+      return;
+    }
+
+    // Since we put all ancestors in toKeepInteractiveSet, if this element
+    // is not in the set, we can check if any of its direct children are.
+    // If none of the direct children are in the set, then no descendants are either.
+    const children = Array.from(el.children);
+    const hasInteractiveChildren = children.some((child) =>
+      toKeepInteractiveSet.has(child),
+    );
+
+    if (!hasInteractiveChildren) {
+      // No interactive descendants, make the entire element inert
+      setInert(el);
+      return;
+    }
+
+    // Some children need to stay interactive, process them selectively
+    for (const child of children) {
+      makeElementInertSelectivelyOrCompletely(child);
+    }
+  };
+
+  // Apply inert to all top-level elements that aren't in our keep-interactive set
+  const bodyChildren = Array.from(document.body.children);
+  for (const child of bodyChildren) {
+    makeElementInertSelectivelyOrCompletely(child);
+  }
+
+  return () => {
+    cleanup();
+  };
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Drag Gesture System
+ *
+ * TODO: rename moveX/moveY en juste x/y
+ * puisque move c'est perturbant sachant que c'est drag + scroll
+ * et que drag c'est juste la partie mouvement de la souris
+ *
+ * donc juste x/y ca seras surement mieux
+ *
+ */
+const css$5 = /* css */`
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    /* A finger dragging must not also pan the page under it. The backdrop is
+       the only element the finger can be over once the gesture is running. */
+    touch-action: none;
+    user-select: none;
+  }
+`;
+const createDragGestureController = (options = {}) => {
+  const {
+    name,
+    onGrab,
+    onDragStart,
+    onDrag,
+    onRelease,
+    threshold = 5,
+    direction: defaultDirection = {
+      x: true,
+      y: true
+    },
+    documentInteractions = "auto",
+    backdrop = true,
+    backdropZIndex = 999999
+  } = options;
+  const dragGestureController = {
+    grab: null,
+    gravViaPointer: null
+  };
+  const grab = ({
+    element,
+    direction = defaultDirection,
+    event = new CustomEvent("programmatic"),
+    grabX = 0,
+    grabY = 0,
+    cursor = "grabbing",
+    scrollContainer = document.documentElement,
+    layoutScrollableLeft: scrollableLeftAtGrab = 0,
+    layoutScrollableTop: scrollableTopAtGrab = 0
+  } = {}) => {
+    if (!element) {
+      throw new Error("element is required");
+    }
+    if (!direction.x && !direction.y) {
+      return null;
+    }
+    const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
+    const [publishDrag, addDragCallback] = createPubSub();
+    const [publishRelease, addReleaseCallback] = createPubSub();
+    if (onDrag) {
+      addDragCallback(onDrag);
+    }
+    if (onRelease) {
+      addReleaseCallback(onRelease);
+    }
+    const scrollLeftAtGrab = scrollContainer.scrollLeft;
+    const scrollTopAtGrab = scrollContainer.scrollTop;
+    const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
+    const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
+    const createLayout = (x, y) => {
+      const {
+        scrollLeft,
+        scrollTop
+      } = scrollContainer;
+      const left = scrollableLeftAtGrab + x;
+      const top = scrollableTopAtGrab + y;
+      const scrollableLeft = left - scrollLeft;
+      const scrollableTop = top - scrollTop;
+      const layoutProps = {
+        // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
+        x,
+        y,
+        // container scrolls when layout is created
+        scrollLeft,
+        scrollTop,
+        // Position relative to container excluding scrolls
+        scrollableLeft,
+        scrollableTop,
+        // Position relative to container including scrolls
+        left,
+        top,
+        // Delta since grab (number representing how much we dragged)
+        xDelta: left - leftAtGrab,
+        yDelta: top - topAtGrab
+      };
+      return layoutProps;
+    };
+    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
+    const gestureInfo = {
+      name,
+      direction,
+      started: !threshold,
+      status: "grabbed",
+      element,
+      scrollContainer,
+      grabX,
+      // x grab coordinate (excluding scroll)
+      grabY,
+      // y grab coordinate (excluding scroll)
+      grabLayout,
+      leftAtGrab,
+      topAtGrab,
+      dragX: grabX,
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY,
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
+      layout: grabLayout,
+      isGoingUp: undefined,
+      isGoingDown: undefined,
+      isGoingLeft: undefined,
+      isGoingRight: undefined,
+      intentGoingUp: false,
+      intentGoingDown: false,
+      intentGoingLeft: false,
+      intentGoingRight: false,
+      // How fast the pointer is going, in px/ms, signed per axis
+      // (see measureVelocity)
+      velocityX: 0,
+      velocityY: 0,
+      velocity: 0,
+      // metadata about interaction sources
+      grabEvent: event,
+      dragEvent: null,
+      releaseEvent: null
+    };
+    definePropertyAsReadOnly(gestureInfo, "name");
+    definePropertyAsReadOnly(gestureInfo, "direction");
+    definePropertyAsReadOnly(gestureInfo, "scrollContainer");
+    definePropertyAsReadOnly(gestureInfo, "grabX");
+    definePropertyAsReadOnly(gestureInfo, "grabY");
+    definePropertyAsReadOnly(gestureInfo, "grabLayout");
+    definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
+    definePropertyAsReadOnly(gestureInfo, "topAtGrab");
+    definePropertyAsReadOnly(gestureInfo, "grabEvent");
+
+    // Where the pointer IS is not where it is going: throwing something is a
+    // matter of speed, and the gesture is the only place that sees the timing of
+    // the events it receives.
+    const measureVelocity = createVelocityMeter(grabX, grabY);
+    document_interactions: {
+      if (documentInteractions === "manual") {
+        break document_interactions;
+      }
+      /*
+      GOAL: Take control of document-level interactions during drag gestures
+      
+      WHY: During drag operations, we need to prevent conflicting user interactions that would:
+      1. Interfere with the drag gesture (competing pointer events, focus changes)
+      2. Break the visual feedback (inconsistent cursors, hover states)
+      3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
+      4. Create accessibility issues (focus jumping, screen reader confusion)
+       STRATEGY: Create a controlled interaction environment by:
+      1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
+      2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
+      3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
+      4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
+       IMPLEMENTATION:
+      */
+
+      // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
+      // This prevents keyboard events, pointer interactions, and screen reader navigation
+      // on non-relevant elements during the drag operation
+      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
+      addReleaseCallback(() => {
+        cleanupInert();
+      });
+
+      // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
+      if (backdrop) {
+        import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
+        const backdropElement = document.createElement("div");
+        backdropElement.className = "navi_drag_gesture_backdrop";
+        backdropElement.ariaHidden = "true";
+        backdropElement.setAttribute("data-backdrop", "");
+        backdropElement.style.zIndex = backdropZIndex;
+        backdropElement.style.cursor = cursor;
+
+        // Handle wheel events on backdrop for directionally-constrained drag gestures
+        // (e.g., table column resize should only allow horizontal scrolling)
+        if (!direction.x || !direction.y) {
+          backdropElement.onwheel = e => {
+            e.preventDefault();
+            const scrollX = direction.x ? e.deltaX : 0;
+            const scrollY = direction.y ? e.deltaY : 0;
+            scrollContainer.scrollBy({
+              left: scrollX,
+              top: scrollY,
+              behavior: "auto"
+            });
+          };
+        }
+        document.body.appendChild(backdropElement);
+        addReleaseCallback(() => {
+          backdropElement.remove();
+        });
+      }
+
+      // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
+      const {
+        activeElement
+      } = document;
+      const focusableElement = findFocusable(element);
+      // Focus the dragged element (or document.body as fallback) to establish clear focus context
+      // This also ensure any keydown event listened by the currently focused element
+      // won't be available during drag
+      const elementToFocus = focusableElement || document.body;
+      elementToFocus.focus({
+        preventScroll: true
+      });
+      addReleaseCallback(() => {
+        // Restore original focus on release
+        activeElement.focus({
+          preventScroll: true
+        });
+      });
+      // Prevent Tab navigation entirely (focus should stay stable)
+      const onkeydown = e => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          return;
+        }
+      };
+      document.addEventListener("keydown", onkeydown);
+      addReleaseCallback(() => {
+        document.removeEventListener("keydown", onkeydown);
+      });
+
+      // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
+      {
+        const onDocumentKeydown = keyboardEvent => {
+          // Vertical scrolling keys - prevent if vertical movement not supported
+          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
+            if (!direction.y) {
+              keyboardEvent.preventDefault();
+            }
+            return;
+          }
+          // Horizontal scrolling keys - prevent if horizontal movement not supported
+          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
+            if (!direction.x) {
+              keyboardEvent.preventDefault();
+            }
+            return;
+          }
+        };
+        document.addEventListener("keydown", onDocumentKeydown);
+        addReleaseCallback(() => {
+          document.removeEventListener("keydown", onDocumentKeydown);
+        });
+      }
+    }
+
+    // Set up scroll event handling to adjust drag position when scrolling occurs
+    {
+      let isHandlingScroll = false;
+      const handleScroll = scrollEvent => {
+        if (isHandlingScroll) {
+          return;
+        }
+        isHandlingScroll = true;
+        drag(gestureInfo.dragX, gestureInfo.dragY, {
+          event: scrollEvent
+        });
+        isHandlingScroll = false;
+      };
+      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
+      scrollEventReceiver.addEventListener("scroll", handleScroll, {
+        passive: true
+      });
+      addReleaseCallback(() => {
+        scrollEventReceiver.removeEventListener("scroll", handleScroll, {
+          passive: true
+        });
+      });
+    }
+    const determineDragData = ({
+      dragX,
+      dragY,
+      dragEvent,
+      isRelease = false
+    }) => {
+      // === ÉTAT INITIAL (au moment du grab) ===
+      const {
+        grabX,
+        grabY,
+        grabLayout
+      } = gestureInfo;
+      // === CE QUI EST DEMANDÉ (où on veut aller) ===
+      // Calcul de la direction basé sur le mouvement précédent
+      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
+      // (ici on veut connaitre l'intention)
+      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
+      const currentDragX = gestureInfo.dragX;
+      const currentDragY = gestureInfo.dragY;
+      const isGoingLeft = dragX < currentDragX;
+      const isGoingRight = dragX > currentDragX;
+      const isGoingUp = dragY < currentDragY;
+      const isGoingDown = dragY > currentDragY;
+      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
+      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
+      const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
+      const currentLayout = gestureInfo.layout;
+      let layout;
+      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
+        layout = currentLayout;
+      } else {
+        // === APPLICATION DES CONTRAINTES ===
+        let layoutConstrained = layoutRequested;
+        const limitLayout = (left, top) => {
+          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
+        };
+        publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
+          dragEvent,
+          isRelease
+        });
+        // === ÉTAT FINAL ===
+        layout = layoutConstrained;
+      }
+      const dragData = {
+        dragX,
+        dragY,
+        layout,
+        isGoingLeft,
+        isGoingRight,
+        isGoingUp,
+        isGoingDown,
+        status: isRelease ? "released" : "dragging",
+        dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
+        releaseEvent: isRelease ? dragEvent : null
+      };
+      if (isRelease) {
+        return dragData;
+      }
+      if (!gestureInfo.started && threshold) {
+        const deltaX = Math.abs(dragX - grabX);
+        const deltaY = Math.abs(dragY - grabY);
+        if (direction.x && direction.y) {
+          // Both directions: check both axes
+          if (deltaX < threshold && deltaY < threshold) {
+            return dragData;
+          }
+        } else if (direction.x) {
+          if (deltaX < threshold) {
+            return dragData;
+          }
+        } else if (direction.y) {
+          if (deltaY < threshold) {
+            return dragData;
+          }
+        }
+        dragData.started = true;
+      }
+      return dragData;
+    };
+    const markAsStarted = () => {
+      // Suppress the click that the browser fires after pointerup following a real drag.
+      // The capture phase runs before any element onClick handler.
+      const suppressClick = clickEvent => {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+        stopSuppressingClick();
+      };
+      // That click is dispatched AFTER the pointerup that ends the drag, so
+      // this cannot be taken down with the gesture — it would be gone one event
+      // too early, and the drag would end on the link it started from being
+      // followed. It goes once it has swallowed the click, or at the next press
+      // if the drag produced none: a click is always preceded by a press, so a
+      // suppressor that outlives one press can never reach the click of
+      // another.
+      const stopSuppressingClick = () => {
+        document.removeEventListener("click", suppressClick, {
+          capture: true
+        });
+        document.removeEventListener("pointerdown", stopSuppressingClick, {
+          capture: true
+        });
+      };
+      document.addEventListener("click", suppressClick, {
+        capture: true
+      });
+      addReleaseCallback(() => {
+        document.addEventListener("pointerdown", stopSuppressingClick, {
+          capture: true
+        });
+      });
+      // Everything this gesture puts on the document is in place, and undoable,
+      // BEFORE anybody is told it started: a listener may end the gesture from
+      // inside this very notification — that is how a press becomes a drag (see
+      // dragAfterIntent, where the gesture that measured the distance releases
+      // itself the moment it is confirmed). Set up afterwards, a listener would
+      // be registering its own removal with a gesture that is already over, and
+      // would then outlive it: what one sees is a click swallowed long after
+      // the drag it belonged to.
+      dispatchPublicCustomEvent(element, "navi_drag_start", {
+        gestureInfo
+      });
+      onDragStart?.(gestureInfo);
+    };
+
+    // Declares the gesture confirmed without waiting for the distance threshold,
+    // for callers who established the intent some other way (a dedicated handle,
+    // a long press).
+    const start = () => {
+      if (gestureInfo.started) {
+        return;
+      }
+      gestureInfo.started = true;
+      markAsStarted();
+    };
+    const drag = (dragX = gestureInfo.dragX,
+    // Scroll container relative X coordinate
+    dragY = gestureInfo.dragY,
+    // Scroll container relative Y coordinate
+    {
+      event = new CustomEvent("programmatic"),
+      isRelease = false
+    } = {}) => {
+      const dragData = determineDragData({
+        dragX,
+        dragY,
+        dragEvent: event,
+        isRelease
+      });
+      const [velocityX, velocityY] = measureVelocity(dragX, dragY);
+      const startedPrevious = gestureInfo.started;
+      const layoutPrevious = gestureInfo.layout;
+      // previousGestureInfo = { ...gestureInfo };
+      Object.assign(gestureInfo, dragData);
+      gestureInfo.velocityX = velocityX;
+      gestureInfo.velocityY = velocityY;
+      gestureInfo.velocity = Math.hypot(velocityX, velocityY);
+      if (gestureInfo.isGoingDown) {
+        gestureInfo.intentGoingDown = true;
+        gestureInfo.intentGoingUp = false;
+      } else if (gestureInfo.isGoingUp) {
+        gestureInfo.intentGoingUp = true;
+        gestureInfo.intentGoingDown = false;
+      }
+      if (gestureInfo.isGoingRight) {
+        gestureInfo.intentGoingRight = true;
+        gestureInfo.intentGoingLeft = false;
+      } else if (gestureInfo.isGoingLeft) {
+        gestureInfo.intentGoingLeft = true;
+        gestureInfo.intentGoingRight = false;
+      }
+      if (!startedPrevious && gestureInfo.started) {
+        markAsStarted();
+      }
+      const someLayoutChange = gestureInfo.layout !== layoutPrevious;
+      dispatchPublicCustomEvent(element, "navi_drag", {
+        gestureInfo,
+        someLayoutChange
+      });
+      publishDrag(gestureInfo,
+      // we still publish drag event even when unchanged
+      // because UI might need to adjust when document scrolls
+      // even if nothing truly changes visually the element
+      // can decide to stick to the scroll for example
+      someLayoutChange);
+    };
+    const release = ({
+      event = new CustomEvent("programmatic"),
+      releaseX = gestureInfo.dragX,
+      releaseY = gestureInfo.dragY
+    } = {}) => {
+      drag(releaseX, releaseY, {
+        event,
+        isRelease: true
+      });
+      dispatchPublicCustomEvent(element, "navi_drag_release", {
+        gestureInfo
+      });
+      publishRelease(gestureInfo);
+    };
+    dispatchPublicCustomEvent(element, "navi_drag_grab", {
+      gestureInfo
+    });
+    onGrab?.(gestureInfo);
+    const dragGesture = {
+      gestureInfo,
+      addBeforeDragCallback,
+      addDragCallback,
+      addReleaseCallback,
+      start,
+      drag,
+      release
+    };
+    return dragGesture;
+  };
+  dragGestureController.grab = grab;
+  const initDragByPointer = (grabEvent, dragOptions, initializer) => {
+    if (!isPrimaryButtonEvent(grabEvent)) {
+      return null;
+    }
+    const target = grabEvent.target;
+    if (!target.closest) {
+      // target is a text node
+      return null;
+    }
+    const mouseEventCoords = mouseEvent => {
+      const {
+        clientX,
+        clientY
+      } = mouseEvent;
+      return [clientX, clientY];
+    };
+    const [grabX, grabY] = mouseEventCoords(grabEvent);
+    const dragGesture = dragGestureController.grab({
+      grabX,
+      grabY,
+      event: grabEvent,
+      ...dragOptions
+    });
+    const dragViaPointer = dragEvent => {
+      const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
+      dragGesture.drag(mouseDragX, mouseDragY, {
+        event: dragEvent
+      });
+    };
+    const releaseViaPointer = mouseupEvent => {
+      const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
+      dragGesture.release({
+        event: mouseupEvent,
+        releaseX: mouseReleaseX,
+        releaseY: mouseReleaseY
+      });
+    };
+    dragGesture.dragViaPointer = dragViaPointer;
+    dragGesture.releaseViaPointer = releaseViaPointer;
+    const cleanup = initializer({
+      onMove: dragViaPointer,
+      onRelease: releaseViaPointer,
+      gestureInfo: dragGesture.gestureInfo
+    });
+    dragGesture.addReleaseCallback(() => {
+      cleanup();
+    });
+    return dragGesture;
+  };
+  const grabViaPointer = (grabEvent, options) => {
+    if (grabEvent.type === "pointerdown") {
+      return initDragByPointer(grabEvent, options, ({
+        onMove,
+        onRelease,
+        gestureInfo
+      }) => {
+        // Captured on something that will still be there at the end of the
+        // gesture: the browser releases the capture when its element leaves the
+        // document, and a gesture whose own effect replaces the DOM under the
+        // finger would lose the pointer at its first move. Callers whose target
+        // is stable have nothing to say and keep it.
+        const target = options?.pointerCaptureElement || grabEvent.target;
+        target.setPointerCapture(grabEvent.pointerId);
+        /*
+         * A touchmove left alone is the browser deciding the touch belongs to
+         * it: it takes it to scroll with, and a touch it has taken is a pointer
+         * stream it CANCELS — the gesture dies mid-move, the finger is still
+         * down, and nothing reads it anymore.
+         *
+         * Refused only once the gesture is established (a `touch-action: none`
+         * would take the touch from everyone who merely brushes past the
+         * element), but LISTENED FOR from the grab: whether a touchmove can be
+         * refused at all is decided when the touch begins, from the listeners
+         * present at that moment. Registered later, the listener is handed
+         * events that are already `cancelable: false` — refusing them does
+         * nothing, and the reason is invisible in the code that refuses.
+         *
+         * On the window in capture AND on the grabbed element: a touch keeps
+         * being dispatched at the node it started on, and a gesture may take
+         * that node out of the document (a page that travels navigates) — from
+         * then on the event never passes through the window on its way
+         * anywhere.
+         */
+        const preventTouchScroll = touchMoveEvent => {
+          if (gestureInfo.started && touchMoveEvent.cancelable) {
+            touchMoveEvent.preventDefault();
+          }
+        };
+        const grabTarget = grabEvent.target;
+        window.addEventListener("touchmove", preventTouchScroll, {
+          passive: false,
+          capture: true
+        });
+        grabTarget.addEventListener("touchmove", preventTouchScroll, {
+          passive: false
+        });
+        // Only OUR capture ending means this gesture is over:
+        // lostpointercapture bubbles, so a descendant giving up its own capture
+        // walks straight into this listener. That is not a rare shape — it is
+        // exactly what happens when a gesture hands over to another one (a
+        // press that becomes a drag releases its intermediate gesture, held on
+        // the pressed element, while the real one is being held on a container
+        // above it), and taken as our own it kills the new gesture one
+        // millisecond after it started.
+        const onCaptureLost = pointerEvent => {
+          if (pointerEvent.target !== target) {
+            return;
+          }
+          onRelease(pointerEvent);
+        };
+        target.addEventListener("lostpointercapture", onCaptureLost);
+        target.addEventListener("pointercancel", onRelease);
+        target.addEventListener("pointermove", onMove);
+        target.addEventListener("pointerup", onRelease);
+        // The end of the pointer is also listened for on the window, because
+        // the end is the one event a gesture cannot afford to miss and the
+        // element it is captured on is not always on its way: a pointer can
+        // be delivered somewhere else entirely (a browser view transition
+        // sends presses to the document root), and a cancel dispatched there
+        // never passes through this element. Missed, the gesture never ends —
+        // whatever it was holding stays held.
+        let released = false;
+        const onPointerEnd = pointerEvent => {
+          if (pointerEvent.pointerId !== grabEvent.pointerId || released) {
+            return;
+          }
+          released = true;
+          onRelease(pointerEvent);
+        };
+        window.addEventListener("pointerup", onPointerEnd, true);
+        window.addEventListener("pointercancel", onPointerEnd, true);
+        return () => {
+          // Listeners first, capture last: giving the pointer back is the
+          // one thing here that can throw, and a gesture that fails to clean
+          // up half way is worse than one that never cleaned up at all — its
+          // listeners stay on the element and answer the NEXT gesture, from
+          // a gesture whose pointer is long gone.
+          window.removeEventListener("touchmove", preventTouchScroll, {
+            capture: true
+          });
+          grabTarget.removeEventListener("touchmove", preventTouchScroll);
+          target.removeEventListener("lostpointercapture", onCaptureLost);
+          target.removeEventListener("pointercancel", onRelease);
+          target.removeEventListener("pointermove", onMove);
+          target.removeEventListener("pointerup", onRelease);
+          window.removeEventListener("pointerup", onPointerEnd, true);
+          window.removeEventListener("pointercancel", onPointerEnd, true);
+          // Asked for only while there is something to give back: a pointer
+          // that is up no longer exists, the browser has already dropped the
+          // capture with it, and asking again throws ("No active pointer with
+          // the given id is found") — on the most ordinary release there is.
+          if (target.hasPointerCapture(grabEvent.pointerId)) {
+            target.releasePointerCapture(grabEvent.pointerId);
+          }
+        };
+      });
+    }
+    if (grabEvent.type === "mousedown") {
+      console.warn(`Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`);
+      return initDragByPointer(grabEvent, options, ({
+        onMove,
+        onRelease
+      }) => {
+        const onPointerUp = pointerEvent => {
+          // <button disabled> for example does not emit mouseup if we release mouse over it
+          // -> we add "pointerup" to catch mouseup occuring on disabled element
+          if (pointerEvent.pointerType === "mouse") {
+            onRelease(pointerEvent);
+          }
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onRelease);
+        document.addEventListener("pointerup", onPointerUp);
+        return () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onRelease);
+          document.removeEventListener("pointerup", onPointerUp);
+        };
+      });
+    }
+    throw new Error(`Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`);
+  };
+  dragGestureController.grabViaPointer = grabViaPointer;
+  return dragGestureController;
+};
+
+// Only the primary button drags: a right click (or any secondary button) opens
+// a context menu, it never grabs anything.
+const isPrimaryButtonEvent = event => event.button === undefined || event.button === 0;
+
+/*
+ * Speed over the last VELOCITY_WINDOW_MS rather than between the last two
+ * events: pointer events arrive irregularly, and the last one before a release
+ * often repeats the previous coordinates — measured on that pair alone, every
+ * throw would end at zero.
+ * A pointer held still keeps producing samples at the same place, so the window
+ * empties itself of movement and the speed falls back to zero on its own: put
+ * down slowly is not thrown.
+ */
+const VELOCITY_WINDOW_MS = 100;
+const createVelocityMeter = (grabX, grabY) => {
+  const samples = [{
+    time: performance.now(),
+    x: grabX,
+    y: grabY
+  }];
+  const measureVelocity = (x, y) => {
+    const time = performance.now();
+    samples.push({
+      time,
+      x,
+      y
+    });
+    while (samples.length > 2 && time - samples[1].time > VELOCITY_WINDOW_MS) {
+      samples.shift();
+    }
+    const oldestSample = samples[0];
+    const elapsed = time - oldestSample.time;
+    if (elapsed === 0) {
+      return [0, 0];
+    }
+    return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
+  };
+  return measureVelocity;
+};
+const definePropertyAsReadOnly = (object, propertyName) => {
+  Object.defineProperty(object, propertyName, {
+    writable: false,
+    value: object[propertyName]
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * When a press becomes a drag.
+ *
+ * A pointer going down on a draggable element is ambiguous — it may be a click,
+ * a text selection, a scroll, or a drag — and starting the gesture right away
+ * would steal all the others. This module owns the wait that resolves the
+ * ambiguity, and only then hands over to the real gesture.
+ *
+ * There is one gesture, with a trigger per pointer:
+ * - a dedicated handle ([data-drag-handle]) says it outright: drag on contact
+ * - a mouse resolves it by distance — a mouse scrolls with its wheel, so travel
+ *   can only mean drag
+ * - a finger resolves it by time — travel is exactly what a scroll looks like,
+ *   so the only unambiguous signal left is a finger that does NOT move
+ *
+ * Whichever trigger fired, it has established the intent: the gesture then
+ * starts at the first pixel, without a second threshold to cross.
+ */
+
+/* iOS shows its callout (Copy / Look Up) and selects the text under the finger
+   on a long press, and does not always route that through an event that can be
+   refused — see preventContextMenu below for the half that is an event.
+   At module scope, and on the markers rather than on the pressed element: it has
+   to be true before the finger lands. */
+const css$4 = /* css */`
+  [data-drag-handle],
+  [data-drag-source] {
+    -webkit-touch-callout: none;
+  }
+  [data-drag-ignore] {
+    -webkit-touch-callout: default;
+  }
+`;
+import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_after_intent.js"];
+
+/**
+ * Waits for the user to mean it, then starts a drag gesture.
+ *
+ * @param {PointerEvent} grabEvent
+ *   The `pointerdown` event that may become a drag.
+ * @param {function} dragGestureInitializer
+ *   Called once the intent is established; must create and return the real drag
+ *   gesture (typically via `grabViaPointer(grabEvent)`). Returning a falsy value
+ *   aborts the gesture.
+ * @param {object} [options]
+ * @param {number} [options.threshold=5]
+ *   Distance (px) the pointer must travel to start a drag, when the trigger is
+ *   distance-based.
+ * @param {boolean|"if-touch"} [options.longPress="if-touch"]
+ *   Which pointers start a drag by holding still instead of by travelling.
+ * @param {number} [options.longPressDelay=400]
+ *   How long (ms) the pointer must stay down. Kept under the system context-menu
+ *   delay so the object is picked up before the menu would have opened.
+ * @param {number} [options.longPressSlop=8]
+ *   How far (px) the pointer may drift during the wait before the press is
+ *   abandoned — beyond it, the finger is scrolling, not holding.
+ * @param {function} [options.onPressStart]
+ *   The pointer went down and the wait began (a cue that the press counts).
+ * @param {function} [options.onPressCancel]
+ *   The pointer moved or lifted before the wait was over.
+ * @param {function} [options.onPress]
+ *   The wait completed and the object is now held (haptics, scale…).
+ */
+const dragAfterIntent = (grabEvent, dragGestureInitializer, {
+  threshold = 5,
+  longPress = "if-touch",
+  longPressDelay = 400,
+  longPressSlop = 8,
+  onPressStart,
+  onPressCancel,
+  onPress
+} = {}) => {
+  if (!isPrimaryButtonEvent(grabEvent)) {
+    return;
+  }
+  const target = grabEvent.target;
+  const isDedicatedHandle = target.closest && target.closest("[data-drag-handle]");
+  if (isDedicatedHandle) {
+    startDragGesture(dragGestureInitializer);
+    return;
+  }
+  const startsOnLongPress = longPress === true || longPress === "if-touch" && grabEvent.pointerType === "touch";
+  if (startsOnLongPress) {
+    dragAfterLongPress(grabEvent, dragGestureInitializer, {
+      longPressDelay,
+      longPressSlop,
+      onPressStart,
+      onPressCancel,
+      onPress
+    });
+    return;
+  }
+  dragAfterDistance(grabEvent, dragGestureInitializer, threshold);
+};
+const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
+  const dragGesture = dragGestureInitializer();
+  if (!dragGesture) {
+    return null;
+  }
+  // The wait is what established the intent; a distance threshold on top of it
+  // would ask the user to prove the same thing twice.
+  dragGesture.start();
+  if (catchUpEvent) {
+    dragGesture.dragViaPointer(catchUpEvent);
+  }
+  return dragGesture;
+};
+const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
+  const significantDragGestureController = createDragGestureController({
+    threshold,
+    // allow interaction for this intermediate gesture:
+    // user should still be able to scroll or interact with the document
+    // only once the gesture is significant we take control
+    documentInteractions: "manual",
+    onDragStart: gestureInfo => {
+      significantDragGesture.release(); // kill that gesture
+      startDragGesture(dragGestureInitializer, gestureInfo.dragEvent);
+    }
+  });
+  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
+    element: grabEvent.target
+  });
+};
+const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
+  longPressDelay,
+  longPressSlop,
+  onPressStart,
+  onPressCancel,
+  onPress
+}) => {
+  const {
+    pointerId,
+    clientX,
+    clientY
+  } = grabEvent;
+  const pressCleanupCallbacks = [];
+  const endPress = () => {
+    for (const pressCleanupCallback of pressCleanupCallbacks) {
+      pressCleanupCallback();
+    }
+    pressCleanupCallbacks.length = 0;
+  };
+
+  /*
+   * A press held long enough IS the system's context-menu gesture: Android opens
+   * its menu around 500ms, iOS its callout — both a tenth of a second after the
+   * object has been picked up, landing on top of something the finger is already
+   * carrying.
+   * The listener goes on window, in capture: once the gesture runs, the drag
+   * backdrop covers the page, so the contextmenu event is aimed at the backdrop
+   * and never reaches the element being dragged.
+   * It is removed on release — a right click with a mouse remains a right click.
+   */
+  const preventContextMenu = contextMenuEvent => {
+    contextMenuEvent.preventDefault();
+  };
+  window.addEventListener("contextmenu", preventContextMenu, true);
+  pressCleanupCallbacks.push(() => {
+    window.removeEventListener("contextmenu", preventContextMenu, true);
+  });
+  const countdownCleanupCallbacks = [];
+  const endCountdown = () => {
+    for (const countdownCleanupCallback of countdownCleanupCallbacks) {
+      countdownCleanupCallback();
+    }
+    countdownCleanupCallbacks.length = 0;
+  };
+  const timeout = setTimeout(() => {
+    endCountdown();
+    onPress?.(grabEvent);
+    // Scrolling is taken away by the gesture itself, from the moment it starts
+    // (see markAsStarted in drag_gesture.js) — one place refuses the touchmove,
+    // for every way a drag can begin.
+    const dragGesture = startDragGesture(dragGestureInitializer);
+    if (!dragGesture) {
+      endPress();
+      return;
+    }
+    dragGesture.addReleaseCallback(endPress);
+  }, longPressDelay);
+  countdownCleanupCallbacks.push(() => {
+    clearTimeout(timeout);
+  });
+  const cancelPress = pointerEvent => {
+    endCountdown();
+    endPress();
+    onPressCancel?.(pointerEvent);
+  };
+  const onPointerMove = pointerMoveEvent => {
+    if (pointerMoveEvent.pointerId !== pointerId) {
+      return;
+    }
+    const xDrift = Math.abs(pointerMoveEvent.clientX - clientX);
+    const yDrift = Math.abs(pointerMoveEvent.clientY - clientY);
+    if (xDrift < longPressSlop && yDrift < longPressSlop) {
+      return;
+    }
+    // The finger is going somewhere: it is scrolling the page, or running down
+    // the list. Letting the countdown survive would unhook an object in passing.
+    cancelPress(pointerMoveEvent);
+  };
+  const onPointerEnd = pointerEndEvent => {
+    if (pointerEndEvent.pointerId !== pointerId) {
+      return;
+    }
+    cancelPress(pointerEndEvent);
+  };
+  // On window rather than on the element: the finger can leave it, and the
+  // element itself can be taken out of the document while the press is waiting.
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerEnd);
+  window.addEventListener("pointercancel", onPointerEnd);
+  countdownCleanupCallbacks.push(() => {
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerEnd);
+    window.removeEventListener("pointercancel", onPointerEnd);
+  });
+  onPressStart?.(grabEvent);
+};
+
 /**
  * The element `element` is genuinely `position: absolute`/`fixed` relative
  * to: its own nearest positioned ancestor (walking up the DOM tree), or
@@ -8142,802 +9304,6 @@ const getDragCoordinates = (
   const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
   const topRelativeToScrollContainer = scrollableTop + scrollTop;
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
-};
-
-const installImportMetaCssBuild = (importMeta) => {
-  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
-
-  if (importMeta.css === IMPORT_META_CSS_BUILD) {
-    return;
-  }
-
-  const stylesheetMap = new Map();
-  const adopt = (url, value) => {
-    const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
-    stylesheet.replaceSync(value);
-    stylesheetMap.set(url, stylesheet);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-  };
-  const update = (url, value) => {
-    stylesheetMap.get(url).replaceSync(value);
-  };
-  const remove = (url) => {
-    const stylesheet = stylesheetMap.get(url);
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-      (s) => s !== stylesheet,
-    );
-    stylesheetMap.delete(url);
-  };
-
-  const currentCssSourceMap = new Map();
-  Object.defineProperty(importMeta, "css", {
-    configurable: true,
-    get() {
-      return IMPORT_META_CSS_BUILD;
-    },
-    set([value, url]) {
-      if (value === undefined) {
-        if (stylesheetMap.has(url)) {
-          remove(url);
-          currentCssSourceMap.delete(url);
-        }
-        return;
-      }
-      if (!stylesheetMap.has(url)) {
-        adopt(url, value);
-        currentCssSourceMap.set(url, value);
-      } else if (currentCssSourceMap.get(url) !== value) {
-        update(url, value);
-        currentCssSourceMap.set(url, value);
-      }
-    },
-  });
-};
-
-/**
- * Isolates user interactions to only the specified elements, making everything else non-interactive.
- *
- * This creates a controlled interaction environment where only the target elements (and their ancestors)
- * can receive user input like clicks, keyboard events, focus, etc. All other DOM elements become
- * non-interactive, preventing conflicting or unwanted interactions during critical operations
- * like drag gestures, modal dialogs, or complex UI states.
- *
- * The function uses the `inert` attribute to achieve this isolation, applying it strategically
- * to parts of the DOM tree while preserving the interactive elements and their ancestor chains.
- *
- * Example DOM structure and inert application:
- *
- * Before calling isolateInteractions:
- * ```
- * <body>
- *   <header>...</header>
- *   <main>
- *     <div>
- *       <span>some content</span>
- *       <div class="modal">modal content</div>
- *       <span>more content</span>
- *     </div>
- *     <aside inert>already inert</aside>
- *     <div class="dropdown">dropdown menu</div>
- *   </main>
- *   <footer>...</footer>
- * </body>
- * ```
- *
- * After calling isolateInteractions([modal, dropdown]):
- * ```
- * <body>
- *   <header inert>...</header>  ← made inert (no active descendants)
- *   <main> ← not inert because it contains active elements
- *     <div> ← not inert because it contains .modal
- *       <span inert>some content</span> ← made inert selectively
- *       <div class="modal">modal content</div> ← stays active
- *       <span inert>more content</span> ← made inert selectively
- *     </div>
- *     <aside inert>already inert</aside>
- *     <div class="dropdown">dropdown menu</div> ← stays active
- *   </main>
- *   <footer inert>...</footer>
- * </body>
- * ```
- *
- * After calling cleanup():
- * ```
- * <body>
- *   <header>...</header>
- *   <main>
- *     <div>
- *       <span>some content</span>
- *       <div class="modal">modal content</div>
- *       <span>more content</span>
- *     </div>
- *     <aside inert>already inert</aside> ← [inert] preserved
- *     <div class="dropdown">dropdown menu</div>
- *   </main>
- *   <footer>...</footer>
- * </body>
- * ```
- *
- * @param {Array<Element>} elements - Array of elements to keep interactive (non-inert)
- * @returns {Function} cleanup - Function to restore original inert states
- */
-const isolateInteractions = (elements) => {
-  const cleanupCallbackSet = new Set();
-  const cleanup = () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
-
-  const toKeepInteractiveSet = new Set();
-  const keepSelfAndAncestors = (el) => {
-    if (toKeepInteractiveSet.has(el)) {
-      return;
-    }
-    const associatedElements = getAssociatedElements(el);
-    if (associatedElements) {
-      for (const associatedElement of associatedElements) {
-        keepSelfAndAncestors(associatedElement);
-      }
-    }
-
-    // Add the element itself
-    toKeepInteractiveSet.add(el);
-    // Add all its ancestors up to document.body
-    let ancestor = el.parentNode;
-    while (ancestor && ancestor !== document.body) {
-      toKeepInteractiveSet.add(ancestor);
-      ancestor = ancestor.parentNode;
-    }
-  };
-
-  // Build set of elements to keep interactive
-  for (const element of elements) {
-    keepSelfAndAncestors(element);
-  }
-  // backdrop elements are meant to control interactions happening at document level
-  // and should stay interactive
-  const backdropElements = document.querySelectorAll("[data-backdrop]");
-  for (const backdropElement of backdropElements) {
-    keepSelfAndAncestors(backdropElement);
-  }
-
-  const setInert = (el) => {
-    if (toKeepInteractiveSet.has(el)) {
-      // element should stay interactive
-      return;
-    }
-    const restoreAttributes = setAttributes(el, {
-      inert: "",
-    });
-    cleanupCallbackSet.add(() => {
-      restoreAttributes();
-    });
-  };
-
-  const makeElementInertSelectivelyOrCompletely = (el) => {
-    // If this element should stay interactive, keep it active
-    if (toKeepInteractiveSet.has(el)) {
-      return;
-    }
-
-    // Since we put all ancestors in toKeepInteractiveSet, if this element
-    // is not in the set, we can check if any of its direct children are.
-    // If none of the direct children are in the set, then no descendants are either.
-    const children = Array.from(el.children);
-    const hasInteractiveChildren = children.some((child) =>
-      toKeepInteractiveSet.has(child),
-    );
-
-    if (!hasInteractiveChildren) {
-      // No interactive descendants, make the entire element inert
-      setInert(el);
-      return;
-    }
-
-    // Some children need to stay interactive, process them selectively
-    for (const child of children) {
-      makeElementInertSelectivelyOrCompletely(child);
-    }
-  };
-
-  // Apply inert to all top-level elements that aren't in our keep-interactive set
-  const bodyChildren = Array.from(document.body.children);
-  for (const child of bodyChildren) {
-    makeElementInertSelectivelyOrCompletely(child);
-  }
-
-  return () => {
-    cleanup();
-  };
-};
-
-installImportMetaCssBuild(import.meta);/**
- * Drag Gesture System
- *
- * TODO: rename moveX/moveY en juste x/y
- * puisque move c'est perturbant sachant que c'est drag + scroll
- * et que drag c'est juste la partie mouvement de la souris
- *
- * donc juste x/y ca seras surement mieux
- *
- */
-const css$4 = /* css */`
-  .navi_drag_gesture_backdrop {
-    position: fixed;
-    inset: 0;
-    user-select: none;
-  }
-`;
-const createDragGestureController = (options = {}) => {
-  const {
-    name,
-    onGrab,
-    onDragStart,
-    onDrag,
-    onRelease,
-    threshold = 5,
-    direction: defaultDirection = {
-      x: true,
-      y: true
-    },
-    documentInteractions = "auto",
-    backdrop = true,
-    backdropZIndex = 999999
-  } = options;
-  const dragGestureController = {
-    grab: null,
-    gravViaPointer: null
-  };
-  const grab = ({
-    element,
-    direction = defaultDirection,
-    event = new CustomEvent("programmatic"),
-    grabX = 0,
-    grabY = 0,
-    cursor = "grabbing",
-    scrollContainer = document.documentElement,
-    layoutScrollableLeft: scrollableLeftAtGrab = 0,
-    layoutScrollableTop: scrollableTopAtGrab = 0
-  } = {}) => {
-    if (!element) {
-      throw new Error("element is required");
-    }
-    if (!direction.x && !direction.y) {
-      return null;
-    }
-    const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
-    const [publishDrag, addDragCallback] = createPubSub();
-    const [publishRelease, addReleaseCallback] = createPubSub();
-    if (onDrag) {
-      addDragCallback(onDrag);
-    }
-    if (onRelease) {
-      addReleaseCallback(onRelease);
-    }
-    const scrollLeftAtGrab = scrollContainer.scrollLeft;
-    const scrollTopAtGrab = scrollContainer.scrollTop;
-    const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
-    const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
-    const createLayout = (x, y) => {
-      const {
-        scrollLeft,
-        scrollTop
-      } = scrollContainer;
-      const left = scrollableLeftAtGrab + x;
-      const top = scrollableTopAtGrab + y;
-      const scrollableLeft = left - scrollLeft;
-      const scrollableTop = top - scrollTop;
-      const layoutProps = {
-        // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
-        x,
-        y,
-        // container scrolls when layout is created
-        scrollLeft,
-        scrollTop,
-        // Position relative to container excluding scrolls
-        scrollableLeft,
-        scrollableTop,
-        // Position relative to container including scrolls
-        left,
-        top,
-        // Delta since grab (number representing how much we dragged)
-        xDelta: left - leftAtGrab,
-        yDelta: top - topAtGrab
-      };
-      return layoutProps;
-    };
-    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
-    const gestureInfo = {
-      name,
-      direction,
-      started: !threshold,
-      status: "grabbed",
-      element,
-      scrollContainer,
-      grabX,
-      // x grab coordinate (excluding scroll)
-      grabY,
-      // y grab coordinate (excluding scroll)
-      grabLayout,
-      leftAtGrab,
-      topAtGrab,
-      dragX: grabX,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
-      dragY: grabY,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
-      layout: grabLayout,
-      isGoingUp: undefined,
-      isGoingDown: undefined,
-      isGoingLeft: undefined,
-      isGoingRight: undefined,
-      intentGoingUp: false,
-      intentGoingDown: false,
-      intentGoingLeft: false,
-      intentGoingRight: false,
-      // metadata about interaction sources
-      grabEvent: event,
-      dragEvent: null,
-      releaseEvent: null
-    };
-    definePropertyAsReadOnly(gestureInfo, "name");
-    definePropertyAsReadOnly(gestureInfo, "direction");
-    definePropertyAsReadOnly(gestureInfo, "scrollContainer");
-    definePropertyAsReadOnly(gestureInfo, "grabX");
-    definePropertyAsReadOnly(gestureInfo, "grabY");
-    definePropertyAsReadOnly(gestureInfo, "grabLayout");
-    definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
-    definePropertyAsReadOnly(gestureInfo, "topAtGrab");
-    definePropertyAsReadOnly(gestureInfo, "grabEvent");
-    document_interactions: {
-      if (documentInteractions === "manual") {
-        break document_interactions;
-      }
-      /*
-      GOAL: Take control of document-level interactions during drag gestures
-      
-      WHY: During drag operations, we need to prevent conflicting user interactions that would:
-      1. Interfere with the drag gesture (competing pointer events, focus changes)
-      2. Break the visual feedback (inconsistent cursors, hover states)
-      3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
-      4. Create accessibility issues (focus jumping, screen reader confusion)
-       STRATEGY: Create a controlled interaction environment by:
-      1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
-      2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
-      3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
-      4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
-       IMPLEMENTATION:
-      */
-
-      // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
-      // This prevents keyboard events, pointer interactions, and screen reader navigation
-      // on non-relevant elements during the drag operation
-      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
-      addReleaseCallback(() => {
-        cleanupInert();
-      });
-
-      // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
-      if (backdrop) {
-        import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
-        const backdropElement = document.createElement("div");
-        backdropElement.className = "navi_drag_gesture_backdrop";
-        backdropElement.ariaHidden = "true";
-        backdropElement.setAttribute("data-backdrop", "");
-        backdropElement.style.zIndex = backdropZIndex;
-        backdropElement.style.cursor = cursor;
-
-        // Handle wheel events on backdrop for directionally-constrained drag gestures
-        // (e.g., table column resize should only allow horizontal scrolling)
-        if (!direction.x || !direction.y) {
-          backdropElement.onwheel = e => {
-            e.preventDefault();
-            const scrollX = direction.x ? e.deltaX : 0;
-            const scrollY = direction.y ? e.deltaY : 0;
-            scrollContainer.scrollBy({
-              left: scrollX,
-              top: scrollY,
-              behavior: "auto"
-            });
-          };
-        }
-        document.body.appendChild(backdropElement);
-        addReleaseCallback(() => {
-          backdropElement.remove();
-        });
-      }
-
-      // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
-      const {
-        activeElement
-      } = document;
-      const focusableElement = findFocusable(element);
-      // Focus the dragged element (or document.body as fallback) to establish clear focus context
-      // This also ensure any keydown event listened by the currently focused element
-      // won't be available during drag
-      const elementToFocus = focusableElement || document.body;
-      elementToFocus.focus({
-        preventScroll: true
-      });
-      addReleaseCallback(() => {
-        // Restore original focus on release
-        activeElement.focus({
-          preventScroll: true
-        });
-      });
-      // Prevent Tab navigation entirely (focus should stay stable)
-      const onkeydown = e => {
-        if (e.key === "Tab") {
-          e.preventDefault();
-          return;
-        }
-      };
-      document.addEventListener("keydown", onkeydown);
-      addReleaseCallback(() => {
-        document.removeEventListener("keydown", onkeydown);
-      });
-
-      // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
-      {
-        const onDocumentKeydown = keyboardEvent => {
-          // Vertical scrolling keys - prevent if vertical movement not supported
-          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
-            if (!direction.y) {
-              keyboardEvent.preventDefault();
-            }
-            return;
-          }
-          // Horizontal scrolling keys - prevent if horizontal movement not supported
-          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
-            if (!direction.x) {
-              keyboardEvent.preventDefault();
-            }
-            return;
-          }
-        };
-        document.addEventListener("keydown", onDocumentKeydown);
-        addReleaseCallback(() => {
-          document.removeEventListener("keydown", onDocumentKeydown);
-        });
-      }
-    }
-
-    // Set up scroll event handling to adjust drag position when scrolling occurs
-    {
-      let isHandlingScroll = false;
-      const handleScroll = scrollEvent => {
-        if (isHandlingScroll) {
-          return;
-        }
-        isHandlingScroll = true;
-        drag(gestureInfo.dragX, gestureInfo.dragY, {
-          event: scrollEvent
-        });
-        isHandlingScroll = false;
-      };
-      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
-      scrollEventReceiver.addEventListener("scroll", handleScroll, {
-        passive: true
-      });
-      addReleaseCallback(() => {
-        scrollEventReceiver.removeEventListener("scroll", handleScroll, {
-          passive: true
-        });
-      });
-    }
-    const determineDragData = ({
-      dragX,
-      dragY,
-      dragEvent,
-      isRelease = false
-    }) => {
-      // === ÉTAT INITIAL (au moment du grab) ===
-      const {
-        grabX,
-        grabY,
-        grabLayout
-      } = gestureInfo;
-      // === CE QUI EST DEMANDÉ (où on veut aller) ===
-      // Calcul de la direction basé sur le mouvement précédent
-      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
-      // (ici on veut connaitre l'intention)
-      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
-      const currentDragX = gestureInfo.dragX;
-      const currentDragY = gestureInfo.dragY;
-      const isGoingLeft = dragX < currentDragX;
-      const isGoingRight = dragX > currentDragX;
-      const isGoingUp = dragY < currentDragY;
-      const isGoingDown = dragY > currentDragY;
-      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
-      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
-      const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
-      const currentLayout = gestureInfo.layout;
-      let layout;
-      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
-        layout = currentLayout;
-      } else {
-        // === APPLICATION DES CONTRAINTES ===
-        let layoutConstrained = layoutRequested;
-        const limitLayout = (left, top) => {
-          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
-        };
-        publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
-          dragEvent,
-          isRelease
-        });
-        // === ÉTAT FINAL ===
-        layout = layoutConstrained;
-      }
-      const dragData = {
-        dragX,
-        dragY,
-        layout,
-        isGoingLeft,
-        isGoingRight,
-        isGoingUp,
-        isGoingDown,
-        status: isRelease ? "released" : "dragging",
-        dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
-        releaseEvent: isRelease ? dragEvent : null
-      };
-      if (isRelease) {
-        return dragData;
-      }
-      if (!gestureInfo.started && threshold) {
-        const deltaX = Math.abs(dragX - grabX);
-        const deltaY = Math.abs(dragY - grabY);
-        if (direction.x && direction.y) {
-          // Both directions: check both axes
-          if (deltaX < threshold && deltaY < threshold) {
-            return dragData;
-          }
-        } else if (direction.x) {
-          if (deltaX < threshold) {
-            return dragData;
-          }
-        } else if (direction.y) {
-          if (deltaY < threshold) {
-            return dragData;
-          }
-        }
-        dragData.started = true;
-      }
-      return dragData;
-    };
-    const drag = (dragX = gestureInfo.dragX,
-    // Scroll container relative X coordinate
-    dragY = gestureInfo.dragY,
-    // Scroll container relative Y coordinate
-    {
-      event = new CustomEvent("programmatic"),
-      isRelease = false
-    } = {}) => {
-      const dragData = determineDragData({
-        dragX,
-        dragY,
-        dragEvent: event,
-        isRelease
-      });
-      const startedPrevious = gestureInfo.started;
-      const layoutPrevious = gestureInfo.layout;
-      // previousGestureInfo = { ...gestureInfo };
-      Object.assign(gestureInfo, dragData);
-      if (gestureInfo.isGoingDown) {
-        gestureInfo.intentGoingDown = true;
-        gestureInfo.intentGoingUp = false;
-      } else if (gestureInfo.isGoingUp) {
-        gestureInfo.intentGoingUp = true;
-        gestureInfo.intentGoingDown = false;
-      }
-      if (gestureInfo.isGoingRight) {
-        gestureInfo.intentGoingRight = true;
-        gestureInfo.intentGoingLeft = false;
-      } else if (gestureInfo.isGoingLeft) {
-        gestureInfo.intentGoingLeft = true;
-        gestureInfo.intentGoingRight = false;
-      }
-      if (!startedPrevious && gestureInfo.started) {
-        dispatchPublicCustomEvent(element, "navi_drag_start", {
-          gestureInfo
-        });
-        onDragStart?.(gestureInfo);
-        // Suppress the click that the browser fires after pointerup following a real drag.
-        // The capture phase runs before any element onClick handler.
-        const suppressClick = clickEvent => {
-          clickEvent.stopPropagation();
-          clickEvent.preventDefault();
-          document.removeEventListener("click", suppressClick, {
-            capture: true
-          });
-        };
-        document.addEventListener("click", suppressClick, {
-          capture: true
-        });
-        addReleaseCallback(() => {
-          document.removeEventListener("click", suppressClick, {
-            capture: true
-          });
-        });
-      }
-      const someLayoutChange = gestureInfo.layout !== layoutPrevious;
-      dispatchPublicCustomEvent(element, "navi_drag", {
-        gestureInfo,
-        someLayoutChange
-      });
-      publishDrag(gestureInfo,
-      // we still publish drag event even when unchanged
-      // because UI might need to adjust when document scrolls
-      // even if nothing truly changes visually the element
-      // can decide to stick to the scroll for example
-      someLayoutChange);
-    };
-    const release = ({
-      event = new CustomEvent("programmatic"),
-      releaseX = gestureInfo.dragX,
-      releaseY = gestureInfo.dragY
-    } = {}) => {
-      drag(releaseX, releaseY, {
-        event,
-        isRelease: true
-      });
-      dispatchPublicCustomEvent(element, "navi_drag_release", {
-        gestureInfo
-      });
-      publishRelease(gestureInfo);
-    };
-    dispatchPublicCustomEvent(element, "navi_drag_grab", {
-      gestureInfo
-    });
-    onGrab?.(gestureInfo);
-    const dragGesture = {
-      gestureInfo,
-      addBeforeDragCallback,
-      addDragCallback,
-      addReleaseCallback,
-      drag,
-      release
-    };
-    return dragGesture;
-  };
-  dragGestureController.grab = grab;
-  const initDragByPointer = (grabEvent, dragOptions, initializer) => {
-    if (!isPrimaryButtonEvent(grabEvent)) {
-      return null;
-    }
-    const target = grabEvent.target;
-    if (!target.closest) {
-      // target is a text node
-      return null;
-    }
-    const mouseEventCoords = mouseEvent => {
-      const {
-        clientX,
-        clientY
-      } = mouseEvent;
-      return [clientX, clientY];
-    };
-    const [grabX, grabY] = mouseEventCoords(grabEvent);
-    const dragGesture = dragGestureController.grab({
-      grabX,
-      grabY,
-      event: grabEvent,
-      ...dragOptions
-    });
-    const dragViaPointer = dragEvent => {
-      const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
-      dragGesture.drag(mouseDragX, mouseDragY, {
-        event: dragEvent
-      });
-    };
-    const releaseViaPointer = mouseupEvent => {
-      const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
-      dragGesture.release({
-        event: mouseupEvent,
-        releaseX: mouseReleaseX,
-        releaseY: mouseReleaseY
-      });
-    };
-    dragGesture.dragViaPointer = dragViaPointer;
-    dragGesture.releaseViaPointer = releaseViaPointer;
-    const cleanup = initializer({
-      onMove: dragViaPointer,
-      onRelease: releaseViaPointer
-    });
-    dragGesture.addReleaseCallback(() => {
-      cleanup();
-    });
-    return dragGesture;
-  };
-  const grabViaPointer = (grabEvent, options) => {
-    if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
-        const target = grabEvent.target;
-        target.setPointerCapture(grabEvent.pointerId);
-        target.addEventListener("lostpointercapture", onRelease);
-        target.addEventListener("pointercancel", onRelease);
-        target.addEventListener("pointermove", onMove);
-        target.addEventListener("pointerup", onRelease);
-        return () => {
-          target.releasePointerCapture(grabEvent.pointerId);
-          target.removeEventListener("lostpointercapture", onRelease);
-          target.removeEventListener("pointercancel", onRelease);
-          target.removeEventListener("pointermove", onMove);
-          target.removeEventListener("pointerup", onRelease);
-        };
-      });
-    }
-    if (grabEvent.type === "mousedown") {
-      console.warn(`Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`);
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
-        const onPointerUp = pointerEvent => {
-          // <button disabled> for example does not emit mouseup if we release mouse over it
-          // -> we add "pointerup" to catch mouseup occuring on disabled element
-          if (pointerEvent.pointerType === "mouse") {
-            onRelease(pointerEvent);
-          }
-        };
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onRelease);
-        document.addEventListener("pointerup", onPointerUp);
-        return () => {
-          document.removeEventListener("mousemove", onMove);
-          document.removeEventListener("mouseup", onRelease);
-          document.removeEventListener("pointerup", onPointerUp);
-        };
-      });
-    }
-    throw new Error(`Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`);
-  };
-  dragGestureController.grabViaPointer = grabViaPointer;
-  return dragGestureController;
-};
-
-// Only the primary button drags: a right click (or any secondary button) opens
-// a context menu, it never grabs anything.
-const isPrimaryButtonEvent = event => event.button === undefined || event.button === 0;
-const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
-  if (!isPrimaryButtonEvent(grabEvent)) {
-    return;
-  }
-  const target = grabEvent.target;
-  const isDedicatedHandle = target.closest && target.closest("[data-drag-handle]");
-  if (isDedicatedHandle) {
-    // Element is dedicated to drag — skip the threshold and start immediately.
-    const dragGesture = dragGestureInitializer();
-    if (!dragGesture) {
-      return;
-    }
-    dragGesture.dragViaPointer(grabEvent);
-    return;
-  }
-  const significantDragGestureController = createDragGestureController({
-    threshold,
-    // allow interaction for this intermediate gesture:
-    // user should still be able to scroll or interact with the document
-    // only once the gesture is significant we take control
-    documentInteractions: "manual",
-    onDragStart: gestureInfo => {
-      significantDragGesture.release(); // kill that gesture
-      const dragGesture = dragGestureInitializer();
-      dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    }
-  });
-  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
-    element: grabEvent.target
-  });
-};
-const definePropertyAsReadOnly = (object, propertyName) => {
-  Object.defineProperty(object, propertyName, {
-    writable: false,
-    value: object[propertyName]
-  });
 };
 
 installImportMetaCssBuild(import.meta);const css$3 = /* css */`
@@ -10258,6 +10624,11 @@ const dragStyleController = createStyleController("drag_to_move");
  *   If omitted, `element` is translated. The translate is read from `dragStyleController`
  *   at grab time so any pre-existing translate is accumulated rather than reset.
  *
+ * A `transform` already on the moved element (rotate, scale…) is preserved and does
+ * not disturb the movement. `rotate` and `scale` set as individual CSS properties do:
+ * they apply outside `transform`, where nothing the gesture writes can reach them —
+ * put those on a child element instead (a warning says so in dev).
+ *
  * @param {object} [options]
  * @param {boolean} [options.stickyFrontiers=true]
  *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
@@ -10279,13 +10650,24 @@ const dragStyleController = createStyleController("drag_to_move");
  *   Renders a visual line when the pointer deviates from the element due to constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
- * @param {"commit"|"cancel"|"manual"} [options.releasePositionEffect="commit"]
+ * @param {"commit"|"cancel"|"cancel-animated"|"manual"} [options.releasePositionEffect="commit"]
  *   Controls what happens to the translated position on release.
  *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
  *   - `"cancel"`: discards the translate so the element snaps back to its original position.
+ *   - `"cancel-animated"`: same, travelling back to it over `cancelAnimationDuration`.
  *   - `"manual"`: does nothing — the caller is responsible for clearing or committing
  *     the transform via `dragStyleController`.
+ * @param {number} [options.cancelAnimationDuration=200]
+ *   Duration (ms) of the way back for `"cancel-animated"`.
+ * @param {string} [options.cancelAnimationEasing="ease-out"]
+ *   Easing of the way back for `"cancel-animated"`.
  * @returns {object} Drag gesture controller with augmented `grab()` / `grabViaPointer()` methods.
+ *
+ * `gestureInfo` gains `cancelPosition()`, `commitPosition()` and
+ * `cancelPositionAnimated({duration, easing})` — the last returns the `Animation`
+ * playing the way back (`null` when the element was already home), so a caller
+ * on `"manual"` can decide between thrown and put back, and still await the
+ * landing.
  */
 const createDragToMoveGestureController = ({
   stickyFrontiers = true,
@@ -10296,6 +10678,8 @@ const createDragToMoveGestureController = ({
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
   releasePositionEffect = "commit",
+  cancelAnimationDuration = 200,
+  cancelAnimationEasing = "ease-out",
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -10321,15 +10705,39 @@ const createDragToMoveGestureController = ({
     const cancelPosition = () => {
       dragStyleController.clear(elementImpacted);
     };
+    // Reading the transform on either side of the clear is what lets this work
+    // without knowing anything about the element: how it looked while held and
+    // how it looks once let go are both just computed transforms, and the
+    // animation has only to bridge the two.
+    const cancelPositionAnimated = ({
+      duration = cancelAnimationDuration,
+      easing = cancelAnimationEasing,
+    } = {}) => {
+      const transformWhileHeld = getComputedStyle(elementImpacted).transform;
+      cancelPosition();
+      const transformAtRest = getComputedStyle(elementImpacted).transform;
+      if (transformWhileHeld === transformAtRest) {
+        return null;
+      }
+      // No fill: the element already sits at its resting transform, the
+      // animation only replays the way back to it.
+      return elementImpacted.animate(
+        [{ transform: transformWhileHeld }, { transform: transformAtRest }],
+        { duration, easing },
+      );
+    };
     const commitPosition = () => {
       dragStyleController.commit(elementImpacted);
     };
     dragGesture.gestureInfo.cancelPosition = cancelPosition;
+    dragGesture.gestureInfo.cancelPositionAnimated = cancelPositionAnimated;
     dragGesture.gestureInfo.commitPosition = commitPosition;
 
     dragGesture.addReleaseCallback(() => {
       if (releasePositionEffect === "cancel") {
         cancelPosition();
+      } else if (releasePositionEffect === "cancel-animated") {
+        cancelPositionAnimated();
       } else if (releasePositionEffect === "commit") {
         commitPosition();
       }
@@ -10522,7 +10930,15 @@ const createDragToMoveGestureController = ({
         // Build the transform to apply, preserving any transforms that were
         // already on the element before the grab (e.g. rotate from another
         // controller), and accumulating from the pre-grab translate baseline.
-        const transform = { ...transformAtGrab };
+        // The translate keys are seeded HERE, before the spread, and not merely
+        // assigned below: a transform object is serialized in key order, and in a
+        // transform list every function transforms the frame of the ones after it.
+        // A translate written after a rotate or a scale therefore travels rotated
+        // and scaled — the element drifts away from the pointer, proportionally to
+        // the distance covered. Dragging moves things on screen, so its translate
+        // has to come first, whatever else the element carries. The spread still
+        // wins on the value when the element already had a translate of its own.
+        const transform = { translateX: 0, translateY: 0, ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
@@ -10910,9 +11326,9 @@ installImportMetaCssBuild(import.meta);const css$1 = /* css */`
 
   /* WHO CAN START A DRAG, said in the cursor.
      A handle drags on the spot, so it shows the hand. A source only drags once
-     the pointer has travelled a few pixels — a plain click stays a click — but
-     the text inside it can no longer be selected (the gesture takes the
-     pointer), so an I-beam over it would promise something that does not
+     the intent shows (a few pixels of travel, or a long press) — a plain click
+     stays a click — but the text inside it cannot be selected (the gesture takes
+     the pointer), so an I-beam over it would promise something that does not
      happen: it reads as a plain surface instead. An opted-out area keeps both
      its cursor and its selection, and never starts a drag (see the check in
      startDragToReorder).
@@ -10986,7 +11402,9 @@ const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop
  * Starts a drag-to-reorder interaction on a list item.
  *
  * Handles the full reorder UX:
- * - Activates only after a short movement threshold (avoids accidental reorders on clicks).
+ * - Activates only once the intent is established — a short movement with a mouse, a long
+ *   press with a finger (see `dragAfterIntent`), so that neither a click nor a scroll
+ *   reorders anything by accident.
  * - Clones the grabbed element and moves the clone while the original stays hidden in place
  *   (keeps the layout intact so other items don't shift during the drag).
  * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
@@ -11009,30 +11427,48 @@ const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop
  * - Virtual lists render fewer DOM nodes than the total item count, so
  *   DOM-index-based counting would be wrong.
  *
+ * Any option not listed below is forwarded to `createDragToMoveGestureController`
+ * (`areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`…), except
+ * `releasePositionEffect`, always `"manual"` here: what moves is the clone, and it
+ * is removed on release, so there is no position to commit or cancel.
+ *
  * @param {PointerEvent} event
- *   The `pointerdown` event from the drag handle.
- * @param {Element} draggedElement
- *   The list item element to drag. Typically `event.currentTarget`.
+ *   The `pointerdown` event that may become a reorder.
  * @param {object} options
+ * @param {Element} [options.draggedElement=event.currentTarget]
+ *   The list item to drag.
+ * @param {Element} [options.containerElement=draggedElement.parentElement]
+ *   Element searched with `itemSelector` to find the items to drop between.
  * @param {string} options.itemSelector
- *   CSS selector that matches all list items inside the scroll container.
+ *   CSS selector that matches all list items inside `containerElement`.
  *   Used for drop-target detection and no-op filtering.
  * @param {function} options.getItemId
  *   Returns the stable ID for a given DOM element.
  *   Signature: `getItemId(element) → id`.
  * @param {function} options.onReorder
  *   Called when the user drops the item in a new position.
- *   Signature: `onReorder(fromId, toId)`.
+ *   Signature: `onReorder(fromId, toId, syncCloneWithDropTarget)`.
  *   - `fromId`: stable ID of the dragged item.
  *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
- *   Called inside `document.startViewTransition` so the resulting DOM mutation is
- *   animated by the View Transitions API.
+ *   - `syncCloneWithDropTarget`: call it synchronously inside a
+ *     `document.startViewTransition` callback, next to the DOM mutation, so the
+ *     clone is captured at its landing position.
  * @param {object} [options.direction={ x: false, y: true }]
  *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
- * @param {...*} [options]
- *   Any remaining options are forwarded to `createDragToMoveGestureController`
- *   (e.g. `areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`).
- *   `releasePositionEffect` is always set to `"manual"` internally and cannot be overridden.
+ * @param {number} [options.threshold=5]
+ *   Distance (px) a mouse must travel before the press becomes a drag.
+ * @param {boolean|"if-touch"} [options.longPress="if-touch"]
+ *   Which pointers start the drag by holding still instead of by travelling.
+ * @param {number} [options.longPressDelay=400]
+ *   How long (ms) such a pointer must stay down.
+ * @param {number} [options.longPressSlop=8]
+ *   How far (px) it may drift during that wait before the press is abandoned.
+ * @param {function} [options.onPressStart]
+ *   The pointer went down and the wait began (a cue that the press counts).
+ * @param {function} [options.onPressCancel]
+ *   The pointer moved or lifted before the wait was over.
+ * @param {function} [options.onPress]
+ *   The wait completed and the item is now held (haptics, scale…).
  */
 const startDragToReorder = (event, {
   draggedElement = event.currentTarget,
@@ -11044,6 +11480,13 @@ const startDragToReorder = (event, {
     x: false,
     y: true
   },
+  threshold,
+  longPress,
+  longPressDelay,
+  longPressSlop,
+  onPressStart,
+  onPressCancel,
+  onPress,
   ...options
 }) => {
   // An area that opted out of dragging (a text one wants to select, a control
@@ -11056,7 +11499,7 @@ const startDragToReorder = (event, {
     return undefined;
   }
   event.preventDefault();
-  return dragAfterThreshold(event, () => {
+  return dragAfterIntent(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
     draggedElement.setAttribute("navi-drag-clone-source", "");
     // Move drag related CSS vars from the element to the document
@@ -11179,6 +11622,14 @@ const startDragToReorder = (event, {
       cloneWrapper.remove();
     });
     return dragGesture;
+  }, {
+    threshold,
+    longPress,
+    longPressDelay,
+    longPressSlop,
+    onPressStart,
+    onPressCancel,
+    onPress
   });
 };
 
@@ -11330,6 +11781,761 @@ const getResizeDirection = (element) => {
   const x = direction === "horizontal" || direction === "both";
   const y = direction === "vertical" || direction === "both";
   return { x, y };
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * What a drag means when it TRAVELS: a whole screen pushed aside to bring in the
+ * next one — slides inside one box, pages that are URLs.
+ *
+ * The pointer itself is not read here: reading a press, waiting for it to become
+ * a gesture, capturing it, measuring how fast it goes, swallowing the click it
+ * would have made is one gesture system for the whole codebase
+ * (@jsenv/dom's drag_gesture + drag_after_intent), and this asks it for the
+ * plain version — nothing carried, so no backdrop over the page, nothing made
+ * inert, no focus taken: a screen slides and the page keeps its scrolling and
+ * its keyboard.
+ *
+ * What IS here is everything that makes a travel a travel rather than a
+ * carry — and it is policy, not plumbing:
+ * - the axis is LOCKED by the first movement, instead of being constrained
+ *   ahead of time;
+ * - a press becomes a gesture by distance for every pointer, finger included:
+ *   a swipe is a travel, and asking a finger to hold still first (the rule for
+ *   picking an object up) would mean waiting before being allowed to swipe;
+ * - what travels walks ONE BOX, resists past its ends, and is measured from
+ *   where the finger is once it gets there — unless the caller has another box
+ *   to offer at that edge, and then the gesture walks on into it;
+ * - letting go is a question with an answer: a third of a box, or a flick.
+ *
+ * What is NOT here is geometry: how big a box is, what lies one step that way,
+ * what to paint while the finger moves. The caller knows those and nothing else
+ * does — this reads the gesture and calls back.
+ *
+ * Who owns a gesture is decided in two places, and both are read here:
+ * - what says so itself, with [data-no-drag-travel] or by being a field — a
+ *   component that reads the pointer marks itself, because the container it
+ *   ends up in cannot know what it is;
+ * - a scroller between the pointer and the box with room left that way, which
+ *   keeps the gesture until it has none.
+ */
+
+// While a pointer is on something that travels: said on the document, because
+// what has to be told is the document.
+const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
+
+// …and while one is actually travelling something, which is a later moment and
+// takes more away (see the CSS).
+const WALKING_ATTRIBUTE = "data-drag-travel-walking";
+import.meta.css = [/* css */`
+  :root[${GESTURE_ATTRIBUTE}] {
+    /* The bounce the browser plays when a gesture reaches the end of a page —
+       and the swipe that goes back in history with it. Both are the browser
+       answering a gesture that is already answered, here, by what the finger is
+       dragging: the page rocks under a travel that is doing its own moving, and
+       one gesture is seen twice. From the press, because the browser starts
+       answering from the press — waiting for the first pixel that travels would
+       let it happen once, every time. Only while a finger is down, so a page
+       that bounces the rest of the time goes on bouncing. */
+    overscroll-behavior: none;
+  }
+  /* …and nothing inside a travelling box hands its leftovers to what is above
+     it: a list that reaches its end passes what is left of the gesture up the
+     chain, and the page moves behind a travel that is being dragged.
+
+     Written ONCE AND FOR ALL rather than while a finger is down, unlike
+     everything else here: a browser decides what a gesture may do when the
+     gesture BEGINS — at the touchstart, at the first wheel event — and a
+     property written after that decision arrives too late for the gesture it
+     was meant for. That is what "most of the time it does not move, sometimes
+     it does" is made of.
+
+     On the axis the box travels on, and that one only: the other axis is the
+     content's own scrolling and is left alone. Containing does not stop it from
+     scrolling anyway — it stops it from spilling over.
+
+     !important because this is not a preference: a box that travels cannot let
+     the page travel with it, and the rule has to win over whatever an
+     application says about its own scrollers. */
+  [data-drag-travel*="x"],
+  [data-drag-travel*="x"] * {
+    overscroll-behavior-x: contain !important;
+  }
+  [data-drag-travel*="y"],
+  [data-drag-travel*="y"] * {
+    overscroll-behavior-y: contain !important;
+  }
+  :root[${WALKING_ATTRIBUTE}] {
+    /* A drag over text selects it on the way, and the blue trail says the
+       gesture was understood as something else. Not from the press: a press on
+       text IS how one selects it, and only a press that has become a travel has
+       said it was about something else. */
+    user-select: none;
+  }
+`, "@jsenv/dom/src/interaction/drag/drag_to_travel.js"];
+
+// How far a pointer goes before it is a travel rather than a click: below this
+// a press that wandered a pixel is still a press, and nothing budges.
+const DRAG_START_THRESHOLD = 10;
+// How much of a box has to be pulled for letting go to carry on rather than put
+// things back. Under half, because a gesture that has clearly begun is an
+// intention: asking for the box to be dragged all the way across turns a travel
+// into work.
+const DRAG_COMMIT_RATIO = 0.3;
+// A flick travels whatever the distance: the hand said "away" quickly, which is
+// the whole gesture — px/ms of pointer, and a few pixels to tell it from a tap
+// that shook.
+const DRAG_FLICK_VELOCITY = 0.4;
+const DRAG_FLICK_DISTANCE = 8;
+// Pulling towards nothing: what travels follows at a fraction of the finger, so
+// the gesture is answered (something moves) while saying there is nothing that
+// way. Let go and it comes back — a wall one can lean on, never walk through.
+const DRAG_RESISTANCE = 0.3;
+
+// What a drag must not start on: something that reads the pointer itself. A
+// button or a link is not in the list — dragging from one travels, and the
+// click it would have made is swallowed on the way out.
+const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-no-drag-travel]"].join(",");
+
+/**
+ * A scroller between the pointer and the box it is in, with room left the way
+ * the gesture goes: it gets the gesture, and nothing travels — dragging a row
+ * that scrolls sideways scrolls that row, and only a row with nowhere left to
+ * go hands the travel over.
+ */
+const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
+  let element = fromElement;
+  while (element && element !== stopElement && element.nodeType === 1) {
+    const size = axis === "x" ? element.clientWidth : element.clientHeight;
+    const scrollSize = axis === "x" ? element.scrollWidth : element.scrollHeight;
+    if (scrollSize > size + 1) {
+      const {
+        overflowX,
+        overflowY
+      } = getComputedStyle(element);
+      const overflow = axis === "x" ? overflowX : overflowY;
+      if (overflow === "auto" || overflow === "scroll") {
+        const position = axis === "x" ? element.scrollLeft : element.scrollTop;
+        // Dragging the content one way reveals what is on the other side of
+        // it: to the right means going back up the scroll.
+        const room = sign > 0 ? position : scrollSize - size - position;
+        if (room > 1) {
+          return true;
+        }
+      }
+    }
+    element = element.parentElement;
+  }
+  return false;
+};
+
+// A gesture is over: does it carry on, or does everything go back? The distance
+// pulled says it, and the speed says it too — a short flick means "away" as
+// clearly as half a box does.
+const travelsAfter = ({
+  pulled,
+  slack,
+  size,
+  velocity,
+  towardsSomething
+}) => {
+  if (!towardsSomething) {
+    return false;
+  }
+  // Caught in flight and let go of again without a word: what was on its way
+  // carries on. Answered on the distance alone, a travel a hand merely touched
+  // is undone BY the touch — it was stopped where it stood, and where it stood
+  // is not far enough to count as an intention. Nobody asked it to stop; it was
+  // asked to wait.
+  if (slack && Math.abs(pulled - slack) < DRAG_START_THRESHOLD) {
+    return true;
+  }
+  const sign = pulled > 0 ? 1 : -1;
+  const goingFast = Math.abs(velocity) > DRAG_FLICK_VELOCITY;
+  // A hand that is still moving says where it is going, and it says it about
+  // BOTH answers. Going away from what it was bringing in is "put it back",
+  // whatever the distance already covered — which is the whole of what one asks
+  // for when catching something in flight and throwing it back the other way.
+  // Without this the picture alone decides, and a screen caught at two thirds
+  // and thrown back still arrives: the gesture was read as the place it was let
+  // go of rather than as a movement.
+  if (goingFast && Math.sign(velocity) !== sign) {
+    return false;
+  }
+  // …and going towards it travels whatever the distance: the hand said "away"
+  // quickly, which is the whole gesture.
+  const flicked = goingFast && Math.abs(pulled) > DRAG_FLICK_DISTANCE;
+  return flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO;
+};
+
+/**
+ * Read a press, and tell the caller what the hand is doing with it.
+ *
+ * Called on pointerdown; returns a handle to stop the gesture, or null when the
+ * press is not one this can be about (a right click, something that reads the
+ * pointer itself).
+ *
+ * The gesture has no shape until the finger says which way it goes: `onStart`
+ * is what turns a press into a travel, and it is asked at that moment rather
+ * than when the finger landed, because whatever was moving then may have
+ * arrived since.
+ *
+ * @param {PointerEvent} pointerDownEvent
+ * @param {object} options
+ * @param {Element} options.element - the box the gesture is about, and what the
+ *   pointer is captured on: it outlives whatever the caller does about the
+ *   travel, which the element under the finger may not.
+ * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel. A
+ *   finger leaning on any other axis is given up on at once, whole, so whatever
+ *   else wants it (a scroller, the page) gets it whole.
+ * @param {false|"x"|"y"} [options.immediate=false] - the axis this press is
+ *   already on, for a press that landed on something moving: the gesture is
+ *   then read from its first pixel instead of waiting for an intent, and every
+ *   pixel since the grab is owed to the hand. The axis comes from the caller
+ *   rather than from the movement, because there is nothing to decide — what
+ *   was caught is travelling on one already.
+ * @param {(detail: {axis: string, sign: number, target: Element, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
+ *   - the finger has picked its axis. Answer `false` to give the gesture up, or
+ *   with the geometry it walks: `size` (one box along that axis), `slack` (how
+ *   far the box already sits from its resting place, for a travel grabbed
+ *   mid-flight) and whether there is anywhere to go each way — `travelBack`
+ *   towards the start of the axis, `travelOn` towards its end. A direction with
+ *   nothing there is not refused, it resists.
+ * @param {(detail: {axis: string, pulled: number, size: number, progress: number, event: PointerEvent}) => void} options.onPull
+ *   - the finger has moved. `pulled` is in px from the resting place, `progress`
+ *   the same as a fraction of the box, signed the same way.
+ * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} [options.onEdge]
+ *   - the hand has reached an end of the box it holds and keeps going: `sign`
+ *   says which one — the far edge, a box walked whole, or its start, a box
+ *   walked back to where it began. Answer with the geometry of the box that
+ *   lies that way to hand the gesture over to it: the pixels past the end
+ *   become its first ones, so nothing is spent twice and the hand feels one
+ *   continuous movement. Answer `false` (or leave it out) for a wall — the
+ *   gesture stays on the box it has and leans on it.
+ * @param {(detail: {axis: string, pulled: number, size: number, sign: number, travels: boolean, cancelled: boolean, event: PointerEvent}) => void} options.onEnd
+ *   - the finger is off. `travels` is the gesture's answer: carry on to what was
+ *   being pulled in, or put things back.
+ * @param {() => void} [options.onGiveUp] - the press is over without ever
+ *   becoming a travel: it stayed still, leaned the wrong way, or `onStart`
+ *   refused it. Nothing was painted and nothing has to be put back — this is
+ *   only so the caller can forget the gesture it is holding.
+ */
+const startDragToTravel = (pointerDownEvent, {
+  element,
+  axes = "xy",
+  immediate = false,
+  onStart,
+  onPull,
+  onEnd,
+  onEdge = () => false,
+  onGiveUp = () => {}
+}) => {
+  const target = pointerDownEvent.target;
+  if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
+    return null;
+  }
+
+  // The travel in hand: null until the finger has picked an axis and the caller
+  // has accepted it.
+  let travel = null;
+  let dragGesture = null;
+  let over = false;
+  const finish = () => {
+    if (over) {
+      return;
+    }
+    over = true;
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+    window.removeEventListener("pointerup", onPressOver);
+    window.removeEventListener("pointercancel", onPressOver);
+  };
+  // A press that never became a travel: the intent never resolved, or the axis
+  // it leaned on is not one this box walks. Nothing was painted and nothing has
+  // to be put back — the caller is only told so it can forget the gesture.
+  const onPressOver = pointerEvent => {
+    if (pointerEvent.pointerId !== pointerDownEvent.pointerId || travel) {
+      return;
+    }
+    finish();
+    onGiveUp();
+  };
+  const giveUp = () => {
+    finish();
+    dragGesture?.release();
+    onGiveUp();
+  };
+
+  // Where the picture stands, from what the gesture reports: the distance the
+  // pointer has covered along the axis, less the pixels spent deciding — what
+  // travels starts moving from where the finger is at that moment rather than
+  // jumping the threshold it just crossed.
+  // How far the POINTER has come along an axis. The raw distance, not the
+  // layout the gesture computes for something being carried: nothing is being
+  // carried here, and a scroll happening meanwhile must not read as a finger
+  // that moved.
+  const coveredOn = (axis, gestureInfo) => axis === "x" ? gestureInfo.dragX - gestureInfo.grabX : gestureInfo.dragY - gestureInfo.grabY;
+  const pullOf = gestureInfo => {
+    const covered = coveredOn(travel.axis, gestureInfo);
+    return travel.slack + (covered - travel.origin);
+  };
+
+  // Another box under the same hand, at either end of the one it holds. The
+  // distance already covered on that side becomes the new box's own, measured
+  // from where the finger IS: nothing is spent twice, and the gesture is one
+  // movement rather than a wall the hand had to let go of to cross.
+  // Returns where the new box stands, or null when there is nothing that way.
+  const relayTo = (sign, distance, gestureInfo) => {
+    const next = onEdge({
+      axis: travel.axis,
+      sign,
+      event: gestureInfo.dragEvent
+    });
+    if (!next || !next.size) {
+      return null;
+    }
+    travel.size = next.size;
+    travel.travelBack = Boolean(next.travelBack);
+    travel.travelOn = Boolean(next.travelOn);
+    travel.slack = 0;
+    let pulled = distance;
+    if (pulled > next.size) {
+      pulled = next.size;
+    } else if (pulled < -next.size) {
+      pulled = -next.size;
+    }
+    travel.origin = coveredOn(travel.axis, gestureInfo) - pulled;
+    return pulled;
+  };
+  const controller = createDragGestureController({
+    // The threshold is left at its default and never crossed: what says this
+    // press has become a gesture is the intent module below, which calls
+    // start() itself. Zero here would mean "started from the grab", and a
+    // gesture that starts on its own is never STARTED — the moment that
+    // installs the click it must swallow and the touch it must refuse would
+    // never come.
+    // Nothing is being carried: the page keeps its focus, its scrolling and its
+    // cursor while a screen slides under the finger. That is the whole
+    // difference with a drag that moves an object, and it is one option.
+    documentInteractions: "manual",
+    onDragStart: () => {
+      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
+    },
+    onDrag: gestureInfo => {
+      // Releasing a gesture reports one last move, so giving one up would come
+      // back through here and give it up again, forever.
+      if (over) {
+        return;
+      }
+      if (!travel) {
+        let axis;
+        if (immediate) {
+          // The axis is not up for decision: what this press caught is already
+          // travelling on one, and the caller said which. The first pixel of a
+          // hand landing on something moving is a tremor as often as it is a
+          // direction — read as a lean across the axis, it gives the gesture up
+          // and lets go of what was caught, under a finger that has not asked
+          // for anything yet.
+          axis = immediate;
+        } else {
+          // ONE axis, decided by the first movement reported and never
+          // revisited: a diagonal would ask for two travels at once and only
+          // one thing can arrive.
+          const reachX = Math.abs(coveredOn("x", gestureInfo));
+          const reachY = Math.abs(coveredOn("y", gestureInfo));
+          if (!reachX && !reachY) {
+            return;
+          }
+          axis = reachX >= reachY ? "x" : "y";
+          if (!axes.includes(axis)) {
+            giveUp();
+            return;
+          }
+        }
+        const covered = coveredOn(axis, gestureInfo);
+        if (!covered) {
+          // Nothing said on that axis yet: a grab without a movement, or one
+          // straight across it. There is no gesture in that and nothing to give
+          // up on either — whatever the caller caught at the press stays
+          // caught, and the next report will say.
+          if (immediate) {
+            return;
+          }
+          giveUp();
+          return;
+        }
+        const sign = Math.sign(covered);
+        const started = onStart({
+          axis,
+          sign,
+          target,
+          event: gestureInfo.dragEvent
+        });
+        if (!started || !started.size) {
+          giveUp();
+          return;
+        }
+        travel = {
+          axis,
+          size: started.size,
+          travelBack: Boolean(started.travelBack),
+          travelOn: Boolean(started.travelOn),
+          slack: started.slack || 0,
+          // The pixels spent deciding the axis are not pulled back — what
+          // travels sets off from where the finger is at that moment rather
+          // than jumping the threshold it just crossed. Except when the intent
+          // was established before the press (see immediate): there was no
+          // threshold to cross, so every pixel since the grab is the hand's and
+          // is owed to it.
+          origin: immediate ? 0 : covered,
+          pulled: started.slack || 0
+        };
+        document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+      }
+      const {
+        axis
+      } = travel;
+      let pulled = pullOf(gestureInfo);
+      // Which side is being pulled in: dragging to the right brings in what is
+      // on the left, which is what comes BEFORE.
+      let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      // Past the start of the box in hand, and the caller has a box that way:
+      // the hand is not leaning on a wall, it is walking into the next one
+      // backwards. Asked before the resistance, so what it is handed is the
+      // hand's own distance rather than a damped one.
+      if (!towardsSomething && pulled) {
+        const relayed = relayTo(pulled > 0 ? 1 : -1, pulled, gestureInfo);
+        if (relayed !== null) {
+          pulled = relayed;
+          towardsSomething = true;
+        }
+      }
+      let size = travel.size;
+      if (!towardsSomething) {
+        pulled *= DRAG_RESISTANCE;
+      }
+      if (pulled > size || pulled < -size) {
+        const sign = pulled > 0 ? 1 : -1;
+        // How far past the edge the hand has gone. Its own number, because it
+        // is what the next box is owed if there is one.
+        const overshoot = pulled - sign * size;
+        pulled = sign * size;
+        if (towardsSomething) {
+          // A box walked whole, and the finger still going: the caller may have
+          // another one to put under it. Then the gesture WALKS ON — the pixels
+          // past the edge are its first ones, so the hand feels one movement
+          // and not a wall it had to let go of to cross.
+          const relayed = relayTo(sign, overshoot, gestureInfo);
+          if (relayed === null) {
+            // A box travels one box, and the hand can go further than that.
+            // Those extra pixels are not owed back: the gesture is measured
+            // from where the finger IS once it has reached the end, so turning
+            // around moves the picture at once instead of first walking back
+            // over the distance the hand went too far.
+            travel.origin = coveredOn(axis, gestureInfo) - (pulled - travel.slack);
+          } else {
+            pulled = relayed;
+            size = travel.size;
+          }
+        }
+      }
+      travel.pulled = pulled;
+      onPull({
+        axis,
+        pulled,
+        size,
+        progress: pulled / size,
+        event: gestureInfo.dragEvent
+      });
+    },
+    onRelease: gestureInfo => {
+      if (over || !travel) {
+        return;
+      }
+      finish();
+      const {
+        axis,
+        size,
+        pulled,
+        slack
+      } = travel;
+      const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+      const velocity = axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
+      // A gesture taken away rather than let go of (the browser scrolling
+      // something else, a call coming in) said nothing: things go back.
+      const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
+      const cancelled = releaseEvent?.type === "pointercancel";
+      onEnd({
+        axis,
+        pulled,
+        size,
+        sign: pulled > 0 ? 1 : -1,
+        travels: !cancelled && travelsAfter({
+          pulled,
+          slack,
+          size,
+          velocity,
+          towardsSomething
+        }),
+        cancelled,
+        event: releaseEvent
+      });
+    }
+  });
+
+  // When a press becomes a gesture, and by which rule. A travel is a swipe, so
+  // the rule is the distance for EVERY pointer: the long press a finger is
+  // asked for elsewhere says "pick this up and carry it", and asking for it
+  // here would mean holding still before being allowed to swipe.
+  const grab = () => {
+    dragGesture = controller.grabViaPointer(pointerDownEvent, {
+      element,
+      // The box, not what the finger landed on: the caller's answer to this
+      // gesture may take that away (a page that travels navigates, and the
+      // router unmounts the page being left), and a capture whose element
+      // leaves the document is a capture the browser drops.
+      pointerCaptureElement: element
+    });
+    return dragGesture;
+  };
+  if (immediate) {
+    // Already in the gesture: what this press landed on was moving, and a hand
+    // that reaches for something in motion has said what it wants by reaching.
+    // Asking it to prove it over ten pixels is asking twice — and over those
+    // pixels the thing it is holding answers to nobody.
+    grab()?.start();
+  } else {
+    dragAfterIntent(pointerDownEvent, grab, {
+      longPress: false,
+      threshold: DRAG_START_THRESHOLD
+    });
+  }
+  window.addEventListener("pointerup", onPressOver);
+  window.addEventListener("pointercancel", onPressOver);
+  return {
+    stop: () => {
+      finish();
+      dragGesture?.release();
+    }
+  };
+};
+
+// A wheel gesture has no beginning and no end of its own: it is a stream of
+// events that starts when the fingers move and stops some time after they are
+// gone — the tail of it is the momentum the system keeps sending. So the end is
+// read from silence, and long enough to survive a page that is busy: the frames
+// right after a travel sets off are the ones where the main thread has the most
+// to do, and a silence read there as "the hand is gone" would cut one gesture
+// into several.
+const WHEEL_GESTURE_END_DELAY = 150;
+// What each screen AFTER the first costs inside one gesture. Deliberately
+// steep: reconstructing "how much did that flick mean" from a stream nobody
+// agrees on is guesswork, and a guess that overshoots leaves someone three
+// screens from where they were with no idea how they got there. Under-shooting
+// costs one more push. So the door is open for a gesture that insists, and shut
+// the rest of the time.
+const WHEEL_NEXT_STEP_DELTA = 600;
+// A stream that keeps getting weaker is momentum, not a hand: the system goes
+// on sending long after the fingers are gone. Counted, one flick becomes five
+// slides. Two events in a row are asked for rather than one, because a hand
+// wavers and momentum does not.
+const WHEEL_FADE_RUN = 2;
+
+/**
+ * A travel asked for with a wheel, and it asks for a WHOLE ONE.
+ *
+ * Two fingers swiping sideways on a trackpad, a mouse pushed sideways: the
+ * browser sends `wheel` events and, left alone, answers them itself by
+ * scrolling the page, bouncing it, or going back in history. Answering them
+ * here is what stops that — a gesture is either ours or the browser's, and half
+ * of each is what makes a page rock under a travel that is already moving.
+ *
+ * Read as STEPS and not as a distance, which is where this parts company with a
+ * press: a hand on the box holds a screen and says where to put it, so it is
+ * owed every pixel; a wheel points at the next screen and says "that one". What
+ * travels is a row of slides, not a long strip one stops in the middle of, so
+ * one push moves one slide — and the travel that follows plays at its own pace,
+ * exactly as it would from a tab pressed or an arrow key.
+ *
+ * A gesture therefore moves ONE screen the moment it begins, on its first event
+ * and whatever that event is worth: a hand that moved and saw nothing happen
+ * does not wait, it pushes harder. Everything a threshold there would have
+ * bought is bought instead by what the SECOND screen costs, which is a lot —
+ * "how much did that flick mean" cannot be reconstructed from a stream nobody
+ * agrees on, and a guess that overshoots leaves someone three screens away with
+ * no idea how they got there. Under-shooting costs one more push, so that is
+ * the side to be wrong on.
+ *
+ * The rest of the stream is mostly momentum, still arriving with the fingers
+ * gone, and it must not be counted. What gives it away is that momentum only
+ * ever WEAKENS: a stream that keeps shrinking is a push already answered, and a
+ * number that grows again is a hand asking for more.
+ *
+ * @param {Element} element
+ * @param {object} options
+ * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel.
+ *   The other one is the content's own scrolling and is left alone.
+ * @param {(detail: {axis: string, sign: number, event: WheelEvent}) => void} options.onStep
+ *   - one push, one screen. `sign` is positive towards the start of the axis,
+ *   which brings in what comes BEFORE — a wheel says how far the CONTENT
+ *   scrolls, and pushing content to the right reveals its left.
+ * @returns {() => void} stop listening.
+ */
+const watchWheelTravel = (element, {
+  axes = "xy",
+  onStep
+}) => {
+  let gesture = null;
+  let endTimeout = null;
+  const forgetGesture = () => {
+    endTimeout = null;
+    gesture = null;
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+  };
+
+  // Where the hand thinks it is pushing. Not "what the event landed on":
+  // while a view transition is playing, the browser delivers the wheel to the
+  // document root rather than to the box under the pointer, whatever the
+  // pseudo-elements are told about pointer-events. Heard on the box alone, a
+  // gesture that sets a travel off loses every event after the first — and the
+  // page scrolls behind the travel with everything that was not taken.
+  const isOverElement = wheelEvent => {
+    const {
+      target
+    } = wheelEvent;
+    if (element.contains(target)) {
+      return true;
+    }
+    // Something the box is INSIDE, which is what a wheel lands on while a view
+    // transition has taken the box's rendering away: the hit falls through to
+    // the nearest ancestor still being painted. That is the only case worth
+    // measuring for, and asking it this way round costs a walk up the tree
+    // rather than a layout read — a page can hold many travelling boxes, and
+    // every one of them would otherwise measure itself on every wheel event
+    // anywhere.
+    if (!target.contains(element)) {
+      return false;
+    }
+    const {
+      left,
+      right,
+      top,
+      bottom
+    } = element.getBoundingClientRect();
+    const {
+      clientX,
+      clientY
+    } = wheelEvent;
+    return clientX >= left && clientX <= right && clientY >= top && clientY <= bottom;
+  };
+  const onWheel = wheelEvent => {
+    if (!isOverElement(wheelEvent)) {
+      return;
+    }
+    const axis = Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
+    const delta = axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY;
+    if (!delta) {
+      return;
+    }
+    // Which way the screens go, said backwards: a wheel says how far the
+    // CONTENT scrolls, and pushing content to the left brings in what is on the
+    // right.
+    const sign = delta > 0 ? -1 : 1;
+    if (!gesture) {
+      if (!axes.includes(axis)) {
+        // The other axis: the content's own scrolling, left whole to whatever
+        // wants it.
+        return;
+      }
+      // Who owns it, asked once for the gesture rather than for every event of
+      // it — the same two claims a press is read against (see the top of this
+      // file), and both are answered by giving the gesture up whole: nothing is
+      // prevented and the browser scrolls as it would have.
+      const {
+        target
+      } = wheelEvent;
+      if (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR) || scrollRoomTowards(target, element, axis, sign)) {
+        return;
+      }
+      gesture = {
+        axis,
+        sign,
+        pushed: 0,
+        lastMagnitude: 0,
+        fadeRun: 0,
+        stepped: false
+      };
+      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
+      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+    }
+    // Ours from here, on both axes: what the browser would do with the leftover
+    // — scroll the page behind the box, bounce it, go back in history — is one
+    // gesture answered twice.
+    wheelEvent.preventDefault();
+    clearTimeout(endTimeout);
+    endTimeout = setTimeout(forgetGesture, WHEEL_GESTURE_END_DELAY);
+    if (axis !== gesture.axis) {
+      // The other axis mid-gesture: a hand is never perfectly straight, and the
+      // axis was decided when the gesture set off.
+      return;
+    }
+    if (sign !== gesture.sign) {
+      // Turned around: what was adding up was going the other way.
+      gesture.sign = sign;
+      gesture.pushed = 0;
+      gesture.lastMagnitude = 0;
+      gesture.fadeRun = 0;
+      gesture.stepped = false;
+    }
+    if (!gesture.stepped) {
+      // The first event of a gesture moves a screen, whatever it is worth —
+      // a pixel is a hand that moved, and a hand that moved and saw nothing
+      // happen pushes harder rather than waiting. Everything a threshold could
+      // buy here is bought by what a screen AFTER this one costs.
+      gesture.stepped = true;
+      onStep({
+        axis: gesture.axis,
+        sign: gesture.sign,
+        event: wheelEvent
+      });
+      return;
+    }
+    const magnitude = Math.abs(delta);
+    if (magnitude < gesture.lastMagnitude) {
+      gesture.fadeRun += 1;
+    } else if (magnitude > gesture.lastMagnitude) {
+      // Back up again — a hand asking for more. Momentum never does this.
+      gesture.fadeRun = 0;
+    }
+    gesture.lastMagnitude = magnitude;
+    if (gesture.fadeRun >= WHEEL_FADE_RUN) {
+      return;
+    }
+    gesture.pushed += magnitude;
+    if (gesture.pushed < WHEEL_NEXT_STEP_DELTA) {
+      return;
+    }
+    gesture.pushed = 0;
+    onStep({
+      axis: gesture.axis,
+      sign: gesture.sign,
+      event: wheelEvent
+    });
+  };
+  document.addEventListener("wheel", onWheel, {
+    passive: false,
+    capture: true
+  });
+  return () => {
+    document.removeEventListener("wheel", onWheel, {
+      capture: true
+    });
+    clearTimeout(endTimeout);
+    endTimeout = null;
+    gesture = null;
+    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
+    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+  };
 };
 
 // Shared by navi's own use_displayed_layout_effect.js (rich "navi_displayed"
@@ -16869,4 +18075,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, watchWheelTravel };
