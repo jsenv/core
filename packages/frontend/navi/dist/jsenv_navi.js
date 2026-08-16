@@ -25728,6 +25728,39 @@ const popupCss = /* css */ `
 `;
 
 /**
+ * Holding a box at the size it has right now — what the `sizing="frozen"` prop
+ * on Dialog, Popover and SlideContainer is made of.
+ *
+ * The need: a surface being used is a frame that has been put down. What moves
+ * inside it is its content, not the frame — a list one empties by acting on it
+ * (marking as read, archiving) must not resize the box under the finger, or the
+ * next row moves while it is being aimed at.
+ */
+
+/**
+ * Read back through getComputedStyle rather than offsetWidth/offsetHeight: the
+ * used values honour whatever `box-sizing` is in effect, so writing them back
+ * reproduces exactly the box that was measured, to the subpixel. Neither is
+ * affected by a transform, so this is safe to call while an entrance animation
+ * is scaling the box.
+ *
+ * `width`/`height`, never `min-width`/`min-height`: a `max-*` — the caller's
+ * own, or the container ceiling a popup already computes for itself — must keep
+ * winning, so a box frozen at 500px on a phone held upright still fits once it
+ * is turned.
+ */
+const freezeSize = (el) => {
+  const { width, height } = getComputedStyle(el);
+  el.style.width = width;
+  el.style.height = height;
+};
+
+const unfreezeSize = (el) => {
+  el.style.width = "";
+  el.style.height = "";
+};
+
+/**
  * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
  * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
  * of which of the two owns it.
@@ -26311,6 +26344,19 @@ const css$V = /* css */`
  * @param {string} [props.minHeight] - Maps to `--dialog-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
+ * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the dialog follows
+ *   its content for as long as it stays open. `"frozen"`: it is measured once
+ *   and held at that size until it closes — what no longer fits (or no longer
+ *   fills it) is the scroll's business. For a surface acted upon while it is
+ *   open: marking a notification as read, emptying a queue, swapping between
+ *   two slides of different heights — the row being aimed at must not move
+ *   under the finger. The measure is taken at the first render where this says
+ *   `"frozen"`, so a dialog opening on skeletons can say
+ *   `sizing={loading ? "auto" : "frozen"}` and be measured once the real
+ *   content is there. The freeze writes a `height`/`width`, never a `min-*`:
+ *   `maxHeight`/`maxWidth` and the container ceiling keep winning, so a frozen
+ *   dialog still fits when the phone is turned. Closing releases it — the next
+ *   opening measures again.
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
  *   `autoFocus="last-resort"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
@@ -26515,6 +26561,9 @@ const useDialogProps = props => {
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     scrollCapture: scrollCaptureProp,
+    // "auto" (default) → the dialog follows its content. "frozen" → measured
+    // once, held at that size while open. See this prop's own JSDoc above.
+    sizing = "auto",
     animation,
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
@@ -26577,6 +26626,21 @@ const useDialogProps = props => {
       detail: {}
     }));
   }, [positionArea, marginWithContainer]);
+  // The freeze is taken where the value changes, not only at open time: a
+  // dialog showing skeletons first says sizing="auto" until its content is
+  // there, and would otherwise be held at the size of the waiting state.
+  // Opening while already "frozen" is openEffect's own case.
+  useEffect(() => {
+    const dialogEl = ref.current;
+    if (!dialogEl || !openController.opened) {
+      return;
+    }
+    if (sizing === "frozen") {
+      freezeSize(dialogEl);
+    } else {
+      unfreezeSize(dialogEl);
+    }
+  }, [sizing]);
   const positionAreaParseResult = parsePositionArea(positionArea);
   if (!positionAreaParseResult) {
     console.warn(`Dialog: invalid positionArea="${positionArea}"`);
@@ -26808,6 +26872,13 @@ const useDialogProps = props => {
       // navi_position_change on every call) — nothing to do here.
     };
     positionDialog();
+    if (sizing === "frozen") {
+      // After positionDialog: the caps it writes
+      // (--container-position-remaining-*) are part of what decides the size
+      // being taken, so measuring before it would freeze a box the dialog
+      // never actually had.
+      freezeSize(dialogEl);
+    }
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
@@ -26939,6 +27010,9 @@ const useDialogProps = props => {
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
+      // The freeze only ever holds for one opening: the next one has its own
+      // content to be measured against.
+      unfreezeSize(dialogEl);
       cancelOpenInteractionSuppression?.();
       if (hasCssTransitionAnimation) {
         suppressPointerEventsDuringTransition(dialogEl);
@@ -27516,6 +27590,18 @@ const css$U = /* css */`
  * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the popover
+ *   follows its content for as long as it stays open. `"frozen"`: it is
+ *   measured once and held at that size until it closes — what no longer fits
+ *   (or no longer fills it) is the scroll's business. For a surface acted upon
+ *   while it is open: emptying a list, swapping between two panels of
+ *   different heights — the row being aimed at must not move under the
+ *   pointer. The measure is taken at the first render where this says
+ *   `"frozen"`, so a popover opening on skeletons can say
+ *   `sizing={loading ? "auto" : "frozen"}` and be measured once the real
+ *   content is there. The freeze writes a `height`/`width`, never a `min-*`:
+ *   `maxHeight`/`maxWidth` and the container ceiling keep winning. Closing
+ *   releases it — the next opening measures again.
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
  *   so `autoFocus="last-resort"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
@@ -27716,6 +27802,9 @@ const usePopoverProps = props => {
     pointerInteractionOutsideEffect = "none",
     scrollCapture,
     focusCapture,
+    // "auto" (default) → the popover follows its content. "frozen" → measured
+    // once, held at that size while open. See this prop's own JSDoc above.
+    sizing = "auto",
     animation,
     anchor,
     anchorCustomEventDetail = "override",
@@ -27774,6 +27863,21 @@ const usePopoverProps = props => {
       detail: {}
     }));
   }, [positionArea, positionAreaFixed, positionAreaWhenAnchorIsInvalid, marginWithAnchor, marginWithContainer]);
+  // The freeze is taken where the value changes, not only at open time: a
+  // popover showing skeletons first says sizing="auto" until its content is
+  // there, and would otherwise be held at the size of the waiting state.
+  // Opening while already "frozen" is openEffect's own case.
+  useEffect(() => {
+    const popoverEl = ref.current;
+    if (!popoverEl || !openController.opened) {
+      return;
+    }
+    if (sizing === "frozen") {
+      freezeSize(popoverEl);
+    } else {
+      unfreezeSize(popoverEl);
+    }
+  }, [sizing]);
   // The custom renderer's own starting-hidden state is a stylesheet default
   // now (&:not([popover]) { display: none } on .navi_popover/
   // .navi_popover_backdrop above) rather than set here imperatively — a
@@ -28170,6 +28274,14 @@ const usePopoverProps = props => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+    if (sizing === "frozen") {
+      // After rectEffect's own setup, which has already placed the popover:
+      // the caps that placement writes
+      // (--container-position-remaining-*) are part of what decides the size
+      // being taken, so measuring before it would freeze a box the popover
+      // never actually had.
+      freezeSize(popoverEl);
+    }
 
     // "sliding"/"expanding" need a concrete direction (see
     // resolveDirectionValue) — resolved here, once, now that rectEffect's
@@ -28265,6 +28377,9 @@ const usePopoverProps = props => {
       } else {
         openLocalPopoverCount = Math.max(0, openLocalPopoverCount - 1);
       }
+      // The freeze only ever holds for one opening: the next one has its own
+      // content to be measured against.
+      unfreezeSize(popoverEl);
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
       // replaces it (nothing ever needs to cancel this one in turn: a
@@ -45593,6 +45708,18 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   scrolling the document — so a map that travels vertically has to be told
  *   (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
+ * @param {"largest"|"frozen"} [props.sizing="largest"] - what decides the size
+ *   of the box. "largest": the largest slide, at every moment — the box follows
+ *   whatever the slides do. "frozen": the box is measured once and kept at that
+ *   size, and what no longer fits (or no longer fills it) is the scroll's
+ *   business. For slides one ACTS on rather than merely reads: a row marked as
+ *   read leaves one panel for the other, the tallest slide is not the same one
+ *   anymore, and with "largest" the box resizes under the finger aiming at the
+ *   next row. The measure is taken at the first render where this says
+ *   "frozen", so a container opening on skeletons says
+ *   `sizing={loading ? "largest" : "frozen"}` and is measured once the real
+ *   content is there. The freeze holds against what happens INSIDE the box, not
+ *   against the room it is given: a window resize measures again.
  */
 const SlideContainer = ({
   layout = "row",
@@ -45606,6 +45733,7 @@ const SlideContainer = ({
   travelByDrag = true,
   travelByScroll = "x",
   duration = "300ms",
+  sizing = "largest",
   children,
   ...rest
 }) => {
@@ -45739,6 +45867,31 @@ const SlideContainer = ({
       cancelAnimationFrame(frame);
     };
   }, [noTravel]);
+
+  // The box, held at the size it has right now (sizing="frozen"): what the
+  // slides do afterwards moves their own content and not this box. Taken where
+  // the value changes rather than at mount alone, so a container opening on
+  // skeletons is measured on the real thing (see the prop's own doc).
+  useLayoutEffect(() => {
+    if (sizing !== "frozen") {
+      return undefined;
+    }
+    const containerEl = containerRef.current;
+    freezeSize(containerEl);
+    // The freeze is about the content, never about the room: a box frozen on a
+    // phone held upright has to fit once it is turned, and one frozen in a
+    // window has to follow that window. So the measure is taken again whenever
+    // the room changes — the only moment the box is allowed to resize.
+    const onWindowResize = () => {
+      unfreezeSize(containerEl);
+      freezeSize(containerEl);
+    };
+    window.addEventListener("resize", onWindowResize);
+    return () => {
+      window.removeEventListener("resize", onWindowResize);
+      unfreezeSize(containerEl);
+    };
+  }, [sizing]);
 
   // What the user was doing on each slide, so coming back comes back to it. The
   // ways out are left out on purpose: pressing one is how one LEAVES a slide,
@@ -48151,6 +48304,10 @@ const css$z = /* css */`
  * @param {string} [props.minWidth] - Forwarded as-is.
  * @param {string} [props.minHeight] - Forwarded as-is.
  * @param {string} [props.maxHeight] - Forwarded as-is.
+ * @param {"auto"|"frozen"} [props.sizing] - Forwarded as-is to both, which
+ *   understand it identically: `"frozen"` holds the surface at the size it was
+ *   measured at while it stays open, so acting on what it contains moves the
+ *   content and not the surface. See either component's own doc.
  * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
  *   `expandX`/`expandY` below. No effect in popover mode.
  * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog

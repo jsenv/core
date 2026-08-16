@@ -1124,6 +1124,174 @@
         </SizingFrame>
       );
 
+      // Said above every box that is compared to another, so which one is
+      // which can be read without going back to the code.
+      const SizingCaption = ({ sizing }) => (
+        <Text size="s" color="#666">
+          {sizing === "frozen"
+            ? `sizing="frozen"`
+            : `sizing="largest" (default)`}
+        </Text>
+      );
+
+      const TODO = [
+        "water the plants",
+        "answer Camille",
+        "book the room",
+        "pay the invoice",
+      ];
+      const EmptyingList = ({ sizing }) => {
+        const slideId = useId();
+        const [items, setItems] = useState(TODO);
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <SizingCaption sizing={sizing} />
+            <SizingFrame width="260px" sizing={sizing}>
+              <SizingSlide id={slideId} title="to do">
+                <Box flex="y" spacing="xs">
+                  {items.map((item) => (
+                    <Box
+                      key={item}
+                      flex="x"
+                      alignY="center"
+                      spacing="s"
+                      padding="xs"
+                      backgroundColor="white"
+                      borderRadius="s"
+                    >
+                      <Text expandX size="s" noWrap>
+                        {item}
+                      </Text>
+                      <Button
+                        variant="discrete"
+                        onClick={() =>
+                          setItems(items.filter((other) => other !== item))
+                        }
+                      >
+                        done
+                      </Button>
+                    </Box>
+                  ))}
+                  {items.length === 0 && (
+                    <Text size="s" color="#666">
+                      nothing left
+                    </Text>
+                  )}
+                </Box>
+              </SizingSlide>
+            </SizingFrame>
+            <Button variant="discrete" onClick={() => setItems(TODO)}>
+              reset
+            </Button>
+          </Box>
+        );
+      };
+
+      const NOTIFICATIONS = [
+        "Camille invited you",
+        "your export is ready",
+        "3 messages in #design",
+        "deploy 4.2 is live",
+      ];
+      const NotificationRow = ({ label, onMarkAsRead }) => (
+        <Box
+          flex="x"
+          alignY="center"
+          spacing="s"
+          padding="xs"
+          backgroundColor="white"
+          borderRadius="s"
+        >
+          <Text expandX size="s" noWrap>
+            {label}
+          </Text>
+          {onMarkAsRead && (
+            <Button variant="discrete" onClick={onMarkAsRead}>
+              mark read
+            </Button>
+          )}
+        </Box>
+      );
+      const NotificationPanels = ({ sizing }) => {
+        const containerId = useId();
+        const [readIndexes, setReadIndexes] = useState([]);
+        const [current, setCurrent] = useState("unread");
+        const unread = [];
+        const read = [];
+        NOTIFICATIONS.forEach((label, index) => {
+          const panel = readIndexes.includes(index) ? read : unread;
+          panel.push({ label, index });
+        });
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <SizingCaption sizing={sizing} />
+            <Box flex="x" spacing="xs">
+              <Button
+                variant={current === "unread" ? undefined : "discrete"}
+                command="--navi-go-to-slide:unread"
+                commandFor={containerId}
+              >
+                unread ({unread.length})
+              </Button>
+              <Button
+                variant={current === "read" ? undefined : "discrete"}
+                command="--navi-go-to-slide:read"
+                commandFor={containerId}
+              >
+                read ({read.length})
+              </Button>
+            </Box>
+            <SizingFrame
+              id={containerId}
+              width="280px"
+              sizing={sizing}
+              current={current}
+              onCurrentChange={setCurrent}
+            >
+              <Slide area="unread" overflow="auto" backgroundColor="#f4f7fc">
+                <Box body padding="s" flex="y" spacing="xs">
+                  {unread.map(({ label, index }) => (
+                    <NotificationRow
+                      key={index}
+                      label={label}
+                      onMarkAsRead={() =>
+                        setReadIndexes([...readIndexes, index])
+                      }
+                    />
+                  ))}
+                  {unread.length === 0 && (
+                    <Text size="s" color="#666">
+                      nothing unread
+                    </Text>
+                  )}
+                </Box>
+              </Slide>
+              <Slide area="read" overflow="auto" backgroundColor="#f4f7fc">
+                <Box body padding="s" flex="y" spacing="xs">
+                  {read.map(({ label, index }) => (
+                    <NotificationRow key={index} label={label} />
+                  ))}
+                  {read.length === 0 && (
+                    <Text size="s" color="#666">
+                      nothing read yet
+                    </Text>
+                  )}
+                </Box>
+              </Slide>
+            </SizingFrame>
+            <Button
+              variant="discrete"
+              onClick={() => {
+                setReadIndexes([]);
+                setCurrent("unread");
+              }}
+            >
+              reset
+            </Button>
+          </Box>
+        );
+      };
+
       // Nothing focusable inside, so the slide itself takes the keyboard as soon
       // as the popup opens — which is the case the popup's own ring is for.
       const FocusRingSlides = ({ focusVisible }) => (
@@ -1803,6 +1971,20 @@
               <div class="demo-way">
                 <h3>Two slides, one wider</h3>
                 <SizingTwoWide />
+              </div>
+              <div class="demo-way">
+                <h3>A list one empties</h3>
+                <Box flex="x" spacing="l" alignY="start">
+                  <EmptyingList />
+                  <EmptyingList sizing="frozen" />
+                </Box>
+              </div>
+              <div class="demo-way">
+                <h3>Two panels, items crossing over</h3>
+                <Box flex="x" spacing="l" alignY="start">
+                  <NotificationPanels />
+                  <NotificationPanels sizing="frozen" />
+                </Box>
               </div>
             </Box>
             <p class="demo-note">
