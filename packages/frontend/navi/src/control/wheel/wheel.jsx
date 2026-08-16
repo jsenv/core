@@ -1971,7 +1971,7 @@ function WheelUI(props) {
       </div>
       {/* The pointer is this wheel's own: it is spun with a finger, on the axis
           it turns, so a container that travels by drag must not take the
-          gesture from under it (see drag_travel.js). */}
+          gesture from under it (see drag_to_travel.js). */}
       <div className="navi_wheel_viewport" data-no-drag-travel="">
         <div className="navi_wheel_pane" data-side="start" />
         {/* Wheel.Item children register their {value,label,itemProps} here and

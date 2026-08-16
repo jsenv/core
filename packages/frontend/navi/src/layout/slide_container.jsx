@@ -34,7 +34,7 @@
  * gesture decides, not the distance alone. It walks ONE AXIS, chosen from the
  * first few pixels: a diagonal would ask for two travels at once and only one
  * slide can arrive. What a gesture IS — how far it has to go, who else may
- * claim it, what letting go says — is read in drag_travel.js; what is here is
+ * claim it, what letting go says — is read in drag_to_travel.js; what is here is
  * where the slides stand while it happens.
  *
  * The slides live INSIDE the box, which is what makes this work for a popup: a
@@ -59,7 +59,7 @@ import {
 import { Box } from "../box/box.jsx";
 import {
   scrollRoomTowards,
-  startDragTravel,
+  startDragToTravel,
   watchWheelTravel,
 } from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
@@ -1560,7 +1560,7 @@ export const SlideContainer = ({
   // What a travel gesture does to the slides, whoever asked for it: a pointer
   // dragging the box and a wheel pushing it sideways ask for the same travel,
   // so they are answered by the same callbacks and only the reading of the
-  // input differs (see drag_travel.js). The rules of the gesture are read
+  // input differs (see drag_to_travel.js). The rules of the gesture are read
   // there, the geometry of the slides here.
   const createTravelHandlers = (caughtAtStart) => {
     let caughtTravel = caughtAtStart;
@@ -1748,7 +1748,7 @@ export const SlideContainer = ({
     const caughtTravel = catchTravelInFlight();
     const caughtAxis = caughtTravel ? axisOfCaughtTravel(caughtTravel) : null;
     const handlers = createTravelHandlers(caughtTravel);
-    const gesture = startDragTravel(pointerDownEvent, {
+    const gesture = startDragToTravel(pointerDownEvent, {
       element: containerRef.current,
       axes: dragAxes,
       // Caught in flight: the hand is already in the gesture, so it is answered
@@ -1866,7 +1866,7 @@ export const SlideContainer = ({
       data-travel-by-drag={dragAxes ?? undefined}
       // The same fact, read by the shared gesture stylesheet: what scrolls
       // inside a box that travels must not spill onto the page behind it (see
-      // drag_travel.js).
+      // drag_to_travel.js).
       data-drag-travel={travelAxes ?? undefined}
       onPointerDown={(e) => {
         startDrag(e);

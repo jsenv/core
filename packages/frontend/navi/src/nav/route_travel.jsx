@@ -41,7 +41,7 @@ import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import {
   scrollRoomTowards,
-  startDragTravel,
+  startDragToTravel,
   watchWheelTravel,
 } from "@jsenv/dom";
 import { observeBeforeRouting } from "./browser_integration/before_routing.js";
@@ -69,7 +69,7 @@ const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
 // press (see the CSS).
 const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 // A travel that changed its mind about where it was going (see
-// turnTravelAround). Only the pages can be turned around: everything else the
+// redirectTravel). Only the pages can be aimed somewhere else: everything the
 // transition carries was measured once, at the start, against a destination
 // this travel is no longer going to.
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
@@ -428,13 +428,9 @@ export const RouteTravel = ({
         if (!matching) {
           return;
         }
-        // A travel of ours already playing: this announcement IS that travel.
-        if (travelRef.current) {
-          return;
-        }
-        // …and so is one this box asked for and had given up waiting on: what
-        // arrives here is the answer to a question already answered, not
-        // somebody going somewhere.
+        // A page this box asked for itself — a travel's own navigation, or one
+        // it had given up waiting on: what arrives here is the answer to a
+        // question already answered, not somebody going somewhere.
         if (routeAskedForRef.current === route) {
           routeAskedForRef.current = null;
           currentIndexRef.current = index;
@@ -445,6 +441,14 @@ export const RouteTravel = ({
         // than kept, or the next press on that very tab would be taken for the
         // late answer to a question nobody remembers asking.
         routeAskedForRef.current = null;
+        // Asked for a page while one was already on its way: the travel in
+        // flight is the answer, aimed somewhere else. Starting a second one on
+        // top would leave this one's pictures to be dropped mid-slide.
+        if (travelRef.current) {
+          currentIndexRef.current = index;
+          retargetTravel(travelRef.current, route);
+          return;
+        }
         const fromIndex = currentIndexRef.current;
         currentIndexRef.current = index;
         if (fromIndex === -1 || fromIndex === index) {
@@ -531,9 +535,16 @@ export const RouteTravel = ({
         // The page that was left is put back UNDER the picture before the
         // picture is dropped, so the two are the same thing at the moment they
         // are swapped: that only holds once the page is really back.
-        await whileRouteRenders(travel.fromRoute, () =>
-          onTravel({ route: travel.fromRoute, cause: "revert" }),
-        );
+        //
+        // Unless it never left: a press on the tab one came from is what sets
+        // this revert off, and that press has already put the page back. There
+        // is nothing to ask for then, and nothing to wait for — waiting anyway
+        // is a render that never comes and a page frozen under its pictures.
+        if (!travel.fromRoute.matchingSignal.peek()) {
+          await whileRouteRenders(travel.fromRoute, () =>
+            onTravel({ route: travel.fromRoute, cause: "revert" }),
+          );
+        }
         travel.viewTransition.skipTransition();
       } finally {
         // A travel ENDS, whatever happened on the way back: put the state back,
@@ -564,19 +575,54 @@ export const RouteTravel = ({
     });
   };
 
-  // The same travel, going the other way from where it began: the still it
-  // starts from does not change, only what is being brought in against it.
-  const turnTravelAround = (travel, route, direction) => {
+  // The same travel, aimed at another page. The still it starts from does not
+  // change — only what is being brought in against it, and that one is LIVE:
+  // pointing the router elsewhere is all it takes for the picture to show that
+  // page instead.
+  const redirectTravel = (travel, route, direction) => {
     travel.route = route;
+    // Everything the transition carries that is NOT the pages was measured
+    // against a destination this travel is no longer going to (see the CSS).
+    document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
+    if (direction === travel.direction) {
+      // Same way, another page: the pictures in hand are already the right
+      // pair, and nothing has to move.
+      return;
+    }
     travel.direction = direction;
     travel.ratio = 0;
     // The other way round is another pair of keyframes, and naming another
     // animation builds another Animation: whatever was collected answers to
-    // nobody now.
+    // nobody now. They start again from the beginning, which is where a travel
+    // that turns around is.
     travel.animations = null;
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
-    document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
-    routeAskedForRef.current = route;
+  };
+
+  // Somebody asked for a page while one was on its way. Where they asked for
+  // decides what that means.
+  const retargetTravel = (travel, route) => {
+    if (travel.scrub || travel.reverting || travel.ended || travel.noPicture) {
+      // A hand is holding the pages, or they are already on their way back:
+      // either way this travel's end is decided by somebody else.
+      return;
+    }
+    if (route === travel.route) {
+      // Already on its way there.
+      return;
+    }
+    if (route === travel.fromRoute) {
+      // Back where it set off from: that is not another travel, it is this one
+      // undone — the same pictures, run backwards.
+      revertTravel(travel);
+      return;
+    }
+    const fromIndex = routes.indexOf(travel.fromRoute);
+    const toIndex = routes.indexOf(route);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    redirectTravel(travel, route, toIndex > fromIndex ? "forward" : "back");
   };
 
   const endTravel = (travel) => {
@@ -600,7 +646,7 @@ export const RouteTravel = ({
   // What a gesture is about, whichever hand made it: a thumb dragging the page
   // and two fingers pushing it sideways on a trackpad ask for the same travel,
   // so they are answered by the same three callbacks and only the reading of
-  // the input differs (see drag_travel.js).
+  // the input differs (see drag_to_travel.js).
   const boxSizeOnAxis = () => {
     const box = elementRef.current.getBoundingClientRect();
     return axis === "x" ? box.width : box.height;
@@ -759,7 +805,8 @@ export const RouteTravel = ({
       if (fromIndex === -1 || !route) {
         return false;
       }
-      turnTravelAround(travel, route, direction);
+      redirectTravel(travel, route, direction);
+      routeAskedForRef.current = route;
       onTravel({ route, cause: "drag" });
       return {
         size: boxSizeOnAxis(),
@@ -819,7 +866,7 @@ export const RouteTravel = ({
     if (currentIndex === -1) {
       return;
     }
-    const gesture = startDragTravel(pointerDownEvent, {
+    const gesture = startDragToTravel(pointerDownEvent, {
       element: elementRef.current,
       axes: axis,
       // Caught in flight: the hand is already in the gesture (see above), so it
@@ -938,7 +985,7 @@ export const RouteTravel = ({
       data-axis={axis}
       // What travels here, and on which axis: read by the shared gesture
       // stylesheet, which keeps this box's scrolling from spilling onto the
-      // page (see drag_travel.js).
+      // page (see drag_to_travel.js).
       data-drag-travel={travelByDrag ? axis : undefined}
       onPointerDown={onPointerDown}
     >

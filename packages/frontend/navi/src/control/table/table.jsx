@@ -656,7 +656,7 @@ export const TableCell = (props) => {
       data-grabbed={columnGrabbed ? "" : undefined}
       // A column that can be dragged reads the pointer itself, so the gesture
       // is its own and a container travelling by drag must not take it (see
-      // drag_travel.js). Said here rather than left to whoever puts a table in
+      // drag_to_travel.js). Said here rather than left to whoever puts a table in
       // a swipeable page: they cannot know, and this can.
       data-no-drag-travel={innerCanDragColumn ? "" : undefined}
       onClick={onClick}

@@ -237,7 +237,7 @@ const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
  *   refused it. Nothing was painted and nothing has to be put back — this is
  *   only so the caller can forget the gesture it is holding.
  */
-export const startDragTravel = (
+export const startDragToTravel = (
   pointerDownEvent,
   {
     element,

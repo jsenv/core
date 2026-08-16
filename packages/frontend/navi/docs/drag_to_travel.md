@@ -3,7 +3,7 @@
 A drag-travel is a pointer pushing a whole screen aside to bring in the next
 one: slides inside a box (`SlideContainer`), pages that are URLs
 (`RouteTravel`). One module answers what such a gesture IS —
-[@jsenv/dom's drag_travel.js](../../dom/src/interaction/drag/drag_travel.js) — and both read it, so
+[@jsenv/dom's drag_to_travel.js](../../dom/src/interaction/drag/drag_to_travel.js) — and both read it, so
 a hand never has to learn two sets of numbers.
 
 ## What the rules are
@@ -288,6 +288,28 @@ below it, which is why a tab row put beside a `RouteTravel` follows the thumb
 with no wiring at all: the bar is named, so the browser recognises it from one
 page to the next, and any transition moves it on the same clock as everything
 else in that transition.
+
+### Asking for a page while one is on its way
+
+A travel is not a queue: a tab pressed while another page is arriving does not
+wait its turn, and it does not start a second travel on top of the first either
+— there is one pair of pictures, and a second transition would drop them
+mid-slide. The travel in flight is simply aimed somewhere else, and where it is
+aimed decides what that costs:
+
+- **back where it set off from** — that is not another travel, it is this one
+  undone: the same pictures, run backwards. Nothing has to be asked of the
+  router either, since the press has already put the page back;
+- **further the same way** — the picture being brought in is LIVE, so pointing
+  the router at another page is all it takes for it to show that one instead.
+  Nothing moves, and it costs nothing. Two tabs along or five makes no
+  difference: a travel goes from where it left to where it is going, never
+  through what lies between — which is just as well here, since the pages in
+  between are not mounted and there is nothing to show of them;
+- **the other way** — the pictures have to change places, so the pair starts
+  again from the beginning. A travel barely begun turns around unnoticed; one
+  nearly arrived snaps back first. That is the price of changing one's mind
+  late, and there is no picture that could have covered it.
 
 ### One gesture that bar cannot follow
 
