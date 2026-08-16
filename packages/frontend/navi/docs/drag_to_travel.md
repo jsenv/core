@@ -6,6 +6,13 @@ one: slides inside a box (`SlideContainer`), pages that are URLs
 [@jsenv/dom's drag_to_travel.js](../../dom/src/interaction/drag/drag_to_travel.js) — and both read it, so
 a hand never has to learn two sets of numbers.
 
+This file is the spec of the travel gesture and of what its two consumers do
+with it. The general rules it leans on — who owns state while something
+animates, the view-transition pitfalls, the compositor traps — live in the
+animations skill
+([.agents/skills/animations/SKILL.md](../../../../.agents/skills/animations/SKILL.md))
+and are referenced from here rather than restated.
+
 ## What the rules are
 
 - A press is not a gesture until it has wandered ~10px, and the axis it leans on
@@ -161,11 +168,9 @@ The two ends cost differently, and it is worth knowing which one is being felt:
   one instead. The travel turns around where it stands, on the same transition,
   and there is no gap at all.
 
-What the browser will not turn around with it is everything else it is
-animating: the group animations of the named elements a travel carries along (a
-trait under a tab row) were built when the transition began and keep the ends
-they were built with. They go on towards a page the travel has stopped going
-to.
+What the browser will not turn around with it is everything ELSE the
+transition carries — see "One gesture that bar cannot follow" at the end of
+this file.
 
 Two things a travel in hand must never lose:
 
@@ -315,30 +320,29 @@ mid-slide. The travel in flight is simply aimed somewhere else, and where it is
 aimed decides what that costs:
 
 - **back where it set off from** — that is not another travel, it is this one
-  undone: the same pictures, run backwards. Backwards over the DISTANCE, not
-  over the time: the way in is eased, so at half of its time a travel has
-  covered ~80% of its distance — rewound at -1, nearly the whole visible way
-  back collapses into the steep end of the curve and reads as a snap. The
-  pictures are walked home over how far they LOOK from home instead, at the
-  travel's own pace (see revertWalkTime) — the distance computed from the clock
-  THROUGH the easing curve, because reading the pseudo-elements' animated
-  position is not possible from here (see below). And the new rate is handed over with
-  `updatePlaybackRate`, never the `playbackRate` setter: these animations run
-  on the COMPOSITOR, and the setter is a non-seamless change there — on screen
-  the pictures jump straight to their end while the Animation object ticks
-  backwards unseen. Nothing read from JS will say so; screenshots re-rasterized
-  off the main thread show the reversal playing while the screen shows a snap.
-  Only a compositor capture (a screencast, a human eye) tells the truth about
-  this one. Nothing has to be asked of the
-  router either, since the press has already put the page back — and that is
-  exactly what makes this one delicate. The picture being brought in is LIVE, so
-  the moment the press lands it shows the page one is going back TO, on both
-  sides at once, and the way back becomes invisible: one presses, and one is
-  simply there. So the PAGES are held where they are until the pictures are at
-  their start — only the pages, because nothing is being photographed here and
-  everything else may go on rendering. The page being left stays on screen
-  while it is brought back, which is the rule this file states about reverts,
-  one step earlier;
+  undone: the same pictures, run backwards. Nothing has to be asked of the
+  router (the press already put the page back), and that is exactly what makes
+  this the delicate one — three things at once:
+  - the picture being brought in is LIVE, and the page it shows is now the
+    page one is going back TO: both sides show the same thing and the way back
+    is invisible — one presses, and one is simply there. So the PAGES are held
+    where they are (`freezeRouteRender`) until the pictures are back at their
+    start; only the pages, because nothing is being photographed here and
+    everything else may keep rendering. The page being left stays on screen
+    while it is brought back — the rule this file states about reverts,
+    applied one step earlier;
+  - the way back is paid for in DISTANCE, not in time: the way in is eased, so
+    at half of its time a travel has covered ~80% of its distance, and rewound
+    at `-1` the visible way home collapses into the steep end of the curve — a
+    snap, not a return. The pictures walk home over how far they visibly are
+    from home, at the travel's own pace (`revertWalkTime`);
+  - both of the above run straight into the compositor traps: the distance is
+    computed from the clock through the easing curve (the pseudo-elements'
+    animated position cannot be read), and the rate is handed over with
+    `updatePlaybackRate`, never the `playbackRate` setter. The traps
+    themselves — including why no JS reading and no ordinary screenshot will
+    ever show this class of bug — are in the animations skill, "The main
+    thread lies about a running transition";
 - **further the same way** — the picture being brought in is LIVE, so pointing
   the router at another page is all it takes for it to show that one instead.
   Nothing moves, and it costs nothing. Two tabs along or five makes no

@@ -30,10 +30,13 @@ aims at a place and pushes, which is what its `<Link>` already does). Pass
 
 The page arriving mounts during the gesture and fills in under the finger, so it
 is dragged in as its own loading state. Anything outside the box that must
-follow the gesture — the trait under the tab row — takes a
-`view-transition-name` of its own and is animated on the same clock.
+follow the gesture takes a `view-transition-name` of its own and is animated on
+the same clock — and the usual case is already done: a `<Nav currentIndicator>`
+beside the box names its own bar, so it follows the thumb with no wiring.
 
 Demo: [demos/route_travel/route_travel.html](./demos/route_travel/route_travel.html).
+The full spec of the gesture (who owns it, the wheel reading, clicking a tab
+mid-travel) is [docs/drag_to_travel.md](../../docs/drag_to_travel.md).
 
 ## Data Loading with Routes
 

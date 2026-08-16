@@ -124,12 +124,16 @@ so it can only be called by whoever owns the change:
   unhandled error).
 - **Keep the page out of it**: `:root { view-transition-name: none }`. The UA
   names the root `root`, so by default the whole document is replaced by a
-  picture for the duration — the page stops rendering live under it. Opted
-  out, only the named elements are captured. The reverse is true of a
-  transition that moves whole screens past each other (below): there the page
-  MUST be a picture, or it renders live beside the pictures being moved — so
-  such a transition asks for the root back while it plays rather than assuming
-  either rule.
+  picture for the duration — and a captured element is dead in BOTH senses: it
+  stops rendering live, and it cannot be pointed at anymore. Nothing hit-tests
+  to it; every press over it falls through to the nearest ancestor still being
+  painted, whatever the pseudo-elements are told about `pointer-events`. Opted
+  out, only the named elements are captured and the rest of the page keeps
+  answering. Even a transition that slides whole screens past each other does
+  not need the root: the travelling box is itself captured, so it paints
+  nothing of its own, and its two pictures cover its rectangle between them at
+  every moment of the travel. _Reference: the `TRAVEL_ATTRIBUTE` CSS in
+  route_travel.jsx._
 
 Facts worth knowing before reaching for one:
 
@@ -153,6 +157,32 @@ Facts worth knowing before reaching for one:
   screen that is off screen animates nothing — and can cost a movement the
   user IS looking at (the rule above). Start one only when what changes is
   what the user is watching.
+
+### The main thread lies about a running transition
+
+The pseudo-elements' animations run on the **compositor**, and everything JS
+can read answers from the main thread instead. Three traps, each of which cost
+an afternoon here, and the pattern behind all three is the same: the number
+looks right, the screen disagrees, and only the screen is telling the truth.
+
+- **The `playbackRate` setter is a jump on screen.** For a composited
+  animation the setter is a non-seamless change: the pictures leap straight to
+  their end state while the `Animation` object goes on ticking (or ticking
+  backwards) unseen. Hand a new rate over with `updatePlaybackRate()` — the
+  seamless, async variant is what it exists for.
+- **`getComputedStyle` on a `::view-transition-*` pseudo returns the
+  UN-animated value.** Where the pictures actually stand cannot be read from
+  JS at all. To know how far a travel visibly is, compute it from the clock
+  THROUGH the easing curve: the easing of a CSS animation sits on its
+  keyframes (`effect.getKeyframes()[0].easing`), and CSS `ease` is parametric
+  — solve it numerically. _Reference: `revertWalkTime` in route_travel.jsx._
+- **Screenshots lie too.** A re-rasterized capture (Playwright's
+  `page.screenshot`) is drawn from main-thread state: it shows the animation
+  where the `Animation` object says it is — pixel-perfect pictures of a
+  movement the screen never played. Only a compositor capture tells the truth:
+  a CDP screencast (`Page.startScreencast`), a screen recording, a human eye.
+  When a human reports a snap that every number says cannot happen, believe
+  the human and reach for the screencast.
 
 ## What moves inside a box stays inside the box
 
@@ -302,9 +332,14 @@ The gesture then drives a transition instead of driving pixels:
   shorthand also writes `animation-play-state`, so a rule using it resets the
   hold above to running and the pictures leave without the finger — the same
   symptom as no hold at all, from a rule that looks unrelated.
-- **Cancelling is the same movement backwards**, not a second one:
-  `playbackRate = -1` and play. A second transition would capture a picture of
-  the wrong "before".
+- **Cancelling is the same movement backwards**, not a second one — a second
+  transition would capture a picture of the wrong "before". Backwards over the
+  DISTANCE, not the time: the way in is eased, so at half of its time a travel
+  has covered ~80% of its distance, and rewound at `-1` the whole visible way
+  back collapses into the steep end of the curve — a snap, not a return. Walk
+  the pictures home over how far they visibly are from home, at the travel's
+  own pace, and hand the rate over with `updatePlaybackRate()` (see "The main
+  thread lies about a running transition" — both halves of this are traps).
 - **Put the state back UNDER the picture before dropping the picture.** When a
   cancelled gesture has run the animations back to 0, what is on screen is the
   old state; undo the state change, let it render, and only then skip the
@@ -323,14 +358,17 @@ The gesture then drives a transition instead of driving pixels:
   before `ensureDocumentStartViewTransition()` has installed the polyfill (it
   marks itself `isPolyfill`).
 
-Three ways to lose an afternoon on this, all seen:
+Ways to lose an afternoon on this, all seen:
 
 - **Never wait for a frame inside the update callback.** The browser has
   stopped rendering while it runs — it is waiting for that very promise before
   taking its picture — so a `requestAnimationFrame` in there waits for a frame
-  that cannot come, and the transition hangs with the page frozen. Waiting for
-  the state to have rendered means waiting for **microtasks** (which is what a
-  signal-driven render costs), never for a frame.
+  that cannot come, and the transition hangs with the page frozen. And do not
+  count microtasks either: how many passes a render takes is the renderer's
+  own business, and a count that works today under-waits after the next
+  refactor. The component that swaps the DOM is the only one that knows when
+  it has — have it say so, and await that. _Reference: `observeRouteRender` in
+  route.jsx, awaited by `whileRouteRenders` in route_travel.jsx._
 - **Clip on the pseudo-elements, never on your own box** — see "What moves
   inside a box stays inside the box" above; a travel between pages is the first
   of the two cases described there.
@@ -345,15 +383,21 @@ Three ways to lose an afternoon on this, all seen:
   transition is about to start — for navi, `holdViewTransition` in
   `start_view_transition_polyfill.js`, which every transition it starts goes
   through.
-- **A press during a transition does not reach the element it looks like it
-  hit.** It goes to the document root, whatever the pseudo-elements are told
-  about `pointer-events`. So a gesture meant to grab what is still moving has to
-  be caught at the document and matched against the box's rectangle — otherwise
-  reaching for a page mid-flight does nothing, and the browser answers the
-  gesture instead (the page rocks under a travel that is already moving).
+- **A press during a transition does not reach a captured element** — captured
+  means not painted where it stands, so nothing hit-tests to it (see "Keep the
+  page out of it" above, which is half of the answer). The other half is the
+  travelling box itself, whose rectangle is legitimately covered by pictures: a
+  gesture meant to grab what is still moving is caught at the document and
+  matched against the box's rectangle — otherwise reaching for a page
+  mid-flight does nothing, and the browser answers the gesture instead (the
+  page rocks under a travel that is already moving). A wheel costs more than a
+  press there: a press is one event, a wheel gesture is a stream, and heard on
+  the box alone it loses every event after the first.
 
 _Reference: `route_travel.jsx` (whole file), demo
-`src/nav/demos/route_travel/route_travel.html`._
+`src/nav/demos/route_travel/route_travel.html`. The full spec of the travel
+gesture — who owns it, the wheel reading, the retargeting rules — is
+[packages/frontend/navi/docs/drag_to_travel.md](../../../packages/frontend/navi/docs/drag_to_travel.md)._
 
 ## Which tool for which movement
 
@@ -382,3 +426,10 @@ the pixels are still moving. Feelings have numbers too: "each press is felt"
 is a speed spike in the samples right after the press; "mushy" is its absence.
 A duration wrong by a factor of two is invisible to the eye but obvious in the
 number.
+
+One family of exceptions: anything running on the compositor — the
+pseudo-elements of a view transition first of all. There the numbers and the
+re-rasterized screenshots BOTH describe the main thread, and both can describe
+a movement the screen never played (see "The main thread lies about a running
+transition"). For those, verify on a compositor capture: a CDP screencast, or
+an eye.

@@ -49,6 +49,9 @@ consistency across the app, not from any single call site.
   values navi's own popups/bars/tables use. Read it before writing a `z-index`.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
+- `src/nav/route_ui.md` — routes as UI: layout/section patterns, and
+  `RouteTravel` (swiping between pages that are URLs — the tabs of a page,
+  driven by thumb, wheel, or a link).
 - Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src
   — worth checking if the JSDoc on an export genuinely doesn't answer your
   question.
@@ -73,6 +76,25 @@ consistency across the app, not from any single call site.
 - **Field components** (`Input`, `Select`, `Checkbox`, etc.) take an `action`
   prop to respond to interaction — this is the standard wiring, not
   `onChange` + manual state.
+- **View transitions**: navi components animate their own changes
+  (`itemTransition` on `List`, `RouteTravel` for routes) and never decide for
+  the whole document. Two things are the application's call, not navi's:
+  - a `view-transition-name` must be unique per document (a duplicate aborts
+    the transition) — scope any name your app adds;
+  - list/grid transitions rely on nested groups
+    (`view-transition-group: contain`, Chrome/Edge 140+). On browsers without
+    it nothing is named, so an unconditional `startViewTransition` falls back
+    to a full-page cross-fade. If that fade is unwanted in your app, the app —
+    not a component — writes:
+    `@supports not (view-transition-group: contain) { :root { view-transition-name: none } }`.
+    Only the application knows whether a page-wide fade is a decent default or
+    a glitch there.
+  - a bonus that costs nothing: any element given its own
+    `view-transition-name` (a tab underline, a header) is animated by the
+    browser from where it was to where it is during any transition — `Nav`
+    does this for its current-tab indicator automatically
+    (`currentIndicator`), which is why the bar follows a `RouteTravel` swipe
+    with no wiring.
 
 If unsure which export solves a problem, check `README.md` first — the
 `src/` tree on GitHub is there too if a specific export's own JSDoc doesn't
