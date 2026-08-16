@@ -7492,6 +7492,86 @@ const trapScrollInside = (element, { boundaryElement } = {}) => {
 };
 
 /**
+ * Who is answering the wheel gesture happening right now.
+ *
+ * A wheel gesture has no beginning and no end of its own: it is a burst of
+ * events that starts when the fingers move and goes on after they are gone —
+ * the tail of it is the momentum the system keeps sending. And it has no target
+ * either: every event is aimed at whatever happens to be under the pointer at
+ * that instant. So a burst that began over one box lands on another as soon as
+ * the hand drifts, or as soon as what was under it has travelled away — and
+ * read box by box, ONE gesture is answered twice: a slide moves, then the box
+ * around it moves too, under a hand that pushed once.
+ *
+ * Hence an owner. Whoever answers a burst first says so, everyone else asks
+ * before answering, and the owner keeps it until the events stop coming.
+ * Silence is the only end there is, which is why an owner has to say it is
+ * still there on every event of its gesture — a claim nobody renews is a
+ * gesture that is over.
+ */
+
+// How long a silence ends a gesture, for an owner that says nothing else: long
+// enough to survive a page that is busy — the frames right after something sets
+// off are the ones where the main thread has the most to do, and a silence read
+// there as "the hand is gone" would cut one gesture into several.
+const GESTURE_END_DELAY = 150;
+
+let gestureOwner = null;
+let gestureOnEnd = null;
+let gestureEndTimeout = null;
+
+const endGesture = () => {
+  const onEnd = gestureOnEnd;
+  gestureOwner = null;
+  gestureOnEnd = null;
+  gestureEndTimeout = null;
+  onEnd?.();
+};
+
+/**
+ * Is the burst going on right now somebody else's? Asked before answering a
+ * wheel event: `false` means it is free, or already this one's.
+ */
+const wheelGestureIsTakenFrom = (candidate) =>
+  gestureOwner !== null && gestureOwner !== candidate;
+
+/**
+ * Take the gesture, or say it is still going. Called on every event of it: the
+ * claim lapses on its own once `delay` goes by without a word, and `onEnd` is
+ * how the owner hears about that — it is the only end a wheel gesture has.
+ *
+ * @param {any} owner - anything that can be compared, usually the element.
+ * @param {object} [options]
+ * @param {() => void} [options.onEnd] - the silence was long enough.
+ * @param {number} [options.delay] - how long that silence is.
+ */
+const claimWheelGesture = (
+  owner,
+  { onEnd, delay = GESTURE_END_DELAY } = {},
+) => {
+  if (wheelGestureIsTakenFrom(owner)) {
+    return false;
+  }
+  gestureOwner = owner;
+  gestureOnEnd = onEnd;
+  clearTimeout(gestureEndTimeout);
+  gestureEndTimeout = setTimeout(endGesture, delay);
+  return true;
+};
+
+/**
+ * Give it back before the silence does — the box is going away, the gesture was
+ * handed to something else. Whoever does not own it says nothing.
+ */
+const releaseWheelGesture = (owner) => {
+  if (gestureOwner !== owner) {
+    return;
+  }
+  clearTimeout(gestureEndTimeout);
+  endGesture();
+};
+
+/**
  * Creates intuitive scrolling behavior when scrolling over an element that needs to stay interactive
  * (we can't use pointer-events: none). Instead of scrolling the document unexpectedly,
  * finds and scrolls the appropriate scrollable container behind the overlay.
@@ -11853,12 +11933,15 @@ installImportMetaCssBuild(import.meta);/**
  * what to paint while the finger moves. The caller knows those and nothing else
  * does — this reads the gesture and calls back.
  *
- * Who owns a gesture is decided in two places, and both are read here:
+ * Who owns a gesture is decided in three places, and all three are read here:
  * - what says so itself, with [data-no-drag-travel] or by being a field — a
  *   component that reads the pointer marks itself, because the container it
  *   ends up in cannot know what it is;
  * - a scroller between the pointer and the box with room left that way, which
- *   keeps the gesture until it has none.
+ *   keeps the gesture until it has none;
+ * - another box that travels, between the pointer and this one: the innermost
+ *   one walks the axis it walks, and leaves the others whatever axis it does
+ *   not (see axesLeftBy).
  */
 
 // While a pointer is on something that travels: said on the document, because
@@ -11937,6 +12020,56 @@ const DRAG_RESISTANCE = 0.3;
 // button or a link is not in the list — dragging from one travels, and the
 // click it would have made is swallowed on the way out.
 const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-no-drag-travel]"].join(",");
+
+// Which axes a box travels on, one attribute per gesture, said in the DOM by
+// whoever owns the box: it is what a box ABOVE another reads to know the
+// gesture is not its own, and the DOM is the only place where that is knowable
+// from the outside.
+const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
+const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
+
+/**
+ * What is left for this box of the axes it travels, once the boxes it CONTAINS
+ * have taken theirs: a row of slides inside a page that walks between pages, a
+ * carousel inside a carousel. Both get the same press (it bubbles), both answer
+ * the same finger, and the one under it is the one the hand is pointing at — so
+ * the innermost takes the axes it walks, and what it does not walk is left to
+ * whoever is above: a row swiped sideways inside a column of screens keeps the
+ * sideways gesture, and the column still answers a finger going down.
+ *
+ * Read at the press and nowhere else, because that is the only moment where the
+ * order is still ours: from the first pixel the gesture is held by whoever asked
+ * the browser for the pointer LAST, which is the outermost box — the wrong one,
+ * and past that point the inner one stops being told anything. So the box that
+ * does not own the gesture must never ask for it.
+ */
+const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
+  if (!stopElement.contains(fromElement)) {
+    // Not a press that came up through this box: a browser view transition
+    // delivers one to the document root instead, and the caller hands it over
+    // by hand. Nothing was walked past, so nothing was taken.
+    return axes;
+  }
+  let left = axes;
+  let element = fromElement;
+  while (element && element !== stopElement && element.nodeType === 1) {
+    const taken = element.getAttribute(attribute);
+    if (taken) {
+      let rest = "";
+      for (const axis of left) {
+        if (!taken.includes(axis)) {
+          rest += axis;
+        }
+      }
+      left = rest;
+      if (!left) {
+        return "";
+      }
+    }
+    element = element.parentElement;
+  }
+  return left;
+};
 
 /**
  * A scroller between the pointer and the box it is in, with room left the way
@@ -12028,7 +12161,10 @@ const travelsAfter = ({
  *   travel, which the element under the finger may not.
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel. A
  *   finger leaning on any other axis is given up on at once, whole, so whatever
- *   else wants it (a scroller, the page) gets it whole.
+ *   else wants it (a scroller, the page) gets it whole. An axis a box NESTED in
+ *   this one travels is not one of them: it is that box's, and this call
+ *   returns null when nothing is left (see axesLeftBy). Say so in the DOM with
+ *   [data-travel-by-drag] for the boxes above to read.
  * @param {false|"x"|"y"} [options.immediate=false] - the axis this press is
  *   already on, for a press that landed on something moving: the gesture is
  *   then read from its first pixel instead of waiting for an intent, and every
@@ -12073,6 +12209,19 @@ const startDragToTravel = (pointerDownEvent, {
 }) => {
   const target = pointerDownEvent.target;
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
+    return null;
+  }
+  // A box between the finger and this one that travels the same way: the
+  // gesture is its, and this one is left with the axes it does not walk — none
+  // at all, most of the time, and then there is no gesture here to read.
+  const axesLeft = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
+  if (!axesLeft) {
+    return null;
+  }
+  // What was caught in flight travels on an axis of its own, and it is not up
+  // for decision: a box below has taken that axis, so what this press caught it
+  // cannot carry on either.
+  if (immediate && !axesLeft.includes(immediate)) {
     return null;
   }
 
@@ -12188,7 +12337,7 @@ const startDragToTravel = (pointerDownEvent, {
             return;
           }
           axis = reachX >= reachY ? "x" : "y";
-          if (!axes.includes(axis)) {
+          if (!axesLeft.includes(axis)) {
             giveUp();
             return;
           }
@@ -12361,14 +12510,6 @@ const startDragToTravel = (pointerDownEvent, {
   };
 };
 
-// A wheel gesture has no beginning and no end of its own: it is a stream of
-// events that starts when the fingers move and stops some time after they are
-// gone — the tail of it is the momentum the system keeps sending. So the end is
-// read from silence, and long enough to survive a page that is busy: the frames
-// right after a travel sets off are the ones where the main thread has the most
-// to do, and a silence read there as "the hand is gone" would cut one gesture
-// into several.
-const WHEEL_GESTURE_END_DELAY = 150;
 // What each screen AFTER the first costs inside one gesture. Deliberately
 // steep: reconstructing "how much did that flick mean" from a stream nobody
 // agrees on is guesswork, and a guess that overshoots leaves someone three
@@ -12407,6 +12548,12 @@ const WHEEL_FADE_RUN = 2;
  * no idea how they got there. Under-shooting costs one more push, so that is
  * the side to be wrong on.
  *
+ * A burst has no target either — every event lands on whatever is under the
+ * pointer at that instant — so it is CLAIMED at its first event and answered to
+ * the end wherever the pointer wanders (see wheel_gesture.js). Without that, a
+ * hand pushing a nested carousel and drifting off it walks a slide, then walks
+ * the box around it, on one push.
+ *
  * The rest of the stream is mostly momentum, still arriving with the fingers
  * gone, and it must not be counted. What gives it away is that momentum only
  * ever WEAKENS: a stream that keeps shrinking is a push already answered, and a
@@ -12415,7 +12562,9 @@ const WHEEL_FADE_RUN = 2;
  * @param {Element} element
  * @param {object} options
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel.
- *   The other one is the content's own scrolling and is left alone.
+ *   The other one is the content's own scrolling and is left alone, and an axis
+ *   a box NESTED in this one travels is that box's (see axesLeftBy). Say so in
+ *   the DOM with [data-travel-by-wheel] for the boxes above to read.
  * @param {(detail: {axis: string, sign: number, event: WheelEvent}) => void} options.onStep
  *   - one push, one screen. `sign` is positive towards the start of the axis,
  *   which brings in what comes BEFORE — a wheel says how far the CONTENT
@@ -12427,9 +12576,7 @@ const watchWheelTravel = (element, {
   onStep
 }) => {
   let gesture = null;
-  let endTimeout = null;
   const forgetGesture = () => {
-    endTimeout = null;
     gesture = null;
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
@@ -12471,7 +12618,10 @@ const watchWheelTravel = (element, {
     return clientX >= left && clientX <= right && clientY >= top && clientY <= bottom;
   };
   const onWheel = wheelEvent => {
-    if (!isOverElement(wheelEvent)) {
+    // The burst is already somebody else's — the box inside this one, a wheel
+    // picker, whoever answered its first event. It is theirs to the end of it,
+    // wherever the pointer has drifted since (see wheel_gesture.js).
+    if (wheelGestureIsTakenFrom(element)) {
       return;
     }
     const axis = Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
@@ -12484,19 +12634,30 @@ const watchWheelTravel = (element, {
     // right.
     const sign = delta > 0 ? -1 : 1;
     if (!gesture) {
+      // Where the hand is pushing, asked at the START of a burst and never
+      // again: from there on the gesture is this box's, and a pointer that has
+      // wandered off it says nothing about what the hand is pushing.
+      if (!isOverElement(wheelEvent)) {
+        return;
+      }
       if (!axes.includes(axis)) {
         // The other axis: the content's own scrolling, left whole to whatever
         // wants it.
         return;
       }
       // Who owns it, asked once for the gesture rather than for every event of
-      // it — the same two claims a press is read against (see the top of this
-      // file), and both are answered by giving the gesture up whole: nothing is
-      // prevented and the browser scrolls as it would have.
+      // it — the same claims a press is read against (see the top of this
+      // file), and all of them are answered by giving the gesture up whole:
+      // nothing is prevented and the browser scrolls as it would have.
       const {
         target
       } = wheelEvent;
-      if (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR) || scrollRoomTowards(target, element, axis, sign)) {
+      if (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR) || scrollRoomTowards(target, element, axis, sign) ||
+      // …plus the third: a box below this one that travels on this axis. Its
+      // watcher hears the same wheel event this one does — they all listen at
+      // the document — so without this both step, and one push moves two
+      // things.
+      !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)) {
         return;
       }
       gesture = {
@@ -12514,8 +12675,11 @@ const watchWheelTravel = (element, {
     // — scroll the page behind the box, bounce it, go back in history — is one
     // gesture answered twice.
     wheelEvent.preventDefault();
-    clearTimeout(endTimeout);
-    endTimeout = setTimeout(forgetGesture, WHEEL_GESTURE_END_DELAY);
+    // …and said on every event of it, because a claim nobody renews is a
+    // gesture that is over: silence is the only end a wheel has.
+    claimWheelGesture(element, {
+      onEnd: forgetGesture
+    });
     if (axis !== gesture.axis) {
       // The other axis mid-gesture: a hand is never perfectly straight, and the
       // axis was decided when the gesture set off.
@@ -12572,11 +12736,10 @@ const watchWheelTravel = (element, {
     document.removeEventListener("wheel", onWheel, {
       capture: true
     });
-    clearTimeout(endTimeout);
-    endTimeout = null;
-    gesture = null;
-    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
-    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+    // Handed back rather than left to lapse: a box that is gone must not hold a
+    // gesture the boxes still there are asking about.
+    releaseWheelGesture(element);
+    forgetGesture();
   };
 };
 
@@ -18117,4 +18280,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, watchWheelTravel };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, watchWheelTravel, wheelGestureIsTakenFrom };

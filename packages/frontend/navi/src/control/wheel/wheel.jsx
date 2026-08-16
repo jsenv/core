@@ -55,6 +55,11 @@
 import { useSignal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  claimWheelGesture,
+  releaseWheelGesture,
+  wheelGestureIsTakenFrom,
+} from "@jsenv/dom";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -777,8 +782,14 @@ const useWheelInteractions = ({
       clearTimeout(gestureGuardTimer);
       gestureGuardTimer = null;
       document.removeEventListener("wheel", onDocumentWheel, { capture: true });
+      releaseWheelGesture(vp);
     };
     const keepClaimingGesture = () => {
+      // Said out loud as well as swallowed: preventDefault only settles it with
+      // the browser, and a box that travels with the wheel answers the burst
+      // from a listener of its own — it asks who owns the gesture instead (see
+      // wheel_gesture.js in @jsenv/dom).
+      claimWheelGesture(vp, { delay: WHEEL_GESTURE_MAX_GAP });
       if (!gestureGuardTimer) {
         document.addEventListener("wheel", onDocumentWheel, {
           capture: true,
@@ -793,6 +804,12 @@ const useWheelInteractions = ({
     };
 
     const onWheel = (e) => {
+      // The burst belongs to something else — a box that travels with the
+      // wheel, another wheel the pointer has just left. It is theirs until the
+      // events stop coming.
+      if (wheelGestureIsTakenFrom(vp)) {
+        return;
+      }
       const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
       if (!raw) {
         return;

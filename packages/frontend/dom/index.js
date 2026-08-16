@@ -110,6 +110,11 @@ export { scrollIntoViewScoped } from "./src/interaction/scroll/scroll_into_view_
 export { scrollIntoViewWithStickyAwareness } from "./src/interaction/scroll/scroll_into_view_sticky_aware.js";
 export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";
 export { measureScrollbar } from "./src/interaction/scroll/scrollbar_size.js";
+export {
+  claimWheelGesture,
+  releaseWheelGesture,
+  wheelGestureIsTakenFrom,
+} from "./src/interaction/scroll/wheel_gesture.js";
 export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
 // interaction/drag
 export { dragAfterIntent } from "./src/interaction/drag/drag_after_intent.js";

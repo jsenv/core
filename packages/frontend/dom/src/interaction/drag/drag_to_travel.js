@@ -39,6 +39,11 @@
 
 import { createDragGestureController } from "./drag_gesture.js";
 import { dragAfterIntent } from "./drag_after_intent.js";
+import {
+  claimWheelGesture,
+  releaseWheelGesture,
+  wheelGestureIsTakenFrom,
+} from "../scroll/wheel_gesture.js";
 
 // While a pointer is on something that travels: said on the document, because
 // what has to be told is the document.
@@ -606,14 +611,6 @@ export const startDragToTravel = (
   };
 };
 
-// A wheel gesture has no beginning and no end of its own: it is a stream of
-// events that starts when the fingers move and stops some time after they are
-// gone — the tail of it is the momentum the system keeps sending. So the end is
-// read from silence, and long enough to survive a page that is busy: the frames
-// right after a travel sets off are the ones where the main thread has the most
-// to do, and a silence read there as "the hand is gone" would cut one gesture
-// into several.
-const WHEEL_GESTURE_END_DELAY = 150;
 // What each screen AFTER the first costs inside one gesture. Deliberately
 // steep: reconstructing "how much did that flick mean" from a stream nobody
 // agrees on is guesswork, and a guess that overshoots leaves someone three
@@ -652,6 +649,12 @@ const WHEEL_FADE_RUN = 2;
  * no idea how they got there. Under-shooting costs one more push, so that is
  * the side to be wrong on.
  *
+ * A burst has no target either — every event lands on whatever is under the
+ * pointer at that instant — so it is CLAIMED at its first event and answered to
+ * the end wherever the pointer wanders (see wheel_gesture.js). Without that, a
+ * hand pushing a nested carousel and drifting off it walks a slide, then walks
+ * the box around it, on one push.
+ *
  * The rest of the stream is mostly momentum, still arriving with the fingers
  * gone, and it must not be counted. What gives it away is that momentum only
  * ever WEAKENS: a stream that keeps shrinking is a push already answered, and a
@@ -671,10 +674,8 @@ const WHEEL_FADE_RUN = 2;
  */
 export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
   let gesture = null;
-  let endTimeout = null;
 
   const forgetGesture = () => {
-    endTimeout = null;
     gesture = null;
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
@@ -709,7 +710,10 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
   };
 
   const onWheel = (wheelEvent) => {
-    if (!isOverElement(wheelEvent)) {
+    // The burst is already somebody else's — the box inside this one, a wheel
+    // picker, whoever answered its first event. It is theirs to the end of it,
+    // wherever the pointer has drifted since (see wheel_gesture.js).
+    if (wheelGestureIsTakenFrom(element)) {
       return;
     }
     const axis =
@@ -723,6 +727,12 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     // right.
     const sign = delta > 0 ? -1 : 1;
     if (!gesture) {
+      // Where the hand is pushing, asked at the START of a burst and never
+      // again: from there on the gesture is this box's, and a pointer that has
+      // wandered off it says nothing about what the hand is pushing.
+      if (!isOverElement(wheelEvent)) {
+        return;
+      }
       if (!axes.includes(axis)) {
         // The other axis: the content's own scrolling, left whole to whatever
         // wants it.
@@ -759,8 +769,9 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     // — scroll the page behind the box, bounce it, go back in history — is one
     // gesture answered twice.
     wheelEvent.preventDefault();
-    clearTimeout(endTimeout);
-    endTimeout = setTimeout(forgetGesture, WHEEL_GESTURE_END_DELAY);
+    // …and said on every event of it, because a claim nobody renews is a
+    // gesture that is over: silence is the only end a wheel has.
+    claimWheelGesture(element, { onEnd: forgetGesture });
     if (axis !== gesture.axis) {
       // The other axis mid-gesture: a hand is never perfectly straight, and the
       // axis was decided when the gesture set off.
@@ -808,10 +819,9 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
   });
   return () => {
     document.removeEventListener("wheel", onWheel, { capture: true });
-    clearTimeout(endTimeout);
-    endTimeout = null;
-    gesture = null;
-    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
-    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+    // Handed back rather than left to lapse: a box that is gone must not hold a
+    // gesture the boxes still there are asking about.
+    releaseWheelGesture(element);
+    forgetGesture();
   };
 };
