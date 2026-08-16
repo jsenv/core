@@ -75,6 +75,7 @@ import {
 } from "./open_controller.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
+import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -431,6 +432,18 @@ const css = /* css */ `
  * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the popover
+ *   follows its content for as long as it stays open. `"frozen"`: it is
+ *   measured once and held at that size until it closes — what no longer fits
+ *   (or no longer fills it) is the scroll's business. For a surface acted upon
+ *   while it is open: emptying a list, swapping between two panels of
+ *   different heights — the row being aimed at must not move under the
+ *   pointer. The measure is taken at the first render where this says
+ *   `"frozen"`, so a popover opening on skeletons can say
+ *   `sizing={loading ? "auto" : "frozen"}` and be measured once the real
+ *   content is there. The freeze writes a `height`/`width`, never a `min-*`:
+ *   `maxHeight`/`maxWidth` and the container ceiling keep winning. Closing
+ *   releases it — the next opening measures again.
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
  *   so `autoFocus="last-resort"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
@@ -630,6 +643,9 @@ const usePopoverProps = (props) => {
     pointerInteractionOutsideEffect = "none",
     scrollCapture,
     focusCapture,
+    // "auto" (default) → the popover follows its content. "frozen" → measured
+    // once, held at that size while open. See this prop's own JSDoc above.
+    sizing = "auto",
     animation,
     anchor,
     anchorCustomEventDetail = "override",
@@ -695,6 +711,21 @@ const usePopoverProps = (props) => {
     marginWithAnchor,
     marginWithContainer,
   ]);
+  // The freeze is taken where the value changes, not only at open time: a
+  // popover showing skeletons first says sizing="auto" until its content is
+  // there, and would otherwise be held at the size of the waiting state.
+  // Opening while already "frozen" is openEffect's own case.
+  useEffect(() => {
+    const popoverEl = ref.current;
+    if (!popoverEl || !openController.opened) {
+      return;
+    }
+    if (sizing === "frozen") {
+      freezeSize(popoverEl);
+    } else {
+      unfreezeSize(popoverEl);
+    }
+  }, [sizing]);
   // The custom renderer's own starting-hidden state is a stylesheet default
   // now (&:not([popover]) { display: none } on .navi_popover/
   // .navi_popover_backdrop above) rather than set here imperatively — a
@@ -1118,6 +1149,14 @@ const usePopoverProps = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+    if (sizing === "frozen") {
+      // After rectEffect's own setup, which has already placed the popover:
+      // the caps that placement writes
+      // (--container-position-remaining-*) are part of what decides the size
+      // being taken, so measuring before it would freeze a box the popover
+      // never actually had.
+      freezeSize(popoverEl);
+    }
 
     // "sliding"/"expanding" need a concrete direction (see
     // resolveDirectionValue) — resolved here, once, now that rectEffect's
@@ -1228,6 +1267,9 @@ const usePopoverProps = (props) => {
       } else {
         openLocalPopoverCount = Math.max(0, openLocalPopoverCount - 1);
       }
+      // The freeze only ever holds for one opening: the next one has its own
+      // content to be measured against.
+      unfreezeSize(popoverEl);
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
       // replaces it (nothing ever needs to cancel this one in turn: a

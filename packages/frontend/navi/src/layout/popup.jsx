@@ -101,6 +101,10 @@ const css = /* css */ `
  * @param {string} [props.minWidth] - Forwarded as-is.
  * @param {string} [props.minHeight] - Forwarded as-is.
  * @param {string} [props.maxHeight] - Forwarded as-is.
+ * @param {"auto"|"frozen"} [props.sizing] - Forwarded as-is to both, which
+ *   understand it identically: `"frozen"` holds the surface at the size it was
+ *   measured at while it stays open, so acting on what it contains moves the
+ *   content and not the surface. See either component's own doc.
  * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
  *   `expandX`/`expandY` below. No effect in popover mode.
  * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog

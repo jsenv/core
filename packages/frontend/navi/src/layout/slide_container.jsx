@@ -75,6 +75,7 @@ import {
 } from "../graphic/icons/chevron_stroke_svg.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/icon.jsx";
+import { freezeSize, unfreezeSize } from "./freeze_size.js";
 
 const css = /* css */ `
   /* Where the picture stands relative to the slide that is current, in boxes
@@ -519,6 +520,18 @@ const readArea = (slideElement) =>
  *   scrolling the document — so a map that travels vertically has to be told
  *   (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
+ * @param {"largest"|"frozen"} [props.sizing="largest"] - what decides the size
+ *   of the box. "largest": the largest slide, at every moment — the box follows
+ *   whatever the slides do. "frozen": the box is measured once and kept at that
+ *   size, and what no longer fits (or no longer fills it) is the scroll's
+ *   business. For slides one ACTS on rather than merely reads: a row marked as
+ *   read leaves one panel for the other, the tallest slide is not the same one
+ *   anymore, and with "largest" the box resizes under the finger aiming at the
+ *   next row. The measure is taken at the first render where this says
+ *   "frozen", so a container opening on skeletons says
+ *   `sizing={loading ? "largest" : "frozen"}` and is measured once the real
+ *   content is there. The freeze holds against what happens INSIDE the box, not
+ *   against the room it is given: a window resize measures again.
  */
 export const SlideContainer = ({
   layout = "row",
@@ -532,6 +545,7 @@ export const SlideContainer = ({
   travelByDrag = true,
   travelByScroll = "x",
   duration = "300ms",
+  sizing = "largest",
   children,
   ...rest
 }) => {
@@ -669,6 +683,31 @@ export const SlideContainer = ({
       cancelAnimationFrame(frame);
     };
   }, [noTravel]);
+
+  // The box, held at the size it has right now (sizing="frozen"): what the
+  // slides do afterwards moves their own content and not this box. Taken where
+  // the value changes rather than at mount alone, so a container opening on
+  // skeletons is measured on the real thing (see the prop's own doc).
+  useLayoutEffect(() => {
+    if (sizing !== "frozen") {
+      return undefined;
+    }
+    const containerEl = containerRef.current;
+    freezeSize(containerEl);
+    // The freeze is about the content, never about the room: a box frozen on a
+    // phone held upright has to fit once it is turned, and one frozen in a
+    // window has to follow that window. So the measure is taken again whenever
+    // the room changes — the only moment the box is allowed to resize.
+    const onWindowResize = () => {
+      unfreezeSize(containerEl);
+      freezeSize(containerEl);
+    };
+    window.addEventListener("resize", onWindowResize);
+    return () => {
+      window.removeEventListener("resize", onWindowResize);
+      unfreezeSize(containerEl);
+    };
+  }, [sizing]);
 
   // What the user was doing on each slide, so coming back comes back to it. The
   // ways out are left out on purpose: pressing one is how one LEAVES a slide,

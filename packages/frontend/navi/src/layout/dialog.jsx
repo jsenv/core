@@ -82,6 +82,7 @@ import {
 } from "./open_controller.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
+import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -482,6 +483,19 @@ const css = /* css */ `
  * @param {string} [props.minHeight] - Maps to `--dialog-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
+ * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the dialog follows
+ *   its content for as long as it stays open. `"frozen"`: it is measured once
+ *   and held at that size until it closes — what no longer fits (or no longer
+ *   fills it) is the scroll's business. For a surface acted upon while it is
+ *   open: marking a notification as read, emptying a queue, swapping between
+ *   two slides of different heights — the row being aimed at must not move
+ *   under the finger. The measure is taken at the first render where this says
+ *   `"frozen"`, so a dialog opening on skeletons can say
+ *   `sizing={loading ? "auto" : "frozen"}` and be measured once the real
+ *   content is there. The freeze writes a `height`/`width`, never a `min-*`:
+ *   `maxHeight`/`maxWidth` and the container ceiling keep winning, so a frozen
+ *   dialog still fits when the phone is turned. Closing releases it — the next
+ *   opening measures again.
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
  *   `autoFocus="last-resort"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
@@ -685,6 +699,9 @@ const useDialogProps = (props) => {
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     scrollCapture: scrollCaptureProp,
+    // "auto" (default) → the dialog follows its content. "frozen" → measured
+    // once, held at that size while open. See this prop's own JSDoc above.
+    sizing = "auto",
     animation,
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
@@ -753,6 +770,21 @@ const useDialogProps = (props) => {
       new CustomEvent("position_props_change", { detail: {} }),
     );
   }, [positionArea, marginWithContainer]);
+  // The freeze is taken where the value changes, not only at open time: a
+  // dialog showing skeletons first says sizing="auto" until its content is
+  // there, and would otherwise be held at the size of the waiting state.
+  // Opening while already "frozen" is openEffect's own case.
+  useEffect(() => {
+    const dialogEl = ref.current;
+    if (!dialogEl || !openController.opened) {
+      return;
+    }
+    if (sizing === "frozen") {
+      freezeSize(dialogEl);
+    } else {
+      unfreezeSize(dialogEl);
+    }
+  }, [sizing]);
   const positionAreaParseResult = parsePositionArea(positionArea);
   if (!positionAreaParseResult) {
     console.warn(`Dialog: invalid positionArea="${positionArea}"`);
@@ -1000,6 +1032,13 @@ const useDialogProps = (props) => {
       // navi_position_change on every call) — nothing to do here.
     };
     positionDialog();
+    if (sizing === "frozen") {
+      // After positionDialog: the caps it writes
+      // (--container-position-remaining-*) are part of what decides the size
+      // being taken, so measuring before it would freeze a box the dialog
+      // never actually had.
+      freezeSize(dialogEl);
+    }
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
@@ -1153,6 +1192,9 @@ const useDialogProps = (props) => {
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
+      // The freeze only ever holds for one opening: the next one has its own
+      // content to be measured against.
+      unfreezeSize(dialogEl);
       cancelOpenInteractionSuppression?.();
       if (hasCssTransitionAnimation) {
         suppressPointerEventsDuringTransition(dialogEl);
