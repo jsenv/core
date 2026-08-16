@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tabs Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        user-select: none;
+      }
+      .demo-section {
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      .url_strip {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        padding: 8px 16px;
+        align-items: center;
+        gap: 12px;
+        color: #eee;
+        font-size: 13px;
+        background: #1e1e1e;
+      }
+      .url_strip code {
+        font-size: 13px;
+        white-space: nowrap;
+        overflow-x: auto;
+      }
+      .phone {
+        display: flex;
+        width: 460px;
+        height: 380px;
+        flex-direction: column;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .top_bar {
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      /* Every tab as wide as its own label, so the bar under the current one
+         changes width as it travels. */
+      .tab_row .navi_link {
+        justify-content: center;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        height: 100%;
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.75);
+        border-radius: 8px;
+      }
+      .elsewhere {
+        display: flex;
+        padding: 24px;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        font-size: 14px;
+        text-align: center;
+        background: repeating-linear-gradient(
+          45deg,
+          #f2f2f2,
+          #f2f2f2 10px,
+          #ececec 10px,
+          #ececec 20px
+        );
+      }
+      .caption {
+        margin-bottom: 8px;
+        color: #555;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Link,
+        Nav,
+        Route,
+        RouteTravel,
+        Slide,
+        SlideContainer,
+        route,
+        setupRoutes,
+        stateSignal,
+        useDocumentUrl,
+        useRouteStatus,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const SLIDE_TABS = [
+        { area: "boite", label: "Boîte", color: "#e8f0fe", rows: 6 },
+        { area: "envoyes", label: "Envoyés", color: "#fdf0e8", rows: 14 },
+        { area: "brouillons", label: "Brouillons", color: "#eaf7ec", rows: 3 },
+        { area: "corbeille", label: "Corbeille", color: "#f3e8fe", rows: 8 },
+      ];
+
+      const sectionSignal = stateSignal("resume", {
+        id: "tabs_demo_section",
+        oneOf: ["resume", "details", "historique"],
+        autoFix: true,
+      });
+      const SECTION_ROUTE = route(`/section/:section=${sectionSignal}`);
+      const PATH_TABS = [
+        { section: "resume", label: "Résumé", color: "#e8f0fe", rows: 6 },
+        { section: "details", label: "Détails", color: "#fdf0e8", rows: 14 },
+        {
+          section: "historique",
+          label: "Historique",
+          color: "#eaf7ec",
+          rows: 8,
+        },
+      ];
+
+      const vueSignal = stateSignal("liste", {
+        id: "tabs_demo_vue",
+        oneOf: ["liste", "carte", "tableau"],
+        autoFix: true,
+      });
+      const ROOT_ROUTE = route("/", { searchParams: { vue: vueSignal } });
+      const SEARCH_TABS = [
+        { vue: "liste", label: "Liste", color: "#e8f0fe", rows: 6 },
+        { vue: "carte", label: "Carte", color: "#fdf0e8", rows: 3 },
+        { vue: "tableau", label: "Tableau", color: "#eaf7ec", rows: 14 },
+      ];
+
+      setupRoutes([SECTION_ROUTE, ROOT_ROUTE]);
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Page = ({ label, color, rows }) => (
+        <div className="page" style={{ background: color }}>
+          {Array.from({ length: rows }, (_, index) => (
+            <div key={index} className="page_row">
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const Elsewhere = () => (
+        <div className="elsewhere">l'url ne parle pas de cette section</div>
+      );
+
+      const UrlStrip = () => {
+        const url = useDocumentUrl();
+        const { pathname, search } = new URL(url);
+        return (
+          <div className="url_strip">
+            <span>url</span>
+            <code>
+              {pathname}
+              {search}
+            </code>
+            <Link
+              variant="tab"
+              color="#9cf"
+              padding="xs"
+              onClick={() => {
+                ROOT_ROUTE.navTo({ vue: undefined });
+              }}
+              preventDefault
+              href="#"
+            >
+              réinitialiser
+            </Link>
+          </div>
+        );
+      };
+
+      const SLIDE_CONTAINER_ID = "messagerie";
+      const SlidePhone = () => (
+        <div className="phone">
+          <div className="top_bar">
+            <Nav
+              className="tab_row"
+              slideContainer={SLIDE_CONTAINER_ID}
+              currentIndicator
+              expand
+            >
+              {SLIDE_TABS.map(({ area, label }) => (
+                <Link key={area} slide={area} variant="tab" padding="m">
+                  {label}
+                </Link>
+              ))}
+            </Nav>
+          </div>
+          <SlideContainer
+            id={SLIDE_CONTAINER_ID}
+            className="travel_box"
+            expandY
+          >
+            {SLIDE_TABS.map(({ area, label, color, rows }) => (
+              <Slide key={area} area={area} overflow="auto">
+                <Page label={label} color={color} rows={rows} />
+              </Slide>
+            ))}
+          </SlideContainer>
+        </div>
+      );
+
+      const PathPhone = () => {
+        const { matching } = useRouteStatus(SECTION_ROUTE);
+        return (
+          <div className="phone">
+            <div className="top_bar">
+              <Nav className="tab_row" currentIndicator expand>
+                {PATH_TABS.map(({ section, label }) => (
+                  <Link
+                    key={section}
+                    route={SECTION_ROUTE}
+                    routeParams={{ section }}
+                    variant="tab"
+                    padding="m"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </Nav>
+            </div>
+            {matching ? (
+              <RouteTravel className="travel_box">
+                <Route>
+                  {PATH_TABS.map(({ section, label, color, rows }) => (
+                    <Route
+                      key={section}
+                      route={SECTION_ROUTE}
+                      routeParams={{ section }}
+                      element={Page}
+                      elementProps={{ label, color, rows }}
+                    />
+                  ))}
+                </Route>
+              </RouteTravel>
+            ) : (
+              <Elsewhere />
+            )}
+          </div>
+        );
+      };
+
+      const SearchPhone = () => {
+        const { matching } = useRouteStatus(ROOT_ROUTE);
+        return (
+          <div className="phone">
+            <div className="top_bar">
+              <Nav className="tab_row" currentIndicator expand>
+                {SEARCH_TABS.map(({ vue, label }) => (
+                  <Link
+                    key={vue}
+                    route={ROOT_ROUTE}
+                    routeParams={{ vue }}
+                    variant="tab"
+                    padding="m"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </Nav>
+            </div>
+            {matching ? (
+              <RouteTravel className="travel_box">
+                <Route>
+                  {SEARCH_TABS.map(({ vue, label, color, rows }) => (
+                    <Route
+                      key={vue}
+                      route={ROOT_ROUTE}
+                      routeParams={{ vue }}
+                      element={Page}
+                      elementProps={{ label, color, rows }}
+                    />
+                  ))}
+                </Route>
+              </RouteTravel>
+            ) : (
+              <Elsewhere />
+            )}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <div>
+          <DemoHeader title="Onglets" />
+          <UrlStrip />
+          <div className="demo-section">
+            <h2>Table of contents</h2>
+            <DocumentToc />
+          </div>
+          <div className="demo-section">
+            <Heading id="slides">Onglets sans url</Heading>
+            <div className="caption">
+              <code>&lt;Nav slideContainer&gt;</code> +{" "}
+              <code>&lt;Link slide&gt;</code>
+            </div>
+            <SlidePhone />
+          </div>
+          <div className="demo-section">
+            <Heading id="pathname">Onglets dans le chemin</Heading>
+            <div className="caption">
+              <code>/section/:section</code>
+            </div>
+            <PathPhone />
+          </div>
+          <div className="demo-section">
+            <Heading id="search-param">
+              Onglets dans un search param de la racine
+            </Heading>
+            <div className="caption">
+              <code>/?vue=</code>
+            </div>
+            <SearchPhone />
+          </div>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

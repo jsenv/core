@@ -26,12 +26,15 @@
  * what to paint while the finger moves. The caller knows those and nothing else
  * does — this reads the gesture and calls back.
  *
- * Who owns a gesture is decided in two places, and both are read here:
+ * Who owns a gesture is decided in three places, and all three are read here:
  * - what says so itself, with [data-no-drag-travel] or by being a field — a
  *   component that reads the pointer marks itself, because the container it
  *   ends up in cannot know what it is;
  * - a scroller between the pointer and the box with room left that way, which
- *   keeps the gesture until it has none.
+ *   keeps the gesture until it has none;
+ * - another box that travels, between the pointer and this one: the innermost
+ *   one walks the axis it walks, and leaves the others whatever axis it does
+ *   not (see axesLeftBy).
  */
 
 import { createDragGestureController } from "./drag_gesture.js";
@@ -122,6 +125,56 @@ const DRAG_EXCLUDED_SELECTOR = [
   "[data-no-drag-travel]",
 ].join(",");
 
+// Which axes a box travels on, one attribute per gesture, said in the DOM by
+// whoever owns the box: it is what a box ABOVE another reads to know the
+// gesture is not its own, and the DOM is the only place where that is knowable
+// from the outside.
+const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
+const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
+
+/**
+ * What is left for this box of the axes it travels, once the boxes it CONTAINS
+ * have taken theirs: a row of slides inside a page that walks between pages, a
+ * carousel inside a carousel. Both get the same press (it bubbles), both answer
+ * the same finger, and the one under it is the one the hand is pointing at — so
+ * the innermost takes the axes it walks, and what it does not walk is left to
+ * whoever is above: a row swiped sideways inside a column of screens keeps the
+ * sideways gesture, and the column still answers a finger going down.
+ *
+ * Read at the press and nowhere else, because that is the only moment where the
+ * order is still ours: from the first pixel the gesture is held by whoever asked
+ * the browser for the pointer LAST, which is the outermost box — the wrong one,
+ * and past that point the inner one stops being told anything. So the box that
+ * does not own the gesture must never ask for it.
+ */
+const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
+  if (!stopElement.contains(fromElement)) {
+    // Not a press that came up through this box: a browser view transition
+    // delivers one to the document root instead, and the caller hands it over
+    // by hand. Nothing was walked past, so nothing was taken.
+    return axes;
+  }
+  let left = axes;
+  let element = fromElement;
+  while (element && element !== stopElement && element.nodeType === 1) {
+    const taken = element.getAttribute(attribute);
+    if (taken) {
+      let rest = "";
+      for (const axis of left) {
+        if (!taken.includes(axis)) {
+          rest += axis;
+        }
+      }
+      left = rest;
+      if (!left) {
+        return "";
+      }
+    }
+    element = element.parentElement;
+  }
+  return left;
+};
+
 /**
  * A scroller between the pointer and the box it is in, with room left the way
  * the gesture goes: it gets the gesture, and nothing travels — dragging a row
@@ -204,7 +257,10 @@ const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
  *   travel, which the element under the finger may not.
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel. A
  *   finger leaning on any other axis is given up on at once, whole, so whatever
- *   else wants it (a scroller, the page) gets it whole.
+ *   else wants it (a scroller, the page) gets it whole. An axis a box NESTED in
+ *   this one travels is not one of them: it is that box's, and this call
+ *   returns null when nothing is left (see axesLeftBy). Say so in the DOM with
+ *   [data-travel-by-drag] for the boxes above to read.
  * @param {false|"x"|"y"} [options.immediate=false] - the axis this press is
  *   already on, for a press that landed on something moving: the gesture is
  *   then read from its first pixel instead of waiting for an intent, and every
@@ -252,6 +308,19 @@ export const startDragToTravel = (
 ) => {
   const target = pointerDownEvent.target;
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
+    return null;
+  }
+  // A box between the finger and this one that travels the same way: the
+  // gesture is its, and this one is left with the axes it does not walk — none
+  // at all, most of the time, and then there is no gesture here to read.
+  const axesLeft = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
+  if (!axesLeft) {
+    return null;
+  }
+  // What was caught in flight travels on an axis of its own, and it is not up
+  // for decision: a box below has taken that axis, so what this press caught it
+  // cannot carry on either.
+  if (immediate && !axesLeft.includes(immediate)) {
     return null;
   }
 
@@ -372,7 +441,7 @@ export const startDragToTravel = (
             return;
           }
           axis = reachX >= reachY ? "x" : "y";
-          if (!axes.includes(axis)) {
+          if (!axesLeft.includes(axis)) {
             giveUp();
             return;
           }
@@ -591,7 +660,9 @@ const WHEEL_FADE_RUN = 2;
  * @param {Element} element
  * @param {object} options
  * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel.
- *   The other one is the content's own scrolling and is left alone.
+ *   The other one is the content's own scrolling and is left alone, and an axis
+ *   a box NESTED in this one travels is that box's (see axesLeftBy). Say so in
+ *   the DOM with [data-travel-by-wheel] for the boxes above to read.
  * @param {(detail: {axis: string, sign: number, event: WheelEvent}) => void} options.onStep
  *   - one push, one screen. `sign` is positive towards the start of the axis,
  *   which brings in what comes BEFORE — a wheel says how far the CONTENT
@@ -658,13 +729,18 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
         return;
       }
       // Who owns it, asked once for the gesture rather than for every event of
-      // it — the same two claims a press is read against (see the top of this
-      // file), and both are answered by giving the gesture up whole: nothing is
-      // prevented and the browser scrolls as it would have.
+      // it — the same claims a press is read against (see the top of this
+      // file), and all of them are answered by giving the gesture up whole:
+      // nothing is prevented and the browser scrolls as it would have.
       const { target } = wheelEvent;
       if (
         (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR)) ||
-        scrollRoomTowards(target, element, axis, sign)
+        scrollRoomTowards(target, element, axis, sign) ||
+        // …plus the third: a box below this one that travels on this axis. Its
+        // watcher hears the same wheel event this one does — they all listen at
+        // the document — so without this both step, and one push moves two
+        // things.
+        !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)
       ) {
         return;
       }

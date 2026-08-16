@@ -84,14 +84,36 @@ scrolling while a screen slides. Same word, other gesture.
 
 ## Who owns a gesture
 
-Two things can claim a pointer that landed on a travelling box, and both are
-read before the box moves:
+Three things can claim a pointer that landed on a travelling box, and all three
+are read before the box moves:
 
 1. **What says so itself.** A field, a `contenteditable`, or anything carrying
    `data-no-drag-travel`.
 2. **A scroller in between with room left that way.** It keeps the gesture until
    it has no room left, and only then hands the travel over — so a row that
    scrolls sideways inside a page still scrolls sideways.
+3. **Another travelling box in between.** The innermost one takes the axes it
+   walks, and leaves the ones it does not to whoever is above it.
+
+### Boxes inside boxes
+
+A row of slides inside a page that walks between pages, a carousel inside a
+carousel, a `SlideContainer` inside a `RouteTravel`: they all get the same
+press, and the innermost is the one the hand is pointing at. So it takes the
+gesture on the axis it walks, and the boxes above it are left with whatever axis
+it does not — a row swiped sideways inside a column of screens keeps the
+sideways gesture, and the column still answers a finger going down. Nothing has
+to be declared for this: each box says which axes it travels in the DOM
+(`data-travel-by-drag`, `data-travel-by-wheel`), and that is what the boxes above
+read.
+
+Decided at the press, once and for all: from the first pixel the gesture belongs
+to whoever asked the browser for the pointer last, which is the outermost box —
+so the arbitration has to happen before anyone asks, and the box that does not
+own the gesture never does. The consequence is that an inner box sitting on its
+last slide does not hand the gesture over mid-drag: it leans on its wall, the way
+it does when it is alone. Travelling the box around it means starting the gesture
+outside it.
 
 ### The browser also wants to answer the gesture
 

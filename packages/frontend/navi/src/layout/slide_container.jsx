@@ -1876,6 +1876,10 @@ export const SlideContainer = ({
       ...handlers,
     });
     if (!gesture) {
+      // Not a press this box can be about — something that reads the pointer
+      // itself, a box below it that travels the same way. Whatever the press
+      // stopped on its way in goes back on its way.
+      handlers.onGiveUp();
       return;
     }
     handlers.drag.gesture = gesture;
@@ -1979,8 +1983,12 @@ export const SlideContainer = ({
       data-slide-container=""
       // Which axes a touch may travel on, said in the DOM: what the browser
       // does with a finger is decided by CSS (touch-action) before any of this
-      // has seen the gesture.
+      // has seen the gesture — and it is also what a box HOLDING this one reads
+      // to know the gesture is not its own (see drag_to_travel.js).
       data-travel-by-drag={dragAxes ?? undefined}
+      // The same fact for a wheel, and only for that second reason: this box
+      // takes the push, whatever the box around it also travels on.
+      data-travel-by-wheel={scrollAxes ?? undefined}
       // The same fact, read by the shared gesture stylesheet: what scrolls
       // inside a box that travels must not spill onto the page behind it (see
       // drag_to_travel.js).

@@ -987,6 +987,16 @@ export const RouteTravel = ({
     if (currentIndex === -1) {
       return;
     }
+    // A press that never became a gesture: whatever it stopped goes on its way,
+    // from where the finger caught it.
+    const giveUp = () => {
+      gestureRef.current = null;
+      const caught = caughtAtPressRef.current;
+      caughtAtPressRef.current = null;
+      if (caught && !caught.ended) {
+        releaseHold(caught);
+      }
+    };
     const gesture = startDragToTravel(pointerDownEvent, {
       element: elementRef.current,
       axes: axis,
@@ -994,17 +1004,14 @@ export const RouteTravel = ({
       // is answered from its first pixel, on the axis the pages travel.
       immediate: caughtAtPressRef.current ? axis : false,
       ...travelHandlers,
-      onGiveUp: () => {
-        gestureRef.current = null;
-        // A press that never became a gesture: whatever it stopped goes on its
-        // way, from where the finger caught it.
-        const caught = caughtAtPressRef.current;
-        caughtAtPressRef.current = null;
-        if (caught && !caught.ended) {
-          releaseHold(caught);
-        }
-      },
+      onGiveUp: giveUp,
     });
+    if (!gesture) {
+      // Not a press this box can be about — something that reads the pointer
+      // itself, a box below it that travels the same way.
+      giveUp();
+      return;
+    }
     gestureRef.current = gesture;
   };
 
@@ -1106,6 +1113,12 @@ export const RouteTravel = ({
       // stylesheet, which keeps this box's scrolling from spilling onto the
       // page (see drag_to_travel.js).
       data-drag-travel={travelByDrag ? axis : undefined}
+      // The same fact said once per gesture, and for the other question the
+      // DOM answers: a box that travels INSIDE this one — a row of slides in a
+      // page — takes the axis it walks, and these are what it reads to know
+      // this box walks it too.
+      data-travel-by-drag={travelByDrag ? axis : undefined}
+      data-travel-by-wheel={travelByDrag ? axis : undefined}
       onPointerDown={onPointerDown}
     >
       {children}
@@ -1362,12 +1375,23 @@ const pageIndexOf = (pages, page) =>
 // so a caller reading this during a render is subscribed to the param changes
 // that walk from one tab to the next — matchingSignal alone never moves there,
 // and a row whose tabs are params of one route would never re-render.
+//
+// The params are read only for a route that matches, and that is not a signal
+// left unread: a reader wakes on anything it read last time, so what matters is
+// that everything able to make this answer change is among them.
+// matchingSignal is read whatever happens, and it is a NECESSARY condition —
+// while it is false no param of that route can put this page on screen, and the
+// day one could, matchingSignal itself has to turn true to say so, which is the
+// read that brings the params back in. (Asking anyway would be worse than
+// useless: the params of a route that does not match are not params.)
 const pageIsCurrent = ({ route, params }) => {
   if (!route.matchingSignal.value) {
     return false;
   }
   return params ? route.matchesParams(params) : true;
 };
+// Every page is read, never only up to the one that answers yes: a page that is
+// not the current one today is the one that must wake the reader tomorrow.
 const currentPageIndex = (pages) => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
