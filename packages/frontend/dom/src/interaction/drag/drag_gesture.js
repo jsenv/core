@@ -629,6 +629,23 @@ export const createDragGestureController = (options = {}) => {
           target.addEventListener("pointercancel", onRelease);
           target.addEventListener("pointermove", onMove);
           target.addEventListener("pointerup", onRelease);
+          // The end of the pointer is also listened for on the window, because
+          // the end is the one event a gesture cannot afford to miss and the
+          // element it is captured on is not always on its way: a pointer can
+          // be delivered somewhere else entirely (a browser view transition
+          // sends presses to the document root), and a cancel dispatched there
+          // never passes through this element. Missed, the gesture never ends —
+          // whatever it was holding stays held.
+          let released = false;
+          const onPointerEnd = (pointerEvent) => {
+            if (pointerEvent.pointerId !== grabEvent.pointerId || released) {
+              return;
+            }
+            released = true;
+            onRelease(pointerEvent);
+          };
+          window.addEventListener("pointerup", onPointerEnd, true);
+          window.addEventListener("pointercancel", onPointerEnd, true);
           return () => {
             // Listeners first, capture last: giving the pointer back is the
             // one thing here that can throw, and a gesture that fails to clean
@@ -643,6 +660,8 @@ export const createDragGestureController = (options = {}) => {
             target.removeEventListener("pointercancel", onRelease);
             target.removeEventListener("pointermove", onMove);
             target.removeEventListener("pointerup", onRelease);
+            window.removeEventListener("pointerup", onPointerEnd, true);
+            window.removeEventListener("pointercancel", onPointerEnd, true);
             // Asked for only while there is something to give back: a pointer
             // that is up no longer exists, the browser has already dropped the
             // capture with it, and asking again throws ("No active pointer with

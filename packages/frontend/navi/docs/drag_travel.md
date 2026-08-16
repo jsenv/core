@@ -112,6 +112,13 @@ Two things a travel in hand must never lose:
   paused with nobody holding it — it never finishes, and the page freezes under
   its pictures. Every transition navi starts passes through one funnel, which
   releases the hold first;
+- **the hold belongs to a travel, not to the page.** Only the travel that took
+  it may give it back — and it must give it back even when it ends after
+  something else has replaced it, or the hold survives its owner;
+- **a gesture must hear its own end wherever it is delivered.** A pointer can be
+  cancelled somewhere the box is not on the path (the document root, during a
+  transition): missed, the gesture never ends, and whatever it was holding stays
+  held. The end is listened for on the window too, filtered by pointer id;
 - **a travel ENDS, whatever happened on the way.** Whoever set the hold lifts it,
   and the "a travel is playing" state is cleared in a `finally`. A travel left in
   flight is not a small leak: it freezes the page under its own pictures, and

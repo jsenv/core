@@ -309,7 +309,7 @@ export const RouteTravel = ({
     travelRef.current = travel;
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
     if (scrub) {
-      document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
+      holdPictures(travel);
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     const viewTransition = startViewTransition(async () => {
@@ -422,7 +422,7 @@ export const RouteTravel = ({
     for (const animation of animations) {
       animation.playbackRate = -1;
     }
-    releaseHold();
+    releaseHold(travel);
     const backAtTheStart = animations.length
       ? Promise.all(
           animations.map((animation) => animation.finished.catch(() => {})),
@@ -455,7 +455,7 @@ export const RouteTravel = ({
       return;
     }
     travel.scrub = true;
-    document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
+    holdPictures(travel);
     // Whatever asks for a transition next takes ours away (there is one per
     // document): it must find this one already let go of, or it inherits a hold
     // nobody is holding.
@@ -472,9 +472,11 @@ export const RouteTravel = ({
     travel.ended = true;
     travel.dropHold?.();
     travel.dropHold = null;
+    // Its own hold, always — whether or not this travel is still the current
+    // one. Nobody else will lift it.
+    releaseHold(travel);
     if (travelRef.current === travel) {
       travelRef.current = null;
-      releaseHold();
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
     }
@@ -690,7 +692,22 @@ export const RouteTravel = ({
 
 // Nobody holds the pictures anymore: whatever they were told (a time to stand
 // at, a direction to run in) is what they carry on from.
-const releaseHold = () => {
+// Which travel is keeping the pictures still, if any. The hold belongs to the
+// travel that took it and only that one may give it back: a travel ending after
+// another has taken over must not lift a hold it no longer owns, and — the way
+// this went wrong — a travel whose end comes once something else has replaced
+// it must still lift its OWN. A hold left behind is a page frozen under
+// pictures nobody is holding.
+let travelHoldingPictures = null;
+const holdPictures = (travel) => {
+  travelHoldingPictures = travel;
+  document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
+};
+const releaseHold = (travel) => {
+  if (travel && travelHoldingPictures !== travel) {
+    return;
+  }
+  travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
 };
 
