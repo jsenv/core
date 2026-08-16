@@ -4,7 +4,7 @@
  */
 
 import { toChildArray } from "preact";
-import { useMemo, useRef } from "preact/hooks";
+import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { NavContext } from "./nav_context.js";
@@ -21,6 +21,75 @@ const css = /* css */ `
       --nav-padding: 0px;
       --nav-border-radius: 0px;
       --nav-background: transparent;
+      --nav-current-indicator-size: 2px;
+      --nav-current-indicator-color: var(--navi-link-current-indicator-color);
+    }
+  }
+
+  /* The bar of a nav whose tabs are SLIDES: one element for the whole row,
+     placed over the current tab and interpolated towards the one the picture
+     leans on (see paintIndicatorGeometry). The two ends are written in pixels
+     as plain numbers, so the whole of the movement is a calc() the browser
+     runs itself — the trait then follows a finger dragging the slides without a
+     render per frame, and rides the same animation as the track when the travel
+     was asked for rather than dragged.
+     No named view transition here, unlike the bar of a nav made of routes:
+     there is no transition to be part of — the slides travel under an animation
+     of their own, which a finger can hold. */
+  .navi_nav[data-nav-indicator] {
+    position: relative;
+
+    > .navi_nav_indicator {
+      --x-nav-indicator-position: calc(
+        var(--nav-indicator-position) + var(--slide-travel-progress) *
+          var(--nav-indicator-position-delta)
+      );
+      --x-nav-indicator-length: calc(
+        var(--nav-indicator-length) + var(--slide-travel-progress) *
+          var(--nav-indicator-length-delta)
+      );
+
+      position: absolute;
+      z-index: 1;
+      background: var(--nav-current-indicator-color);
+      border-radius: 0.1px;
+      pointer-events: none;
+    }
+    /* Nothing to draw until the row has been measured: a tab bar whose current
+       tab is not among its links (a container on a slide no tab names) has no
+       place to put the trait. */
+    &:not([data-nav-indicator-measured]) > .navi_nav_indicator {
+      display: none;
+    }
+
+    &[data-nav-indicator="top"],
+    &[data-nav-indicator="bottom"] {
+      > .navi_nav_indicator {
+        left: calc(var(--x-nav-indicator-position) * 1px);
+        width: calc(var(--x-nav-indicator-length) * 1px);
+        height: var(--nav-current-indicator-size);
+      }
+    }
+    &[data-nav-indicator="top"] > .navi_nav_indicator {
+      top: 0;
+    }
+    &[data-nav-indicator="bottom"] > .navi_nav_indicator {
+      bottom: 0;
+    }
+
+    &[data-nav-indicator="left"],
+    &[data-nav-indicator="right"] {
+      > .navi_nav_indicator {
+        top: calc(var(--x-nav-indicator-position) * 1px);
+        width: var(--nav-current-indicator-size);
+        height: calc(var(--x-nav-indicator-length) * 1px);
+      }
+    }
+    &[data-nav-indicator="left"] > .navi_nav_indicator {
+      left: 0;
+    }
+    &[data-nav-indicator="right"] > .navi_nav_indicator {
+      right: 0;
     }
   }
 
@@ -178,22 +247,48 @@ const NavStyleCSSVars = {
   paddingBottom: "--nav-padding-bottom",
   paddingLeft: "--nav-padding-left",
   background: "--nav-background",
+  currentIndicatorColor: "--nav-current-indicator-color",
+  currentIndicatorSize: "--nav-current-indicator-size",
 };
+
+const positionOfCurrentIndicator = (currentIndicator, vertical) => {
+  if (currentIndicator === true) {
+    return vertical ? "left" : "bottom";
+  }
+  if (
+    currentIndicator === "top" ||
+    currentIndicator === "bottom" ||
+    currentIndicator === "left" ||
+    currentIndicator === "right"
+  ) {
+    return currentIndicator;
+  }
+  return null;
+};
+
 /**
  * @type {import("preact").FunctionComponent<{
  *   currentIndicator?: boolean|"top"|"bottom"|"left"|"right",
  *   currentIndicatorSlides?: boolean,
+ *   slideContainer?: string,
  * }>}
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
  *   `<Link>`. A link may still say otherwise for itself.
  * @param {boolean} [props.currentIndicatorSlides=true] - whether that bar
  *   travels from the tab it was under to the tab it is under now, instead of
- *   going out on one and coming back on the other. It does so by being NAMED,
- *   which is all the browser needs: any change played as a view transition
- *   animates it on the same clock as everything else in that transition. Inside
- *   a `RouteTravel` that means it follows the pages, and the thumb dragging
- *   them, without either of them being told about the other.
+ *   going out on one and coming back on the other. For a nav made of routes it
+ *   does so by being NAMED, which is all the browser needs: any change played as
+ *   a view transition animates it on the same clock as everything else in that
+ *   transition. Inside a `RouteTravel` that means it follows the pages, and the
+ *   thumb dragging them, without either of them being told about the other. For
+ *   a nav made of slides (`slideContainer`) the bar is one element for the whole
+ *   row, and it reads the travel the container publishes.
+ * @param {string} [props.slideContainer] - the id of a `<SlideContainer>` these
+ *   tabs are about: each one says which slide it is (`<Link slide="…">`), the
+ *   container says which one is on screen, and pressing a tab travels there.
+ *   Tabs that are places in the same screen rather than pages of their own —
+ *   nothing is written to the URL and nothing is a link.
  */
 export const Nav = ({
   children,
@@ -205,22 +300,149 @@ export const Nav = ({
   currentIndicator,
   currentIndicatorSlides = true,
   panelPosition, // "before" or "after": which side the panel sits on, turning the nav into folder tabs
+  slideContainer,
   ...props
 }) => {
   import.meta.css = css;
 
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const navRef = props.ref;
   const indicatorNameRef = useRef(null);
   if (indicatorNameRef.current === null) {
     indicatorNameRef.current = `navi-nav-indicator-${++navCount}`;
   }
+  const [currentSlideArea, setCurrentSlideArea] = useState(undefined);
+  const slideContainerElementRef = useRef(null);
+  const indicatorPosition = slideContainer
+    ? positionOfCurrentIndicator(currentIndicator, vertical)
+    : null;
+
+  // Where the trait is and where it is headed, as four numbers of pixels the
+  // CSS above interpolates between (see the .navi_nav_indicator rules). Written
+  // by hand rather than rendered: it is read off the row as it stands, and the
+  // travel it must agree with starts in the same frame the container publishes
+  // it — a render would land after the movement had begun.
+  const paintIndicatorGeometry = () => {
+    const navElement = navRef.current;
+    const containerElement = slideContainerElementRef.current;
+    if (!navElement || !containerElement || !indicatorPosition) {
+      return;
+    }
+    const tabElements = Array.from(
+      navElement.querySelectorAll("[data-slide-target]"),
+    );
+    const areaOf = (tabElement) => tabElement.getAttribute("data-slide-target");
+    const currentArea = containerElement.getAttribute("data-slide-current");
+    const currentIndex = tabElements.findIndex(
+      (tabElement) => areaOf(tabElement) === currentArea,
+    );
+    if (currentIndex === -1) {
+      // On a slide no tab in this row names: there is no tab to sit under.
+      navElement.removeAttribute("data-nav-indicator-measured");
+      return;
+    }
+    const measure = (tabElement) =>
+      vertical
+        ? { position: tabElement.offsetTop, length: tabElement.offsetHeight }
+        : { position: tabElement.offsetLeft, length: tabElement.offsetWidth };
+    const currentMeasure = measure(tabElements[currentIndex]);
+    const towardArea = containerElement.getAttribute(
+      "data-slide-travel-toward",
+    );
+    const towardIndex = tabElements.findIndex(
+      (tabElement) => areaOf(tabElement) === towardArea,
+    );
+    let positionDelta = 0;
+    let lengthDelta = 0;
+    if (towardIndex !== -1 && towardIndex !== currentIndex) {
+      const towardMeasure = measure(tabElements[towardIndex]);
+      // What one box of travel is worth in pixels of this row, signed so that
+      // the trait is exactly on the other tab when the progress is at its own
+      // end: the container counts +1 when the picture leans on a slide sitting
+      // BEFORE the current one and -1 when it sits after.
+      const sign = towardIndex > currentIndex ? -1 : 1;
+      positionDelta = (towardMeasure.position - currentMeasure.position) * sign;
+      lengthDelta = (towardMeasure.length - currentMeasure.length) * sign;
+    }
+    const { style } = navElement;
+    style.setProperty("--nav-indicator-position", currentMeasure.position);
+    style.setProperty("--nav-indicator-length", currentMeasure.length);
+    style.setProperty("--nav-indicator-position-delta", positionDelta);
+    style.setProperty("--nav-indicator-length-delta", lengthDelta);
+    navElement.setAttribute("data-nav-indicator-measured", "");
+  };
+  // Reached through a ref by everything watching the DOM below: those watchers
+  // outlive a render, and what they must run is the version of this that knows
+  // about the row as it is now.
+  const paintIndicatorGeometryRef = useRef(null);
+  paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+
+  useLayoutEffect(() => {
+    if (!slideContainer) {
+      return undefined;
+    }
+    const containerElement = document.getElementById(slideContainer);
+    if (!containerElement) {
+      console.warn(
+        `<Nav slideContainer="${slideContainer}"> but no element with that id found`,
+      );
+      return undefined;
+    }
+    slideContainerElementRef.current = containerElement;
+    const readContainer = () => {
+      setCurrentSlideArea(
+        containerElement.getAttribute("data-slide-current") ?? undefined,
+      );
+      paintIndicatorGeometryRef.current();
+    };
+    readContainer();
+    // The container says where one is and what the picture leans on, and says
+    // it in the DOM: nothing here is told, everything is read — which is what
+    // lets this row sit anywhere on the page (above the box, in a fixed bar)
+    // rather than inside it.
+    const attributeObserver = new MutationObserver(readContainer);
+    attributeObserver.observe(containerElement, {
+      attributes: true,
+      attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
+    });
+    // A row whose tabs changed width — a badge count, a font that just
+    // arrived, a window resized — is measured again: what was written is
+    // pixels, and pixels go stale.
+    const sizeObserver = new ResizeObserver(() => {
+      paintIndicatorGeometryRef.current();
+    });
+    sizeObserver.observe(navRef.current);
+    return () => {
+      attributeObserver.disconnect();
+      sizeObserver.disconnect();
+      slideContainerElementRef.current = null;
+    };
+  }, [slideContainer]);
+
+  // Said after every commit: a tab added, removed or renamed moves the trait,
+  // and no observer above watches this row's own children.
+  useLayoutEffect(() => {
+    paintIndicatorGeometry();
+  });
+
   const navContextValue = useMemo(
     () => ({
-      currentIndicator,
+      // The bar belongs to the row itself when the tabs are slides, so the
+      // links draw none of their own.
+      currentIndicator: slideContainer ? undefined : currentIndicator,
       // Read by the link that is current, and by it alone: a name belongs to
       // one element at a time, and the bar exists in every tab.
       indicatorName: currentIndicatorSlides ? indicatorNameRef.current : null,
+      slideContainer,
+      currentSlideArea,
     }),
-    [currentIndicator, currentIndicatorSlides],
+    [
+      currentIndicator,
+      currentIndicatorSlides,
+      slideContainer,
+      currentSlideArea,
+    ],
   );
 
   children = toChildArray(children);
@@ -235,12 +457,22 @@ export const Nav = ({
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
+      data-nav-indicator={indicatorPosition ?? undefined}
+      // "write your travel here too": a custom property cannot be read across
+      // the DOM, so the container paints its progress onto this element and the
+      // trait follows in CSS alone (see SlideContainer's followerElements).
+      data-slide-container-follows={slideContainer}
+      // Tabs over one screen, not links to pages: a screen reader is told so,
+      // and told which way the row runs.
+      role={slideContainer ? "tablist" : undefined}
+      aria-orientation={slideContainer && vertical ? "vertical" : undefined}
       expand={expand}
       expandX={expandX}
       spacing={spacing}
       {...props}
       styleCSSVars={NavStyleCSSVars}
     >
+      {indicatorPosition && <span className="navi_nav_indicator" />}
       <NavContext.Provider value={navContextValue}>
         {children}
       </NavContext.Provider>

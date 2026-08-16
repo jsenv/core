@@ -1,0 +1,342 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RouteTravel (onglets en paramètre) Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        user-select: none;
+      }
+      .phone {
+        display: flex;
+        width: 540px;
+        height: 560px;
+        flex-direction: column;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .top_bar {
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .bottom_bar {
+        flex: none;
+        background: white;
+        border-top: 1px solid #ddd;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      /* Every tab the same width, so the bar under the current one travels a
+         predictable distance. */
+      .tab_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .page {
+        height: 100%;
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.75);
+        border-radius: 8px;
+      }
+      .home_page {
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: #f5f6f8;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .url_bar {
+        display: flex;
+        width: 540px;
+        margin-bottom: 8px;
+        padding: 6px 10px;
+        gap: 8px;
+        color: #333;
+        font-size: 13px;
+        font-family: ui-monospace, monospace;
+        background: #f0f2f5;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      .url_bar b {
+        color: #6a7180;
+        font-weight: 500;
+      }
+      .speed_picker {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+      .demo-section {
+        max-width: 700px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      .phone_row {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .beside_phone {
+        width: 140px;
+        padding: 12px;
+        color: #666;
+        font-size: 13px;
+        background: repeating-linear-gradient(
+          45deg,
+          #eee,
+          #eee 10px,
+          #e0e0e0 10px,
+          #e0e0e0 20px
+        );
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { useLayoutEffect, useState } from "preact/hooks";
+      import { render } from "preact";
+      import {
+        Link,
+        Nav,
+        Route,
+        RouteTravel,
+        route,
+        setupRoutes,
+        stateSignal,
+        useDocumentUrl,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      // The section is a PARAM, not a route of its own: the signal IS the
+      // memory of the tab, so a link with no params (the bottom bar) reopens
+      // the section one was looking at, and a hand-edited url is put back on
+      // one of the three.
+      const sectionSignal = stateSignal("to_come", {
+        id: "my_games_section",
+        oneOf: ["candidate", "to_come", "done"],
+        autoFix: true,
+      });
+      const HOME_ROUTE = route("/home");
+      const MY_GAMES_ROUTE = route(`/games/me/:section=${sectionSignal}`);
+      setupRoutes([HOME_ROUTE, MY_GAMES_ROUTE]);
+
+      const SECTIONS = [
+        { section: "candidate", label: "Candidatures", color: "#e8f0fe" },
+        { section: "to_come", label: "À venir", color: "#eaf7ec" },
+        { section: "done", label: "Terminées", color: "#fdf0e8" },
+      ];
+      // The third tab has no <Route> of its own — the fallback shows it, and a
+      // fallback carries no params. Written out here, the row knows it as a tab
+      // like the other two (see the `routes` prop below).
+      const TABS = SECTIONS.map(({ section }) => ({
+        route: MY_GAMES_ROUTE,
+        params: { section },
+      }));
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const GamesSection = ({ label, color, rows }) => (
+        <div className="page" style={{ background: color }}>
+          {Array.from({ length: rows }, (_, index) => (
+            <div key={index} className="page_row">
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+      const CandidateGames = () => <GamesSection {...SECTIONS[0]} rows={6} />;
+      const GamesToCome = () => <GamesSection {...SECTIONS[1]} rows={30} />;
+      const DoneGames = () => <GamesSection {...SECTIONS[2]} rows={6} />;
+
+      const HomePage = () => (
+        <div className="home_page">
+          <Link route={MY_GAMES_ROUTE}>Mes parties</Link>
+        </div>
+      );
+
+      const TabRow = () => (
+        <div className="top_bar">
+          <Nav className="tab_row" expand currentIndicator>
+            {SECTIONS.map(({ section, label }) => (
+              <Link
+                key={section}
+                variant="tab"
+                route={MY_GAMES_ROUTE}
+                routeParams={{ section }}
+                padding="m"
+                textAlign="center"
+              >
+                {label}
+              </Link>
+            ))}
+          </Nav>
+        </div>
+      );
+
+      const BottomBar = () => (
+        <div className="bottom_bar">
+          <Nav className="tab_row" expand>
+            <Link
+              variant="tab"
+              route={HOME_ROUTE}
+              padding="m"
+              textAlign="center"
+            >
+              Accueil
+            </Link>
+            {/* No params: the url is built on the section signal, so this comes
+                back to the one that was open. */}
+            <Link
+              variant="tab"
+              route={MY_GAMES_ROUTE}
+              padding="m"
+              textAlign="center"
+            >
+              Mes parties
+            </Link>
+          </Nav>
+        </div>
+      );
+
+      const MyGamesPage = () => (
+        <>
+          <TabRow />
+          {/* The row is written here for the third tab: <Route fallback> shows
+              "À venir" and says nothing about its params. */}
+          <RouteTravel className="travel_box" routes={TABS}>
+            <Route>
+              <Route
+                route={MY_GAMES_ROUTE}
+                routeParams={{ section: "candidate" }}
+                element={CandidateGames}
+              />
+              <Route
+                route={MY_GAMES_ROUTE}
+                routeParams={{ section: "done" }}
+                element={DoneGames}
+              />
+              <Route fallback element={GamesToCome} />
+            </Route>
+          </RouteTravel>
+        </>
+      );
+
+      // The page has no url of its own: it opens on the section that was left.
+      const Index = () => {
+        useLayoutEffect(() => {
+          HOME_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const UrlBar = () => {
+        const url = useDocumentUrl();
+        const { pathname, search } = new URL(url);
+        return (
+          <div className="url_bar">
+            <b>url</b>
+            <span>{`${pathname}${search}`}</span>
+          </div>
+        );
+      };
+
+      const SPEEDS = [
+        { label: "normale (300ms)", value: "300ms" },
+        { label: "lente (1s)", value: "1000ms" },
+        { label: "très lente (2,5s)", value: "2500ms" },
+      ];
+      const SPEED_STORAGE_KEY = "route_travel_demo_speed";
+      const SpeedPicker = () => {
+        const [speed, setSpeed] = useState(
+          () => localStorage.getItem(SPEED_STORAGE_KEY) || SPEEDS[0].value,
+        );
+        useLayoutEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-route-travel-duration",
+            speed,
+          );
+          localStorage.setItem(SPEED_STORAGE_KEY, speed);
+        }, [speed]);
+        return (
+          <label className="speed_picker">
+            Durée du voyage{" "}
+            <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
+              {SPEEDS.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      };
+
+      const Phone = () => (
+        <div className="phone">
+          <Route>
+            <Route route={HOME_ROUTE} element={HomePage} />
+            <Route route={MY_GAMES_ROUTE} element={MyGamesPage} />
+            <Route fallback element={Index} />
+          </Route>
+          <BottomBar />
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <DemoHeader title="RouteTravel — onglets en paramètre" />
+          <div className="demo-section">
+            <h2>Table of contents</h2>
+            <DocumentToc />
+          </div>
+          <div className="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <SpeedPicker />
+            <UrlBar />
+            <div className="phone_row">
+              <Phone />
+              <aside className="beside_phone">Voisin</aside>
+            </div>
+          </div>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

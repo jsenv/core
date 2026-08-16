@@ -624,7 +624,16 @@ export const SlideContainer = ({
   // picture is from the slide ARRIVING when the travel starts, in boxes. Null
   // for a travel nobody dragged, where a whole box is what is left to close.
   const travelProgressFromRef = useRef(null);
-  const progressAnimationRef = useRef(null);
+  // One per element painting the progress: the box, plus everything following
+  // it (see followerElementsRef). All started together and with the same
+  // options, so they are one movement said in several places.
+  const progressAnimationsRef = useRef([]);
+  // Elements outside the box that draw something about this travel — a tab bar
+  // above it, most of all. A custom property cannot be read across the DOM, so
+  // the progress is WRITTEN on each of them: they then interpolate whatever they
+  // draw in CSS alone, at the pace of the travel and under the finger, with
+  // nothing measured per frame.
+  const followerElementsRef = useRef([]);
   const current =
     rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
@@ -759,6 +768,30 @@ export const SlideContainer = ({
     return { slideElements, ...map };
   };
 
+  // Who is drawing something about this box from outside it: a tab bar saying
+  // where one is, a row of dots. They name the box they follow by its id, the
+  // way everything else that talks to it across the document does (commandfor).
+  const readFollowerElements = () => {
+    const containerEl = containerRef.current;
+    const { id } = containerEl;
+    if (!id) {
+      return [];
+    }
+    return Array.from(
+      document.querySelectorAll(
+        `[data-slide-container-follows="${CSS.escape(id)}"]`,
+      ),
+    );
+  };
+
+  // Which slide is on screen, said in the DOM: it is what anything outside the
+  // box reads to know where one is (a tab bar marking its current tab), and
+  // there is nothing else for it to read — a slide the container holds by
+  // itself is known to no one else.
+  const paintCurrentArea = (area) => {
+    containerRef.current?.setAttribute("data-slide-current", area);
+  };
+
   const markAnswered = (area) => {
     const order = readMap().slideElements.map(readArea);
     const rank = order.indexOf(area);
@@ -840,6 +873,10 @@ export const SlideContainer = ({
   // the children free — their shape says nothing about the arrangement, the map
   // does — and it is also the only place that has to agree with itself.
   useLayoutEffect(() => {
+    // Read on every render rather than subscribed to: a follower says who it
+    // follows in the DOM, and the render that mounted one is the render this
+    // runs after.
+    followerElementsRef.current = readFollowerElements();
     const { slideElements, placeOf } = readMap();
     if (slideElements.length === 0) {
       return;
@@ -852,6 +889,7 @@ export const SlideContainer = ({
       // shown, the way a stack of pages opens on its first page.
       slideElements[0];
     const currentArea = readArea(currentElement);
+    paintCurrentArea(currentArea);
     const realPlaceOf = (area) => placeOf.get(area) || { x: 0, y: 0 };
     const durationMs = durationToMs(duration);
     // Nothing is travelling, so nothing is staged: the picture to paint is the
@@ -1027,7 +1065,14 @@ export const SlideContainer = ({
         travelProgressFromRef.current ??
         (travelStep ? travelStep.x || travelStep.y : 0);
       travelProgressFromRef.current = null;
-      animateTravelProgress(progressFrom, durationMs * travelRatio, easing);
+      // The slide the picture leans on for the length of it is the one being
+      // LEFT: it is the second one in the frame until the travel is over.
+      animateTravelProgress(
+        progressFrom,
+        durationMs * travelRatio,
+        easing,
+        drawnArea,
+      );
       // Presses still waiting behind this one: it is already late, so it is
       // sent home at once rather than played out at the pace of someone who
       // has stopped pressing. Someone pressing → four times is asking to be
@@ -1434,6 +1479,30 @@ export const SlideContainer = ({
     paintTravelProgress(drag.progress, drag.areaPulled);
   };
 
+  // Everything that draws this travel: the box itself and whoever follows it.
+  const travelPainters = () => {
+    const containerEl = containerRef.current;
+    if (!containerEl) {
+      return [];
+    }
+    return [containerEl, ...followerElementsRef.current];
+  };
+
+  // Which OTHER slide the picture leans on while it is not on the current one:
+  // the slide being pulled in under a finger, the slide being left during a
+  // travel. Two slides are in the frame and the number below says how far
+  // between them one is — this says which the second one is, so a trait can be
+  // drawn between two places rather than merely offset from one.
+  const paintTravelToward = (area) => {
+    for (const element of travelPainters()) {
+      if (area) {
+        element.setAttribute("data-slide-travel-toward", area);
+      } else {
+        element.removeAttribute("data-slide-travel-toward");
+      }
+    }
+  };
+
   // Where the picture stands relative to the slide that is CURRENT, in boxes:
   // 0 on it, +1 one whole box before it, -1 one box after. Written on the
   // container so an indicator drawn inside the box — a tab bar, a dot row, a
@@ -1442,42 +1511,50 @@ export const SlideContainer = ({
   // gesture, so the number stays continuous when the travel commits and the
   // current slide changes under it.
   const paintTravelProgress = (progress, area) => {
-    const containerEl = containerRef.current;
-    if (!containerEl) {
-      return;
+    for (const element of travelPainters()) {
+      if (progress) {
+        element.style.setProperty("--slide-travel-progress", progress);
+      } else {
+        element.style.removeProperty("--slide-travel-progress");
+      }
     }
-    if (!progress) {
-      containerEl.style.removeProperty("--slide-travel-progress");
-      containerEl.removeAttribute("data-slide-travel-to");
-      return;
+    paintTravelToward(progress ? area : null);
+  };
+
+  const cancelTravelProgressAnimation = () => {
+    for (const animation of progressAnimationsRef.current) {
+      animation.cancel();
     }
-    containerEl.style.setProperty("--slide-travel-progress", progress);
-    if (area) {
-      containerEl.setAttribute("data-slide-travel-to", area);
-    } else {
-      containerEl.removeAttribute("data-slide-travel-to");
-    }
+    progressAnimationsRef.current = [];
   };
 
   // The indicator, brought home at the pace of the travel it belongs to: the
   // same duration and the same easing as the track, so the trait and the slides
   // are one movement. The value it lands on is the one nothing writes (0), so
-  // the animation is left to fall away on its own.
-  const animateTravelProgress = (from, durationMs, easing) => {
-    const containerEl = containerRef.current;
-    progressAnimationRef.current?.cancel();
-    progressAnimationRef.current = null;
+  // the animation is left to fall away on its own — only the name of the slide
+  // being leant on is taken back by hand, at the end.
+  const animateTravelProgress = (from, durationMs, easing, area) => {
+    // Read again at the start of every travel, not only at every render: a
+    // follower appearing does not make this box render, and the travel it must
+    // draw is the one about to start.
+    followerElementsRef.current = readFollowerElements();
+    cancelTravelProgressAnimation();
     paintTravelProgress(0);
-    if (!containerEl || !from || !durationMs) {
+    const painters = travelPainters();
+    if (!painters.length || !from || !durationMs) {
       return;
     }
-    progressAnimationRef.current = containerEl.animate(
-      [{ "--slide-travel-progress": from }, { "--slide-travel-progress": 0 }],
-      { duration: durationMs, easing },
+    paintTravelToward(area);
+    progressAnimationsRef.current = painters.map((element) =>
+      element.animate(
+        [{ "--slide-travel-progress": from }, { "--slide-travel-progress": 0 }],
+        { duration: durationMs, easing },
+      ),
     );
-    progressAnimationRef.current.finished.then(
+    progressAnimationsRef.current[0].finished.then(
       () => {
-        progressAnimationRef.current = null;
+        progressAnimationsRef.current = [];
+        paintTravelToward(null);
       },
       () => {
         // cancelled by the next travel — that one says where the trait goes
@@ -1545,6 +1622,7 @@ export const SlideContainer = ({
       drag.progress,
       durationMs * (pulled / size),
       "ease-out",
+      drag.areaPulled,
     );
     const animation = track.animate(
       [{ translate: drag.offset }, { translate: restOffset }],
@@ -1663,8 +1741,8 @@ export const SlideContainer = ({
         caughtTravel = null;
         trackAnimationRef.current?.cancel();
         trackAnimationRef.current = null;
-        progressAnimationRef.current?.cancel();
-        progressAnimationRef.current = null;
+        cancelTravelProgressAnimation();
+        followerElementsRef.current = readFollowerElements();
         drag.axis = axis;
         drag.areaBack = areaBack;
         drag.areaOn = areaOn;
@@ -1840,7 +1918,7 @@ export const SlideContainer = ({
     return () => {
       dragRef.current?.gesture?.stop();
       dragRef.current = null;
-      progressAnimationRef.current?.cancel();
+      cancelTravelProgressAnimation();
     };
   }, []);
 

@@ -123,17 +123,25 @@ export const Route = (props) => {
   return <RouteLeaf {...props} />;
 };
 /**
- * The routes a tree of <Route> children is made of, in the order they are
+ * The pages a tree of <Route> children is made of, in the order they are
  * written. Reading them is what turns a router into a row one can walk: "one
  * step that way" is a fact about the order the branches were declared in, and
  * nothing in a URL says it.
+ *
+ * A page is `{ route, params }`, never the route alone: a section of a page is
+ * as often a PARAM as it is a route of its own — `<Route route={PAGE}
+ * routeParams={{ section: "done" }}>` is how this very file selects a branch on
+ * one — and three branches of the same route are then the same object three
+ * times. Told apart by their params, they are three pages one walks between;
+ * told apart by identity, they are one page and there is nowhere to walk.
+ * `params` is undefined for a branch that is a route on its own.
  *
  * The same walk the container does to find the active branch (collectBranches),
  * except that it keeps every leaf rather than the one that matches — and reads
  * no signal, so asking does not subscribe the asker to anything.
  */
-export const collectRoutes = (children) => {
-  const routes = [];
+export const collectRoutePages = (children) => {
+  const pages = [];
   const visit = (child) => {
     if (!child || child === true || child === false) {
       return;
@@ -147,17 +155,17 @@ export const collectRoutes = (children) => {
     if (child.type !== Route) {
       return;
     }
-    const { children: nodeChildren, route } = child.props;
+    const { children: nodeChildren, route, routeParams } = child.props;
     if (nodeChildren) {
       visit(nodeChildren);
       return;
     }
     if (route) {
-      routes.push(route);
+      pages.push({ route, params: routeParams });
     }
   };
   visit(children);
-  return routes;
+  return pages;
 };
 
 // RouteContainer: traverses children statically per render, finds the active branch,

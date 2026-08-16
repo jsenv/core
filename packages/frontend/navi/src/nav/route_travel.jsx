@@ -38,6 +38,7 @@
 
 import { options } from "preact";
 import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { computed } from "@preact/signals";
 
 import {
   scrollRoomTowards,
@@ -49,10 +50,11 @@ import {
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
 import {
-  collectRoutes,
+  collectRoutePages,
   freezeRouteRender,
   observeRouteRender,
 } from "./route.jsx";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   ensureDocumentStartViewTransition,
   holdViewTransition,
@@ -286,21 +288,30 @@ const css = /* css */ `
 
 /**
  * @type {import("preact").FunctionComponent<{
- *   routes?: Array<object>,
+ *   routes?: Array<object|{route: object, params?: object}>,
  *   axis?: "x"|"y",
  *   travelByDrag?: boolean,
- *   onTravel?: (detail: {route: object, cause: string}) => void|Promise<void>,
+ *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  * }>}
- * @param {Array<object>} [props.routes] - the tabs, in the order they are shown.
- *   Read from the <Route> children by default, in the order they are written:
- *   the router already holds that list, and asking a caller to write it twice is
- *   asking for the two to disagree. Pass it to say another order, or when the
- *   pages are not children of this box.
+ * @param {Array<object|{route: object, params?: object}>} [props.routes] - the
+ *   tabs, in the order they are shown. Read from the <Route> children by
+ *   default, in the order they are written: the router already holds that list,
+ *   and asking a caller to write it twice is asking for the two to disagree.
+ *   Pass it to say another order, when the pages are not children of this box,
+ *   or to name a tab the children cannot — the section a <Route fallback> shows
+ *   is a tab like the others, and only its params say which one.
+ *
+ *   An entry is a route, or `{ route, params }` when the tabs of the row are a
+ *   PARAM of one route rather than routes of their own (the form
+ *   `<Route routeParams>` selects a branch on, and the form that lets a link
+ *   with no params reopen the section one was looking at). Written as bare
+ *   routes, three tabs of one route are the same object three times: there is
+ *   then one tab, and nowhere to travel.
  * @param {"x"|"y"} [props.axis="x"] - which way the pages are laid out.
  * @param {boolean} [props.travelByDrag=true] - whether a pointer dragging the
  *   page travels. Off where the gesture belongs to the content.
- * @param {(detail: {route: object, cause: "drag"|"wheel"|"revert"}) => void|Promise<void>} [props.onTravel]
- *   - how to go to a route. The default REPLACES the current history entry
+ * @param {(detail: {route: object, params: object|undefined, cause: "drag"|"wheel"|"revert"}) => void|Promise<void>} [props.onTravel]
+ *   - how to go to a tab. The default REPLACES the current history entry
  *   rather than pushing one: a swipe is how one browses a page, not a place one
  *   aimed at, and three swipes back and forth must not bury the way out of the
  *   page under six entries. A tab pressed is the other case and pushes, which
@@ -322,7 +333,7 @@ export const RouteTravel = ({
   routes: routesProp,
   axis = "x",
   travelByDrag = true,
-  onTravel = ({ route }) => route.redirectTo(),
+  onTravel = ({ route, params }) => route.redirectTo(params),
   className,
   children,
   ...rest
@@ -334,12 +345,12 @@ export const RouteTravel = ({
   // left, the animations the finger drives, and what to do with them once the
   // browser has them ready. Null when no page is on its way anywhere.
   const travelRef = useRef(null);
-  // The route this box has ASKED for and is still waiting to see arrive.
+  // The page this box has ASKED for and is still waiting to see arrive.
   // Routing is asynchronous: a travel's own navigation lands well after the
   // travel decided anything about it — sometimes after the travel was undone —
-  // and read back as "the route changed" it would start a second travel nobody
+  // and read back as "the page changed" it would start a second travel nobody
   // asked for, over pictures that are already showing something else.
-  const routeAskedForRef = useRef(null);
+  const pageAskedForRef = useRef(null);
   // What a press stopped in flight, until the gesture says what it is about.
   const caughtAtPressRef = useRef(null);
   // The latest way to answer a gesture, for a watcher that outlives every
@@ -347,33 +358,43 @@ export const RouteTravel = ({
   const travelHandlersRef = useRef(null);
   const pointerDownRef = useRef(null);
 
-  const routesFromChildren = useMemo(() => collectRoutes(children), [children]);
-  const routes = routesProp || routesFromChildren;
+  const pagesFromChildren = useMemo(
+    () => collectRoutePages(children),
+    [children],
+  );
+  const pagesFromProp = useMemo(
+    () => routesProp && routesProp.map(normalizePage),
+    [routesProp],
+  );
+  const pages = pagesFromProp || pagesFromChildren;
 
-  // Which page is on screen, read from the routes themselves: every one of them
-  // is read, so this re-renders when any of them starts or stops matching.
-  let currentIndex = -1;
-  for (let i = 0; i < routes.length; i++) {
-    if (routes[i].matchingSignal.value) {
-      currentIndex = i;
-    }
-  }
+  // Which page is on screen, read from the pages themselves: every one of them
+  // is read, so this re-renders when any of them starts or stops matching — and
+  // for a row whose tabs are params of one route, when the params move from one
+  // tab to the next (see pageIsCurrent).
+  const currentIndex = currentPageIndex(pages);
   // The page that was on screen when the change now happening was asked for:
   // a travel is between two of them, and by the time anything renders the first
   // one is already gone. Written after each render (below), so a subscriber
   // reading it — they all run before Preact flushes — reads the one being left.
   const currentIndexRef = useRef(currentIndex);
 
+  // Where a page is asked for, whoever asks: a page is a route AND the params
+  // that say which of its tabs, and a caller told only the route would send the
+  // row back to whichever tab the URL already says (see redirectTo).
+  const travelTo = (page, cause) =>
+    onTravel({ route: page.route, params: page.params, cause });
+
   // One travel, whoever asked for it: a finger, a tab pressed, the browser's
   // own back button. What differs is only who moves it — the finger drives it
   // frame by frame (`scrub`), everything else lets it play.
-  const beginTravel = ({ route, fromRoute, direction, scrub, change }) => {
+  const beginTravel = ({ page, fromPage, direction, scrub, change }) => {
     const travel = {
-      route,
+      page,
       // The page this set off from, kept rather than looked up again: the URL
       // changes at the first pixel, so a moment later nothing on screen
       // remembers where it started.
-      fromRoute,
+      fromPage,
       direction,
       scrub,
       ratio: 0,
@@ -389,7 +410,7 @@ export const RouteTravel = ({
       holdPictures(travel);
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
-    routeAskedForRef.current = route;
+    pageAskedForRef.current = page;
     // The box as it stands before anything moves: rendering is held, so this is
     // still the page being left (see holdTravelHeight).
     const heightBefore = elementRef.current.getBoundingClientRect().height;
@@ -400,7 +421,7 @@ export const RouteTravel = ({
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered.
     const viewTransition = startViewTransition(async () => {
-      await whileRouteRenders(route, async () => {
+      await whilePageRenders(page, async () => {
         releaseRendering();
         if (change) {
           await change();
@@ -453,57 +474,77 @@ export const RouteTravel = ({
   };
 
   // A page change nobody here asked for: a tab pressed, a key, the back button.
-  // The transition is started from the route's own announcement rather than
-  // from a render, because a render is one flush too late — by then the DOM
-  // holds the new page and the picture of the old one cannot be taken anymore.
+  // The transition is started from what the router SAYS rather than from a
+  // render, because a render is one flush too late — by then the DOM holds the
+  // new page and the picture of the old one cannot be taken anymore.
+  //
+  // Watched as a position in the row rather than route by route. A route
+  // announces its own status, and the row's tabs can all be one route: the
+  // announcement then says a section changed without saying which is on screen,
+  // and it says it about things this row does not move for (a route that has
+  // now been visited, a param of its own that is not a tab of this row). Worse,
+  // a status is published from inside the routing and the params it carries are
+  // the ones known at that instant — a section that lands as a signal settles
+  // is announced late, or not at all. The signals ARE the position, so the
+  // position is read from them: one computed over the whole row, notified once
+  // per move, whichever route moved and whether by matching or by params.
   useLayoutEffect(() => {
-    const unsubscribes = routes.map((route, index) =>
-      route.subscribeStatus(({ matching }) => {
-        if (!matching) {
-          return;
-        }
-        // A page this box asked for itself — a travel's own navigation, or one
-        // it had given up waiting on: what arrives here is the answer to a
-        // question already answered, not somebody going somewhere.
-        if (routeAskedForRef.current === route) {
-          routeAskedForRef.current = null;
-          currentIndexRef.current = index;
-          return;
-        }
-        // Somewhere else arrived first: whatever this box was still waiting for
-        // is not coming, or no longer means anything. Forgotten here rather
-        // than kept, or the next press on that very tab would be taken for the
-        // late answer to a question nobody remembers asking.
-        routeAskedForRef.current = null;
-        // Asked for a page while one was already on its way: the travel in
-        // flight is the answer, aimed somewhere else. Starting a second one on
-        // top would leave this one's pictures to be dropped mid-slide.
-        if (travelRef.current) {
-          currentIndexRef.current = index;
-          retargetTravel(travelRef.current, route);
-          return;
-        }
-        const fromIndex = currentIndexRef.current;
-        currentIndexRef.current = index;
-        if (fromIndex === -1 || fromIndex === index) {
-          // Arriving from outside this row (or not moving at all): there is no
-          // pair of pages to show, so there is nothing to travel between.
-          return;
-        }
-        beginTravel({
-          route,
-          fromRoute: routes[fromIndex],
-          direction: index > fromIndex ? "forward" : "back",
-          scrub: false,
-        });
-      }),
-    );
-    return () => {
-      for (const unsubscribe of unsubscribes) {
-        unsubscribe();
+    const currentIndexSignal = computed(() => currentPageIndex(pages));
+    const onRowMove = (index) => {
+      if (index === -1) {
+        return;
       }
+      if (index === currentIndexRef.current) {
+        // Where the row already was — the first reading of all, and any move
+        // this box has already taken note of (a render writes it too). What it
+        // was still waiting for is here nonetheless, so the wait is called off.
+        if (samePage(pageAskedForRef.current, pages[index])) {
+          pageAskedForRef.current = null;
+        }
+        return;
+      }
+      const page = pages[index];
+      // A page this box asked for itself — a travel's own navigation, or one
+      // it had given up waiting on: what arrives here is the answer to a
+      // question already answered, not somebody going somewhere.
+      if (samePage(pageAskedForRef.current, page)) {
+        pageAskedForRef.current = null;
+        currentIndexRef.current = index;
+        return;
+      }
+      // Somewhere else arrived first: whatever this box was still waiting for
+      // is not coming, or no longer means anything. Forgotten here rather
+      // than kept, or the next press on that very tab would be taken for the
+      // late answer to a question nobody remembers asking.
+      pageAskedForRef.current = null;
+      // Asked for a page while one was already on its way: the travel in
+      // flight is the answer, aimed somewhere else. Starting a second one on
+      // top would leave this one's pictures to be dropped mid-slide.
+      if (travelRef.current) {
+        currentIndexRef.current = index;
+        retargetTravel(travelRef.current, page);
+        return;
+      }
+      const fromIndex = currentIndexRef.current;
+      currentIndexRef.current = index;
+      if (fromIndex === -1 || fromIndex === index) {
+        // Arriving from outside this row (or not moving at all): there is no
+        // pair of pages to show, so there is nothing to travel between.
+        return;
+      }
+      beginTravel({
+        page,
+        fromPage: pages[fromIndex],
+        direction: index > fromIndex ? "forward" : "back",
+        scrub: false,
+      });
     };
-  }, [routes]);
+    // `subscribe` rather than `effect`: it hands the value to a callback that
+    // is NOT being tracked, and what this one does — navigate, ask the router
+    // for another page — reads and writes the very signals the row is watched
+    // through.
+    return currentIndexSignal.subscribe(onRowMove);
+  }, [pages]);
 
   // Rendering is held for the length of a navigation, so that whatever picture
   // this box is about to take is of the page being LEFT (see holdRendering).
@@ -540,6 +581,13 @@ export const RouteTravel = ({
   // Let go of far enough: the movement carries on from under the finger, at its
   // own pace, to the end.
   const finishTravel = (travel) => {
+    // Nobody is driving it anymore. `scrub` is who MOVES the pictures, not what
+    // set them off: left standing after the release, this travel would go on
+    // claiming a hand that is no longer there — and everything that asks
+    // "is somebody holding this?" before touching it (a press on the tab one
+    // came from, a wheel push) would be answered yes and do nothing, while the
+    // pages carry on to a page the router has already left.
+    travel.scrub = false;
     releaseHold();
     travel.viewTransition.finished.then(
       () => endTravel(travel),
@@ -598,19 +646,23 @@ export const RouteTravel = ({
         Promise.resolve();
     backAtTheStart.then(async () => {
       try {
-        routeAskedForRef.current = travel.fromRoute;
+        pageAskedForRef.current = travel.fromPage;
         // The page that was left is put back UNDER the picture before the
         // picture is dropped, so the two are the same thing at the moment they
         // are swapped: that only holds once the page is really back.
-        if (travel.fromRoute.matchingSignal.peek()) {
+        if (pageIsCurrent(travel.fromPage)) {
           // It never left: the press that set this revert off put it back
           // there, and the pages have been held where they were until now.
           // Nothing to ask for, and nothing to wait for — waiting anyway is a
           // render that never comes and a page frozen under its own pictures.
           releaseRendering();
         } else {
-          await whileRouteRenders(travel.fromRoute, () =>
-            onTravel({ route: travel.fromRoute, cause: "revert" }),
+          await whilePageRenders(travel.fromPage, () =>
+            onTravel({
+              route: travel.fromPage.route,
+              params: travel.fromPage.params,
+              cause: "revert",
+            }),
           );
         }
         travel.viewTransition.skipTransition();
@@ -648,8 +700,8 @@ export const RouteTravel = ({
   // change — only what is being brought in against it, and that one is LIVE:
   // pointing the router elsewhere is all it takes for the picture to show that
   // page instead.
-  const redirectTravel = (travel, route, direction) => {
-    travel.route = route;
+  const redirectTravel = (travel, page, direction) => {
+    travel.page = page;
     // Everything the transition carries that is NOT the pages was measured
     // against a destination this travel is no longer going to (see the CSS).
     document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
@@ -670,28 +722,28 @@ export const RouteTravel = ({
 
   // Somebody asked for a page while one was on its way. Where they asked for
   // decides what that means.
-  const retargetTravel = (travel, route) => {
+  const retargetTravel = (travel, page) => {
     if (travel.scrub || travel.reverting || travel.ended || travel.noPicture) {
       // A hand is holding the pages, or they are already on their way back:
       // either way this travel's end is decided by somebody else.
       return;
     }
-    if (route === travel.route) {
+    if (samePage(page, travel.page)) {
       // Already on its way there.
       return;
     }
-    if (route === travel.fromRoute) {
+    if (samePage(page, travel.fromPage)) {
       // Back where it set off from: that is not another travel, it is this one
       // undone — the same pictures, run backwards.
       revertTravel(travel);
       return;
     }
-    const fromIndex = routes.indexOf(travel.fromRoute);
-    const toIndex = routes.indexOf(route);
+    const fromIndex = pageIndexOf(pages, travel.fromPage);
+    const toIndex = pageIndexOf(pages, page);
     if (fromIndex === -1 || toIndex === -1) {
       return;
     }
-    redirectTravel(travel, route, toIndex > fromIndex ? "forward" : "back");
+    redirectTravel(travel, page, toIndex > fromIndex ? "forward" : "back");
   };
 
   const endTravel = (travel) => {
@@ -768,10 +820,9 @@ export const RouteTravel = ({
       }
       // Dragging the page towards the end of the axis brings in what is
       // BEFORE it, the way pushing a sheet to the right reveals its left.
-      const route =
-        sign > 0 ? routes[currentIndex - 1] : routes[currentIndex + 1];
+      const page = sign > 0 ? pages[currentIndex - 1] : pages[currentIndex + 1];
       if (
-        !route ||
+        !page ||
         !size ||
         scrollRoomTowards(target, elementRef.current, axis, sign)
       ) {
@@ -779,14 +830,14 @@ export const RouteTravel = ({
       }
       if (CAN_KEEP_PICTURE) {
         beginTravel({
-          route,
-          fromRoute: routes[currentIndex],
+          page,
+          fromPage: pages[currentIndex],
           direction: sign > 0 ? "back" : "forward",
           scrub: true,
-          change: () => onTravel({ route, cause: "drag" }),
+          change: () => travelTo(page, "drag"),
         });
       } else {
-        travelRef.current = { route, noPicture: true, ended: false };
+        travelRef.current = { page, noPicture: true, ended: false };
       }
       return {
         size,
@@ -837,10 +888,10 @@ export const RouteTravel = ({
         // Where we are is what THIS travel was bringing in — the URL changed at
         // the first pixel, so `currentIndex` belongs to a render this gesture
         // is older than.
-        const fromIndex = routes.indexOf(travel.route);
-        const route =
-          direction === "back" ? routes[fromIndex - 1] : routes[fromIndex + 1];
-        if (fromIndex === -1 || !route) {
+        const fromIndex = pageIndexOf(pages, travel.page);
+        const page =
+          direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
+        if (fromIndex === -1 || !page) {
           return false;
         }
         // At their very end before they are let go of: what ends the travel in
@@ -850,11 +901,11 @@ export const RouteTravel = ({
         scrubTravel(travel, 1);
         travel.ratio = 1;
         beginTravel({
-          route,
-          fromRoute: travel.route,
+          page,
+          fromPage: travel.page,
           direction,
           scrub: true,
-          change: () => onTravel({ route, cause: "drag" }),
+          change: () => travelTo(page, "drag"),
         });
         return {
           size: boxSizeOnAxis(),
@@ -869,15 +920,15 @@ export const RouteTravel = ({
       // other neighbour is enough for it to show that one instead. The travel
       // turns around where it stands, on the same transition and under the same
       // hand, and there is no gap at all.
-      const fromIndex = routes.indexOf(travel.fromRoute);
-      const route =
-        direction === "back" ? routes[fromIndex - 1] : routes[fromIndex + 1];
-      if (fromIndex === -1 || !route) {
+      const fromIndex = pageIndexOf(pages, travel.fromPage);
+      const page =
+        direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
+      if (fromIndex === -1 || !page) {
         return false;
       }
-      redirectTravel(travel, route, direction);
-      routeAskedForRef.current = route;
-      onTravel({ route, cause: "drag" });
+      redirectTravel(travel, page, direction);
+      pageAskedForRef.current = page;
+      travelTo(page, "drag");
       return {
         size: boxSizeOnAxis(),
         travelBack: sign > 0,
@@ -898,7 +949,7 @@ export const RouteTravel = ({
       if (travel.noPicture) {
         travelRef.current = null;
         if (travels) {
-          onTravel({ route: travel.route, cause: "drag" });
+          travelTo(travel.page, "drag");
         }
         return;
       }
@@ -1002,15 +1053,13 @@ export const RouteTravel = ({
     }
     // Where the box is going, which is not where it is: a step asked for while
     // a travel plays is the page after the one on its way.
-    const fromRoute = travelInFlight
-      ? travelInFlight.route
-      : routes[currentIndex];
-    const fromIndex = routes.indexOf(fromRoute);
+    const fromPage = travelInFlight ? travelInFlight.page : pages[currentIndex];
+    const fromIndex = pageIndexOf(pages, fromPage);
     if (fromIndex === -1) {
       return;
     }
-    const route = sign > 0 ? routes[fromIndex - 1] : routes[fromIndex + 1];
-    if (!route) {
+    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
+    if (!page) {
       return;
     }
     if (travelInFlight) {
@@ -1021,11 +1070,11 @@ export const RouteTravel = ({
       travelInFlight.ratio = 1;
     }
     beginTravel({
-      route,
-      fromRoute,
+      page,
+      fromPage,
       direction: sign > 0 ? "back" : "forward",
       scrub: false,
-      change: () => onTravel({ route, cause: "wheel" }),
+      change: () => travelTo(page, "wheel"),
     });
   };
 
@@ -1261,7 +1310,7 @@ const scrubTravel = (travel, ratio) => {
   }
 };
 
-// A route change, carried out and then waited for until the page it selects is
+// A page change, carried out and then waited for until the page it selects is
 // really on screen. The container doing the swapping is the only one who knows
 // when that is (observeRouteRender): a route matching is a signal changing, and
 // how many passes Preact takes to answer it is its own business.
@@ -1271,7 +1320,7 @@ const scrubTravel = (travel, ratio) => {
 // inside the callback of a view transition: the browser has stopped rendering
 // and is waiting on this very promise to take its picture, so a wait that never
 // ends is a page frozen under a transition that never became ready.
-const whileRouteRenders = async (route, change) => {
+const whilePageRenders = async (page, change) => {
   let stopListening;
   const rendered = new Promise((resolve) => {
     // Listened for before the change, or a render landing while the change is
@@ -1280,12 +1329,53 @@ const whileRouteRenders = async (route, change) => {
   });
   try {
     await change();
-    if (route.matchingSignal.peek()) {
+    if (pageIsCurrent(page)) {
       await rendered;
     }
   } finally {
     stopListening();
   }
+};
+
+// A page of the row: a route, and the params that say which of its tabs when
+// several of them share it. Written as a bare route by a caller whose tabs are
+// routes of their own — which is the same page with nothing to tell apart.
+const normalizePage = (page) =>
+  page.isRoute ? { route: page, params: undefined } : page;
+
+// Two pages are the same page when they select the same thing, not when they
+// were written by the same hand: the params of a tab are a literal in JSX, so
+// every render builds another object for what is plainly the same tab.
+const samePage = (a, b) => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.route === b.route && compareTwoJsValues(a.params, b.params);
+};
+const pageIndexOf = (pages, page) =>
+  pages.findIndex((candidate) => samePage(candidate, page));
+
+// Whether this page is the one on screen. `matchesParams` reads paramsSignal,
+// so a caller reading this during a render is subscribed to the param changes
+// that walk from one tab to the next — matchingSignal alone never moves there,
+// and a row whose tabs are params of one route would never re-render.
+const pageIsCurrent = ({ route, params }) => {
+  if (!route.matchingSignal.value) {
+    return false;
+  }
+  return params ? route.matchesParams(params) : true;
+};
+const currentPageIndex = (pages) => {
+  let currentIndex = -1;
+  for (let i = 0; i < pages.length; i++) {
+    if (pageIsCurrent(pages[i])) {
+      currentIndex = i;
+    }
+  }
+  return currentIndex;
 };
 
 // A transition skipped by another one starting is an outcome, not a failure.

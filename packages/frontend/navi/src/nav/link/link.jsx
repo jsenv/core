@@ -1,6 +1,7 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
+import { triggerNaviCommand } from "../../control/commands.js";
 import { useControlProps } from "../../control/control_hooks.jsx";
 import {
   SelectionContext,
@@ -444,6 +445,12 @@ Object.assign(PSEUDO_CLASSES, {
  *   instead of a raw `href`: the URL is built from the route (see
  *   `routeParams`) and "current" is derived from whether the route matches.
  * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
+ * @param {string} [props.slide] - Makes this a tab for a slide rather than for
+ *   a URL: the area of a `<SlideContainer>` it goes to. The container is the one
+ *   the surrounding `<Nav slideContainer={id}>` names, and it is also what says
+ *   whether this tab is the current one. Nothing is written to the URL — these
+ *   are places within one screen, not pages of their own — so there is no href
+ *   and the tab behaves like a button.
  * @param {string} [props.target] - Native anchor target; defaults from
  *   internal/external detection when omitted.
  * @param {string} [props.rel] - Native anchor rel; defaults to
@@ -526,6 +533,7 @@ const LinkPlain = (props) => {
     target,
     rel,
     anchor,
+    slide,
     value = href,
 
     // visual
@@ -569,7 +577,10 @@ const LinkPlain = (props) => {
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
-  const innerCurrent = current || isCurrent;
+  // A tab that is a SLIDE is current when the container is on it — which the
+  // <Nav> around reads off that container, so nothing here has to be told.
+  const innerCurrent =
+    current || (slide ? nav?.currentSlideArea === slide : isCurrent);
   useReportCurrentToBinderItem(innerCurrent);
   controlHostProps.basePseudoState = {
     ...basePseudoState,
@@ -674,6 +685,12 @@ const LinkPlain = (props) => {
     ) : null;
 
   const { onClick, preventDefault } = props;
+  // Travelling there is the container's business, said as the command anything
+  // else in the page would say it with: the tab knows the name of a slide and
+  // the id of the box, and nothing more about either.
+  const goToSlide = (element, event) => {
+    triggerNaviCommand(element, `--navi-go-to-slide:${slide}`, event);
+  };
 
   return (
     <Text
@@ -688,6 +705,7 @@ const LinkPlain = (props) => {
       // was handed.
       preventDefault={undefined}
       anchor={undefined}
+      slide={undefined}
       revealOnInteraction={undefined}
       variant={undefined}
       current={undefined}
@@ -701,15 +719,41 @@ const LinkPlain = (props) => {
       hrefFallback={undefined}
       onClick={(e) => {
         onClick?.(e);
+        if (slide) {
+          goToSlide(e.currentTarget, e);
+        }
         if (preventDefault) {
           e.preventDefault();
+        }
+      }}
+      // A tab with no href is not a link the browser knows how to press: it is
+      // focusable because it says so (tabIndex below) and it answers the two
+      // keys a button answers, since that is what it behaves like.
+      onKeyDown={(e) => {
+        props.onKeyDown?.(e);
+        if (!slide || e.defaultPrevented) {
+          return;
+        }
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToSlide(e.currentTarget, e);
         }
       }}
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
+      // Which slide this tab is, and which box to say it to: read by the <Nav>
+      // around it to place the row's own bar, and by the command above to find
+      // the container across the document.
+      data-slide-target={slide}
+      commandfor={slide ? nav?.slideContainer : undefined}
+      aria-controls={slide ? nav?.slideContainer : undefined}
+      tabIndex={slide ? (props.tabIndex ?? 0) : props.tabIndex}
+      role={slide ? "tab" : props.role}
       aria-current={isCurrent ? "page" : undefined}
-      aria-selected={selectionContext ? selected : undefined}
+      aria-selected={
+        slide ? innerCurrent : selectionContext ? selected : undefined
+      }
       data-value-event="navi_value"
       onnavi_value={(e) => {
         e.detail.setValue(value);
