@@ -589,6 +589,75 @@
         </SlideContainer>
       );
 
+      // Three screens of settings, one of them holding a carousel of its own —
+      // and both travel up and down, so the same gesture could ask for either.
+      const SETTINGS_TABS = [
+        {
+          id: "settings_display",
+          label: "Affichage",
+          background: "#e8f0fe",
+          body: "Thème clair",
+        },
+        { id: "settings_games", label: "Mes parties", background: "#eaf7ec" },
+        {
+          id: "settings_alerts",
+          label: "Me prévenir",
+          background: "#fdf0e8",
+          body: "Par e-mail",
+        },
+      ];
+      const NestedSlides = () => {
+        const duration = useSlideDuration();
+        return (
+          <SlideContainer
+            layout="column"
+            travelByScroll="y"
+            defaultCurrent="settings_games"
+            duration={duration}
+            width="300px"
+            height="240px"
+            borderRadius="8px"
+            borderWidth="1"
+            borderStyle="solid"
+            borderColor="#cfd8e3"
+          >
+            {SETTINGS_TABS.map(({ id, label, background, body }) => (
+              <Slide key={id} id={id}>
+                <Box
+                  flex="y"
+                  spacing="s"
+                  padding="m"
+                  alignX="center"
+                  alignY="center"
+                  expandY
+                  style={{ background }}
+                >
+                  <Text>{label}</Text>
+                  {body ? (
+                    <Text>{body}</Text>
+                  ) : (
+                    <SlideContainer
+                      layout="column"
+                      travelByScroll="y"
+                      duration={duration}
+                      width="180px"
+                      height="110px"
+                      borderRadius="8px"
+                    >
+                      {PHOTOS.map((photo, index) => (
+                        <Slide key={photo.name} id={`settings_photo_${index}`}>
+                          <Photo index={index} />
+                        </Slide>
+                      ))}
+                    </SlideContainer>
+                  )}
+                </Box>
+              </Slide>
+            ))}
+          </SlideContainer>
+        );
+      };
+
       // A full bar: the two ends, the two steps, and one button per photo. All
       // of them outside the box and driving it by name (commandFor), so nothing
       // in the bar travels with what it commands.
@@ -2032,6 +2101,16 @@
                 <MapSlides />
               </div>
             </Box>
+          </section>
+
+          <section class="demo-section" id="nested">
+            <Heading id="nested">A container inside a container</Heading>
+            <p>
+              Both travel up and down, with a drag or with the wheel (
+              <code>travelByScroll="y"</code>): push the photos and the photos
+              travel, push anywhere else and the settings do.
+            </p>
+            <NestedSlides />
           </section>
 
           <section class="demo-section" id="scroll">

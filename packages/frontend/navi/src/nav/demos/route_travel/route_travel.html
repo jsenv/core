@@ -46,6 +46,15 @@
         padding: 14px 12px;
         border-radius: 8px;
       }
+      .page_photo {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 2rem;
+      }
       .travel_box {
         min-height: 0;
         flex: 1;
@@ -94,6 +103,8 @@
         Nav,
         Route,
         RouteTravel,
+        Slide,
+        SlideContainer,
         route,
         setupRoutes,
       } from "@jsenv/navi";
@@ -137,8 +148,33 @@
         return null;
       };
 
-      const Page = ({ label, color, rows }) => (
+      // A carousel inside a page that travels between pages: both go sideways,
+      // and the one under the finger is the one that answers it.
+      const PHOTOS = [
+        "linear-gradient(160deg,#ffb74d,#f06292)",
+        "linear-gradient(160deg,#4dd0e1,#1976d2)",
+        "linear-gradient(160deg,#aed581,#2e7d32)",
+      ];
+      const PagePhotos = () => (
+        <SlideContainer
+          height="120px"
+          borderRadius="8px"
+          marginBottom="8px"
+          expandX
+        >
+          {PHOTOS.map((background, index) => (
+            <Slide key={background} id={`page_photo_${index}`}>
+              <div className="page_photo" style={{ background }}>
+                {index + 1}
+              </div>
+            </Slide>
+          ))}
+        </SlideContainer>
+      );
+
+      const Page = ({ label, color, rows, photos }) => (
         <div className="page" style={{ background: color }}>
+          {photos && <PagePhotos />}
           {Array.from({ length: rows }, (_, index) => (
             <div
               key={index}
@@ -221,6 +257,7 @@
                     label,
                     color,
                     rows: label === "C" ? 40 : 6,
+                    photos: label === "B",
                   }}
                 />
               ))}
@@ -239,6 +276,10 @@
           </div>
           <div className="demo-section">
             <Heading id="nominal">Cas nominal</Heading>
+            <p>
+              L’onglet B tient un carrousel : les deux voyagent latéralement, et
+              c’est celui qui est sous le doigt qui répond.
+            </p>
             <SpeedPicker />
             <div className="phone_row">
               <Phone />

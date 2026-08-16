@@ -49,9 +49,13 @@ consistency across the app, not from any single call site.
   values navi's own popups/bars/tables use. Read it before writing a `z-index`.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
-- `src/nav/route_ui.md` — routes as UI: layout/section patterns, and
-  `RouteTravel` (swiping between pages that are URLs — the tabs of a page,
-  driven by thumb, wheel, or a link).
+- `docs/navigation.md` — how to build navigation: declaring routes
+  (`route()` / `setupRoutes()`), when a section is a route of its own rather
+  than a param, search params bound to signals, rendering with `<Route>`,
+  tab rows (`Nav` / `Link` / `RouteTravel`), and the few cases where tabs are
+  legitimately not URLs. Read it before writing any routing code — the
+  position of the user belongs in the URL by default, and that decision is
+  not retrofittable.
 - Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src
   — worth checking if the JSDoc on an export genuinely doesn't answer your
   question.

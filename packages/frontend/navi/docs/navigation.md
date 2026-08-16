@@ -1,0 +1,253 @@
+# Navigation
+
+How to build navigation with `@jsenv/navi`: declaring routes, rendering them,
+linking to them, and turning them into tabs.
+
+## The rule that decides everything else: the position belongs in the URL
+
+Where the user is — which section, which tab, which sub-page — is state. Put it
+in the URL unless there is a reason not to. What that buys, none of which can be
+retrofitted later:
+
+- the browser's back and forward buttons work, because each place is a history
+  entry;
+- the place is shareable and bookmarkable — someone can send a link to exactly
+  what they are looking at;
+- the place is **targetable**: anything, anywhere in the app, can send the user
+  there with a `<Link route={…}>`, without knowing anything about the component
+  that displays it;
+- a reload lands where the user was.
+
+So the default shape of a tab row is routes: `<Nav>` + `<Link route>` +
+`<RouteTravel>`. `SlideContainer` is the exception, not the starting point — see
+[Tabs with no URL](#tabs-with-no-url) for the cases that genuinely are one.
+
+## Declaring routes
+
+Every route is created with `route()` and they are all declared to `setupRoutes()`
+in one call — the routing system resolves specificity and signal ownership across
+the whole set, so it has to see the whole set.
+
+```js
+// routes.js
+import { route, setupRoutes } from "@jsenv/navi";
+
+export const HOME_ROUTE = route("/");
+export const GAMES_ROUTE = route("/games");
+export const GAME_ROUTE = route("/games/:gameId");
+
+setupRoutes([HOME_ROUTE, GAMES_ROUTE, GAME_ROUTE]);
+```
+
+Named exports from one module, on purpose: the file is the map of the
+application, and an import line says which places a component deals with.
+Routes are plain objects usable outside of any component — `route.buildUrl()`,
+`route.navTo()`, `route.redirectTo()`, `route.matching` — which is why they are
+declared apart from the JSX that renders them.
+
+### A section is allowed to be a route of its own
+
+This is the most commonly missed point.
+
+When a segment can take a **finite, known set of values**, declare one literal
+route per value rather than one parameterized route you pass params to:
+
+```js
+// ✅ each section is a route object of its own
+export const MY_GAMES_ROUTE = route("/games/my_games");
+export const CANDIDATE_GAMES_ROUTE = route("/games/candidates");
+export const FINISHED_GAMES_ROUTE = route("/games/finished");
+```
+
+A literal route may sit alongside a parameterized one on the same segment
+(`/games/:section` and `/games/my_games`). Both match, and the literal one is
+taken as the more specific — so declaring the sections costs nothing and takes
+nothing away.
+
+Why prefer it:
+
+- **The routes are listable.** `routes.js` shows the places the application has.
+  A single `/games/:section` shows one place and hides three.
+- **No `routeParams` at the call sites.** `<Link route={MY_GAMES_ROUTE}>` instead
+  of `<Link route={GAMES_ROUTE} routeParams={{ section: "my_games" }}>`, and the
+  same for `<Route>`. A wrong section is then a missing import rather than a
+  string nobody checks.
+- **Each section can carry its own search params.** `/games/finished` may have a
+  `sort` the other sections have no business knowing about.
+
+Params stay for what is genuinely dynamic — a value the code cannot enumerate:
+
+```js
+export const GAME_ROUTE = route("/games/:gameId"); // ✅ an id
+export const DAY_ROUTE = route("/planning/:day"); // ✅ any date
+```
+
+A parameterized route also remains right for a finite set that must be handled
+**uniformly** — a row built by `.map()` over a list of sections, where writing
+one branch per section would be writing the same branch N times. Bind the param
+to a signal to get validation and a default:
+
+```js
+import { stateSignal } from "@jsenv/navi";
+
+const sectionSignal = stateSignal("to_come", {
+  id: "games_section",
+  oneOf: ["candidate", "to_come", "done"],
+  autoFix: true,
+});
+export const GAMES_SECTION_ROUTE = route(`/games/:section=${sectionSignal}`);
+```
+
+### Search params
+
+A param that qualifies a page rather than naming it — a zoom level, a sort, a
+view mode — is a search param, declared with the signal it two-way syncs with:
+
+```js
+const vueSignal = stateSignal("liste", {
+  id: "vue",
+  oneOf: ["liste", "carte"],
+});
+export const HOME_ROUTE = route("/", { searchParams: { vue: vueSignal } });
+```
+
+The signal and the URL are the same state: writing the signal rewrites the URL,
+and a URL arriving from outside writes the signal. Never keep a `useState`
+beside a route param for the same fact.
+
+Declared on the **root route**, a search param is a position that holds wherever
+one is in the application — a view mode that survives moving from page to page.
+Declared on one route, it exists only there.
+
+## Rendering routes
+
+`<Route>` is the only primitive. With `children` it is a container that renders
+the branch matching the URL; with a `route` it is a branch; with `fallback` it is
+the branch taken when no sibling matches.
+
+```jsx
+<Route>
+  <Route route={MY_GAMES_ROUTE} element={MyGamesPage} />
+  <Route route={CANDIDATE_GAMES_ROUTE} element={CandidateGamesPage} />
+  <Route route={GAME_ROUTE} element={GamePage} />
+  <Route fallback element={NotFoundPage} />
+</Route>
+```
+
+`elementProps` passes props to the element, which is how a section hands its own
+local state down to its sub-pages.
+
+Two shapes for a section, and which one applies is decided by the URL:
+
+- **A section with a shared prefix owns its own sub-router.** One leaf
+  `<Route route={DASHBOARD_SECTION_ROUTE} element={DashboardSection} />` at the
+  top, and `DashboardSection` renders its own `<Route>` tree plus whatever chrome
+  it has. Everything about the section is in one file.
+- **Pages sharing a layout but no prefix** (`/profile` and `/settings` inside an
+  authenticated shell) use a container `<Route element={AuthLayout}>`: the active
+  child is injected into the layout as its children.
+
+### Loading data
+
+A branch loads with `action`, and shows its states with the usual boundaries:
+
+```jsx
+<ErrorBoundary fallback={(error, { resetError }) => …}>
+  <Suspense fallback={<p>Loading…</p>}>
+    <Route route={GAME_ROUTE} action={loadGame} element={(game) => <GamePage game={game} />} />
+  </Suspense>
+</ErrorBoundary>
+```
+
+## Links and tab rows
+
+`<Link route={…}>` builds its href from the route and knows on its own whether it
+is the current one — that is what draws the current-tab state. `<Nav>` says once,
+for the whole row, where the bar that marks the current tab goes:
+
+```jsx
+<Nav currentIndicator>
+  <Link route={MY_GAMES_ROUTE} variant="tab">
+    Mes parties
+  </Link>
+  <Link route={CANDIDATE_GAMES_ROUTE} variant="tab">
+    Candidatures
+  </Link>
+</Nav>
+```
+
+The bar travels from one tab to the next rather than blinking, because `<Nav>`
+gives it a `view-transition-name` of its own: the browser then moves it on the
+same clock as any transition playing — including a `RouteTravel` swipe, with no
+wiring between the two.
+
+## Tabs that travel: `RouteTravel`
+
+`<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes every change
+between them a movement — a tab pressed, a key, the back button, and a thumb
+dragging the pages.
+
+```jsx
+<SectionNav />
+<RouteTravel>
+  <Route>
+    <Route route={MY_GAMES_ROUTE} element={MyGamesPage} />
+    <Route route={CANDIDATE_GAMES_ROUTE} element={CandidateGamesPage} />
+    <Route route={FINISHED_GAMES_ROUTE} element={FinishedGamesPage} />
+  </Route>
+</RouteTravel>
+```
+
+The router still mounts only the branch that matches; the page being left is
+shown from the picture the browser keeps of it. The page arriving mounts during
+the gesture and fills in under the finger, as its own loading state.
+
+The order of the tabs — what "one step that way" means, which no URL says — is
+read from the children in the order they are written. Pass `routes` only to say
+another order, or when the pages are not children of the box. An entry is a route,
+or `{ route, params }` when the tabs are params of one route.
+
+A swipe **replaces** the current history entry (a gesture browses; a tab pressed
+aims at a place and pushes, which its `<Link>` already does). `onTravel` decides
+otherwise.
+
+Several `RouteTravel` boxes may live on one page — a section of the path and a
+search param of the root route are two rows of tabs, both live — and only the one
+actually travelling is captured.
+
+Demo: [../src/nav/demos/route_travel/route_travel.html](../src/nav/demos/route_travel/route_travel.html)
+and [../src/nav/demos/tabs/tabs.html](../src/nav/demos/tabs/tabs.html). The full
+spec of the gesture is [drag_to_travel.md](./drag_to_travel.md).
+
+## Tabs with no URL
+
+`SlideContainer` holds slides that replace one another in one box, with the same
+gestures and the same travelling bar, and nothing written to the URL. Use it when
+the position genuinely is not a place one should be able to link to:
+
+- the steps of a wizard, or the screens of a picker, inside a dialog or a popover
+  — a popup is promoted to the browser's top layer, so no container can hold two
+  of them side by side and `RouteTravel` has nothing to work with there;
+- a carousel, or any window over something endless (days, months);
+- a panel switch local to one widget, which nobody would ever send a link to.
+
+If the answer to "should a link be able to open the app on this?" is yes, it is a
+route.
+
+```jsx
+<Nav slideContainer="messagerie" currentIndicator>
+  <Link slide="unread" variant="tab">Non lus</Link>
+  <Link slide="read" variant="tab">Lus</Link>
+</Nav>
+<SlideContainer id="messagerie">
+  <Slide area="unread">…</Slide>
+  <Slide area="read">…</Slide>
+</SlideContainer>
+```
+
+`<Nav slideContainer>` names the container by id — the row can sit anywhere on the
+page. It reads which slide is on screen from the container itself, and its bar
+follows the slides, a finger dragging them included. `<Link slide>` has no href
+and behaves like a button: this is not a link to anywhere.
+
+Demo: [../src/layout/demos/8_slide_container_demo.html](../src/layout/demos/8_slide_container_demo.html).

@@ -82,15 +82,20 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 // transition carries was measured once, at the start, against a destination
 // this travel is no longer going to.
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
+// The name the box wears while it travels, and only then (see nameForTravel).
+const TRAVEL_NAME = "navi-route-travel";
 
 const css = /* css */ `
+  /* The name that makes the page inside this box a picture of its own during a
+     transition — rather than part of the one big picture the document takes, so
+     the two pages can move past each other while everything else stays where it
+     is — is not written here: it is worn only for the length of a travel (see
+     nameForTravel). A name belongs to ONE element at a time, and a page can hold
+     several of these boxes at once — a section of the url and a search param of
+     the root route are two rows of tabs, both live, and only one of them is ever
+     travelling. */
   .navi_route_travel {
     position: relative;
-    /* Named, so the page inside this box is a picture of its own during a
-       transition rather than part of the one big picture the document takes:
-       the two pages can then move past each other while everything else stays
-       where it is. */
-    view-transition-name: navi-route-travel;
     /* The gesture takes the axis the pages travel on and leaves the other one
        to the page, so a list still scrolls under the same finger. */
     touch-action: pan-y;
@@ -405,6 +410,10 @@ export const RouteTravel = ({
       ended: false,
     };
     travelRef.current = travel;
+    // Taken before the picture is: the browser reads the name off the DOM as it
+    // stands when the transition starts, and this box is only a picture of its
+    // own for as long as it is the one travelling.
+    nameForTravel(elementRef.current);
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
     if (scrub) {
       holdPictures(travel);
@@ -758,6 +767,10 @@ export const RouteTravel = ({
     releaseHold(travel);
     if (travelRef.current === travel) {
       travelRef.current = null;
+      // Given back, so another box may wear it: kept, two of them on a page
+      // would both answer to it and the browser refuses the whole transition
+      // rather than pick.
+      unnameAfterTravel(elementRef.current);
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
@@ -1404,3 +1417,14 @@ const currentPageIndex = (pages) => {
 
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped = () => {};
+
+// The name is lent to the box that is travelling and taken back afterwards.
+// There is one transition in a document at a time, so one box wears it at a
+// time — and the others, unnamed, are simply not captured: they stay live
+// under the pictures rather than being frozen with the page.
+const nameForTravel = (element) => {
+  element.style.viewTransitionName = TRAVEL_NAME;
+};
+const unnameAfterTravel = (element) => {
+  element.style.viewTransitionName = "";
+};

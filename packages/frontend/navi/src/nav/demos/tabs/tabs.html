@@ -277,45 +277,41 @@
         );
       };
 
-      const SearchPhone = () => {
-        const { matching } = useRouteStatus(ROOT_ROUTE);
-        return (
-          <div className="phone">
-            <div className="top_bar">
-              <Nav className="tab_row" currentIndicator expand>
-                {SEARCH_TABS.map(({ vue, label }) => (
-                  <Link
-                    key={vue}
-                    route={ROOT_ROUTE}
-                    routeParams={{ vue }}
-                    variant="tab"
-                    padding="m"
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </Nav>
-            </div>
-            {matching ? (
-              <RouteTravel className="travel_box">
-                <Route>
-                  {SEARCH_TABS.map(({ vue, label, color, rows }) => (
-                    <Route
-                      key={vue}
-                      route={ROOT_ROUTE}
-                      routeParams={{ vue }}
-                      element={Page}
-                      elementProps={{ label, color, rows }}
-                    />
-                  ))}
-                </Route>
-              </RouteTravel>
-            ) : (
-              <Elsewhere />
-            )}
+      // The root route matches wherever one is in the app, so this row is never
+      // "elsewhere": its tabs are a search param laid over whatever page is
+      // showing.
+      const SearchPhone = () => (
+        <div className="phone">
+          <div className="top_bar">
+            <Nav className="tab_row" currentIndicator expand>
+              {SEARCH_TABS.map(({ vue, label }) => (
+                <Link
+                  key={vue}
+                  route={ROOT_ROUTE}
+                  routeParams={{ vue }}
+                  variant="tab"
+                  padding="m"
+                >
+                  {label}
+                </Link>
+              ))}
+            </Nav>
           </div>
-        );
-      };
+          <RouteTravel className="travel_box">
+            <Route>
+              {SEARCH_TABS.map(({ vue, label, color, rows }) => (
+                <Route
+                  key={vue}
+                  route={ROOT_ROUTE}
+                  routeParams={{ vue }}
+                  element={Page}
+                  elementProps={{ label, color, rows }}
+                />
+              ))}
+            </Route>
+          </RouteTravel>
+        </div>
+      );
 
       const App = () => (
         <div>
