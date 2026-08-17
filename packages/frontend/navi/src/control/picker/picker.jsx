@@ -162,6 +162,11 @@ const css = /* css */ `
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
+    /* The frame is drawn by the box, but its radius is declared here, on the
+       control root, like every other navi control does — so anything styling
+       the picker from the outside (a Group squaring the corners it joins) has
+       one element to talk to, and the box follows. */
+    border-radius: var(--picker-border-radius);
 
     .navi_picker_box {
       position: relative;
@@ -183,7 +188,7 @@ const css = /* css */ `
       border-width: var(--picker-border-width);
       border-style: solid;
       border-color: var(--x-picker-border-color);
-      border-radius: var(--picker-border-radius);
+      border-radius: inherit;
       outline-width: var(--picker-outline-width);
       outline-style: none;
       outline-color: var(--picker-outline-color);
