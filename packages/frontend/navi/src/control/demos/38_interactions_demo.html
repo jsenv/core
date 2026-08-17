@@ -930,6 +930,11 @@
           // vers la droite tirerait aussi la page vers l'onglet d'à côté, et le
           // voyage — qui arrive après — tuerait la prise.
           element.setAttribute("data-no-drag-travel", "");
+          // …et ce que @jsenv/dom pose sur une source de glisser: pas de callout
+          // iOS, pas de sélection de texte sous la prise, et le toucher laissé au
+          // défilement jusqu'à l'appui. Trois choses vraies avant la pression,
+          // donc un attribut et pas du JS dans le pointerdown.
+          element.setAttribute("data-drag-source", "");
           const onPointerDown = (pointerDownEvent) => {
             dragAfterIntent(
               pointerDownEvent,
@@ -964,6 +969,7 @@
           element.addEventListener("pointerdown", onPointerDown);
           return () => {
             element.removeAttribute("data-no-drag-travel");
+            element.removeAttribute("data-drag-source");
             element.removeEventListener("pointerdown", onPointerDown);
           };
         },

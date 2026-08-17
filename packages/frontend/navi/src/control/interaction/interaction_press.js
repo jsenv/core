@@ -140,19 +140,28 @@ import.meta.css = /* css */ `
     touch-action: none;
   }
 
+  /* A mouse pressed on a row selects its text from the first pixel, while the
+     gesture is still spending ten of them deciding whether the press is a swipe.
+     By the time it is one the blue trail is already there, and clearing it
+     afterwards only half works — a selection under way goes on being extended as
+     long as the button is down. So it is refused instead, and refused from the
+     press rather than from the swipe: an element that declares a swipe has said
+     what a press on it is about. */
+  [${SWIPE_AXES_ATTRIBUTE}] {
+    user-select: none;
+  }
+
   /* iOS shows its callout (Copy / Look Up) and selects the word under the finger on
      a press held still, and does not always route that through an event that can be
      refused. Same reason as the drag sources in @jsenv/dom: it has to be true
      before the finger lands. */
   [${LONGPRESS_ATTRIBUTE}] {
     -webkit-touch-callout: none;
+    user-select: none;
   }
 
   /* The element follows the finger. The translate property rather than a transform,
      so whatever transform the element (or its theme) already has is left alone. */
-  [data-swiping] {
-    user-select: none;
-  }
   [data-swiping="left"],
   [data-swiping="right"] {
     translate: var(--swipe-pulled) 0;

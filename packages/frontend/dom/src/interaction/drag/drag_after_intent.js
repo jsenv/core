@@ -24,9 +24,9 @@ import {
   isPrimaryButtonEvent,
 } from "./drag_gesture.js";
 
-/* At module scope, and on the markers rather than on the pressed element: both
-   rules below have to be true BEFORE the finger lands — a stylesheet, never a
-   line of JS in the pointerdown.
+/* At module scope, and on the markers rather than on the pressed element: every
+   rule below has to be true BEFORE the press — a stylesheet, never a line of JS
+   in the pointerdown.
 
    -webkit-touch-callout: iOS shows its callout (Copy / Look Up) and selects the
    text under the finger on a long press, and does not always route that through
@@ -45,6 +45,14 @@ const css = /* css */ `
   [data-drag-handle],
   [data-drag-source] {
     -webkit-touch-callout: none;
+    /* A mouse pressed on text selects it from the first pixel, while this is
+       still spending a few of them deciding whether the press is a drag at all.
+       By the time it is one, a blue trail is already there — and clearing it
+       afterwards only half works, because a selection already under way goes on
+       being extended as long as the button is down. So it is refused instead, and
+       refused BEFORE the press: an element that says it is a drag source has said
+       the press is about the drag. */
+    user-select: none;
   }
   [data-drag-handle] {
     /* A dedicated handle has nothing to share: it takes the gesture on contact. */
@@ -65,6 +73,7 @@ const css = /* css */ `
   [data-drag-ignore] {
     -webkit-touch-callout: default;
     touch-action: auto;
+    user-select: auto;
   }
 `;
 import.meta.css = css;

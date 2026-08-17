@@ -93,11 +93,9 @@ const css = /* css */ `
   }
   [data-drag-source] {
     cursor: default;
-    user-select: none;
   }
   [data-drag-ignore] {
     cursor: auto;
-    user-select: auto;
   }
 
   [navi-drag-clone-source] {
