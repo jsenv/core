@@ -164,8 +164,10 @@ place taken by the list.
 />
 ```
 
-`data-drag-free` on the element or a container lets it leave its scroll area; by
-default it stays inside. A `move` whose answer rejects travels back, because a
+`data-drag-free` on the element or a container lets it leave; by default a `move`
+stays inside what one can SEE of its container — which requires that container to
+be a scroll container at all (`overflow` anything but `visible`), since there is
+nothing else for "inside" to mean. A `move` whose answer rejects travels back, because a
 place the application would not accept must not stay on screen as if it had.
 
 **Declaring `toss` frees the area by itself.** What is dragged is otherwise kept

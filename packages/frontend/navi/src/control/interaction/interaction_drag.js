@@ -126,13 +126,16 @@ defineInteractionDetector({
         itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
-        // Where it may go, said in the DOM: something moved inside a frame stays in
-        // it by default (its scroll area), and `data-drag-free` is how that is
-        // lifted. Left alone for a throw, which frees the area on its own — it has
-        // to be able to leave.
+        // Where it may go, said in the DOM. A thing that is put somewhere stays
+        // inside what one can SEE of its container ("scrollport", not "scroll":
+        // the scrollable area can be far larger than the box, and "inside the box"
+        // is what a hand expects). `data-drag-free` lifts that. Left alone for a
+        // throw, which frees the area on its own — it has to be able to leave.
         areaConstraint: element.closest(`[data-drag-free]`)
           ? "none"
-          : undefined,
+          : canMove
+            ? "scrollport"
+            : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Interactions demo</title>
@@ -228,11 +228,11 @@
         font-size: 14px;
         background: white;
       }
-      /* Ce qui est porté par le pointeur. navi pose `navi-drag-clone` sur la
-         copie et `navi-drag-clone-source` sur l'original resté en place — c'est
-         par là qu'on habille l'un et l'autre. Un élément est transparent par
-         défaut, et une copie transparente ne se voit pas : le fond est un choix
-         de la page, pas du geste. */
+      /* What the pointer carries. navi writes `navi-drag-clone` on the copy and
+         `navi-drag-clone-source` on the original left in place — that is how both
+         are dressed. An element has no background unless something gave it one, and
+         a transparent copy cannot be seen: the background is the page's call, not
+         the gesture's. */
       .task[navi-drag-clone] {
         background: white;
         border-radius: 6px;
@@ -376,11 +376,11 @@
         </Box>
       );
 
-      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archiver" };
-      const DELETE_TRAIL = { className: "trail_delete", label: "Supprimer" };
+      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archive" };
+      const DELETE_TRAIL = { className: "trail_delete", label: "Delete" };
 
-      // Une ligne balayable : une Box, ni un lien ni un bouton — une interaction
-      // n'a pas besoin d'un contrôle pour être lue.
+      // A swipeable row: a Box, neither a link nor a button — an interaction does
+      // not need a control to be read.
       const Row = ({ title, body, trailStart, trailEnd, ...rest }) => (
         <Box className="row" {...rest}>
           {trailStart ? (
@@ -432,9 +432,7 @@
         return (
           <div class="demo-section">
             <Heading id="nominal">Nominal case</Heading>
-            <p class="legend">
-              Click to select, double click to open.
-            </p>
+            <p class="legend">Click to select, double click to open.</p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" width="220px">
                 <List>
@@ -443,9 +441,8 @@
                       key={file}
                       id={file}
                       className="file_item"
-                      // En style inline plutôt qu'en classe : la liste a son
-                      // propre fond, et une classe de la page perdrait contre
-                      // lui.
+                      // Inline rather than a class: the list has a background of
+                      // its own, and a class of the page would lose against it.
                       style={
                         selected === file
                           ? { backgroundColor: "#dde9fb" }
@@ -471,11 +468,11 @@
                   <Box flex="y" spacing="xs">
                     <strong>{opened}</strong>
                     <Text size="s" color="#6b7482">
-                      ouvert
+                      open
                     </Text>
                   </Box>
                 ) : (
-                  <span class="opened_pane_empty">rien d'ouvert</span>
+                  <span class="opened_pane_empty">nothing open</span>
                 )}
               </div>
             </Box>
@@ -496,26 +493,26 @@
           <div class="demo-section">
             <Heading id="states">States</Heading>
             <p class="desc">
-              Sur un contrôle, une interaction passe par la même porte qu'un
-              clic.
+              On a control, an interaction goes through the same gate as a
+              click.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="normal">
-                <Button interactions={swipeAndHold}>Maintenir</Button>
+                <Button interactions={swipeAndHold}>Hold</Button>
               </Variant>
               <Variant caption="readOnly">
                 <Button readOnly interactions={swipeAndHold}>
-                  Maintenir
+                  Hold
                 </Button>
               </Variant>
               <Variant caption="disabled">
                 <Button disabled interactions={swipeAndHold}>
-                  Maintenir
+                  Hold
                 </Button>
               </Variant>
               <Variant caption="loading">
                 <Button loading interactions={swipeAndHold}>
-                  Maintenir
+                  Hold
                 </Button>
               </Variant>
             </Box>
@@ -526,7 +523,7 @@
 
       // ── Already-draggable surfaces ───────────────────────────────────────────
 
-      // Un carré de couleur en data: URI, pour avoir une vraie <img> sans réseau.
+      // A coloured square as a data: URI, so there is a real <img> and no network.
       const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#2f5fa8"/></svg>',
       )}`;
@@ -540,8 +537,8 @@
               On already-draggable surfaces
             </Heading>
             <p class="desc">
-              Commencer le geste sur la vignette, puis sur le lien, puis sur le
-              texte.
+              Start the gesture on the thumbnail, then on the link, then on the
+              text.
             </p>
             <Box className="rows">
               <Row
@@ -551,7 +548,7 @@
                     <Link href="https://jsenv.dev">jsenv.dev</Link>
                   </Box>
                 }
-                body="une image et un lien dans la ligne"
+                body="an image and a link inside the row"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("swipe_right") }}
               />
@@ -568,12 +565,12 @@
         const archiveOrDelete = (value, { event }) => {
           const swipe = findEvent(event, "swipe_right");
           if (!swipe) {
-            push("action", "sans balayage", event);
+            push("action", "no swipe", event);
             return;
           }
           const { progress } = swipe.detail;
           push(
-            progress > 0.8 ? "supprime" : "archive",
+            progress > 0.8 ? "delete" : "archive",
             `progress ${progress.toFixed(2)}`,
             event,
           );
@@ -596,7 +593,7 @@
                     longpress: "request_action",
                   }}
                 >
-                  Balayer, ou maintenir
+                  Swipe, or hold
                 </Button>
               </Variant>
             </Box>
@@ -615,23 +612,23 @@
               While the answer takes its time
             </Heading>
             <p class="legend">
-              Balayer une ligne vers la droite, puis répondre depuis le backend
-              ci-dessous. La ligne reste sortie tant que l'appel n'a pas
-              répondu, et revient qu'il réussisse ou qu'il échoue.
+              Swipe a row to the right, then answer from the backend below. The
+              row stays out for as long as the call has not answered, and comes
+              back whether it succeeded or failed.
             </p>
             <FakeBackend value={{ archived: [] }}>
               {({ action }) => (
                 <Box className="rows" flex="y">
-                  {["Marc", "Léa", "Sofia"]
+                  {["Marc", "Lea", "Sofia"]
                     .filter((name) => !archived.includes(name))
                     .map((name) => (
                       <Row
                         key={name}
                         title={name}
-                        body="balayer vers la droite"
+                        body="swipe to the right"
                         trailStart={ARCHIVE_TRAIL}
                         interactions={{
-                          // Une promesse : le balayage attend qu'elle se règle.
+                          // A promise: the swipe waits for it to settle.
                           swipe_right: async () => {
                             await action({ archived: [name] });
                             setArchived((previous) => [...previous, name]);
@@ -645,7 +642,7 @@
             {archived.length ? (
               <Box paddingY="s">
                 <Button action={() => setArchived([])}>
-                  Rétablir {archived.length}
+                  Restore {archived.length}
                 </Button>
               </Box>
             ) : null}
@@ -662,8 +659,8 @@
           <div class="demo-section">
             <Heading id="swipe">Swipe</Heading>
             <p class="desc">
-              With a mouse as with a finger: the row follows, and comes back if it
-              is let go of too early.
+              With a mouse as with a finger: the row follows, and comes back if
+              it is let go of too early.
             </p>
 
             <Heading level={3} id="swipe-one-way">
@@ -672,13 +669,13 @@
             <Box className="rows" flex="y" spacing="0">
               <Row
                 title="swipe_right"
-                body="vers la droite"
+                body="to the right"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("swipe_right") }}
               />
               <Row
                 title="swipe_left"
-                body="vers la gauche"
+                body="to the left"
                 trailEnd={DELETE_TRAIL}
                 interactions={{ swipe_left: log("swipe_left") }}
               />
@@ -690,7 +687,7 @@
             <Box className="rows">
               <Row
                 title="swipe_right + swipe_left"
-                body="deux gestes, deux effets"
+                body="two gestures, two effects"
                 trailStart={ARCHIVE_TRAIL}
                 trailEnd={DELETE_TRAIL}
                 interactions={{
@@ -719,20 +716,20 @@
             <Box className="rows">
               <Row
                 title="0.33"
-                body="par défaut"
+                body="default"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("0.33") }}
               />
               <Row
                 title="0.15"
-                body="lâchée tôt, elle part"
+                body="let go of early, it leaves"
                 data-swipe-threshold="0.15"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("0.15") }}
               />
               <Row
                 title="0.8"
-                body="il faut la traverser"
+                body="it has to be crossed"
                 data-swipe-threshold="0.8"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("0.8") }}
@@ -757,7 +754,7 @@
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ longpress }">
                 <Button interactions={{ longpress: log("longpress") }}>
-                  Maintenir
+                  Hold
                 </Button>
               </Variant>
             </Box>
@@ -766,25 +763,25 @@
               And the context menu
             </Heading>
             <p class="legend">
-              Clic droit sur chacun des deux. Un appui long ne prend pas le menu
-              du navigateur : le clic droit vient de l'autre bouton, ce n'est
-              pas la pression qu'on écoute. Pour qu'il fasse ce que fait l'appui
-              long, on l'écrit à côté.
+              Right click on each of the two. A held press does not take the
+              browser's menu: a right click comes from the other button, it is
+              not the press being read. To make it do what the held press does,
+              write it beside.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="{ longpress } — clic droit : menu du navigateur">
+              <Variant caption="{ longpress } — right click: the browser menu">
                 <Button interactions={{ longpress: log("longpress") }}>
-                  Clic droit ici
+                  Right click here
                 </Button>
               </Variant>
-              <Variant caption="{ longpress, contextmenu } — clic droit : l'interaction">
+              <Variant caption="{ longpress, contextmenu } — right click: the interaction">
                 <Button
                   interactions={{
                     longpress: log("longpress"),
                     contextmenu: log("contextmenu"),
                   }}
                 >
-                  Clic droit ici
+                  Right click here
                 </Button>
               </Variant>
             </Box>
@@ -796,21 +793,19 @@
               data-longpress-delay
             </Heading>
             <p class="legend">
-              How long the press has to hold. Under the system menu's own delay, so
-              that the press is answered before that menu would open.
+              How long the press has to hold. Under the system menu's own delay,
+              so that the press is answered before that menu would open.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="450 ms (par défaut)">
-                <Button interactions={{ longpress: log("450") }}>
-                  Maintenir
-                </Button>
+              <Variant caption="450 ms (default)">
+                <Button interactions={{ longpress: log("450") }}>Hold</Button>
               </Variant>
               <Variant caption='data-longpress-delay="1200"'>
                 <Button
                   data-longpress-delay="1200"
                   interactions={{ longpress: log("1200") }}
                 >
-                  Maintenir
+                  Hold
                 </Button>
               </Variant>
             </Box>
@@ -819,9 +814,9 @@
               data-longpress-slop
             </Heading>
             <p class="legend">
-              Combien de pixels le doigt peut dériver pendant l'attente avant
-              que l'appui soit abandonné. Maintenir 1,2 s en bougeant lentement
-              d'un centimètre : à 8 px rien ne se déclenche, à 60 px si.
+              How many pixels the finger may drift during the wait before the
+              press is abandoned. Hold for 1.2 s while moving slowly by a
+              centimetre: at 8 px nothing fires, at 60 px it does.
             </p>
             <Box
               flex="x"
@@ -829,17 +824,17 @@
               alignY="start"
               data-longpress-delay="1200"
             >
-              <Variant caption="8 px (par défaut) — la dérive annule">
+              <Variant caption="8 px (default) — the drift cancels it">
                 <Button interactions={{ longpress: log("slop 8") }}>
-                  Maintenir en bougeant
+                  Hold while moving
                 </Button>
               </Variant>
-              <Variant caption='data-longpress-slop="60" — la dérive est tolérée'>
+              <Variant caption='data-longpress-slop="60" — the drift is tolerated'>
                 <Button
                   data-longpress-slop="60"
                   interactions={{ longpress: log("slop 60") }}
                 >
-                  Maintenir en bougeant
+                  Hold while moving
                 </Button>
               </Variant>
             </Box>
@@ -863,7 +858,7 @@
                   action={logAction}
                   interactions={{ "keyboard:ctrl+backspace": "request_action" }}
                 >
-                  Focus puis ctrl+backspace
+                  Focus then ctrl+backspace
                 </Button>
               </Variant>
               <Variant caption='{ "keyboard:shift+a": fn }'>
@@ -873,7 +868,7 @@
                       push("keyboard:shift+a", undefined, event),
                   }}
                 >
-                  Focus puis shift+a
+                  Focus then shift+a
                 </Button>
               </Variant>
             </Box>
@@ -884,9 +879,8 @@
 
       // ── An interaction of your own ─────────────────────────────────────────────
 
-      // Trois clics dans la seconde : navi n'en a pas, l'appli l'enregistre.
-      // `setup` ne tourne qu'une fois par élément, donc le compte est une simple
-      // variable de la closure.
+      // Three clicks within a second: navi has no such thing, the app registers it.
+      // `setup` runs once per element, so the count is a plain closure variable.
       defineInteractionDetector({
         name: "triple_click",
         claims: (type) => type === "triple_click",
@@ -926,7 +920,7 @@
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ triple_click: fn }">
                 <Button
-                  action={(value, { event }) => push("clic", undefined, event)}
+                  action={(value, { event }) => push("click", undefined, event)}
                   interactions={{
                     triple_click: (event) => {
                       setFired((previous) => previous + 1);
@@ -934,11 +928,11 @@
                     },
                   }}
                 >
-                  Cliquer trois fois
+                  Click three times
                 </Button>
               </Variant>
-              <Variant caption="déclenché">
-                <Text>{fired} fois</Text>
+              <Variant caption="fired">
+                <Text>{fired} times</Text>
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
@@ -949,11 +943,11 @@
       // ── Reorder ────────────────────────────────────────────────────────
 
       const TASKS = [
-        { id: "task_1", label: "Relancer le devis" },
-        { id: "task_2", label: "Réserver le terrain" },
-        { id: "task_3", label: "Envoyer les photos" },
-        { id: "task_4", label: "Payer la licence" },
-        { id: "task_5", label: "Trouver un gardien" },
+        { id: "task_1", label: "Chase the quote" },
+        { id: "task_2", label: "Book the pitch" },
+        { id: "task_3", label: "Send the photos" },
+        { id: "task_4", label: "Pay the licence" },
+        { id: "task_5", label: "Find a keeper" },
       ];
 
       const moveBefore = (order, fromId, toId) => {
@@ -970,9 +964,9 @@
       };
 
       const TaskList = ({ name, interactionsFor }) => {
-        // Les ids portés par les éléments sont ceux que le geste rend (`fromId`,
-        // `toId`, `id`), donc ce sont eux que l'ordre contient — deux listes sur la
-        // même page ne peuvent pas partager les ids de TASKS.
+        // The ids the elements carry are the ones the gesture hands back (`fromId`,
+        // `toId`, `id`), so they are what the order holds — two lists on one page
+        // cannot share the ids of TASKS.
         const items = TASKS.map((task) => ({
           ...task,
           id: `${name}_${task.id}`,
@@ -980,8 +974,8 @@
         const [order, setOrder] = useState(items.map((item) => item.id));
         const reorder = (event) => {
           const { fromId, toId, syncCloneWithDropTarget } = event.detail;
-          // Le nom de transition est unique par document, donc c'est l'appli qui
-          // le pose et l'appli qui lance la transition.
+          // A transition name is unique per document, so it is the app that writes
+          // it and the app that starts the transition.
           const transition = document.startViewTransition(() => {
             syncCloneWithDropTarget();
             setOrder((previous) => moveBefore(previous, fromId, toId));
@@ -1021,7 +1015,7 @@
             {order.length < items.length ? (
               <Box paddingY="s">
                 <Button action={() => setOrder(items.map((item) => item.id))}>
-                  Rétablir {items.length - order.length}
+                  Restore {items.length - order.length}
                 </Button>
               </Box>
             ) : null}
@@ -1033,8 +1027,8 @@
         <div class="demo-section">
           <Heading id="reorder">Reorder</Heading>
           <p class="legend">
-            Attraper une tâche par sa poignée et la déposer sur une autre. À la
-            souris quelques pixels suffisent, au doigt il faut la tenir.
+            Grab a task by its handle and drop it onto another one. With a mouse
+            a few pixels are enough; with a finger it has to be held.
           </p>
           <TaskList
             name="reorder"
@@ -1046,9 +1040,9 @@
       // ── Toss ─────────────────────────────────────────────────────────────
 
       const NOTES = [
-        "Terrain 3, au fond à gauche",
-        "Apporter un maillot clair",
-        "Le portail se ferme à 22h",
+        "Pitch 3, far left",
+        "Bring a light shirt",
+        "The gate closes at 10pm",
       ];
 
       const TossDemo = () => {
@@ -1057,10 +1051,9 @@
           <div class="demo-section">
             <Heading id="toss">Toss</Heading>
             <p class="legend">
-              Attraper un papier — il se soulève — puis l'envoyer loin et vite :
-              il sort de l'écran. Trop court ou trop lent, il se raccroche.
-              Répondre depuis le backend décide s'il est vraiment décroché ou
-              s'il revient.
+              Grab a paper and send it far and fast: it leaves the screen. Too
+              short or too slow and it goes back up. Answering from the backend
+              decides whether it is really off or comes back.
             </p>
             <FakeBackend value={{ tossed: [] }}>
               {({ action }) => (
@@ -1088,7 +1081,7 @@
             {tossed.length ? (
               <Box paddingY="s">
                 <Button action={() => setTossed([])}>
-                  Rétablir {tossed.length}
+                  Restore {tossed.length}
                 </Button>
               </Box>
             ) : null}
@@ -1101,10 +1094,10 @@
               data-toss-distance et data-toss-speed
             </Heading>
             <p class="legend">
-              Jeter demande les deux à la fois : loin, et vite. L'un sans
-              l'autre, c'est déplacer la chose en hésitant, et rien ne se perd
-              sur une hésitation. Le premier papier part au moindre geste franc,
-              le second demande d'insister.
+              Tossing asks for both at once: far, and fast. One without the
+              other is moving the thing while hesitating, and nothing is lost on
+              a hesitation. The first paper leaves on the slightest firm
+              gesture, the second asks you to insist.
             </p>
             <TossThresholds />
           </div>
@@ -1124,7 +1117,7 @@
                 data-toss-speed="0.15"
                 interactions={{ toss: log("40 px, 0.15 px/ms") }}
               >
-                Se jette facilement
+                Tossed easily
               </Box>
               <Box
                 className="note"
@@ -1133,7 +1126,7 @@
                 data-toss-speed="1"
                 interactions={{ toss: log("300 px, 1 px/ms") }}
               >
-                Demande d'insister
+                Asks you to insist
               </Box>
             </Box>
             <CallLog entries={entries} onClear={clear} />
@@ -1159,15 +1152,15 @@
           <div class="demo-section">
             <Heading id="move">Move</Heading>
             <p class="legend">
-              Grab a token and put it somewhere else: it stays where it was put. It
-              is the token itself that travels, not a copy.
+              Grab a token and put it somewhere else: it stays where it was put.
+              It is the token itself that travels, not a copy.
             </p>
             <Box className="board">
               <Token
                 id="token_free"
-                label="libre"
+                label="free"
                 style={{ left: "16px", top: "16px" }}
-                interactions={{ move: logMove("libre") }}
+                interactions={{ move: logMove("free") }}
               />
             </Box>
 
@@ -1179,8 +1172,8 @@
               data-drag-axis
             </Heading>
             <p class="legend">
-              Un jeton tenu à un seul axe. Sans rien dire, un déplacement va où
-              on le met ; une liste réordonnée, elle, suit la sienne.
+              A token held to one axis. Said nothing, a move goes wherever it is
+              put; a reordered list, for its part, follows its own.
             </p>
             <Box className="board">
               <Token
@@ -1203,21 +1196,21 @@
               data-drag-free
             </Heading>
             <p class="legend">
-              Par défaut un jeton ne sort pas de ce qui le porte. Le second
-              plateau rend cette liberté : son jeton peut être emmené n'importe
-              où sur la page.
+              By default a token does not leave what holds it — drag the first
+              one against an edge and it stops there. The second board gives
+              that freedom back: its token can be taken anywhere on the page.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box flex="y" spacing="xs">
                 <Text size="s" color="#666">
-                  tenu dans son plateau
+                  held inside its board
                 </Text>
                 <Box className="board board_small">
                   <Token
                     id="token_held"
-                    label="tenu"
+                    label="held"
                     style={{ left: "16px", top: "16px" }}
-                    interactions={{ move: logMove("tenu") }}
+                    interactions={{ move: logMove("held") }}
                   />
                 </Box>
               </Box>
@@ -1228,9 +1221,9 @@
                 <Box className="board board_small board_open" data-drag-free>
                   <Token
                     id="token_loose"
-                    label="libre"
+                    label="free"
                     style={{ left: "16px", top: "16px" }}
-                    interactions={{ move: logMove("libre du plateau") }}
+                    interactions={{ move: logMove("free of the board") }}
                   />
                 </Box>
               </Box>
@@ -1242,9 +1235,9 @@
 
       // ── Combinations ──────────────────────────────────────────────────────
       //
-      // Plusieurs interactions sur un même élément: c'est là qu'on vérifie qu'elles
-      // ne se marchent pas dessus. Une section par PAIRE qui partage une entrée —
-      // une pression, un lâcher — et non une par combinaison imaginable.
+      // Several interactions on one element: this is where one checks they do not
+      // walk over each other. One section per PAIR that shares an input — a press, a
+      // release — and not one per imaginable combination.
 
       const CombinationsDemo = () => {
         const [entries, push, clear] = useCallLog();
@@ -1257,13 +1250,13 @@
               Held press and swipe
             </Heading>
             <p class="legend">
-              La même pression : le doigt part sur le côté, c'est un balayage ;
-              il ne bouge pas, c'est un appui long. Jamais les deux.
+              The same press: the finger leaves sideways and it is a swipe, it
+              does not move and it is a held press. Never both.
             </p>
             <Box className="rows">
               <Row
                 title="swipe_right + longpress"
-                body="partir sur le côté, ou ne pas bouger"
+                body="leave sideways, or do not move"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{
                   swipe_right: log("swipe_right"),
@@ -1277,10 +1270,10 @@
               Reorder and toss
             </Heading>
             <p class="legend">
-              Le même lâcher : déposée sur une autre tâche, la ligne l'échange ;
-              envoyée loin et vite, elle est jetée. Une ligne qui peut être
-              jetée doit pouvoir quitter sa liste, donc le geste lui rend cette
-              liberté — avec <code>reorder</code> seul elle y reste enfermée.
+              The same release: dropped onto another task, the row swaps with
+              it; sent far and fast, it is tossed. A row that can be tossed has
+              to be able to leave its list, so the gesture gives it that freedom
+              — with <code>reorder</code> alone it stays shut inside.
             </p>
             <TaskList
               name="both"
@@ -1292,10 +1285,10 @@
 
       // ── Concrete cases ─────────────────────────────────────────────────────
       //
-      // Chacun met plusieurs interactions sur un même composant, ce qu'aucune
-      // section par geste ne montre: c'est là qu'on voit l'arbitrage. Il en
-      // viendra d'autres — un par situation qui a vraiment eu lieu, jamais un par
-      // combinaison possible.
+      // Each puts several interactions on one component, which no per-gesture
+      // section shows: this is where the arbitration is visible. More will come —
+      // one per situation that actually happened, never one per possible
+      // combination.
 
       const ConcreteCasesDemo = () => (
         <div class="demo-section">
@@ -1310,29 +1303,29 @@
         {
           id: "1",
           from: "Sofia Mendes",
-          subject: "Relecture du devis avant jeudi",
+          subject: "Quote to review before Thursday",
         },
-        { id: "2", from: "GitHub", subject: "3 activités sur jsenv/core" },
-        { id: "3", from: "Marc Aubert", subject: "Photos de la conf" },
+        { id: "2", from: "GitHub", subject: "3 activities on jsenv/core" },
+        { id: "3", from: "Marc Aubert", subject: "Photos from the conference" },
         {
           id: "4",
-          from: "Léa Fournier",
-          subject: "On décale le point de 15h ?",
+          from: "Lea Fournier",
+          subject: "Shall we move the 3pm call?",
         },
       ];
 
       const MailboxCase = () => {
         const [archived, setArchived] = useState([]);
         const [read, setRead] = useState(["3"]);
-        // Le menu n'est pas un état de ce composant : il s'ouvre par commande,
-        // comme un picker, et se ferme tout seul. Ce qui reste ici est la seule
-        // chose que la commande ne dit pas — de quel message il parle.
+        // The menu is not a state of this component: it opens by command, like a
+        // picker, and closes on its own. What is left here is the only thing the
+        // command does not say — which message it is about.
         const [menuMailId, setMenuMailId] = useState(null);
         const [openedId, setOpenedId] = useState(null);
         const visible = MAILS.filter((mail) => !archived.includes(mail.id));
         const opened = MAILS.find((mail) => mail.id === openedId);
-        // Le point où la pression a eu lieu : un carré d'un pixel qu'on déplace,
-        // parce qu'une ancre est un élément et qu'un point n'en est pas un.
+        // Where the press happened: a one-pixel square that gets moved, because an
+        // anchor is an element and a point is not one.
         const anchorPointRef = useRef(null);
         const openMenuAt = (mail, interactionEvent) => {
           const press = interactionEvent.detail.event;
@@ -1362,8 +1355,8 @@
             </Heading>
             <p class="legend">
               Click to open, swipe right to archive, swipe left to mark read or
-              unread, hold to get the menu — which opens where the finger landed,
-              while it is still down.
+              unread, hold to get the menu — which opens where the finger
+              landed, while it is still down.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
@@ -1385,11 +1378,10 @@
                         trailStart={ARCHIVE_TRAIL}
                         trailEnd={{
                           className: "trail_unread",
-                          label: read.includes(mail.id) ? "Non lu" : "Lu",
+                          label: read.includes(mail.id) ? "Unread" : "Read",
                         }}
-                        // Quel popover la commande va ouvrir : il n'est pas au
-                        // -dessus de la ligne dans le DOM, donc il ne se trouve
-                        // pas tout seul.
+                        // Which popover the command opens: it is not above the row
+                        // in the DOM, so it cannot be found on its own.
                         commandfor="mail_menu"
                         interactions={{
                           click: () => setOpenedId(mail.id),
@@ -1417,13 +1409,13 @@
                     </Text>
                   </Box>
                 ) : (
-                  <span class="opened_pane_empty">rien d'ouvert</span>
+                  <span class="opened_pane_empty">nothing open</span>
                 )}
               </div>
             </Box>
-            {/* Un seul popover pour toute la liste — une liste n'en montre qu'un
-                à la fois. Il n'a pas de prop `open` : c'est --navi-open qui
-                l'ouvre, et la commande porte l'ancre. */}
+            {/* One popover for the whole list — a list only ever shows one at a
+                time. It has no `open` prop: --navi-open is what opens it, and the
+                command carries the anchor. */}
             <div
               ref={anchorPointRef}
               style={{
@@ -1455,7 +1447,7 @@
                       <EyeSvg />
                     </Icon>
                   </span>
-                  Ouvrir le message
+                  Open the message
                 </Box>
                 <Box
                   as="button"
@@ -1473,7 +1465,7 @@
                       <EyeClosedSvg />
                     </Icon>
                   </span>
-                  Marquer comme non lu
+                  Mark as unread
                 </Box>
                 <Box
                   as="button"
@@ -1486,7 +1478,7 @@
                       <StarSvg />
                     </Icon>
                   </span>
-                  Épingler
+                  Pin
                 </Box>
                 <Box
                   as="button"
@@ -1499,7 +1491,7 @@
                       <ExclamationSvg />
                     </Icon>
                   </span>
-                  Signaler comme indésirable
+                  Report as spam
                 </Box>
                 <Box
                   as="button"
@@ -1515,14 +1507,14 @@
                       <CloseSvg />
                     </Icon>
                   </span>
-                  Supprimer
+                  Delete
                 </Box>
               </Box>
             </Popover>
             {archived.length ? (
               <Box paddingY="s">
                 <Button action={() => setArchived([])}>
-                  Rétablir {archived.length}
+                  Restore {archived.length}
                 </Button>
               </Box>
             ) : null}
