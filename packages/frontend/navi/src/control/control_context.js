@@ -81,6 +81,7 @@ export const CONTROL_PROP_SET = new Set([
   "onDblClick",
   "onPointerDown",
   "onContextMenu",
+  "onDragStart",
   "onKeyDown",
   "onPaste",
   "onInput",

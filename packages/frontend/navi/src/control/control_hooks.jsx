@@ -866,6 +866,7 @@ export const useControlProps = (
       onDblClick: props.onDblClick,
       onPointerDown: props.onPointerDown,
       onContextMenu: props.onContextMenu,
+      onDragStart: props.onDragStart,
     });
 
     // The interactions the caller declared, read on the control host: one element

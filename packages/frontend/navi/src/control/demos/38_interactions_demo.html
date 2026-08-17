@@ -113,6 +113,75 @@
       [data-swipe-past-threshold] .trail_delete {
         background: #c62828;
       }
+      .trail_unread {
+        background: #a8b4c8;
+      }
+      [data-swipe-past-threshold] .trail_unread {
+        background: #2f5fa8;
+      }
+
+      .notification {
+        position: relative;
+        display: flex;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 12px;
+        color: #1f2733;
+        font-size: 14px;
+        text-align: left;
+        text-decoration: none;
+        background: white;
+      }
+      .notification_dot {
+        width: 8px;
+        height: 8px;
+        flex: none;
+        background: #2f5fa8;
+        border-radius: 50%;
+      }
+      .notification_dot_read {
+        background: transparent;
+      }
+      .notification_text {
+        min-width: 0;
+        flex: 1;
+      }
+      .notification_from {
+        font-weight: 600;
+      }
+      .notification_subject {
+        color: #6b7482;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .notification_menu {
+        display: flex;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+        background: #f2f5fa;
+        border-top: 1px solid #e3e9f2;
+      }
+      .thumb {
+        width: 40px;
+        height: 40px;
+        flex: none;
+        border-radius: 6px;
+      }
+      .tile {
+        width: 120px;
+        padding: 14px 10px;
+        text-align: center;
+        background: white;
+        border: 2px solid #dde3ec;
+        border-radius: 8px;
+      }
+      .tile_selected {
+        background: #eef4fd;
+        border-color: #2f5fa8;
+      }
     </style>
   </head>
   <body>
@@ -191,7 +260,9 @@
           <SwipeDemo />
           <LongPressDemo />
           <KeyboardDemo />
+          <DraggableSurfaceDemo />
           <SettingsDemo />
+          <ClickAndDblclickDemo />
           <WhichInteractionDemo />
           <RunningDemo />
           <CustomDetectorDemo />
@@ -200,30 +271,102 @@
 
       // ── Cas nominal ───────────────────────────────────────────────────────
 
+      const MAILS = [
+        {
+          id: "1",
+          from: "Sofia Mendes",
+          subject: "Relecture du devis avant jeudi",
+        },
+        {
+          id: "2",
+          from: "GitHub",
+          subject: "3 nouvelles activités sur jsenv/core",
+        },
+        { id: "3", from: "Marc Aubert", subject: "Photos de la conf" },
+        {
+          id: "4",
+          from: "Léa Fournier",
+          subject: "On décale le point de 15h ?",
+        },
+      ];
+
       const NominalDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const logAction = (value, { event }) => push("action", value, event);
+        const [archived, setArchived] = useState([]);
+        const [read, setRead] = useState(["3"]);
+        const [menuId, setMenuId] = useState(null);
+        const visible = MAILS.filter((mail) => !archived.includes(mail.id));
         return (
           <div class="demo-section">
             <Heading id="nominal">Cas nominal</Heading>
-            <p class="desc">
-              L'action reste branchée sur le clic ; <code>interactions</code>{" "}
-              ajoute les autres façons de la demander.
-            </p>
-            <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="action seule">
-                <Button action={logAction}>Envoyer</Button>
-              </Variant>
-              <Variant caption='interactions={{ dblclick: "request_action" }}'>
+            <div class="rows">
+              {visible.map((mail) => (
+                <div key={mail.id}>
+                  <Link
+                    className="notification"
+                    href="#"
+                    interactions={{
+                      swipe_right: () => {
+                        setArchived((previous) => [...previous, mail.id]);
+                        setMenuId(null);
+                      },
+                      swipe_left: () => {
+                        setRead((previous) =>
+                          previous.includes(mail.id)
+                            ? previous.filter((id) => id !== mail.id)
+                            : [...previous, mail.id],
+                        );
+                      },
+                      long_press: () => {
+                        setMenuId(menuId === mail.id ? null : mail.id);
+                      },
+                    }}
+                  >
+                    <span className="trail trail_start trail_archive">
+                      Archiver
+                    </span>
+                    <span className="trail trail_end trail_unread">
+                      {read.includes(mail.id) ? "Non lu" : "Lu"}
+                    </span>
+                    <span
+                      className={`notification_dot ${read.includes(mail.id) ? "notification_dot_read" : ""}`}
+                    />
+                    <span className="notification_text">
+                      <span className="notification_from">{mail.from}</span>
+                      <br />
+                      <span className="notification_subject">
+                        {mail.subject}
+                      </span>
+                    </span>
+                  </Link>
+                  {menuId === mail.id ? (
+                    <div className="notification_menu">
+                      <Button
+                        action={() => {
+                          setArchived((previous) => [...previous, mail.id]);
+                          setMenuId(null);
+                        }}
+                      >
+                        Archiver
+                      </Button>
+                      <Button action={() => setMenuId(null)}>Épingler</Button>
+                      <Button action={() => setMenuId(null)}>Signaler</Button>
+                      <Button action={() => setMenuId(null)}>Fermer</Button>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {archived.length ? (
+              <Box paddingY="s">
                 <Button
-                  action={logAction}
-                  interactions={{ dblclick: "request_action" }}
+                  action={() => {
+                    setArchived([]);
+                  }}
                 >
-                  Envoyer
+                  Rétablir {archived.length}
                 </Button>
-              </Variant>
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
+              </Box>
+            ) : null}
           </div>
         );
       };
@@ -412,6 +555,38 @@
         );
       };
 
+      // ── Surfaces déjà draggable ───────────────────────────────────────────
+
+      // Un carré de couleur en data: URI, pour avoir une vraie <img> sans réseau.
+      const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#2f5fa8"/></svg>',
+      )}`;
+
+      const DraggableSurfaceDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="draggable">Surfaces déjà draggable</Heading>
+            <p class="desc">
+              Commencer le geste sur la vignette, puis sur le texte.
+            </p>
+            <div class="rows">
+              <Row
+                title={<img class="thumb" src={THUMB_SRC} alt="" />}
+                body="la ligne est un lien, et contient une image"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+            </div>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
       // ── Réglages ──────────────────────────────────────────────────────────
 
       const SettingsDemo = () => {
@@ -494,6 +669,37 @@
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Clic et double clic ───────────────────────────────────────────────
+
+      const FILES = ["notes.md", "budget.csv", "photo.png"];
+
+      const ClickAndDblclickDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [opened, setOpened] = useState(null);
+        return (
+          <div class="demo-section">
+            <Heading id="click-dblclick">Clic et double clic</Heading>
+            <Box flex="x" spacing="m" alignY="start">
+              {FILES.map((name) => (
+                <Button
+                  key={name}
+                  className={`tile ${selected === name ? "tile_selected" : ""}`}
+                  action={() => setSelected(name)}
+                  interactions={{ dblclick: () => setOpened(name) }}
+                >
+                  {name}
+                </Button>
+              ))}
+            </Box>
+            <Box paddingY="s">
+              <Text size="s" color="#666">
+                sélectionné : {selected ?? "—"} · ouvert : {opened ?? "—"}
+              </Text>
+            </Box>
           </div>
         );
       };
