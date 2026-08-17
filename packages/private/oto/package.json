@@ -1,6 +1,6 @@
 {
   "name": "oto",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "private": true,
   "workspaces": [
@@ -23,14 +23,14 @@
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
     "@jsenv/navi": "./packages/navi",
-    "@preact/signals": "2.9.4",
+    "@preact/signals": "2.11.1",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",
     "preact": "11.0.0-beta.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.28.6",
+    "@babel/plugin-syntax-import-attributes": "7.29.7",
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/core": "../../../",
@@ -38,9 +38,9 @@
     "@jsenv/eslint-config-relax": "../../tooling/eslint-config-relax",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/test": "../../related/test",
-    "@playwright/browser-chromium": "1.61.1",
+    "@playwright/browser-chromium": "1.62.1",
     "eslint": "9.39.2",
-    "open": "11.0.0",
+    "open": "11.0.1",
     "prettier": "3.9.6",
     "prettier-plugin-organize-imports": "4.3.0"
   },
