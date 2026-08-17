@@ -72,14 +72,20 @@ const detectors = [];
  *   reads that interaction name.
  * @param {(claimedTypes: string[], interactions: object) => object|null} [definition.implies]
  *   Interactions that come with the ones declared, for a detector whose gesture
- *   would otherwise be a dead end (longpress brings contextmenu). What the
- *   caller declared explicitly always wins.
+ *   only makes sense alongside another. What the caller declared explicitly always
+ *   wins.
  * @param {(context: object) => object|null} definition.setup Called on every
- *   render with `{ types, interactions, ref, perform, request, readConfig }`, and
- *   returns props to put on the control host — event handlers, attributes. It
- *   must not call hooks: how many detectors run, and which, follows the caller's
- *   object and changes between two renders.
+ *   render with `{ types, interactions, ref, state, perform, request, readConfig }`,
+ *   and returns props to put on the element — event handlers, attributes. It must
+ *   not call hooks: how many detectors run, and which, follows the caller's object
+ *   and changes between two renders.
  *   - `types`: the claimed names actually declared.
+ *   - `state`: an object of this detector's own, the SAME one across renders of
+ *     that element. Anything counted between two events (how many clicks so far,
+ *     a pending timeout) has to live here: `setup` runs again on every render, so
+ *     a closure variable would go back to its initial value under a component
+ *     that re-rendered mid-gesture — which is most of them, since answering an
+ *     interaction usually changes something.
  *   - `perform(type, event)`: answer an interaction whose event already exists
  *     (a native one). Returns a promise while something is still going, else null.
  *   - `request(type, detail, originalEvent)`: dispatch the interaction as an event
@@ -117,9 +123,9 @@ const REQUEST_UI_ACTION = "request_ui_action";
  * The interactions as declared, plus the ones they imply, minus the ones turned
  * off.
  *
- * A falsy effect means "not this one": it is how an implication is refused —
- * `{ longpress: fn, contextmenu: false }` holds without taking the browser's own
- * menu away.
+ * A falsy effect means "not this one", so an interaction can be declared under a
+ * condition — `{ swipe_right: canArchive && archive }` — without the caller
+ * having to build the object in two steps.
  */
 export const resolveInteractions = (interactions) => {
   if (!interactions) {

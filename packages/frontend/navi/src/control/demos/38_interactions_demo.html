@@ -437,11 +437,9 @@
         const log = (name) => (event) => push(name, undefined, event);
         return (
           <div class="demo-section">
-            <Heading id="long-press">Appui long</Heading>
-            <p class="desc">
-              Le clic droit et la touche « menu » du clavier font la même chose
-              :<code> longpress</code> amène <code>contextmenu</code> avec lui
-              tant qu'on ne le déclare pas soi-même.
+            <Heading id="longpress">Appui long</Heading>
+            <p class="legend">
+              Maintenir enfoncé sans bouger, au doigt comme à la souris.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ longpress }">
@@ -449,18 +447,35 @@
                   Maintenir
                 </Button>
               </Variant>
-              <Variant caption="{ longpress, contextmenu }">
+            </Box>
+
+            <Heading level={3} id="longpress-contextmenu">
+              Et le menu contextuel
+            </Heading>
+            <p class="legend">
+              Clic droit sur chacun des deux. Un appui long ne prend pas le menu
+              du navigateur : le clic droit vient de l'autre bouton, ce n'est
+              pas la pression qu'on écoute. Pour qu'il fasse ce que fait l'appui
+              long, on l'écrit à côté.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ longpress } — clic droit : menu du navigateur">
+                <Button interactions={{ longpress: log("longpress") }}>
+                  Clic droit ici
+                </Button>
+              </Variant>
+              <Variant caption="{ longpress, contextmenu } — clic droit : l'interaction">
                 <Button
                   interactions={{
                     longpress: log("longpress"),
                     contextmenu: log("contextmenu"),
                   }}
                 >
-                  Maintenir
+                  Clic droit ici
                 </Button>
               </Variant>
             </Box>
-            <Heading level={3} id="long-press-and-swipe">
+            <Heading level={3} id="longpress-and-swipe">
               Avec un balayage
             </Heading>
             <Box className="rows">
@@ -582,7 +597,7 @@
               />
             </Box>
 
-            <Heading level={3} id="long-press-delay">
+            <Heading level={3} id="longpress-delay">
               data-longpress-delay
             </Heading>
             <Box flex="x" spacing="xl" alignY="start">
@@ -601,7 +616,7 @@
               </Variant>
             </Box>
 
-            <Heading level={3} id="long-press-slop">
+            <Heading level={3} id="longpress-slop">
               data-longpress-slop
             </Heading>
             <p class="legend">

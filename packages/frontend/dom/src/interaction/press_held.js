@@ -8,12 +8,16 @@
  * up, a menu opened) belongs to whoever asked for it.
  *
  * The wait also has to hold off the system's own answer to the same gesture: a
- * press held long enough IS the context-menu gesture, and Android's menu (around
- * 500ms) or iOS's callout lands a tenth of a second after the press was
- * answered here. The half of that which is an event is refused below; the half
- * that is not (iOS selecting the word under the finger) is a stylesheet the
- * caller writes on its own elements — `-webkit-touch-callout: none` has to be
- * true before the finger lands, so it cannot be set from here.
+ * FINGER held long enough IS the context-menu gesture, and Android's menu (around
+ * 500ms) or iOS's callout lands a tenth of a second after the press was answered
+ * here. The half of that which is an event is refused below; the half that is not
+ * (iOS selecting the word under the finger) is a stylesheet the caller writes on
+ * its own elements — `-webkit-touch-callout: none` has to be true before the
+ * finger lands, so it cannot be set from here.
+ *
+ * A mouse is a different matter and is left alone: its context menu comes from
+ * the other button, not from this press, and refusing it would take the browser's
+ * menu away from an element for no reason.
  */
 
 /**
@@ -52,18 +56,23 @@ export const waitForPressHeld = (
     pressCleanupCallbacks.length = 0;
   };
 
-  /* The listener goes on window, in capture: what answers the press may cover
-     the page (a drag backdrop, a popup), and the contextmenu event is then
-     aimed at that instead of at the element pressed.
-     It is removed when the press ends — a right click with a mouse remains a
-     right click. */
-  const preventContextMenu = (contextMenuEvent) => {
-    contextMenuEvent.preventDefault();
-  };
-  window.addEventListener("contextmenu", preventContextMenu, true);
-  pressCleanupCallbacks.push(() => {
-    window.removeEventListener("contextmenu", preventContextMenu, true);
-  });
+  /* A FINGER held down is the system's own context-menu gesture, and the menu it
+     raises lands on top of the answer this press was already given. A MOUSE is
+     not: its context menu comes from the other button, has nothing to do with
+     this press, and is the user asking for the browser's menu — so it is left
+     alone, and only a touch press refuses it.
+     The listener goes on window, in capture: what answers the press may cover the
+     page (a drag backdrop, a popup), and the contextmenu event is then aimed at
+     that instead of at the element pressed. */
+  if (pressEvent.pointerType === "touch") {
+    const preventContextMenu = (contextMenuEvent) => {
+      contextMenuEvent.preventDefault();
+    };
+    window.addEventListener("contextmenu", preventContextMenu, true);
+    pressCleanupCallbacks.push(() => {
+      window.removeEventListener("contextmenu", preventContextMenu, true);
+    });
+  }
 
   const countdownCleanupCallbacks = [];
   const endCountdown = () => {

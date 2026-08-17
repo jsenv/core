@@ -44,6 +44,14 @@
  * it is those settings that differ — a third of a row rather than a third of a
  * screen, tuned per element with `data-swipe-threshold`.
  *
+ * A hold does NOT take the context menu with it. Declaring one says what a held
+ * FINGER does — a finger held down being the system's own context-menu gesture,
+ * which is why that one is refused while the wait runs (see waitForPressHeld). A
+ * right click is not that press: it comes from the other button and it is the
+ * user asking for the browser's menu, so it keeps opening it. An element that
+ * wants the right click to do what the hold does says so, with `contextmenu`
+ * beside it.
+ *
  * What is deliberately NOT here: `longpress` opening a popup while the finger is
  * still down. The `pointerup` that ends the press is then an interaction OUTSIDE
  * the popup, and the browser's own light dismiss closes it on the spot — decided
@@ -163,22 +171,6 @@ import.meta.css = /* css */ `
 defineInteractionDetector({
   name: "press",
   claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
-  // A hold nobody can see and nobody can reach from a keyboard is a dead end, so
-  // the way in is a default rather than an option: the "menu" key and a right
-  // click are the same request as a press held still.
-  //
-  // Which means a right click answers the hold instead of opening the browser's
-  // menu, and that is the point rather than a side effect: an element that
-  // answers a hold has its own answer to give, and the browser's menu on top of
-  // it would be the wrong one. An element that declares no hold is left alone.
-  // `contextmenu: false` refuses the implication for the rare case that wants the
-  // browser's menu anyway.
-  implies: (claimedTypes, interactions) => {
-    if (!claimedTypes.includes("longpress")) {
-      return null;
-    }
-    return { contextmenu: interactions.longpress };
-  },
   setup: ({ types, ref, request, readConfig }) => {
     let axes = "";
     for (const type of types) {
