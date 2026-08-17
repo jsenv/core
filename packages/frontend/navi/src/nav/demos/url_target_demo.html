@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>URL target demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 820px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 20px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .legend {
+        margin: 0 0 12px;
+        padding: 8px 12px;
+        color: #37474f;
+        font-size: 13px;
+        background: #eef4fd;
+        border-left: 3px solid #2f5fa8;
+        border-radius: 4px;
+      }
+      code {
+        padding: 1px 4px;
+        font-size: 0.9em;
+        background: #eef1f5;
+        border-radius: 3px;
+      }
+
+      /* Le centre de notifications : ce qui nomme un radar et y mène. */
+      .notifications {
+        display: flex;
+        margin-bottom: 16px;
+        padding: 10px 14px;
+        flex-direction: column;
+        align-items: start;
+        gap: 6px;
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        border-radius: 8px;
+      }
+      .notifications_label {
+        color: #8d6e63;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .notifications a {
+        color: #4a3b00;
+        font-size: 13px;
+      }
+
+      .radars {
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .radar {
+        display: flex;
+        padding: 12px 16px;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+        background: white;
+        scroll-margin: 12px;
+      }
+      .radar + .radar {
+        border-top: 1px solid #eef1f5;
+      }
+      .radar_name {
+        font-weight: 500;
+      }
+      .radar_zone {
+        color: #6b7482;
+        font-size: 13px;
+      }
+
+      /* Une ligne fantôme est anonyme : elle dit « vous en avez quatorze », pas
+         lesquels. */
+      .radar_ghost > span {
+        height: 10px;
+        background: linear-gradient(90deg, #eef1f5, #e2e7ee, #eef1f5);
+        background-size: 200% 100%;
+        border-radius: 5px;
+        animation: ghost 1.2s linear infinite;
+      }
+      .radar_ghost > span:first-child {
+        width: 90px;
+      }
+      .radar_ghost > span:last-child {
+        width: 130px;
+      }
+      @keyframes ghost {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
+      }
+
+      .cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .card {
+        padding: 14px 16px;
+        font-size: 13px;
+        background: #fafbfc;
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        scroll-margin: 12px;
+      }
+
+      /* L'habillage de l'app : la marque de navi remplacée par la sienne. */
+      .card_dressed[data-url-target] {
+        animation: dressed 2s ease-out;
+      }
+      @keyframes dressed {
+        from {
+          color: white;
+          background: #6a1b9a;
+          box-shadow: 0 0 0 8px rgba(106, 27, 154, 0.25);
+        }
+        to {
+          color: inherit;
+          background: #fafbfc;
+          box-shadow: 0 0 0 8px transparent;
+        }
+      }
+
+      /* Ce que `:target` donne tout seul, et qui reste. */
+      .card_target:target {
+        background: #e8f5e9;
+        border-color: #66bb6a;
+      }
+
+      .spacer {
+        display: flex;
+        height: 70vh;
+        align-items: center;
+        justify-content: center;
+        color: #b6bdc9;
+        font-size: 13px;
+        border: 1px dashed #dde3ec;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        createAction,
+        Link,
+        setUrlTargetOptions,
+        Text,
+        useAsyncData,
+        useRunOnMount,
+        useUrlTargetId,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id} {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="URL target"
+            previous={{ href: "./nav_demo.html", label: "Nav" }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <AlreadyThereDemo />
+          <NeverThereDemo />
+          <MarkDemo />
+          <BlockDemo />
+          <ReadDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const RADARS = [
+        { id: "radar_alize", name: "Alizé", zone: "Baie nord" },
+        { id: "radar_autan", name: "Autan", zone: "Plateau" },
+        { id: "radar_blizzard", name: "Blizzard", zone: "Col des Trois" },
+        { id: "radar_bora", name: "Bora", zone: "Estuaire" },
+        { id: "radar_chinook", name: "Chinook", zone: "Versant est" },
+        { id: "radar_criquet", name: "Criquet", zone: "Marais" },
+        { id: "radar_foehn", name: "Foehn", zone: "Vallée haute" },
+        { id: "radar_harmattan", name: "Harmattan", zone: "Dunes" },
+        { id: "radar_mistral", name: "Mistral", zone: "Delta" },
+        { id: "radar_noroit", name: "Noroît", zone: "Pointe ouest" },
+        { id: "radar_simoun", name: "Simoun", zone: "Plaine sud" },
+        { id: "radar_sirocco", name: "Sirocco", zone: "Bord de mer" },
+        { id: "radar_tramontane", name: "Tramontane", zone: "Crête" },
+        { id: "radar_zephyr", name: "Zéphyr", zone: "Bocage" },
+      ];
+
+      let callBackend;
+      const loadRadars = createAction(() => callBackend(RADARS), {
+        name: "load_radars",
+      });
+
+      const NominalDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="legend">
+            Les radars arrivent après le clic sur la notification.
+          </p>
+          <FakeBackend value={RADARS}>
+            {({ action }) => {
+              callBackend = action;
+              return <RadarPage />;
+            }}
+          </FakeBackend>
+        </div>
+      );
+
+      const RadarPage = () => {
+        const [radars, loading, error] = useAsyncData(loadRadars, {
+          loading: true,
+          error: true,
+        });
+        useRunOnMount(loadRadars, RadarPage);
+
+        return (
+          <Box flex="y" spacing="s" expandX>
+            <div class="notifications">
+              <span class="notifications_label">Notifications</span>
+              <a href="#radar_criquet">Le radar Criquet a sonné</a>
+              <a href="#radar_tramontane">Le radar Tramontane a sonné</a>
+              <a href="#radar_zephyr">Le radar Zéphyr a sonné</a>
+            </div>
+            <Box flex="x" spacing="s" alignY="center">
+              <Button action={() => loadRadars.rerun()}>
+                Recharger la liste
+              </Button>
+              {error ? <Text color="#c62828">{error.message}</Text> : null}
+            </Box>
+            <div class="radars">
+              {loading || !radars
+                ? RADARS.map((radar) => (
+                    <div class="radar radar_ghost" key={radar.id}>
+                      <span />
+                      <span />
+                    </div>
+                  ))
+                : radars.map((radar) => (
+                    <div class="radar" key={radar.id} id={radar.id}>
+                      <span class="radar_name">{radar.name}</span>
+                      <span class="radar_zone">{radar.zone}</span>
+                    </div>
+                  ))}
+            </div>
+          </Box>
+        );
+      };
+
+      // ── La cible est déjà là ──────────────────────────────────────────────
+
+      const AlreadyThereDemo = () => (
+        <div class="demo-section">
+          <Heading id="already_there">La cible est déjà là</Heading>
+          <Box flex="y" spacing="s" alignX="start">
+            <a href="#card_close">Vers la carte juste dessous</a>
+            <a href="#card_far">Vers la carte tout en bas</a>
+            <div class="cards">
+              <div class="card" id="card_close">
+                Carte voisine
+              </div>
+            </div>
+            <div class="spacer">…</div>
+            <div class="cards">
+              <div class="card" id="card_far">
+                Carte lointaine
+              </div>
+            </div>
+          </Box>
+        </div>
+      );
+
+      // ── La cible n'arrive jamais ──────────────────────────────────────────
+
+      const NeverThereDemo = () => (
+        <div class="demo-section">
+          <Heading id="never_there">La cible n'arrive jamais</Heading>
+          <Box flex="y" spacing="s" alignX="start">
+            <a href="#radar_supprime">Le radar Bise a sonné</a>
+            <Text size="s" color="#6b7482">
+              Aucun élément ne porte <code>radar_supprime</code>.
+            </Text>
+          </Box>
+        </div>
+      );
+
+      // ── La marque ─────────────────────────────────────────────────────────
+
+      const MarkDemo = () => (
+        <div class="demo-section">
+          <Heading id="mark">La marque</Heading>
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex="x" spacing="s">
+              <a href="#card_mark_default">défaut</a>
+              <a href="#card_mark_color">--navi-url-target-color</a>
+              <a href="#card_mark_dressed">habillée par l'app</a>
+              <a href="#card_mark_target">:target</a>
+            </Box>
+            <div class="cards">
+              <div class="card" id="card_mark_default">
+                défaut
+              </div>
+              <div
+                class="card"
+                id="card_mark_color"
+                style="--navi-url-target-color: #e91e63"
+              >
+                --navi-url-target-color
+              </div>
+              <div class="card card_dressed" id="card_mark_dressed">
+                habillée par l'app
+              </div>
+              <div class="card card_target" id="card_mark_target">
+                :target
+              </div>
+            </div>
+          </Box>
+        </div>
+      );
+
+      // ── block ─────────────────────────────────────────────────────────────
+
+      const BLOCKS = ["center", "start", "end", "nearest"];
+
+      const BlockDemo = () => {
+        const [block, setBlock] = useState("center");
+        return (
+          <div class="demo-section">
+            <Heading id="block">block</Heading>
+            <Box flex="y" spacing="s" alignX="start">
+              <Box flex="x" spacing="xs">
+                {BLOCKS.map((value) => (
+                  <Button
+                    key={value}
+                    variant={block === value ? "primary" : "secondary"}
+                    action={() => {
+                      setUrlTargetOptions({ block: value });
+                      setBlock(value);
+                    }}
+                  >
+                    {value}
+                  </Button>
+                ))}
+              </Box>
+              <a href="#card_block">Vers la carte, sous la bande</a>
+              <div class="spacer">…</div>
+              <div class="cards">
+                <div class="card" id="card_block">
+                  Carte
+                </div>
+              </div>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── useUrlTargetId ────────────────────────────────────────────────────
+
+      const ReadDemo = () => {
+        const urlTargetId = useUrlTargetId();
+        return (
+          <div class="demo-section">
+            <Heading id="read">useUrlTargetId</Heading>
+            <Box flex="y" spacing="s" alignX="start">
+              <code>{urlTargetId || "∅"}</code>
+              <div class="cards">
+                <div
+                  class="card"
+                  id="card_read"
+                  style={
+                    urlTargetId === "card_read"
+                      ? "border-color: #2f5fa8"
+                      : undefined
+                  }
+                >
+                  Carte
+                </div>
+              </div>
+              <a href="#card_read">Vers la carte</a>
+            </Box>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

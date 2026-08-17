@@ -950,7 +950,14 @@
       };
 
       const TaskList = ({ name, interactionsFor }) => {
-        const [order, setOrder] = useState(TASKS.map((task) => task.id));
+        // Les ids portés par les éléments sont ceux que le geste rend (`fromId`,
+        // `toId`, `id`), donc ce sont eux que l'ordre contient — deux listes sur la
+        // même page ne peuvent pas partager les ids de TASKS.
+        const items = TASKS.map((task) => ({
+          ...task,
+          id: `${name}_${task.id}`,
+        }));
+        const [order, setOrder] = useState(items.map((item) => item.id));
         const reorder = (event) => {
           const { fromId, toId, syncCloneWithDropTarget } = event.detail;
           // Le nom de transition est unique par document, donc c'est l'appli qui
@@ -971,13 +978,13 @@
             <Box className="rows" width="320px">
               <List>
                 {order.map((id) => {
-                  const task = TASKS.find((candidate) => candidate.id === id);
+                  const task = items.find((candidate) => candidate.id === id);
                   return (
                     <List.Item
                       key={id}
-                      id={`${name}_${id}`}
+                      id={id}
                       className="task"
-                      data-view-transition-name={`${name}_${id}`}
+                      data-view-transition-name={id}
                       interactions={interactionsFor({ reorder, toss })}
                     >
                       <Box flex="x" spacing="s" alignY="center">
@@ -991,10 +998,10 @@
                 })}
               </List>
             </Box>
-            {order.length < TASKS.length ? (
+            {order.length < items.length ? (
               <Box paddingY="s">
-                <Button action={() => setOrder(TASKS.map((task) => task.id))}>
-                  Rétablir {TASKS.length - order.length}
+                <Button action={() => setOrder(items.map((item) => item.id))}>
+                  Rétablir {items.length - order.length}
                 </Button>
               </Box>
             ) : null}

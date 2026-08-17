@@ -113,6 +113,18 @@ export const useUrlTargetId = () => {
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
 
+/**
+ * Answers the URL's target again, as if it had just been designated.
+ *
+ * Clicking the very link one is already on moves nothing — same pathname, same
+ * hash, no history entry, no event — so nothing downstream would notice. The
+ * reader did ask, again, to be taken to that element.
+ */
+export const rearmUrlTarget = () => {
+  currentTargetKey = undefined;
+  armUrlTarget(documentUrlSignal.peek());
+};
+
 const armUrlTarget = (documentUrl) => {
   const targetKey = urlToTargetKey(documentUrl);
   if (targetKey === currentTargetKey) {
