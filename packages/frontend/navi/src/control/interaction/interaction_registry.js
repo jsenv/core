@@ -9,7 +9,7 @@
  *   interactions={{
  *     swipe_left: "request_action",       // ask for the action prop
  *     swipe_right: "request_ui_action",   // ask for a ui action
- *     long_press: (event) => openMenu(event),
+ *     longpress: (event) => openMenu(event),
  *     "keyboard:ctrl+backspace": "request_action",
  *   }}
  *
@@ -72,7 +72,7 @@ const detectors = [];
  *   reads that interaction name.
  * @param {(claimedTypes: string[], interactions: object) => object|null} [definition.implies]
  *   Interactions that come with the ones declared, for a detector whose gesture
- *   would otherwise be a dead end (long_press brings contextmenu). What the
+ *   would otherwise be a dead end (longpress brings contextmenu). What the
  *   caller declared explicitly always wins.
  * @param {(context: object) => object|null} definition.setup Called on every
  *   render with `{ types, interactions, ref, perform, request, readConfig }`, and
@@ -92,11 +92,34 @@ export const defineInteractionDetector = (definition) => {
   detectors.push(definition);
 };
 
+// Keyed by the element's ref rather than by the element: it is stable from the
+// first render, while the element itself only exists from the first mount, and a
+// detector is set up before that.
+const stateByRef = new WeakMap();
+const getDetectorState = (ref, detectorName) => {
+  let stateByDetectorName = stateByRef.get(ref);
+  if (!stateByDetectorName) {
+    stateByDetectorName = new Map();
+    stateByRef.set(ref, stateByDetectorName);
+  }
+  let state = stateByDetectorName.get(detectorName);
+  if (!state) {
+    state = {};
+    stateByDetectorName.set(detectorName, state);
+  }
+  return state;
+};
+
 const REQUEST_ACTION = "request_action";
 const REQUEST_UI_ACTION = "request_ui_action";
 
 /**
- * The interactions as declared, plus the ones they imply.
+ * The interactions as declared, plus the ones they imply, minus the ones turned
+ * off.
+ *
+ * A falsy effect means "not this one": it is how an implication is refused —
+ * `{ longpress: fn, contextmenu: false }` holds without taking the browser's own
+ * menu away.
  */
 export const resolveInteractions = (interactions) => {
   if (!interactions) {
@@ -117,6 +140,16 @@ export const resolveInteractions = (interactions) => {
       // said what that interaction does has already answered.
       resolved = { ...implied, ...resolved };
     }
+  }
+  const kept = {};
+  for (const type of Object.keys(resolved)) {
+    if (resolved[type]) {
+      kept[type] = resolved[type];
+    }
+  }
+  resolved = kept;
+  if (Object.keys(resolved).length === 0) {
+    return null;
   }
   if (import.meta.dev) {
     for (const type of Object.keys(resolved)) {
@@ -280,6 +313,7 @@ export const useInteractionProps = (interactions, { ref }) => {
       types,
       interactions,
       ref,
+      state: getDetectorState(ref, detector.name),
       perform,
       request,
       readConfig,

@@ -44,7 +44,7 @@
  * it is those settings that differ — a third of a row rather than a third of a
  * screen, tuned per element with `data-swipe-threshold`.
  *
- * What is deliberately NOT here: `long_press` opening a popup while the finger is
+ * What is deliberately NOT here: `longpress` opening a popup while the finger is
  * still down. The `pointerup` that ends the press is then an interaction OUTSIDE
  * the popup, and the browser's own light dismiss closes it on the spot — decided
  * from the recorded pointerdown, not something a gesture can take back. Opening on
@@ -83,9 +83,9 @@ const SWIPE_TYPE_BY_AXIS = {
 const SWIPE_THRESHOLD_DEFAULT = 0.33;
 // Under the system context-menu delay, so the press is answered before the menu it
 // would otherwise open.
-const LONG_PRESS_DELAY_DEFAULT = 450;
+const LONGPRESS_DELAY_DEFAULT = 450;
 // Past this the finger is going somewhere: it swipes, it does not hold.
-const LONG_PRESS_SLOP_DEFAULT = 8;
+const LONGPRESS_SLOP_DEFAULT = 8;
 // How long the element takes to reach where the gesture leaves it, or to come
 // back. Written into the CSS below from here: the state is cleaned up when the
 // movement is over, so a duration living only in the stylesheet would be a timing
@@ -95,13 +95,13 @@ const SETTLE_DURATION_MS = 200;
 // Read off the element or off any ancestor carrying it, so a whole list is tuned
 // in one place and a stylesheet can read the same value.
 const SWIPE_THRESHOLD_ATTRIBUTE = "data-swipe-threshold";
-const LONG_PRESS_DELAY_ATTRIBUTE = "data-long-press-delay";
-const LONG_PRESS_SLOP_ATTRIBUTE = "data-long-press-slop";
+const LONGPRESS_DELAY_ATTRIBUTE = "data-longpress-delay";
+const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
 
 // Which axes this element takes a swipe on, and that it takes a hold: said in the
 // DOM at render time, for the CSS below and for the boxes above to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
-const LONG_PRESS_ATTRIBUTE = "data-long-press";
+const LONGPRESS_ATTRIBUTE = "data-longpress";
 
 import.meta.css = /* css */ `
   /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
@@ -136,7 +136,7 @@ import.meta.css = /* css */ `
      a press held still, and does not always route that through an event that can be
      refused. Same reason as the drag sources in @jsenv/dom: it has to be true
      before the finger lands. */
-  [${LONG_PRESS_ATTRIBUTE}] {
+  [${LONGPRESS_ATTRIBUTE}] {
     -webkit-touch-callout: none;
   }
 
@@ -162,15 +162,22 @@ import.meta.css = /* css */ `
 
 defineInteractionDetector({
   name: "press",
-  claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "long_press",
+  claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
   // A hold nobody can see and nobody can reach from a keyboard is a dead end, so
   // the way in is a default rather than an option: the "menu" key and a right
   // click are the same request as a press held still.
+  //
+  // Which means a right click answers the hold instead of opening the browser's
+  // menu, and that is the point rather than a side effect: an element that
+  // answers a hold has its own answer to give, and the browser's menu on top of
+  // it would be the wrong one. An element that declares no hold is left alone.
+  // `contextmenu: false` refuses the implication for the rare case that wants the
+  // browser's menu anyway.
   implies: (claimedTypes, interactions) => {
-    if (!claimedTypes.includes("long_press")) {
+    if (!claimedTypes.includes("longpress")) {
       return null;
     }
-    return { contextmenu: interactions.long_press };
+    return { contextmenu: interactions.longpress };
   },
   setup: ({ types, ref, request, readConfig }) => {
     let axes = "";
@@ -180,7 +187,7 @@ defineInteractionDetector({
         axes += axis;
       }
     }
-    const hasLongPress = types.includes("long_press");
+    const hasLongPress = types.includes("longpress");
 
     const onPointerDown = (pointerDownEvent) => {
       const element = ref.current;
@@ -213,11 +220,8 @@ defineInteractionDetector({
       }
       if (hasLongPress) {
         press = waitForPressHeld(pointerDownEvent, {
-          delay: readConfig(
-            LONG_PRESS_DELAY_ATTRIBUTE,
-            LONG_PRESS_DELAY_DEFAULT,
-          ),
-          slop: readConfig(LONG_PRESS_SLOP_ATTRIBUTE, LONG_PRESS_SLOP_DEFAULT),
+          delay: readConfig(LONGPRESS_DELAY_ATTRIBUTE, LONGPRESS_DELAY_DEFAULT),
+          slop: readConfig(LONGPRESS_SLOP_ATTRIBUTE, LONGPRESS_SLOP_DEFAULT),
           onPressHeld: (pressEvent, { endPress }) => {
             // The hold won the arbitration: the swipe never got the distance it
             // needed, and must not get it from whatever the finger does next.
@@ -233,7 +237,7 @@ defineInteractionDetector({
             window.addEventListener("pointerup", onPointerEnd, true);
             window.addEventListener("pointercancel", onPointerEnd, true);
             request(
-              "long_press",
+              "longpress",
               { pointerType: pressEvent.pointerType },
               pressEvent,
             );
@@ -270,7 +274,7 @@ defineInteractionDetector({
       };
     }
     if (hasLongPress) {
-      props[LONG_PRESS_ATTRIBUTE] = "";
+      props[LONGPRESS_ATTRIBUTE] = "";
     }
     return props;
   },

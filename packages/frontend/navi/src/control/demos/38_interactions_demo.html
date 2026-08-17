@@ -59,6 +59,11 @@
         border-radius: 8px;
         overflow: hidden;
       }
+      /* Une ligne tirée hors de la liste allongerait ce qui défile : rien ne se
+         lit sur le côté d'une liste de mails, donc rien n'y défile. */
+      .mail_list {
+        overflow-x: hidden;
+      }
       .row {
         position: relative;
         display: flex;
@@ -131,8 +136,10 @@
         padding: 8px 12px;
         font-size: 14px;
       }
-      .file_item_selected {
-        background: #dde9fb;
+      .file_marker {
+        width: 10px;
+        color: #2f5fa8;
+        font-weight: 700;
       }
       .opened_pane {
         min-width: 220px;
@@ -290,13 +297,26 @@
                     <List.Item
                       key={file}
                       id={file}
-                      className={`file_item ${selected === file ? "file_item_selected" : ""}`}
+                      className="file_item"
+                      // En style inline plutôt qu'en classe : la liste a son
+                      // propre fond, et une classe de la page perdrait contre
+                      // lui.
+                      style={
+                        selected === file
+                          ? { backgroundColor: "#dde9fb" }
+                          : undefined
+                      }
                       interactions={{
                         click: () => setSelected(file),
                         dblclick: () => setOpened(file),
                       }}
                     >
-                      {file}
+                      <Box flex="x" spacing="xs" alignY="center">
+                        <span className="file_marker">
+                          {selected === file ? "▸" : ""}
+                        </span>
+                        <span>{file}</span>
+                      </Box>
                     </List.Item>
                   ))}
                 </List>
@@ -325,7 +345,7 @@
         const log = (name) => (event) => push(name, undefined, event);
         const swipeAndHold = {
           swipe_right: log("swipe_right"),
-          long_press: log("long_press"),
+          longpress: log("longpress"),
         };
         return (
           <div class="demo-section">
@@ -420,19 +440,19 @@
             <Heading id="long-press">Appui long</Heading>
             <p class="desc">
               Le clic droit et la touche « menu » du clavier font la même chose
-              :<code> long_press</code> amène <code>contextmenu</code> avec lui
+              :<code> longpress</code> amène <code>contextmenu</code> avec lui
               tant qu'on ne le déclare pas soi-même.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="{ long_press }">
-                <Button interactions={{ long_press: log("long_press") }}>
+              <Variant caption="{ longpress }">
+                <Button interactions={{ longpress: log("longpress") }}>
                   Maintenir
                 </Button>
               </Variant>
-              <Variant caption="{ long_press, contextmenu }">
+              <Variant caption="{ longpress, contextmenu }">
                 <Button
                   interactions={{
-                    long_press: log("long_press"),
+                    longpress: log("longpress"),
                     contextmenu: log("contextmenu"),
                   }}
                 >
@@ -445,12 +465,12 @@
             </Heading>
             <Box className="rows">
               <Row
-                title="swipe_right + long_press"
+                title="swipe_right + longpress"
                 body="partir sur le côté, ou ne pas bouger"
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{
                   swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
+                  longpress: log("longpress"),
                 }}
               />
             </Box>
@@ -563,18 +583,18 @@
             </Box>
 
             <Heading level={3} id="long-press-delay">
-              data-long-press-delay
+              data-longpress-delay
             </Heading>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="450 (par défaut)">
-                <Button interactions={{ long_press: log("450") }}>
+                <Button interactions={{ longpress: log("450") }}>
                   Maintenir
                 </Button>
               </Variant>
-              <Variant caption='data-long-press-delay="1200"'>
+              <Variant caption='data-longpress-delay="1200"'>
                 <Button
-                  data-long-press-delay="1200"
-                  interactions={{ long_press: log("1200") }}
+                  data-longpress-delay="1200"
+                  interactions={{ longpress: log("1200") }}
                 >
                   Maintenir
                 </Button>
@@ -582,23 +602,28 @@
             </Box>
 
             <Heading level={3} id="long-press-slop">
-              data-long-press-slop
+              data-longpress-slop
             </Heading>
+            <p class="legend">
+              Combien de pixels le doigt peut dériver pendant l'attente avant
+              que l'appui soit abandonné. Maintenir 1,2 s en bougeant lentement
+              d'un centimètre : à 8 px rien ne se déclenche, à 60 px si.
+            </p>
             <Box
               flex="x"
               spacing="xl"
               alignY="start"
-              data-long-press-delay="1200"
+              data-longpress-delay="1200"
             >
-              <Variant caption="8 (par défaut)">
-                <Button interactions={{ long_press: log("slop 8") }}>
-                  Maintenir sans bouger
+              <Variant caption="8 px (par défaut) — la dérive annule">
+                <Button interactions={{ longpress: log("slop 8") }}>
+                  Maintenir en bougeant
                 </Button>
               </Variant>
-              <Variant caption='data-long-press-slop="60"'>
+              <Variant caption='data-longpress-slop="60" — la dérive est tolérée'>
                 <Button
-                  data-long-press-slop="60"
-                  interactions={{ long_press: log("slop 60") }}
+                  data-longpress-slop="60"
+                  interactions={{ longpress: log("slop 60") }}
                 >
                   Maintenir en bougeant
                 </Button>
@@ -636,12 +661,12 @@
               signe, la distance, la taille, la progression.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption='{ swipe_right: "request_action", long_press: "request_action" }'>
+              <Variant caption='{ swipe_right: "request_action", longpress: "request_action" }'>
                 <Button
                   action={archiveOrDelete}
                   interactions={{
                     swipe_right: "request_action",
-                    long_press: "request_action",
+                    longpress: "request_action",
                   }}
                 >
                   Balayer, ou maintenir
@@ -653,36 +678,50 @@
         );
       };
 
-      // ── Pendant que l'action tourne ───────────────────────────────────────
+      // ── Ce que la ligne fait pendant l'attente ────────────────────────────
 
       const RunningDemo = () => {
         const [archived, setArchived] = useState([]);
         return (
           <div class="demo-section">
-            <Heading id="running">Pendant que l'action tourne</Heading>
+            <Heading id="running">
+              Ce que la ligne fait pendant l'attente
+            </Heading>
+            <p class="legend">
+              Balayer une ligne vers la droite, puis répondre depuis le backend
+              ci-dessous. La ligne reste sortie tant que l'appel n'a pas
+              répondu, et revient qu'il réussisse ou qu'il échoue.
+            </p>
             <FakeBackend value={{ archived: [] }}>
               {({ action }) => (
-                <Box flex="x" spacing="xl" alignY="start">
+                <Box className="rows" flex="y">
                   {["Marc", "Léa", "Sofia"]
                     .filter((name) => !archived.includes(name))
                     .map((name) => (
-                      <Button
+                      <Row
                         key={name}
-                        action={async () => {
-                          await action({ archived: [name] });
-                          setArchived((previous) => [...previous, name]);
-                        }}
+                        title={name}
+                        body="balayer vers la droite"
+                        trailStart={ARCHIVE_TRAIL}
                         interactions={{
-                          swipe_right: "request_action",
-                          long_press: "request_action",
+                          // Une promesse : le balayage attend qu'elle se règle.
+                          swipe_right: async () => {
+                            await action({ archived: [name] });
+                            setArchived((previous) => [...previous, name]);
+                          },
                         }}
-                      >
-                        {name}
-                      </Button>
+                      />
                     ))}
                 </Box>
               )}
             </FakeBackend>
+            {archived.length ? (
+              <Box paddingY="s">
+                <Button action={() => setArchived([])}>
+                  Rétablir {archived.length}
+                </Button>
+              </Box>
+            ) : null}
           </div>
         );
       };
@@ -690,31 +729,31 @@
       // ── Une interaction à soi ─────────────────────────────────────────────
 
       // Trois clics dans la seconde : navi n'en a pas, l'appli l'enregistre.
+      // Le compte vit dans `state`, qui est le même d'un rendu à l'autre — une
+      // variable de la closure repartirait de zéro au premier re-rendu, donc au
+      // premier clic.
       defineInteractionDetector({
         name: "triple_click",
         claims: (type) => type === "triple_click",
-        setup: ({ request }) => {
-          let count = 0;
-          let timeout = null;
-          return {
-            onClick: (clickEvent) => {
-              count++;
-              clearTimeout(timeout);
-              timeout = setTimeout(() => {
-                count = 0;
-              }, 1000);
-              if (count < 3) {
-                return;
-              }
-              count = 0;
-              request("triple_click", {}, clickEvent);
-            },
-          };
-        },
+        setup: ({ request, state }) => ({
+          onClick: (clickEvent) => {
+            state.count = (state.count || 0) + 1;
+            clearTimeout(state.timeout);
+            state.timeout = setTimeout(() => {
+              state.count = 0;
+            }, 1000);
+            if (state.count < 3) {
+              return;
+            }
+            state.count = 0;
+            request("triple_click", {}, clickEvent);
+          },
+        }),
       });
 
       const CustomDetectorDemo = () => {
         const [entries, push, clear] = useCallLog();
+        const [fired, setFired] = useState(0);
         return (
           <div class="demo-section">
             <Heading id="custom">Une interaction à soi</Heading>
@@ -725,13 +764,19 @@
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ triple_click: fn }">
                 <Button
+                  action={(value, { event }) => push("clic", undefined, event)}
                   interactions={{
-                    triple_click: (event) =>
-                      push("triple_click", undefined, event),
+                    triple_click: (event) => {
+                      setFired((previous) => previous + 1);
+                      push("triple_click", undefined, event);
+                    },
                   }}
                 >
                   Cliquer trois fois
                 </Button>
+              </Variant>
+              <Variant caption="déclenché">
+                <Text>{fired} fois</Text>
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
@@ -776,7 +821,7 @@
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
-                <List>
+                <List className="mail_list">
                   {visible.map((mail) => (
                     <List.Item key={mail.id} id={mail.id}>
                       <Row
@@ -806,7 +851,7 @@
                                 : [...previous, mail.id],
                             );
                           },
-                          long_press: () => {
+                          longpress: () => {
                             setMenuId(menuId === mail.id ? null : mail.id);
                           },
                         }}
