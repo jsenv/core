@@ -413,10 +413,10 @@
           <SwipeDemo />
           <LongPressDemo />
           <KeyboardDemo />
-          <CustomDetectorDemo />
           <ReorderDemo />
           <TossDemo />
           <MoveDemo />
+          <CustomDetectorDemo />
           <CombinationsDemo />
           <ConcreteCasesDemo />
         </Box>
@@ -877,69 +877,6 @@
         );
       };
 
-      // ── An interaction of your own ─────────────────────────────────────────────
-
-      // Three clicks within a second: navi has no such thing, the app registers it.
-      // `setup` runs once per element, so the count is a plain closure variable.
-      defineInteractionDetector({
-        name: "triple_click",
-        claims: (type) => type === "triple_click",
-        setup: (element, trigger) => {
-          let count = 0;
-          let timeout = null;
-          const onClick = (clickEvent) => {
-            count++;
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-              count = 0;
-            }, 1000);
-            if (count < 3) {
-              return;
-            }
-            count = 0;
-            trigger(clickEvent);
-          };
-          element.addEventListener("click", onClick);
-          return () => {
-            clearTimeout(timeout);
-            element.removeEventListener("click", onClick);
-          };
-        },
-      });
-
-      const CustomDetectorDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const [fired, setFired] = useState(0);
-        return (
-          <div class="demo-section">
-            <Heading id="custom">An interaction of your own</Heading>
-            <p class="desc">
-              <code>defineInteractionDetector</code>: the same door navi's own
-              swipes and shortcuts come through.
-            </p>
-            <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="{ triple_click: fn }">
-                <Button
-                  action={(value, { event }) => push("click", undefined, event)}
-                  interactions={{
-                    triple_click: (event) => {
-                      setFired((previous) => previous + 1);
-                      push("triple_click", undefined, event);
-                    },
-                  }}
-                >
-                  Click three times
-                </Button>
-              </Variant>
-              <Variant caption="fired">
-                <Text>{fired} times</Text>
-              </Variant>
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
       // ── Reorder ────────────────────────────────────────────────────────
 
       const TASKS = [
@@ -1227,6 +1164,71 @@
                   />
                 </Box>
               </Box>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── An interaction of your own: triple click ─────────────────────────────────────────────
+
+      // Three clicks within a second: navi has no such thing, the app registers it.
+      // `setup` runs once per element, so the count is a plain closure variable.
+      defineInteractionDetector({
+        name: "triple_click",
+        claims: (type) => type === "triple_click",
+        setup: (element, trigger) => {
+          let count = 0;
+          let timeout = null;
+          const onClick = (clickEvent) => {
+            count++;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              count = 0;
+            }, 1000);
+            if (count < 3) {
+              return;
+            }
+            count = 0;
+            trigger(clickEvent);
+          };
+          element.addEventListener("click", onClick);
+          return () => {
+            clearTimeout(timeout);
+            element.removeEventListener("click", onClick);
+          };
+        },
+      });
+
+      const CustomDetectorDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const [fired, setFired] = useState(0);
+        return (
+          <div class="demo-section">
+            <Heading id="custom">
+              An interaction of your own: triple click
+            </Heading>
+            <p class="desc">
+              <code>defineInteractionDetector</code>: the same door navi's own
+              swipes and shortcuts come through.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ triple_click: fn }">
+                <Button
+                  action={(value, { event }) => push("click", undefined, event)}
+                  interactions={{
+                    triple_click: (event) => {
+                      setFired((previous) => previous + 1);
+                      push("triple_click", undefined, event);
+                    },
+                  }}
+                >
+                  Click three times
+                </Button>
+              </Variant>
+              <Variant caption="fired">
+                <Text>{fired} times</Text>
+              </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
