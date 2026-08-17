@@ -31,6 +31,9 @@ const takeSnapshotsForScenario = async (scenario) => {
 
 await takeSnapshotsForScenario("no_route_matching");
 await page.click('a[href="/.internal/route_inspector"]');
+// the route list is rendered by a client side script fetching /.internal/routes.json
+// without this the screenshot would be taken while the page is still loading
+await page.waitForSelector(".route_list");
 await takeSnapshotsForScenario("after_click_route_inspector");
 
 if (!debug) {
