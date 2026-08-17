@@ -76,7 +76,6 @@
       .radars {
         border: 1px solid #dde3ec;
         border-radius: 8px;
-        overflow: hidden;
       }
       .radar {
         display: flex;
@@ -162,6 +161,7 @@
 
       .spacer {
         display: flex;
+        width: 100%;
         height: 70vh;
         align-items: center;
         justify-content: center;
@@ -186,7 +186,7 @@
         Link,
         setUrlTargetOptions,
         Text,
-        useAsyncData,
+        useActionStatus,
         useRunOnMount,
         useUrlTargetId,
       } from "@jsenv/navi";
@@ -265,10 +265,7 @@
       );
 
       const RadarPage = () => {
-        const [radars, loading, error] = useAsyncData(loadRadars, {
-          loading: true,
-          error: true,
-        });
+        const { data: radars, loading, error } = useActionStatus(loadRadars);
         useRunOnMount(loadRadars, RadarPage);
 
         return (
@@ -385,11 +382,10 @@
           <div class="demo-section">
             <Heading id="block">block</Heading>
             <Box flex="y" spacing="s" alignX="start">
-              <Box flex="x" spacing="xs">
+              <Box flex="x" spacing="xs" alignY="center">
                 {BLOCKS.map((value) => (
                   <Button
                     key={value}
-                    variant={block === value ? "primary" : "secondary"}
                     action={() => {
                       setUrlTargetOptions({ block: value });
                       setBlock(value);
@@ -398,6 +394,9 @@
                     {value}
                   </Button>
                 ))}
+                <Text size="s" color="#6b7482">
+                  block: {block}
+                </Text>
               </Box>
               <a href="#card_block">Vers la carte, sous la bande</a>
               <div class="spacer">…</div>

@@ -166,7 +166,11 @@ const css = /* css */ `
     color: inherit;
     background: transparent;
     border: none;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    /* A var, and read from the dragged element (see dragCSSVars): what being
+       carried LOOKS like belongs to whoever owns the thing — a row lifted off a
+       list wants this shadow, a sheet of paper leaving a board wants none, and its
+       shade is a theme's business either way. */
+    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
     opacity: 0.95;
     transition: box-shadow 0.15s ease;
     pointer-events: none;
@@ -218,6 +222,7 @@ const dragCSSVars = [
   "--drop-hint-margin-y",
   "--drop-hint-arrow-size",
   "--drag-clone-scale",
+  "--drag-clone-shadow",
 ];
 
 /**
@@ -1288,6 +1293,15 @@ const createDragClone = (element, pointerEvent) => {
   }
 
   const elementClone = element.cloneNode(true);
+  // A deep copy copies the ids too, and two elements answering to one id is a
+  // document that lies: getElementById picks whichever comes first, an anchor
+  // resolves to the wrong one, a view-transition-name is claimed twice and the
+  // transition is dropped. The copy is a picture of the thing, not another one of
+  // it — so it answers to no name at all.
+  elementClone.removeAttribute("id");
+  for (const descendantWithId of elementClone.querySelectorAll("[id]")) {
+    descendantWithId.removeAttribute("id");
+  }
   elementClone.setAttribute("navi-drag-clone", "");
   // What is held is the copy, so it is the copy that must LOOK held: the caller
   // dresses `[data-grabbed]` on its own element once, and the copy is that element.

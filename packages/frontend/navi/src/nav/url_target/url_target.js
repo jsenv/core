@@ -16,11 +16,13 @@
  *
  * Two decisions worth knowing before reading:
  *
- * - **Scroll only when the target is not already fully visible.** A list that
- *   fits on screen does not move (the transient mark alone then says which one
- *   was meant), and an in-page anchor the browser just handled itself does not
- *   get scrolled a second time on top of it. Put another way: navi does what
- *   the browser could not.
+ * - **navi places the target itself, every time.** Where the browser does
+ *   answer a fragment it puts the element against the top edge, where it reads
+ *   as the first thing on the page rather than as the one that was pointed at;
+ *   the alignment below is applied after, so one rule holds whether the target
+ *   was there all along or arrived late. A page with nothing to scroll simply
+ *   does not move, which is the whole of the "the list already fits on screen"
+ *   case — the transient mark alone then says which one was meant.
  *
  * - **Wait, but not forever.** As long as the document is working (routes,
  *   actions) the target may still arrive; once it has been idle for a moment, a
@@ -223,15 +225,13 @@ const revealUrlTarget = (element) => {
   // The element just entered the DOM: where it sits is only known once layout
   // has run.
   requestAnimationFrame(() => {
-    if (!elementIsFullyVisibleInViewport(element)) {
-      const prefersReducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-      element.scrollIntoView({
-        block,
-        behavior: prefersReducedMotion ? "instant" : behavior,
-      });
-    }
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    element.scrollIntoView({
+      block,
+      behavior: prefersReducedMotion ? "instant" : behavior,
+    });
     // What the browser does when it handles a fragment itself: keyboard
     // navigation resumes from the target, not from the top of the document.
     if (elementIsFocusable(element)) {

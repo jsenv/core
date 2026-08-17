@@ -25,8 +25,15 @@
         scroll-margin-top: 12px;
       }
       h3 {
-        margin: 16px 0 4px;
+        margin: 20px 0 4px;
         font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      h4 {
+        margin: 14px 0 4px;
+        color: #6b7482;
+        font-size: 0.85rem;
+        font-family: ui-monospace, monospace;
         scroll-margin-top: 12px;
       }
       .demo-section {
@@ -239,6 +246,7 @@
       /* Un papier jaune : ce que quelqu'un a écrit à la main, posé sur ce qu'on
          regarde. */
       .note {
+        position: relative;
         max-width: 260px;
         padding: 10px 14px;
         color: #4a3f14;
@@ -248,12 +256,22 @@
         border-radius: 2px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
         rotate: -1.2deg;
+        /* Ce qui est porté n'est ni soulevé ni ombré : un papier qu'on décroche
+           n'est pas un objet qu'on présente. Le geste lit ces deux valeurs sur
+           l'original et les applique à la copie. */
+        --drag-clone-scale: 1;
+        --drag-clone-shadow: none;
       }
-      /* La copie portée par le pointeur : elle se redresse un peu et se soulève.
-         C'est la page qui le dit, via l'attribut que le geste pose. */
-      .note[navi-drag-clone] {
-        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
-        rotate: -3deg;
+      /* L'endroit d'où le papier vient, le temps qu'il traverse l'écran. Le geste
+         laisse l'original en place mais masqué ; un pseudo-élément qui redevient
+         visible perce ce masque, et c'est tout ce qu'on veut voir — la place vide. */
+      .note[navi-drag-clone-source]::after {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.07);
+        border-radius: 2px;
+        visibility: visible;
+        content: "";
       }
 
       /* Un plateau, et des jetons qu'on y déplace. */
@@ -390,13 +408,11 @@
           <SwipeDemo />
           <LongPressDemo />
           <KeyboardDemo />
-          <DraggableSurfaceDemo />
-          <WhichInteractionDemo />
-          <RunningDemo />
           <CustomDetectorDemo />
           <ReorderDemo />
           <TossDemo />
           <MoveDemo />
+          <CombinationsDemo />
           <ConcreteCasesDemo />
         </Box>
       );
@@ -503,6 +519,135 @@
         );
       };
 
+      // ── Surfaces déjà draggable ───────────────────────────────────────────
+
+      // Un carré de couleur en data: URI, pour avoir une vraie <img> sans réseau.
+      const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#2f5fa8"/></svg>',
+      )}`;
+
+      const SwipeOnDraggableSurface = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <>
+            <Heading level={3} id="swipe-draggable">
+              Sur des surfaces déjà draggable
+            </Heading>
+            <p class="desc">
+              Commencer le geste sur la vignette, puis sur le lien, puis sur le
+              texte.
+            </p>
+            <Box className="rows">
+              <Row
+                title={
+                  <Box flex="x" spacing="s" alignY="center">
+                    <img class="thumb" src={THUMB_SRC} alt="" />
+                    <Link href="https://jsenv.dev">jsenv.dev</Link>
+                  </Box>
+                }
+                body="une image et un lien dans la ligne"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("swipe_right") }}
+              />
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      // ── Quelle interaction a demandé ──────────────────────────────────────
+
+      const SwipeDetail = () => {
+        const [entries, push, clear] = useCallLog();
+        const archiveOrDelete = (value, { event }) => {
+          const swipe = findEvent(event, "swipe_right");
+          if (!swipe) {
+            push("action", "sans balayage", event);
+            return;
+          }
+          const { progress } = swipe.detail;
+          push(
+            progress > 0.8 ? "supprime" : "archive",
+            `progress ${progress.toFixed(2)}`,
+            event,
+          );
+        };
+        return (
+          <>
+            <Heading level={3} id="swipe-detail">
+              Ce que le balayage a dit
+            </Heading>
+            <p class="desc">
+              <code>findEvent(event, "swipe_right").detail</code> : l'axe, le
+              signe, la distance, la taille, la progression.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption='{ swipe_right: "request_action", longpress: "request_action" }'>
+                <Button
+                  action={archiveOrDelete}
+                  interactions={{
+                    swipe_right: "request_action",
+                    longpress: "request_action",
+                  }}
+                >
+                  Balayer, ou maintenir
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      // ── Ce que la ligne fait pendant l'attente ────────────────────────────
+
+      const SwipeWhileRunning = () => {
+        const [archived, setArchived] = useState([]);
+        return (
+          <>
+            <Heading level={3} id="swipe-running">
+              Pendant l'attente
+            </Heading>
+            <p class="legend">
+              Balayer une ligne vers la droite, puis répondre depuis le backend
+              ci-dessous. La ligne reste sortie tant que l'appel n'a pas
+              répondu, et revient qu'il réussisse ou qu'il échoue.
+            </p>
+            <FakeBackend value={{ archived: [] }}>
+              {({ action }) => (
+                <Box className="rows" flex="y">
+                  {["Marc", "Léa", "Sofia"]
+                    .filter((name) => !archived.includes(name))
+                    .map((name) => (
+                      <Row
+                        key={name}
+                        title={name}
+                        body="balayer vers la droite"
+                        trailStart={ARCHIVE_TRAIL}
+                        interactions={{
+                          // Une promesse : le balayage attend qu'elle se règle.
+                          swipe_right: async () => {
+                            await action({ archived: [name] });
+                            setArchived((previous) => [...previous, name]);
+                          },
+                        }}
+                      />
+                    ))}
+                </Box>
+              )}
+            </FakeBackend>
+            {archived.length ? (
+              <Box paddingY="s">
+                <Button action={() => setArchived([])}>
+                  Rétablir {archived.length}
+                </Button>
+              </Box>
+            ) : null}
+          </>
+        );
+      };
+
       // ── Balayage ──────────────────────────────────────────────────────────
 
       const SwipeDemo = () => {
@@ -550,7 +695,15 @@
               />
             </Box>
 
-            <Heading level={3} id="swipe-threshold">
+            <SwipeOnDraggableSurface />
+            <SwipeDetail />
+            <SwipeWhileRunning />
+
+            <Heading level={3} id="swipe-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="swipe-threshold">
               data-swipe-threshold
             </Heading>
             <p class="legend">
@@ -630,7 +783,11 @@
                 </Button>
               </Variant>
             </Box>
-            <Heading level={3} id="longpress-delay">
+            <Heading level={3} id="longpress-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="longpress-delay">
               data-longpress-delay
             </Heading>
             <p class="legend">
@@ -654,7 +811,7 @@
               </Variant>
             </Box>
 
-            <Heading level={3} id="longpress-slop">
+            <Heading level={4} id="longpress-slop">
               data-longpress-slop
             </Heading>
             <p class="legend">
@@ -683,20 +840,6 @@
               </Variant>
             </Box>
 
-            <Heading level={3} id="longpress-and-swipe">
-              Avec un balayage
-            </Heading>
-            <Box className="rows">
-              <Row
-                title="swipe_right + longpress"
-                body="partir sur le côté, ou ne pas bouger"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  longpress: log("longpress"),
-                }}
-              />
-            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -731,133 +874,6 @@
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── Surfaces déjà draggable ───────────────────────────────────────────
-
-      // Un carré de couleur en data: URI, pour avoir une vraie <img> sans réseau.
-      const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#2f5fa8"/></svg>',
-      )}`;
-
-      const DraggableSurfaceDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const log = (name) => (event) => push(name, undefined, event);
-        return (
-          <div class="demo-section">
-            <Heading id="draggable">Surfaces déjà draggable</Heading>
-            <p class="desc">
-              Commencer le geste sur la vignette, puis sur le lien, puis sur le
-              texte.
-            </p>
-            <Box className="rows">
-              <Row
-                title={
-                  <Box flex="x" spacing="s" alignY="center">
-                    <img class="thumb" src={THUMB_SRC} alt="" />
-                    <Link href="https://jsenv.dev">jsenv.dev</Link>
-                  </Box>
-                }
-                body="une image et un lien dans la ligne"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{ swipe_right: log("swipe_right") }}
-              />
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── Quelle interaction a demandé ──────────────────────────────────────
-
-      const WhichInteractionDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const archiveOrDelete = (value, { event }) => {
-          const swipe = findEvent(event, "swipe_right");
-          if (!swipe) {
-            push("action", "sans balayage", event);
-            return;
-          }
-          const { progress } = swipe.detail;
-          push(
-            progress > 0.8 ? "supprime" : "archive",
-            `progress ${progress.toFixed(2)}`,
-            event,
-          );
-        };
-        return (
-          <div class="demo-section">
-            <Heading id="which-interaction">
-              Quelle interaction a demandé
-            </Heading>
-            <p class="desc">
-              <code>findEvent(event, "swipe_right").detail</code> : l'axe, le
-              signe, la distance, la taille, la progression.
-            </p>
-            <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption='{ swipe_right: "request_action", longpress: "request_action" }'>
-                <Button
-                  action={archiveOrDelete}
-                  interactions={{
-                    swipe_right: "request_action",
-                    longpress: "request_action",
-                  }}
-                >
-                  Balayer, ou maintenir
-                </Button>
-              </Variant>
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── Ce que la ligne fait pendant l'attente ────────────────────────────
-
-      const RunningDemo = () => {
-        const [archived, setArchived] = useState([]);
-        return (
-          <div class="demo-section">
-            <Heading id="running">
-              Ce que la ligne fait pendant l'attente
-            </Heading>
-            <p class="legend">
-              Balayer une ligne vers la droite, puis répondre depuis le backend
-              ci-dessous. La ligne reste sortie tant que l'appel n'a pas
-              répondu, et revient qu'il réussisse ou qu'il échoue.
-            </p>
-            <FakeBackend value={{ archived: [] }}>
-              {({ action }) => (
-                <Box className="rows" flex="y">
-                  {["Marc", "Léa", "Sofia"]
-                    .filter((name) => !archived.includes(name))
-                    .map((name) => (
-                      <Row
-                        key={name}
-                        title={name}
-                        body="balayer vers la droite"
-                        trailStart={ARCHIVE_TRAIL}
-                        interactions={{
-                          // Une promesse : le balayage attend qu'elle se règle.
-                          swipe_right: async () => {
-                            await action({ archived: [name] });
-                            setArchived((previous) => [...previous, name]);
-                          },
-                        }}
-                      />
-                    ))}
-                </Box>
-              )}
-            </FakeBackend>
-            {archived.length ? (
-              <Box paddingY="s">
-                <Button action={() => setArchived([])}>
-                  Rétablir {archived.length}
-                </Button>
-              </Box>
-            ) : null}
           </div>
         );
       };
@@ -1020,20 +1036,6 @@
             name="reorder"
             interactionsFor={({ reorder }) => ({ reorder })}
           />
-
-          <Heading level={3} id="reorder-and-toss">
-            …et jeter
-          </Heading>
-          <p class="legend">
-            La même liste, plus <code>toss</code> : déposer sur une autre tâche
-            l'échange, l'envoyer loin et vite la jette. Une ligne qui peut être
-            jetée doit pouvoir quitter sa liste, donc le geste lui rend cette
-            liberté — avec <code>reorder</code> seul elle y reste enfermée.
-          </p>
-          <TaskList
-            name="both"
-            interactionsFor={({ reorder, toss }) => ({ reorder, toss })}
-          />
         </div>
       );
 
@@ -1087,7 +1089,11 @@
               </Box>
             ) : null}
 
-            <Heading level={3} id="toss-thresholds">
+            <Heading level={3} id="toss-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="toss-thresholds">
               data-toss-distance et data-toss-speed
             </Heading>
             <p class="legend">
@@ -1161,7 +1167,11 @@
               />
             </Box>
 
-            <Heading level={3} id="move-axis">
+            <Heading level={3} id="move-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="move-axis">
               data-drag-axis
             </Heading>
             <p class="legend">
@@ -1185,7 +1195,7 @@
               />
             </Box>
 
-            <Heading level={3} id="move-free">
+            <Heading level={4} id="move-free">
               data-drag-free
             </Heading>
             <p class="legend">
@@ -1222,6 +1232,56 @@
               </Box>
             </Box>
             <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Combinaisons ──────────────────────────────────────────────────────
+      //
+      // Plusieurs interactions sur un même élément: c'est là qu'on vérifie qu'elles
+      // ne se marchent pas dessus. Une section par PAIRE qui partage une entrée —
+      // une pression, un lâcher — et non une par combinaison imaginable.
+
+      const CombinationsDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="combinations">Combinaisons</Heading>
+
+            <Heading level={3} id="longpress-and-swipe">
+              Appui long et balayage
+            </Heading>
+            <p class="legend">
+              La même pression : le doigt part sur le côté, c'est un balayage ;
+              il ne bouge pas, c'est un appui long. Jamais les deux.
+            </p>
+            <Box className="rows">
+              <Row
+                title="swipe_right + longpress"
+                body="partir sur le côté, ou ne pas bouger"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  longpress: log("longpress"),
+                }}
+              />
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="reorder-and-toss">
+              Réordonner et jeter
+            </Heading>
+            <p class="legend">
+              Le même lâcher : déposée sur une autre tâche, la ligne l'échange ;
+              envoyée loin et vite, elle est jetée. Une ligne qui peut être
+              jetée doit pouvoir quitter sa liste, donc le geste lui rend cette
+              liberté — avec <code>reorder</code> seul elle y reste enfermée.
+            </p>
+            <TaskList
+              name="both"
+              interactionsFor={({ reorder, toss }) => ({ reorder, toss })}
+            />
           </div>
         );
       };
