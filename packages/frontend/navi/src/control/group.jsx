@@ -32,8 +32,15 @@ const css = /* css */ `
       position: relative;
       z-index: var(--navi-z-index-control-hovered);
     }
+    /* Three spellings for one thing — the member showing a focus ring. Some
+       controls take the focus on their own root (a button); others wrap a real
+       input and draw the ring on their frame while the keyboard is held
+       somewhere inside (a picker, a spin). The ring is what must not be sliced,
+       so the member holding it is raised whether it wears the state itself or
+       merely contains it. */
     > *:focus-visible,
-    > *[data-focus-visible] {
+    > *[data-focus-visible],
+    > *:has([data-focus-visible]) {
       position: relative;
       z-index: var(--navi-z-index-control-focused);
     }

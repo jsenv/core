@@ -47,11 +47,14 @@ Live examples: `src/control/demos/15_group_demo.html`.
   last one loses it on the other side, and any member in between loses all
   four. A single member keeps its own radius — a group of one looks like the
   control alone.
-- **Overlap order**: the member under the pointer, and the member holding
-  focus, paints above its neighbours (`position: relative; z-index: 1`).
-  Without it the border color change and the focus ring of the active member
-  would be sliced by whichever neighbour is painted after it. The value is `1`
-  and there is deliberately no `isolation: isolate` — see
+- **Overlap order**: the member under the pointer, and the member showing a
+  focus ring, paint above their neighbours (`position: relative` plus
+  `--navi-z-index-control-hovered` / `-focused`). Without it the border color
+  change and the focus ring of the active member would be sliced by whichever
+  neighbour is painted after it. The focused member is matched whether it wears
+  `data-focus-visible` itself or merely contains it — a control that wraps a
+  real input (`Picker`, `Spin`) draws the ring on its own frame while the
+  keyboard is held inside. There is deliberately no `isolation: isolate` — see
   [z_index.md](./z_index.md).
 
 Nothing else: a group does not restyle its members, does not impose a size,
