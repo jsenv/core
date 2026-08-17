@@ -106,9 +106,9 @@ import.meta.css = /* css */ `
 // a press that wandered a pixel is still a press, and nothing budges.
 const DRAG_START_THRESHOLD = 10;
 // How much of a box has to be pulled for letting go to carry on rather than put
-// things back. Under half, because a gesture that has clearly begun is an
-// intention: asking for the box to be dragged all the way across turns a travel
-// into work.
+// things back, when the caller does not say. Under half, because a gesture that
+// has clearly begun is an intention: asking for the box to be dragged all the
+// way across turns a travel into work.
 const DRAG_COMMIT_RATIO = 0.3;
 // A flick travels whatever the distance: the hand said "away" quickly, which is
 // the whole gesture — px/ms of pointer, and a few pixels to tell it from a tap
@@ -238,7 +238,14 @@ export const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
 // A gesture is over: does it carry on, or does everything go back? The distance
 // pulled says it, and the speed says it too — a short flick means "away" as
 // clearly as half a box does.
-const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
+const travelsAfter = ({
+  pulled,
+  slack,
+  size,
+  velocity,
+  towardsSomething,
+  commitRatio,
+}) => {
   if (!towardsSomething) {
     return false;
   }
@@ -265,7 +272,7 @@ const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
   // …and going towards it travels whatever the distance: the hand said "away"
   // quickly, which is the whole gesture.
   const flicked = goingFast && Math.abs(pulled) > DRAG_FLICK_DISTANCE;
-  return flicked || Math.abs(pulled) > size * DRAG_COMMIT_RATIO;
+  return flicked || Math.abs(pulled) > size * commitRatio;
 };
 
 /**
@@ -297,6 +304,11 @@ const travelsAfter = ({ pulled, slack, size, velocity, towardsSomething }) => {
  *   pixel since the grab is owed to the hand. The axis comes from the caller
  *   rather than from the movement, because there is nothing to decide — what
  *   was caught is travelling on one already.
+ * @param {number} [options.commitRatio=0.3] - what fraction of the box has to
+ *   be pulled for letting go to carry on rather than put things back. A
+ *   fraction and never a distance, so the same gesture asks for the same thing
+ *   on a phone and on a wide screen. Speed still answers on its own (see
+ *   travelsAfter), whatever this says.
  * @param {(detail: {axis: string, sign: number, target: Element, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
  *   - the finger has picked its axis. Answer `false` to give the gesture up, or
  *   with the geometry it walks: `size` (one box along that axis), `slack` (how
@@ -329,6 +341,7 @@ export const startDragToTravel = (
     element,
     axes = "xy",
     immediate = false,
+    commitRatio = DRAG_COMMIT_RATIO,
     onStart,
     onPull,
     onEnd,
@@ -598,7 +611,14 @@ export const startDragToTravel = (
         sign: pulled > 0 ? 1 : -1,
         travels:
           !cancelled &&
-          travelsAfter({ pulled, slack, size, velocity, towardsSomething }),
+          travelsAfter({
+            pulled,
+            slack,
+            size,
+            velocity,
+            towardsSomething,
+            commitRatio,
+          }),
         cancelled,
         event: releaseEvent,
       });

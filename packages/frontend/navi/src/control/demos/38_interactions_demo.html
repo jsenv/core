@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Interactions demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 16px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+
+      /* Une "liste" : ce qui dépasse d'une ligne balayée est coupé par la liste,
+         pas par la ligne. */
+      .rows {
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .rows > * + * {
+        border-top: 1px solid #eef1f6;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        padding: 14px 16px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #1f2733;
+        font-size: 14px;
+        text-decoration: none;
+        background: white;
+      }
+      .row_title {
+        font-weight: 500;
+      }
+      .row_body {
+        color: #6b7482;
+        font-size: 13px;
+      }
+
+      /* Ce qu'on découvre derrière la ligne : exactement la bande qu'elle vient
+         de quitter, donc large de ce qu'elle a parcouru. */
+      .trail {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .trail_start {
+        right: 100%;
+        width: var(--swipe-pulled);
+        padding-right: 16px;
+        justify-content: flex-end;
+        opacity: calc(var(--swipe-progress) * 3);
+      }
+      .trail_end {
+        left: 100%;
+        width: calc(-1 * var(--swipe-pulled));
+        padding-left: 16px;
+        justify-content: flex-start;
+        opacity: calc(var(--swipe-progress) * -3);
+      }
+      .trail_archive {
+        background: #9aa6b6;
+      }
+      [data-swipe-past-threshold] .trail_archive {
+        background: #1e8e5a;
+      }
+      .trail_delete {
+        background: #d8a3a3;
+      }
+      [data-swipe-past-threshold] .trail_delete {
+        background: #c62828;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        defineInteractionDetector,
+        findEvent,
+        Link,
+        Text,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const Row = ({ title, body, trailStart, trailEnd, ...rest }) => (
+        <Link className="row" href="#" {...rest}>
+          {trailStart ? (
+            <span className={`trail trail_start ${trailStart.className}`}>
+              {trailStart.label}
+            </span>
+          ) : null}
+          {trailEnd ? (
+            <span className={`trail trail_end ${trailEnd.className}`}>
+              {trailEnd.label}
+            </span>
+          ) : null}
+          <span className="row_title">{title}</span>
+          <span className="row_body">{body}</span>
+        </Link>
+      );
+
+      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archiver" };
+      const DELETE_TRAIL = { className: "trail_delete", label: "Supprimer" };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Interactions"
+            previous={{ href: "./37_select_demo.html", label: "Select" }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <SwipeDemo />
+          <LongPressDemo />
+          <KeyboardDemo />
+          <SettingsDemo />
+          <WhichInteractionDemo />
+          <RunningDemo />
+          <CustomDetectorDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const NominalDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const logAction = (value, { event }) => push("action", value, event);
+        return (
+          <div class="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <p class="desc">
+              L'action reste branchée sur le clic ; <code>interactions</code>{" "}
+              ajoute les autres façons de la demander.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="action seule">
+                <Button action={logAction}>Envoyer</Button>
+              </Variant>
+              <Variant caption='interactions={{ dblclick: "request_action" }}'>
+                <Button
+                  action={logAction}
+                  interactions={{ dblclick: "request_action" }}
+                >
+                  Envoyer
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="states">États</Heading>
+            <div class="rows">
+              <Row
+                title="normal"
+                body="balayer vers la droite"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+              <Row
+                title="readOnly"
+                body="balayer vers la droite"
+                readOnly
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+              <Row
+                title="disabled"
+                body="balayer vers la droite"
+                disabled
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+            </div>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Balayage ──────────────────────────────────────────────────────────
+
+      const SwipeDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="swipe">Balayage</Heading>
+            <p class="desc">
+              À la souris comme au doigt : la ligne suit, et revient si on la
+              lâche trop tôt.
+            </p>
+
+            <Heading level={3} id="swipe-one-way">
+              Un seul côté
+            </Heading>
+            <div class="rows">
+              <Row
+                title="swipe_right"
+                body="vers la droite"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+              <Row
+                title="swipe_left"
+                body="vers la gauche"
+                trailEnd={DELETE_TRAIL}
+                interactions={{
+                  swipe_left: log("swipe_left"),
+                  long_press: log("long_press"),
+                }}
+              />
+            </div>
+
+            <Heading level={3} id="swipe-both-ways">
+              Les deux
+            </Heading>
+            <div class="rows">
+              <Row
+                title="swipe_right + swipe_left"
+                body="deux gestes, deux effets"
+                trailStart={ARCHIVE_TRAIL}
+                trailEnd={DELETE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  swipe_left: log("swipe_left"),
+                  long_press: log("long_press"),
+                }}
+              />
+            </div>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Appui long ────────────────────────────────────────────────────────
+
+      const LongPressDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="long-press">Appui long</Heading>
+            <p class="desc">
+              Le clic droit et la touche « menu » du clavier font la même chose
+              :<code> long_press</code> amène <code>contextmenu</code> avec lui
+              tant qu'on ne le déclare pas soi-même.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ long_press }">
+                <Button interactions={{ long_press: log("long_press") }}>
+                  Maintenir
+                </Button>
+              </Variant>
+              <Variant caption="{ long_press, contextmenu }">
+                <Button
+                  interactions={{
+                    long_press: log("long_press"),
+                    contextmenu: log("contextmenu"),
+                  }}
+                >
+                  Maintenir
+                </Button>
+              </Variant>
+            </Box>
+            <Heading level={3} id="long-press-and-swipe">
+              Avec un balayage
+            </Heading>
+            <div class="rows">
+              <Row
+                title="swipe_right + long_press"
+                body="partir sur le côté, ou ne pas bouger"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  long_press: log("long_press"),
+                }}
+              />
+            </div>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Clavier ───────────────────────────────────────────────────────────
+
+      const KeyboardDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const logAction = (value, { event }) => push("action", value, event);
+        return (
+          <div class="demo-section">
+            <Heading id="keyboard">Clavier</Heading>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption='{ "keyboard:ctrl+backspace": "request_action" }'>
+                <Button
+                  action={logAction}
+                  interactions={{ "keyboard:ctrl+backspace": "request_action" }}
+                >
+                  Focus puis ctrl+backspace
+                </Button>
+              </Variant>
+              <Variant caption='{ "keyboard:shift+a": fn }'>
+                <Button
+                  interactions={{
+                    "keyboard:shift+a": (event) =>
+                      push("keyboard:shift+a", undefined, event),
+                  }}
+                >
+                  Focus puis shift+a
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Réglages ──────────────────────────────────────────────────────────
+
+      const SettingsDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        const swipeAndHold = {
+          swipe_right: log("swipe_right"),
+          long_press: log("long_press"),
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="settings">Réglages</Heading>
+
+            <Heading level={3} id="swipe-threshold">
+              data-swipe-threshold
+            </Heading>
+            <div class="rows">
+              <Row
+                title="0.33"
+                body="par défaut"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={swipeAndHold}
+              />
+              <Row
+                title="0.15"
+                body="lâchée tôt, elle part"
+                data-swipe-threshold="0.15"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={swipeAndHold}
+              />
+              <Row
+                title="0.8"
+                body="il faut la traverser"
+                data-swipe-threshold="0.8"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={swipeAndHold}
+              />
+            </div>
+
+            <Heading level={3} id="long-press-delay">
+              data-long-press-delay
+            </Heading>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="450 (par défaut)">
+                <Button interactions={{ long_press: log("long_press") }}>
+                  Maintenir
+                </Button>
+              </Variant>
+              <Variant caption='data-long-press-delay="1200"'>
+                <Button
+                  data-long-press-delay="1200"
+                  interactions={{ long_press: log("long_press") }}
+                >
+                  Maintenir
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={3} id="long-press-slop">
+              data-long-press-slop
+            </Heading>
+            <Box
+              flex="x"
+              spacing="xl"
+              alignY="start"
+              data-long-press-delay="1200"
+            >
+              <Variant caption="8 (par défaut)">
+                <Button interactions={{ long_press: log("long_press") }}>
+                  Maintenir sans bouger
+                </Button>
+              </Variant>
+              <Variant caption='data-long-press-slop="60"'>
+                <Button
+                  data-long-press-slop="60"
+                  interactions={{ long_press: log("long_press") }}
+                >
+                  Maintenir en bougeant
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Quelle interaction a demandé ──────────────────────────────────────
+
+      const WhichInteractionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const archiveOrDelete = (value, { event }) => {
+          const swipe = findEvent(event, "swipe_right");
+          if (!swipe) {
+            push("action", "sans geste", event);
+            return;
+          }
+          const { progress } = swipe.detail;
+          push(
+            progress > 0.8 ? "supprime" : "archive",
+            `progress ${progress.toFixed(2)}`,
+            event,
+          );
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="which-interaction">
+              Quelle interaction a demandé
+            </Heading>
+            <p class="desc">
+              <code>findEvent(event, "swipe_right").detail</code> : l'axe, le
+              signe, la distance, la taille, la progression.
+            </p>
+            <div class="rows">
+              <Row
+                title="au-delà de 80 %"
+                body="supprime au lieu d'archiver"
+                trailStart={ARCHIVE_TRAIL}
+                action={archiveOrDelete}
+                interactions={{
+                  swipe_right: "request_action",
+                  long_press: "request_action",
+                }}
+              />
+            </div>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Pendant que l'action tourne ───────────────────────────────────────
+
+      const RunningDemo = () => {
+        const [archived, setArchived] = useState([]);
+        return (
+          <div class="demo-section">
+            <Heading id="running">Pendant que l'action tourne</Heading>
+            <FakeBackend value={{ archived: [] }}>
+              {({ action }) => (
+                <div class="rows">
+                  {["Marc", "Léa", "Sofia"]
+                    .filter((name) => !archived.includes(name))
+                    .map((name) => (
+                      <Row
+                        key={name}
+                        title={name}
+                        body="balayer vers la droite"
+                        trailStart={ARCHIVE_TRAIL}
+                        action={async () => {
+                          await action({ archived: [name] });
+                          setArchived((previous) => [...previous, name]);
+                        }}
+                        interactions={{
+                          swipe_right: "request_action",
+                          long_press: "request_action",
+                        }}
+                      />
+                    ))}
+                </div>
+              )}
+            </FakeBackend>
+          </div>
+        );
+      };
+
+      // ── Une interaction à soi ─────────────────────────────────────────────
+
+      // Trois clics dans la seconde : navi n'en a pas, l'appli l'enregistre.
+      defineInteractionDetector({
+        name: "triple_click",
+        claims: (type) => type === "triple_click",
+        setup: ({ request }) => {
+          let count = 0;
+          let timeout = null;
+          return {
+            onClick: (clickEvent) => {
+              count++;
+              clearTimeout(timeout);
+              timeout = setTimeout(() => {
+                count = 0;
+              }, 1000);
+              if (count < 3) {
+                return;
+              }
+              count = 0;
+              request("triple_click", {}, clickEvent);
+            },
+          };
+        },
+      });
+
+      const CustomDetectorDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="custom">Une interaction à soi</Heading>
+            <p class="desc">
+              <code>defineInteractionDetector</code> : la porte par laquelle
+              passent aussi les balayages et les raccourcis de navi.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ triple_click: fn }">
+                <Button
+                  interactions={{
+                    triple_click: (event) =>
+                      push("triple_click", undefined, event),
+                  }}
+                >
+                  Cliquer trois fois
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

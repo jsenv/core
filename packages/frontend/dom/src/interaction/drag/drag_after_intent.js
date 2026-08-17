@@ -3,8 +3,9 @@
  *
  * A pointer going down on a draggable element is ambiguous — it may be a click,
  * a text selection, a scroll, or a drag — and starting the gesture right away
- * would steal all the others. This module owns the wait that resolves the
- * ambiguity, and only then hands over to the real gesture.
+ * would steal all the others. This module picks which signal resolves the
+ * ambiguity for the pointer at hand, and only then hands over to the real
+ * gesture.
  *
  * There is one gesture, with a trigger per pointer:
  * - a dedicated handle ([data-drag-handle]) says it outright: drag on contact
@@ -17,6 +18,7 @@
  * starts at the first pixel, without a second threshold to cross.
  */
 
+import { waitForPressHeld } from "../press_held.js";
 import {
   createDragGestureController,
   isPrimaryButtonEvent,
@@ -171,93 +173,22 @@ const dragAfterLongPress = (
   dragGestureInitializer,
   { longPressDelay, longPressSlop, onPressStart, onPressCancel, onPress },
 ) => {
-  const { pointerId, clientX, clientY } = grabEvent;
-
-  const pressCleanupCallbacks = [];
-  const endPress = () => {
-    for (const pressCleanupCallback of pressCleanupCallbacks) {
-      pressCleanupCallback();
-    }
-    pressCleanupCallbacks.length = 0;
-  };
-
-  /*
-   * A press held long enough IS the system's context-menu gesture: Android opens
-   * its menu around 500ms, iOS its callout — both a tenth of a second after the
-   * object has been picked up, landing on top of something the finger is already
-   * carrying.
-   * The listener goes on window, in capture: once the gesture runs, the drag
-   * backdrop covers the page, so the contextmenu event is aimed at the backdrop
-   * and never reaches the element being dragged.
-   * It is removed on release — a right click with a mouse remains a right click.
-   */
-  const preventContextMenu = (contextMenuEvent) => {
-    contextMenuEvent.preventDefault();
-  };
-  window.addEventListener("contextmenu", preventContextMenu, true);
-  pressCleanupCallbacks.push(() => {
-    window.removeEventListener("contextmenu", preventContextMenu, true);
+  waitForPressHeld(grabEvent, {
+    delay: longPressDelay,
+    slop: longPressSlop,
+    onPressStart,
+    onPressCancel,
+    onPressHeld: (pressEvent, { endPress }) => {
+      onPress?.(pressEvent);
+      // Scrolling is taken away by the gesture itself, from the moment it starts
+      // (see markAsStarted in drag_gesture.js) — one place refuses the touchmove,
+      // for every way a drag can begin.
+      const dragGesture = startDragGesture(dragGestureInitializer);
+      if (!dragGesture) {
+        endPress();
+        return;
+      }
+      dragGesture.addReleaseCallback(endPress);
+    },
   });
-
-  const countdownCleanupCallbacks = [];
-  const endCountdown = () => {
-    for (const countdownCleanupCallback of countdownCleanupCallbacks) {
-      countdownCleanupCallback();
-    }
-    countdownCleanupCallbacks.length = 0;
-  };
-
-  const timeout = setTimeout(() => {
-    endCountdown();
-    onPress?.(grabEvent);
-    // Scrolling is taken away by the gesture itself, from the moment it starts
-    // (see markAsStarted in drag_gesture.js) — one place refuses the touchmove,
-    // for every way a drag can begin.
-    const dragGesture = startDragGesture(dragGestureInitializer);
-    if (!dragGesture) {
-      endPress();
-      return;
-    }
-    dragGesture.addReleaseCallback(endPress);
-  }, longPressDelay);
-  countdownCleanupCallbacks.push(() => {
-    clearTimeout(timeout);
-  });
-
-  const cancelPress = (pointerEvent) => {
-    endCountdown();
-    endPress();
-    onPressCancel?.(pointerEvent);
-  };
-  const onPointerMove = (pointerMoveEvent) => {
-    if (pointerMoveEvent.pointerId !== pointerId) {
-      return;
-    }
-    const xDrift = Math.abs(pointerMoveEvent.clientX - clientX);
-    const yDrift = Math.abs(pointerMoveEvent.clientY - clientY);
-    if (xDrift < longPressSlop && yDrift < longPressSlop) {
-      return;
-    }
-    // The finger is going somewhere: it is scrolling the page, or running down
-    // the list. Letting the countdown survive would unhook an object in passing.
-    cancelPress(pointerMoveEvent);
-  };
-  const onPointerEnd = (pointerEndEvent) => {
-    if (pointerEndEvent.pointerId !== pointerId) {
-      return;
-    }
-    cancelPress(pointerEndEvent);
-  };
-  // On window rather than on the element: the finger can leave it, and the
-  // element itself can be taken out of the document while the press is waiting.
-  window.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("pointerup", onPointerEnd);
-  window.addEventListener("pointercancel", onPointerEnd);
-  countdownCleanupCallbacks.push(() => {
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("pointerup", onPointerEnd);
-    window.removeEventListener("pointercancel", onPointerEnd);
-  });
-
-  onPressStart?.(grabEvent);
 };

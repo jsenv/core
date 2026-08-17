@@ -35,6 +35,7 @@ import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_el
 import {
   dispatchRequestAction,
   tryActionAfterInteractionAllowed,
+  watchActionCompletion,
 } from "@jsenv/navi/src/control/rules/control_action.js";
 import {
   dispatchRequestInteraction,
@@ -50,6 +51,10 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
+import {
+  resolveInteractions,
+  useInteractionProps,
+} from "./interaction/interactions.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -173,6 +178,9 @@ export const useControlProps = (
   props.id = props.id || controlId || idDefault;
   const controlName = useContext(ControlNameContext);
   props.name = props.name || controlName;
+  // The interactions declared, plus the ones they imply — resolved before
+  // anything reads them, so `props.interactions` means the same thing everywhere.
+  props.interactions = resolveInteractions(props.interactions);
 
   const toDomProps = (newUIState) => {
     if (
@@ -851,7 +859,61 @@ export const useControlProps = (
       onKeyDown,
       onPaste,
       onInput,
+      // Handed over untouched unless an interaction claims the same event, and
+      // then composed with it below — the caller's handler runs first, whatever
+      // navi does with that event afterwards.
+      onMouseUp: props.onMouseUp,
+      onDblClick: props.onDblClick,
+      onPointerDown: props.onPointerDown,
+      onContextMenu: props.onContextMenu,
     });
+
+    // The interactions the caller declared, read on the control host: one element
+    // reads the press, whichever interaction it turns out to be — the same one
+    // the click is read on.
+    const interactionProps = useInteractionProps(props.interactions, {
+      ref,
+      requestAction: (interactionEvent) =>
+        watchActionCompletion(ref.current, () =>
+          dispatchRequestAction(ref.current, {
+            event: interactionEvent,
+            name: `interaction "${interactionEvent.type}"`,
+            action: boundAction,
+            requester: ref.current,
+          }),
+        ),
+      requestUIAction: (interactionEvent) => {
+        dispatchRequestInteraction(ref.current, {
+          event: interactionEvent,
+          name: `interaction "${interactionEvent.type}"`,
+          allowed: () => triggerUIAction(interactionEvent),
+        });
+      },
+      requestInteraction: (interactionEvent, name, allowed) => {
+        dispatchRequestInteraction(ref.current, {
+          event: interactionEvent,
+          name,
+          allowed,
+        });
+      },
+    });
+    if (interactionProps) {
+      for (const key of Object.keys(interactionProps)) {
+        const interactionValue = interactionProps[key];
+        const existingValue = controlHostProps[key];
+        if (
+          typeof interactionValue === "function" &&
+          typeof existingValue === "function"
+        ) {
+          controlHostProps[key] = (...args) => {
+            existingValue(...args);
+            interactionValue(...args);
+          };
+          continue;
+        }
+        controlHostProps[key] = interactionValue;
+      }
+    }
   }
 
   const uiState = uiStateController.uiStateSignal.peek();
@@ -1061,6 +1123,7 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
     props.signal || // a bound signal is written back on uiAction → interactive
     props.uiAction ||
     props.action ||
+    props.interactions ||
     formContext ||
     parentUIStateController ||
     isProxy ||

@@ -12,6 +12,13 @@ export {
   rerunActions,
   updateActions,
 } from "./src/action/actions.js";
+// How an action reads which interaction asked for it: an interaction is an event
+// (see src/control/interaction/interactions.js), and the action receives the
+// event chain it belongs to — `findEvent(event, "swipe_left")` gets back to it.
+export { findEvent } from "@jsenv/dom";
+// …and how code registers an interaction navi does not know: the door navi's own
+// swipes, holds and shortcuts come through.
+export { defineInteractionDetector } from "./src/control/interaction/interactions.js";
 export { useActionStatus } from "./src/action/use_action_status.js";
 export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 

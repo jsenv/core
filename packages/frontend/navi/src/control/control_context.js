@@ -51,6 +51,9 @@ export const CONTROL_PROP_SET = new Set([
   ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
+  // Which interactions this control answers, and with what — see
+  // src/control/interaction/interactions.js.
+  "interactions",
   "confirm",
   "confirmPopupContent",
   "actionEvent",
@@ -73,7 +76,11 @@ export const CONTROL_PROP_SET = new Set([
   "autoFocusSelect",
 
   "onMouseDown",
+  "onMouseUp",
   "onClick",
+  "onDblClick",
+  "onPointerDown",
+  "onContextMenu",
   "onKeyDown",
   "onPaste",
   "onInput",

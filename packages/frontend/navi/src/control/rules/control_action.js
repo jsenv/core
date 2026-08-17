@@ -72,19 +72,32 @@ export const dispatchRequestAction = (
  *
  * `whenSucceeded` registers what to do once it completes, and only then: an
  * error or an abort leaves whatever the action left in front of the user
- * (a validation message, an aborted state) instead.
+ * (a validation message, an aborted state) instead. `whenSettled` is for a
+ * caller that has something to undo however it ended — a row a swipe pulled out
+ * has to come back on a failure, so it must hear about one.
  *
  * @param {Element} element - The element the action is dispatched on.
  * @param {() => any} dispatchAction
- * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void }}
+ * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void, whenSettled: (callback: Function) => void }}
  */
 export const watchActionCompletion = (element, dispatchAction) => {
   let running = false;
   let onSuccess = null;
+  let onSettled = null;
+  let settledOutcome = null;
   const onActionStart = (actionStartEvent) => {
     running = true;
-    actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
+    actionStartEvent.detail.addSideEffect((outcome) => {
       running = false;
+      const { error, aborted } = outcome;
+      if (onSettled) {
+        onSettled(outcome);
+      } else {
+        // Settled before the caller had a chance to ask — a synchronous action.
+        // Kept rather than dropped, because what waits on this waits to UNDO
+        // something (see whenSettled), and there is no other path for that.
+        settledOutcome = outcome;
+      }
       if (error || aborted) {
         return;
       }
@@ -113,6 +126,13 @@ export const watchActionCompletion = (element, dispatchAction) => {
     isRunning: running,
     whenSucceeded: (callback) => {
       onSuccess = callback;
+    },
+    whenSettled: (callback) => {
+      if (settledOutcome) {
+        callback(settledOutcome);
+        return;
+      }
+      onSettled = callback;
     },
   };
 };
