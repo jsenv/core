@@ -36,6 +36,25 @@ export const findControlHost = (el) => {
   }
   return el.querySelector("[navi-control-host]");
 };
+/**
+ * The control this element belongs to, wherever it sits relative to it.
+ *
+ * `findControlHost` above answers for a control's own DOM (itself, or the native
+ * element it wraps). This one is for something that is not part of a control but
+ * has to reach one — an interaction declared on a box (see
+ * interaction/interactions.js), which may be the control, may hold it, or may sit
+ * inside it. Nearest wins in that order, and the answer is null when there is no
+ * control anywhere: not every box lives in one.
+ */
+export const findNearestControlHost = (el) => {
+  // Itself, then upwards — the box is inside a button, or is one.
+  const selfOrAncestor = el.closest("[navi-control-host]");
+  if (selfOrAncestor) {
+    return selfOrAncestor;
+  }
+  // …then downwards: the box holds the control rather than being held by it.
+  return el.querySelector("[navi-control-host]");
+};
 export const isControlRoot = (el) => {
   return el.hasAttribute("navi-control");
 };

@@ -49,6 +49,17 @@
 
 import { chainEvent } from "@jsenv/dom";
 
+import { findNearestControlHost } from "../control_dom.js";
+import {
+  dispatchRequestAction,
+  watchActionCompletion,
+} from "../rules/control_action.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
+
 const detectors = [];
 
 /**
@@ -124,22 +135,19 @@ export const resolveInteractions = (interactions) => {
  * Reads the interactions declared on a control and returns the props that make
  * them happen.
  *
+ * The control is not passed in: it is found from the element, which is what lets
+ * `interactions` live on a Box rather than on the control itself. A Box that IS a
+ * control (a Button) is its own; a Box around one or inside one reaches it; a Box
+ * with no control anywhere near it can still answer with a callback of the
+ * caller's, and only "request_action" has nothing to ask.
+ *
  * @param {object|null} interactions What `resolveInteractions` returned.
  * @param {object} options
  * @param {{current: Element}} options.ref The element the interactions are read
- *   on: the control host, which is where the click is read too.
- * @param {(event: Event) => object} options.requestAction Asks for the control's
- *   own action, gate included; returns what `watchActionCompletion` returns.
- * @param {(event: Event) => void} options.requestUIAction Asks for a ui action.
- * @param {(event: Event, name: string, allowed: Function) => void} options.requestInteraction
- *   The interaction gate, for an interaction whose effect is a callback of the
- *   caller's.
- * @returns {object|null} props to spread on the control host.
+ *   on, and the one that moves under a swipe.
+ * @returns {object|null} props to spread on that element.
  */
-export const useInteractionProps = (
-  interactions,
-  { ref, requestAction, requestUIAction, requestInteraction },
-) => {
+export const useInteractionProps = (interactions, { ref }) => {
   if (!interactions) {
     return null;
   }
@@ -148,10 +156,34 @@ export const useInteractionProps = (
   // a promise, or null for an interaction that is already over. A swipe waits on
   // it before letting the row it pulled out come back.
   const perform = (type, interactionEvent) => {
+    const element = ref.current;
+    if (!element) {
+      return null;
+    }
     const effect = interactions[type];
+    const controlHost = findNearestControlHost(element);
+    const name = `interaction "${type}"`;
     if (effect === REQUEST_ACTION) {
-      const completion = requestAction(interactionEvent);
-      if (!completion || completion.result === false || !completion.isRunning) {
+      if (!controlHost) {
+        if (import.meta.dev) {
+          console.warn(
+            `interactions: "${type}" asks for an action, but there is no control around it to ask. Put the interaction on a control (or on a box that holds one), or give it a callback.`,
+          );
+        }
+        return null;
+      }
+      // "auto" rather than an action of our own: which action this is belongs to
+      // the control, and it resolves it to whatever its `action` prop bound (see
+      // onnavi_action_allowed).
+      const completion = watchActionCompletion(controlHost, () =>
+        dispatchRequestAction(controlHost, {
+          event: interactionEvent,
+          name,
+          action: "auto",
+          requester: controlHost,
+        }),
+      );
+      if (completion.result === false || !completion.isRunning) {
         return null;
       }
       return new Promise((resolve) => {
@@ -159,13 +191,46 @@ export const useInteractionProps = (
       });
     }
     if (effect === REQUEST_UI_ACTION) {
-      requestUIAction(interactionEvent);
+      if (!controlHost) {
+        if (import.meta.dev) {
+          console.warn(
+            `interactions: "${type}" asks for a ui action, but there is no control around it to ask.`,
+          );
+        }
+        return null;
+      }
+      // The value it already holds, set again: a ui action is what says the user
+      // acted, and everything listening for one (a command, a group above) hears
+      // it whether or not the value moved.
+      dispatchRequestInteraction(controlHost, {
+        event: interactionEvent,
+        name,
+        allowed: () => {
+          dispatchRequestSetUIState(
+            controlHost,
+            getUIStateFromElement(controlHost),
+            { event: interactionEvent },
+          );
+        },
+      });
       return null;
     }
     let returnValue;
-    requestInteraction(interactionEvent, `interaction "${type}"`, () => {
+    const run = () => {
       returnValue = effect(interactionEvent);
-    });
+    };
+    if (controlHost) {
+      // Through the gate even for a callback of the caller's: a disabled or
+      // read-only control must answer a swipe the way it answers a click, and it
+      // is the control that knows it is.
+      dispatchRequestInteraction(controlHost, {
+        event: interactionEvent,
+        name,
+        allowed: run,
+      });
+    } else {
+      run();
+    }
     if (returnValue && typeof returnValue.then === "function") {
       return returnValue;
     }

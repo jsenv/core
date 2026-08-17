@@ -42,16 +42,22 @@
         color: #555;
         font-size: 13px;
       }
+      .legend {
+        margin: 0 0 12px;
+        padding: 8px 12px;
+        color: #37474f;
+        font-size: 13px;
+        background: #eef4fd;
+        border-left: 3px solid #2f5fa8;
+        border-radius: 4px;
+      }
 
-      /* Une "liste" : ce qui dépasse d'une ligne balayée est coupé par la liste,
-         pas par la ligne. */
+      /* Une « liste » : ce qui dépasse d'une ligne balayée est coupé par la
+         liste, pas par la ligne. */
       .rows {
         border: 1px solid #dde3ec;
         border-radius: 8px;
         overflow: hidden;
-      }
-      .rows > * + * {
-        border-top: 1px solid #eef1f6;
       }
       .row {
         position: relative;
@@ -62,7 +68,7 @@
         gap: 12px;
         color: #1f2733;
         font-size: 14px;
-        text-decoration: none;
+        text-align: left;
         background: white;
       }
       .row_title {
@@ -120,43 +126,46 @@
         background: #2f5fa8;
       }
 
-      .notification {
-        position: relative;
-        display: flex;
-        padding: 12px 16px;
-        align-items: center;
-        gap: 12px;
-        color: #1f2733;
+      /* Cas nominal : la liste à gauche, ce qui est ouvert à droite. */
+      .file_item {
+        padding: 8px 12px;
         font-size: 14px;
-        text-align: left;
-        text-decoration: none;
-        background: white;
       }
-      .notification_dot {
+      .file_item_selected {
+        background: #dde9fb;
+      }
+      .opened_pane {
+        min-width: 220px;
+        min-height: 120px;
+        padding: 16px;
+        color: #37474f;
+        font-size: 14px;
+        background: #fafbfd;
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+      }
+      .opened_pane_empty {
+        color: #9aa6b6;
+      }
+
+      .mail_dot {
         width: 8px;
         height: 8px;
         flex: none;
         background: #2f5fa8;
         border-radius: 50%;
       }
-      .notification_dot_read {
+      .mail_dot_read {
         background: transparent;
       }
-      .notification_text {
-        min-width: 0;
-        flex: 1;
-      }
-      .notification_from {
+      .mail_from {
         font-weight: 600;
       }
-      .notification_subject {
+      .mail_subject {
         color: #6b7482;
         font-size: 13px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
       }
-      .notification_menu {
+      .mail_menu {
         display: flex;
         padding: 10px 16px;
         flex-wrap: wrap;
@@ -164,23 +173,12 @@
         background: #f2f5fa;
         border-top: 1px solid #e3e9f2;
       }
+
       .thumb {
         width: 40px;
         height: 40px;
         flex: none;
         border-radius: 6px;
-      }
-      .tile {
-        width: 120px;
-        padding: 14px 10px;
-        text-align: center;
-        background: white;
-        border: 2px solid #dde3ec;
-        border-radius: 8px;
-      }
-      .tile_selected {
-        background: #eef4fd;
-        border-color: #2f5fa8;
       }
     </style>
   </head>
@@ -197,6 +195,7 @@
         defineInteractionDetector,
         findEvent,
         Link,
+        List,
         Text,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -217,7 +216,7 @@
       };
 
       const Variant = ({ caption, children }) => (
-        <Box flex="y" spacing="xs">
+        <Box flex="y" spacing="xs" alignX="start">
           <Text size="s" color="#666">
             {caption}
           </Text>
@@ -225,8 +224,13 @@
         </Box>
       );
 
+      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archiver" };
+      const DELETE_TRAIL = { className: "trail_delete", label: "Supprimer" };
+
+      // Une ligne balayable : une Box, ni un lien ni un bouton — une interaction
+      // n'a pas besoin d'un contrôle pour être lue.
       const Row = ({ title, body, trailStart, trailEnd, ...rest }) => (
-        <Link className="row" href="#" {...rest}>
+        <Box className="row" {...rest}>
           {trailStart ? (
             <span className={`trail trail_start ${trailStart.className}`}>
               {trailStart.label}
@@ -239,11 +243,8 @@
           ) : null}
           <span className="row_title">{title}</span>
           <span className="row_body">{body}</span>
-        </Link>
+        </Box>
       );
-
-      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archiver" };
-      const DELETE_TRAIL = { className: "trail_delete", label: "Supprimer" };
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -262,111 +263,57 @@
           <KeyboardDemo />
           <DraggableSurfaceDemo />
           <SettingsDemo />
-          <ClickAndDblclickDemo />
           <WhichInteractionDemo />
           <RunningDemo />
           <CustomDetectorDemo />
+          <MailboxDemo />
         </Box>
       );
 
       // ── Cas nominal ───────────────────────────────────────────────────────
 
-      const MAILS = [
-        {
-          id: "1",
-          from: "Sofia Mendes",
-          subject: "Relecture du devis avant jeudi",
-        },
-        {
-          id: "2",
-          from: "GitHub",
-          subject: "3 nouvelles activités sur jsenv/core",
-        },
-        { id: "3", from: "Marc Aubert", subject: "Photos de la conf" },
-        {
-          id: "4",
-          from: "Léa Fournier",
-          subject: "On décale le point de 15h ?",
-        },
-      ];
+      const FILES = ["notes.md", "budget.csv", "photo.png", "brouillon.txt"];
 
       const NominalDemo = () => {
-        const [archived, setArchived] = useState([]);
-        const [read, setRead] = useState(["3"]);
-        const [menuId, setMenuId] = useState(null);
-        const visible = MAILS.filter((mail) => !archived.includes(mail.id));
+        const [selected, setSelected] = useState(null);
+        const [opened, setOpened] = useState(null);
         return (
           <div class="demo-section">
             <Heading id="nominal">Cas nominal</Heading>
-            <div class="rows">
-              {visible.map((mail) => (
-                <div key={mail.id}>
-                  <Link
-                    className="notification"
-                    href="#"
-                    interactions={{
-                      swipe_right: () => {
-                        setArchived((previous) => [...previous, mail.id]);
-                        setMenuId(null);
-                      },
-                      swipe_left: () => {
-                        setRead((previous) =>
-                          previous.includes(mail.id)
-                            ? previous.filter((id) => id !== mail.id)
-                            : [...previous, mail.id],
-                        );
-                      },
-                      long_press: () => {
-                        setMenuId(menuId === mail.id ? null : mail.id);
-                      },
-                    }}
-                  >
-                    <span className="trail trail_start trail_archive">
-                      Archiver
-                    </span>
-                    <span className="trail trail_end trail_unread">
-                      {read.includes(mail.id) ? "Non lu" : "Lu"}
-                    </span>
-                    <span
-                      className={`notification_dot ${read.includes(mail.id) ? "notification_dot_read" : ""}`}
-                    />
-                    <span className="notification_text">
-                      <span className="notification_from">{mail.from}</span>
-                      <br />
-                      <span className="notification_subject">
-                        {mail.subject}
-                      </span>
-                    </span>
-                  </Link>
-                  {menuId === mail.id ? (
-                    <div className="notification_menu">
-                      <Button
-                        action={() => {
-                          setArchived((previous) => [...previous, mail.id]);
-                          setMenuId(null);
-                        }}
-                      >
-                        Archiver
-                      </Button>
-                      <Button action={() => setMenuId(null)}>Épingler</Button>
-                      <Button action={() => setMenuId(null)}>Signaler</Button>
-                      <Button action={() => setMenuId(null)}>Fermer</Button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            {archived.length ? (
-              <Box paddingY="s">
-                <Button
-                  action={() => {
-                    setArchived([]);
-                  }}
-                >
-                  Rétablir {archived.length}
-                </Button>
+            <p class="legend">
+              Clic pour sélectionner, double clic pour ouvrir.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box className="rows" width="220px">
+                <List>
+                  {FILES.map((file) => (
+                    <List.Item
+                      key={file}
+                      id={file}
+                      className={`file_item ${selected === file ? "file_item_selected" : ""}`}
+                      interactions={{
+                        click: () => setSelected(file),
+                        dblclick: () => setOpened(file),
+                      }}
+                    >
+                      {file}
+                    </List.Item>
+                  ))}
+                </List>
               </Box>
-            ) : null}
+              <div class="opened_pane">
+                {opened ? (
+                  <Box flex="y" spacing="xs">
+                    <strong>{opened}</strong>
+                    <Text size="s" color="#6b7482">
+                      ouvert
+                    </Text>
+                  </Box>
+                ) : (
+                  <span class="opened_pane_empty">rien d'ouvert</span>
+                )}
+              </div>
+            </Box>
           </div>
         );
       };
@@ -376,40 +323,37 @@
       const StatesDemo = () => {
         const [entries, push, clear] = useCallLog();
         const log = (name) => (event) => push(name, undefined, event);
+        const swipeAndHold = {
+          swipe_right: log("swipe_right"),
+          long_press: log("long_press"),
+        };
         return (
           <div class="demo-section">
             <Heading id="states">États</Heading>
-            <div class="rows">
-              <Row
-                title="normal"
-                body="balayer vers la droite"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
-                }}
-              />
-              <Row
-                title="readOnly"
-                body="balayer vers la droite"
-                readOnly
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
-                }}
-              />
-              <Row
-                title="disabled"
-                body="balayer vers la droite"
-                disabled
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
-                }}
-              />
-            </div>
+            <p class="desc">
+              Sur un contrôle, une interaction passe par la même porte qu'un
+              clic.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="normal">
+                <Button interactions={swipeAndHold}>Maintenir</Button>
+              </Variant>
+              <Variant caption="readOnly">
+                <Button readOnly interactions={swipeAndHold}>
+                  Maintenir
+                </Button>
+              </Variant>
+              <Variant caption="disabled">
+                <Button disabled interactions={swipeAndHold}>
+                  Maintenir
+                </Button>
+              </Variant>
+              <Variant caption="loading">
+                <Button loading interactions={swipeAndHold}>
+                  Maintenir
+                </Button>
+              </Variant>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -431,31 +375,25 @@
             <Heading level={3} id="swipe-one-way">
               Un seul côté
             </Heading>
-            <div class="rows">
+            <Box className="rows" flex="y" spacing="0">
               <Row
                 title="swipe_right"
                 body="vers la droite"
                 trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
-                }}
+                interactions={{ swipe_right: log("swipe_right") }}
               />
               <Row
                 title="swipe_left"
                 body="vers la gauche"
                 trailEnd={DELETE_TRAIL}
-                interactions={{
-                  swipe_left: log("swipe_left"),
-                  long_press: log("long_press"),
-                }}
+                interactions={{ swipe_left: log("swipe_left") }}
               />
-            </div>
+            </Box>
 
             <Heading level={3} id="swipe-both-ways">
               Les deux
             </Heading>
-            <div class="rows">
+            <Box className="rows">
               <Row
                 title="swipe_right + swipe_left"
                 body="deux gestes, deux effets"
@@ -464,10 +402,9 @@
                 interactions={{
                   swipe_right: log("swipe_right"),
                   swipe_left: log("swipe_left"),
-                  long_press: log("long_press"),
                 }}
               />
-            </div>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -506,7 +443,7 @@
             <Heading level={3} id="long-press-and-swipe">
               Avec un balayage
             </Heading>
-            <div class="rows">
+            <Box className="rows">
               <Row
                 title="swipe_right + long_press"
                 body="partir sur le côté, ou ne pas bouger"
@@ -516,7 +453,7 @@
                   long_press: log("long_press"),
                 }}
               />
-            </div>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -569,19 +506,22 @@
           <div class="demo-section">
             <Heading id="draggable">Surfaces déjà draggable</Heading>
             <p class="desc">
-              Commencer le geste sur la vignette, puis sur le texte.
+              Commencer le geste sur la vignette, puis sur le lien, puis sur le
+              texte.
             </p>
-            <div class="rows">
+            <Box className="rows">
               <Row
-                title={<img class="thumb" src={THUMB_SRC} alt="" />}
-                body="la ligne est un lien, et contient une image"
+                title={
+                  <Box flex="x" spacing="s" alignY="center">
+                    <img class="thumb" src={THUMB_SRC} alt="" />
+                    <Link href="https://jsenv.dev">jsenv.dev</Link>
+                  </Box>
+                }
+                body="une image et un lien dans la ligne"
                 trailStart={ARCHIVE_TRAIL}
-                interactions={{
-                  swipe_right: log("swipe_right"),
-                  long_press: log("long_press"),
-                }}
+                interactions={{ swipe_right: log("swipe_right") }}
               />
-            </div>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -592,10 +532,6 @@
       const SettingsDemo = () => {
         const [entries, push, clear] = useCallLog();
         const log = (name) => (event) => push(name, undefined, event);
-        const swipeAndHold = {
-          swipe_right: log("swipe_right"),
-          long_press: log("long_press"),
-        };
         return (
           <div class="demo-section">
             <Heading id="settings">Réglages</Heading>
@@ -603,42 +539,42 @@
             <Heading level={3} id="swipe-threshold">
               data-swipe-threshold
             </Heading>
-            <div class="rows">
+            <Box className="rows">
               <Row
                 title="0.33"
                 body="par défaut"
                 trailStart={ARCHIVE_TRAIL}
-                interactions={swipeAndHold}
+                interactions={{ swipe_right: log("0.33") }}
               />
               <Row
                 title="0.15"
                 body="lâchée tôt, elle part"
                 data-swipe-threshold="0.15"
                 trailStart={ARCHIVE_TRAIL}
-                interactions={swipeAndHold}
+                interactions={{ swipe_right: log("0.15") }}
               />
               <Row
                 title="0.8"
                 body="il faut la traverser"
                 data-swipe-threshold="0.8"
                 trailStart={ARCHIVE_TRAIL}
-                interactions={swipeAndHold}
+                interactions={{ swipe_right: log("0.8") }}
               />
-            </div>
+            </Box>
 
             <Heading level={3} id="long-press-delay">
               data-long-press-delay
             </Heading>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="450 (par défaut)">
-                <Button interactions={{ long_press: log("long_press") }}>
+                <Button interactions={{ long_press: log("450") }}>
                   Maintenir
                 </Button>
               </Variant>
               <Variant caption='data-long-press-delay="1200"'>
                 <Button
                   data-long-press-delay="1200"
-                  interactions={{ long_press: log("long_press") }}
+                  interactions={{ long_press: log("1200") }}
                 >
                   Maintenir
                 </Button>
@@ -655,51 +591,20 @@
               data-long-press-delay="1200"
             >
               <Variant caption="8 (par défaut)">
-                <Button interactions={{ long_press: log("long_press") }}>
+                <Button interactions={{ long_press: log("slop 8") }}>
                   Maintenir sans bouger
                 </Button>
               </Variant>
               <Variant caption='data-long-press-slop="60"'>
                 <Button
                   data-long-press-slop="60"
-                  interactions={{ long_press: log("long_press") }}
+                  interactions={{ long_press: log("slop 60") }}
                 >
                   Maintenir en bougeant
                 </Button>
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── Clic et double clic ───────────────────────────────────────────────
-
-      const FILES = ["notes.md", "budget.csv", "photo.png"];
-
-      const ClickAndDblclickDemo = () => {
-        const [selected, setSelected] = useState(null);
-        const [opened, setOpened] = useState(null);
-        return (
-          <div class="demo-section">
-            <Heading id="click-dblclick">Clic et double clic</Heading>
-            <Box flex="x" spacing="m" alignY="start">
-              {FILES.map((name) => (
-                <Button
-                  key={name}
-                  className={`tile ${selected === name ? "tile_selected" : ""}`}
-                  action={() => setSelected(name)}
-                  interactions={{ dblclick: () => setOpened(name) }}
-                >
-                  {name}
-                </Button>
-              ))}
-            </Box>
-            <Box paddingY="s">
-              <Text size="s" color="#666">
-                sélectionné : {selected ?? "—"} · ouvert : {opened ?? "—"}
-              </Text>
-            </Box>
           </div>
         );
       };
@@ -711,7 +616,7 @@
         const archiveOrDelete = (value, { event }) => {
           const swipe = findEvent(event, "swipe_right");
           if (!swipe) {
-            push("action", "sans geste", event);
+            push("action", "sans balayage", event);
             return;
           }
           const { progress } = swipe.detail;
@@ -730,18 +635,19 @@
               <code>findEvent(event, "swipe_right").detail</code> : l'axe, le
               signe, la distance, la taille, la progression.
             </p>
-            <div class="rows">
-              <Row
-                title="au-delà de 80 %"
-                body="supprime au lieu d'archiver"
-                trailStart={ARCHIVE_TRAIL}
-                action={archiveOrDelete}
-                interactions={{
-                  swipe_right: "request_action",
-                  long_press: "request_action",
-                }}
-              />
-            </div>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption='{ swipe_right: "request_action", long_press: "request_action" }'>
+                <Button
+                  action={archiveOrDelete}
+                  interactions={{
+                    swipe_right: "request_action",
+                    long_press: "request_action",
+                  }}
+                >
+                  Balayer, ou maintenir
+                </Button>
+              </Variant>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -756,15 +662,12 @@
             <Heading id="running">Pendant que l'action tourne</Heading>
             <FakeBackend value={{ archived: [] }}>
               {({ action }) => (
-                <div class="rows">
+                <Box flex="x" spacing="xl" alignY="start">
                   {["Marc", "Léa", "Sofia"]
                     .filter((name) => !archived.includes(name))
                     .map((name) => (
-                      <Row
+                      <Button
                         key={name}
-                        title={name}
-                        body="balayer vers la droite"
-                        trailStart={ARCHIVE_TRAIL}
                         action={async () => {
                           await action({ archived: [name] });
                           setArchived((previous) => [...previous, name]);
@@ -773,9 +676,11 @@
                           swipe_right: "request_action",
                           long_press: "request_action",
                         }}
-                      />
+                      >
+                        {name}
+                      </Button>
                     ))}
-                </div>
+                </Box>
               )}
             </FakeBackend>
           </div>
@@ -830,6 +735,120 @@
               </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Cas concret : une boîte mail ──────────────────────────────────────
+
+      const MAILS = [
+        {
+          id: "1",
+          from: "Sofia Mendes",
+          subject: "Relecture du devis avant jeudi",
+        },
+        { id: "2", from: "GitHub", subject: "3 activités sur jsenv/core" },
+        { id: "3", from: "Marc Aubert", subject: "Photos de la conf" },
+        {
+          id: "4",
+          from: "Léa Fournier",
+          subject: "On décale le point de 15h ?",
+        },
+      ];
+
+      const MailboxDemo = () => {
+        const [archived, setArchived] = useState([]);
+        const [read, setRead] = useState(["3"]);
+        const [menuId, setMenuId] = useState(null);
+        const [openedId, setOpenedId] = useState(null);
+        const visible = MAILS.filter((mail) => !archived.includes(mail.id));
+        const opened = MAILS.find((mail) => mail.id === openedId);
+        const archive = (id) => {
+          setArchived((previous) => [...previous, id]);
+          setMenuId(null);
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="mailbox">Cas concret : une boîte mail</Heading>
+            <p class="legend">
+              Clic pour ouvrir, balayage à droite pour archiver, balayage à
+              gauche pour marquer lu ou non lu, appui long pour le menu.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box className="rows" expandX>
+                <List>
+                  {visible.map((mail) => (
+                    <List.Item key={mail.id} id={mail.id}>
+                      <Row
+                        title={
+                          <Box flex="x" spacing="s" alignY="center">
+                            <span
+                              className={`mail_dot ${read.includes(mail.id) ? "mail_dot_read" : ""}`}
+                            />
+                            <span className="mail_from">{mail.from}</span>
+                          </Box>
+                        }
+                        body={
+                          <span className="mail_subject">{mail.subject}</span>
+                        }
+                        trailStart={ARCHIVE_TRAIL}
+                        trailEnd={{
+                          className: "trail_unread",
+                          label: read.includes(mail.id) ? "Non lu" : "Lu",
+                        }}
+                        interactions={{
+                          click: () => setOpenedId(mail.id),
+                          swipe_right: () => archive(mail.id),
+                          swipe_left: () => {
+                            setRead((previous) =>
+                              previous.includes(mail.id)
+                                ? previous.filter((id) => id !== mail.id)
+                                : [...previous, mail.id],
+                            );
+                          },
+                          long_press: () => {
+                            setMenuId(menuId === mail.id ? null : mail.id);
+                          },
+                        }}
+                      />
+                      {menuId === mail.id ? (
+                        <div className="mail_menu">
+                          <Button action={() => archive(mail.id)}>
+                            Archiver
+                          </Button>
+                          <Button action={() => setMenuId(null)}>
+                            Épingler
+                          </Button>
+                          <Button action={() => setMenuId(null)}>
+                            Signaler
+                          </Button>
+                          <Button action={() => setMenuId(null)}>Fermer</Button>
+                        </div>
+                      ) : null}
+                    </List.Item>
+                  ))}
+                </List>
+              </Box>
+              <div class="opened_pane">
+                {opened ? (
+                  <Box flex="y" spacing="xs">
+                    <strong>{opened.from}</strong>
+                    <Text size="s" color="#6b7482">
+                      {opened.subject}
+                    </Text>
+                  </Box>
+                ) : (
+                  <span class="opened_pane_empty">rien d'ouvert</span>
+                )}
+              </div>
+            </Box>
+            {archived.length ? (
+              <Box paddingY="s">
+                <Button action={() => setArchived([])}>
+                  Rétablir {archived.length}
+                </Button>
+              </Box>
+            ) : null}
           </div>
         );
       };

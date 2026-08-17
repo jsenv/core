@@ -55,6 +55,10 @@ import { normalizeStyles } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
 import { useCallback, useContext } from "preact/hooks";
 
+import {
+  resolveInteractions,
+  useInteractionProps,
+} from "../control/interaction/interactions.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
@@ -331,6 +335,11 @@ export const Box = (props) => {
     header,
     footer,
     body,
+    // Which interactions this box answers, and with what. Read here rather than
+    // on the control, so a swipe or a hold can be declared on anything — a row, a
+    // card, a block of text — and reach the control it belongs to (which is what
+    // carries the action, and what knows it is disabled) by looking for it.
+    interactions,
     ...rest
   } = props;
   let as = asProp;
@@ -448,6 +457,12 @@ export const Box = (props) => {
   const boxFlowIsDefault = boxFlow === defaultDisplay;
 
   const remainingPropKeySet = new Set(Object.keys(rest));
+  // The box is only a frame and one of its descendants IS the component (a Button
+  // and its content): everything, event handlers included, belongs to that
+  // descendant.
+  const shouldForwardAllToChild = Boolean(
+    hasChildUsingForwardedProps && visualSelector && pseudoStateSelector,
+  );
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
@@ -519,8 +534,6 @@ export const Box = (props) => {
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const canForwardToChild = hasChildUsingForwardedProps;
-    const shouldForwardAllToChild =
-      canForwardToChild && visualSelector && pseudoStateSelector;
 
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
       const mergedValue = prepareStyleValue(
@@ -857,6 +870,40 @@ export const Box = (props) => {
         {innerChildren}
       </BoxForwardedPropsContext.Provider>
     );
+  }
+
+  interaction_props: {
+    const interactionProps = useInteractionProps(
+      resolveInteractions(interactions),
+      { ref: finalRef },
+    );
+    if (!interactionProps) {
+      break interaction_props;
+    }
+    for (const key of Object.keys(interactionProps)) {
+      const interactionValue = interactionProps[key];
+      // An event an interaction reads goes where this box's other handlers go:
+      // when the box is only a frame around the element that is really the
+      // component (a Button and its content), that element is the one listening.
+      const target =
+        key.startsWith("on") && shouldForwardAllToChild
+          ? childForwardedProps
+          : selfForwardedProps;
+      const existingValue = target[key];
+      if (
+        typeof interactionValue === "function" &&
+        typeof existingValue === "function"
+      ) {
+        // The caller's handler first, then what the interaction does with the
+        // same event.
+        target[key] = (...args) => {
+          existingValue(...args);
+          interactionValue(...args);
+        };
+        continue;
+      }
+      target[key] = interactionValue;
+    }
   }
 
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
