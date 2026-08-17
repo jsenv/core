@@ -685,6 +685,9 @@ const ListUI = (props) => {
     error,
     horizontal,
     spacing,
+    overflow,
+    overflowX,
+    overflowY,
     ...rest
   } = props;
   // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
@@ -952,6 +955,9 @@ const ListUI = (props) => {
         renderWindow={renderWindow}
         virtual={virtual}
         pendingScrollRef={pendingScrollRef}
+        overflow={overflow}
+        overflowX={overflowX}
+        overflowY={overflowY}
       >
         {content}
       </ListContent>
@@ -1121,11 +1127,19 @@ const ListContent = ({
   renderWindow,
   virtual,
   pendingScrollRef,
+  overflow,
+  overflowX,
+  overflowY,
   children,
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
   return (
-    <div className="navi_list_scroll_container">
+    <Box
+      className="navi_list_scroll_container"
+      overflow={overflow}
+      overflowX={overflowX}
+      overflowY={overflowY}
+    >
       <UnorderedList
         role={role}
         fallback={fallback}
@@ -1163,7 +1177,7 @@ const ListContent = ({
           {children}
         </PendingScrollRefContext.Provider>
       </UnorderedList>
-    </div>
+    </Box>
   );
 };
 const LIST_STYLE_CSS_VARS = {

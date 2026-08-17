@@ -59,11 +59,6 @@
         border-radius: 8px;
         overflow: hidden;
       }
-      /* Une ligne tirée hors de la liste allongerait ce qui défile : rien ne se
-         lit sur le côté d'une liste de mails, donc rien n'y défile. */
-      .mail_list {
-        overflow-x: hidden;
-      }
       .row {
         position: relative;
         display: flex;
@@ -836,7 +831,7 @@
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
-                <List className="mail_list">
+                <List overflowX="hidden">
                   {visible.map((mail) => (
                     <List.Item key={mail.id} id={mail.id}>
                       <Row
