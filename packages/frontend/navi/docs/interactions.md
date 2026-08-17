@@ -57,13 +57,13 @@ condition: `{ swipe_right: canArchive && archive }`.
 
 ### The interactions navi detects
 
-| Key                                                    | Read from                                  |
-| ------------------------------------------------------ | ------------------------------------------ |
-| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                   |
-| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                       |
-| `longpress`                                            | a press held still                         |
-| `drag_to_reorder`                                      | a row carried to another place in its list |
-| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`     |
+| Key                                                    | Read from                                            |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                             |
+| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                                 |
+| `longpress`                                            | a press held still                                   |
+| `reorder` `toss`                                       | a row carried, then dropped somewhere or thrown away |
+| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`               |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist.
@@ -140,40 +140,85 @@ comes back once it settles — a failure leaves the row in place so it can be tr
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
 
-## Reordering a list
+## Reordering, and throwing away
 
-`drag_to_reorder` is `startDragToReorder`'s gesture, whole — a clone carried above
-the page while the original keeps its place, a drop hint, drop targets found by
-intersection, no-op drops filtered out. Every element declaring it marks itself, so
-the set of items IS the set of elements that declared it: no selector to pass, and
-an item that must not move simply does not declare it. Items are identified by
-their `id`.
+`reorder` and `toss` are the same gesture — the element is picked up and carried —
+and they combine. What differs is the release: dropped on another item it changes
+places, thrown far and fast it is gotten rid of. One detector reads both, because
+it is one press.
 
 ```jsx
 <List.Item
   id={task.id}
   data-view-transition-name={`task_${task.id}`}
   interactions={{
-    drag_to_reorder: (event) => {
+    reorder: (event) => {
       const { fromId, toId, syncCloneWithDropTarget } = event.detail;
       return document.startViewTransition(() => {
         syncCloneWithDropTarget();
         setOrder(moveBefore(order, fromId, toId));
       }).finished;
     },
+    toss: (event) => remove(event.detail.id),
   }}
 />
 ```
 
-`toId` is null for a drop at the end. `syncCloneWithDropTarget` must be called
-synchronously inside the transition callback, next to the state change, so the
-clone is captured where it lands rather than where it was let go of — and
-returning the transition is what makes the landing continuous, since the gesture
-keeps its clone until the answer settles.
+The gesture is `startDragToReorder`'s, whole: a copy carried above the page while
+the original keeps its place, a drop hint, drop targets found by intersection,
+no-op drops filtered out, the flight of a thrown copy and its return when the
+answer refuses.
 
-Starting the document transition is the application's call, not navi's: a
+Every element declaring `reorder` marks itself, so the set of items IS the set of
+elements that declared it — no selector to pass, and an item that must not move
+simply does not declare it. An element declaring only `toss` marks nothing: it is
+not a place anything lands. Items are named by their `id`.
+
+`toId` is null for a drop at the end. `syncCloneWithDropTarget` must be called
+synchronously inside the transition callback, next to the state change, so the copy
+is captured where it lands rather than where it was let go of.
+
+**The promise matters in both cases**: the gesture holds its copy until the answer
+settles. Returning the transition is what makes a landing continuous; a `toss` that
+rejects brings the copy back, because the thing still exists and the screen has to
+say so.
+
+A throw is asked about before a landing: a hand that sent something across the
+screen has not asked for it to swap places with whatever it flew over.
+
+Starting a document transition is the application's call, not navi's: a
 `view-transition-name` must be unique per document, so only the application can
 name what moves.
+
+| Attribute                                                | Meaning                                |
+| -------------------------------------------------------- | -------------------------------------- |
+| `data-reorder-axis="x"`                                  | the list runs sideways                 |
+| `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
+| `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
+
+### Dressing the clone
+
+What the pointer carries is a copy, and a copy of a transparent element is
+invisible — an element has no background unless something gave it one, and a row
+usually gets its own from the list around it, which the copy has left. So the
+clone's look is the page's to declare, through the attributes the gesture puts on
+it:
+
+| Attribute                 | On                                                     |
+| ------------------------- | ------------------------------------------------------ |
+| `navi-drag-clone`         | the copy being carried                                 |
+| `navi-drag-clone-wrapper` | what positions it (already shadowed, in the top layer) |
+| `navi-drag-clone-source`  | the original, still in place (already hidden)          |
+
+```css
+.task[navi-drag-clone] {
+  background: white;
+  border-radius: 6px;
+}
+```
+
+Reusing the item's own class is the point: the copy is that item, so it is styled
+as that item plus whatever being carried changes.
 
 `data-reorder-axis="x"` for a list that runs sideways. `data-reorder-delay`,
 `data-reorder-slop`, `data-reorder-threshold` tune when the press becomes a grab.

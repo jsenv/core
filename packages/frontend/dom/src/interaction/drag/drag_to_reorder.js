@@ -4,6 +4,13 @@ import { createDragToMoveGestureController } from "./drag_to_move.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
 
+// How long the copy takes to leave the screen, and to come back. Written into the
+// CSS below from here: the flight has to be waited for, and a duration living only
+// in a stylesheet is a timing JS cannot read reliably.
+const TOSS_DURATION_MS = 320;
+// Far enough to be off any screen, in the direction the hand was going.
+const TOSS_DISTANCE = 900;
+
 const css = /* css */ `
   /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
      for the last one is the very bottom of the scroll area — drawn inside it,
@@ -105,13 +112,6 @@ const css = /* css */ `
   }
 
   [navi-drag-clone-wrapper] {
-    /* Nothing in a copy being carried by a pointer is text to select: the
-       selection belongs to the original, which is still in the page. This is the
-       one place the rule is unconditional — an element that can be dragged is
-       usually selectable too (a link is both), and forcing it there would take
-       away a selection made from outside the element.  */
-    user-select: none;
-
     /* Also a popover (see .navi_drop_hint): in the top layer it is over the
        page whatever the page's own stacking is, and the coordinates it is
        given are viewport ones — which is what the pointer carrying it works
@@ -132,7 +132,24 @@ const css = /* css */ `
     opacity: 0.95;
     transition: box-shadow 0.15s ease;
     pointer-events: none;
+    /* Nothing in a copy being carried by a pointer is text to select: the
+       selection belongs to the original, which is still in the page. This is the
+       one place the rule is unconditional — an element that can be dragged is
+       usually selectable too (a link is both), and forcing it there would take
+       away a selection made from outside the element.  */
+    user-select: none;
     overflow: visible;
+  }
+
+  /* Ce qui a été lancé: il continue dans la direction du geste jusqu'à sortir de
+     l'écran, et revient par le même chemin si la réponse refuse. */
+  [navi-drag-clone-wrapper][data-tossed] {
+    transition:
+      translate ${TOSS_DURATION_MS}ms ease-out,
+      opacity ${TOSS_DURATION_MS}ms ease-out;
+  }
+  [navi-drag-clone-wrapper][data-tossed="away"] {
+    opacity: 0;
   }
 
   [navi-drag-clone] {
@@ -206,9 +223,11 @@ const dragCSSVars = [
  *   The list item to drag.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
  *   Element searched with `itemSelector` to find the items to drop between.
- * @param {string} options.itemSelector
+ * @param {string} [options.itemSelector]
  *   CSS selector that matches all list items inside `containerElement`.
- *   Used for drop-target detection and no-op filtering.
+ *   Used for drop-target detection and no-op filtering. Left out, nothing is a
+ *   drop target: no hint is drawn and no reorder can be answered — which is what
+ *   a drag that only ever throws the thing away asks for.
  * @param {function} options.getItemId
  *   Returns the stable ID for a given DOM element.
  *   Signature: `getItemId(element) → id`.
@@ -220,6 +239,15 @@ const dragCSSVars = [
  *   - `syncCloneWithDropTarget`: call it synchronously inside a
  *     `document.startViewTransition` callback, next to the DOM mutation, so the
  *     clone is captured at its landing position.
+ * @param {(detail: {gestureInfo: object, dropTarget: Element|null}) => "reorder"|"toss"|"cancel"} [options.resolveDrop]
+ *   What THIS release means, when the answer is not simply "a target was found or
+ *   not": the same grab can be meant to reorder or to get rid of the thing, and
+ *   only the caller knows which — far and fast is a throw, over a row is a move.
+ *   Left out, a drop target reorders and anything else is cancelled.
+ * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onToss]
+ *   The release was a throw. The clone leaves the screen the way it was thrown
+ *   while this runs; it comes back if the promise rejects, because the thing still
+ *   exists and the screen has to say so.
  * @param {object} [options.direction={ x: false, y: true }]
  *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
  * @param {number} [options.threshold=5]
@@ -245,6 +273,8 @@ export const startDragToReorder = (
     itemSelector,
     getItemId,
     onReorder,
+    resolveDrop,
+    onToss,
     direction = { x: false, y: true },
     threshold,
     longPress,
@@ -319,6 +349,11 @@ export const startDragToReorder = (
       };
 
       dragGesture.addDragCallback((gestureInfo) => {
+        if (!itemSelector) {
+          // Nothing is a drop target: there is no hint to draw and no landing to
+          // look for (see itemSelector).
+          return;
+        }
         const allItems = [];
         const items = [];
         for (const el of containerElement.querySelectorAll(itemSelector)) {
@@ -397,7 +432,29 @@ export const startDragToReorder = (
         dropHintEl.remove();
         restoreCSSVars();
 
-        if (currentBeforeElement !== undefined) {
+        const hasDropTarget = currentBeforeElement !== undefined;
+        const dropMeans = resolveDrop
+          ? resolveDrop({
+              gestureInfo,
+              dropTarget: hasDropTarget ? currentReleaseElement : null,
+            })
+          : hasDropTarget
+            ? "reorder"
+            : "cancel";
+
+        if (dropMeans === "toss") {
+          // Bake the position the hand left it at, so the flight starts from
+          // there rather than from where the clone was declared.
+          setCloneViewportRect(cloneWrapper, cloneWrapper);
+          gestureInfo.cancelPosition();
+          const gone = await tossCloneAway(cloneWrapper, gestureInfo, onToss);
+          if (!gone) {
+            // It still exists, so the screen has to say so: the copy comes back
+            // over the original, and taking it away then reveals the row in
+            // place.
+            await settleCloneBack(cloneWrapper, draggedElement);
+          }
+        } else if (dropMeans === "reorder" && hasDropTarget) {
           const clone = cloneWrapper.firstElementChild;
           // Bake the current visual position (transform included) into the CSS vars
           // so the clone stays where the user released it when we clear the transform.
@@ -489,6 +546,54 @@ const createDropHint = () => {
   const div = document.createElement("div");
   div.innerHTML = dropHintTemplate.trim();
   return div.firstElementChild;
+};
+
+/**
+ * The copy leaves the screen the way it was thrown, and the caller says what that
+ * meant. Resolves true when it is really gone.
+ *
+ * The answer is asked for WHILE it flies rather than after: the thing is already
+ * far away by the time the request lands, which is the whole point of a gesture
+ * that means "get rid of this" — nobody waits to watch it go.
+ */
+const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
+  const { xDelta, yDelta } = gestureInfo.layout;
+  const distance = Math.hypot(xDelta, yDelta) || 1;
+  cloneWrapper.dataset.tossed = "away";
+  cloneWrapper.style.translate = `${(xDelta / distance) * TOSS_DISTANCE}px ${
+    (yDelta / distance) * TOSS_DISTANCE
+  }px`;
+  try {
+    await onToss?.({ gestureInfo });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * It comes back where it came from, and only then is taken away — which is what
+ * makes the original reappear in place rather than blink back into it.
+ *
+ * Flown home on `translate` rather than by rewriting the position vars: the vars
+ * hold where the hand let go, the transition is on translate, and moving the vars
+ * would put the copy there instantly instead of taking it there.
+ */
+const settleCloneBack = (cloneWrapper, sourceElement) => {
+  const sourceRect = sourceElement.getBoundingClientRect();
+  const releaseLeft = parseFloat(
+    cloneWrapper.style.getPropertyValue("--clone-left"),
+  );
+  const releaseTop = parseFloat(
+    cloneWrapper.style.getPropertyValue("--clone-top"),
+  );
+  cloneWrapper.dataset.tossed = "back";
+  cloneWrapper.style.translate = `${sourceRect.left - releaseLeft}px ${
+    sourceRect.top - releaseTop
+  }px`;
+  return new Promise((resolve) => {
+    setTimeout(resolve, TOSS_DURATION_MS);
+  });
 };
 
 const createDragClone = (element, pointerEvent) => {

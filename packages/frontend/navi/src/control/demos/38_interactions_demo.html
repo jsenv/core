@@ -221,6 +221,15 @@
         font-size: 14px;
         background: white;
       }
+      /* Ce qui est porté par le pointeur. navi pose `navi-drag-clone` sur la
+         copie et `navi-drag-clone-source` sur l'original resté en place — c'est
+         par là qu'on habille l'un et l'autre. Un élément est transparent par
+         défaut, et une copie transparente ne se voit pas : le fond est un choix
+         de la page, pas du geste. */
+      .task[navi-drag-clone] {
+        background: white;
+        border-radius: 6px;
+      }
       .task_handle {
         color: #9aa6b6;
         font-size: 16px;
@@ -921,6 +930,11 @@
 
       const ReorderDemo = () => {
         const [order, setOrder] = useState(TASKS.map((task) => task.id));
+        const toss = (event) => {
+          setOrder((previous) =>
+            previous.filter((id) => id !== event.detail.id),
+          );
+        };
         const reorder = (event) => {
           const { fromId, toId, syncCloneWithDropTarget } = event.detail;
           // Le nom de transition est unique par document, donc c'est l'appli qui
@@ -944,10 +958,11 @@
         };
         return (
           <div class="demo-section">
-            <Heading id="reorder">Réordonner</Heading>
+            <Heading id="reorder">Réordonner, ou jeter</Heading>
             <p class="legend">
-              Attraper une tâche par sa poignée et la déposer ailleurs. À la
-              souris quelques pixels suffisent, au doigt il faut la tenir.
+              Attraper une tâche par sa poignée : la déposer sur une autre les
+              échange, l'envoyer loin et vite la jette. Un même geste, deux
+              réponses.
             </p>
             <Box className="rows" width="320px">
               <List>
@@ -959,7 +974,7 @@
                       id={id}
                       className="task"
                       data-view-transition-name={`task_${id}`}
-                      interactions={{ drag_to_reorder: reorder }}
+                      interactions={{ reorder, toss }}
                     >
                       <Box flex="x" spacing="s" alignY="center">
                         <span className="task_handle" data-drag-handle>
@@ -972,6 +987,13 @@
                 })}
               </List>
             </Box>
+            {order.length < TASKS.length ? (
+              <Box paddingY="s">
+                <Button action={() => setOrder(TASKS.map((task) => task.id))}>
+                  Rétablir {TASKS.length - order.length}
+                </Button>
+              </Box>
+            ) : null}
           </div>
         );
       };

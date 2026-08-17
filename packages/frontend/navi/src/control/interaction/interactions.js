@@ -9,7 +9,7 @@
 
 import "./interaction_native.js";
 import "./interaction_press.js";
-import "./interaction_reorder.js";
+import "./interaction_drag.js";
 import "./interaction_keyboard.js";
 
 export {
