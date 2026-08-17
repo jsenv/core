@@ -267,6 +267,16 @@
         border-radius: 8px;
         overflow: hidden;
       }
+      .board_small {
+        width: 220px;
+        height: 140px;
+      }
+      /* Celui-ci ne coupe pas ce qui en sort: son jeton peut être emmené
+         n'importe où. */
+      .board_open {
+        border-style: dashed;
+        overflow: visible;
+      }
       .token {
         position: absolute;
         display: flex;
@@ -381,14 +391,13 @@
           <LongPressDemo />
           <KeyboardDemo />
           <DraggableSurfaceDemo />
-          <SettingsDemo />
           <WhichInteractionDemo />
           <RunningDemo />
           <CustomDetectorDemo />
           <ReorderDemo />
           <TossDemo />
           <MoveDemo />
-          <MailboxDemo />
+          <ConcreteCasesDemo />
         </Box>
       );
 
@@ -540,6 +549,37 @@
                 }}
               />
             </Box>
+
+            <Heading level={3} id="swipe-threshold">
+              data-swipe-threshold
+            </Heading>
+            <p class="legend">
+              Quelle fraction de la ligne il faut tirer pour que lâcher aille au
+              bout. Une fraction et jamais une distance : le même geste doit
+              vouloir dire la même chose sur un téléphone et sur un grand écran.
+            </p>
+            <Box className="rows">
+              <Row
+                title="0.33"
+                body="par défaut"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.33") }}
+              />
+              <Row
+                title="0.15"
+                body="lâchée tôt, elle part"
+                data-swipe-threshold="0.15"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.15") }}
+              />
+              <Row
+                title="0.8"
+                body="il faut la traverser"
+                data-swipe-threshold="0.8"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.8") }}
+              />
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
@@ -590,6 +630,59 @@
                 </Button>
               </Variant>
             </Box>
+            <Heading level={3} id="longpress-delay">
+              data-longpress-delay
+            </Heading>
+            <p class="legend">
+              Combien de temps la pression doit tenir. Sous le délai du menu
+              système, pour que la pression soit répondue avant que ce menu ne
+              s'ouvre.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="450 ms (par défaut)">
+                <Button interactions={{ longpress: log("450") }}>
+                  Maintenir
+                </Button>
+              </Variant>
+              <Variant caption='data-longpress-delay="1200"'>
+                <Button
+                  data-longpress-delay="1200"
+                  interactions={{ longpress: log("1200") }}
+                >
+                  Maintenir
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={3} id="longpress-slop">
+              data-longpress-slop
+            </Heading>
+            <p class="legend">
+              Combien de pixels le doigt peut dériver pendant l'attente avant
+              que l'appui soit abandonné. Maintenir 1,2 s en bougeant lentement
+              d'un centimètre : à 8 px rien ne se déclenche, à 60 px si.
+            </p>
+            <Box
+              flex="x"
+              spacing="xl"
+              alignY="start"
+              data-longpress-delay="1200"
+            >
+              <Variant caption="8 px (par défaut) — la dérive annule">
+                <Button interactions={{ longpress: log("slop 8") }}>
+                  Maintenir en bougeant
+                </Button>
+              </Variant>
+              <Variant caption='data-longpress-slop="60" — la dérive est tolérée'>
+                <Button
+                  data-longpress-slop="60"
+                  interactions={{ longpress: log("slop 60") }}
+                >
+                  Maintenir en bougeant
+                </Button>
+              </Variant>
+            </Box>
+
             <Heading level={3} id="longpress-and-swipe">
               Avec un balayage
             </Heading>
@@ -671,93 +764,6 @@
                 trailStart={ARCHIVE_TRAIL}
                 interactions={{ swipe_right: log("swipe_right") }}
               />
-            </Box>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── Réglages ──────────────────────────────────────────────────────────
-
-      const SettingsDemo = () => {
-        const [entries, push, clear] = useCallLog();
-        const log = (name) => (event) => push(name, undefined, event);
-        return (
-          <div class="demo-section">
-            <Heading id="settings">Réglages</Heading>
-
-            <Heading level={3} id="swipe-threshold">
-              data-swipe-threshold
-            </Heading>
-            <Box className="rows">
-              <Row
-                title="0.33"
-                body="par défaut"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{ swipe_right: log("0.33") }}
-              />
-              <Row
-                title="0.15"
-                body="lâchée tôt, elle part"
-                data-swipe-threshold="0.15"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{ swipe_right: log("0.15") }}
-              />
-              <Row
-                title="0.8"
-                body="il faut la traverser"
-                data-swipe-threshold="0.8"
-                trailStart={ARCHIVE_TRAIL}
-                interactions={{ swipe_right: log("0.8") }}
-              />
-            </Box>
-
-            <Heading level={3} id="longpress-delay">
-              data-longpress-delay
-            </Heading>
-            <Box flex="x" spacing="xl" alignY="start">
-              <Variant caption="450 (par défaut)">
-                <Button interactions={{ longpress: log("450") }}>
-                  Maintenir
-                </Button>
-              </Variant>
-              <Variant caption='data-longpress-delay="1200"'>
-                <Button
-                  data-longpress-delay="1200"
-                  interactions={{ longpress: log("1200") }}
-                >
-                  Maintenir
-                </Button>
-              </Variant>
-            </Box>
-
-            <Heading level={3} id="longpress-slop">
-              data-longpress-slop
-            </Heading>
-            <p class="legend">
-              Combien de pixels le doigt peut dériver pendant l'attente avant
-              que l'appui soit abandonné. Maintenir 1,2 s en bougeant lentement
-              d'un centimètre : à 8 px rien ne se déclenche, à 60 px si.
-            </p>
-            <Box
-              flex="x"
-              spacing="xl"
-              alignY="start"
-              data-longpress-delay="1200"
-            >
-              <Variant caption="8 px (par défaut) — la dérive annule">
-                <Button interactions={{ longpress: log("slop 8") }}>
-                  Maintenir en bougeant
-                </Button>
-              </Variant>
-              <Variant caption='data-longpress-slop="60" — la dérive est tolérée'>
-                <Button
-                  data-longpress-slop="60"
-                  interactions={{ longpress: log("slop 60") }}
-                >
-                  Maintenir en bougeant
-                </Button>
-              </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
@@ -1073,19 +1079,65 @@
                 </Button>
               </Box>
             ) : null}
+
+            <Heading level={3} id="toss-thresholds">
+              data-toss-distance et data-toss-speed
+            </Heading>
+            <p class="legend">
+              Jeter demande les deux à la fois : loin, et vite. L'un sans
+              l'autre, c'est déplacer la chose en hésitant, et rien ne se perd
+              sur une hésitation. Le premier papier part au moindre geste franc,
+              le second demande d'insister.
+            </p>
+            <TossThresholds />
           </div>
+        );
+      };
+
+      const TossThresholds = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => () => push("toss", name, undefined);
+        return (
+          <>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Box
+                className="note"
+                id="note_easy"
+                data-toss-distance="40"
+                data-toss-speed="0.15"
+                interactions={{ toss: log("40 px, 0.15 px/ms") }}
+              >
+                Se jette facilement
+              </Box>
+              <Box
+                className="note"
+                id="note_hard"
+                data-toss-distance="300"
+                data-toss-speed="1"
+                interactions={{ toss: log("300 px, 1 px/ms") }}
+              >
+                Demande d'insister
+              </Box>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
         );
       };
 
       // ── Déplacer ──────────────────────────────────────────────────────────
 
-      const TOKENS = [
-        { id: "token_a", label: "A", left: 16, top: 16 },
-        { id: "token_b", label: "B", left: 120, top: 90 },
-      ];
+      const Token = ({ label, ...rest }) => (
+        <Box className="token" {...rest}>
+          {label}
+        </Box>
+      );
 
       const MoveDemo = () => {
         const [entries, push, clear] = useCallLog();
+        const logMove = (name) => (event) => {
+          const { x, y } = event.detail;
+          push(name, `${Math.round(x)}, ${Math.round(y)}`, event);
+        };
         return (
           <div class="demo-section">
             <Heading id="move">Déplacer</Heading>
@@ -1093,28 +1145,93 @@
               Attraper un jeton et le poser ailleurs : il reste où on l'a mis.
               C'est le jeton lui-même qui voyage, pas une copie.
             </p>
-            <Box className="board" data-drag-free>
-              {TOKENS.map((token) => (
-                <Box
-                  key={token.id}
-                  id={token.id}
-                  className="token"
-                  style={{ left: `${token.left}px`, top: `${token.top}px` }}
-                  interactions={{
-                    move: (event) => {
-                      const { x, y } = event.detail;
-                      push("move", `${Math.round(x)}, ${Math.round(y)}`, event);
-                    },
-                  }}
-                >
-                  {token.label}
+            <Box className="board">
+              <Token
+                id="token_free"
+                label="libre"
+                style={{ left: "16px", top: "16px" }}
+                interactions={{ move: logMove("libre") }}
+              />
+            </Box>
+
+            <Heading level={3} id="move-axis">
+              data-drag-axis
+            </Heading>
+            <p class="legend">
+              Un jeton tenu à un seul axe. Sans rien dire, un déplacement va où
+              on le met ; une liste réordonnée, elle, suit la sienne.
+            </p>
+            <Box className="board">
+              <Token
+                id="token_x"
+                label="x"
+                data-drag-axis="x"
+                style={{ left: "16px", top: "40px" }}
+                interactions={{ move: logMove("x") }}
+              />
+              <Token
+                id="token_y"
+                label="y"
+                data-drag-axis="y"
+                style={{ left: "140px", top: "40px" }}
+                interactions={{ move: logMove("y") }}
+              />
+            </Box>
+
+            <Heading level={3} id="move-free">
+              data-drag-free
+            </Heading>
+            <p class="legend">
+              Par défaut un jeton ne sort pas de ce qui le porte. Le second
+              plateau rend cette liberté : son jeton peut être emmené n'importe
+              où sur la page.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  tenu dans son plateau
+                </Text>
+                <Box className="board board_small">
+                  <Token
+                    id="token_held"
+                    label="tenu"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("tenu") }}
+                  />
                 </Box>
-              ))}
+              </Box>
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  data-drag-free
+                </Text>
+                <Box className="board board_small board_open" data-drag-free>
+                  <Token
+                    id="token_loose"
+                    label="libre"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("libre du plateau") }}
+                  />
+                </Box>
+              </Box>
             </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };
+
+      // ── Cas concrets ─────────────────────────────────────────────────────
+      //
+      // Chacun met plusieurs interactions sur un même composant, ce qu'aucune
+      // section par geste ne montre: c'est là qu'on voit l'arbitrage. Il en
+      // viendra d'autres — un par situation qui a vraiment eu lieu, jamais un par
+      // combinaison possible.
+
+      const ConcreteCasesDemo = () => (
+        <div class="demo-section">
+          <Heading id="concrete">Cas concrets</Heading>
+          <MailboxCase />
+        </div>
+      );
 
       // ── Cas concret : une boîte mail ──────────────────────────────────────
 
@@ -1133,7 +1250,7 @@
         },
       ];
 
-      const MailboxDemo = () => {
+      const MailboxCase = () => {
         const [archived, setArchived] = useState([]);
         const [read, setRead] = useState(["3"]);
         // Le menu n'est pas un état de ce composant : il s'ouvre par commande,
@@ -1168,8 +1285,10 @@
           setArchived((previous) => [...previous, id]);
         };
         return (
-          <div class="demo-section">
-            <Heading id="mailbox">Cas concret : une boîte mail</Heading>
+          <>
+            <Heading level={3} id="mailbox">
+              Une boîte mail
+            </Heading>
             <p class="legend">
               Clic pour ouvrir, balayage à droite pour archiver, balayage à
               gauche pour marquer lu ou non lu, appui long pour le menu — qui
@@ -1336,7 +1455,7 @@
                 </Button>
               </Box>
             ) : null}
-          </div>
+          </>
         );
       };
 
