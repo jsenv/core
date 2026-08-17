@@ -276,7 +276,7 @@ export {
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Interactions
-export { startDragToMove } from "@jsenv/dom";
+export { startDragTo } from "@jsenv/dom";
 
 // Other
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";

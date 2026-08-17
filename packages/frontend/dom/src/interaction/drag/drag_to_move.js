@@ -1,11 +1,12 @@
 /**
- * A drag that MOVES something, and the three things letting go of it can mean.
+ * A drag, and what it is FOR.
  *
- * One gesture, one file. What a hand does is always the same — pick the thing up,
- * carry it, let go — and what changes is the answer at the release:
+ * What a hand does is always the same — pick the thing up, carry it, let go — so
+ * the gesture is not what distinguishes these. What distinguishes them is the
+ * outcome the caller asked for, and that is what `startDragTo` takes:
  *
- * - **move**: it stays where it was put. The element ITSELF travels and keeps the
- *   place the hand gave it.
+ * - **position**: it stays where it was put. The element ITSELF travels and keeps
+ *   the place the hand gave it.
  * - **reorder**: it takes a place in a list. A COPY travels while the original
  *   keeps its place in the layout, which is what makes the gesture possible at
  *   all — nothing else moves while the hand looks for a place, so there is a
@@ -13,11 +14,12 @@
  * - **toss**: it is gotten rid of. The same copy, for the opposite reason: the
  *   original stays until the answer says it is really gone.
  *
- * The caller declares which of them ITS element can answer, and only the machinery
- * those need runs: no copy for a move, no drop hint for something that can only be
- * thrown away, no landing looked for where nothing lands. `reorder` and `toss`
- * combine (dropped on a row, or thrown off the screen); `move` and `reorder` cannot
- * both be true of one release, and the caller is the one who must not ask for both.
+ * The caller lists which outcomes ITS element can answer, and only the machinery
+ * those need runs: no copy for a positioning, no drop hint for something that can
+ * only be thrown away, no landing looked for where nothing lands. `reorder` and
+ * `toss` combine (dropped on a row, or thrown off the screen); `position` and
+ * `reorder` cannot both be true of one release, and the caller is the one who must
+ * not ask for both.
  *
  * `createDragToMoveGestureController` below is the layer under all of that — the
  * translation, the auto-scroll, the constraints — and stays usable on its own for
@@ -126,7 +128,7 @@ const css = /* css */ `
      the pointer), so an I-beam over it would promise something that does not
      happen: it reads as a plain surface instead. An opted-out area keeps both
      its cursor and its selection, and never starts a drag (see the check in
-     startDragToMove).
+     startDragTo).
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself.
      Only the resting cursor is set here: what it becomes once a drag is under
@@ -205,7 +207,7 @@ const css = /* css */ `
     }
   }
 `;
-// At module scope, not inside startDragToMove: the cursor rules above say who
+// At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
 import.meta.css = css;
 
@@ -708,7 +710,7 @@ export const createDragToMoveGestureController = ({
  * Nothing written inside `transform` can compensate, and `getComputedStyle().transform`
  * does not show these properties, so the gesture cannot even see what is happening
  * to it: hence a warning, and the way out is to carry the decoration on a child
- * (what the drag clone of startDragToMove does).
+ * (what the drag clone of startDragTo does).
  * `translate` as an individual property is left alone — translations compose,
  * whatever their order.
  */
@@ -731,16 +733,16 @@ const warnAboutTransformsOutsideTransform = (element) => {
 };
 
 /**
- * Starts a drag whose release means one of `effects`.
+ * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {object} options
- * @param {("move"|"reorder"|"toss")[]} [options.effects=["move"]]
- *   What letting go of this element can mean. `["reorder"]`, `["reorder","toss"]`,
- *   `["toss"]` carry a copy; `["move"]` carries the element itself. Asking for
- *   `move` and `reorder` together is asking one release to mean two things.
+ * @param {("position"|"reorder"|"toss")[]} effects
+ *   What letting go of this element can mean. `reorder` and `toss` carry a copy;
+ *   `position` carries the element itself. Asking for `position` and `reorder`
+ *   together is asking one release to mean two things.
+ * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
- * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
+ * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onPosition]
  *   It was put somewhere. The position is already committed when this runs — the
  *   hand let go of it there — and travels back if the promise rejects.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
@@ -772,9 +774,10 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * The gesture holds its copy until what `onReorder` returns settles, so returning
  * the transition is what makes the landing continuous.
  */
-export const startDragToMove = (
+export const startDragTo = (
   event,
-  { effects = ["move"], draggedElement = event.currentTarget, ...options },
+  effects,
+  { draggedElement = event.currentTarget, ...options } = {},
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control that
   // owns the gesture): the press there is none of our business.
@@ -788,9 +791,9 @@ export const startDragToMove = (
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
   if (canReorder || canToss) {
-    if (import.meta.dev && effects.includes("move")) {
+    if (import.meta.dev && effects.includes("position")) {
       console.warn(
-        `startDragToMove: "move" and "reorder"/"toss" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
+        `startDragTo: "position" and "reorder"/"toss" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "position".`,
       );
     }
     return startDragToCarryCopy(event, {
@@ -800,7 +803,7 @@ export const startDragToMove = (
       ...options,
     });
   }
-  return startDragToMoveItself(event, { draggedElement, ...options });
+  return startDragToPosition(event, { draggedElement, ...options });
 };
 
 /**
@@ -809,11 +812,11 @@ export const startDragToMove = (
  * No copy, unlike the two others: what is being moved is the thing and not a
  * stand-in for it, so there is nothing to put back and nothing to reveal.
  */
-const startDragToMoveItself = (
+const startDragToPosition = (
   event,
   {
     draggedElement,
-    onMove,
+    onPosition,
     threshold,
     longPress,
     longPressDelay,
@@ -850,7 +853,7 @@ const startDragToMoveItself = (
         // gesture was not understood.
         gestureInfo.commitPosition();
         try {
-          await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
+          await onPosition?.({ gestureInfo, x: xDelta, y: yDelta });
         } catch {
           gestureInfo.cancelPositionAnimated();
         }
@@ -952,6 +955,12 @@ const startDragToCarryCopy = (
       const gestureController = createDragToMoveGestureController({
         direction,
         releasePositionEffect: "manual",
+        // Something that can be thrown away has to be able to LEAVE: the default
+        // keeps what is dragged inside its scroll area, which is right for a
+        // reorder (a row belongs to its list) and makes a throw impossible — the
+        // copy hits the edge of the list and no distance is ever covered. The two
+        // together therefore free the area, and the caller can still say otherwise.
+        areaConstraint: canToss ? "none" : undefined,
         ...options,
       });
       const dragGesture = gestureController.grabViaPointer(event, {

@@ -137,7 +137,7 @@
         Link,
         moveArrayItemByIndex,
         ensureDocumentStartViewTransition,
-        startDragToMove,
+        startDragTo,
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
@@ -1819,8 +1819,7 @@
         const [tasks, setTasks] = useState(TASKS);
 
         const startDrag = (event) => {
-          startDragToMove(event, {
-            effects: ["reorder"],
+          startDragTo(event, ["reorder"], {
             itemSelector: "[data-id]",
             getItemId: (el) => el.dataset.id,
             onReorder: async (fromId, toId, syncClone) => {

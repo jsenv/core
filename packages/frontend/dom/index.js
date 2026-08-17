@@ -128,7 +128,7 @@ export {
 } from "./src/interaction/drag/drag_gesture.js";
 export {
   createDragToMoveGestureController,
-  startDragToMove,
+  startDragTo,
 } from "./src/interaction/drag/drag_to_move.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
 export {

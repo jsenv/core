@@ -134,7 +134,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState, useEffect } from "preact/hooks";
-      import { startDragToMove } from "@jsenv/dom";
+      import { startDragTo } from "@jsenv/dom";
 
       const INITIAL_ITEMS = [
         { id: 1, label: "Apple", bg: "#e3f2fd", color: "#1565c0" },
@@ -196,8 +196,7 @@
         const [order, setOrder] = useState(INITIAL_ITEMS.map((i) => i.id));
 
         const startDrag = (event) => {
-          startDragToMove(event, {
-            effects: ["reorder"],
+          startDragTo(event, ["reorder"], {
             itemSelector: ".list-item",
             getItemId: (el) => parseInt(el.dataset.id),
             onReorder: async (fromId, toId, syncClone) => {

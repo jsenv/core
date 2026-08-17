@@ -236,6 +236,26 @@
         cursor: grab;
       }
 
+      /* Un papier jaune : ce que quelqu'un a écrit à la main, posé sur ce qu'on
+         regarde. */
+      .note {
+        max-width: 260px;
+        padding: 10px 14px;
+        color: #4a3f14;
+        font-size: 13px;
+        line-height: 1.4;
+        background: #fdf3b8;
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        rotate: -1.2deg;
+      }
+      /* La copie portée par le pointeur : elle se redresse un peu et se soulève.
+         C'est la page qui le dit, via l'attribut que le geste pose. */
+      .note[navi-drag-clone] {
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+        rotate: -3deg;
+      }
+
       /* Un plateau, et des jetons qu'on y déplace. */
       .board {
         position: relative;
@@ -366,7 +386,8 @@
           <RunningDemo />
           <CustomDetectorDemo />
           <ReorderDemo />
-          <MoveDemo />
+          <TossDemo />
+          <PositionDemo />
           <MailboxDemo />
         </Box>
       );
@@ -909,42 +930,38 @@
         { id: "task_5", label: "Trouver un gardien" },
       ];
 
-      const ReorderDemo = () => {
+      const moveBefore = (order, fromId, toId) => {
+        const withoutMoved = order.filter((id) => id !== fromId);
+        if (toId === null) {
+          return [...withoutMoved, fromId];
+        }
+        const at = withoutMoved.indexOf(toId);
+        return [
+          ...withoutMoved.slice(0, at),
+          fromId,
+          ...withoutMoved.slice(at),
+        ];
+      };
+
+      const TaskList = ({ name, interactionsFor }) => {
         const [order, setOrder] = useState(TASKS.map((task) => task.id));
-        const toss = (event) => {
-          setOrder((previous) =>
-            previous.filter((id) => id !== event.detail.id),
-          );
-        };
         const reorder = (event) => {
           const { fromId, toId, syncCloneWithDropTarget } = event.detail;
           // Le nom de transition est unique par document, donc c'est l'appli qui
           // le pose et l'appli qui lance la transition.
           const transition = document.startViewTransition(() => {
             syncCloneWithDropTarget();
-            setOrder((previous) => {
-              const withoutMoved = previous.filter((id) => id !== fromId);
-              if (toId === null) {
-                return [...withoutMoved, fromId];
-              }
-              const at = withoutMoved.indexOf(toId);
-              return [
-                ...withoutMoved.slice(0, at),
-                fromId,
-                ...withoutMoved.slice(at),
-              ];
-            });
+            setOrder((previous) => moveBefore(previous, fromId, toId));
           });
           return transition.finished;
         };
+        const toss = (event) => {
+          setOrder((previous) =>
+            previous.filter((id) => id !== event.detail.id),
+          );
+        };
         return (
-          <div class="demo-section">
-            <Heading id="reorder">Réordonner, ou jeter</Heading>
-            <p class="legend">
-              Attraper une tâche par sa poignée : la déposer sur une autre les
-              échange, l'envoyer loin et vite la jette. Un même geste, deux
-              réponses.
-            </p>
+          <>
             <Box className="rows" width="320px">
               <List>
                 {order.map((id) => {
@@ -952,10 +969,10 @@
                   return (
                     <List.Item
                       key={id}
-                      id={id}
+                      id={`${name}_${id}`}
                       className="task"
-                      data-view-transition-name={`task_${id}`}
-                      interactions={{ reorder, toss }}
+                      data-view-transition-name={`${name}_${id}`}
+                      interactions={interactionsFor({ reorder, toss })}
                     >
                       <Box flex="x" spacing="s" alignY="center">
                         <span className="task_handle" data-drag-handle>
@@ -975,27 +992,108 @@
                 </Button>
               </Box>
             ) : null}
+          </>
+        );
+      };
+
+      const ReorderDemo = () => (
+        <div class="demo-section">
+          <Heading id="reorder">Réordonner</Heading>
+          <p class="legend">
+            Attraper une tâche par sa poignée et la déposer sur une autre. À la
+            souris quelques pixels suffisent, au doigt il faut la tenir.
+          </p>
+          <TaskList
+            name="reorder"
+            interactionsFor={({ reorder }) => ({ reorder })}
+          />
+
+          <Heading level={3} id="reorder-and-toss">
+            …et jeter
+          </Heading>
+          <p class="legend">
+            La même liste, plus <code>toss</code> : déposer sur une autre tâche
+            l'échange, l'envoyer loin et vite la jette. Une ligne qui peut être
+            jetée doit pouvoir quitter sa liste, donc le geste lui rend cette
+            liberté — avec <code>reorder</code> seul elle y reste enfermée.
+          </p>
+          <TaskList
+            name="both"
+            interactionsFor={({ reorder, toss }) => ({ reorder, toss })}
+          />
+        </div>
+      );
+
+      // ── Jeter ─────────────────────────────────────────────────────────────
+
+      const NOTES = [
+        "Terrain 3, au fond à gauche",
+        "Apporter un maillot clair",
+        "Le portail se ferme à 22h",
+      ];
+
+      const TossDemo = () => {
+        const [tossed, setTossed] = useState([]);
+        return (
+          <div class="demo-section">
+            <Heading id="toss">Jeter</Heading>
+            <p class="legend">
+              Attraper un papier — il se soulève — puis l'envoyer loin et vite :
+              il sort de l'écran. Trop court ou trop lent, il se raccroche.
+              Répondre depuis le backend décide s'il est vraiment décroché ou
+              s'il revient.
+            </p>
+            <FakeBackend value={{ tossed: [] }}>
+              {({ action }) => (
+                <Box flex="y" spacing="m" alignX="start">
+                  {NOTES.filter((note) => !tossed.includes(note)).map(
+                    (note) => (
+                      <Box
+                        key={note}
+                        id={`note_${NOTES.indexOf(note)}`}
+                        className="note"
+                        interactions={{
+                          toss: async () => {
+                            await action({ tossed: [note] });
+                            setTossed((previous) => [...previous, note]);
+                          },
+                        }}
+                      >
+                        {note}
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              )}
+            </FakeBackend>
+            {tossed.length ? (
+              <Box paddingY="s">
+                <Button action={() => setTossed([])}>
+                  Rétablir {tossed.length}
+                </Button>
+              </Box>
+            ) : null}
           </div>
         );
       };
 
-      // ── Déplacer ──────────────────────────────────────────────────────────
+      // ── Positionner ──────────────────────────────────────────────────────────
 
       const TOKENS = [
         { id: "token_a", label: "A", left: 16, top: 16 },
         { id: "token_b", label: "B", left: 120, top: 90 },
       ];
 
-      const MoveDemo = () => {
+      const PositionDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
           <div class="demo-section">
-            <Heading id="move">Déplacer</Heading>
+            <Heading id="position">Positionner</Heading>
             <p class="legend">
               Attraper un jeton et le poser ailleurs : il reste où on l'a mis.
               C'est le jeton lui-même qui voyage, pas une copie.
             </p>
-            <Box className="board" data-move-free>
+            <Box className="board" data-drag-free>
               {TOKENS.map((token) => (
                 <Box
                   key={token.id}
@@ -1003,9 +1101,13 @@
                   className="token"
                   style={{ left: `${token.left}px`, top: `${token.top}px` }}
                   interactions={{
-                    move: (event) => {
+                    position: (event) => {
                       const { x, y } = event.detail;
-                      push("move", `${Math.round(x)}, ${Math.round(y)}`, event);
+                      push(
+                        "position",
+                        `${Math.round(x)}, ${Math.round(y)}`,
+                        event,
+                      );
                     },
                   }}
                 >

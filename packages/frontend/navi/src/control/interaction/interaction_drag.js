@@ -1,24 +1,24 @@
 /**
- * `move`, `reorder`, `toss` — one grab, and what letting go of it means.
+ * `position`, `reorder`, `toss` — one grab, and what letting go of it means.
  *
  * All three are the same gesture: the element is picked up and carried. What
  * differs is the answer at the release, so one detector reads them all — it is one
  * press, and something has to arbitrate it.
  *
  *   interactions={{ reorder: moveBefore, toss: remove }}
- *   interactions={{ move: remember }}
+ *   interactions={{ position: remember }}
  *
  * `reorder` and `toss` combine: a task dragged onto another changes places, the
- * same task thrown far and fast is gotten rid of. `move` does not combine with
- * `reorder` — an element either goes where it is put or takes a place in a list,
- * and the two answers cannot both be true of one release.
+ * same task thrown far and fast is gotten rid of. `position` does not combine
+ * with `reorder` — an element either goes where it is put or takes a place in a
+ * list, and the two answers cannot both be true of one release.
  *
- * `move` carries the element ITSELF and leaves it where it was put; the other two
- * carry a copy and put the original back. That is the same difference said in
+ * `position` carries the element ITSELF and leaves it where it was put; the other
+ * two carry a copy and put the original back. That is the same difference said in
  * layout terms: something moved has a new place of its own, something reordered
  * had its place taken by the list.
  *
- * Nothing of the gesture is decided here. `startDragToMove` owns all of it — the
+ * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
  * drop hint, the drop targets found by intersection, the no-op drops filtered out,
  * the flight of a thrown copy and its return when the answer refuses. This says
@@ -66,11 +66,11 @@
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import { startDragToMove } from "@jsenv/dom";
+import { startDragTo } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
-const MOVE = "move";
+const POSITION = "position";
 const REORDER = "reorder";
 const TOSS = "toss";
 
@@ -86,12 +86,12 @@ const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
 
 defineInteractionDetector({
   name: "drag",
-  claims: (type) => type === MOVE || type === REORDER || type === TOSS,
+  claims: (type) => type === POSITION || type === REORDER || type === TOSS,
   setup: (element, trigger, { types, readConfig }) => {
-    const canMove = types.includes(MOVE);
+    const canPosition = types.includes(POSITION);
     const canReorder = types.includes(REORDER);
     const canToss = types.includes(TOSS);
-    if (import.meta.dev && canMove && canReorder) {
+    if (import.meta.dev && canPosition && canReorder) {
       console.warn(
         `interactions: "move" and "reorder" cannot both answer one release — an element either goes where it is put or takes a place in a list. "reorder" wins here.`,
       );
@@ -109,12 +109,11 @@ defineInteractionDetector({
     element.setAttribute("data-drag-source", axis === "x" ? "x" : "");
 
     const onPointerDown = (pointerDownEvent) => {
-      startDragToMove(pointerDownEvent, {
+      // What this element says a release can mean. The gesture then runs only what
+      // those need — no copy for a positioning, no drop hint for something that can
+      // only be thrown away.
+      startDragTo(pointerDownEvent, types, {
         draggedElement: element,
-        // What this element says a release can mean. The gesture then runs only
-        // what those need — no copy for a move, no drop hint for something that
-        // can only be thrown away.
-        effects: types,
         // Nothing to land on when nothing reorders.
         itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
         getItemId: (itemElement) => itemElement.id,
@@ -127,7 +126,9 @@ defineInteractionDetector({
         // Where a moved element may go, said in the DOM: a box moved inside a
         // frame stays in it, a note pinned on a board does not.
         areaConstraint:
-          canMove && element.closest(`[data-move-free]`) ? "none" : undefined,
+          canPosition && element.closest(`[data-drag-free]`)
+            ? "none"
+            : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
@@ -149,7 +150,7 @@ defineInteractionDetector({
             x: gestureInfo.layout.xDelta,
             y: gestureInfo.layout.yDelta,
           }),
-        onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
+        onPosition: ({ x, y }) => trigger(POSITION, pointerDownEvent, { x, y }),
       });
     };
     element.addEventListener("pointerdown", onPointerDown);
