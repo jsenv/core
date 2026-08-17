@@ -170,8 +170,9 @@ place the application would not accept must not stay on screen as if it had.
 
 **Declaring `toss` frees the area by itself.** What is dragged is otherwise kept
 inside its scroll area — right for a reorder, since a row belongs to its list, and
-fatal for a throw: the copy hits the edge of the list and no distance is ever
-covered, so the throw can never happen. So the two together let it leave.
+fatal for a throw: the copy hits the edge of the list, no distance is ever covered,
+so no throw can happen and no sideways movement is even visible. So the two
+together let it leave.
 
 ```jsx
 <List.Item
@@ -220,7 +221,7 @@ name what moves.
 
 | Attribute                                                | Meaning                                |
 | -------------------------------------------------------- | -------------------------------------- |
-| `data-reorder-axis="x"`                                  | the list runs sideways                 |
+| `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 
@@ -248,8 +249,11 @@ it:
 Reusing the item's own class is the point: the copy is that item, so it is styled
 as that item plus whatever being carried changes.
 
-`data-reorder-axis="x"` for a list that runs sideways. `data-reorder-delay`,
-`data-reorder-slop`, `data-reorder-threshold` tune when the press becomes a grab.
+`data-drag-axis` says which axes the drag walks, and its default is not the same
+for every outcome: `reorder` alone walks the list (`y`, or `x` for a list that runs
+sideways), while a `move` goes wherever it is put and a `toss` wherever it was
+thrown (`xy`). `data-drag-delay`, `data-drag-slop`, `data-drag-threshold` tune when
+the press becomes a grab.
 
 ## Tuning
 

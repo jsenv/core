@@ -910,6 +910,16 @@ const startDragToCarryCopy = (
     draggedElement,
     canReorder,
     canToss,
+    // Something that can be thrown away has to be able to LEAVE. The default of
+    // the layer below keeps what is dragged inside its scroll area, which is right
+    // for a reorder (a row belongs to its list) and makes a throw impossible — the
+    // copy hits the edge of the list and no distance is ever covered, so no throw
+    // ever happens and no sideways movement is even visible.
+    // Destructured with the default here rather than written at the call below: a
+    // caller passing `areaConstraint: undefined` (which is what saying nothing
+    // through an options object looks like) would otherwise put the layer below
+    // back on its own default and undo this.
+    areaConstraint = canToss ? "none" : undefined,
     containerElement = draggedElement.parentElement,
     itemSelector,
     getItemId,
@@ -954,12 +964,7 @@ const startDragToCarryCopy = (
       const gestureController = createDragToMoveGestureController({
         direction,
         releasePositionEffect: "manual",
-        // Something that can be thrown away has to be able to LEAVE: the default
-        // keeps what is dragged inside its scroll area, which is right for a
-        // reorder (a row belongs to its list) and makes a throw impossible — the
-        // copy hits the edge of the list and no distance is ever covered. The two
-        // together therefore free the area, and the caller can still say otherwise.
-        areaConstraint: canToss ? "none" : undefined,
+        areaConstraint,
         ...options,
       });
       const dragGesture = gestureController.grabViaPointer(event, {
@@ -1284,6 +1289,10 @@ const createDragClone = (element, pointerEvent) => {
 
   const elementClone = element.cloneNode(true);
   elementClone.setAttribute("navi-drag-clone", "");
+  // What is held is the copy, so it is the copy that must LOOK held: the caller
+  // dresses `[data-grabbed]` on its own element once, and the copy is that element.
+  // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
+  elementClone.setAttribute("data-grabbed", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
 
   wrapper.appendChild(elementClone);

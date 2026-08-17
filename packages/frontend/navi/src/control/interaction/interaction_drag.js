@@ -76,8 +76,10 @@ const TOSS = "toss";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
-// Which way the list runs. A row of cards reorders sideways; a list of rows, down.
-const AXIS_ATTRIBUTE = "data-reorder-axis";
+// Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
+// every outcome — a list runs one way, and something being put somewhere goes
+// wherever it is put.
+const AXIS_ATTRIBUTE = "data-drag-axis";
 const DELAY_ATTRIBUTE = "data-drag-delay";
 const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
@@ -98,7 +100,13 @@ defineInteractionDetector({
     }
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
-    const axis = element.closest(`[${AXIS_ATTRIBUTE}="x"]`) ? "x" : "y";
+    const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
+    const axes =
+      axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
+      // A list runs one way, and reordering walks it. Anything else goes wherever
+      // the hand takes it: a thing put somewhere has two axes to be put along, and
+      // a throw goes where it was thrown.
+      (canReorder && !canToss ? "y" : "xy");
 
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
@@ -106,7 +114,7 @@ defineInteractionDetector({
     // What @jsenv/dom puts on a drag source: no iOS callout, and the touch left to
     // the scroll until the press becomes a grab. Its value is the axis the
     // SURROUNDINGS scroll on, which for a list is the axis the list runs on.
-    element.setAttribute("data-drag-source", axis === "x" ? "x" : "");
+    element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
 
     const onPointerDown = (pointerDownEvent) => {
       // What this element says a release can mean. The gesture then runs only what
@@ -117,16 +125,14 @@ defineInteractionDetector({
         // Nothing to land on when nothing reorders.
         itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
         getItemId: (itemElement) => itemElement.id,
-        // A throw goes wherever the hand sent it; a reorder walks the list.
-        direction: canToss
-          ? { x: true, y: true }
-          : axis === "x"
-            ? { x: true, y: false }
-            : { x: false, y: true },
-        // Where a moved element may go, said in the DOM: a box moved inside a
-        // frame stays in it, a note pinned on a board does not.
-        areaConstraint:
-          canMove && element.closest(`[data-drag-free]`) ? "none" : undefined,
+        direction: { x: axes.includes("x"), y: axes.includes("y") },
+        // Where it may go, said in the DOM: something moved inside a frame stays in
+        // it by default (its scroll area), and `data-drag-free` is how that is
+        // lifted. Left alone for a throw, which frees the area on its own — it has
+        // to be able to leave.
+        areaConstraint: element.closest(`[data-drag-free]`)
+          ? "none"
+          : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
