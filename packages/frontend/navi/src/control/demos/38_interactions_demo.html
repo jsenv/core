@@ -294,6 +294,7 @@
         Popover,
         StarSvg,
         Text,
+        triggerNaviCommand,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import { FakeBackend } from "../../internal/fake_backend.jsx";
@@ -1115,18 +1116,37 @@
       const MailboxDemo = () => {
         const [archived, setArchived] = useState([]);
         const [read, setRead] = useState(["3"]);
-        const [menu, setMenu] = useState(null);
+        // Le menu n'est pas un état de ce composant : il s'ouvre par commande,
+        // comme un picker, et se ferme tout seul. Ce qui reste ici est la seule
+        // chose que la commande ne dit pas — de quel message il parle.
+        const [menuMailId, setMenuMailId] = useState(null);
         const [openedId, setOpenedId] = useState(null);
         const visible = MAILS.filter((mail) => !archived.includes(mail.id));
         const opened = MAILS.find((mail) => mail.id === openedId);
-        // Le menu s'ouvre là où le doigt s'est posé, pas sur la ligne : le point
-        // d'ancrage est un carré d'un pixel placé aux coordonnées de la pression.
+        // Le point où la pression a eu lieu : un carré d'un pixel qu'on déplace,
+        // parce qu'une ancre est un élément et qu'un point n'en est pas un.
         const anchorPointRef = useRef(null);
+        const openMenuAt = (mail, interactionEvent) => {
+          const press = interactionEvent.detail.event;
+          const anchorPoint = anchorPointRef.current;
+          anchorPoint.style.left = `${press.clientX}px`;
+          anchorPoint.style.top = `${press.clientY}px`;
+          setMenuMailId(mail.id);
+          triggerNaviCommand(
+            interactionEvent.target,
+            "--navi-open",
+            interactionEvent,
+            { anchor: anchorPoint },
+          );
+        };
+        const closeMenu = (event) => {
+          triggerNaviCommand(event.currentTarget, "--navi-close", event, {
+            optional: true,
+          });
+        };
         const archive = (id) => {
           setArchived((previous) => [...previous, id]);
-          setMenu(null);
         };
-        const closeMenu = () => setMenu(null);
         return (
           <div class="demo-section">
             <Heading id="mailbox">Cas concret : une boîte mail</Heading>
@@ -1157,6 +1177,10 @@
                           className: "trail_unread",
                           label: read.includes(mail.id) ? "Non lu" : "Lu",
                         }}
+                        // Quel popover la commande va ouvrir : il n'est pas au
+                        // -dessus de la ligne dans le DOM, donc il ne se trouve
+                        // pas tout seul.
+                        commandfor="mail_menu"
                         interactions={{
                           click: () => setOpenedId(mail.id),
                           swipe_right: () => archive(mail.id),
@@ -1167,14 +1191,7 @@
                                 : [...previous, mail.id],
                             );
                           },
-                          longpress: (event) => {
-                            const press = event.detail.event;
-                            setMenu({
-                              id: mail.id,
-                              x: press.clientX,
-                              y: press.clientY,
-                            });
-                          },
+                          longpress: (event) => openMenuAt(mail, event),
                         }}
                       />
                     </List.Item>
@@ -1195,37 +1212,32 @@
               </div>
             </Box>
             {/* Un seul popover pour toute la liste — une liste n'en montre qu'un
-                à la fois — ancré au point où la pression a eu lieu. */}
-            {menu ? (
-              <div
-                ref={anchorPointRef}
-                style={{
-                  position: "fixed",
-                  left: `${menu.x}px`,
-                  top: `${menu.y}px`,
-                  width: "1px",
-                  height: "1px",
-                  pointerEvents: "none",
-                }}
-              />
-            ) : null}
+                à la fois. Il n'a pas de prop `open` : c'est --navi-open qui
+                l'ouvre, et la commande porte l'ancre. */}
+            <div
+              ref={anchorPointRef}
+              style={{
+                position: "fixed",
+                width: "1px",
+                height: "1px",
+                pointerEvents: "none",
+              }}
+            />
             <Popover
-              open={Boolean(menu)}
-              anchor={anchorPointRef}
+              id="mail_menu"
               positionArea="bottom-right"
               padding="0"
               borderRadius="10px"
               pointerInteractionOutsideEffect="close"
-              onClose={closeMenu}
             >
               <Box flex="y" className="mail_menu">
                 <Box
                   as="button"
                   type="button"
                   className="mail_menu_item mail_menu_item_primary"
-                  onClick={() => {
-                    setOpenedId(menu.id);
-                    closeMenu();
+                  onClick={(event) => {
+                    setOpenedId(menuMailId);
+                    closeMenu(event);
                   }}
                 >
                   <span className="mail_menu_icon">
@@ -1239,11 +1251,11 @@
                   as="button"
                   type="button"
                   className="mail_menu_item"
-                  onClick={() => {
+                  onClick={(event) => {
                     setRead((previous) =>
-                      previous.filter((id) => id !== menu.id),
+                      previous.filter((id) => id !== menuMailId),
                     );
-                    closeMenu();
+                    closeMenu(event);
                   }}
                 >
                   <span className="mail_menu_icon">
@@ -1283,7 +1295,10 @@
                   as="button"
                   type="button"
                   className="mail_menu_item mail_menu_item_danger"
-                  onClick={() => archive(menu.id)}
+                  onClick={(event) => {
+                    archive(menuMailId);
+                    closeMenu(event);
+                  }}
                 >
                   <span className="mail_menu_icon">
                     <Icon>

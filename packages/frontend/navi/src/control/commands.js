@@ -19,11 +19,23 @@ import {
   getUIStateFromElement,
 } from "./ui_state_dom.js";
 
+/**
+ * @param {Element} element The element asking — the command's source, and the
+ *   anchor a popup opens on unless `anchor` says otherwise.
+ * @param {string} command
+ * @param {Event} event What the user did.
+ * @param {object} [options]
+ * @param {boolean} [options.optional] No suitable target is not a warning.
+ * @param {any} [options.value] Carried to whoever answers.
+ * @param {Element} [options.anchor] Where a popup this opens should be placed,
+ *   when that is not the element asking: a menu opened by a press belongs at the
+ *   point the press happened, and the row that was pressed is not that point.
+ */
 export const triggerNaviCommand = (
   element,
   command,
   event,
-  { optional, value } = {},
+  { optional, value, anchor } = {},
 ) => {
   const naviCommand =
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
@@ -42,6 +54,7 @@ export const triggerNaviCommand = (
   const execute = naviCommand.commandHandler(element, event, {
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
     argument: command.includes(":") ? commandArgument(command) : undefined,
+    anchor,
   });
   if (!execute) {
     if (optional) {
@@ -634,7 +647,7 @@ registerNaviCommand("--navi-back", (source, event) => {
   };
 });
 
-registerNaviCommand("--navi-toggle", (source, event) => {
+registerNaviCommand("--navi-toggle", (source, event, { anchor } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -650,11 +663,12 @@ registerNaviCommand("--navi-toggle", (source, event) => {
       return dispatchCustomEvent(target, customEventName, {
         event,
         source: resolveCommandProxySource(source),
+        anchor,
       });
     },
   };
 });
-registerNaviCommand("--navi-open", (source, event) => {
+registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -663,9 +677,13 @@ registerNaviCommand("--navi-open", (source, event) => {
   return {
     target,
     implementation: () => {
+      // The popup reads `anchor` first and falls back to the source (see
+      // onnavi_request_open in popover.jsx), so saying nothing keeps the old
+      // behaviour: the element asking is the element opened against.
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
         source: resolveCommandProxySource(source),
+        anchor,
       });
     },
   };
