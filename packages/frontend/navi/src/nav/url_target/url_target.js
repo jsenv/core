@@ -244,15 +244,6 @@ const revealUrlTarget = (element) => {
   });
 };
 
-const elementIsFullyVisibleInViewport = (element) => {
-  const { top, bottom, left, right } = element.getBoundingClientRect();
-  const viewportHeight = window.innerHeight;
-  const viewportWidth = window.innerWidth;
-  return (
-    top >= 0 && left >= 0 && bottom <= viewportHeight && right <= viewportWidth
-  );
-};
-
 effect(() => {
   const documentUrl = documentUrlSignal.value;
   armUrlTarget(documentUrl);
