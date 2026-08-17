@@ -183,10 +183,12 @@ position the application would not accept must not stay on screen as if it had.
 />
 ```
 
-The gesture is `startDragToReorder`'s, whole: a copy carried above the page while
-the original keeps its place, a drop hint, drop targets found by intersection,
-no-op drops filtered out, the flight of a thrown copy and its return when the
-answer refuses.
+The gesture is `startDragToMove`'s, whole: `move` carries the element itself, the
+other two carry a copy above the page while the original keeps its place, with a
+drop hint, drop targets found by intersection, no-op drops filtered out, and the
+flight of a thrown copy plus its return when the answer refuses. Only what the
+declared effects need runs — no copy for a move, no hint for something that can
+only be thrown away.
 
 Every element declaring `reorder` marks itself, so the set of items IS the set of
 elements that declared it — no selector to pass, and an item that must not move

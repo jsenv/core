@@ -18,7 +18,7 @@
  * layout terms: something moved has a new place of its own, something reordered
  * had its place taken by the list.
  *
- * Nothing of the gesture is decided here. `startDragToReorder` owns all of it — the
+ * Nothing of the gesture is decided here. `startDragToMove` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
  * drop hint, the drop targets found by intersection, the no-op drops filtered out,
  * the flight of a thrown copy and its return when the answer refuses. This says
@@ -66,11 +66,7 @@
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import {
-  createDragToMoveGestureController,
-  dragAfterIntent,
-  startDragToReorder,
-} from "@jsenv/dom";
+import { startDragToMove } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
@@ -87,12 +83,6 @@ const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
 const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
-
-// Throwing asks for the two at once: far, and fast. One without the other is
-// moving the thing while hesitating, and nothing is thrown away on a hesitation —
-// it comes back.
-const TOSS_DISTANCE_DEFAULT = 110;
-const TOSS_SPEED_DEFAULT = 0.45;
 
 defineInteractionDetector({
   name: "drag",
@@ -119,14 +109,13 @@ defineInteractionDetector({
     element.setAttribute("data-drag-source", axis === "x" ? "x" : "");
 
     const onPointerDown = (pointerDownEvent) => {
-      if (canMove && !canReorder) {
-        grabToMove(element, pointerDownEvent, trigger, { readConfig });
-        return;
-      }
-      startDragToReorder(pointerDownEvent, {
+      startDragToMove(pointerDownEvent, {
         draggedElement: element,
-        // Nothing to land on when nothing reorders: no hint is drawn and no
-        // landing is looked for.
+        // What this element says a release can mean. The gesture then runs only
+        // what those need — no copy for a move, no drop hint for something that
+        // can only be thrown away.
+        effects: types,
+        // Nothing to land on when nothing reorders.
         itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
         getItemId: (itemElement) => itemElement.id,
         // A throw goes wherever the hand sent it; a reorder walks the list.
@@ -135,33 +124,18 @@ defineInteractionDetector({
           : axis === "x"
             ? { x: true, y: false }
             : { x: false, y: true },
+        // Where a moved element may go, said in the DOM: a box moved inside a
+        // frame stays in it, a note pinned on a board does not.
+        areaConstraint:
+          canMove && element.closest(`[data-move-free]`) ? "none" : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
-        // A throw is asked about first: it is the more insistent of the two, and a
-        // hand that sent the thing across the screen has not asked for it to swap
-        // places with whatever it happened to fly over.
-        resolveDrop: ({ gestureInfo, dropTarget }) => {
-          if (canToss) {
-            const { xDelta, yDelta } = gestureInfo.layout;
-            const distance = Math.hypot(xDelta, yDelta);
-            if (
-              distance >
-                readConfig(TOSS_DISTANCE_ATTRIBUTE, TOSS_DISTANCE_DEFAULT) &&
-              gestureInfo.velocity >
-                readConfig(TOSS_SPEED_ATTRIBUTE, TOSS_SPEED_DEFAULT)
-            ) {
-              return TOSS;
-            }
-          }
-          if (canReorder && dropTarget) {
-            return REORDER;
-          }
-          return "cancel";
-        },
-        // Handed straight back: what `trigger` returns is a promise while the
-        // answer is still going, which is what the gesture waits on before it
-        // lets go of its copy.
+        tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
+        tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
+        // Handed straight back in all three cases: what `trigger` returns is a
+        // promise while the answer is still going, which is what the gesture waits
+        // on before it lets go of what it carries.
         onReorder: (fromId, toId, syncCloneWithDropTarget) =>
           trigger(REORDER, pointerDownEvent, {
             fromId,
@@ -175,6 +149,7 @@ defineInteractionDetector({
             x: gestureInfo.layout.xDelta,
             y: gestureInfo.layout.yDelta,
           }),
+        onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
       });
     };
     element.addEventListener("pointerdown", onPointerDown);
@@ -186,59 +161,3 @@ defineInteractionDetector({
     };
   },
 });
-
-/**
- * The element itself, carried and left where it was put.
- *
- * No copy here, unlike a reorder or a toss: what is being moved is the thing, not a
- * stand-in for it, and it keeps the place the hand gave it. The position is
- * committed by the gesture and taken back only if the answer refuses — a move the
- * application would not accept must not stay on screen as if it had.
- */
-const grabToMove = (element, pointerDownEvent, trigger, { readConfig }) => {
-  dragAfterIntent(
-    pointerDownEvent,
-    () => {
-      const controller = createDragToMoveGestureController({
-        // Where it can go is the caller's business, said in the DOM: a box moved
-        // inside a frame stays in it, a note pinned on a board does not.
-        areaConstraint: element.closest(`[data-move-free]`) ? "none" : "scroll",
-        releasePositionEffect: "manual",
-      });
-      const gesture = controller.grabViaPointer(pointerDownEvent, { element });
-      if (!gesture) {
-        return null;
-      }
-      gesture.addReleaseCallback(async (gestureInfo) => {
-        const { xDelta, yDelta } = gestureInfo.layout;
-        if (!xDelta && !yDelta) {
-          gestureInfo.cancelPosition();
-          return;
-        }
-        // Committed before the answer rather than after: the hand let go of it
-        // there, and a thing that snaps home while a request is in flight says the
-        // gesture was not understood.
-        gestureInfo.commitPosition();
-        const pending = trigger(MOVE, pointerDownEvent, {
-          x: xDelta,
-          y: yDelta,
-        });
-        if (!pending) {
-          gestureInfo.cancelPositionAnimated();
-          return;
-        }
-        try {
-          await pending;
-        } catch {
-          gestureInfo.cancelPositionAnimated();
-        }
-      });
-      return gesture;
-    },
-    {
-      longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
-      longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
-      threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
-    },
-  );
-};
