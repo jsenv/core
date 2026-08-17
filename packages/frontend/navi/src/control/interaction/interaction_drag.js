@@ -1,12 +1,22 @@
 /**
- * `reorder` and `toss` — one grab, and what letting go of it means.
+ * `move`, `reorder`, `toss` — one grab, and what letting go of it means.
  *
- * Both are the same gesture: the element is picked up and carried. What differs is
- * the answer at the release, and the two combine — a task dragged onto another one
- * changes places, the same task thrown far and fast is gotten rid of. So one
- * detector reads both, because it is one press and something has to arbitrate it:
+ * All three are the same gesture: the element is picked up and carried. What
+ * differs is the answer at the release, so one detector reads them all — it is one
+ * press, and something has to arbitrate it.
  *
  *   interactions={{ reorder: moveBefore, toss: remove }}
+ *   interactions={{ move: remember }}
+ *
+ * `reorder` and `toss` combine: a task dragged onto another changes places, the
+ * same task thrown far and fast is gotten rid of. `move` does not combine with
+ * `reorder` — an element either goes where it is put or takes a place in a list,
+ * and the two answers cannot both be true of one release.
+ *
+ * `move` carries the element ITSELF and leaves it where it was put; the other two
+ * carry a copy and put the original back. That is the same difference said in
+ * layout terms: something moved has a new place of its own, something reordered
+ * had its place taken by the list.
  *
  * Nothing of the gesture is decided here. `startDragToReorder` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -56,10 +66,15 @@
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import { startDragToReorder } from "@jsenv/dom";
+import {
+  createDragToMoveGestureController,
+  dragAfterIntent,
+  startDragToReorder,
+} from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
+const MOVE = "move";
 const REORDER = "reorder";
 const TOSS = "toss";
 
@@ -81,10 +96,16 @@ const TOSS_SPEED_DEFAULT = 0.45;
 
 defineInteractionDetector({
   name: "drag",
-  claims: (type) => type === REORDER || type === TOSS,
+  claims: (type) => type === MOVE || type === REORDER || type === TOSS,
   setup: (element, trigger, { types, readConfig }) => {
+    const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
     const canToss = types.includes(TOSS);
+    if (import.meta.dev && canMove && canReorder) {
+      console.warn(
+        `interactions: "move" and "reorder" cannot both answer one release — an element either goes where it is put or takes a place in a list. "reorder" wins here.`,
+      );
+    }
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
     const axis = element.closest(`[${AXIS_ATTRIBUTE}="x"]`) ? "x" : "y";
@@ -98,6 +119,10 @@ defineInteractionDetector({
     element.setAttribute("data-drag-source", axis === "x" ? "x" : "");
 
     const onPointerDown = (pointerDownEvent) => {
+      if (canMove && !canReorder) {
+        grabToMove(element, pointerDownEvent, trigger, { readConfig });
+        return;
+      }
       startDragToReorder(pointerDownEvent, {
         draggedElement: element,
         // Nothing to land on when nothing reorders: no hint is drawn and no
@@ -161,3 +186,59 @@ defineInteractionDetector({
     };
   },
 });
+
+/**
+ * The element itself, carried and left where it was put.
+ *
+ * No copy here, unlike a reorder or a toss: what is being moved is the thing, not a
+ * stand-in for it, and it keeps the place the hand gave it. The position is
+ * committed by the gesture and taken back only if the answer refuses — a move the
+ * application would not accept must not stay on screen as if it had.
+ */
+const grabToMove = (element, pointerDownEvent, trigger, { readConfig }) => {
+  dragAfterIntent(
+    pointerDownEvent,
+    () => {
+      const controller = createDragToMoveGestureController({
+        // Where it can go is the caller's business, said in the DOM: a box moved
+        // inside a frame stays in it, a note pinned on a board does not.
+        areaConstraint: element.closest(`[data-move-free]`) ? "none" : "scroll",
+        releasePositionEffect: "manual",
+      });
+      const gesture = controller.grabViaPointer(pointerDownEvent, { element });
+      if (!gesture) {
+        return null;
+      }
+      gesture.addReleaseCallback(async (gestureInfo) => {
+        const { xDelta, yDelta } = gestureInfo.layout;
+        if (!xDelta && !yDelta) {
+          gestureInfo.cancelPosition();
+          return;
+        }
+        // Committed before the answer rather than after: the hand let go of it
+        // there, and a thing that snaps home while a request is in flight says the
+        // gesture was not understood.
+        gestureInfo.commitPosition();
+        const pending = trigger(MOVE, pointerDownEvent, {
+          x: xDelta,
+          y: yDelta,
+        });
+        if (!pending) {
+          gestureInfo.cancelPositionAnimated();
+          return;
+        }
+        try {
+          await pending;
+        } catch {
+          gestureInfo.cancelPositionAnimated();
+        }
+      });
+      return gesture;
+    },
+    {
+      longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
+      longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
+      threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+    },
+  );
+};

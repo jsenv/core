@@ -57,13 +57,13 @@ condition: `{ swipe_right: canArchive && archive }`.
 
 ### The interactions navi detects
 
-| Key                                                    | Read from                                            |
-| ------------------------------------------------------ | ---------------------------------------------------- |
-| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                             |
-| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                                 |
-| `longpress`                                            | a press held still                                   |
-| `reorder` `toss`                                       | a row carried, then dropped somewhere or thrown away |
-| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`               |
+| Key                                                    | Read from                                      |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                       |
+| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
+| `longpress`                                            | a press held still                             |
+| `move` `reorder` `toss`                                | the element carried, and what letting go means |
+| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist.
@@ -140,12 +140,31 @@ comes back once it settles — a failure leaves the row in place so it can be tr
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
 
-## Reordering, and throwing away
+## Carrying something: `move`, `reorder`, `toss`
 
-`reorder` and `toss` are the same gesture — the element is picked up and carried —
-and they combine. What differs is the release: dropped on another item it changes
-places, thrown far and fast it is gotten rid of. One detector reads both, because
-it is one press.
+All three are the same gesture — the element is picked up and carried — and what
+differs is the release. One detector reads them all, because it is one press.
+
+`reorder` and `toss` **combine**: dropped on another item the element changes
+places, thrown far and fast it is gotten rid of. `move` does **not** combine with
+`reorder` — an element either goes where it is put or takes a place in a list, and
+one release cannot mean both (a dev warning says so).
+
+`move` carries the element ITSELF and leaves it where it was put; the other two
+carry a copy and put the original back. That is the same difference said in layout
+terms: something moved has a new place of its own, something reordered had its
+place taken by the list.
+
+```jsx
+<Box
+  id={token.id}
+  interactions={{ move: (event) => remember(event.detail.x, event.detail.y) }}
+/>
+```
+
+`data-move-free` on the element or a container lets it leave its scroll area; by
+default it stays inside. A `move` whose answer rejects travels back, because a
+position the application would not accept must not stay on screen as if it had.
 
 ```jsx
 <List.Item
