@@ -57,12 +57,13 @@ condition: `{ swipe_right: canArchive && archive }`.
 
 ### The interactions navi detects
 
-| Key                                                    | Read from                              |
-| ------------------------------------------------------ | -------------------------------------- |
-| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events               |
-| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                   |
-| `longpress`                                            | a press held still                     |
-| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"` |
+| Key                                                    | Read from                                  |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                   |
+| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                       |
+| `longpress`                                            | a press held still                         |
+| `drag_to_reorder`                                      | a row carried to another place in its list |
+| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`     |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist.
@@ -138,6 +139,44 @@ While the answer takes time, the element **stays where the gesture left it**, an
 comes back once it settles — a failure leaves the row in place so it can be tried
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
+
+## Reordering a list
+
+`drag_to_reorder` is `startDragToReorder`'s gesture, whole — a clone carried above
+the page while the original keeps its place, a drop hint, drop targets found by
+intersection, no-op drops filtered out. Every element declaring it marks itself, so
+the set of items IS the set of elements that declared it: no selector to pass, and
+an item that must not move simply does not declare it. Items are identified by
+their `id`.
+
+```jsx
+<List.Item
+  id={task.id}
+  data-view-transition-name={`task_${task.id}`}
+  interactions={{
+    drag_to_reorder: (event) => {
+      const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+      return document.startViewTransition(() => {
+        syncCloneWithDropTarget();
+        setOrder(moveBefore(order, fromId, toId));
+      }).finished;
+    },
+  }}
+/>
+```
+
+`toId` is null for a drop at the end. `syncCloneWithDropTarget` must be called
+synchronously inside the transition callback, next to the state change, so the
+clone is captured where it lands rather than where it was let go of — and
+returning the transition is what makes the landing continuous, since the gesture
+keeps its clone until the answer settles.
+
+Starting the document transition is the application's call, not navi's: a
+`view-transition-name` must be unique per document, so only the application can
+name what moves.
+
+`data-reorder-axis="x"` for a list that runs sideways. `data-reorder-delay`,
+`data-reorder-slop`, `data-reorder-threshold` tune when the press becomes a grab.
 
 ## Tuning
 

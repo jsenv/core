@@ -93,9 +93,11 @@ const css = /* css */ `
   }
   [data-drag-source] {
     cursor: default;
+    user-select: none;
   }
   [data-drag-ignore] {
     cursor: auto;
+    user-select: auto;
   }
 
   [navi-drag-clone-source] {
@@ -103,6 +105,13 @@ const css = /* css */ `
   }
 
   [navi-drag-clone-wrapper] {
+    /* Nothing in a copy being carried by a pointer is text to select: the
+       selection belongs to the original, which is still in the page. This is the
+       one place the rule is unconditional — an element that can be dragged is
+       usually selectable too (a link is both), and forcing it there would take
+       away a selection made from outside the element.  */
+    user-select: none;
+
     /* Also a popover (see .navi_drop_hint): in the top layer it is over the
        page whatever the page's own stacking is, and the coordinates it is
        given are viewport ones — which is what the pointer carrying it works

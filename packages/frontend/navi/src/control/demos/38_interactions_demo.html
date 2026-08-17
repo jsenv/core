@@ -216,6 +216,17 @@
         color: #6b7482;
         font-size: 13px;
       }
+      .task {
+        padding: 10px 14px;
+        font-size: 14px;
+        background: white;
+      }
+      .task_handle {
+        color: #9aa6b6;
+        font-size: 16px;
+        cursor: grab;
+      }
+
       /* Un papier jaune scotché : ce que quelqu'un a écrit à la main, posé sur
          ce qu'on regarde. */
       .note_slot {
@@ -364,7 +375,8 @@
           <WhichInteractionDemo />
           <RunningDemo />
           <CustomDetectorDemo />
-          <SwipeOutDemo />
+          <ReorderDemo />
+          <GrabToThrowDemo />
           <MailboxDemo />
         </Box>
       );
@@ -897,7 +909,74 @@
         );
       };
 
-      // ── Cas concret : un geste à soi, swipe_out ───────────────────────────
+      // ── Réordonner ────────────────────────────────────────────────────────
+
+      const TASKS = [
+        { id: "task_1", label: "Relancer le devis" },
+        { id: "task_2", label: "Réserver le terrain" },
+        { id: "task_3", label: "Envoyer les photos" },
+        { id: "task_4", label: "Payer la licence" },
+        { id: "task_5", label: "Trouver un gardien" },
+      ];
+
+      const ReorderDemo = () => {
+        const [order, setOrder] = useState(TASKS.map((task) => task.id));
+        const reorder = (event) => {
+          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+          // Le nom de transition est unique par document, donc c'est l'appli qui
+          // le pose et l'appli qui lance la transition.
+          const transition = document.startViewTransition(() => {
+            syncCloneWithDropTarget();
+            setOrder((previous) => {
+              const withoutMoved = previous.filter((id) => id !== fromId);
+              if (toId === null) {
+                return [...withoutMoved, fromId];
+              }
+              const at = withoutMoved.indexOf(toId);
+              return [
+                ...withoutMoved.slice(0, at),
+                fromId,
+                ...withoutMoved.slice(at),
+              ];
+            });
+          });
+          return transition.finished;
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="reorder">Réordonner</Heading>
+            <p class="legend">
+              Attraper une tâche par sa poignée et la déposer ailleurs. À la
+              souris quelques pixels suffisent, au doigt il faut la tenir.
+            </p>
+            <Box className="rows" width="320px">
+              <List>
+                {order.map((id) => {
+                  const task = TASKS.find((candidate) => candidate.id === id);
+                  return (
+                    <List.Item
+                      key={id}
+                      id={id}
+                      className="task"
+                      data-view-transition-name={`task_${id}`}
+                      interactions={{ drag_to_reorder: reorder }}
+                    >
+                      <Box flex="x" spacing="s" alignY="center">
+                        <span className="task_handle" data-drag-handle>
+                          ⠿
+                        </span>
+                        <span>{task.label}</span>
+                      </Box>
+                    </List.Item>
+                  );
+                })}
+              </List>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Cas concret : un geste à soi, grab_to_throw ───────────────────────────
 
       /*
        * Jeter un papier: le prendre, l'envoyer loin et vite, et il ne revient pas.
@@ -923,8 +1002,8 @@
       const NOTE_FLIGHT_MS = 320;
 
       defineInteractionDetector({
-        name: "swipe_out",
-        claims: (type) => type === "swipe_out",
+        name: "grab_to_throw",
+        claims: (type) => type === "grab_to_throw",
         setup: (element, trigger, { readConfig }) => {
           // Celui qui lit le pointeur se marque lui-même: sans ça, tirer le papier
           // vers la droite tirerait aussi la page vers l'onglet d'à côté, et le
@@ -941,21 +1020,21 @@
               () =>
                 grabNote(element, pointerDownEvent, trigger, {
                   distanceToThrow: readConfig(
-                    "data-swipe-out-distance",
+                    "data-grab-to-throw-distance",
                     NOTE_THROW_DISTANCE,
                   ),
                   speedToThrow: readConfig(
-                    "data-swipe-out-speed",
+                    "data-grab-to-throw-speed",
                     NOTE_THROW_SPEED,
                   ),
                 }),
               {
                 longPressDelay: readConfig(
-                  "data-swipe-out-delay",
+                  "data-grab-to-throw-delay",
                   NOTE_GRAB_DELAY,
                 ),
                 longPressSlop: readConfig(
-                  "data-swipe-out-slop",
+                  "data-grab-to-throw-slop",
                   NOTE_GRAB_SLOP,
                 ),
                 // le téléphone confirme la prise: c'est le seul retour qu'on ait
@@ -982,7 +1061,7 @@
         { distanceToThrow, speedToThrow },
       ) => {
         const controller = createDragToMoveGestureController({
-          name: "swipe_out",
+          name: "grab_to_throw",
           // il doit pouvoir sortir de ce qui le porte, et de l'écran: c'est le
           // geste. Par défaut le papier serait retenu dans sa zone de défilement,
           // exactement ce qu'un jet doit franchir
@@ -1027,7 +1106,7 @@
             (yDelta / distance) * 900
           }px`;
           const pending = trigger(
-            "swipe_out",
+            "grab_to_throw",
             gestureInfo.releaseEvent ?? pointerDownEvent,
             { x: xDelta, y: yDelta, distance, velocity: gestureInfo.velocity },
           );
@@ -1063,12 +1142,12 @@
         "Le portail se ferme à 22h",
       ];
 
-      const SwipeOutDemo = () => {
+      const GrabToThrowDemo = () => {
         const [thrown, setThrown] = useState([]);
         return (
           <div class="demo-section">
-            <Heading id="swipe-out">
-              Cas concret : un geste à soi, swipe_out
+            <Heading id="grab-to-throw">
+              Cas concret : un geste à soi, grab_to_throw
             </Heading>
             <p class="legend">
               Maintenir un papier une demi-seconde, puis l'envoyer loin et vite
@@ -1085,7 +1164,7 @@
                         <Box
                           className="note"
                           interactions={{
-                            swipe_out: async () => {
+                            grab_to_throw: async () => {
                               await action({ thrown: [note] });
                               setThrown((previous) => [...previous, note]);
                             },
