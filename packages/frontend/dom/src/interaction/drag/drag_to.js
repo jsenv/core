@@ -5,8 +5,8 @@
  * the gesture is not what distinguishes these. What distinguishes them is the
  * outcome the caller asked for, and that is what `startDragTo` takes:
  *
- * - **position**: it stays where it was put. The element ITSELF travels and keeps
- *   the place the hand gave it.
+ * - **move**: it stays where it was put. The element ITSELF travels and keeps the
+ *   place the hand gave it.
  * - **reorder**: it takes a place in a list. A COPY travels while the original
  *   keeps its place in the layout, which is what makes the gesture possible at
  *   all — nothing else moves while the hand looks for a place, so there is a
@@ -15,11 +15,10 @@
  *   original stays until the answer says it is really gone.
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
- * those need runs: no copy for a positioning, no drop hint for something that can
- * only be thrown away, no landing looked for where nothing lands. `reorder` and
- * `toss` combine (dropped on a row, or thrown off the screen); `position` and
- * `reorder` cannot both be true of one release, and the caller is the one who must
- * not ask for both.
+ * those need runs: no copy for a move, no drop hint for something that can only be
+ * thrown away, no landing looked for where nothing lands. `reorder` and `toss`
+ * combine (dropped on a row, or thrown off the screen); `move` and `reorder` cannot
+ * both be true of one release, and the caller is the one who must not ask for both.
  *
  * `createDragToMoveGestureController` below is the layer under all of that — the
  * translation, the auto-scroll, the constraints — and stays usable on its own for
@@ -736,13 +735,13 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("position"|"reorder"|"toss")[]} effects
+ * @param {("move"|"reorder"|"toss")[]} effects
  *   What letting go of this element can mean. `reorder` and `toss` carry a copy;
- *   `position` carries the element itself. Asking for `position` and `reorder`
- *   together is asking one release to mean two things.
+ *   `move` carries the element itself. Asking for `move` and `reorder` together is
+ *   asking one release to mean two things.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
- * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onPosition]
+ * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
  *   It was put somewhere. The position is already committed when this runs — the
  *   hand let go of it there — and travels back if the promise rejects.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
@@ -791,9 +790,9 @@ export const startDragTo = (
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
   if (canReorder || canToss) {
-    if (import.meta.dev && effects.includes("position")) {
+    if (import.meta.dev && effects.includes("move")) {
       console.warn(
-        `startDragTo: "position" and "reorder"/"toss" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "position".`,
+        `startDragTo: "move" and "reorder"/"toss" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
       );
     }
     return startDragToCarryCopy(event, {
@@ -803,7 +802,7 @@ export const startDragTo = (
       ...options,
     });
   }
-  return startDragToPosition(event, { draggedElement, ...options });
+  return startDragToMoveElement(event, { draggedElement, ...options });
 };
 
 /**
@@ -812,11 +811,11 @@ export const startDragTo = (
  * No copy, unlike the two others: what is being moved is the thing and not a
  * stand-in for it, so there is nothing to put back and nothing to reveal.
  */
-const startDragToPosition = (
+const startDragToMoveElement = (
   event,
   {
     draggedElement,
-    onPosition,
+    onMove,
     threshold,
     longPress,
     longPressDelay,
@@ -853,7 +852,7 @@ const startDragToPosition = (
         // gesture was not understood.
         gestureInfo.commitPosition();
         try {
-          await onPosition?.({ gestureInfo, x: xDelta, y: yDelta });
+          await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
         } catch {
           gestureInfo.cancelPositionAnimated();
         }

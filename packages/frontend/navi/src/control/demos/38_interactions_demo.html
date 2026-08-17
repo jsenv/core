@@ -387,7 +387,7 @@
           <CustomDetectorDemo />
           <ReorderDemo />
           <TossDemo />
-          <PositionDemo />
+          <MoveDemo />
           <MailboxDemo />
         </Box>
       );
@@ -1077,18 +1077,18 @@
         );
       };
 
-      // ── Positionner ──────────────────────────────────────────────────────────
+      // ── Déplacer ──────────────────────────────────────────────────────────
 
       const TOKENS = [
         { id: "token_a", label: "A", left: 16, top: 16 },
         { id: "token_b", label: "B", left: 120, top: 90 },
       ];
 
-      const PositionDemo = () => {
+      const MoveDemo = () => {
         const [entries, push, clear] = useCallLog();
         return (
           <div class="demo-section">
-            <Heading id="position">Positionner</Heading>
+            <Heading id="move">Déplacer</Heading>
             <p class="legend">
               Attraper un jeton et le poser ailleurs : il reste où on l'a mis.
               C'est le jeton lui-même qui voyage, pas une copie.
@@ -1101,13 +1101,9 @@
                   className="token"
                   style={{ left: `${token.left}px`, top: `${token.top}px` }}
                   interactions={{
-                    position: (event) => {
+                    move: (event) => {
                       const { x, y } = event.detail;
-                      push(
-                        "position",
-                        `${Math.round(x)}, ${Math.round(y)}`,
-                        event,
-                      );
+                      push("move", `${Math.round(x)}, ${Math.round(y)}`, event);
                     },
                   }}
                 >

@@ -62,7 +62,7 @@ condition: `{ swipe_right: canArchive && archive }`.
 | `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                       |
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
 | `longpress`                                            | a press held still                             |
-| `position` `reorder` `toss`                            | the element carried, and what letting go means |
+| `move` `reorder` `toss`                                | the element carried, and what letting go means |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
@@ -140,32 +140,32 @@ comes back once it settles — a failure leaves the row in place so it can be tr
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
 
-## Carrying something: `position`, `reorder`, `toss`
+## Carrying something: `move`, `reorder`, `toss`
 
 All three are the same gesture — the element is picked up and carried — and what
 differs is the release. One detector reads them all, because it is one press.
 
 `reorder` and `toss` **combine**: dropped on another item the element changes
-places, thrown far and fast it is gotten rid of. `position` does **not** combine
-with `reorder` — an element either goes where it is put or takes a place in a list,
+places, thrown far and fast it is gotten rid of. `move` does **not** combine with
+`reorder` — an element either goes where it is put or takes a place in a list,
 and one release cannot mean both (a dev warning says so).
 
-`position` carries the element ITSELF and leaves it where it was put; the other two
+`move` carries the element ITSELF and leaves it where it was put; the other two
 carry a copy and put the original back. That is the same difference said in layout
-terms: something positioned has a new place of its own, something reordered had its
+terms: something moved has a new place of its own, something reordered had its
 place taken by the list.
 
 ```jsx
 <Box
   id={token.id}
   interactions={{
-    position: (event) => remember(event.detail.x, event.detail.y),
+    move: (event) => remember(event.detail.x, event.detail.y),
   }}
 />
 ```
 
 `data-drag-free` on the element or a container lets it leave its scroll area; by
-default it stays inside. A `position` whose answer rejects travels back, because a
+default it stays inside. A `move` whose answer rejects travels back, because a
 place the application would not accept must not stay on screen as if it had.
 
 **Declaring `toss` frees the area by itself.** What is dragged is otherwise kept
@@ -190,11 +190,11 @@ covered, so the throw can never happen. So the two together let it leave.
 />
 ```
 
-The gesture is `startDragTo`'s, whole: `position` carries the element itself, the
+The gesture is `startDragTo`'s, whole: `move` carries the element itself, the
 other two carry a copy above the page while the original keeps its place, with a
 drop hint, drop targets found by intersection, no-op drops filtered out, and the
 flight of a thrown copy plus its return when the answer refuses. Only what the
-declared outcomes need runs — no copy for a positioning, no hint for something
+declared outcomes need runs — no copy for a move, no hint for something
 that can only be thrown away.
 
 Every element declaring `reorder` marks itself, so the set of items IS the set of
