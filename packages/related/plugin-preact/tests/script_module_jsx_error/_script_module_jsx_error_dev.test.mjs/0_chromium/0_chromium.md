@@ -21,9 +21,9 @@ base/client/main.noeslint.html:10:5
 "jsenv:babel"
 ```
 
-# 2/4 write file "./.jsenv/chrome@149.0.0/main.noeslint.html"
+# 2/4 write file "./.jsenv/chrome@151.0.0/main.noeslint.html"
 
-see [./.jsenv/chrome@149.0.0/main.noeslint.html](./.jsenv/chrome@149.0.0/main.noeslint.html)
+see [./.jsenv/chrome@151.0.0/main.noeslint.html](./.jsenv/chrome@151.0.0/main.noeslint.html)
 
 # 3/4 console.error
 
