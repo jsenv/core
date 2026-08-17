@@ -2,17 +2,490 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, installImportMetaCssBuild, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { createContext, isValidElement, h, Fragment, toChildArray, render, options, cloneElement } from "preact";
-import { useContext, useLayoutEffect, useRef, useCallback, useState, useMemo, useId, useEffect, useErrorBoundary } from "preact/hooks";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, startDragToTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
+import { signal, computed, effect, batch, useSignal } from "@preact/signals";
+import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
+import { useContext, useLayoutEffect, useCallback, useRef, useState, useEffect, useMemo, useId, useErrorBoundary } from "preact/hooks";
 import { jsx, jsxs, Fragment as Fragment$1 } from "preact/jsx-runtime";
-import { computed, signal, effect, batch, useSignal } from "@preact/signals";
-import { createPubSub, normalizeStyle, mergeOneStyle, getPositionedParent, dispatchInternalCustomEvent, dispatchCustomEvent, findEvent, mergeTwoStyles, normalizeStyles, resolveCSSSize, measureLongestVisualLineWidth, hasCSSSizeUnit, resolveOklchLightness, contrastColor, createIterableWeakSet, getElementSignature, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, createEventGroupLogger, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, activeElementSignal, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, startDragToTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
-export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { createPortal, Suspense, forwardRef } from "preact/compat";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
+
+const addIntoArray = (array, ...valuesToAdd) => {
+  if (valuesToAdd.length === 1) {
+    const [valueToAdd] = valuesToAdd;
+    const arrayWithThisValue = [];
+    for (const value of array) {
+      if (value === valueToAdd) {
+        return array;
+      }
+      arrayWithThisValue.push(value);
+    }
+    arrayWithThisValue.push(valueToAdd);
+    return arrayWithThisValue;
+  }
+
+  const existingValueSet = new Set();
+  const arrayWithTheseValues = [];
+  for (const existingValue of array) {
+    arrayWithTheseValues.push(existingValue);
+    existingValueSet.add(existingValue);
+  }
+  let hasNewValues = false;
+  for (const valueToAdd of valuesToAdd) {
+    if (existingValueSet.has(valueToAdd)) {
+      continue;
+    }
+    arrayWithTheseValues.push(valueToAdd);
+    hasNewValues = true;
+  }
+  return hasNewValues ? arrayWithTheseValues : array;
+};
+
+const removeFromArray = (array, ...valuesToRemove) => {
+  if (valuesToRemove.length === 1) {
+    const [valueToRemove] = valuesToRemove;
+    const arrayWithoutThisValue = [];
+    let found = false;
+    for (const value of array) {
+      if (value === valueToRemove) {
+        found = true;
+        continue;
+      }
+      arrayWithoutThisValue.push(value);
+    }
+    if (!found) {
+      return array;
+    }
+    return arrayWithoutThisValue;
+  }
+
+  const valuesToRemoveSet = new Set(valuesToRemove);
+  const arrayWithoutTheseValues = [];
+  let hasRemovedValues = false;
+  for (const value of array) {
+    if (valuesToRemoveSet.has(value)) {
+      hasRemovedValues = true;
+      continue;
+    }
+    arrayWithoutTheseValues.push(value);
+  }
+  return hasRemovedValues ? arrayWithoutTheseValues : array;
+};
+
+const arraySignal = (initialValue = []) => {
+  const theSignal = signal(initialValue);
+
+  const add = (...args) => {
+    theSignal.value = addIntoArray(theSignal.peek(), ...args);
+  };
+  const remove = (...args) => {
+    theSignal.value = removeFromArray(theSignal.peek(), ...args);
+  };
+
+  return [theSignal, add, remove];
+};
+
+const executeWithCleanup = (fn, cleanup) => {
+  let isThenable;
+  try {
+    const result = fn();
+    isThenable = result && typeof result.then === "function";
+    if (isThenable) {
+      return (async () => {
+        try {
+          return await result;
+        } finally {
+          cleanup();
+        }
+      })();
+    }
+    return result;
+  } finally {
+    if (!isThenable) {
+      cleanup();
+    }
+  }
+};
+
+let DEBUG$3 = false;
+const enableDebugOnDocumentLoading = () => {
+  DEBUG$3 = true;
+};
+
+const windowIsLoadingSignal = signal(true);
+if (document.readyState === "complete") {
+  windowIsLoadingSignal.value = false;
+} else {
+  document.addEventListener("readystatechange", () => {
+    if (document.readyState === "complete") {
+      windowIsLoadingSignal.value = false;
+    }
+  });
+}
+
+const [
+  documentLoadingRouteArraySignal,
+  addToDocumentLoadingRouteArraySignal,
+  removeFromDocumentLoadingRouteArraySignal,
+] = arraySignal([]);
+const routingWhile = (fn, routeNames = []) => {
+  if (DEBUG$3 && routeNames.length > 0) {
+    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
+  }
+  addToDocumentLoadingRouteArraySignal(...routeNames);
+  return executeWithCleanup(fn, () => {
+    removeFromDocumentLoadingRouteArraySignal(...routeNames);
+    if (DEBUG$3 && routeNames.length > 0) {
+      console.debug(
+        `routingWhile: Removed routes from loading state:`,
+        routeNames,
+        "state after removing:",
+        documentLoadingRouteArraySignal.peek(),
+      );
+    }
+  });
+};
+
+const [
+  documentLoadingActionArraySignal,
+  addToDocumentLoadingActionArraySignal,
+  removeFromDocumentLoadingActionArraySignal,
+] = arraySignal([]);
+const workingWhile = (fn, actionNames = []) => {
+  if (DEBUG$3 && actionNames.length > 0) {
+    console.debug(
+      `workingWhile: Adding actions to loading state:`,
+      actionNames,
+    );
+  }
+  addToDocumentLoadingActionArraySignal(...actionNames);
+  return executeWithCleanup(fn, () => {
+    removeFromDocumentLoadingActionArraySignal(...actionNames);
+    if (DEBUG$3 && actionNames.length > 0) {
+      console.debug(
+        `routingWhile: Removed action from loading state:`,
+        actionNames,
+        "start after removing:",
+        documentLoadingActionArraySignal.peek(),
+      );
+    }
+  });
+};
+
+const documentIsBusySignal = computed(() => {
+  return (
+    documentLoadingRouteArraySignal.value.length > 0 ||
+    documentLoadingActionArraySignal.value.length > 0
+  );
+});
+
+computed(() => {
+  const windowIsLoading = windowIsLoadingSignal.value;
+  const routesLoading = documentLoadingRouteArraySignal.value;
+  const actionsLoading = documentLoadingActionArraySignal.value;
+  const reasonArray = [];
+  if (windowIsLoading) {
+    reasonArray.push("window_loading");
+  }
+  if (routesLoading.length > 0) {
+    reasonArray.push("document_routing");
+  }
+  if (actionsLoading.length > 0) {
+    reasonArray.push("document_working");
+  }
+  return reasonArray;
+});
+
+const documentUrlSignal = signal(
+  typeof window === "undefined" ? "http://localhost" : window.location.href,
+);
+const useDocumentUrl = () => {
+  return documentUrlSignal.value;
+};
+const updateDocumentUrl = (value) => {
+  documentUrlSignal.value = value;
+};
+
+const documentResourceSignal = computed(() => {
+  const documentUrl = documentUrlSignal.value;
+  const documentResource = urlToResource(documentUrl);
+  return documentResource;
+});
+const useDocumentResource = () => {
+  return documentResourceSignal.value;
+};
+const urlToResource = (url) => {
+  const scheme = urlToScheme(url);
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+const urlToScheme = (url) => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) {
+    return "";
+  }
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * The element the URL designates — the one whose id is the hash — shows itself
+ * when it renders, not when the URL changes.
+ *
+ * The browser answers a fragment at two moments only: the end of the document
+ * load, and each fragment navigation. In an app whose content comes from a
+ * request, both are too early — the element does not exist yet, there is
+ * nothing to scroll to, and the moment passes.
+ *
+ * What is already acquired, and what this file therefore does not redo:
+ * `:target` is live — as soon as an element carries the hash's id it matches,
+ * even if it arrives a second later. The durable "this is the one" state is
+ * there for free, and an app styles it in CSS. What is lost is the one-shot
+ * action tied to a moment: bringing the target under the reader's eyes, and
+ * saying it just arrived. That is all of what follows.
+ *
+ * Two decisions worth knowing before reading:
+ *
+ * - **navi places the target itself, every time.** Where the browser does
+ *   answer a fragment it puts the element against the top edge, where it reads
+ *   as the first thing on the page rather than as the one that was pointed at;
+ *   the alignment below is applied after, so one rule holds whether the target
+ *   was there all along or arrived late. A page with nothing to scroll simply
+ *   does not move, which is the whole of the "the list already fits on screen"
+ *   case — the transient mark alone then says which one was meant.
+ *
+ * - **Wait, but not forever.** As long as the document is working (routes,
+ *   actions) the target may still arrive; once it has been idle for a moment, a
+ *   month-old link to a deleted element simply brings nothing and the reader
+ *   lands on the page — the right degradation.
+ *
+ * The case where none of this is needed is worth naming: when a list's skeleton
+ * already knows the ids of its slice (they are in cache, or they come from the
+ * URL), putting them on the placeholders is enough — the target then exists on
+ * the very first render and the browser does everything on its own.
+ */
+const URL_TARGET_ATTRIBUTE = "data-url-target";
+const css$$ = /* css */`
+  @layer navi {
+    [${URL_TARGET_ATTRIBUTE}] {
+      animation: navi_url_target var(--navi-url-target-duration, 2000ms)
+        ease-out;
+    }
+
+    @keyframes navi_url_target {
+      from {
+        box-shadow: 0 0 0 3px
+          var(--navi-url-target-color, light-dark(#4476ff, #3b82f6));
+      }
+      to {
+        box-shadow: 0 0 0 3px transparent;
+      }
+    }
+  }
+`;
+import.meta.css = [css$$, "@jsenv/navi/src/nav/url_target/url_target.js"];
+let urlTargetOptions = {
+  block: "center",
+  behavior: "smooth",
+  markDuration: 2000,
+  graceAfterIdle: 1000,
+  maxWait: 10_000
+};
+
+/**
+ * Adjusts how navi answers the element designated by the URL hash.
+ *
+ * @param {object} options
+ * @param {"start"|"center"|"end"|"nearest"} [options.block="center"]
+ *   Vertical alignment of the scroll. "center" by default: an element stuck to
+ *   the top of the screen reads as the first one of the page rather than as the
+ *   one that was pointed at.
+ * @param {ScrollBehavior} [options.behavior="smooth"]
+ *   Overridden with "instant" under `prefers-reduced-motion: reduce`.
+ * @param {number} [options.markDuration=2000]
+ *   How long, in ms, the element carries `data-url-target`. Published to CSS as
+ *   `--navi-url-target-duration`.
+ * @param {number} [options.graceAfterIdle=1000]
+ *   How long, in ms, to keep waiting for a target that has not arrived, counted
+ *   from the moment the document stops working.
+ * @param {number} [options.maxWait=10000]
+ *   Longest wait, in ms, for a document that never stops working.
+ */
+const setUrlTargetOptions = options => {
+  urlTargetOptions = {
+    ...urlTargetOptions,
+    ...options
+  };
+  if (options.markDuration !== undefined) {
+    document.documentElement.style.setProperty("--navi-url-target-duration", `${options.markDuration}ms`);
+  }
+};
+const urlTargetIdSignal = computed(() => {
+  const documentUrl = documentUrlSignal.value;
+  return urlToTargetId(documentUrl);
+});
+/**
+ * The id the URL hash designates, or "" when the URL designates none.
+ * Reactive: a component reading it re-renders when the target changes.
+ */
+const useUrlTargetId = () => {
+  return urlTargetIdSignal.value;
+};
+let stopWaitingForCurrentTarget = null;
+let currentTargetKey;
+
+/**
+ * Answers the URL's target again, as if it had just been designated.
+ *
+ * Clicking the very link one is already on moves nothing — same pathname, same
+ * hash, no history entry, no event — so nothing downstream would notice. The
+ * reader did ask, again, to be taken to that element.
+ */
+const rearmUrlTarget = () => {
+  currentTargetKey = undefined;
+  armUrlTarget(documentUrlSignal.peek());
+};
+const armUrlTarget = documentUrl => {
+  const targetKey = urlToTargetKey(documentUrl);
+  if (targetKey === currentTargetKey) {
+    return;
+  }
+  currentTargetKey = targetKey;
+  if (stopWaitingForCurrentTarget) {
+    stopWaitingForCurrentTarget();
+    stopWaitingForCurrentTarget = null;
+  }
+  const targetId = urlToTargetId(documentUrl);
+  if (!targetId) {
+    return;
+  }
+  stopWaitingForCurrentTarget = waitForElementWithId(targetId, element => {
+    stopWaitingForCurrentTarget = null;
+    revealUrlTarget(element);
+  });
+};
+
+// The pathname and the hash, not the whole URL: a search param changing (a
+// filter, a page) is still the same page and the same target, and must not make
+// it answer a second time.
+const urlToTargetKey = url => {
+  const {
+    pathname,
+    hash
+  } = new URL(url);
+  return `${pathname}${hash}`;
+};
+const urlToTargetId = url => {
+  const {
+    hash
+  } = new URL(url);
+  return hash ? decodeURIComponent(hash.slice(1)) : "";
+};
+const waitForElementWithId = (id, onFound) => {
+  let mutationObserver = null;
+  let stopWatchingBusy = null;
+  let idleTimeout = null;
+  let maxWaitTimeout = null;
+  let found = false;
+  const stopWaiting = () => {
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
+    }
+    if (stopWatchingBusy) {
+      stopWatchingBusy();
+      stopWatchingBusy = null;
+    }
+    clearTimeout(idleTimeout);
+    clearTimeout(maxWaitTimeout);
+  };
+  const checkForElement = () => {
+    const element = document.getElementById(id);
+    if (!element) {
+      return;
+    }
+    // Rendered inside a closed tab, a folded details, a view that is not the
+    // one on screen: the element exists but would show nothing. Keep waiting —
+    // it is the same wait, for the same reason.
+    if (element.checkVisibility && !element.checkVisibility()) {
+      return;
+    }
+    found = true;
+    stopWaiting();
+    onFound(element);
+  };
+  checkForElement();
+  if (found) {
+    return stopWaiting;
+  }
+  mutationObserver = new MutationObserver(checkForElement);
+  mutationObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["id"]
+  });
+  const {
+    graceAfterIdle,
+    maxWait
+  } = urlTargetOptions;
+  stopWatchingBusy = effect(() => {
+    const documentIsBusy = documentIsBusySignal.value;
+    clearTimeout(idleTimeout);
+    if (!documentIsBusy) {
+      idleTimeout = setTimeout(stopWaiting, graceAfterIdle);
+    }
+  });
+  maxWaitTimeout = setTimeout(stopWaiting, maxWait);
+  return stopWaiting;
+};
+const revealUrlTarget = element => {
+  const {
+    block,
+    behavior,
+    markDuration
+  } = urlTargetOptions;
+  // The element just entered the DOM: where it sits is only known once layout
+  // has run.
+  requestAnimationFrame(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({
+      block,
+      behavior: prefersReducedMotion ? "instant" : behavior
+    });
+    // What the browser does when it handles a fragment itself: keyboard
+    // navigation resumes from the target, not from the top of the document.
+    if (elementIsFocusable(element)) {
+      element.focus({
+        preventScroll: true
+      });
+    }
+    element.setAttribute(URL_TARGET_ATTRIBUTE, "");
+    setTimeout(() => {
+      element.removeAttribute(URL_TARGET_ATTRIBUTE);
+    }, markDuration);
+  });
+};
+effect(() => {
+  const documentUrl = documentUrlSignal.value;
+  armUrlTarget(documentUrl);
+});
 
 const NextResolverContext = createContext(null);
 const useNextResolver = () => useContext(NextResolverContext);
@@ -2158,7 +2631,7 @@ const stateSignal = (defaultValue, options = {}) => {
  */
 
 
-const DEBUG$3 =
+const DEBUG$2 =
   typeof process === "object" ? process.env.DEBUG === "true" : false;
 
 // Base URL management
@@ -2230,7 +2703,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     queryConnectionMap,
   });
 
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
     console.debug(`[CustomPattern] Signal connections:`, connections);
     console.debug(`[CustomPattern] Path connections:`, pathConnectionMap.size);
@@ -2249,7 +2722,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       patternObj: patternObject,
     });
 
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
         result,
@@ -2543,7 +3016,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
             continue;
           }
           // Different literal - incompatible
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
             );
@@ -2582,7 +3055,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       // Parent doesn't have a segment at this position - child extends beyond parent
       // Check if any available parameter can produce this literal value
       else if (!canReachLiteralValue(literalValue, params, childPosition)) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
           );
@@ -2607,7 +3080,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         childPatternObj.pattern,
       );
 
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] Processing param '${item.paramName}' (userProvided: ${item.isUserProvided}, value: ${item.isUserProvided ? item.userValue : item.signal?.value}) for child ${childPatternObj.originalPattern}: compatible=${result.isCompatible}, shouldInclude=${result.shouldInclude}`,
         );
@@ -2615,7 +3088,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
       if (!result.isCompatible) {
         isCompatible = false;
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] Child ${childPatternObj.originalPattern} INCOMPATIBLE due to param '${item.paramName}'`,
           );
@@ -2628,7 +3101,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
     }
 
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] Final compatibility result for ${childPatternObj.originalPattern}: ${isCompatible}`,
       );
@@ -2770,7 +3243,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         if (signalMatchesThisChildLiteral) {
           // This child route's literal matches the sibling's signal value
           // User passed undefined to override that signal - don't use this child route
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${siblingSignalValue}"`,
             );
@@ -2808,7 +3281,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           signalValue !== childSegment.value
         ) {
           hasIncompatibleLiterals = true;
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because parameter "${paramName}" must be "${childSegment.value}" but current values are explicit="${explicitValue}" signal="${signalValue}"`,
             );
@@ -2946,7 +3419,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       (hasNonDefaultProvidedParams && canBuildChildCompletely) ||
       (hasMatchingNonDefaultLiterals && canBuildChildCompletely);
 
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] shouldUseChildRoute decision for ${childPatternObj.originalPattern}:`,
         {
@@ -3025,7 +3498,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
             ) {
               // Child has non-default path parameters, indicating explicit navigation
               childSpecificParamsAreDefaults = false;
-              if (DEBUG$3) {
+              if (DEBUG$2) {
                 console.debug(
                   `[${pattern}] Child has non-default path parameter '${childParamName}=${childResolvedValue}' (default: ${childDefaultValue}) - indicates explicit navigation`,
                 );
@@ -3050,7 +3523,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
               // AND user didn't explicitly provide this parameter
               // When structural parameters are defaults, prefer parent for cleaner URL
               shouldUse = false;
-              if (DEBUG$3) {
+              if (DEBUG$2) {
                 console.debug(
                   `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default and no active params)`,
                 );
@@ -3058,7 +3531,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
               break;
             }
           }
-        } else if (DEBUG$3) {
+        } else if (DEBUG$2) {
           console.debug(
             `[${pattern}] Using child route - parameters that determine child selection are non-default or child has active params`,
           );
@@ -3066,7 +3539,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
     }
 
-    if (DEBUG$3 && shouldUse) {
+    if (DEBUG$2 && shouldUse) {
       console.debug(
         `[${pattern}] Will use child route ${childPatternObj.originalPattern}`,
       );
@@ -3309,7 +3782,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
 
       if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] checkChildParentOptimization: checking child ${childPatternObj.originalPattern}`,
             { parentPathDefaults, canOptimizeToParent },
@@ -3328,7 +3801,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
             connection.isCustomValue(signalValue)
           ) {
             // Child has non-default path parameters - don't optimize away the structure
-            if (DEBUG$3) {
+            if (DEBUG$2) {
               console.debug(
                 `[${pattern}] Not optimizing child route because it has non-default path parameter '${paramName}=${signalValue}'`,
               );
@@ -3377,7 +3850,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           patternObject,
         );
 
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
             { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
@@ -3392,7 +3865,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   };
 
   const buildMostPreciseUrl = (params = {}) => {
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
 
@@ -3400,7 +3873,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     const effectiveSignalSet = patternObject.signalSet;
 
     // Access signal.value to trigger dependency tracking
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] Reading ${effectiveSignalSet.size} signals for reactive dependencies`,
       );
@@ -3417,7 +3890,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     // Step 2: Try ancestors first - find the highest ancestor that works
     const parentPattern = patternObject.parent;
 
-    if (DEBUG$3 && parentPattern) {
+    if (DEBUG$2 && parentPattern) {
       console.debug(
         `[${pattern}] Available ancestor:`,
         parentPattern.originalPattern,
@@ -3433,7 +3906,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           parentPattern,
           resolvedParams,
         );
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] Highest ancestor from ${parentPattern.originalPattern}:`,
             highestAncestorUrl,
@@ -3447,7 +3920,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     }
 
     if (bestAncestorUrl) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(`[${pattern}] Using ancestor optimization`);
       }
       return bestAncestorUrl;
@@ -3475,12 +3948,12 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     }
 
     if (bestDescendantUrl) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(`[${pattern}] Using descendant optimization`);
       }
       return bestDescendantUrl;
     }
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(`[${pattern}] No suitable child route found`);
     }
 
@@ -3623,7 +4096,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       immediateParent.originalPattern === ancestorPatternObj.originalPattern
     ) {
       // This is the immediate parent - check if we can optimize
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryUseAncestor: Trying immediate parent ${ancestorPatternObj.originalPattern}`,
         );
@@ -3662,7 +4135,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
             ancestorPatternObj,
             resolvedParams,
           );
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] tryUseAncestor: Path-based optimization result:`,
               result,
@@ -3671,7 +4144,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           return result;
         }
 
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryUseAncestor: Path-based optimization blocked - child has non-default path parameters`,
           );
@@ -3690,7 +4163,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       });
 
       if (hasNonDefaultOwnParameters) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryUseAncestor: Has non-default own parameters, skipping immediate parent optimization`,
           );
@@ -3705,7 +4178,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         ancestorPatternObj,
         resolvedParams,
       );
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
           result,
@@ -3725,7 +4198,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     });
 
     if (hasNonDefaultOwnParameters) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryUseAncestor: Non-immediate parent with non-default own parameters, skipping`,
         );
@@ -3739,7 +4212,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       parsedPattern.segments.some((seg) => seg.type === "param");
 
     if (hasParameters) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryUseAncestor: Non-immediate parent with parameters, skipping`,
         );
@@ -3749,7 +4222,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
     // Pure literal route optimization
     // Allow literal routes to optimize to parametric ancestors if literal segments match parameter defaults
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] tryUseAncestor: Trying optimization to ${ancestorPatternObj.originalPattern}`,
       );
@@ -3761,7 +4234,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       ancestorPatternObj,
       resolvedParams,
     );
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
         result,
@@ -3791,7 +4264,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       (seg) => seg.type === "param",
     );
 
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] tryDirectOptimization: sourceLiterals:`,
         sourceLiterals,
@@ -3808,7 +4281,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
     // Source must extend target's literal path
     if (sourceLiterals.length <= targetLiterals.length) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(`[${pattern}] tryDirectOptimization: Source too short`);
       }
       return null;
@@ -3817,7 +4290,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     // Source must start with same literals as target
     for (let i = 0; i < targetLiterals.length; i++) {
       if (sourceLiterals[i] !== targetLiterals[i]) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Literal mismatch at ${i}`,
           );
@@ -3839,7 +4312,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
       // Two pure literal routes have no parametric relationship — nothing to optimize.
       // /dashboard/section must never collapse to /dashboard.
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, no optimization possible`,
         );
@@ -3850,7 +4323,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     // For parametric optimization: remaining segments must match target's parameter defaults
     const extraSegments = sourceLiterals.slice(targetLiterals.length);
     if (extraSegments.length !== targetParams.length) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryDirectOptimization: Extra segments ${extraSegments.length} != target params ${targetParams.length}`,
         );
@@ -3865,7 +4338,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         (conn) => conn.paramName === param.name,
       );
       if (!connection || connection.getDefaultValue() !== segment) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Parameter default mismatch for ${param.name}`,
           );
@@ -3874,7 +4347,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
     }
 
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
       );
@@ -3903,7 +4376,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     );
 
     for (const [paramName, value] of Object.entries(resolvedParams)) {
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryDirectOptimization: Considering param ${paramName}=${value}`,
         );
@@ -3916,7 +4389,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           targetAncestor.queryConnectionMap.get(paramName);
         if (connection && connection.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
             );
@@ -3936,7 +4409,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           connection.getDefaultValue() !== value
         ) {
           ancestorParams[paramName] = value;
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] tryDirectOptimization: Added source param ${paramName}=${value}`,
             );
@@ -3949,7 +4422,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         !targetPatternParamNames.has(paramName)
       ) {
         ancestorParams[paramName] = value;
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Added extra param ${paramName}=${value}`,
           );
@@ -3958,7 +4431,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     }
 
     // Also check target ancestor's own signal values for parameters not in resolvedParams
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `[${pattern}] tryDirectOptimization: Target ancestor has ${targetAncestor.connections.length} connections`,
       );
@@ -3972,7 +4445,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     for (const connection of targetAncestor.connections) {
       const { paramName } = connection;
       if (paramName in ancestorParams) {
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Skipping ${paramName} - already in ancestorParams`,
           );
@@ -3988,7 +4461,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         const isPathParam = targetParam !== undefined; // Any param in segments is a path param
         if (isPathParam) {
           // Skip path parameters - we want them to use default values for optimization
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] tryDirectOptimization: Skipping path param ${paramName}=${signalValue} (will use default)`,
             );
@@ -3999,17 +4472,17 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         // For query parameters, only include custom values (not defaults)
         if (connection.isCustomValue(signalValue)) {
           ancestorParams[paramName] = signalValue;
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
             );
           }
-        } else if (DEBUG$3) {
+        } else if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Skipping default value ${paramName}=${signalValue}`,
           );
         }
-      } else if (DEBUG$3) {
+      } else if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryDirectOptimization: Skipping ${paramName}=${signalValue} - undefined value`,
         );
@@ -4943,7 +5416,7 @@ const buildHierarchicalQueryParams = (
   }
 
   // DEBUG: Log what we found
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     // Force debug for now
     console.debug(`Building params for ${originalPattern}`);
     console.debug(`parsedPattern:`, parsedPattern.original);
@@ -4965,7 +5438,7 @@ const buildHierarchicalQueryParams = (
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
 
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `Added ancestor param: ${paramName}=${params[paramName]}`,
           );
@@ -4976,7 +5449,7 @@ const buildHierarchicalQueryParams = (
 
   // Step 2: Add query parameters from current pattern
   if (parsedPattern.queryParams) {
-    if (DEBUG$3) {
+    if (DEBUG$2) {
       console.debug(
         `Processing current pattern query params:`,
         parsedPattern.queryParams.map((q) => q.name),
@@ -4989,7 +5462,7 @@ const buildHierarchicalQueryParams = (
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
 
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `Added current param: ${paramName}=${params[paramName]}`,
           );
@@ -5326,12 +5799,12 @@ const setupRoutePatterns = (routePatterns) => {
           routePattern.queryConnectionMap.set(paramName, inheritedConnection);
           routePattern.connections.push(inheritedConnection);
 
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.debug(
               `[${routePattern.originalPattern}] Inherited search param "${paramName}" from ancestor [${ancestorRoutePattern.originalPattern}]`,
             );
           }
-        } else if (DEBUG$3) {
+        } else if (DEBUG$2) {
           console.debug(
             `[${routePattern.originalPattern}] Skipped inheriting "${paramName}" - child uses default values, not truly more specific`,
           );
@@ -5375,7 +5848,7 @@ const setupRoutePatterns = (routePatterns) => {
     // Update the pattern's signalSet with all relevant signals
     routePattern.signalSet = allRelevantSignals;
 
-    if (DEBUG$3 && allRelevantSignals.size > 0) {
+    if (DEBUG$2 && allRelevantSignals.size > 0) {
       console.debug(
         `[${routePattern.urlPatternRaw}] Collected ${allRelevantSignals.size} relevant signals`,
       );
@@ -5464,7 +5937,7 @@ const setupRoutePatterns = (routePatterns) => {
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     console.debug("Pattern registry updated");
   }
 };
@@ -6278,6 +6751,8652 @@ const ButtonWithRoute = props => {
     ...rest,
     children: children || route.buildRelativeUrl(routeParams)
   });
+};
+
+/**
+ * DOM utilities for navigating the control element hierarchy.
+ *
+ * A control is a self-contained interactive widget. Its DOM structure can be
+ * either flat (host only) or layered (wrapper + host):
+ *
+ * Flat — the element is both the root and the host:
+ * ```html
+ * <button navi-control navi-control-host>Click me</button>
+ * ```
+ *
+ * Layered — a visual wrapper surrounds a native input that is the real host:
+ * ```html
+ * <span navi-control>           ← wrapper: root of the control's DOM subtree
+ *   <input navi-control-host /> ← host: holds controlProps, value, UI state, constraints
+ * </span>
+ * ```
+ *
+ * Attribute roles:
+ *  - `navi-control`           boolean, on the wrapper/root; marks the control boundary
+ *  - `navi-control-host`      boolean, on the host; set automatically by `useInteractiveProps`
+ *
+ * See control_proxy.js for the `navi-control-proxy-for` pattern.
+ */
+
+/**
+ * Returns the host element inside `el` — the element that holds the control's
+ * value, UI state, and constraints (i.e. the element onto which
+ * `useInteractiveProps` spreads `controlProps` and its event handlers).
+ *
+ * Returns `null` when `el` is itself the host (no separate wrapper).
+ */
+const findControlHost = (el) => {
+  if (el.hasAttribute("navi-control-host")) {
+    return el;
+  }
+  return el.querySelector("[navi-control-host]");
+};
+/**
+ * The control this element belongs to, wherever it sits relative to it.
+ *
+ * `findControlHost` above answers for a control's own DOM (itself, or the native
+ * element it wraps). This one is for something that is not part of a control but
+ * has to reach one — an interaction declared on a box (see
+ * interaction/interactions.js), which may be the control, may hold it, or may sit
+ * inside it. Nearest wins in that order, and the answer is null when there is no
+ * control anywhere: not every box lives in one.
+ */
+const findNearestControlHost = (el) => {
+  // Itself, then upwards — the box is inside a button, or is one.
+  const selfOrAncestor = el.closest("[navi-control-host]");
+  if (selfOrAncestor) {
+    return selfOrAncestor;
+  }
+  // …then downwards: the box holds the control rather than being held by it.
+  return el.querySelector("[navi-control-host]");
+};
+const isControlRoot = (el) => {
+  return el.hasAttribute("navi-control");
+};
+const isControlHost = (el) => {
+  return el.hasAttribute("navi-control-host");
+};
+
+/**
+ * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
+ * has a `[data-action]` attribute.
+ *
+ * The search walks up `parentElement` manually (rather than using `.closest()`)
+ * so it can stop at hard boundaries.
+ *
+ * **`[navi-control="picker"]` boundary**: a picker is a hard stop. Elements inside a picker
+ * (including inside its popover content) can reach the picker itself, but nothing above it.
+ * This prevents an input inside a picker from accidentally submitting a parent form.
+ *
+ * ```html
+ * <form data-action="outer">              ← NOT found (above picker boundary)
+ *   <button navi-control="picker" data-action="p">  ← found and search stops here
+ *     <input navi-control-host />         ← el (in picker button area)
+ *     <div popover>
+ *       <input navi-control-host />       ← el (in picker popover)
+ *     </div>
+ *   </button>
+ * </form>
+ * ```
+ */
+const findClosestControlWithAction = (el) => {
+  let current = el;
+  while (current) {
+    if (current.hasAttribute("data-action")) {
+      return current;
+    }
+    // Stop at a picker boundary — nothing above the picker is reachable from within.
+    if (current.getAttribute("navi-control") === "picker") {
+      return undefined;
+    }
+    current = current.parentElement;
+  }
+  return undefined;
+};
+
+/**
+ * Returns the closest ancestor control element of `el` — i.e. the nearest
+ * `[navi-control]` element that is not the control `el` belongs to.
+ *
+ * `navi-control` is only on wrapper elements, never on hosts. So
+ * `el.closest("[navi-control]")` from a host returns that host's own wrapper,
+ * and one more `.parentNode.closest("[navi-control]")` reaches a true ancestor:
+ *
+ * ```html
+ * <button navi-control>              ← outer control  (returned)
+ *   <span navi-control>              ← inner wrapper  (skipped via parentNode)
+ *     <input navi-control-host />    ← el
+ *   </span>
+ * </button>
+ * ```
+ */
+const getParentControl = (el) => {
+  const ownControlRoot = el.closest("[navi-control]");
+  const parentControlRoot = ownControlRoot.parentNode.closest("[navi-control]");
+  return parentControlRoot;
+};
+
+/**
+ * Returns the root element of the control that `el` belongs to, or `null` if
+ * `el` is not part of a control.
+ *
+ * Use this when you have an element that may be a host (inner input) and need
+ * the visual boundary of its control — e.g. to anchor a callout, track
+ * mousedown interactions, or measure the control's bounding box.
+ */
+const findControlRoot = (el) => {
+  if (el.hasAttribute("navi-control")) {
+    return el;
+  }
+  if (el.hasAttribute("navi-control-host")) {
+    return el.closest("[navi-control]");
+  }
+  return null;
+};
+
+const dispatchRequestSetUIState = (element, value, detail) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
+    ...detail,
+    value,
+  });
+};
+const dispatchRequestClearUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
+    event: e,
+  });
+};
+const dispatchRequestResetUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
+    event: e,
+  });
+};
+/**
+ * @param {Element} el
+ * @param {{ own?: boolean }} [options] `own`: what the element holds BY ITSELF.
+ *   Only a button ever answers differently — one with no value of its own
+ *   inherits the value of the control around it, which is what makes
+ *   `--navi-send` on a form's button be about that form. Something asking what
+ *   THIS element says (a travel command reading what the travel is about) wants
+ *   the own value and would otherwise be handed the surrounding control's.
+ */
+const getUIStateFromElement = (el, { own } = {}) => {
+  let uiState;
+  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    own,
+    respondWith: (v) => {
+      uiState = v;
+    },
+  });
+  return uiState;
+};
+
+/**
+ * Converts a JS value into the form expected by the browser DOM property for a
+ * given control type/input type combination.
+ *
+ * For example:
+ * - `datetime-local` inputs expect a local datetime string without timezone
+ * - `number`/`range` inputs expect a numeric string or number
+ * - `color` inputs require a non-empty hex string (falls back to `#000000`)
+ * - All other inputs receive the value as-is (undefined → "")
+ *
+ * Returns either the converted value directly, or a converter function when the
+ * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
+ *
+ * @param {any} value - The JS value to convert.
+ * @param {{ controlType: string, type: string }} options
+ * @returns {any} The DOM-compatible value or a converter function.
+ */
+const asControlHostValue = (
+  jsValue,
+  { controlType, type, inputMode },
+) => {
+  if (controlType === "select") {
+    // A select holds one of its options, always a string; holding nothing is
+    // the empty option, which the element spells "".
+    return asInputValue(jsValue);
+  }
+  if (controlType === "input" || controlType === "picker") {
+    if (type === "datetime-local") {
+      return asDatetimeLocalString(jsValue);
+    }
+    if (
+      type === "number" ||
+      type === "range" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
+      return asNumberString(jsValue);
+    }
+    if (type === "color") {
+      return asColorString(jsValue);
+    }
+    return asInputValue(jsValue);
+  }
+  return jsValue;
+};
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const asDatetimeLocalString = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+const asNumberString = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
+// Browser requires a non-empty value for <input type="color">.
+// When our logical value is empty we give it #000000 so it doesn't choke.
+// The UI uses the original (possibly empty) value to show the checkerboard.
+const asColorString = (jsValue) => {
+  return jsValue || "#000000";
+};
+const asInputValue = (jsValue) => {
+  if (jsValue === undefined) {
+    return "";
+  }
+  return jsValue;
+};
+
+/**
+ * Reads the current logical JS value from a control host DOM element.
+ *
+ * Handles all navi control host element types:
+ * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
+ * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
+ * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
+ *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
+ * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
+ * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
+ * - All other inputs — returns `input.value` as a string
+ *
+ * @param {HTMLElement} controlHost - The control host DOM element to read from.
+ * @returns {any} The current logical value of the control.
+ */
+const readControlValue = (controlHost) => {
+  if (
+    controlHost.tagName === "BUTTON" ||
+    controlHost.getAttribute("role") === "button"
+  ) {
+    return readValueFromButton(controlHost);
+  }
+  if (controlHost.tagName === "INPUT") {
+    // important: input.type = "navi_js"; followed by input.type; returns "text"
+    // so use getAttribute
+    const type = controlHost.getAttribute("type");
+
+    if (
+      type === "number" ||
+      type === "range" ||
+      controlHost.inputMode === "numeric" ||
+      controlHost.inputMode === "decimal"
+    ) {
+      return readNumberFromInput(controlHost);
+    }
+    if (type === "color") {
+      return readValueFromControlHost(controlHost);
+    }
+    if (type === "checkbox" || type === "radio") {
+      return readValueFromCheckableInput(controlHost);
+    }
+    if (type === "datetime-local") {
+      return readDatetimeLocalFromInput(controlHost);
+    }
+    if (type === "navi_js") {
+      return getUIStateFromElement(controlHost);
+    }
+    return readValueFromInput(controlHost);
+  }
+  if (controlHost.hasAttribute("navi-control-host")) {
+    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
+    return readValueFromControlHost(controlHost);
+  }
+  return readValueFromElement(controlHost);
+};
+const readValueFromControlHost = (controlHost) => {
+  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
+};
+const readValueFromButton = (button) => {
+  return readValueFromControlHost(button);
+};
+const readDatetimeLocalFromInput = (input) => {
+  const localDateTimeString = input.value;
+  if (localDateTimeString === "") {
+    return "";
+  }
+  const localDate = new Date(localDateTimeString);
+  if (isNaN(localDate.getTime())) {
+    return localDateTimeString;
+  }
+  return localDate.toISOString();
+};
+const readNumberFromInput = (input) => {
+  const numberString = input.value;
+  if (numberString === "") {
+    return "";
+  }
+  const asNumber = Number(numberString);
+  if (isNaN(asNumber)) {
+    return numberString;
+  }
+  return asNumber;
+};
+const readValueFromCheckableInput = (input) => {
+  const checked = input.checked;
+  if (!checked) {
+    return undefined;
+  }
+  return readValueFromControlHost(input);
+};
+const readValueFromInput = (input) => {
+  const value = input.value;
+  return value;
+};
+const readValueFromElement = (element) => {
+  const value = element.value;
+  return value;
+};
+const readValueFromNaviCustomEvent = (field, fallback) => {
+  // prefer the value given as prop (respect original type, browser would convert to string)
+  let responded;
+  let value;
+  dispatchCustomEvent(field, "navi_get_value", {
+    respondWith: (jsValue) => {
+      responded = true;
+      value = jsValue;
+    },
+  });
+  if (responded) {
+    return value;
+  }
+  return fallback;
+};
+
+// In-memory registry of all mounted ui state controllers keyed by their id.
+// Allows direct controller access without dispatching DOM events — used by external
+// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
+const controllersById = new Map();
+
+// In-memory registry for radio controllers, keyed by input name.
+// Allows radio sibling unchecking without querying the DOM — necessary when
+// items are virtualized and their DOM element may not exist at the time.
+// Form scoping is reproduced by comparing parentUIStateController references.
+const radioControllersByName = new Map();
+
+// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
+// When a value is an object/array, we store it here and write a reference string to the DOM
+// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
+// The controller id is used as key — if the controller has no id, the value is not registered.
+const naviJsRegistry = new Map();
+
+const getUIStateControllerById = (id) => controllersById.get(id);
+const getRadioSiblings = (radioUIStateController) => {
+  const siblings = radioControllersByName.get(radioUIStateController.name);
+  return siblings;
+};
+
+const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
+  const domValue = asControlHostValue(jsValue, {
+    controlType,
+    type,
+    inputMode,
+  });
+  if (isSerializableAsDomValue(domValue)) {
+    return domValue;
+  }
+  naviJsRegistry.set(id, domValue);
+  return `window.__navi_js('${id}')`;
+};
+
+window.__navi_js = (id) => naviJsRegistry.get(id);
+const isSerializableAsDomValue = (value) => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  const type = typeof value;
+  return type === "string" || type === "number" || type === "boolean";
+};
+
+const onUIStateControllerCreated = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.set(id, uiStateController);
+  }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    let proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (!proxySet) {
+      proxySet = new Set();
+      proxyControllersByRealInputId.set(proxyFor, proxySet);
+    }
+    proxySet.add(uiStateController);
+  }
+  if (
+    controlType === "input" &&
+    uiStateController.props.type === "radio" &&
+    name
+  ) {
+    let set = radioControllersByName.get(name);
+    if (!set) {
+      set = new Set();
+      radioControllersByName.set(name, set);
+    }
+    set.add(uiStateController);
+  }
+};
+const onUIStateControllerDestroyed = (uiStateController) => {
+  const { id, name, controlType } = uiStateController;
+  if (id) {
+    controllersById.delete(id);
+    naviJsRegistry.delete(id);
+  }
+  const proxyFor = uiStateController.props["navi-control-proxy-for"];
+  if (proxyFor) {
+    const proxySet = proxyControllersByRealInputId.get(proxyFor);
+    if (proxySet) {
+      proxySet.delete(uiStateController);
+      if (proxySet.size === 0) {
+        proxyControllersByRealInputId.delete(proxyFor);
+      }
+    }
+  }
+  if (
+    controlType === "input" &&
+    uiStateController.controlHostProps.type === "radio" &&
+    name
+  ) {
+    const set = radioControllersByName.get(name);
+    if (set) {
+      set.delete(uiStateController);
+      if (set.size === 0) {
+        radioControllersByName.delete(name);
+      }
+    }
+  }
+};
+
+/**
+ * Controller-based equivalent of findControlProxyTarget.
+ * Given a proxy controller, returns the real control's controller.
+ * Finds the target by walking the parent controller's children — no DOM queries.
+ * Returns `null` when the controller is not a proxy or the target is not found.
+ */
+const findControlProxyTargetController = (controller) => {
+  const proxyFor = controller.controlHostProps["navi-control-proxy-for"];
+  if (!proxyFor) {
+    return null;
+  }
+  return getUIStateControllerById(proxyFor) ?? null;
+};
+
+// Reverse-lookup map: real-input id → the proxy controllers that reference it
+// via `navi-control-proxy-for`. A single control can be represented by several
+// proxies (an "enable"/"disable" button pair for one radio, for instance), so
+// each id holds a set. Maintained on create/destroy so lookup is O(1).
+const proxyControllersByRealInputId = new Map();
+const findProxyControllers = (realInputId) => {
+  if (!realInputId) {
+    return null;
+  }
+  return proxyControllersByRealInputId.get(realInputId) ?? null;
+};
+
+/**
+ * A control placed inside a region that expands on click — a `<summary>`, an
+ * accordion header carrying `aria-expanded` — has its click read twice: once by
+ * the control it was aimed at, once by the region around it. The second reading
+ * is never wanted; a menu opened from a collapsed row should not also unfold the
+ * row.
+ *
+ * Cancelling the click is the only way to stop the region: a `<summary>` runs
+ * its default action after the propagation, so `stopPropagation` does not reach
+ * it. And it can only be done once the control has taken the click for itself —
+ * navi refuses an interaction on an already-cancelled event (see
+ * `onRequestInteraction`), so cancelling any earlier silences the control
+ * instead of the region.
+ *
+ * That moment — right after an interaction was allowed — only exists inside
+ * navi, which is why the cancellation lives here rather than in application code.
+ */
+
+const CLICK_TO_EXPAND_SELECTOR = "summary, [aria-expanded]";
+// A popup is written inside whatever opened it, but it is not part of it on
+// screen: a control inside a popup must not be read as a click on the region
+// the popup happens to be nested in.
+const POPUP_SELECTOR = "[navi-control='popover'], [navi-control='dialog']";
+
+/**
+ * Cancels `event` when the control consumed a click that a surrounding
+ * click-to-expand region would otherwise read as "unfold me".
+ *
+ * Does nothing when cancelling the click would also cancel what the control
+ * itself does with it (a link navigating, a checkbox toggling): there, the two
+ * behaviours cannot be separated and the control's own comes first.
+ */
+const preventClickToExpand = (element, event) => {
+  if (!event || event.type !== "click") {
+    return;
+  }
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (!clickDefaultActionIsInert(element, event)) {
+    return;
+  }
+  const parentElement = element.parentElement;
+  if (!parentElement) {
+    return;
+  }
+  // From the parent: a control that opens something carries its own
+  // `aria-expanded` and would find itself.
+  const clickToExpandRegion = findClickToExpandRegion(parentElement);
+  if (!clickToExpandRegion) {
+    return;
+  }
+  event.preventDefault();
+};
+
+const findClickToExpandRegion = (element) => {
+  let ancestor = element;
+  while (ancestor) {
+    // Tested first: a popup carries `aria-expanded` of its own, so it would
+    // otherwise pass for the region containing its own content.
+    if (ancestor.matches(POPUP_SELECTOR)) {
+      return null;
+    }
+    if (ancestor.matches(CLICK_TO_EXPAND_SELECTOR)) {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
+};
+
+const clickDefaultActionIsInert = (element, event) => {
+  if (!isInertOnClick(element)) {
+    return false;
+  }
+  // The activation belongs to what was clicked, which can be deeper than the
+  // control host (a button inside it) or above it (a label wrapping it).
+  const { target } = event;
+  if (target && target !== element && target.nodeType === 1) {
+    let ancestor = target;
+    while (ancestor) {
+      if (!isInertOnClick(ancestor)) {
+        return false;
+      }
+      ancestor = ancestor.parentElement;
+    }
+  }
+  return true;
+};
+
+const NON_INERT_INPUT_TYPE_SET = new Set([
+  "checkbox",
+  "radio",
+  "submit",
+  "reset",
+  "image",
+  "file",
+]);
+
+const isInertOnClick = (element) => {
+  const { tagName } = element;
+  if (tagName === "A" || tagName === "AREA") {
+    return !element.hasAttribute("href");
+  }
+  if (tagName === "LABEL") {
+    // A label forwards the click to its control, whose activation would be
+    // cancelled along with the click.
+    return false;
+  }
+  if (tagName === "INPUT") {
+    return !NON_INERT_INPUT_TYPE_SET.has(element.type);
+  }
+  if (tagName === "BUTTON") {
+    return element.type === "button";
+  }
+  if (tagName === "SELECT") {
+    // The click opens the option list; cancelling it leaves the select shut.
+    return false;
+  }
+  return true;
+};
+
+const CONSTRAINT_NAME_TO_PROP = {
+  disabled: "disabledMessage",
+  required: "requiredMessage",
+  pattern: "patternMessage",
+  type_email: "typeMessage",
+  type_number: "typeMessage",
+  min_length: "minLengthMessage",
+  max_length: "maxLengthMessage",
+  min: "minMessage",
+  max: "maxMessage",
+  single_space: "singleSpaceMessage",
+  same_as: "sameAsMessage",
+  min_lower_letter: "minLowerLetterMessage",
+  min_upper_letter: "minUpperLetterMessage",
+  min_digit: "minDigitMessage",
+  min_special_char: "minSpecialCharMessage",
+  one_of: "oneOfMessage",
+  readonly: "readOnlyMessage",
+  available: "availableMessage",
+};
+
+const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+  Object.values(CONSTRAINT_NAME_TO_PROP),
+);
+
+const extractMessageAndRemainingProps = (props) => {
+  const ownMessages = {};
+  const remaining = {};
+  const keyToVisit = new Set(Object.keys(props));
+  for (const key of keyToVisit) {
+    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
+      ownMessages[key] = props[key];
+    } else {
+      remaining[key] = props[key];
+    }
+  }
+  return [ownMessages, remaining];
+};
+
+const getConstraintMessage = (
+  controller,
+  constraint,
+  generatedMessage,
+  { requester },
+) => {
+  const { name: constraintName } = constraint;
+  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
+
+  // 1. Search first on the requester (e.g. the <li> that was clicked),
+  //  then fall back to element (e.g. the hidden <input>).
+  if (requester) {
+    const requesterController = requester.__uiStateController__;
+    if (requesterController && requesterController !== controller) {
+      const requesterControllerMessage = requesterController.props[propName];
+      if (requesterControllerMessage) {
+        return {
+          message: requesterControllerMessage,
+          origin: "requester controller",
+        };
+      }
+    }
+  }
+
+  const controllerMessage = controller.props[propName];
+  if (controllerMessage) {
+    return {
+      message: controllerMessage,
+      origin: "controller",
+    };
+  }
+
+  return {
+    message: generatedMessage,
+    origin: "generated message",
+  };
+};
+
+/**
+ * DOM utilities for the proxy control pattern.
+ *
+ * Some components need a native `<input>` internally — for form submission,
+ * constraint validation, or browser autofill — but the user may not want to
+ * display that input at all. In those cases the input is hidden and a separate
+ * visible element (the proxy) takes over the visual and interactive role.
+ *
+ * The typical use case is `SelectableList`: each list item acts as a styled
+ * radio button, but an actual `<input type="radio">` lives hidden in the DOM
+ * so form submission and validation work natively.  When users DO want to
+ * display the input they want full control over its appearance, so they render
+ * their own element and link it to the real input via `navi-control-proxy-for`:
+ *
+ * ```html
+ *  <div>
+ *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden, drives form/validation)
+ *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, delegates interactions to real input)
+ * </div>
+ * ```
+ *
+ * When the proxy is interacted with, navi events are forwarded to the real
+ * control so validation, state management, and form submission all work
+ * through the real input.
+ *
+ * Note: an alternative design would be to require users to always instantiate
+ * the input explicitly — e.g. `<Selectable.Input headless />` when they don't
+ * want to display it. That would remove the need for the proxy mechanism
+ * entirely. For now we keep the proxy pattern.
+ */
+
+
+/**
+ * Given a proxy element, returns the real control it represents.
+ * Returns `null` when `el` is not a proxy.
+ */
+const findControlProxyTarget = (el) => {
+  const proxyFor = el.getAttribute("navi-control-proxy-for");
+  if (!proxyFor) {
+    return null;
+  }
+  return document.getElementById(proxyFor);
+};
+
+/**
+ * Given a real control element, returns every proxy that visually represents
+ * it — a control can have more than one (an "enable"/"disable" button pair for
+ * one radio, for instance).
+ *
+ * Answered from the controller registry rather than the document: every proxy
+ * declares itself through the `navi-control-proxy-for` prop, so the registry
+ * knows them all, while asking the document means walking it in full for each
+ * of the (overwhelmingly many) controls that have no proxy at all.
+ *
+ * Returns an empty array when no proxy exists for `el`.
+ */
+const findControlProxies = (el) => {
+  if (!el.id) {
+    return [];
+  }
+  const proxyControllerSet = findProxyControllers(el.id);
+  if (!proxyControllerSet) {
+    return [];
+  }
+  const proxyElements = [];
+  for (const proxyController of proxyControllerSet) {
+    const proxyElement = proxyController.ref.current;
+    if (proxyElement) {
+      proxyElements.push(proxyElement);
+    }
+  }
+  return proxyElements;
+};
+
+/**
+ * Given a real control element, returns the proxy that visually represents it.
+ *
+ * Use when you need a single visible stand-in for the real control — anchoring
+ * a callout, for instance. Anything notifying proxies of a state change wants
+ * `findControlProxies` instead, so a control represented by several of them
+ * updates all of them.
+ *
+ * Returns `null` when no proxy exists for `el`.
+ */
+const findControlProxy = (el) => {
+  const [firstProxy = null] = findControlProxies(el);
+  return firstProxy;
+};
+
+const CalloutRequestCloseContext = createContext();
+const useCalloutRequestClose = () => {
+  return useContext(CalloutRequestCloseContext);
+};
+const renderIntoCallout = (jsx$1, calloutMessageElement, {
+  requestClose
+}) => {
+  const calloutJsx = jsx(CalloutRequestCloseContext.Provider, {
+    value: requestClose,
+    children: jsx$1
+  });
+  render(calloutJsx, calloutMessageElement);
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A callout component that mimics native browser validation messages.
+ * Features:
+ * - Positions above or below target element based on available space
+ * - Follows target element during scrolling and resizing
+ * - Automatically hides when target element is not visible
+ * - Arrow automatically shows when pointing at a valid anchor element
+ * - Centers in viewport when no anchor element provided or anchor is too big
+ */
+const css$_ = /* css */`
+  @layer navi {
+    .navi_callout {
+      /* A callout is parented to what it explains, so it inherits from it — and
+       an element that suppressed text selection (a list row, a drag source)
+       would make its own explanation unselectable. The message is text one
+       copies. */
+      user-select: text;
+
+      --callout-success-color: #4caf50;
+      --callout-info-color: #2196f3;
+      --callout-warning-color: #ff9800;
+      --callout-error-color: #f44336;
+
+      --callout-background-color: white;
+      --callout-icon-color: black;
+      --callout-padding: 8px;
+      --callout-z-index: 1000;
+    }
+  }
+
+  .navi_callout {
+    --x-callout-border-color: var(--x-callout-status-color);
+    --x-callout-background-color: var(--callout-background-color);
+    --x-callout-icon-color: var(--x-callout-status-color);
+    /* Default: no anchor at all (docked/centered in the viewport) — fixed
+       is the direct way to stay pinned there. Overridden to absolute below
+       only when data-anchor-scrolls is set (see its own JS-side comment,
+       right where it's set) — same reasoning as Popover's identical
+       attribute (popover.jsx's own top comment has the full case). */
+    position: fixed;
+    /* Popover resets */
+    inset: auto;
+    top: 0;
+    left: 0;
+    /* For some reason callout could end up behing elements when it's redisplayed in a dialog
+    (behind button relatively positioned in dialog footer while callout is appended into dialog body)
+    To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
+    z-index: 1;
+    /* Callout styles */
+    display: block;
+    height: auto; /* User agent reset */
+    margin: 0;
+    padding: 0; /* User agent reset */
+    color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
+    font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
+    background: transparent;
+    border: none;
+    outline: none; /* programmatic focus may land here briefly before being redirected to close button */
+    opacity: 0;
+    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
+       left/top are NOT transitioned here, applyNewPosition drives that
+       itself via the Web Animations API instead of CSS, same mechanism
+       Popover/Dialog use. */
+    transition: opacity 0.2s ease-in-out;
+    cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
+    pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
+    overflow: visible;
+
+    &[data-anchor-scrolls] {
+      position: absolute;
+    }
+
+    &[data-status="success"] {
+      --x-callout-status-color: var(--callout-success-color);
+    }
+    &[data-status="info"] {
+      --x-callout-status-color: var(--callout-info-color);
+    }
+    &[data-status="warning"] {
+      --x-callout-status-color: var(--callout-warning-color);
+    }
+    &[data-status="error"] {
+      --x-callout-status-color: var(--callout-error-color);
+    }
+
+    .navi_callout_box {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+
+      .navi_callout_frame {
+        position: absolute;
+        filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+        pointer-events: none;
+
+        svg {
+          position: absolute;
+          inset: 0;
+          overflow: visible;
+
+          .navi_callout_border {
+            fill: var(--x-callout-border-color);
+          }
+          .navi_callout_background {
+            fill: var(--x-callout-background-color);
+          }
+        }
+      }
+
+      .navi_callout_body {
+        --callout-icon-height: round(1.5em, 1px);
+
+        position: relative;
+        display: flex;
+        /* 85vw on small screens (<500px), then 47vw to not grow too large capped at 1000px */
+        max-width: min(85dvw, max(47dvw, 500px), 1000px);
+        padding: var(--callout-padding);
+        flex-direction: row;
+        gap: 10px;
+
+        .navi_callout_icon {
+          display: flex;
+          aspect-ratio: 1/1;
+          height: var(--callout-icon-height);
+          flex-shrink: 0;
+          align-items: center;
+          align-self: flex-start;
+          justify-content: center;
+          background-color: var(--x-callout-icon-color);
+          border-radius: 2px;
+
+          svg {
+            width: 16px;
+            height: 12px;
+            color: white;
+          }
+        }
+
+        .navi_callout_message {
+          position: relative;
+          display: block;
+          box-sizing: border-box;
+          box-decoration-break: clone;
+          align-self: center;
+          white-space: normal; /* Override in case ancetor sets nowrap */
+          word-break: break-word;
+          overflow-wrap: anywhere;
+
+          .navi_callout_error_stack {
+            max-height: 200px;
+            overflow: auto;
+          }
+          iframe {
+            display: block;
+            margin: 0;
+          }
+        }
+      }
+    }
+
+    .navi_callout_close_button_column {
+      display: flex;
+      height: var(--callout-icon-height);
+      align-self: flex-start;
+
+      .navi_callout_close_button {
+        width: 1em;
+        height: 1em;
+        padding: 0;
+        align-self: center;
+        color: currentColor;
+        font-size: inherit;
+        background: none;
+        border: none;
+        border-radius: 0.2em;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.1);
+        }
+
+        &:focus-visible,
+        .navi_callout:focus-visible & {
+          outline: auto;
+        }
+
+        .navi_callout_close_button_svg {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Shows a callout attached to the specified element
+ * @param {string} message - HTML content for the callout
+ * @param {Object} options - Configuration options
+ * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
+ * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
+ * @param {Function} [options.onClose] - Callback when callout is closed
+ * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.debug=false] - Enable debug logging
+ *
+ * Positioning is also driven by attributes read on the anchor element itself
+ * (so markup can tune a callout without going through this function):
+ * - `data-callout-arrow-x="start" | "center" | "end"`: where the arrow points
+ *   horizontally along the anchor — `start`/`end` target the left/right edge of
+ *   the anchor's text content (inside its borders and padding), `center` targets
+ *   the middle of the anchor. Without it the arrow follows the anchor's computed
+ *   `text-align` (`center` → center, `right`/`end` → end, anything else → start),
+ *   so it lands where the text visually begins. The arrow is always clamped to
+ *   stay within the callout's own rounded corners, so a value pointing outside
+ *   the callout's width sticks to the nearest side.
+ * - `data-callout-position="top" | "bottom" | …`: preferred side of the anchor
+ *   (defaults to `"bottom"`, flipped when there isn't enough space).
+ * - `data-callout-position-fixed`: opt out of that flipping.
+ * - `data-callout-anchor="<selector>"`: point at an inner element instead of the
+ *   anchor itself.
+ * - `data-callout-point-to-border-box` / `data-callout-point-to-content-box`:
+ *   which box the callout aligns to.
+ * - `data-callout-viewport-spacing="<number>"`: minimum gap with the viewport edges.
+ * @returns {Object} - Callout object with properties:
+ *   - {Function} close - Function to close the callout
+ *   - {Function} update - Function to update message and options
+ *   - {Function} updatePosition - Function to update position
+ *   - {HTMLElement} element - The callout DOM element
+ *   - {boolean} opened - Whether the callout is currently open
+ */
+const openCallout = (message, {
+  anchorElement,
+  // status determines visual styling and behavior:
+  // "info" - polite announcement (e.g., "This element cannot be modified")
+  // "warning" - expected failure requiring user action (e.g., "Field is required")
+  // "error" - unexpected failure, may not be actionable (e.g., "Server error")
+  // "success" - positive feedback (e.g., "Changes saved successfully")
+  // "" - neutral information
+  status = "",
+  onClose,
+  closeOnClickOutside = status === "info",
+  closeOnFocusLeave = closeOnClickOutside,
+  openingEvent,
+  showErrorStack,
+  skipFocus = false,
+  debug = () => {}
+} = {}) => {
+  import.meta.css = [css$_, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  if (debug === true) {
+    debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
+  }
+  const callout = {
+    opened: true,
+    close: null,
+    status: undefined,
+    update: null,
+    updatePosition: null,
+    element: null
+  };
+  debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
+  const [teardown, addTeardown] = createPubSub(true);
+  const requestClose = (e, reason) => {
+    return dispatchCustomEvent(callout.element, "navi_request_close", {
+      event: e,
+      reason
+    });
+  };
+  const onRequestClose = event => {
+    if (!callout.opened) {
+      return;
+    }
+    const {
+      reason
+    } = event.detail;
+    const clickOrSpaceOutside = reason === "click_outside" || reason === "space_outside";
+    if (clickOrSpaceOutside) {
+      if (!closeOnClickOutside) {
+        return;
+      }
+      if (callout.status === "error") {
+        return;
+      }
+    } else if (reason === "focus_leave") {
+      if (!closeOnFocusLeave || undefined) {
+        return;
+      }
+      if (callout.status === "error") {
+        return;
+      }
+    }
+    if (debug) {
+      debug(event, `callout close (reason: ${reason})`);
+    }
+    const mousedownEvent = findEvent(event, "mousedown");
+    if (mousedownEvent) {
+      const isInsideCallout = callout.element && callout.element.contains(event.target);
+      if (isInsideCallout) {
+        debug(event, "preventing mousedown default to avoid focus change on callout close");
+        mousedownEvent.preventDefault(); // prevent focus change to the callout, let it on the input
+      }
+    }
+    callout.opened = false;
+    teardown({
+      event,
+      reason
+    });
+  };
+  if (onClose) {
+    addTeardown(({
+      event,
+      reason
+    }) => {
+      let shouldTransferFocusFromCallout = false;
+      const focusOut = findEvent(event, "focusout");
+      if (focusOut) {
+        const relatedTarget = focusOut.relatedTarget;
+        if (relatedTarget && callout.element.contains(relatedTarget)) {
+          shouldTransferFocusFromCallout = true;
+        }
+      } else {
+        const focusInsideCallout = callout.element.contains(document.activeElement);
+        if (focusInsideCallout) {
+          shouldTransferFocusFromCallout = true;
+        } else {
+          // mousedown to close callout would have given focus to the callout
+          // so we can consider focus was inside callout
+          const mousedownEvent = findEvent(event, "mousedown");
+          if (mousedownEvent) {
+            const mousedownInsideCallout = callout.element && callout.element.contains(event.target);
+            if (mousedownInsideCallout) {
+              shouldTransferFocusFromCallout = true;
+            }
+          }
+        }
+      }
+      onClose({
+        event,
+        reason,
+        shouldTransferFocusFromCallout
+      });
+    });
+  }
+  const [updateStatus, addStatusEffect, cleanupStatusEffects] = createValueEffect(undefined);
+  addTeardown(cleanupStatusEffects);
+
+  // Create and add callout to document
+  const calloutElement = createCalloutElement();
+  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
+  const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
+  calloutCloseButton.onmousedown = e => {
+    if (e.button !== 0) {
+      return;
+    }
+    requestClose(e, "mousedown_close_button");
+  };
+  // "click" is received for enter/space
+  calloutCloseButton.onclick = e => {
+    if (e.button !== 0) {
+      return;
+    }
+    requestClose(e, "click_close_button");
+  };
+  const calloutId = `navi_callout_${Date.now()}`;
+  calloutElement.id = calloutId;
+  calloutElement.style.opacity = 0;
+  const update = (newMessage, options = {}) => {
+    const prevStatus = callout.status;
+    // Connect callout with target element for accessibility
+    if (options.status && options.status !== callout.status) {
+      callout.status = options.status;
+      debug(`callout update status: ${prevStatus ?? "(none)"} -> ${options.status}`);
+      updateStatus(options.status);
+    }
+    if (Object.hasOwn(options, "closeOnClickOutside")) {
+      closeOnClickOutside = options.closeOnClickOutside;
+      if (closeOnClickOutside) {
+        closeOnFocusLeave = true;
+      }
+    }
+    if (Object.hasOwn(options, "closeOnFocusLeave")) {
+      closeOnFocusLeave = options.closeOnFocusLeave;
+    }
+    if (isValidElement(newMessage)) {
+      debug(`callout update message (jsx)`);
+      renderIntoCallout(newMessage, calloutMessageElement, {
+        requestClose
+      });
+    } else if (newMessage instanceof Node) {
+      // Handle DOM node (cloned from CSS selector)
+      debug(`callout update message (node)`);
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(newMessage);
+    } else if (typeof newMessage === "function") {
+      debug(`callout update message (function)`);
+      calloutMessageElement.innerHTML = "";
+      newMessage({
+        renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
+          requestClose
+        }),
+        requestClose
+      });
+    } else {
+      if (Error.isError(newMessage)) {
+        const error = newMessage;
+        newMessage = error.message;
+        if (showErrorStack && error.stack) {
+          newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
+        }
+      }
+
+      // Check if the message is a full HTML document (starts with DOCTYPE)
+      if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+        // Create iframe to isolate the HTML document
+        const iframe = document.createElement("iframe");
+        iframe.style.border = "none";
+        iframe.style.width = "100%";
+        iframe.style.backgroundColor = "white";
+        iframe.srcdoc = newMessage;
+        debug(`callout update message (html document iframe)`);
+        // Clear existing content and add iframe
+        calloutMessageElement.innerHTML = "";
+        calloutMessageElement.appendChild(iframe);
+      } else {
+        debug(`callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`);
+        calloutMessageElement.innerHTML = newMessage;
+      }
+    }
+    // After updating content the callout size likely changed — re-position immediately
+    // while the resize observer is still settled, to avoid a ResizeObserver loop where
+    // the observer fires, triggers a check, which changes the SVG frame, which fires again.
+    if (callout.updatePosition) {
+      callout.updatePosition();
+    }
+  };
+  const originalAnchorElement = anchorElement;
+  if (anchorElement) {
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
+    }
+    const controlRoot = findControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
+    }
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+      if (!anchorElement) {
+        // anchorElement is not in the DOM anymore, fallback to body
+        anchorElement = document.body;
+      }
+      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
+    }
+  }
+  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
+  // use the inner element it points to. anchorElement remains the container
+  // that receives data-callout and CSS vars.
+  let visualAnchorElement = anchorElement;
+  if (anchorElement && anchorElement !== document.body) {
+    const calloutAnchorSelector = anchorElement.getAttribute("data-callout-anchor");
+    if (calloutAnchorSelector) {
+      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
+      if (resolvedAnchor) {
+        visualAnchorElement = resolvedAnchor;
+      }
+    }
+  }
+  const calloutContainer = (() => {
+    if (!anchorElement || anchorElement === document.body) {
+      return document.body;
+    }
+    const closestLabel = anchorElement.closest("label");
+    if (closestLabel) {
+      // Putting callout inside label would be problematic:
+      // - Click on callout would be catched by the browser and re-dispatched to the label
+      // -> Callout would detect a click outside and close
+      // (We could preventDefault but that would prevent click interaction on the callout like selecting callout text)
+      // (Even ignoring the click without preventDefault prevent click to select as browser use click for label)
+      // -> We put callout inside label aprent
+      const labelParent = closestLabel.parentElement;
+      return labelParent;
+    }
+    // Some elements (e.g. <input>) cannot have children
+    if (canContainCallout(anchorElement)) {
+      return anchorElement;
+    }
+    return anchorElement.parentNode || document.body;
+  })();
+  {
+    const handleClickOutside = event => {
+      if (event.button !== 0) {
+        // right click
+        return;
+      }
+      const clickTarget = event.target;
+      if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
+        return;
+      }
+      requestClose(event, "click_outside");
+    };
+    const handleSpaceOutside = event => {
+      if (event.key !== " ") {
+        return;
+      }
+      const keyTarget = event.target;
+      if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+        return;
+      }
+      requestClose(event, "space_outside");
+    };
+    const registerClickOutsideListener = () => {
+      document.addEventListener("click", handleClickOutside, true);
+      document.addEventListener("keydown", handleSpaceOutside, true);
+      addTeardown(() => {
+        document.removeEventListener("click", handleClickOutside, true);
+        document.removeEventListener("keydown", handleSpaceOutside, true);
+      });
+    };
+    // A callout opened during a press (mousedown or pointerdown) must wait for the
+    // matching release before listening for click-outside, otherwise the same
+    // gesture's trailing click would immediately close it. Covers pointerdown too
+    // (e.g. a readonly control popping its callout from a pointerdown handler).
+    const openingDownEvent = findEvent(openingEvent, "mousedown") || findEvent(openingEvent, "pointerdown");
+    if (closeOnClickOutside && openingEvent && openingDownEvent) {
+      const upType = openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
+      debug(openingEvent, `deferring click-outside listener registration until ${upType} to avoid immediate close`);
+      const onUp = () => {
+        setTimeout(() => {
+          debug(openingEvent, `registering click-outside listener after ${upType}`);
+          registerClickOutsideListener();
+        });
+      };
+      document.addEventListener(upType, onUp, {
+        once: true,
+        capture: true
+      });
+      addTeardown(() => {
+        document.removeEventListener(upType, onUp, true);
+      });
+    } else {
+      registerClickOutsideListener();
+    }
+  }
+  {
+    if (anchorElement) {
+      // Make the callout itself focusable so that when the user clicks on a
+      // non-interactive part of it, the browser can transfer focus there.
+      // Without this, relatedTarget on focusout would be null (non-focusable
+      // elements don't receive focus), making it impossible to distinguish
+      // "clicked the callout" from "focus left the document entirely".
+      // tabIndex=-1 keeps it out of the natural tab order.
+      calloutElement.tabIndex = -1;
+      const handleFocusOut = event => {
+        const {
+          relatedTarget
+        } = event;
+        if (relatedTarget && anchorElement.contains(relatedTarget)) {
+          return;
+        }
+        if (relatedTarget && calloutElement.contains(relatedTarget)) {
+          return;
+        }
+        requestClose(event, "focus_leave");
+      };
+      anchorElement.addEventListener("focusout", handleFocusOut);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focusout", handleFocusOut);
+      });
+    }
+  }
+  close_on_escape_from_anchor: {
+    if (!anchorElement) {
+      break close_on_escape_from_anchor;
+    }
+    calloutCloseButton.tabIndex = -1;
+    calloutCloseButton.setAttribute("navi-focus-delegate", "");
+    const onAnchorKeydown = e => {
+      if (e.key === "Escape") {
+        requestClose(e, "escape_key");
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    anchorElement.addEventListener("keydown", onAnchorKeydown);
+    addTeardown(() => {
+      anchorElement.removeEventListener("keydown", onAnchorKeydown);
+    });
+    // Also close when Escape reaches the callout itself
+    // e.g. when close button is focused
+    // Usually callout is inside anchor so the anchor would see the escape being pressed
+    // but callout can be appended outside anchor when anchor cannot receive children
+    const onCalloutKeydown = e => {
+      if (e.key === "Escape") {
+        requestClose(e, "escape_key");
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    calloutElement.addEventListener("keydown", onCalloutKeydown);
+    addTeardown(() => {
+      calloutElement.removeEventListener("keydown", onCalloutKeydown);
+    });
+  }
+  focus_on_open: {
+    if (!anchorElement) {
+      break focus_on_open;
+    }
+    if (skipFocus) {
+      break focus_on_open;
+    }
+    if (anchorElement.closest('[aria-hidden="true"]')) {
+      break focus_on_open;
+    }
+    // If focus is already inside the anchor, don't steal it — the user is
+    // actively typing and Escape via close_on_escape_from_anchor will work.
+    if (anchorElement.contains(document.activeElement)) {
+      break focus_on_open;
+    }
+    // Move focus into the anchor so the user can immediately press Escape to
+    // dismiss the callout. Prefer navi-focus-delegate targets (explicit intent),
+    // fall back to first generic focusable, then the callout close button for
+    // anchors with no focusable descendants (e.g. a read-only group).
+    const focusTarget = findFocusDelegateTarget(anchorElement) || findFocusable(anchorElement) || calloutCloseButton;
+    focusTarget.focus({
+      preventScroll: true
+    });
+  }
+  {
+    const handleCustomCloseEvent = e => {
+      onRequestClose(e);
+    };
+    calloutElement.addEventListener("navi_request_close", handleCustomCloseEvent);
+  }
+  Object.assign(callout, {
+    element: calloutElement,
+    update,
+    requestClose
+  });
+  addStatusEffect(status => {
+    if (status) {
+      calloutElement.setAttribute("data-status", status);
+    } else {
+      calloutElement.removeAttribute("data-status");
+    }
+    if (!status || status === "info" || status === "success") {
+      calloutElement.setAttribute("role", "status");
+    } else if (status) {
+      calloutElement.setAttribute("role", "alert");
+    }
+  });
+  if (debug) {
+    debug(openingEvent, `append callout into ${getElementSignature(calloutContainer)}`);
+  }
+  calloutContainer.appendChild(calloutElement);
+  calloutElement.showPopover();
+  addTeardown(() => {
+    calloutElement.remove();
+  });
+  if (anchorElement) {
+    // "instant", not "smooth": the positioning block further down measures
+    // anchorElement's geometry synchronously, in the same tick — a "smooth"
+    // scroll doesn't move anything until the browser gets to animate it on
+    // a later frame, so that first measurement would run against the
+    // pre-scroll position instead. Once the animation actually plays,
+    // positionCallout's own visibleRectEffect (watching document
+    // scroll to keep following the anchor) reacts to every intermediate
+    // frame of it too, and its sticky above/below choice (deliberately
+    // hysteretic, to avoid flip-flopping while the user scrolls normally)
+    // can latch onto whichever side a mid-animation frame happened to
+    // favor — even when the anchor's own final, settled position would
+    // have fit fine on the original side. Scrolling instantly collapses
+    // that whole window: by the time anything measures anchorElement, it's
+    // already at its final position, so there's no transient frame left to
+    // latch onto.
+    anchorElement.scrollIntoView({
+      behavior: "instant",
+      block: "nearest"
+    });
+    allowWheelThrough(calloutElement, visualAnchorElement);
+    anchorElement.setAttribute("data-callout", calloutId);
+    addTeardown(() => {
+      anchorElement.removeAttribute("data-callout");
+    });
+    const visualElement = (() => {
+      const visualSelector = anchorElement.getAttribute("data-visual-selector");
+      if (visualSelector) {
+        const visualElement = anchorElement.querySelector(visualSelector);
+        if (visualElement) {
+          return visualElement;
+        }
+      }
+      return anchorElement;
+    })();
+    dispatchPublicCustomEvent(visualElement, "navi_callout_open");
+    addTeardown(() => {
+      dispatchPublicCustomEvent(visualElement, "navi_callout_close");
+    });
+    addStatusEffect(status => {
+      if (!status) {
+        return () => {};
+      }
+      const statusColor = resolveCSSColor(`var(--callout-${status}-color)`, calloutElement);
+      anchorElement.setAttribute("data-callout-status", status);
+      anchorElement.style.setProperty("--callout-color", statusColor);
+      return () => {
+        anchorElement.removeAttribute("data-callout-status");
+        anchorElement.style.removeProperty("--callout-color");
+      };
+    });
+    addStatusEffect(status => {
+      if (!status || status === "info" || status === "success") {
+        visualAnchorElement.setAttribute("aria-describedby", calloutId);
+        return () => {
+          visualAnchorElement.removeAttribute("aria-describedby");
+        };
+      }
+      visualAnchorElement.setAttribute("aria-errormessage", calloutId);
+      visualAnchorElement.setAttribute("aria-invalid", "true");
+      return () => {
+        visualAnchorElement.removeAttribute("aria-errormessage");
+        visualAnchorElement.removeAttribute("aria-invalid");
+      };
+    });
+    anchorElement.callout = callout;
+    addTeardown(() => {
+      delete anchorElement.callout;
+    });
+  }
+  update(message, {
+    status
+  });
+
+  // positionCallout itself handles both "no anchorElement at all" and "a
+  // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its
+  // own doc) — nothing left to dispatch on here.
+  const positioner = positionCallout(calloutElement, visualAnchorElement, {
+    debug,
+    originalAnchorElement
+  });
+  addTeardown(() => {
+    positioner.stop();
+  });
+  // The content it just rendered changed its own size, so the check must not be
+  // deduped away on the grounds that the anchor did not move.
+  callout.updatePosition = () => positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
+  return callout;
+};
+
+// Configuration parameters for callout appearance
+const BORDER_WIDTH = 1;
+const CORNER_RADIUS = 3;
+const ARROW_WIDTH = 16;
+const ARROW_HEIGHT = 8;
+const ARROW_SPACING = 8;
+
+// HTML template for the callout
+const calloutTemplate = /* html */`
+  <div
+    class="navi_callout"
+    popover="manual"
+  >
+    <div class="navi_callout_box">
+      <div class="navi_callout_frame"></div>
+      <div class="navi_callout_body">
+        <div class="navi_callout_icon">
+          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
+        <!-- Keep .navi_callout_message so preact controls it -->
+        <div class="navi_callout_message"></div>
+        <div class="navi_callout_close_button_column">
+          <button class="navi_callout_close_button">
+            <svg
+              class="navi_callout_close_button_svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+/**
+ * Creates a new callout element from template
+ * @returns {HTMLElement} - The callout element
+ */
+const createCalloutElement = () => {
+  const div = document.createElement("div");
+  div.innerHTML = calloutTemplate;
+  const calloutElement = div.firstElementChild;
+  return calloutElement;
+};
+
+/**
+ * Positions the callout — sticks to `anchorElement` with an arrow when one
+ * is given, live-degrading to a plain centered box (no arrow) whenever
+ * pickPositionRelativeTo's own isAnchorTooBig rejects it (see its doc in
+ * visible_rect.js), or unconditionally when `anchorElement` itself is
+ * omitted: either way, `hasValidAnchor` in pickPositionRelativeTo's own result
+ * is the only thing that ever decides which of the two to render, fresh on
+ * every visibleRectEffect check (watching `anchorElement`, or
+ * `document.documentElement` when there is none) — no anchor
+ * presence/size detection happens in this function at all.
+ * @param {HTMLElement} calloutElement - The callout element to position
+ * @param {HTMLElement} [anchorElement] - The anchor element to stick to, if any
+ * @returns {Object} - Object with update and stop functions
+ */
+const positionCallout = (calloutElement, anchorElement, {
+  debug,
+  originalAnchorElement = anchorElement
+} = {}) => {
+  // Read an attribute from the original anchor first, then the visual
+  // anchor (a wrapper element that doesn't carry the data-callout-*
+  // attributes) — meaningless without a real anchorElement.
+  const getAnchorAttribute = name => {
+    if (!anchorElement) {
+      return null;
+    }
+    return originalAnchorElement.getAttribute(name) ?? anchorElement.getAttribute(name);
+  };
+  // Get references to callout parts
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
+  let alignToAnchorBox;
+  if (anchorElement) {
+    if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
+      alignToAnchorBox = "border-box";
+    } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
+      alignToAnchorBox = "content-box";
+    } else {
+      // Smart default: form controls and buttons are tight boxes where border-box makes sense.
+      // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
+      // the arrow points at visible text rather than the outer padding/border.
+      const controHost = findControlHost(anchorElement) || anchorElement;
+      const tagName = controHost.tagName;
+      if (tagName === "INPUT" || tagName === "SELECT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+        alignToAnchorBox = "border-box";
+      } else {
+        alignToAnchorBox = "content-box";
+      }
+    }
+    calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
+  }
+
+  // Drives the callout's own position: fixed/absolute switch (see
+  // .navi_callout's own CSS) — same reasoning as Popover's identical
+  // data-anchor-scrolls attribute (popover.jsx): true only for a real
+  // anchor that itself scrolls with the document — that's the one case
+  // absolute (scrolling in lockstep with it) is correct; not just "has an
+  // anchor at all", since an anchor that's itself position: fixed, or
+  // nested inside something that is (e.g. anchored to an element inside a
+  // Popover/Dialog rendered in the top layer), stays pinned to the viewport
+  // regardless of document scroll too, so the callout must stay fixed right
+  // alongside it instead — switching to absolute there would make it drift
+  // away from an anchor that never actually moves on scroll. No anchor at
+  // all (docked/centered in the viewport) also stays fixed, the default.
+  if (anchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+    calloutElement.setAttribute("data-anchor-scrolls", "");
+  } else {
+    calloutElement.removeAttribute("data-anchor-scrolls");
+  }
+
+  // Set initial border styles
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+  const rectEffect = visibleRectEffect(anchorElement || document.documentElement, ({
+    left: anchorLeft,
+    right: anchorRight,
+    visibilityRatio
+  }, {
+    event,
+    ancestorClosed
+  }) => {
+    if (anchorElement) {
+      if (ancestorClosed) {
+        if (calloutElement.matches(":popover-open")) {
+          if (debug) {
+            debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
+          }
+          calloutElement.hidePopover();
+        }
+        return;
+      }
+      if (!calloutElement.matches(":popover-open")) {
+        if (debug) {
+          debug(event, "showing callout because anchor is visible again");
+        }
+        calloutElement.showPopover();
+      }
+    }
+    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
+    const position = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+      alignToContainerEdgeWhenAnchorNearEdge: 20,
+      minLeft: 1,
+      // x is always center for a callout — the arrow, not positionArea's
+      // own x, is what points at the anchor horizontally.
+      positionArea: anchorElement ? getAnchorAttribute("data-callout-position") || "bottom" : "center",
+      positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
+      // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
+      // below reports which way it went).
+      positionAreaWhenAnchorIsInvalid: "center",
+      marginWithAnchor: ARROW_HEIGHT,
+      alignToAnchorBox,
+      marginWithContainer: anchorElement && (originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing")) ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0,
+      event
+    });
+    const {
+      hasValidAnchor,
+      positionY,
+      left: calloutLeft,
+      width: calloutWidth,
+      height: calloutHeight
+    } = position;
+    // data-position-y-current is written to the clone by pickPositionRelativeTo,
+    // copy it back to the real element so stickiness works on next call
+    const previousPositionY = calloutElement.getAttribute("data-position-y-current");
+    const positionYCurrent = calloutElementClone.getAttribute("data-position-y-current");
+    if (positionYCurrent) {
+      calloutElement.setAttribute("data-position-y-current", positionYCurrent);
+    } else {
+      calloutElement.removeAttribute("data-position-y-current");
+    }
+    if (debug && anchorElement && positionY !== previousPositionY) {
+      const anchorRect = anchorElement.getBoundingClientRect();
+      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
+    }
+    calloutBoxElement.style.marginTop = "";
+    calloutBoxElement.style.marginBottom = "";
+    let maxHeight;
+    if (hasValidAnchor) {
+      // Calculate arrow position to point at anchorElement element
+      let arrowLeftPosOnCallout;
+      // Determine arrow target position: explicit attribute wins, otherwise
+      // fall back to the computed text-align of the anchor element so the
+      // arrow naturally follows where the text starts.
+      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
+      const arrowPosition = arrowPositionAttribute || (() => {
+        const textAlign = getComputedStyle(anchorElement).textAlign;
+        if (textAlign === "center") {
+          return "center";
+        }
+        if (textAlign === "right" || textAlign === "end") {
+          return "end";
+        }
+        return "start";
+      })();
+      let arrowAnchorLeft;
+      calloutElement.setAttribute("data-arrow-x", arrowPosition);
+      if (arrowPosition === "start") {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the left edge of the anchorElement text content (after borders + padding)
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
+      } else if (arrowPosition === "center") {
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else {
+        // "end"
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the right edge of the anchorElement text content (before borders + padding)
+        arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
+      }
+
+      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+      const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
+      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+        // Arrow target is beyond the right edge of the callout — pin arrow to far right
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+      } else {
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
+      }
+
+      // Ensure arrow stays within callout bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = calloutWidth - minArrowPos;
+      arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
+
+      // Force content overflow when there is not enough space to display
+      // the entirety of the callout
+      const spaceAvailable = positionY === "top" || positionY === "inset-bottom" ? position.spaceAbove : position.spaceBelow;
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
+      const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
+      if (spaceRemainingAfterContent < 2) {
+        maxHeight = spaceAvailableForContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+        maxHeight
+      });
+      calloutElementClone.remove();
+      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+      const {
+        width,
+        height
+      } = calloutElement.getBoundingClientRect();
+      if (positionY === "top" || positionY === "inset-bottom") {
+        // Arrow at bottom, extending below the element
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+      } else {
+        // Arrow at top, extending above the element
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+      }
+      calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
+    } else {
+      // Either no anchorElement at all, or a real one isAnchorTooBig
+      // rejected (see pickPositionRelativeTo's own doc) — render as a
+      // plain centered box, no arrow, opacity never gated on the
+      // (irrelevant, once centered) anchor's own visibilityRatio.
+      calloutElement.removeAttribute("data-arrow-x");
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const maxAllowedHeight = viewportHeight - 40;
+      if (calloutHeight > maxAllowedHeight) {
+        const paddingSizes = getPaddingSizes(calloutBodyElement);
+        const paddingY = paddingSizes.top + paddingSizes.bottom;
+        const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+        maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+        maxHeight
+      });
+      calloutElementClone.remove();
+      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+      const {
+        width,
+        height
+      } = calloutElement.getBoundingClientRect();
+      calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+      calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+      calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+      calloutElement.style.opacity = 1;
+    }
+    applyNewPosition(calloutElement, position);
+  });
+  // Re-measures/repositions the callout whenever its own message body
+  // changes size (e.g. async content loading in, a filter narrowing the
+  // list) — not just when the anchor itself moves/resizes (or, with no
+  // anchorElement at all, the viewport itself resizing/scrolling). The
+  // feedback-loop guard (re-checking can itself change the message body's
+  // size) is handled internally by observeSize.
+  rectEffect.observeSize(calloutMessageElement);
+  return {
+    update: rectEffect.check,
+    stop: () => {
+      rectEffect.disconnect();
+    }
+  };
+};
+
+// Void elements and replaced elements cannot have children
+const VOID_ELEMENT_TAG_NAMES = new Set(["AREA", "BASE", "BR", "COL", "EMBED", "HR", "IMG", "INPUT", "LINK", "META", "PARAM", "SOURCE", "TRACK", "WBR"]);
+const canContainCallout = element => {
+  if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
+    return false;
+  }
+  if (element.tagName === "BUTTON" || element.getAttribute("role") === "button") {
+    // Never mount the callout inside a button, native or role="button":
+    // - a <button> cannot contain the callout's own close button
+    // - presses inside the callout would bubble into the button's own press
+    //   handlers: a preventDefault there makes the callout text unselectable,
+    //   and a handler that opens the callout re-opens it (visible blink)
+    return false;
+  }
+  return true;
+};
+const escapeHtml = string => {
+  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+};
+
+/**
+ * Checks if a string is a full HTML document (starts with DOCTYPE)
+ * @param {string} content - The content to check
+ * @returns {boolean} - True if it looks like a complete HTML document
+ */
+const isHtmlDocument = content => {
+  if (typeof content !== "string") {
+    return false;
+  }
+  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
+  const trimmed = content.trim();
+  return /^<!doctype\s+html/i.test(trimmed);
+};
+
+// It's ok to do this because the element is absolutely positioned
+// maxHeight, when provided, is applied to the clone's message so the measurement
+// accounts for the scrollbar width that will appear on the real element.
+//
+// Goal: shrink-wrap the callout body so it hugs the wrapped text with no blank
+// space to the right of shorter lines.
+//
+// The CSS "shrink-to-fit" algorithm (display:inline-block / fit-content) expands
+// the element to the widest line it *could* have given the max-width constraint,
+// not to the widest line that actually rendered. This leaves trailing whitespace
+// when text wraps at a point shorter than max-width.
+// See: https://github.com/w3c/csswg-drafts/issues/191
+//
+// Fix: use Range.getClientRects() to get one rect per rendered text line, find
+// the widest one, and set an explicit width on the body equal to that line width
+// (adjusted for the body's box-sizing and the non-message siblings — icon, gap,
+// close button). After the explicit width is set the element is exactly as wide
+// as its longest line, so no blank area remains to the right of shorter lines.
+const measureOptimalBodyWidth = (calloutElementClone, {
+  maxHeight
+} = {}) => {
+  const calloutBodyElement = calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElementClone.querySelector(".navi_callout_message");
+  if (maxHeight !== undefined) {
+    calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+    calloutMessageElement.style.overflowY = "scroll";
+  } else {
+    calloutMessageElement.style.maxHeight = "";
+    calloutMessageElement.style.overflowY = "";
+  }
+  const longestLineWidth = measureLongestVisualLineWidth(calloutMessageElement);
+  if (longestLineWidth === null) {
+    return null;
+  }
+  const messageRect = calloutMessageElement.getBoundingClientRect();
+  // bodyRect.width is always the border-box size (content + padding + border).
+  // style.width interprets differently depending on box-sizing:
+  //   border-box → sets total width (includes padding) → use bodyRect.width directly
+  //   content-box → sets content only → subtract body horizontal padding first
+  const bodyRect = calloutBodyElement.getBoundingClientRect();
+  const bodyStyle = getComputedStyle(calloutBodyElement);
+  if (bodyStyle.boxSizing === "border-box") {
+    return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
+  }
+  const bodyPaddingH = parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+  return Math.ceil(bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth);
+};
+const cloneCalloutToMeasureNaturalSize = calloutElement => {
+  // Create invisible clone to measure natural size
+  const calloutElementClone = calloutElement.cloneNode(true);
+  calloutElementClone.style.visibility = "hidden";
+  const calloutBodyElementClone = calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElementClone = calloutElementClone.querySelector(".navi_callout_message");
+  // Reset any constrained styles on the clone so it measures natural size
+  calloutBodyElementClone.style.width = "";
+  calloutMessageElementClone.style.maxHeight = "";
+  calloutMessageElementClone.style.overflowY = "";
+
+  // Add clone to DOM to measure
+  calloutElement.parentNode.appendChild(calloutElementClone);
+  calloutElementClone.showPopover();
+  return calloutElementClone;
+};
+
+/**
+ * Generates SVG path for callout with arrow on top
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // Slight adjustment for visual balance
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path (border)
+  const outerPath = `
+      M${CORNER_RADIUS},${ARROW_HEIGHT} 
+      H${constrainedArrowPos - ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
+      H${width - CORNER_RADIUS} 
+      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
+      V${adjustedHeight - CORNER_RADIUS} 
+      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
+      V${ARROW_HEIGHT + CORNER_RADIUS} 
+      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
+    `;
+
+  // Inner path (content) - keep arrow width almost the same
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
+    L${constrainedArrowPos},${BORDER_WIDTH} 
+    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
+  `;
+  return /* html */`
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout with arrow on bottom
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // For small border widths, keep inner arrow nearly the same size as outer
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path with rounded corners
+  const outerPath = `
+      M${CORNER_RADIUS},0 
+      H${width - CORNER_RADIUS} 
+      Q${width},0 ${width},${CORNER_RADIUS} 
+      V${contentHeight - CORNER_RADIUS} 
+      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
+      H${constrainedArrowPos + ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
+      V${CORNER_RADIUS} 
+      Q0,0 ${CORNER_RADIUS},0
+    `;
+
+  // Inner path with correct arrow direction and color
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
+    V${contentHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
+    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
+    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
+    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
+    V${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
+  `;
+  return /* html */`
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout without arrow (simple rectangle)
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithoutArrow = (width, height) => {
+  return /* html */`
+    <svg
+      width="${width}"
+      height="${height}"
+      viewBox="0 0 ${width} ${height}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <rect
+        class="navi_callout_border"
+        x="0"
+        y="0"
+        width="${width}"
+        height="${height}"
+        rx="${CORNER_RADIUS}"
+        ry="${CORNER_RADIUS}"
+      />
+      <rect
+        class="navi_callout_background"
+        x="${BORDER_WIDTH}"
+        y="${BORDER_WIDTH}"
+        width="${width - BORDER_WIDTH * 2}"
+        height="${height - BORDER_WIDTH * 2}"
+        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+      />
+    </svg>`;
+};
+
+/**
+ * Shared callout manager for displaying constraint failure callouts on a control.
+ *
+ * Used by both:
+ *  - `control_validation.js`  — invalid value (required, pattern, etc.)
+ *  - `control_interaction.js` — interaction blocked (disabled, readonly, busy)
+ *
+ * Usage:
+ *   const myToken = createOpenToken();
+ *   calloutManager.addOpenToken(myToken, { message, status, anchorElement, event, skipFocus, onClose });
+ *   calloutManager.removeOpenToken(myToken, event);
+ *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
+ *   calloutManager.callout  // current open callout or null
+ */
+
+
+/**
+ * Creates an opaque token used as a key for callout open reasons.
+ * Each caller (validation, interaction, …) owns one token.
+ */
+const createOpenToken = () => ({});
+
+/**
+ * Creates a callout state manager for a controller.
+ *
+ * @param {object} controller - The UI state controller owning this callout.
+ * @param {object} [options]
+ * @param {Function} [options.addTeardown]   - Register a cleanup fn (called on controller unmount).
+ * @param {Function} [options.debugFocus]    - Focus debug logger.
+ * @param {Function} [options.debugPopup]  - Callout debug logger (passed as `debug` to openCallout).
+ * @param {Function} [options.onOpen]        - Called after opening. May return an array of cleanup fns.
+ */
+const createCalloutManager = (
+  controller,
+  { addTeardown, debugFocus, debugPopup } = {},
+) => {
+  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
+
+  let callout = null;
+  // Tracks open tokens → their constraint info.
+  // The callout closes automatically when the last token is removed.
+  const tokens = new Map();
+
+  // Remove a token. Closes the callout only when no tokens remain.
+  // If other tokens are still active, updates the callout to show the first remaining one.
+  const removeOpenToken = (token, event) => {
+    if (!tokens.has(token)) {
+      return false;
+    }
+    tokens.delete(token);
+    if (tokens.size > 0) {
+      if (callout) {
+        const [, remainingTokenData] = tokens.entries().next().value;
+        callout.update(remainingTokenData.message, {
+          status: remainingTokenData.status,
+        });
+      }
+      return false;
+    }
+    if (!callout) {
+      return false;
+    }
+    return callout.requestClose(event, "token_removed");
+  };
+
+  // Force-close the callout regardless of active tokens (teardown / external request).
+  const requestCloseCallout = (event, debugReason) => {
+    tokens.clear();
+    if (!callout) {
+      return false;
+    }
+    return callout.requestClose(event, debugReason);
+  };
+
+  const addOpenToken = (
+    token,
+    { message, status, anchorElement, event, skipFocus, onClose } = {},
+  ) => {
+    if (!message) {
+      removeOpenToken(token, event);
+      return;
+    }
+    const calloutOptions = {
+      status,
+      closeOnClickOutside: status !== "error",
+    };
+
+    tokens.set(token, { message, status, onClose });
+    if (callout) {
+      callout.update(message, calloutOptions);
+      return;
+    }
+    const resolvedAnchorElement =
+      anchorElement || controller.ref.current;
+    const removeCloseOnCleanup = addTeardown?.(() => {
+      requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
+    });
+    // `openResults` is referenced in onClose which runs later — forward ref is intentional.
+    let openResults = [];
+    callout = openCallout(message, {
+      ...calloutOptions,
+      anchorElement: resolvedAnchorElement,
+      openingEvent: event,
+      skipFocus,
+      debug: debugPopup,
+      onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
+        removeCloseOnCleanup?.();
+        for (const result of openResults) {
+          if (typeof result === "function") {
+            result();
+          }
+        }
+        callout = null;
+        // User dismissed the callout — notify all active tokens then clear.
+        for (const [, tokenData] of tokens) {
+          tokenData.onClose?.();
+        }
+        tokens.clear();
+        const element = controller.ref.current;
+        if (
+          shouldTransferFocusFromCallout &&
+          element &&
+          !element.closest('[aria-hidden="true"]')
+        ) {
+          const focusTarget =
+            findFocusDelegateTarget(resolvedAnchorElement) ||
+            resolvedAnchorElement;
+          debugFocus(
+            closeEvent,
+            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
+          );
+          focusTarget.focus();
+        }
+      },
+    });
+    // `onOpen` can be a createPubSub publisher — its return value is an array of cleanup fns.
+    // Or just a plain callback — wrap the single return value in an array.
+    openResults = notifyCalloutOpen(event);
+  };
+
+  const calloutManager = {
+    onOpen: onCalloutOpen,
+    addOpenToken,
+    removeOpenToken,
+    requestCloseCallout,
+    get callout() {
+      return callout;
+    },
+  };
+  return calloutManager;
+};
+
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
+
+const CONSTRAINT_ATTRIBUTE_SET = new Set();
+
+const BUSY_CONSTRAINT = {
+  name: "busy",
+  messageAttribute: "data-busy-message",
+  // True for as long as an action runs and false again right after, with
+  // nothing to re-check it in between: a title written from it would still be
+  // saying "this action is in progress" over a button that has been idle for
+  // minutes. The callout says it live while it lasts, which is where that
+  // message belongs (see control_interaction.js).
+  transient: true,
+  // Unlike readonly/disabled, a busy element DOES block its parent from
+  // submitting — the element is mid-operation and cannot safely participate.
+  check: (field) => {
+    const isBusy = isControlBusy(field);
+    if (!isBusy) {
+      return null;
+    }
+
+    const isButton = field.controlType === "button";
+    const message = isButton
+      ? naviI18n("constraint.busy.button")
+      : naviI18n("constraint.busy.default");
+    return { message, status: "info" };
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
+
+// Asked source by source rather than off the rendered `aria-busy`, which
+// conflates them and is a frame behind: that attribute is written during
+// render, so it still says "true" for the whole tick in which an action
+// settles — and that tick is exactly when this gets asked (an action's own
+// completion side effect walking the surface around it: a popup deciding
+// whether it may finally close, a slide whether it may move on).
+//
+// The action's running state is a signal, so it is already right there. A
+// control busy only because the group above is running the action it asked for
+// has no state of its own to read — the group's answer IS its answer, so it
+// asks upward and inherits the same live reading.
+const isControlBusy = (field) => {
+  if (field.loadingFromOwnProp) {
+    return true;
+  }
+  const { boundAction } = field;
+  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
+    return true;
+  }
+  if (field.loadingFromParent) {
+    const parent = field.parentUIStateController;
+    return parent ? isControlBusy(parent) : false;
+  }
+  return false;
+};
+
+const DISABLED_CONSTRAINT = {
+  name: "disabled",
+  messageAttribute: "data-disabled-message",
+  check: (field) => {
+    const disabled = field.controlHostProps.disabled;
+    if (!disabled) {
+      return null;
+    }
+
+    const type = field.controlHostProps.type;
+    let message;
+    if (type === "radio") {
+      message = naviI18n(`constraint.disabled.radio`);
+    } else if (type === "checkbox") {
+      message = naviI18n(`constraint.disabled.checkbox`);
+    } else {
+      message = naviI18n(`constraint.disabled.default`);
+    }
+    // A disabled element does not block its parent from submitting.
+    return { message, status: "info", ignoredByParents: true };
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("disabled");
+CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
+
+/**
+ * Pure vanilla JS time formatting utilities.
+ * All functions accept an optional `{ now }` parameter for testability.
+ */
+
+
+// Our own compact/custom duration notation interpolates raw numbers
+// directly (unlike Intl.DurationFormat, which groups thousands on its own,
+// e.g. "5 400 secondes") — this keeps that consistent without reimplementing
+// locale-aware grouping. Falls back to the raw value as-is for a
+// non-numeric mid-edit value (e.g. "2a"), which Intl.NumberFormat can't
+// format anyway.
+const formatCompactNumber = (value, lang) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? new Intl.NumberFormat(lang).format(n) : value;
+};
+
+/**
+ * Formats a date as a human-readable day string.
+ *
+ * @param {Date} date
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric" }} [options]
+ *
+ * @example
+ * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
+ * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
+ * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
+ * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
+ */
+const formatDay = (
+  date,
+  { lang = languagesSignal.value, format = "long" } = {},
+) => {
+  if (format === "numeric") {
+    return new Intl.DateTimeFormat(lang, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat(lang, {
+    weekday: format, // "long", "short", or "narrow"
+    day: "numeric",
+    month: format,
+  }).format(date);
+};
+
+/**
+ * Returns the day offset relative to now: -1 (yesterday), 0 (today), 1 (tomorrow), or the
+ * actual number of days difference for any other date.
+ */
+const getRelativeDay = (date, { now = new Date() } = {}) => {
+  const dateKey = toLocalDayKey(date);
+
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  if (dateKey === toLocalDayKey(yesterdayDate)) {
+    return -1;
+  }
+
+  if (dateKey === toLocalDayKey(now)) {
+    return 0;
+  }
+
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (dateKey === toLocalDayKey(tomorrowDate)) {
+    return 1;
+  }
+
+  const nowMidnight = new Date(now);
+  nowMidnight.setHours(0, 0, 0, 0);
+  const dateMidnight = new Date(date);
+  dateMidnight.setHours(0, 0, 0, 0);
+  return Math.round((dateMidnight - nowMidnight) / DAY);
+};
+
+/**
+ * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
+ */
+// ── Placeholder helpers ────────────────────────────────────────────────────
+// Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
+// using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
+// Per-language token tables cover the most common locales; unknown langs fall
+// back to "dd/mm/yyyy".
+
+const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
+
+const getToken = (key, lang) =>
+  naviI18n(`time.placeholder.${key}`, undefined, { lang });
+
+const formatDatePlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
+  const parts = new Intl.DateTimeFormat(lang, {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "day") {
+        return getToken("day", lang);
+      }
+      if (p.type === "month") {
+        return getToken("month", lang);
+      }
+      if (p.type === "year") {
+        return getToken("year", lang);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+const formatMonthPlaceholder = ({
+  lang = languagesSignal.value,
+  format = "long",
+} = {}) => {
+  const parts = new Intl.DateTimeFormat(lang, {
+    month: format,
+    year: "numeric",
+  }).formatToParts(SENTINEL_DATE);
+  return parts
+    .map((p) => {
+      if (p.type === "month") {
+        // Text month formats (long/short/narrow) → dash; numeric → token
+        return format === "numeric" ? "–" : getToken("month", lang);
+      }
+      if (p.type === "year") {
+        return getToken("year", lang);
+      }
+      return p.value;
+    })
+    .join("");
+};
+
+const formatWeekPlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
+  return `${getToken("week", lang)} xx / ${getToken(lang)}`;
+};
+
+const formatDatetimePlaceholder = ({
+  lang = languagesSignal.value,
+  format = "long",
+} = {}) => {
+  const intlOptions =
+    format === "long"
+      ? {
+          weekday: "short",
+          day: "numeric",
+          month: "long",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      : format === "narrow"
+        ? {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        : {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          };
+  const parts = new Intl.DateTimeFormat(lang, intlOptions).formatToParts(
+    SENTINEL_DATE,
+  );
+  let skipNext = false;
+  return parts
+    .map((p) => {
+      if (p.type === "weekday") {
+        skipNext = true;
+        return "";
+      }
+      if (p.type === "literal" && skipNext) {
+        skipNext = false;
+        return "";
+      }
+      skipNext = false;
+      if (p.type === "day") {
+        return getToken("day", lang);
+      }
+      if (p.type === "month") {
+        return getToken("month", lang);
+      }
+      if (p.type === "hour") {
+        return getToken("hour", lang);
+      }
+      if (p.type === "minute") {
+        return getToken("minute", lang);
+      }
+      return p.value;
+    })
+    .join("")
+    .trim();
+};
+
+// ── End placeholder helpers ────────────────────────────────────────────────
+
+const formatDayRelative = (offset, lang) => {
+  const relativeDay = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+  }).format(offset, "day");
+  return relativeDay;
+};
+
+const formatMonth = (
+  date,
+  { lang = languagesSignal.value, format = "long" } = {},
+) => {
+  return new Intl.DateTimeFormat(lang, {
+    month: format, // "long", "short", or "narrow"
+    year: "numeric",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
+ */
+const formatDatetime = (
+  date,
+  { lang = languagesSignal.value, format = "long" } = {},
+) => {
+  if (format === "long") {
+    return new Intl.DateTimeFormat(lang, {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  if (format === "narrow") {
+    return new Intl.DateTimeFormat(lang, {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  // "short": no weekday
+  return new Intl.DateTimeFormat(lang, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a date as "14:30".
+ */
+const formatTime = (date, lang) => {
+  return new Intl.DateTimeFormat(lang, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/**
+ * Formats a duration expressed in minutes as a human-readable string.
+ * "long", "short", "narrow" delegate to Intl.DurationFormat.
+ * "compact" uses our own notation that omits the minute symbol when hours are present.
+ *
+ * @param {number} minutes
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
+ *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
+ *   Past 24 hours the default promotes to days, which reads better but hides
+ *   the unit the caller works in.
+ * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
+ *   represents a time-of-day rather than a real duration (used by
+ *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
+ *   things at once, both consequences of a clock's "0" being a meaningful
+ *   hour rather than "no hours":
+ *   - a zero-hours component is normally dropped entirely (a real 5-minute
+ *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
+ *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
+ *     doesn't collapse to something indistinguishable from an actual
+ *     5-minute duration.
+ *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
+ *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
+ *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
+ *     formats spell out their units, so "10 heures"/"10h" reads fine there
+ *     and only "compact" needs the clock shape.
+ *   Must not be set for plain duration formatting.
+ *
+ * @example
+ * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
+ * formatMinuteDuration(90, { lang: "fr", format: "short" })     // "1 h et 30 min" (Intl short)
+ * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
+ * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
+ * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
+ * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
+ * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
+ * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
+ * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
+ */
+const formatMinuteDuration = (
+  minutes,
+  {
+    lang = languagesSignal.value,
+    format = "long",
+    clockStyle = false,
+    forceUnit = false,
+  } = {},
+) => {
+  if (minutes < 0) {
+    // the d/h/m split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
+  }
+  if (forceUnit || (minutes === 0 && !clockStyle)) {
+    // a zero has nothing to promote to, and rendering it as an empty string
+    // would be indistinguishable from a missing value
+    return formatSingleUnit(minutes, "minute", { lang, format });
+  }
+  const totalHours = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  // a time of day never goes past 24h, and its hour part is the clock hour
+  const d = clockStyle ? 0 : Math.floor(totalHours / 24);
+  const h = clockStyle ? totalHours : totalHours % 24;
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(lang, {
+      style: format, // "long", "short", or "narrow"
+      ...(clockStyle ? { hoursDisplay: "always" } : {}),
+    });
+    const duration = {};
+    if (d > 0) {
+      duration.days = d;
+    }
+    if (h > 0 || clockStyle || d > 0) {
+      duration.hours = h;
+    }
+    if (m > 0 || (d === 0 && h === 0)) {
+      duration.minutes = m;
+    }
+    return fmt.format(duration);
+  }
+  // format="compact": "1j12h", "1h30", "45min", "2h" — no minute symbol when hours are present
+  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
+  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
+  const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
+  const hStr = clockStyle
+    ? String(h).padStart(2, "0")
+    : formatCompactNumber(h, lang);
+  if (d === 0 && h === 0 && !clockStyle) {
+    return `${m}${mSym}`;
+  }
+  if (m === 0) {
+    if (clockStyle) {
+      // "10h00" on a clock, "2h" for a real 2 hours duration
+      return `${hStr}${hSym}00`;
+    }
+    return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
+  }
+  return `${dStr}${hStr}${hSym}${String(m).padStart(2, "0")}`;
+};
+
+// "forceUnit": stay in the unit the value is expressed in, however big it gets
+const formatSingleUnit = (value, unit, { lang, format }) => {
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    return new Intl.DurationFormat(lang, {
+      style: format,
+      // Intl drops a zero-valued unit, and "0 minute" is the whole point here
+      [`${unit}sDisplay`]: "always",
+    }).format({
+      [`${unit}s`]: value,
+    });
+  }
+  const symbol = naviI18n(`time.duration.${unit}_symbol`, undefined, { lang });
+  return `${formatCompactNumber(value, lang)}${symbol}`;
+};
+
+/**
+ * Formats a duration expressed in hours (possibly fractional) as a human-readable string.
+ * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
+ *
+ * @param {number} hours
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in hours however
+ *   big it gets ("36 heures" instead of "1 jour et 12 heures"). Ignored for a
+ *   fractional value, which has no single-unit spelling.
+ *
+ * @example
+ * formatHourDuration(1.5, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
+ * formatHourDuration(1.5, { lang: "fr", format: "compact" })   // "1h30"
+ * formatHourDuration(2, { lang: "en", format: "compact" })     // "2h"
+ * formatHourDuration(36, { lang: "fr" })                        // "1 jour et 12 heures"
+ * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
+ */
+const formatHourDuration = (hours, options = {}) => {
+  const { lang = languagesSignal.value, format = "long", forceUnit } = options;
+  if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
+    return formatSingleUnit(hours, "hour", { lang, format });
+  }
+  // a fractional value has no single-unit spelling, it needs its minutes
+  const totalMinutes = Math.round(hours * 60);
+  return formatMinuteDuration(totalMinutes, { ...options, forceUnit: false });
+};
+
+/**
+ * Formats a duration expressed in seconds as a human-readable string.
+ * "long", "short", "narrow" delegate to Intl.DurationFormat.
+ * "compact" uses our own symbol-based notation.
+ *
+ * @param {number} seconds
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in seconds
+ *   however big it gets ("90 000 secondes" instead of "1 jour et 1 heure").
+ *
+ * @example
+ * formatSecondDuration(90, { lang: "fr" })                       // "1 minute 30 secondes" (long, default)
+ * formatSecondDuration(90, { lang: "fr", format: "short" })     // "1 min. et 30 s." (Intl short)
+ * formatSecondDuration(90, { lang: "fr", format: "narrow" })    // "1min 30s" (Intl narrow)
+ * formatSecondDuration(90, { lang: "fr", format: "compact" })   // "1m30s" (custom)
+ * formatSecondDuration(45, { lang: "en", format: "compact" })   // "45s"
+ */
+const formatSecondDuration = (
+  seconds,
+  { lang = languagesSignal.value, format = "long", forceUnit = false } = {},
+) => {
+  if (seconds < 0) {
+    // the d/h/m/s split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
+  }
+  if (forceUnit || seconds === 0) {
+    return formatSingleUnit(seconds, "second", { lang, format });
+  }
+  const totalHours = Math.floor(seconds / 3600);
+  const d = Math.floor(totalHours / 24);
+  const h = totalHours % 24;
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const fmt = new Intl.DurationFormat(lang, { style: format });
+    const duration = {};
+    if (d > 0) duration.days = d;
+    if (h > 0) duration.hours = h;
+    if (m > 0) duration.minutes = m;
+    if (s > 0 || (d === 0 && h === 0 && m === 0)) duration.seconds = s;
+    return fmt.format(duration);
+  }
+  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
+  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
+  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
+  const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
+  const parts = [];
+  // h/m/s are bounded by construction (never need grouping); d can be
+  // arbitrarily large for a long duration.
+  if (d > 0) parts.push(`${formatCompactNumber(d, lang)}${dSym}`);
+  if (h > 0) parts.push(`${h}${hSym}`);
+  if (m > 0) parts.push(`${m}${mSym}`);
+  if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
+  return parts.join("");
+};
+
+/**
+ * Formats a duration object as a human-readable string.
+ * Reads the parts directly — no conversion to seconds — so years/months/days
+ * are preserved as-is and non-numeric mid-edit values (e.g. "2a") are rendered
+ * with their unit symbol rather than being stringified.
+ *
+ * @param {{ years?: any, months?: any, weeks?: any, days?: any,
+ *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ *
+ * @example
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                       // "2 heures 15 minutes" (long, default)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })     // "2 h et 15 min" (Intl short)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
+ * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
+ * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
+ * formatDuration({ hours: 0, minutes: 0 }, { lang: "fr" })                        // "0 minute"
+ * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
+ */
+const formatDuration = (
+  duration,
+  { lang = languagesSignal.value, format = "long" } = {},
+) => {
+  if (typeof duration === "string") {
+    duration = parseDuration(duration) ?? {};
+  } else if (typeof duration === "number") {
+    duration = { seconds: duration };
+  }
+  const has = (key) => duration[key] !== undefined && duration[key] !== null;
+
+  // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
+  //
+  // "short" always uses our own compact symbols ("2h15", "45min") because:
+  // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
+  //    which Intl.DurationFormat style:"narrow" does not do.
+  // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
+  //    unit symbol — Intl.DurationFormat only accepts integers.
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const intlDuration = {};
+    let allNumeric = true;
+    let hasNegative = false;
+    let hasPositive = false;
+    for (const key of [
+      "years",
+      "months",
+      "weeks",
+      "days",
+      "hours",
+      "minutes",
+      "seconds",
+      "milliseconds",
+    ]) {
+      if (!has(key)) {
+        continue;
+      }
+      const n = Number(duration[key]);
+      if (!isFinite(n)) {
+        allNumeric = false;
+        break;
+      }
+      if (n < 0) {
+        hasNegative = true;
+      } else if (n > 0) {
+        hasPositive = true;
+      }
+      intlDuration[key] = n;
+    }
+    // Temporal requires all components to share the same sign.
+    // Mixed-sign values (e.g. { hours: -1, minutes: 15 }) throw a RangeError.
+    if (
+      allNumeric &&
+      Object.keys(intlDuration).length > 0 &&
+      !(hasNegative && hasPositive)
+    ) {
+      if (!hasNegative && !hasPositive) {
+        return formatSingleUnit(0, smallestUnitOf(intlDuration), {
+          lang,
+          format,
+        });
+      }
+      return new Intl.DurationFormat(lang, { style: format }).format(
+        intlDuration,
+      );
+    }
+    // Fall through to compact notation when values are non-numeric or mixed-sign
+  }
+
+  // A component explicitly present but numerically zero (e.g. the demo's own
+  // { hours: 0, minutes: 5 }) conveys no information for a genuine duration
+  // — same convention formatMinuteDuration/formatSecondDuration already
+  // follow (checking h > 0/m > 0, not merely "was a value passed") — so
+  // it's dropped here too, regardless of whether the caller included the
+  // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
+  // present — Number("2a") is NaN, never === 0 — so those keep rendering
+  // as-is with their own unit symbol. When every component is zero there is
+  // nothing left to drop, so the zero itself is rendered — see below.
+  const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
+
+  const sym = (key) =>
+    naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
+  const parts = [];
+
+  if (hasNonZero("years")) {
+    parts.push(`${formatCompactNumber(duration.years, lang)}${sym("year")}`);
+  }
+  if (hasNonZero("months")) {
+    parts.push(`${formatCompactNumber(duration.months, lang)}${sym("month")}`);
+  }
+  if (hasNonZero("weeks")) {
+    parts.push(`${formatCompactNumber(duration.weeks, lang)}${sym("week")}`);
+  }
+  if (hasNonZero("days")) {
+    parts.push(`${formatCompactNumber(duration.days, lang)}${sym("day")}`);
+  }
+
+  // Hours + minutes: when both present, pad minutes to 2 digits after the h
+  // symbol — minutes stays a plain 2-digit pad (it's always 0-59 by
+  // convention), only hours goes through grouping.
+  const hSym = sym("hour");
+  const mSym = sym("minute");
+  if (hasNonZero("hours") && hasNonZero("minutes")) {
+    parts.push(
+      `${formatCompactNumber(duration.hours, lang)}${hSym}${String(duration.minutes).padStart(2, "0")}`,
+    );
+  } else if (hasNonZero("hours")) {
+    parts.push(`${formatCompactNumber(duration.hours, lang)}${hSym}`);
+  } else if (hasNonZero("minutes")) {
+    parts.push(`${formatCompactNumber(duration.minutes, lang)}${mSym}`);
+  }
+
+  if (hasNonZero("seconds")) {
+    parts.push(
+      `${formatCompactNumber(duration.seconds, lang)}${sym("second")}`,
+    );
+  }
+  if (hasNonZero("milliseconds")) {
+    parts.push(
+      `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
+    );
+  }
+  if (parts.length > 0) {
+    return parts.join("");
+  }
+  // everything was zero: say so in the smallest unit the caller mentioned,
+  // rather than a bare "0" whose unit the reader has to guess
+  const smallestUnit = smallestUnitOf(duration);
+  return smallestUnit ? `0${sym(smallestUnit)}` : "0";
+};
+
+const UNIT_KEYS = [
+  "years",
+  "months",
+  "weeks",
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+  "milliseconds",
+];
+const smallestUnitOf = (duration) => {
+  for (const key of [...UNIT_KEYS].reverse()) {
+    if (duration[key] !== undefined && duration[key] !== null) {
+      return key.slice(0, -1); // "seconds" -> "second"
+    }
+  }
+  return null;
+};
+
+/**
+ * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
+ */
+const formatTimeAgo = (
+  date,
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
+) => {
+  const rtf = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+    style: format,
+  });
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const diff = date.getTime() - nowMs;
+  const absDiff = Math.abs(diff);
+
+  let value;
+  let unit;
+  if (absDiff < MINUTE) {
+    value = Math.round(diff / 1000);
+    unit = "second";
+  } else if (absDiff < HOUR) {
+    value = Math.round(diff / MINUTE);
+    unit = "minute";
+  } else if (absDiff < DAY) {
+    value = Math.round(diff / HOUR);
+    unit = "hour";
+  } else if (absDiff < 7 * DAY) {
+    value = Math.round(diff / DAY);
+    unit = "day";
+  } else if (absDiff < 30 * DAY) {
+    value = Math.round(diff / (7 * DAY));
+    unit = "week";
+  } else if (absDiff < YEAR) {
+    value = Math.round(diff / (30 * DAY));
+    unit = "month";
+  } else {
+    value = Math.round(diff / YEAR);
+    unit = "year";
+  }
+
+  if (!bare || value >= 0) {
+    return rtf.format(value, unit);
+  }
+  // Drop the leading past-tense literal ("il y a ", "ago ") — keep only integer + unit.
+  const parts = rtf.formatToParts(value, unit);
+  const integerIndex = parts.findIndex((p) => p.type === "integer");
+  return parts
+    .slice(integerIndex)
+    .map((p) => p.value)
+    .join("")
+    .trim();
+};
+
+/**
+ * Formats a timed event with an optional duration window.
+ *
+ * States:
+ * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
+ * - Ongoing (start ≤ now < start+dur)  → "En cours"
+ * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
+ *
+ * @param {Date|number} start      Start of the event (Date or ms timestamp)
+ * @param {number}      durationMs Duration in milliseconds (0 = instant event)
+ * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow" }} options
+ *
+ * @example
+ * // 90 min from now
+ * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure 30"
+ * // currently happening (30 min window)
+ * formatTimeRelative(Date.now() - 5 * 60_000, 30 * 60_000, { lang: "fr" }) // "En cours"
+ * // ended 2 hours ago
+ * formatTimeRelative(Date.now() - 3 * 3_600_000, 3_600_000, { lang: "fr" }) // "il y a 2 heures"
+ * // short format
+ * formatTimeRelative(Date.now() - 3 * 3_600_000, 0, { lang: "fr", format: "short" }) // "il y a 3 h"
+ */
+const formatTimeRelative = (
+  start,
+  durationMs = 0,
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
+) => {
+  const startMs = start instanceof Date ? start.getTime() : Number(start);
+  const endMs = startMs + durationMs;
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+
+  if (nowMs >= startMs && nowMs < endMs) {
+    return getOngoingText(lang);
+  }
+  if (nowMs >= endMs) {
+    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
+    return formatTimeAgo(refDate, { lang, now, bare, format });
+  }
+
+  const diff = startMs - nowMs;
+  return formatFuture(new Date(startMs), diff, { lang, now, format });
+};
+
+const formatFuture = (date, diff, { lang, now, format = "long" }) => {
+  const rtf = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+    style: format,
+  });
+  const nowDate = now instanceof Date ? now : new Date(now);
+
+  // < 1 min
+  if (diff < MINUTE) {
+    return getLessThanMinuteText(lang);
+  }
+
+  // < 1 hour → "dans X minutes"
+  if (diff < HOUR) {
+    return rtf.format(Math.ceil(diff / MINUTE), "minute");
+  }
+
+  // 1h to 2h → "dans 1 heure 30"
+  if (diff < 2 * HOUR) {
+    const hours = Math.floor(diff / HOUR);
+    const minutes = Math.round((diff % HOUR) / MINUTE);
+    if (minutes === 0) {
+      return rtf.format(hours, "hour");
+    }
+    const duration = formatMinuteDuration(hours * 60 + minutes, {
+      lang,
+      format,
+    });
+    const template = naviI18n("time.in_duration", undefined, { lang });
+    if (template !== "time.in_duration") {
+      return template.replace("[duration]", duration);
+    }
+    return `in ${duration}`;
+  }
+
+  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
+  if (diff < 6 * HOUR) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
+  const tomorrowDate = new Date(nowDate);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
+    return formatTomorrowAt(date, lang);
+  }
+
+  // < 24h → "dans X heures"
+  if (diff < DAY) {
+    return rtf.format(Math.round(diff / HOUR), "hour");
+  }
+
+  // < 7 days → "dans X jours"
+  if (diff < 7 * DAY) {
+    return rtf.format(Math.round(diff / DAY), "day");
+  }
+
+  // < 30 days → "dans X semaines"
+  if (diff < 30 * DAY) {
+    return rtf.format(Math.round(diff / (7 * DAY)), "week");
+  }
+
+  // months (Intl handles "le mois prochain" when value = 1)
+  if (diff < YEAR) {
+    return rtf.format(Math.round(diff / (30 * DAY)), "month");
+  }
+
+  return rtf.format(Math.round(diff / YEAR), "year");
+};
+
+const formatTomorrowAt = (date, lang) => {
+  const dayLabel = new Intl.RelativeTimeFormat(lang, {
+    numeric: "auto",
+  }).format(1, "day");
+  const hasMinutes = date.getMinutes() !== 0;
+  const timeLabel = new Intl.DateTimeFormat(lang, {
+    hour: "numeric",
+    ...(hasMinutes ? { minute: "2-digit" } : {}),
+  }).format(date);
+  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
+    lang,
+  });
+  // atTemplate is e.g. "[day] à [time]" — replace placeholders
+  if (atTemplate !== "time.tomorrow_at") {
+    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
+  }
+  // fallback: concatenate with a space
+  return `${dayLabel} ${timeLabel}`;
+};
+
+const getLessThanMinuteText = (lang) => {
+  return naviI18n("time.less_than_minute", undefined, { lang });
+};
+
+const getOngoingText = (lang) => {
+  return naviI18n("time.ongoing", undefined, { lang });
+};
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const YEAR = 365 * DAY;
+
+// Compares calendar days in local time (ignores the clock time)
+const toLocalDayKey = (date) => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+ */
+
+
+const REQUIRED_CONSTRAINT = {
+  name: "required",
+  messageAttribute: "data-required-message",
+  check: (field) => {
+    const required = field.controlHostProps.required;
+    if (!required) {
+      return null;
+    }
+    const controlType = field.controlType;
+    const type = field.controlHostProps.type;
+
+    // radio_group controller: check aggregate uiState
+    if (controlType === "radio_group") {
+      if (field.uiState !== undefined) {
+        return null;
+      }
+      return {
+        message: naviI18n("constraint.required.radio"),
+        target: field.ref.current,
+      };
+    }
+    if (type === "radio") {
+      const parent = field.parentUIStateController;
+      if (parent) {
+        return null; // handled by parent
+      }
+      // A radio without parent, not supposed to happen
+      if (field.uiState !== undefined) {
+        return null;
+      }
+      return {
+        message: naviI18n("constraint.required.radio"),
+        target: field.ref.current,
+      };
+    }
+
+    // checkbox_group controller: check aggregate uiState array
+    if (controlType === "checkbox_group") {
+      const uiState = field.uiState;
+      if (uiState.length > 0) {
+        return null;
+      }
+      return {
+        message: naviI18n("constraint.required.checkbox_group"),
+        target: field.ref.current,
+      };
+    }
+    if (type === "checkbox") {
+      const parent = field.parentUIStateController;
+      if (parent.controlType === "checkbox_group") {
+        // handled by parent
+        return null;
+      }
+      if (field.uiState !== undefined) {
+        return null;
+      }
+      return naviI18n("constraint.required.checkbox");
+    }
+
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (valueAsString) {
+      return null;
+    }
+
+    if (type === "password") {
+      return naviI18n("constraint.required.password");
+    }
+    if (type === "email") {
+      return naviI18n("constraint.required.email");
+    }
+    if (type === "color") {
+      return naviI18n("constraint.required.color");
+    }
+    if (type === "date") {
+      return naviI18n("constraint.required.date");
+    }
+    if (type === "month") {
+      return naviI18n("constraint.required.month");
+    }
+    if (type === "week") {
+      return naviI18n("constraint.required.week");
+    }
+    if (type === "time") {
+      return naviI18n("constraint.required.time");
+    }
+    const inputMode = field.controlHostProps.inputMode;
+    if (
+      type === "number" ||
+      inputMode === "numeric" ||
+      inputMode === "decimal"
+    ) {
+      return naviI18n("constraint.required.number");
+    }
+    if (type === "datetime-local") {
+      return naviI18n("constraint.required.datetime");
+    }
+    if (type === "file") {
+      const multiple = field.controlHostProps.multiple;
+      return multiple
+        ? naviI18n("constraint.required.file.multiple")
+        : naviI18n("constraint.required.file");
+    }
+    return naviI18n("constraint.required.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("required");
+
+const PATTERN_CONSTRAINT = {
+  name: "pattern",
+  messageAttribute: "data-pattern-message",
+  check: (field) => {
+    const pattern = field.controlHostProps.pattern;
+    if (!pattern) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const regex = new RegExp(`^(?:${pattern})$`);
+    if (regex.test(valueAsString)) {
+      return null;
+    }
+
+    const type = field.controlHostProps.type;
+    if (type === "email") {
+      return naviI18n("constraint.pattern.email");
+    }
+    if (type === "password") {
+      return naviI18n("constraint.pattern.password");
+    }
+    return naviI18n("constraint.pattern.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("pattern");
+
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
+const emailregex =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const TYPE_EMAIL_CONSTRAINT = {
+  name: "type_email",
+  messageAttribute: "data-type-message",
+  check: (field) => {
+    const type = field.controlHostProps.type;
+    if (type !== "email") {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    if (emailregex.test(valueAsString)) {
+      return null;
+    }
+
+    if (!valueAsString.includes("@")) {
+      return naviI18n("constraint.type.email.at", { value: valueAsString });
+    }
+    return naviI18n("constraint.type.email.invalid");
+  },
+};
+
+const MIN_LENGTH_CONSTRAINT = {
+  name: "min_length",
+  messageAttribute: "data-min-length-message",
+  check: (field) => {
+    const type = field.controlHostProps.type ?? "text";
+    const isInput =
+      field.controlType === "input" || field.controlType === "picker";
+    const isTextarea =
+      field.controlHostProps.as === "textarea" ||
+      field.controlType === "textarea";
+    if (isInput) {
+      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(type)) {
+        return null;
+      }
+    } else if (!isTextarea) {
+      return null;
+    }
+    const minLength = field.controlHostProps.minLength;
+    if (minLength === undefined) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString && !field.controlHostProps.required) {
+      return null;
+    }
+    const valueLength = valueAsString.length;
+    if (valueLength >= minLength) {
+      return null;
+    }
+
+    if (valueLength === 1) {
+      const singularKey = (() => {
+        if (type === "email") {
+          return `constraint.min_length.singular.email`;
+        }
+        if (type === "password") {
+          return `constraint.min_length.singular.password`;
+        }
+        return `constraint.min_length.singular.default`;
+      })();
+      return naviI18n(singularKey, {
+        min: String(minLength),
+      });
+    }
+    const pluralKey = (() => {
+      if (type === "email") {
+        return `constraint.min_length.plural.email`;
+      }
+      if (type === "password") {
+        return `constraint.min_length.plural.password`;
+      }
+      return `constraint.min_length.plural.default`;
+    })();
+    return naviI18n(pluralKey, {
+      min: String(minLength),
+      count: String(valueLength),
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("minLength");
+const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
+  "text",
+  "search",
+  "url",
+  "tel",
+  "email",
+  "password",
+]);
+
+const MAX_LENGTH_CONSTRAINT = {
+  name: "max_length",
+  messageAttribute: "data-max-length-message",
+  check: (field) => {
+    const type = field.controlHostProps.type ?? "text";
+    // A multiple selection has a length the way a string has one — how many
+    // items it holds — so it wears the same constraint under the same name. The
+    // group answers for it: a checkbox on its own holds one value, not a count.
+    if (field.controlType === "checkbox_group") {
+      const maxLength =
+        field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+      if (maxLength === undefined) {
+        return null;
+      }
+      const uiState = field.uiState;
+      if (!Array.isArray(uiState)) {
+        return null;
+      }
+      const count = uiState.length;
+      if (count <= maxLength) {
+        return null;
+      }
+      return {
+        message: naviI18n("constraint.max_length.selection", {
+          max: String(maxLength),
+          count: String(count),
+        }),
+        target: field.ref.current,
+      };
+    }
+    const isInput =
+      field.controlType === "input" || field.controlType === "picker";
+    const isTextarea =
+      field.controlHostProps.as === "textarea" ||
+      field.controlType === "textarea";
+    if (isInput) {
+      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(type)) {
+        return null;
+      }
+    } else if (!isTextarea) {
+      return null;
+    }
+    const maxLength =
+      field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
+    if (maxLength === undefined) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const valueLength = valueAsString.length;
+    if (valueLength <= maxLength) {
+      return null;
+    }
+
+    const maxLengthKey = (() => {
+      if (type === "email") {
+        return `constraint.max_length.email`;
+      }
+      if (type === "password") {
+        return `constraint.max_length.password`;
+      }
+      return `constraint.max_length.default`;
+    })();
+    return naviI18n(maxLengthKey, {
+      max: String(maxLength),
+      count: String(valueLength),
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
+const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
+  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
+);
+
+const TYPE_NUMBER_CONSTRAINT = {
+  name: "type_number",
+  messageAttribute: "data-type-message",
+  check: (field) => {
+    if (field.controlType !== "input" && field.controlType !== "picker") {
+      return null;
+    }
+    const type = field.controlHostProps.type;
+    const inputMode = field.controlHostProps.inputMode;
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
+    if (!isNumber) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const numericValue = Number(valueAsString);
+    if (!isNaN(numericValue)) {
+      return null;
+    }
+
+    const naviType = field.controlHostProps["navi-input-type"];
+    if (naviType === "hour") {
+      return naviI18n(`constraint.type.hour.default`);
+    }
+    if (naviType === "minute") {
+      return naviI18n(`constraint.type.minute.default`);
+    }
+    if (naviType === "second") {
+      return naviI18n(`constraint.type.second.default`);
+    }
+    if (naviType === "percentage") {
+      return naviI18n(`constraint.type.percentage.default`);
+    }
+    return naviI18n(`constraint.type.number.default`);
+  },
+};
+
+// ISO date strings (YYYY-MM-DD, YYYY-MM, YYYY-Www, YYYY-MM-DDTHH:MM) are
+// zero-padded big-endian, so lexicographic comparison is equivalent to
+// chronological comparison — no need to parse into Date objects.
+const DATE_INPUT_TYPE_SET = new Set([
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
+
+const MIN_CONSTRAINT = {
+  name: "min",
+  messageAttribute: "data-min-message",
+  check: (field) => {
+    if (field.controlType === "duration_group") {
+      const min = field.controlHostProps.min;
+      if (min === undefined || min === null) {
+        return null;
+      }
+      if (durationContainsNaN(field.uiState)) {
+        return null;
+      }
+      const cmp = compareTwoDurations(field.uiState, min);
+      if (cmp === null || cmp >= 0) {
+        return null;
+      }
+
+      return naviI18n("constraint.min.duration.default", {
+        min: formatDuration(min),
+      });
+    }
+    if (field.controlType !== "input" && field.controlType !== "picker") {
+      return null;
+    }
+    const minString = field.controlHostProps.min;
+    if (!minString) {
+      return null;
+    }
+    const type = field.controlHostProps.type;
+    const inputMode = field.controlHostProps.inputMode;
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
+    if (isNumber) {
+      const minNumber = parseFloat(minString);
+      if (isNaN(minNumber)) {
+        return null;
+      }
+      const numericValue = Number(valueAsString);
+      if (isNaN(numericValue)) {
+        return null;
+      }
+      if (numericValue < minNumber) {
+        const naviInputType = field.controlHostProps["navi-input-type"];
+        if (naviInputType === "hour") {
+          return naviI18n(`constraint.min.hour.default`, {
+            min: minString,
+          });
+        }
+        if (naviInputType === "minute") {
+          return naviI18n(`constraint.min.minute.default`, {
+            min: minString,
+          });
+        }
+        if (naviInputType === "second") {
+          return naviI18n(`constraint.min.second.default`, {
+            min: minString,
+          });
+        }
+        if (naviInputType === "percentage") {
+          return naviI18n(`constraint.min.percentage.default`, {
+            min: minString,
+          });
+        }
+        return naviI18n(`constraint.min.number.default`, {
+          min: minString,
+        });
+      }
+      return null;
+    }
+    if (type === "time") {
+      const [minHours, minMinutes] = minString.split(":").map(Number);
+      const [hours, minutes] = valueAsString.split(":").map(Number);
+      if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
+        return naviI18n("constraint.min.time.default", {
+          min: minString,
+        });
+      }
+      return null;
+    }
+    // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
+    // so they never need a min/max validation message.
+    if (DATE_INPUT_TYPE_SET.has(type)) {
+      if (valueAsString < minString) {
+        const todayIso = getTodayIso(type);
+        if (minString === todayIso) {
+          return naviI18n("constraint.min.date.today.default");
+        }
+        return naviI18n("constraint.min.date.default", {
+          min: formatDateIso(minString, type),
+        });
+      }
+      return null;
+    }
+    return null;
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("min");
+
+const MAX_CONSTRAINT = {
+  name: "max",
+  messageAttribute: "data-max-message",
+  check: (field) => {
+    if (field.controlType === "duration_group") {
+      const max = field.controlHostProps.max;
+      if (max === undefined || max === null) {
+        return null;
+      }
+      if (durationContainsNaN(field.uiState)) {
+        return null;
+      }
+      const cmp = compareTwoDurations(field.uiState, max);
+      if (cmp === null || cmp <= 0) {
+        return null;
+      }
+
+      return naviI18n("constraint.max.duration.default", {
+        max: formatDuration(max),
+      });
+    }
+    if (field.controlType !== "input" && field.controlType !== "picker") {
+      return null;
+    }
+    const maxString = field.controlHostProps.max;
+    if (!maxString) {
+      return null;
+    }
+    const type = field.controlHostProps.type;
+    const inputMode = field.controlHostProps.inputMode;
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const isNumber =
+      type === "number" || inputMode === "numeric" || inputMode === "decimal";
+    if (isNumber) {
+      const maxNumber = parseFloat(maxString);
+      if (isNaN(maxNumber)) {
+        return null;
+      }
+      const numericValue = Number(valueAsString);
+      if (isNaN(numericValue)) {
+        return null;
+      }
+      if (numericValue <= maxNumber) {
+        return null;
+      }
+
+      const naviInputType = field.controlHostProps["navi-input-type"];
+      if (naviInputType === "hour") {
+        return naviI18n(`constraint.max.hour.default`, {
+          max: maxString,
+        });
+      }
+      if (naviInputType === "minute") {
+        return naviI18n(`constraint.max.minute.default`, {
+          max: maxString,
+        });
+      }
+      if (naviInputType === "second") {
+        return naviI18n(`constraint.max.second.default`, {
+          max: maxString,
+        });
+      }
+      if (naviInputType === "percentage") {
+        return naviI18n(`constraint.max.percentage.default`, {
+          max: maxString,
+        });
+      }
+      return naviI18n(`constraint.max.number.default`, {
+        max: maxString,
+      });
+    }
+    if (type === "time") {
+      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
+      const [hours, minutes] = valueAsString.split(":").map(Number);
+      if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
+        return naviI18n("constraint.max.time.default", {
+          max: maxString,
+        });
+      }
+      return null;
+    }
+    if (DATE_INPUT_TYPE_SET.has(type)) {
+      if (valueAsString <= maxString) {
+        return null;
+      }
+
+      const todayIso = getTodayIso(type);
+      if (maxString === todayIso) {
+        return naviI18n("constraint.max.date.today.default");
+      }
+      return naviI18n("constraint.max.date.default", {
+        max: formatDateIso(maxString, type),
+      });
+    }
+    return null;
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("max");
+
+const STEP_SUPPORTED_TYPE_SET = new Set([
+  "number",
+  "time",
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+]);
+
+const STEP_CONSTRAINT = {
+  name: "step",
+  messageAttribute: "data-step-message",
+  check: (field) => {
+    if (field.controlType === "duration_group") {
+      const step = field.controlHostProps.step;
+      if (!step) {
+        return null;
+      }
+      if (durationContainsNaN(field.uiState)) {
+        return null;
+      }
+      const min = field.controlHostProps.min ?? 0;
+      const valueSeconds = durationToSeconds(field.uiState);
+      if (valueSeconds === null) {
+        return null;
+      }
+      const stepSeconds =
+        typeof step === "number" ? step : durationToSeconds(step);
+      const minSeconds =
+        typeof min === "number" ? min : (durationToSeconds(min) ?? 0);
+      if (stepSeconds === null) {
+        return null;
+      }
+
+      const remainder =
+        (((valueSeconds - minSeconds) % stepSeconds) + stepSeconds) %
+        stepSeconds;
+      const epsilon = stepSeconds * 1e-9;
+      if (remainder <= epsilon || remainder >= stepSeconds - epsilon) {
+        return null;
+      }
+
+      const before = valueSeconds - remainder;
+      const after = before + stepSeconds;
+      return naviI18n("constraint.step.duration.default", {
+        step: formatDuration(stepSeconds),
+        before: formatDuration(before),
+        after: formatDuration(after),
+      });
+    }
+    if (field.controlType !== "input" && field.controlType !== "picker") {
+      return null;
+    }
+    const type = field.controlHostProps.type;
+    const inputMode = field.controlHostProps.inputMode;
+    const isNumericText =
+      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
+    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
+      return null;
+    }
+    const stepRaw = field.controlHostProps.step;
+    if (!stepRaw || stepRaw === "any") {
+      return null;
+    }
+    const stepString = String(stepRaw);
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (!valueAsString) {
+      return null;
+    }
+    const minString = field.controlHostProps.min;
+    const isNumber = type === "number" || isNumericText;
+    if (isNumber) {
+      const step = parseFloat(stepString);
+      const base = minString ? parseFloat(minString) : 0;
+      const numericValue = Number(valueAsString);
+      if (isNaN(numericValue)) {
+        return null;
+      }
+      const remainder = (((numericValue - base) % step) + step) % step;
+      // Use a small epsilon to handle floating-point imprecision
+      const epsilon = step * 1e-9;
+      const hasMismatch = remainder > epsilon && remainder < step - epsilon;
+      if (!hasMismatch) {
+        return null;
+      }
+      const before = base + Math.floor((numericValue - base) / step) * step;
+      const after = before + step;
+      const decimals = (stepString.split(".")[1] || "").length;
+      const context = (() => {
+        const naviInputType = field.controlHostProps["navi-input-type"];
+        if (naviInputType === "hour") {
+          return `hour`;
+        }
+        if (naviInputType === "minute") {
+          return `minute`;
+        }
+        if (naviInputType === "second") {
+          return `second`;
+        }
+        if (naviInputType === "percentage") {
+          return `percentage`;
+        }
+        return `number`;
+      })();
+      return naviI18n(`constraint.step.${context}.default`, {
+        step: stepString,
+        before: before.toFixed(decimals),
+        after: after.toFixed(decimals),
+      });
+    }
+    if (type === "time") {
+      const stepSeconds = parseFloat(stepString);
+      if (!isNaN(stepSeconds)) {
+        const stepMs = stepSeconds * 1000;
+        const valueMs = timeStringToMs(valueAsString);
+        const baseMs = minString ? timeStringToMs(minString) : 0;
+        const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
+        if (remainder === 0) {
+          return null;
+        }
+        const beforeMs = valueMs - remainder;
+        const afterMs = beforeMs + stepMs;
+        const showSeconds = stepSeconds % 60 !== 0;
+        const before = formatMsToTime(beforeMs, showSeconds);
+        const after = formatMsToTime(afterMs, showSeconds);
+        if (stepSeconds % 3600 === 0) {
+          return naviI18n("constraint.step.time.hour", {
+            step: String(stepSeconds / 3600),
+            before,
+            after,
+          });
+        }
+        if (stepSeconds % 60 === 0) {
+          return naviI18n("constraint.step.time.minute", {
+            step: String(stepSeconds / 60),
+            before,
+            after,
+          });
+        }
+        return naviI18n("constraint.step.time.second", {
+          step: stepString,
+          before,
+          after,
+        });
+      }
+    }
+    {
+      const step = parseInt(stepString, 10);
+      const baseDate = minString
+        ? new Date(`${minString}T00:00:00`)
+        : new Date(0);
+      const valueDate = new Date(`${valueAsString}T00:00:00`);
+      const diffDays = Math.round((valueDate - baseDate) / 86400000);
+      if (diffDays % step === 0) {
+        return null;
+      }
+      const beforeDays = Math.floor(diffDays / step) * step;
+      const afterDays = beforeDays + step;
+      const beforeDate = new Date(baseDate);
+      beforeDate.setDate(beforeDate.getDate() + beforeDays);
+      const afterDate = new Date(baseDate);
+      afterDate.setDate(afterDate.getDate() + afterDays);
+      return naviI18n("constraint.step.date.default", {
+        step: stepString,
+        before: formatDateIso(beforeDate.toISOString().slice(0, 10), type),
+        after: formatDateIso(afterDate.toISOString().slice(0, 10), type),
+      });
+    }
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("step");
+
+const timeStringToMs = (timeString) => {
+  const parts = timeString.split(":").map(Number);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  const s = parts[2] || 0;
+  return (h * 3600 + m * 60 + s) * 1000;
+};
+
+const formatMsToTime = (ms, showSeconds) => {
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  if (!showSeconds) {
+    return `${hh}:${mm}`;
+  }
+  const ss = String(s).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+};
+
+const getTodayIso = (inputType) => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  if (inputType === "month") {
+    return `${yyyy}-${mm}`;
+  }
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatDateIso = (iso, inputType) => {
+  const locale = languagesSignal.value;
+  if (inputType === "month") {
+    const date = new Date(`${iso}-01T00:00:00`);
+    return formatMonth(date, locale);
+  }
+  // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
+  const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  if (!isoMatch) {
+    return iso;
+  }
+  const datePart = isoMatch[1];
+  const date = new Date(`${datePart}T00:00:00`);
+  if (isNaN(date.getTime())) {
+    return iso;
+  }
+  return formatDay(date, locale);
+};
+
+const READONLY_CONSTRAINT = {
+  name: "readonly",
+  messageAttribute: "data-readonly-message",
+  check: (field) => {
+    const readOnly = Boolean(
+      field.controlHostProps.readOnly ||
+      field.controlHostProps["aria-readonly"] === "true",
+    );
+    if (!readOnly) {
+      return null;
+    }
+
+    // A selection guarding its length (see maxLengthGuard) is what holds this
+    // one back, so max_length is what refuses it: same name, same message, same
+    // `maxLengthMessage` to say it in the caller's own words. Read-only is only
+    // how it is expressed on the item.
+    const parent = field.parentUIStateController;
+    if (parent?.isChildBlockedByMaxLengthGuard?.(field)) {
+      return {
+        name: MAX_LENGTH_CONSTRAINT.name,
+        constraint: MAX_LENGTH_CONSTRAINT,
+        message: naviI18n("constraint.guard.max_length.selection", {
+          max: String(parent.props.maxLengthGuard),
+        }),
+        status: "info",
+        ignoredByParents: true,
+      };
+    }
+
+    // A readonly element does not block its parent from submitting — mirrors
+    // standard HTML form behaviour where readonly inputs are submitted as-is.
+    return {
+      message: readOnlyMessage(field),
+      status: "info",
+      ignoredByParents: true,
+    };
+  },
+};
+// CONSTRAINT_ATTRIBUTE_SET.add("readOnly"); // not all control support this attr
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
+
+const readOnlyMessage = (field) => {
+  // Read-only for a reason the control named itself. Only one so far: a send
+  // button held back by the form above it, which holds nothing new (see
+  // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
+  // button, it is the form still waiting for a change, so that is what it says.
+  // Read off the reason rather than off the form's state: a button read-only for
+  // its own reasons, inside a form that happens to be unchanged, is not waiting
+  // for anything.
+  if (field.controlHostProps["data-readonly-reason"] === "form-unchanged") {
+    return naviI18n("constraint.readonly.awaiting_change");
+  }
+  if (field.controlType === "button") {
+    return naviI18n("constraint.readonly.button");
+  }
+  return naviI18n("constraint.readonly.default");
+};
+
+/**
+ * Interaction gate: decides whether a user interaction is allowed to proceed
+ * based solely on the control's interactivity state (disabled / read-only / busy).
+ *
+ * Does NOT know about actions or validity — those are handled separately:
+ * - Action dispatch + validity: `control_action.js` / `dispatchRequestAction`
+ * - Validity checking: `control_validation.js`
+ *
+ * Each UI state controller gets its own `controlInteraction` instance (created by
+ * `createControlInteraction`) just like it gets a `controlValidity` instance.
+ *
+ * Flow:
+ *   user interaction
+ *   → dispatchRequestInteraction
+ *   → "navi_request_interaction" event
+ *   → onRequestInteraction
+ *       → check disabled / read-only / busy (via controller.controlInteraction)
+ *       → if blocked  → prevented()
+ *       → if allowed  → allowed()
+ *         → (in allowed callback) setUIState(value)
+ *         → (in allowed callback) dispatchRequestAction(element, { action, event })
+ */
+
+
+const INTERACTION_TOKEN = createOpenToken();
+
+const INTERACTION_CONSTRAINT_SET = new Set([
+  DISABLED_CONSTRAINT,
+  BUSY_CONSTRAINT,
+  READONLY_CONSTRAINT,
+]);
+
+/**
+ * Per-controller interactivity state manager.
+ * Checks whether the control is currently interactive (not disabled/readonly/busy).
+ * Shows a callout when interaction is blocked.
+ * Knows nothing about validity or actions.
+ *
+ * @param {object} controller - The UI state controller.
+ * @param {object} callout    - Shared callout manager from `controller.rules.callout`.
+ */
+const createControlInteraction = (
+  controller,
+  { callout, debugInteraction },
+) => {
+  let interactionFailedConstraintInfo = null;
+  let failingManagedInteraction = null;
+  // The title this rule put on the element, if any (see checkInteractivity).
+  let titleWritten = null;
+
+  const checkInteractivity = ({ event } = {}) => {
+    interactionFailedConstraintInfo = null;
+    for (const constraint of INTERACTION_CONSTRAINT_SET) {
+      const checkResult = constraint.check(controller);
+      if (!checkResult) {
+        continue;
+      }
+      const constraintInfo =
+        typeof checkResult === "string"
+          ? { message: checkResult }
+          : checkResult;
+      interactionFailedConstraintInfo = {
+        name: constraint.name,
+        constraint,
+        ...constraintInfo,
+      };
+      break;
+    }
+    // Check managed controls — a non-interactable child blocks the parent,
+    // UNLESS the child's failing constraint has `ignoredByParents: true`
+    // (e.g. a disabled child inside a group should not prevent the group from acting).
+    // Only the children that are reachable alongside the parent take part: a
+    // picker's popup content is excluded, see getInteractionBlockingControls.
+    failingManagedInteraction = null;
+    if (!interactionFailedConstraintInfo) {
+      for (const mc of controller.getInteractionBlockingControls()) {
+        const mci = mc.rules.interaction;
+        if (!mci) {
+          continue;
+        }
+        const canInteract = mci.checkInteractivity({ event });
+        if (canInteract) {
+          continue;
+        }
+        const failedInfo = mci.interactionFailedConstraintInfo;
+        if (failedInfo?.ignoredByParents) {
+          continue;
+        }
+        failingManagedInteraction = mci;
+        break;
+      }
+    }
+
+    // Keep title attribute in sync for accessibility.
+    const titleLess = !controller.controlHostProps?.title;
+    if (titleLess) {
+      const element = controller.ref.current;
+      if (element) {
+        if (interactionFailedConstraintInfo) {
+          // Only what stays true: a title is written once and read whenever the
+          // pointer rests on the element, so a constraint that comes and goes
+          // on its own (busy, see its own `transient`) would leave it telling a
+          // story that ended — "this action is in progress" over a button that
+          // has been idle for minutes. Those say what they have to say through
+          // the callout, live, while it lasts.
+          if (!interactionFailedConstraintInfo.constraint?.transient) {
+            // The same message the callout would show, not the generated one:
+            // a control that says why in its own words (readOnlyMessage and
+            // friends) says it wherever the reason is read.
+            const { message } = getConstraintMessage(
+              controller,
+              interactionFailedConstraintInfo.constraint,
+              interactionFailedConstraintInfo.message,
+              {},
+            );
+            element.setAttribute("title", message);
+            // Remembered so it can be taken back below.
+            titleWritten = message;
+          }
+        } else if (titleWritten !== null) {
+          // Only what this rule wrote, and only if nothing has changed it since
+          // — a title from validation (which owns its own, see
+          // control_validation.js) or from anywhere else is not ours to remove.
+          if (element.getAttribute("title") === titleWritten) {
+            element.removeAttribute("title");
+          }
+          titleWritten = null;
+        }
+      }
+    }
+
+    const canInteract =
+      !interactionFailedConstraintInfo && !failingManagedInteraction;
+    // When the control is now interactable, remove the interaction token
+    // so the callout closes if no other tokens (e.g. validation) are active.
+    if (canInteract) {
+      callout.removeOpenToken(INTERACTION_TOKEN, event);
+    }
+    return canInteract;
+  };
+
+  const reportInteractivity = ({ event } = {}) => {
+    if (failingManagedInteraction) {
+      // Report on the specific child that is blocking, not the parent.
+      failingManagedInteraction.reportInteractivity({ event });
+      return;
+    }
+    debugInteraction(
+      event,
+      `reportInteractivity (${interactionFailedConstraintInfo.name})`,
+    );
+    const { message } = getConstraintMessage(
+      controller,
+      interactionFailedConstraintInfo.constraint,
+      interactionFailedConstraintInfo.message,
+      {},
+    );
+    callout.addOpenToken(INTERACTION_TOKEN, {
+      message,
+      status: interactionFailedConstraintInfo.status,
+      anchorElement: interactionFailedConstraintInfo.target,
+      event,
+      skipFocus: true,
+    });
+  };
+
+  const controlInteraction = {
+    checkInteractivity,
+    reportInteractivity,
+  };
+  Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
+    get: () => interactionFailedConstraintInfo,
+  });
+  Object.defineProperty(controlInteraction, "failingManagedInteraction", {
+    get: () => failingManagedInteraction,
+  });
+  return controlInteraction;
+};
+
+const dispatchRequestInteraction = (
+  element,
+  { event, name = "", prevented, allowed, always, ...detailRest } = {},
+) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
+    event,
+    name,
+    prevented,
+    allowed,
+    always,
+    ...detailRest,
+  });
+};
+
+const onRequestInteraction = (
+  requestInteractionCustomEvent,
+  { debugInteraction },
+) => {
+  const {
+    event,
+    name,
+    bypassInteractivity = false,
+    prevented,
+    allowed,
+    always,
+  } = requestInteractionCustomEvent.detail;
+
+  const onPrevented = (reason) => {
+    debugInteraction(event, `"${name}" prevented (${reason})`);
+    requestInteractionCustomEvent.preventDefault();
+    prevented?.();
+    always?.();
+  };
+
+  if (event.defaultPrevented) {
+    onPrevented("event.defaultPrevented");
+    return false;
+  }
+
+  if (POINTER_DOWN_TYPE_SET.has(event.type) && event.button !== 0) {
+    onPrevented(`non-primary mouse button (${event.button})`);
+    return false;
+  }
+
+  const currentTarget = requestInteractionCustomEvent.currentTarget;
+  const controlHost = findControlHost(currentTarget) || currentTarget;
+  const controller = controlHost.__uiStateController__;
+
+  if (controller && !bypassInteractivity) {
+    const ci = controller?.rules.interaction;
+    if (ci) {
+      const canInteract = ci.checkInteractivity({ event });
+      if (!canInteract) {
+        const failedInfo =
+          ci.interactionFailedConstraintInfo ??
+          ci.failingManagedInteraction?.interactionFailedConstraintInfo;
+        const reason = failedInfo
+          ? `failing interaction constraint "${failedInfo.name}"`
+          : "not interactable";
+        ci.reportInteractivity({ event });
+        onPrevented(reason);
+        return false;
+      }
+    }
+  }
+
+  debugInteraction(event, `"${name}" allowed`);
+  allowed?.();
+  always?.();
+  // The click served this control; it must not serve a second time whatever
+  // unfolds around it (see click_to_expand.js).
+  preventClickToExpand(controlHost, event);
+  return true;
+};
+
+const POINTER_DOWN_TYPE_SET = new Set(["pointerdown", "mousedown", "click"]);
+
+/**
+ * Action gate: decides whether a requested action should execute, based on
+ * the control's current validity state.
+ *
+ * This is intentionally separate from the interaction gate (`control_interaction.js`):
+ * - Interaction gate: "can the user interact with this control at all?" (disabled/readonly/busy)
+ * - Action gate: "should this specific action execute?" (required, pattern, etc.)
+ *
+ * Typical call sequence from `control_hooks.jsx`:
+ *   1. `dispatchRequestInteraction(element, { ... })` — interactivity check
+ *   2. In the `allowed` callback: `setUIState(value)` — update state
+ *   3. Still in `allowed`: `dispatchRequestAction(element, { action, event })` — action gate
+ *
+ * `dispatchRequestAction` assumes `checkValidity` has already been called (it is called
+ * by `setUIState` on every state change). It re-checks with `fromRequestAction: true`
+ * to trigger any `autoResetOnAction` side effects, then reads the validity state to
+ * decide whether to report the failure or fire `navi_action_allowed`.
+ */
+
+
+/**
+ * Requests that `action` be executed on `element`.
+ *
+ * - Resolves any proxy target (so navi_action_* fires on the real element).
+ * - Calls `syncValidity` to update callout state and determine validity.
+ * - If invalid: calls `reportValidity`, dispatches `navi_action_prevented`, returns false.
+ * - If valid:   dispatches `navi_action_allowed`, returns true.
+ *
+ * Pass `action: "auto"` for form submits — the `onnavi_action_allowed` handler
+ * in `control_hooks.jsx` will resolve it to the element's bound action.
+ */
+const dispatchRequestAction = (
+  element,
+  {
+    event,
+    name = "dispatchRequestAction",
+    prevented,
+    allowed,
+    always,
+    ...actionOptions // action, requester, actionOrigin, method, meta
+  } = {},
+) => {
+  return dispatchRequestInteraction(element, {
+    event,
+    name,
+    prevented,
+    allowed: () => {
+      allowed?.();
+      return tryActionAfterInteractionAllowed(element, {
+        event,
+        ...actionOptions,
+      });
+    },
+    always,
+  });
+};
+
+/**
+ * Dispatches an action and reports whether it outlived the dispatch.
+ *
+ * "start" is dispatched synchronously (see `use_execute_action.js`), so an
+ * action that has not settled by the time `dispatchAction` returns is
+ * asynchronous — which is the question anything waiting on a commit actually
+ * asks before acting on it: a dialog before closing, `--navi-send` before
+ * moving to the next slide.
+ *
+ * `whenSucceeded` registers what to do once it completes, and only then: an
+ * error or an abort leaves whatever the action left in front of the user
+ * (a validation message, an aborted state) instead. `whenSettled` is for a
+ * caller that has something to undo however it ended — a row a swipe pulled out
+ * has to come back on a failure, so it must hear about one.
+ *
+ * @param {Element} element - The element the action is dispatched on.
+ * @param {() => any} dispatchAction
+ * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void, whenSettled: (callback: Function) => void }}
+ */
+const watchActionCompletion = (element, dispatchAction) => {
+  let running = false;
+  let onSuccess = null;
+  let onSettled = null;
+  let settledOutcome = null;
+  const onActionStart = (actionStartEvent) => {
+    running = true;
+    actionStartEvent.detail.addSideEffect((outcome) => {
+      running = false;
+      const { error, aborted } = outcome;
+      if (onSettled) {
+        onSettled(outcome);
+      } else {
+        // Settled before the caller had a chance to ask — a synchronous action.
+        // Kept rather than dropped, because what waits on this waits to UNDO
+        // something (see whenSettled), and there is no other path for that.
+        settledOutcome = outcome;
+      }
+      if (error || aborted) {
+        return;
+      }
+      // A microtask later, not right here: this runs inside the `batch()` that
+      // settles the action (see actions.js), and a bound action mirrors its
+      // running state through a signal effect the batch defers — so the action
+      // still reads as running until the batch ends. What waits for a commit
+      // asks exactly that question next (the interaction gate, on the way to
+      // closing a popup), and must not be told the action is still going.
+      // Null for an action that settled before the caller ever asked to wait
+      // (a synchronous one): it goes out through the caller's own normal path.
+      queueMicrotask(() => {
+        onSuccess?.();
+      });
+    });
+  };
+  element.addEventListener("navi_action_start", onActionStart);
+  let result;
+  try {
+    result = dispatchAction();
+  } finally {
+    element.removeEventListener("navi_action_start", onActionStart);
+  }
+  return {
+    result,
+    isRunning: running,
+    whenSucceeded: (callback) => {
+      onSuccess = callback;
+    },
+    whenSettled: (callback) => {
+      if (settledOutcome) {
+        callback(settledOutcome);
+        return;
+      }
+      onSettled = callback;
+    },
+  };
+};
+
+const tryActionAfterInteractionAllowed = (
+  element,
+  {
+    event,
+    action = "auto",
+    requester,
+    actionOrigin = "action_prop",
+    method = "rerun",
+    meta = {},
+    reportOnInvalid,
+    onInvalid,
+  },
+) => {
+  const controlHost = findControlHost(element) || element;
+  const controller = controlHost.__uiStateController__;
+  // Whether the control being asked owns the work, or is only a way of asking
+  // for it. A button with no action of its own still comes through here (it
+  // gets a placeholder action so its own navi_action_* events exist), then
+  // hands the real request to its command's target — a submit button to the
+  // form around it, which comes back through here with that same button as
+  // requester.
+  const hasOwnAction = Boolean(controller?.props.action);
+
+  // What the requester asks before the action runs at all, read off it rather
+  // than passed down from each call site: a confirmation belongs to the button
+  // the user pressed, whichever route brought the request here. Only asked on
+  // the request that carries the real work, or the same press would ask twice.
+  const confirmParams =
+    hasOwnAction || requester !== controlHost
+      ? getConfirmParams(requester)
+      : undefined;
+
+  // Resolve proxy so navi_action_* fires on the real control element.
+  let elementForAction = controlHost;
+  let uiState;
+  if (controller) {
+    const proxyTargetController = findControlProxyTargetController(controller);
+    if (proxyTargetController) {
+      elementForAction = proxyTargetController.ref.current;
+    }
+    const activeController = proxyTargetController ?? controller;
+    uiState = activeController?.uiState;
+  }
+
+  // Validity gate: re-check (handles autoResetOnAction side effects), then read
+  // the result and decide whether to report/prevent/allow.
+  const cv = controller?.rules.validation;
+  if (cv) {
+    const isValid = cv.syncValidity(event, {
+      report: reportOnInvalid ?? hasOwnAction,
+      fromRequestAction: true,
+    });
+    if (!isValid) {
+      onInvalid?.();
+      if (action === "auto" || action?.isAction) {
+        dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
+          event,
+          requester,
+          actionOrigin,
+          action,
+          method,
+          meta,
+        });
+      }
+      return false;
+    }
+  }
+
+  if (action === "auto" || action?.isAction) {
+    // A control that commits gets the last word on whether this particular
+    // value is worth acting on — see Form's own `shouldRequestAction`, which
+    // is where "nothing changed since the last send" is decided. Everything
+    // before this still ran (the interaction gate, the constraints), and the
+    // caller is still told the send went through: what follows a send (a slide
+    // moving on, a popup closing) is about the user being done, not about
+    // whether there was anything to send.
+    if (controller?.shouldRequestAction?.(uiState) === false) {
+      return true;
+    }
+    dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
+      event,
+      requester,
+      uiState,
+      actionOrigin,
+      action,
+      method,
+      meta,
+      confirmParams,
+    });
+  }
+  return true;
+};
+
+/**
+ * `interactions`: which interactions a control answers, and with what.
+ *
+ * `action` stays what it always was — the work, wired to whatever asking for it
+ * naturally means for that control (a click on a button, a change on a field).
+ * `interactions` is the other half: the interactions that are NOT that natural
+ * one, named, each said to do one of three things.
+ *
+ *   interactions={{
+ *     swipe_left: "request_action",       // ask for the action prop
+ *     swipe_right: "request_ui_action",   // ask for a ui action
+ *     longpress: (event) => openMenu(event),
+ *     "keyboard:ctrl+backspace": "request_action",
+ *   }}
+ *
+ * An interaction that asks for the action does not say WHICH work: the action is
+ * one, and it reads which interaction asked from the event it already receives.
+ *
+ *   action={(value, { event }) => {
+ *     const swipe = findEvent(event, "swipe_left");
+ *     if (swipe) { … }
+ *   }}
+ *
+ * Everything goes through the interaction gate, so a disabled, read-only or busy
+ * control answers a swipe the way it answers a click: it says why, where the
+ * interaction happened, and nothing runs.
+ *
+ * WHAT AN INTERACTION IS, HERE
+ *
+ * A name, and something that knows when it happened. Some names are the browser's
+ * own events (`click`, `mousedown`, `contextmenu`); the rest are interactions the
+ * browser has no event for, and something has to read them from lower-level ones.
+ * That something is a DETECTOR, and this module holds no detector of its own —
+ * navi registers its own through `defineInteractionDetector` exactly like an
+ * application does (see interaction_native.js, interaction_press.js,
+ * interaction_keyboard.js). So an application that needs an interaction navi does
+ * not have registers it the same way, and its name then works in `interactions`
+ * like any other.
+ *
+ * A detector claims a SET of names rather than one, because interactions that
+ * share an input have to be arbitrated together: a swipe, a long press and a
+ * click dispute the same press, and read apart they walk over each other.
+ *
+ * An interaction navi makes is DISPATCHED as an event of its own name — bubbling
+ * and cancelable, like any other. That is what puts it in the event chain the
+ * action receives, what lets anything around the control listen for one, and what
+ * gives a caller the usual way to say "not this time" (`preventDefault`).
+ */
+
+
+const detectors = [];
+
+/**
+ * Registers something that knows when an interaction happened.
+ *
+ * @param {object} definition
+ * @param {string} definition.name For debugging and for the message a name
+ *   nothing claims produces.
+ * @param {(type: string) => boolean} definition.claims Whether this detector
+ *   reads that interaction name.
+ * @param {(claimedTypes: string[], interactions: object) => object|null} [definition.implies]
+ *   Interactions that come with the ones declared, for a detector whose gesture
+ *   only makes sense alongside another. What the caller declared explicitly always
+ *   wins.
+ * @param {(element: Element, trigger: Function, context: object) => (void|Function)} definition.setup
+ *   Called ONCE per element, with the element itself, and returns how to undo
+ *   whatever it did. Listeners, attributes, anything — it is a plain setup and
+ *   teardown, so a detector counts what it needs in its own closure and nothing
+ *   here has to hold state on its behalf.
+ *
+ *     setup: (element, trigger) => {
+ *       const onClick = (event) => trigger(event);
+ *       element.addEventListener("click", onClick);
+ *       return () => {
+ *         element.removeEventListener("click", onClick);
+ *       };
+ *     }
+ *
+ *   `trigger(type, originalEvent, detail)` says the interaction happened. Called
+ *   with a single event — `trigger(event)` — the type is the detector's own, which
+ *   only works when exactly one of its names is declared here.
+ *
+ *   It returns null when NOTHING RAN (the gate refused, no control to ask, the
+ *   interaction event was prevented), and otherwise a promise: resolved once the
+ *   effect worked, rejected when it did not. Those two answers are different and a
+ *   detector usually treats them differently — a row pulled out comes back either
+ *   way, something thrown off the screen only comes back if the throw failed.
+ *
+ *   The third argument carries `{ types, readConfig }`: the claimed names actually
+ *   declared, and a number read off the element or any ancestor carrying that
+ *   attribute (so a whole list is tuned in one place).
+ */
+const defineInteractionDetector = (definition) => {
+  detectors.push(definition);
+};
+
+const REQUEST_ACTION = "request_action";
+const REQUEST_UI_ACTION = "request_ui_action";
+
+/**
+ * The interactions as declared, plus the ones they imply, minus the ones turned
+ * off.
+ *
+ * A falsy effect means "not this one", so an interaction can be declared under a
+ * condition — `{ swipe_right: canArchive && archive }` — without the caller
+ * having to build the object in two steps.
+ */
+const resolveInteractions = (interactions) => {
+  if (!interactions) {
+    return null;
+  }
+  let resolved = interactions;
+  for (const detector of detectors) {
+    if (!detector.implies) {
+      continue;
+    }
+    const claimedTypes = Object.keys(resolved).filter(detector.claims);
+    if (claimedTypes.length === 0) {
+      continue;
+    }
+    const implied = detector.implies(claimedTypes, resolved);
+    if (implied) {
+      // Declared last so it wins: an implication is a default, and a caller who
+      // said what that interaction does has already answered.
+      resolved = { ...implied, ...resolved };
+    }
+  }
+  const kept = {};
+  for (const type of Object.keys(resolved)) {
+    if (resolved[type]) {
+      kept[type] = resolved[type];
+    }
+  }
+  resolved = kept;
+  if (Object.keys(resolved).length === 0) {
+    return null;
+  }
+  return resolved;
+};
+
+/**
+ * Installs the detectors for the interactions declared on an element, and takes
+ * them down when they change or when it goes away.
+ *
+ * The control is not passed in: it is found from the element, which is what lets
+ * `interactions` live on a Box rather than on the control itself. A Box that IS a
+ * control (a Button) is its own; a Box around one or inside one reaches it; a Box
+ * with no control anywhere near it can still answer with a callback of the
+ * caller's, and only "request_action" has nothing to ask.
+ *
+ * Set up once per element rather than on every render, which is what lets a
+ * detector be a plain `setup`/teardown pair. So the interactions themselves are
+ * read through a ref: what a swipe DOES is the caller's latest render, while WHEN
+ * it happens was wired at mount.
+ *
+ * @param {{current: Element}} ref The element the interactions are read on, and
+ *   the one that moves under a swipe.
+ * @param {{current: object|null}} interactionsRef What `resolveInteractions`
+ *   returned, kept current by the caller.
+ */
+const useInteractionsEffect = (ref, interactionsRef) => {
+  // Which detectors to install, and under which names — the only thing a change
+  // of which has to take everything down and put it back. What each one does can
+  // change every render without any of that.
+  const names = interactionsRef.current
+    ? Object.keys(interactionsRef.current).sort().join(",")
+    : "";
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || !names) {
+      return undefined;
+    }
+    const interactionsNow = () => interactionsRef.current || {};
+
+    // Answers one interaction, and reports back what became of it: null when
+    // nothing ran at all, else a promise that mirrors the effect (see the
+    // trigger contract on defineInteractionDetector).
+    const perform = (type, interactionEvent) => {
+      const effect = interactionsNow()[type];
+      if (!effect) {
+        return null;
+      }
+      const controlHost = findNearestControlHost(element);
+      const name = `interaction "${type}"`;
+      if (effect === REQUEST_ACTION) {
+        if (!controlHost) {
+          return null;
+        }
+        // "auto" rather than an action of our own: which action this is belongs
+        // to the control, and it resolves it to whatever its `action` prop bound
+        // (see onnavi_action_allowed).
+        const completion = watchActionCompletion(controlHost, () =>
+          dispatchRequestAction(controlHost, {
+            event: interactionEvent,
+            name,
+            action: "auto",
+            requester: controlHost,
+          }),
+        );
+        if (completion.result === false) {
+          // The gate turned the request down and has said why where it happened.
+          return null;
+        }
+        if (!completion.isRunning) {
+          // Synchronous: it is already done, and done is not refused.
+          return settled(Promise.resolve());
+        }
+        return settled(
+          new Promise((resolve, reject) => {
+            completion.whenSettled((outcome) => {
+              if (outcome.error) {
+                reject(outcome.error);
+              } else if (outcome.aborted) {
+                reject(new Error(`aborted: ${outcome.reason}`));
+              } else {
+                resolve(outcome.data);
+              }
+            });
+          }),
+        );
+      }
+      if (effect === REQUEST_UI_ACTION) {
+        if (!controlHost) {
+          return null;
+        }
+        // The value it already holds, set again: a ui action is what says the
+        // user acted, and everything listening for one (a command, a group
+        // above) hears it whether or not the value moved.
+        let allowed = false;
+        dispatchRequestInteraction(controlHost, {
+          event: interactionEvent,
+          name,
+          allowed: () => {
+            allowed = true;
+            dispatchRequestSetUIState(
+              controlHost,
+              getUIStateFromElement(controlHost),
+              { event: interactionEvent },
+            );
+          },
+        });
+        return allowed ? settled(Promise.resolve()) : null;
+      }
+      let ran = false;
+      let returnValue;
+      const run = () => {
+        ran = true;
+        returnValue = effect(interactionEvent);
+      };
+      if (controlHost) {
+        // Through the gate even for a callback of the caller's: a disabled or
+        // read-only control must answer a swipe the way it answers a click, and
+        // it is the control that knows it is.
+        dispatchRequestInteraction(controlHost, {
+          event: interactionEvent,
+          name,
+          allowed: run,
+        });
+      } else {
+        run();
+      }
+      if (!ran) {
+        return null;
+      }
+      if (returnValue && typeof returnValue.then === "function") {
+        return settled(returnValue);
+      }
+      return settled(Promise.resolve(returnValue));
+    };
+
+    const cleanups = [];
+    for (const detector of detectors) {
+      const types = Object.keys(interactionsNow()).filter(detector.claims);
+      if (types.length === 0) {
+        continue;
+      }
+      const trigger = (typeOrEvent, originalEvent, detail) => {
+        if (typeof typeOrEvent !== "string") {
+          // trigger(event): the type is the detector's own, which only makes
+          // sense when it has exactly one here.
+          if (types.length !== 1) {
+            throw new Error(
+              `trigger(event) needs a single interaction to be unambiguous, and "${detector.name}" has ${types.length} here (${types.join(", ")}). Name it: trigger(type, event, detail).`,
+            );
+          }
+          return trigger(types[0], typeOrEvent);
+        }
+        const type = typeOrEvent;
+        if (originalEvent?.type === type) {
+          // The interaction IS that event — a native one. Dispatching a second
+          // event of the same name would be answering the same thing twice.
+          return perform(type, originalEvent);
+        }
+        const interactionEvent = new CustomEvent(type, {
+          detail: { ...detail, event: originalEvent },
+          bubbles: true,
+          cancelable: true,
+        });
+        // The event the interaction was read from stays reachable from it:
+        // `findEvent(actionEvent, "pointerdown")` still finds the press a swipe
+        // was made of.
+        chainEvent(interactionEvent, originalEvent);
+        if (!element.dispatchEvent(interactionEvent)) {
+          return null;
+        }
+        return perform(type, interactionEvent);
+      };
+      const cleanup = detector.setup(element, trigger, {
+        types,
+        readConfig: (attribute, defaultValue) =>
+          readNumberFromDom(element, attribute, defaultValue),
+      });
+      if (typeof cleanup === "function") {
+        cleanups.push(cleanup);
+      }
+    }
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+    // `names` alone: what a detector DOES is read live off the ref, so a render
+    // that changes only that must not take the wiring down and put it back.
+  }, [names]);
+};
+
+// A rejection nobody is listening for is a console warning about something already
+// reported where it happened (a validation message on the control). The promise
+// handed out keeps rejecting — a detector that has something to undo needs to hear
+// it — but it is no longer "unhandled".
+const settled = (promise) => {
+  promise.catch(() => {});
+  return promise;
+};
+
+const readNumberFromDom = (element, attribute, defaultValue) => {
+  const holder = element.closest(`[${attribute}]`);
+  if (!holder) {
+    return defaultValue;
+  }
+  const value = parseFloat(holder.getAttribute(attribute));
+  if (isNaN(value)) {
+    return defaultValue;
+  }
+  return value;
+};
+
+const isSignal = (value) => {
+  return getSignalType(value) !== null;
+};
+
+const BRAND_SYMBOL = Symbol.for("preact-signals");
+const getSignalType = (value) => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (value.brand !== BRAND_SYMBOL) {
+    return null;
+  }
+
+  if (typeof value._fn === "function") {
+    return "computed";
+  }
+
+  return "signal";
+};
+
+/**
+ * jsenv/navi - createJsValueWeakMap
+ *
+ * Key/value cache with true ephemeron behavior and deep equality support.
+ *
+ * Features:
+ * - Mutual retention: key keeps value alive, value keeps key alive
+ * - Deep equality: different objects with same content are treated as identical keys
+ * - Automatic GC: entries are eligible for collection when unreferenced
+ * - Iteration support: can iterate over live entries for deep equality lookup
+ *
+ * Implementation:
+ * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
+ * - WeakRef registry enables iteration without preventing GC
+ * - Primitives stored in Map (permanent retention - avoid for keys)
+ *
+ * Use case: Action caching where params (key) and action (value) should have
+ * synchronized lifetimes while allowing natural garbage collection.
+ */
+
+
+const createJsValueWeakMap = () => {
+  // Core ephemeron maps for mutual retention
+  const keyToValue = new WeakMap(); // key -> value
+  const valueToKey = new WeakMap(); // value -> key
+
+  // Registry for iteration/deep equality (holds WeakRefs)
+  const keyRegistry = new Set(); // Set of WeakRef(key)
+
+  // Primitive cache
+  const primitiveCache = new Map();
+
+  function cleanupKeyRegistry() {
+    for (const keyRef of keyRegistry) {
+      if (keyRef.deref() === undefined) {
+        keyRegistry.delete(keyRef);
+      }
+    }
+  }
+
+  return {
+    *[Symbol.iterator]() {
+      cleanupKeyRegistry();
+      for (const keyRef of keyRegistry) {
+        const key = keyRef.deref();
+        if (key && keyToValue.has(key)) {
+          yield [key, keyToValue.get(key)];
+        }
+      }
+      for (const [k, v] of primitiveCache) {
+        yield [k, v];
+      }
+    },
+
+    get(key) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        // Fast path: exact key match
+        if (keyToValue.has(key)) {
+          return keyToValue.get(key);
+        }
+
+        // Slow path: deep equality search
+        cleanupKeyRegistry();
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            return keyToValue.get(existingKey);
+          }
+        }
+        return undefined;
+      }
+      return primitiveCache.get(key);
+    },
+
+    set(key, value) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        cleanupKeyRegistry();
+
+        // Remove existing deep-equal key
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const existingValue = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(existingValue);
+            keyRegistry.delete(keyRef);
+            break;
+          }
+        }
+
+        // Set ephemeron pair
+        keyToValue.set(key, value);
+        valueToKey.set(value, key);
+        keyRegistry.add(new WeakRef(key));
+      } else {
+        primitiveCache.set(key, value);
+      }
+    },
+
+    delete(key) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        cleanupKeyRegistry();
+
+        // Try exact match first
+        if (keyToValue.has(key)) {
+          const value = keyToValue.get(key);
+          keyToValue.delete(key);
+          valueToKey.delete(value);
+
+          // Remove from registry
+          for (const keyRef of keyRegistry) {
+            if (keyRef.deref() === key) {
+              keyRegistry.delete(keyRef);
+              break;
+            }
+          }
+          return true;
+        }
+
+        // Try deep equality
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const value = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(value);
+            keyRegistry.delete(keyRef);
+            return true;
+          }
+        }
+        return false;
+      }
+      return primitiveCache.delete(key);
+    },
+
+    getStats: () => {
+      cleanupKeyRegistry();
+      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
+        ref.deref(),
+      ).length;
+
+      return {
+        ephemeronPairs: {
+          total: keyRegistry.size,
+          alive: aliveKeys,
+          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
+        },
+        primitive: {
+          total: primitiveCache.size,
+          note: "Primitive keys never GC'd",
+        },
+      };
+    },
+  };
+};
+
+const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
+
+const mergeTwoJsValues = (firstValue, secondValue) => {
+  const firstIsPrimitive =
+    firstValue === null ||
+    typeof firstValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
+
+  if (firstIsPrimitive) {
+    return secondValue;
+  }
+  const secondIsPrimitive =
+    secondValue === null ||
+    typeof secondValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
+  if (secondIsPrimitive) {
+    return secondValue;
+  }
+  const objectMerge = {};
+  const firstKeys = Object.keys(firstValue);
+  const secondKeys = Object.keys(secondValue);
+  let hasChanged = false;
+
+  // First loop: check for keys in first object and recursively merge with second
+  for (const key of firstKeys) {
+    const firstValueForKey = firstValue[key];
+    const secondHasKey = secondKeys.includes(key);
+
+    if (secondHasKey) {
+      const secondValueForKey = secondValue[key];
+      const mergedValue = mergeTwoJsValues(firstValueForKey, secondValueForKey);
+      objectMerge[key] = mergedValue;
+      if (mergedValue !== firstValueForKey) {
+        hasChanged = true;
+      }
+    } else {
+      objectMerge[key] = firstValueForKey;
+    }
+  }
+
+  for (const key of secondKeys) {
+    if (firstKeys.includes(key)) {
+      continue;
+    }
+    objectMerge[key] = secondValue[key];
+    hasChanged = true;
+  }
+
+  if (!hasChanged) {
+    return firstValue;
+  }
+  return objectMerge;
+};
+
+const MAX_ENTRIES = 5;
+
+const stringifyForDisplay = (
+  value,
+  maxDepth = 2,
+  currentDepth = 0,
+  options = {},
+) => {
+  const { asFunctionArgs = false } = options;
+  const indent = "  ".repeat(currentDepth);
+  const nextIndent = "  ".repeat(currentDepth + 1);
+
+  if (currentDepth >= maxDepth) {
+    return typeof value === "object" && value !== null
+      ? "[Object]"
+      : String(value);
+  }
+
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return `"${value}"`;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (typeof value === "function") {
+    return `[Function ${value.name || "anonymous"}]`;
+  }
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+  if (value instanceof RegExp) {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    const openBracket = asFunctionArgs ? "(" : "[";
+    const closeBracket = asFunctionArgs ? ")" : "]";
+
+    if (value.length === 0) return `${openBracket}${closeBracket}`;
+
+    // Display arrays with only one element on a single line
+    if (value.length === 1) {
+      const item = stringifyForDisplay(
+        value[0],
+        maxDepth,
+        currentDepth + 1,
+        // Remove asFunctionArgs for nested calls
+        { ...options, asFunctionArgs: false },
+      );
+      return `${openBracket}${item}${closeBracket}`;
+    }
+
+    if (value.length > MAX_ENTRIES) {
+      const preview = value
+        .slice(0, MAX_ENTRIES)
+        .map(
+          (v) =>
+            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
+    }
+
+    const items = value.map(
+      (v) =>
+        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
+  }
+
+  if (typeof value === "object") {
+    const signalType = getSignalType(value);
+    if (signalType) {
+      const signalValue = value.peek();
+      const prefix = signalType === "computed" ? "computed" : "signal";
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
+    }
+
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "{}";
+
+    // ✅ Inclure les clés avec valeurs undefined/null
+    const allEntries = [];
+    for (const [key, val] of entries) {
+      allEntries.push([key, val]);
+    }
+
+    // Ajouter les clés avec undefined (que Object.entries omet)
+    const descriptor = Object.getOwnPropertyDescriptors(value);
+    for (const [key, desc] of Object.entries(descriptor)) {
+      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
+        allEntries.push([key, undefined]);
+      }
+    }
+
+    // Display objects with only one key on a single line
+    if (allEntries.length === 1) {
+      const [key, val] = allEntries[0];
+      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
+        ...options,
+        asFunctionArgs: false,
+      });
+      return `{ ${key}: ${valueStr} }`;
+    }
+
+    if (allEntries.length > MAX_ENTRIES) {
+      const preview = allEntries
+        .slice(0, MAX_ENTRIES)
+        .map(
+          ([k, v]) =>
+            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
+    }
+
+    const pairs = allEntries.map(
+      ([k, v]) =>
+        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `{\n${pairs.join(",\n")}\n${indent}}`;
+  }
+
+  return String(value);
+};
+
+/**
+ * Creates an effect that uses WeakRef to prevent garbage collection of referenced values.
+ *
+ * This utility is useful when you want to create reactive effects that watch objects
+ * without preventing those objects from being garbage collected. If any of the referenced
+ * values is collected, the effect automatically disposes itself.
+ *
+ * @param {Array} values - Array of values to create weak references for
+ * @param {Function} callback - Function to call when the effect runs, receives dereferenced values as arguments
+ * @returns {Function} dispose - Function to manually dispose the effect
+ *
+ * @example
+ * ```js
+ * const objectA = { name: "A" };
+ * const objectB = { name: "B" };
+ * const prefixSignal = signal('demo');
+ *
+ * const dispose = weakEffect([objectA, objectB], (a, b) => {
+ *   const prefix = prefixSignal.value
+ *   console.log(prefix, a.name, b.name);
+ * });
+ *
+ * // Effect will auto-dispose if objectA or objectB where garbage collected
+ * // or can be manually disposed:
+ * dispose();
+ * ```
+ */
+const weakEffect = (values, callback) => {
+  const weakRefSet = new Set();
+  for (const value of values) {
+    weakRefSet.add(new WeakRef(value));
+  }
+  const dispose = effect(() => {
+    const values = [];
+    for (const weakRef of weakRefSet) {
+      const value = weakRef.deref();
+      if (value === undefined) {
+        dispose();
+        return;
+      }
+      values.push(value);
+    }
+    callback(...values);
+  });
+  return dispose;
+};
+
+const actionPrivatePropertiesWeakMap = new WeakMap();
+const getActionPrivateProperties = (action) => {
+  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
+  if (!actionPrivateProperties) {
+    throw new Error(`Cannot find action private properties for "${action}"`);
+  }
+  return actionPrivateProperties;
+};
+const setActionPrivateProperties = (action, properties) => {
+  actionPrivatePropertiesWeakMap.set(action, properties);
+};
+
+const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
+
+let DEBUG$1 = false;
+const enableDebugActions = () => {
+  DEBUG$1 = true;
+};
+
+let dispatchActions = (params) => {
+  const { requestedResult } = updateActions({
+    globalAbortSignal: new AbortController().signal,
+    abortSignal: new AbortController().signal,
+    ...params,
+  });
+  return requestedResult;
+};
+
+const dispatchSingleAction = (action, method, options) => {
+  const requestedResult = dispatchActions({
+    prerunSet: method === "prerun" ? new Set([action]) : undefined,
+    runSet: method === "run" ? new Set([action]) : undefined,
+    rerunSet: method === "rerun" ? new Set([action]) : undefined,
+    resetSet: method === "reset" ? new Set([action]) : undefined,
+    ...options,
+  });
+  if (requestedResult && typeof requestedResult.then === "function") {
+    return requestedResult.then((resolvedResult) =>
+      resolvedResult ? resolvedResult[0] : undefined,
+    );
+  }
+  return requestedResult ? requestedResult[0] : undefined;
+};
+const setActionDispatcher = (value) => {
+  dispatchActions = value;
+};
+
+const getActionDispatcher = () => dispatchActions;
+
+const rerunActions = async (actionSet, options) => {
+  return dispatchActions({
+    rerunSet: actionSet,
+    reason: "rerunActions was calle",
+    ...options,
+  });
+};
+
+/**
+ * Registry that prevents prerun actions from being garbage collected.
+ *
+ * When an action is prerun, it might not have any active references yet
+ * (e.g., the component that will use it hasn't loaded yet due to dynamic imports).
+ * This registry keeps a reference to prerun actions for a configurable duration
+ * to ensure they remain available when needed.
+ *
+ * Actions are automatically unprotected when:
+ * - The protection duration expires (default: 5 minutes)
+ * - The action is explicitly stopped via .reset()
+ */
+const prerunProtectionRegistry = (() => {
+  const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
+  const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+
+  const unprotect = (action) => {
+    const protection = protectedActionMap.get(action);
+    if (protection) {
+      clearTimeout(protection.timeoutId);
+      protectedActionMap.delete(action);
+      const elapsed = Date.now() - protection.timestamp;
+      action.debug(`"${action}": GC protection removed after ${elapsed}ms`);
+    }
+  };
+
+  return {
+    protect(action) {
+      // Si déjà protégée, étendre la protection
+      if (protectedActionMap.has(action)) {
+        const existing = protectedActionMap.get(action);
+        clearTimeout(existing.timeoutId);
+      }
+
+      const timestamp = Date.now();
+      const timeoutId = setTimeout(() => {
+        unprotect(action);
+        action.debug(
+          `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
+        );
+      }, PROTECTION_DURATION);
+      protectedActionMap.set(action, { timeoutId, timestamp });
+      action.debug(
+        `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+      );
+    },
+
+    unprotect,
+
+    isProtected(action) {
+      return protectedActionMap.has(action);
+    },
+
+    // Pour debugging
+    getProtectedActions() {
+      return Array.from(protectedActionMap.keys());
+    },
+
+    // Nettoyage manuel si nécessaire
+    clear() {
+      for (const [, protection] of protectedActionMap) {
+        clearTimeout(protection.timeoutId);
+      }
+      protectedActionMap.clear();
+    },
+  };
+})();
+
+const formatActionSet = (actionSet, prefix = "") => {
+  let message = "";
+  message += `${prefix}`;
+  for (const action of actionSet) {
+    message += "\n";
+    message += prefixFirstAndIndentRemainingLines(String(action), {
+      prefix: "  -",
+    });
+  }
+  return message;
+};
+
+const actionAbortMap = new Map();
+const actionPromiseMap = new Map();
+const activationWeakSet = createIterableWeakSet("activation");
+
+const getActivationInfo = () => {
+  const runningSet = new Set();
+  const settledSet = new Set();
+
+  for (const action of activationWeakSet) {
+    const runningState = action.runningStateSignal.peek();
+
+    if (runningState === RUNNING) {
+      runningSet.add(action);
+    } else if (
+      runningState === COMPLETED ||
+      runningState === FAILED ||
+      runningState === ABORTED
+    ) {
+      settledSet.add(action);
+    } else {
+      throw new Error(
+        `An action in the activation weak set must be RUNNING, ABORTED, FAILED or COMPLETED, found "${runningState.id}" for action "${action}"`,
+      );
+    }
+  }
+
+  return {
+    runningSet,
+    settledSet,
+  };
+};
+
+const updateActions = ({
+  globalAbortSignal,
+  abortSignal,
+  isReplace = false,
+  reason,
+  event,
+  prerunSet = new Set(),
+  runSet = new Set(),
+  rerunSet = new Set(),
+  resetSet = new Set(),
+  abortSignalMap = new Map(),
+  onComplete,
+  onAbort,
+  onError,
+} = {}) => {
+  /*
+   * Action update flow:
+   *
+   * Input: 4 sets of requested operations
+   * - prerunSet: actions to prerun (background, low priority)
+   * - runSet: actions to run (user-visible, medium priority)
+   * - rerunSet: actions to force rerun (highest priority)
+   * - resetSet: actions to reset/clear
+   *
+   * Priority resolution:
+   * - reset always wins (explicit cleanup)
+   * - rerun > run > prerun (rerun forces refresh even if already running)
+   * - An action in multiple sets triggers warnings in dev mode
+   *
+   * Output: Internal operation sets that track what will actually happen
+   * - willResetSet: actions that will be reset/cleared
+   * - willPrerunSet: actions that will be prerun
+   * - willRunSet: actions that will be run
+   * - willPromoteSet: prerun actions that become run-requested
+   * - stays*Set: actions that remain in their current state
+   */
+
+  const { runningSet, settledSet } = getActivationInfo();
+
+  if (DEBUG$1) {
+    let argSource = `reason: ${JSON.stringify(reason)}`;
+    if (isReplace) {
+      argSource += `, isReplace: true`;
+    }
+    console.group(`updateActions({ ${argSource} })`);
+    const lines = [
+      ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
+      ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
+      ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
+      ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : []),
+    ];
+    console.debug(
+      `requested operations:
+${lines.join("\n")}`,
+    );
+  }
+
+  // Internal sets that track what operations will actually be performed
+  const willResetSet = new Set();
+  const willPrerunSet = new Set();
+  const willRunSet = new Set();
+  const willPromoteSet = new Set(); // prerun -> run requested
+  const staysRunningSet = new Set();
+  const staysAbortedSet = new Set();
+  const staysFailedSet = new Set();
+  const staysCompletedSet = new Set();
+
+  // Step 1: Determine which actions will be reset
+  {
+    for (const actionToReset of resetSet) {
+      if (actionToReset.runningState !== IDLE) {
+        willResetSet.add(actionToReset);
+      }
+    }
+  }
+
+  // Step 2: Process prerun, run, and rerun sets
+  {
+    const handleActionRequest = (
+      action,
+      requestType, // "prerun", "run", or "rerun"
+    ) => {
+      const isPrerun = requestType === "prerun";
+      const isRerun = requestType === "rerun";
+
+      if (
+        action.runningState === RUNNING ||
+        action.runningState === COMPLETED
+      ) {
+        // Action is already running/completed
+        // By default, we don't interfere with already active actions
+        // Unless it's a rerun or the action is also being reset
+        if (isRerun || willResetSet.has(action)) {
+          // Force reset first, then rerun/run
+          willResetSet.add(action);
+          if (isPrerun) {
+            willPrerunSet.add(action);
+          } else {
+            willRunSet.add(action);
+          }
+        }
+        // Otherwise, ignore the request (action stays as-is)
+      } else if (isPrerun) {
+        willPrerunSet.add(action);
+      } else {
+        willRunSet.add(action);
+      }
+    };
+
+    // Process prerunSet (lowest priority)
+    for (const actionToPrerun of prerunSet) {
+      if (runSet.has(actionToPrerun) || rerunSet.has(actionToPrerun)) {
+        // run/rerun wins over prerun - skip prerun
+        continue;
+      }
+      handleActionRequest(actionToPrerun, "prerun");
+    }
+
+    // Process runSet (medium priority)
+    for (const actionToRun of runSet) {
+      if (rerunSet.has(actionToRun)) {
+        // rerun wins over run - skip run
+        continue;
+      }
+      if (actionToRun.isPrerun && actionToRun.runningState !== IDLE) {
+        // Special case: action was prerun but not yet requested to run
+        // Just promote it to "run requested" without rerunning
+        willPromoteSet.add(actionToRun);
+        continue;
+      }
+      handleActionRequest(actionToRun, "run");
+    }
+
+    // Process rerunSet (highest priority)
+    for (const actionToRerun of rerunSet) {
+      handleActionRequest(actionToRerun, "rerun");
+    }
+  }
+  const allThenableArray = [];
+
+  // Step 3: Determine which actions will stay in their current state
+  {
+    for (const actionRunning of runningSet) {
+      if (willResetSet.has(actionRunning)) ; else if (
+        willRunSet.has(actionRunning) ||
+        willPrerunSet.has(actionRunning)
+      ) ; else {
+        // an action that was running and not affected by this update
+        const actionPromise = actionPromiseMap.get(actionRunning);
+        allThenableArray.push(actionPromise);
+        staysRunningSet.add(actionRunning);
+      }
+    }
+    for (const actionSettled of settledSet) {
+      if (willResetSet.has(actionSettled)) ; else if (actionSettled.runningState === ABORTED) {
+        staysAbortedSet.add(actionSettled);
+      } else if (actionSettled.runningState === FAILED) {
+        staysFailedSet.add(actionSettled);
+      } else {
+        staysCompletedSet.add(actionSettled);
+      }
+    }
+  }
+  if (DEBUG$1) {
+    const lines = [
+      ...(willResetSet.size
+        ? [formatActionSet(willResetSet, "- will reset:")]
+        : []),
+      ...(willPrerunSet.size
+        ? [formatActionSet(willPrerunSet, "- will prerun:")]
+        : []),
+      ...(willPromoteSet.size
+        ? [formatActionSet(willPromoteSet, "- will promote:")]
+        : []),
+      ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
+      ...(staysRunningSet.size
+        ? [formatActionSet(staysRunningSet, "- stays running:")]
+        : []),
+      ...(staysAbortedSet.size
+        ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
+        : []),
+      ...(staysFailedSet.size
+        ? [formatActionSet(staysFailedSet, "- stays failed:")]
+        : []),
+      ...(staysCompletedSet.size
+        ? [formatActionSet(staysCompletedSet, "- stays completed:")]
+        : []),
+    ];
+    console.debug(`operations that will be performed:
+${lines.join("\n")}`);
+  }
+
+  // Step 4: Execute resets
+  {
+    for (const actionToReset of willResetSet) {
+      const actionToResetPrivateProperties =
+        getActionPrivateProperties(actionToReset);
+      actionToResetPrivateProperties.performReset({
+        reason,
+        event,
+        willRunOrPrerun:
+          willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
+      });
+      activationWeakSet.delete(actionToReset);
+    }
+  }
+
+  const resultArray = []; // Store results with their execution order
+  let hasAsync = false;
+
+  // Step 5: Execute preruns and runs
+  {
+    const onActionToRunOrPrerun = (actionToPrerunOrRun, isPrerun) => {
+      const actionSpecificSignal = abortSignalMap.get(actionToPrerunOrRun);
+      const effectiveSignal = actionSpecificSignal || abortSignal;
+
+      const actionToRunPrivateProperties =
+        getActionPrivateProperties(actionToPrerunOrRun);
+      const performRunResult = actionToRunPrivateProperties.performRun({
+        globalAbortSignal,
+        abortSignal: effectiveSignal,
+        reason,
+        event,
+        isPrerun,
+        onComplete,
+        onAbort,
+        onError,
+      });
+      activationWeakSet.add(actionToPrerunOrRun);
+
+      if (performRunResult && typeof performRunResult.then === "function") {
+        actionPromiseMap.set(actionToPrerunOrRun, performRunResult);
+        allThenableArray.push(performRunResult);
+        hasAsync = true;
+        // Store async result with order info
+        resultArray.push({
+          type: "async",
+          promise: performRunResult,
+        });
+      } else {
+        // Store sync result with order info
+        resultArray.push({
+          type: "sync",
+          result: performRunResult,
+        });
+      }
+    };
+
+    // Execute preruns
+    for (const actionToPrerun of willPrerunSet) {
+      onActionToRunOrPrerun(actionToPrerun, true);
+    }
+
+    // Execute runs
+    for (const actionToRun of willRunSet) {
+      onActionToRunOrPrerun(actionToRun, false);
+    }
+
+    // Execute promotions (prerun -> run requested)
+    for (const actionToPromote of willPromoteSet) {
+      actionToPromote.isPrerunSignal.value = false;
+    }
+  }
+  if (DEBUG$1) {
+    console.groupEnd();
+  }
+
+  // Calculate requestedResult based on the execution results
+  let requestedResult;
+  if (resultArray.length === 0) {
+    requestedResult = null;
+  } else if (hasAsync) {
+    requestedResult = Promise.all(
+      resultArray.map((item) =>
+        item.type === "sync" ? item.result : item.promise,
+      ),
+    );
+  } else {
+    requestedResult = resultArray.map((item) => item.result);
+  }
+
+  const allResult = allThenableArray.length
+    ? Promise.allSettled(allThenableArray)
+    : null;
+  const runningActionSet = new Set([...willPrerunSet, ...willRunSet]);
+  return {
+    requestedResult,
+    allResult,
+    runningActionSet,
+  };
+};
+
+const NO_PARAMS = { __no_params__: true };
+const initialParamsDefault = NO_PARAMS;
+const mergeActionParams = (currentParams, newParams) => {
+  if (currentParams === NO_PARAMS) {
+    return newParams;
+  }
+  if (newParams === undefined) {
+    // Every control binds its action to its UI state signal; a control that carries
+    // no value (a button) has an undefined one. It contributes no params, which must
+    // not be confused with "the params are undefined" — the params bound by
+    // bindParams stay in place.
+    return currentParams;
+  }
+  return mergeTwoJsValues(currentParams, newParams);
+};
+
+const actionWeakMap = new WeakMap();
+const createAction = (callback, rootOptions = {}) => {
+  const existing = actionWeakMap.get(callback);
+  if (existing) {
+    return existing;
+  }
+
+  let rootAction;
+
+  const createActionCore = (options, { parentAction } = {}) => {
+    let {
+      name = callback.name || "anonymous",
+      params,
+      isPrerun = false,
+      runningState = IDLE,
+      aborted = false,
+      error = null,
+      value,
+      resultToValue,
+      valueToData,
+      dataDefault,
+      data = dataDefault,
+
+      completed = false,
+      renderLoadedAsync,
+      sideEffect = () => {},
+      meta = {},
+
+      outputSignal,
+      completeSideEffect,
+    } = options;
+    if (!Object.hasOwn(options, "params")) {
+      // even undefined should be respected it's only when not provided at all we use default
+      params = initialParamsDefault;
+    }
+    if (value === undefined && data !== undefined) {
+      value = data;
+    }
+
+    const valueInitial = value;
+    const paramsSignal = signal(params);
+    const isPrerunSignal = signal(isPrerun);
+    const runningStateSignal = signal(runningState);
+    const errorSignal = signal(error);
+    const valueSignal = signal(valueInitial);
+    const dataSignal = valueToData
+      ? computed(() => {
+          const value = valueSignal.value;
+          const data = valueToData(value);
+          return data;
+        })
+      : valueSignal;
+
+    const prerun = (options) => {
+      action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
+      return dispatchSingleAction(action, "prerun", options);
+    };
+    /**
+     * Requests the action's data. An action that is already RUNNING or
+     * COMPLETED already has it, so the request is a no-op there: use `rerun()`
+     * to force a fresh run ("refresh", "check now", any explicit user intent to
+     * go back to the network).
+     */
+    const run = (options) => {
+      action.debug(`${action}.run(${stringifyForDisplay(options)})`);
+      return dispatchSingleAction(action, "run", options);
+    };
+    /** Resets the action and runs it again, whatever state it is in. */
+    const rerun = (options) => {
+      action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
+      return dispatchSingleAction(action, "rerun", options);
+    };
+    /**
+     * Stop the action completely - this will:
+     * 1. Abort if it's currently running
+     * 2. Reset action running signal to IDLE state
+     * 3. Clean up any resources and side effects
+     * 4. Reset data/error to initial value
+     */
+    const reset = (options) => {
+      return dispatchSingleAction(action, "reset", options);
+    };
+    const abort = (reason) => {
+      if (runningState !== RUNNING) {
+        return false;
+      }
+      const actionAbort = actionAbortMap.get(action);
+      if (!actionAbort) {
+        return false;
+      }
+      action.debug(`"${action}".abort(${reason})`);
+      actionAbort(reason);
+      return true;
+    };
+
+    let action;
+
+    const childActionWeakSet = createIterableWeakSet("child_action");
+    /*
+     * Ephemeron behavior is critical here: actions must keep params alive.
+     * Without this, bindParams(params) could create a new action while code
+     * still references the old action with GC'd params. This would cause:
+     * - Duplicate actions in activationWeakSet (old + new)
+     * - Cache misses when looking up existing actions
+     * - Subtle bugs where different parts of code use different action instances
+     * The ephemeron pattern ensures params and actions have synchronized lifetimes.
+     */
+    const childActionWeakMap = createJsValueWeakMap();
+    const _bindParams = (newParamsOrSignal, options = {}) => {
+      // ✅ CAS 1: Signal direct -> proxy
+      if (isSignal(newParamsOrSignal)) {
+        const combinedParamsSignal = computed(() => {
+          const newParams = newParamsOrSignal.value;
+          const result = mergeActionParams(params, newParams);
+          return result;
+        });
+        return createActionProxyFromSignal(
+          action,
+          combinedParamsSignal,
+          options,
+        );
+      }
+
+      // ✅ CAS 2: Objet -> vérifier s'il contient des signals
+      if (isPlainObject$1(newParamsOrSignal)) {
+        const staticParams = {};
+        const signalMap = new Map();
+
+        const keyArray = Object.keys(newParamsOrSignal);
+        for (const key of keyArray) {
+          const value = newParamsOrSignal[key];
+          if (isSignal(value)) {
+            signalMap.set(key, value);
+          } else {
+            const objectSignal = value ? value[SYMBOL_OBJECT_SIGNAL] : null;
+            if (objectSignal) {
+              signalMap.set(key, objectSignal);
+            } else {
+              staticParams[key] = value;
+            }
+          }
+        }
+
+        if (signalMap.size === 0) {
+          // Pas de signals, merge statique normal
+          if (
+            params === null ||
+            typeof params !== "object" ||
+            params === NO_PARAMS
+          ) {
+            return createChildAction({
+              ...options,
+              params: newParamsOrSignal,
+            });
+          }
+          const combinedParams = mergeActionParams(params, newParamsOrSignal);
+          return createChildAction({
+            ...options,
+            params: combinedParams,
+          });
+        }
+
+        // Combiner avec les params existants pour les valeurs statiques
+        const paramsSignal = computed(() => {
+          const params = {};
+          for (const key of keyArray) {
+            const signalForThisKey = signalMap.get(key);
+            if (signalForThisKey) {
+              // eslint-disable-next-line signals/no-conditional-value-read
+              params[key] = signalForThisKey.value;
+            } else {
+              params[key] = staticParams[key];
+            }
+          }
+          return params;
+        });
+        return createActionProxyFromSignal(action, paramsSignal, options);
+      }
+
+      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
+      return createChildAction({
+        params: newParamsOrSignal,
+        ...options,
+      });
+    };
+    const bindParams = (newParamsOrSignal, options = {}) => {
+      const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
+      if (existingChildAction) {
+        return existingChildAction;
+      }
+      const childAction = _bindParams(newParamsOrSignal, options);
+      childActionWeakMap.set(newParamsOrSignal, childAction);
+      childActionWeakSet.add(childAction);
+
+      return childAction;
+    };
+
+    const createChildAction = (childOptions) => {
+      const childActionOptions = {
+        ...rootOptions,
+        ...childOptions,
+        meta: {
+          ...rootOptions.meta,
+          ...childOptions.meta,
+        },
+      };
+      const childAction = createActionCore(childActionOptions, {
+        parentAction: action,
+      });
+      return childAction;
+    };
+
+    // ✅ Implement matchAllSelfOrDescendant
+    const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
+      const matches = [];
+
+      const traverse = (currentAction) => {
+        if (currentAction.isProxy && !includeProxies) {
+          // proxy action should be ignored because the underlying action will be found anyway
+          // and if we check the proxy action we'll end up with duplicates
+          // (loading the proxy would load the action it proxies)
+          // and as they are 2 different objects they would be added to the set
+          return;
+        }
+
+        if (predicate(currentAction)) {
+          matches.push(currentAction);
+        }
+
+        // Get child actions from the current action
+        const currentActionPrivateProps =
+          getActionPrivateProperties(currentAction);
+        const childActionWeakSet = currentActionPrivateProps.childActionWeakSet;
+        for (const childAction of childActionWeakSet) {
+          traverse(childAction);
+        }
+      };
+
+      traverse(action);
+      return matches;
+    };
+
+    const actionNameSignal = signal(name);
+    const actionCallSourceSignal = signal(
+      generateActionCallSource(name, params),
+    );
+
+    {
+      // Create the action as a function that can be called directly
+      action = function actionFunction(...args) {
+        if (args.length === 0) {
+          return action.rerun();
+        }
+        const boundAction = bindParams(...args);
+        return boundAction.rerun();
+      };
+      Object.defineProperty(action, "name", {
+        configurable: true,
+        get() {
+          return actionNameSignal.value;
+        },
+      });
+      Object.defineProperty(action, "callSource", {
+        configurable: true,
+        get() {
+          return actionCallSourceSignal.value;
+        },
+        set(v) {
+          actionCallSourceSignal.value = v;
+        },
+      });
+      actionWeakMap.set(action, action);
+    }
+
+    // Assign all the action properties and methods to the function
+    Object.assign(action, {
+      isAction: true,
+      callback,
+      rootAction,
+      parentAction,
+      params,
+      isPrerun,
+      runningState,
+      aborted,
+      error,
+      value,
+      data,
+      completed,
+      prerun,
+      run,
+      rerun,
+      reset,
+      abort,
+      bindParams,
+      matchAllSelfOrDescendant, // ✅ Add the new method
+      replaceParams: (newParams) => {
+        const currentParams = paramsSignal.value;
+        const nextParams = mergeActionParams(currentParams, newParams);
+        if (nextParams === currentParams) {
+          return false;
+        }
+
+        // Update the weak map BEFORE updating the signal
+        // so that any code triggered by the signal update finds this action
+        if (parentAction) {
+          const parentActionPrivateProps =
+            getActionPrivateProperties(parentAction);
+          const parentChildActionWeakMap =
+            parentActionPrivateProps.childActionWeakMap;
+          parentChildActionWeakMap.delete(currentParams);
+          parentChildActionWeakMap.set(nextParams, action);
+        }
+
+        params = nextParams;
+        action.params = nextParams;
+        action.callSource = generateActionCallSource(name, nextParams);
+        paramsSignal.value = nextParams;
+        return true;
+      },
+      toString: () => action.callSource,
+      meta,
+      debug: (...args) => {
+        if (!meta.debug || DEBUG$1) {
+          return;
+        }
+        console.debug(...args);
+      },
+
+      paramsSignal,
+      runningStateSignal,
+      isPrerunSignal,
+      valueSignal,
+      dataSignal,
+      errorSignal,
+    });
+    Object.preventExtensions(action);
+
+    // Effects pour synchroniser les propriétés
+    {
+      weakEffect([action], (actionRef) => {
+        isPrerun = isPrerunSignal.value;
+        actionRef.isPrerun = isPrerun;
+      });
+      weakEffect([action], (actionRef) => {
+        runningState = runningStateSignal.value;
+        actionRef.runningState = runningState;
+        aborted = runningState === ABORTED;
+        actionRef.aborted = aborted;
+        completed = runningState === COMPLETED;
+        actionRef.completed = completed;
+      });
+      weakEffect([action], (actionRef) => {
+        error = errorSignal.value;
+        actionRef.error = error;
+      });
+      weakEffect([action], (actionRef) => {
+        value = valueSignal.value;
+        data = dataSignal.value;
+        actionRef.value = value;
+        actionRef.data = data;
+      });
+    }
+
+    // Propriétés privées
+    {
+      const ui = {
+        renderLoaded: null,
+        renderLoadedAsync,
+        hasRenderers: false, // Flag to track if action is bound to UI components
+      };
+      let sideEffectCleanup;
+      let completeSideEffectCleanup;
+
+      const performRun = (runParams) => {
+        const {
+          globalAbortSignal,
+          abortSignal,
+          reason,
+          event,
+          isPrerun,
+          onComplete,
+          onAbort,
+          onError,
+        } = runParams;
+
+        if (isPrerun) {
+          prerunProtectionRegistry.protect(action);
+        }
+
+        const internalAbortController = new AbortController();
+        const internalAbortSignal = internalAbortController.signal;
+        const abort = (abortReason) => {
+          runningStateSignal.value = ABORTED;
+          internalAbortController.abort(abortReason);
+          actionAbortMap.delete(action);
+          if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
+            prerunProtectionRegistry.unprotect(action);
+          }
+          if (DEBUG$1) {
+            console.log(`"${action}" aborted (reason: ${abortReason})`);
+          }
+        };
+
+        const onAbortFromSpecific = () => {
+          abort(abortSignal.reason);
+        };
+        const onAbortFromGlobal = () => {
+          abort(globalAbortSignal.reason);
+        };
+
+        if (abortSignal) {
+          abortSignal.addEventListener("abort", onAbortFromSpecific);
+        }
+        if (globalAbortSignal) {
+          globalAbortSignal.addEventListener("abort", onAbortFromGlobal);
+        }
+
+        actionAbortMap.set(action, abort);
+
+        batch(() => {
+          runningStateSignal.value = RUNNING;
+          if (!isPrerun) {
+            isPrerunSignal.value = false;
+          }
+        });
+
+        const args = [];
+        args.push(params);
+        args.push({
+          reason,
+          event,
+          signal: internalAbortSignal,
+          isPrerun,
+        });
+        const returnValue = sideEffect(...args);
+        if (typeof returnValue === "function") {
+          sideEffectCleanup = returnValue;
+        }
+
+        let runResult;
+        let rejected = false;
+        let rejectedValue;
+        const onRunEnd = () => {
+          if (abortSignal) {
+            abortSignal.removeEventListener("abort", onAbortFromSpecific);
+          }
+          if (globalAbortSignal) {
+            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
+          }
+          prerunProtectionRegistry.unprotect(action);
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
+          /*
+           * Critical: dataEffect, onComplete and completeSideEffect must be batched together to prevent
+           * UI inconsistencies. The dataEffect might modify shared state (e.g.,
+           * deleting items from a store), and onLoad callbacks might trigger
+           * dependent action state changes.
+           *
+           * Without batching, the UI could render with partially updated state:
+           * - dataEffect deletes a resource from the store
+           * - UI renders immediately and tries to display the deleted resource
+           * - onLoad hasn't yet updated dependent actions to loading state
+           *
+           * Example: When deleting a resource, we need to both update the store
+           * AND put the action that loaded that resource back into loading state
+           * before the UI attempts to render the now-missing resource.
+           */
+
+          batch(() => {
+            const value = resultToValue
+              ? resultToValue(runResult, action)
+              : runResult;
+            errorSignal.value = undefined;
+            valueSignal.value = value;
+            runningStateSignal.value = COMPLETED;
+            const data = dataSignal.value;
+            if (outputSignal) {
+              outputSignal.value = data;
+            }
+            onComplete?.(data, action);
+            completeSideEffectCleanup = completeSideEffect?.(action);
+          });
+          if (DEBUG$1) {
+            console.log(`"${action}": completed`);
+          }
+          const data = dataSignal.peek();
+          return data;
+        };
+        const onRunError = (error) => {
+          if (abortSignal) {
+            abortSignal.removeEventListener("abort", onAbortFromSpecific);
+          }
+          if (globalAbortSignal) {
+            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
+          }
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
+          const isAbort =
+            (internalAbortSignal.aborted &&
+              error === internalAbortSignal.reason) ||
+            error.name === "AbortError";
+          if (isAbort) {
+            runningStateSignal.value = ABORTED;
+            if (isPrerun && abortSignal.aborted) {
+              prerunProtectionRegistry.unprotect(action);
+            }
+            onAbort?.(error, { event, action, args });
+            return error;
+          }
+          if (DEBUG$1) {
+            console.log(
+              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
+            );
+          }
+          batch(() => {
+            errorSignal.value = error;
+            runningStateSignal.value = FAILED;
+            onError?.(error, { event, action, args });
+          });
+
+          if (ui.hasRenderers || onError) {
+            // When inside suspense this console.error is redundant with the error thrown by preact debug at
+            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
+            console.error(error);
+            // For UI-bound actions: error is properly handled by logging + UI display
+            // Return error instead of throwing to signal it's handled and prevent:
+            // - jsenv error overlay from appearing
+            // - error being treated as unhandled by runtime
+            return error;
+          }
+          error.action = action;
+          throw error;
+        };
+
+        try {
+          const thenableArray = [];
+          const callbackResult = callback(...args);
+          if (callbackResult && typeof callbackResult.then === "function") {
+            thenableArray.push(
+              callbackResult.then(
+                (value) => {
+                  runResult = value;
+                },
+                (e) => {
+                  rejected = true;
+                  rejectedValue = e;
+                },
+              ),
+            );
+          } else {
+            runResult = callbackResult;
+          }
+          if (ui.renderLoadedAsync && !ui.renderLoaded) {
+            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
+              (renderLoaded) => {
+                ui.renderLoaded = renderLoaded;
+              },
+              (e) => {
+                if (!rejected) {
+                  rejected = true;
+                  rejectedValue = e;
+                }
+              },
+            );
+            thenableArray.push(renderLoadedPromise);
+          }
+          if (thenableArray.length === 0) {
+            return onRunEnd();
+          }
+          return Promise.all(thenableArray).then(() => {
+            if (rejected) {
+              return onRunError(rejectedValue);
+            }
+            return onRunEnd();
+          });
+        } catch (e) {
+          return onRunError(e);
+        }
+      };
+
+      const performReset = ({ reason, willRunOrPrerun }) => {
+        abort(reason);
+        if (DEBUG$1) {
+          console.log(`"${action}": resetting (reason: ${reason})`);
+        }
+
+        prerunProtectionRegistry.unprotect(action);
+
+        if (sideEffectCleanup) {
+          sideEffectCleanup(reason);
+          sideEffectCleanup = undefined;
+        }
+        if (completeSideEffectCleanup) {
+          completeSideEffectCleanup(reason);
+          completeSideEffectCleanup = undefined;
+        }
+
+        actionPromiseMap.delete(action);
+        batch(() => {
+          if (!willRunOrPrerun) {
+            errorSignal.value = undefined;
+            valueSignal.value = valueInitial;
+            if (outputSignal) {
+              outputSignal.value = undefined;
+            }
+          }
+          isPrerunSignal.value = true;
+          runningStateSignal.value = IDLE;
+        });
+      };
+
+      const privateProperties = {
+        valueInitial,
+
+        performRun,
+        performReset,
+        ui,
+
+        nameSignal: actionNameSignal,
+        callSourceSignal: actionCallSourceSignal,
+
+        childActionWeakSet,
+        childActionWeakMap,
+      };
+      setActionPrivateProperties(action, privateProperties);
+    }
+
+    return action;
+  };
+
+  rootAction = createActionCore(rootOptions);
+  actionWeakMap.set(callback, rootAction);
+  return rootAction;
+};
+
+/**
+ * Creates an action proxy that automatically updates based on signal changes.
+ *
+ * @param {Object} action - The base action to proxy
+ * @param {Signal} paramsSignal - Signal containing parameters for the action
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
+ *   This enables live updates - for example, performing an HTTP GET request every time
+ *   a list of filters changes, providing real-time results without user interaction.
+ * @param {boolean} options.inheritData - When true, each new target action starts fresh with no inherited state.
+ *   By default (false), the proxy carries over the previous target's value and error into the new action.
+ *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
+ *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
+ *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
+ *   available data — even while a newer action is in flight.
+ *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
+ *   on an explicit user trigger: the previous results remain visible until the new action completes.
+ * @param {function} options.onChange - Optional callback triggered when the target action changes
+ */
+const createActionProxyFromSignal = (
+  action,
+  paramsSignal,
+  {
+    runOnce = false,
+    rerunOnChange = false,
+    inheritData = true,
+    onChange,
+    syncParams,
+  } = {},
+) => {
+  const actionTargetChangeCallbackSet = new Set();
+  const onActionTargetChange = (callback) => {
+    actionTargetChangeCallbackSet.add(callback);
+    return () => {
+      actionTargetChangeCallbackSet.delete(callback);
+    };
+  };
+  const changeCleanupCallbackSet = new Set();
+  const triggerTargetChange = (actionTarget, previousTarget, context) => {
+    for (const changeCleanupCallback of changeCleanupCallbackSet) {
+      changeCleanupCallback();
+    }
+    changeCleanupCallbackSet.clear();
+    for (const callback of actionTargetChangeCallbackSet) {
+      const returnValue = callback(actionTarget, previousTarget, context);
+      if (typeof returnValue === "function") {
+        changeCleanupCallbackSet.add(returnValue);
+      }
+    }
+  };
+
+  let actionTarget = null;
+  let currentAction = action;
+  let currentActionPrivateProperties = getActionPrivateProperties(action);
+  let actionTargetPreviousWeakRef = null;
+
+  const createTarget = (params) => {
+    if (inheritData) {
+      const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+      const previousTarget = previousActionTarget || action;
+      return action.bindParams(params, {
+        error: previousTarget.errorSignal.peek(),
+        value: previousTarget.valueSignal.peek(),
+      });
+    }
+    return action.bindParams(params);
+  };
+
+  let isUpdatingTarget = false;
+  const _updateTarget = (context) => {
+    if (isUpdatingTarget) {
+      // likely syncParams caused the paramsSignal.value to update which
+      // calls _updateTarget. But we are already in the middle of an update
+      // likely cause by an explicit call to rerun for instance
+      // so we want to keep that rerun intent and "ignore" this updateTarget call
+      // so we don't end up running the action twice (once because we dispatch change without explicitRunIntent and one for the initial run intent)
+      return;
+    }
+    isUpdatingTarget = true;
+    action.debug(`${action}._updateTarget(${stringifyForDisplay(context)})`);
+    if (syncParams) {
+      syncParams();
+    }
+    isUpdatingTarget = false;
+
+    const params = paramsSignal.peek();
+    const proxyParams = proxyParamsSignal.peek();
+    if (params !== proxyParams) {
+      proxyParamsSignal.value = params;
+    }
+    const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+
+    if (params === NO_PARAMS) {
+      actionTarget = null;
+      currentAction = action;
+      currentActionPrivateProperties = getActionPrivateProperties(action);
+    } else {
+      actionTarget = createTarget(params);
+      if (previousActionTarget === actionTarget) {
+        return;
+      }
+      currentAction = actionTarget;
+      currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
+    }
+    actionTargetPreviousWeakRef = actionTarget
+      ? new WeakRef(actionTarget)
+      : null;
+    triggerTargetChange(actionTarget, previousActionTarget, context);
+  };
+
+  const proxyMethod = (method, { explicitRunIntent } = {}) => {
+    return (...args) => {
+      /*
+       * Ensure the proxy targets the correct action before method execution.
+       * This prevents race conditions where external effects run before our
+       * internal parameter synchronization effect. Using peek() avoids creating
+       * reactive dependencies within this pass-through method.
+       */
+      _updateTarget({
+        changeCause: "method_call",
+        changeCauseDetail: method,
+        explicitRunIntent,
+      });
+      return currentAction[method](...args);
+    };
+  };
+
+  const nameSignal = signal(action.name);
+  const callSourceSignal = signal(`[Proxy] ${action.callSource}`);
+  let actionProxy;
+  {
+    actionProxy = function actionProxyFunction() {
+      return actionProxy.rerun();
+    };
+    Object.defineProperty(actionProxy, "name", {
+      configurable: true,
+      get() {
+        return nameSignal.value;
+      },
+    });
+    Object.defineProperty(actionProxy, "callSource", {
+      configurable: true,
+      get() {
+        return callSourceSignal.value;
+      },
+    });
+    actionWeakMap.set(actionProxy, actionProxy);
+  }
+
+  // Create our own signal for params that we control completely
+  const proxyParamsSignal = signal(paramsSignal.value);
+  const proxySignal = (signalPropertyName, propertyName) => {
+    const signalProxy = signal();
+    let dispose;
+    onActionTargetChange(() => {
+      if (dispose) {
+        dispose();
+        dispose = undefined;
+      }
+      dispose = effect(() => {
+        const currentActionSignal = currentAction[signalPropertyName];
+        const currentActionSignalValue = currentActionSignal.value;
+        signalProxy.value = currentActionSignalValue;
+        if (propertyName) {
+          actionProxy[propertyName] = currentActionSignalValue;
+        }
+      });
+      return dispose;
+    });
+    return signalProxy;
+  };
+
+  Object.assign(actionProxy, {
+    isAction: true,
+    isProxy: true,
+    callback: undefined,
+    params: undefined,
+    isPrerun: undefined,
+    runningState: undefined,
+    aborted: undefined,
+    error: undefined,
+    value: undefined,
+    data: undefined,
+    completed: undefined,
+    prerun: proxyMethod("prerun", { explicitRunIntent: true }),
+    run: proxyMethod("run", { explicitRunIntent: true }),
+    rerun: proxyMethod("rerun", { explicitRunIntent: true }),
+    reset: proxyMethod("reset", { explicitRunIntent: true }),
+    abort: proxyMethod("abort", { explicitRunIntent: true }),
+    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
+    getCurrentAction: () => {
+      _updateTarget({
+        changeCause: "get_current_action",
+      });
+      return currentAction;
+    },
+    bindParams: () => {
+      throw new Error(
+        `bindParams() is not supported on action proxies, use the underlying action instead`,
+      );
+    },
+    replaceParams: null, // Will be set below
+    toString: () => actionProxy.callSource,
+    meta: {},
+
+    paramsSignal: proxyParamsSignal,
+    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
+    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
+    errorSignal: proxySignal("errorSignal", "error"),
+    valueSignal: proxySignal("valueSignal", "value"),
+    dataSignal: proxySignal("dataSignal", "data"),
+  });
+  Object.preventExtensions(actionProxy);
+  // Watch for changes in the original paramsSignal and update ours
+  // (original signal wins over any replaceParams calls)
+  weakEffect(
+    [paramsSignal, proxyParamsSignal],
+    (paramsSignalRef, proxyParamsSignalRef) => {
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
+    },
+  );
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
+    });
+  });
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
+    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
+    actionProxy.callback = currentAction.callback;
+    actionProxy.params = currentAction.params;
+    actionProxy.isPrerun = currentAction.isPrerun;
+    actionProxy.runningState = currentAction.runningState;
+    actionProxy.aborted = currentAction.aborted;
+    actionProxy.error = currentAction.error;
+    actionProxy.value = currentAction.value;
+    actionProxy.data = currentAction.data;
+    actionProxy.completed = currentAction.completed;
+  });
+
+  {
+    const proxyPrivateMethod = (method) => {
+      return (...args) => currentActionPrivateProperties[method](...args);
+    };
+    const proxyPrivateProperties = {
+      get currentAction() {
+        return currentAction;
+      },
+
+      performRun: proxyPrivateMethod("performRun"),
+      performReset: proxyPrivateMethod("performReset"),
+      ui: currentActionPrivateProperties.ui,
+    };
+    onActionTargetChange((actionTarget, previousTarget) => {
+      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+      if (previousTarget && actionTarget) {
+        const previousPrivateProps = getActionPrivateProperties(previousTarget);
+        if (previousPrivateProps.ui.hasRenderers) {
+          const newPrivateProps = getActionPrivateProperties(actionTarget);
+          newPrivateProps.ui.hasRenderers = true;
+        }
+      }
+      proxyPrivateProperties.childActionWeakSet =
+        currentActionPrivateProperties.childActionWeakSet;
+    });
+    setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+  }
+
+  actionProxy.replaceParams = (newParams) => {
+    if (currentAction === action) {
+      const currentParams = proxyParamsSignal.value;
+      const nextParams = mergeActionParams(currentParams, newParams);
+      if (nextParams === currentParams) {
+        return false;
+      }
+      proxyParamsSignal.value = nextParams;
+      return true;
+    }
+    if (!currentAction.replaceParams(newParams)) {
+      return false;
+    }
+    proxyParamsSignal.value = currentAction.paramsSignal.peek();
+    return true;
+  };
+
+  if (runOnce) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (!actionTargetPrevious && actionTarget) {
+        action.debug(
+          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
+        );
+        actionTarget.run({ reason: "runOnce" });
+      }
+    });
+  }
+  if (rerunOnChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        if (explicitRunIntent) {
+          return;
+        }
+        if (
+          actionTarget &&
+          actionTargetPrevious &&
+          !actionTargetPrevious.isPrerun
+        ) {
+          action.debug(
+            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
+            {
+              newTarget: actionTarget,
+              previousTarget: actionTargetPrevious,
+            },
+          );
+          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
+        }
+      },
+    );
+  }
+  if (onChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        onChange(actionTarget, actionTargetPrevious, { explicitRunIntent });
+      },
+    );
+  }
+
+  return actionProxy;
+};
+
+const generateActionCallSource = (name, params) => {
+  if (params === NO_PARAMS) {
+    return `${name}()`;
+  }
+  // Use stringifyForDisplay with asFunctionArgs option for the entire args array
+  const argsString = stringifyForDisplay([params], 3, 0, {
+    asFunctionArgs: true,
+  });
+  return `${name}${argsString}`;
+};
+
+const isPlainObject$1 = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
+};
+
+const COMPLETED_ACTION = createAction(() => undefined, {
+  name: "ACTION.COMPLETED",
+});
+getActionPrivateProperties(COMPLETED_ACTION).performRun({});
+
+// used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
+// when inside a <form> the form params are updated when the form element single param is updated
+const useActionBoundToOneParam = (action, paramsSignal) => {
+  if (!isSignal(paramsSignal)) {
+    throw new Error(
+      `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
+    );
+  }
+  const boundAction = useBoundAction(action, paramsSignal);
+  const getValue = useCallback(() => paramsSignal.value, []);
+  const setValue = useCallback((value) => {
+    paramsSignal.value = value;
+  }, []);
+  return [boundAction, getValue(), setValue];
+};
+// used by <details> to just call their action
+const useAction = (action, paramsSignal) => {
+  return useBoundAction(action, paramsSignal);
+};
+
+const useBoundAction = (action, actionParamsSignal) => {
+  const actionRef = useRef();
+  const actionCallbackRef = useRef();
+
+  if (!action) {
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const noopAction = createAction(() => {}, { params: undefined });
+    const noopActionBound = actionParamsSignal
+      ? noopAction.bindParams(actionParamsSignal)
+      : noopAction;
+    actionRef.current = noopActionBound;
+    return noopActionBound;
+  }
+  const isFunction = typeof action === "function";
+  if (!isFunction) {
+    throw new TypeError(
+      `useBoundAction expects an action function or an action object, got: ${action}`,
+    );
+  }
+  if (isFunctionButNotAnActionFunction(action)) {
+    actionCallbackRef.current = action;
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const actionFromFunction = createAction(
+      (...args) => {
+        return actionCallbackRef.current?.(...args);
+      },
+      {
+        name: action.name,
+        // We don't want to give empty params by default
+        // we want to give undefined for regular functions
+        params: undefined,
+      },
+    );
+    if (!actionParamsSignal) {
+      actionRef.current = actionFromFunction;
+      return actionFromFunction;
+    }
+    const actionBoundToParams =
+      actionFromFunction.bindParams(actionParamsSignal);
+    actionRef.current = actionBoundToParams;
+    return actionBoundToParams;
+  }
+  if (actionParamsSignal) {
+    return action.bindParams(actionParamsSignal);
+  }
+  return action;
+};
+
+const isFunctionButNotAnActionFunction = (action) => {
+  return typeof action === "function" && !action.isAction;
+};
+
+const MIN_LOWER_LETTER_CONSTRAINT = {
+  name: "min_lower_letter",
+  messageAttribute: "data-min-lower-letter-message",
+  check: (field) => {
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const required = field.controlHostProps.required;
+    if (!valueAsString && !required) {
+      return "";
+    }
+    const minAttribute = field.controlHostProps["data-min-lower-letter"];
+    if (!minAttribute) {
+      return "";
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfLowercaseChars = 0;
+    for (const char of valueAsString) {
+      if (char >= "a" && char <= "z") {
+        numberOfLowercaseChars++;
+      }
+    }
+    if (numberOfLowercaseChars >= min) {
+      return null;
+    }
+
+    if (min === 1) {
+      const type = field.controlHostProps.type;
+      if (type === "password") {
+        return naviI18n("constraint.min_lower_letter.password.singular");
+      }
+      return naviI18n("constraint.min_lower_letter.default.singular");
+    }
+    const key = (() => {
+      const type = field.controlHostProps.type;
+      if (type === "password") {
+        return "constraint.min_lower_letter.password.plural";
+      }
+      return "constraint.min_lower_letter.default.plural";
+    })();
+    return naviI18n(key, {
+      min: String(min),
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
+
+const MIN_UPPER_LETTER_CONSTRAINT = {
+  name: "min_upper_letter",
+  messageAttribute: "data-min-upper-letter-message",
+  check: (field) => {
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const required = field.controlHostProps.required;
+    if (!valueAsString && !required) {
+      return null;
+    }
+    const minAttribute = field.controlHostProps["data-min-upper-letter"];
+    if (!minAttribute) {
+      return null;
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfUppercaseChars = 0;
+    for (const char of valueAsString) {
+      if (char >= "A" && char <= "Z") {
+        numberOfUppercaseChars++;
+      }
+    }
+    if (numberOfUppercaseChars >= min) {
+      return null;
+    }
+
+    const type = field.controlHostProps.type;
+    const context = type === "password" ? "password" : "default";
+    if (min === 1) {
+      return naviI18n(`constraint.min_upper_letter.${context}.singular`);
+    }
+    return naviI18n(`constraint.min_upper_letter.${context}.plural`, {
+      min: String(min),
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
+
+const MIN_DIGIT_CONSTRAINT = {
+  name: "min_digit",
+  messageAttribute: "data-min-digit-message",
+  check: (field) => {
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const required = field.controlHostProps.required;
+    if (!valueAsString && !required) {
+      return null;
+    }
+    const minAttribute = field.controlHostProps["data-min-digit"];
+    if (!minAttribute) {
+      return null;
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfDigitChars = 0;
+    for (const char of valueAsString) {
+      if (char >= "0" && char <= "9") {
+        numberOfDigitChars++;
+      }
+    }
+    if (numberOfDigitChars >= min) {
+      return null;
+    }
+
+    const type = field.controlHostProps.type;
+    const context = type === "password" ? "password" : "default";
+    if (min === 1) {
+      return naviI18n(`constraint.min_digit.${context}.singular`);
+    }
+    return naviI18n(`constraint.min_digit.${context}.plural`, {
+      min: String(min),
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
+
+const MIN_SPECIAL_CHAR_CONSTRAINT = {
+  name: "min_special_char",
+  messageAttribute: "data-min-special-char-message",
+  check: (field) => {
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const required = field.controlHostProps.required;
+    if (!valueAsString && !required) {
+      return null;
+    }
+    const minSpecialChars = field.controlHostProps["data-min-special-char"];
+    if (!minSpecialChars) {
+      return null;
+    }
+    const min = parseInt(minSpecialChars, 10);
+    const specialCharset = field.controlHostProps["data-special-charset"];
+    if (!specialCharset) {
+      return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
+    }
+
+    let numberOfSpecialChars = 0;
+    for (const char of valueAsString) {
+      if (specialCharset.includes(char)) {
+        numberOfSpecialChars++;
+      }
+    }
+    if (numberOfSpecialChars >= min) {
+      return null;
+    }
+
+    const type = field.controlHostProps.type;
+    const context = type === "password" ? "password" : "default";
+    if (min === 1) {
+      return naviI18n(`constraint.min_special_char.${context}.singular`, {
+        charset: specialCharset,
+      });
+    }
+    return naviI18n(`constraint.min_special_char.${context}.plural`, {
+      min: String(min),
+      charset: specialCharset,
+    });
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
+
+const ONE_OF_CONSTRAINT = {
+  name: "one_of",
+  messageAttribute: "data-one-of-message",
+  check: (field) => {
+    const oneOf = field.controlHostProps["data-one-of"];
+    if (!oneOf) {
+      return null;
+    }
+    const value = field.uiState;
+    if (value === undefined || value === "") {
+      return null;
+    }
+    const listEl = document.querySelector(oneOf);
+    if (!listEl) {
+      console.warn(
+        `One of constraint: could not find element for selector "${oneOf}"`,
+      );
+      return null;
+    }
+    const allowedValues = collectAllowedValues(listEl);
+    if (allowedValues.size === 0) {
+      return null;
+    }
+    if (allowedValues.has(value)) {
+      return null;
+    }
+    const visibleOptions = listEl.querySelectorAll(
+      "[role='option']:not([hidden])",
+    );
+    const isNoMatch = visibleOptions.length === 0;
+    const message = field.controlHostProps["data-one-of-message"];
+    const noMatchMessage = field.controlHostProps["data-one-of-no-match-message"];
+    if (isNoMatch) {
+      return noMatchMessage || naviI18n("constraint.one_of.no_match");
+    }
+    return message || naviI18n("constraint.one_of.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
+
+const collectAllowedValues = (listEl) => {
+  const values = new Set();
+  for (const optionEl of listEl.querySelectorAll("[role='option']")) {
+    const value =
+      optionEl.dataset.value ??
+      optionEl.getAttribute("value") ??
+      optionEl.textContent.trim();
+    if (value) {
+      values.add(value);
+    }
+  }
+  return values;
+};
+
+const SAME_AS_CONSTRAINT = {
+  name: "same_as",
+  messageAttribute: "data-same-as-message",
+  check: (field) => {
+    const sameAs = field.controlHostProps["data-same-as"];
+    if (sameAs === undefined) {
+      return null;
+    }
+    // Ideally we should get the sameAs using the state controller id to avoid relying on DOM here too
+    const otherField = document.querySelector(sameAs);
+    if (!otherField) {
+      console.warn(
+        `Same as constraint: could not find element for selector ${sameAs}`,
+      );
+      return null;
+    }
+    const otherFieldValue = otherField.value;
+    if (!otherFieldValue) {
+      // Reference field is empty — nothing to compare against yet.
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (valueAsString === otherFieldValue) {
+      return null;
+    }
+    const type = field.controlHostProps.type;
+    // sameAs implies the field must be filled — no need for required on a confirm field.
+    if (!valueAsString) {
+      if (type === "password") {
+        return naviI18n("constraint.same_as.missing.password");
+      }
+      if (type === "email") {
+        return naviI18n("constraint.same_as.missing.email");
+      }
+      return naviI18n("constraint.same_as.missing.default");
+    }
+    if (type === "password") {
+      return naviI18n("constraint.same_as.password");
+    }
+    if (type === "email") {
+      return naviI18n("constraint.same_as.email");
+    }
+    return naviI18n("constraint.same_as.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
+
+const SINGLE_SPACE_CONSTRAINT = {
+  name: "single_space",
+  messageAttribute: "data-single-space-message",
+  check: (field) => {
+    const singleSpace = field.controlHostProps["data-single-space"];
+    if (singleSpace === undefined) {
+      return null;
+    }
+
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const hasLeadingSpace = valueAsString.startsWith(" ");
+    const hasTrailingSpace = valueAsString.endsWith(" ");
+    const hasDoubleSpace = valueAsString.includes("  ");
+    if (!hasLeadingSpace && !hasTrailingSpace && !hasDoubleSpace) {
+      return null;
+    }
+    if (hasLeadingSpace) {
+      return naviI18n("constraint.single_space.start.default");
+    }
+    if (hasTrailingSpace) {
+      return naviI18n("constraint.single_space.end.default");
+    }
+    return naviI18n("constraint.single_space.consecutive.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
+
+/**
+ * Custom form validation implementation
+ *
+ * This implementation addresses several limitations of the browser's native validation API:
+ *
+ * Limitations of native validation:
+ * - Cannot programmatically detect if validation message is currently displayed
+ * - No ability to dismiss messages with keyboard (e.g., Escape key)
+ * - Requires complex event handling to manage validation message display
+ * - Limited support for storing/managing multiple validation messages
+ * - No customization of validation message appearance
+ *
+ * Design approach:
+ * - Works alongside native validation (which acts as a fallback)
+ * - Proactively detects validation issues before native validation triggers
+ * - Provides complete control over validation message UX
+ * - Supports keyboard navigation and dismissal
+ * - Allows custom styling and positioning of validation messages
+ *
+ * Features:
+ * - Constraint-based validation system with built-in and custom constraints
+ * - Custom validation messages with different severity levels
+ * - Form submission prevention on validation failure
+ * - Validation on Enter key in forms or standalone inputs
+ * - Escape key to dismiss validation messages
+ * - Support for standard HTML validation attributes (required, pattern, type="email")
+ * - Validation messages that follow the input element and adapt to viewport
+ *
+ * Constraint evaluation behavior:
+ * This implementation differs from browser native validation in how it handles empty values.
+ * Native validation typically ignores constraints (like minLength) when the input is empty,
+ * only validating them once the user starts typing. This prevents developers from knowing
+ * the validation state until user interaction begins.
+ *
+ * Our approach:
+ * - When 'required' attribute is not set: behaves like native validation (ignores constraints on empty values)
+ * - When 'required' attribute is set: evaluates all constraints even on empty values
+ *
+ * This allows for complete constraint state visibility when fields are required, enabling
+ * better UX patterns like showing all validation requirements upfront.
+ */
+
+
+const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+
+const VALIDATION_TOKEN = createOpenToken();
+
+// the order matters here, the first constraint is picked first when multiple constraints fail
+// so it's better to keep the most complex constraints at the end of the list
+// so the more basic ones shows up first
+const STANDARD_CONSTRAINT_SET = new Set([
+  REQUIRED_CONSTRAINT,
+  PATTERN_CONSTRAINT,
+  TYPE_EMAIL_CONSTRAINT,
+  TYPE_NUMBER_CONSTRAINT,
+  MIN_CONSTRAINT,
+  MAX_CONSTRAINT,
+  STEP_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
+]);
+const NAVI_CONSTRAINT_SET = new Set([
+  MIN_SPECIAL_CHAR_CONSTRAINT,
+  SINGLE_SPACE_CONSTRAINT,
+  MIN_DIGIT_CONSTRAINT,
+  MIN_UPPER_LETTER_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  SAME_AS_CONSTRAINT,
+  ONE_OF_CONSTRAINT,
+]);
+const DEFAULT_CONSTRAINT_SET = new Set([
+  ...STANDARD_CONSTRAINT_SET,
+  ...NAVI_CONSTRAINT_SET,
+]);
+const registerGlobalConstraint = (customConstraint) => {
+  NAVI_CONSTRAINT_SET.add(customConstraint);
+  DEFAULT_CONSTRAINT_SET.add(customConstraint);
+};
+
+const createControlValidation = (
+  controller,
+  { callout, debugUIState },
+) => {
+  const controlValidity = {
+    registerConstraint: undefined,
+    checkValidity: undefined,
+    reportValidity: undefined,
+  };
+
+  const dynamicConstraintSet = new Set();
+  {
+    controlValidity.registerConstraint = (constraint) => {
+      if (typeof constraint === "function") {
+        constraint = {
+          name: constraint.name || "custom_function",
+          check: constraint,
+        };
+      }
+      dynamicConstraintSet.add(constraint);
+      return () => {
+        dynamicConstraintSet.delete(constraint);
+      };
+    };
+  }
+
+  let failedConstraintInfo = null;
+  let failingManagedControlValidity = null;
+  const validityInfoMap = new Map();
+  let constraintValidityState = { valid: true };
+  const getConstraintValidityState = () => constraintValidityState;
+  controlValidity.getConstraintValidityState = getConstraintValidityState;
+
+  const checkValidity = ({
+    event,
+    requester = controller.ref.current,
+    fromRequestAction,
+  } = {}) => {
+    if (fromRequestAction) {
+      for (const [, validityInfo] of validityInfoMap) {
+        if (validityInfo.constraint.autoResetOnAction) {
+          validityInfo.constraint.onAutoResetOnAction(controller);
+        }
+      }
+    }
+
+    // Never validate a proxy — always delegate to the underlying element
+    const proxyTargetController = findControlProxyTargetController(controller);
+    if (proxyTargetController) {
+      return proxyTargetController.rules.validation.checkValidity({
+        event,
+        fromRequestAction,
+        requester,
+      });
+    }
+
+    // Always check managed fields first. If any fails, stop immediately and
+    // expose the failing controlValidity so the caller can reportValidity on the right element.
+    failingManagedControlValidity = null;
+    const managedControllers = controller.getManagedControls();
+    for (const managedController of managedControllers) {
+      const managedCV = managedController.rules.validation;
+      const managedIsValid = managedCV.checkValidity({
+        event,
+        requester,
+        fromRequestAction,
+      });
+      if (!managedIsValid) {
+        failingManagedControlValidity = managedCV;
+        return false;
+      }
+    }
+
+    let newConstraintValidityState = { valid: true };
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
+    const elementSig = getElementSignature(controller.ref.current);
+    // Not logged: every control checks its constraints on every interaction and
+    // almost always passes, so this line alone was most of the debug output —
+    // and with devtools open, formatting it costs a frame. What matters is a
+    // constraint that FAILS, which says so below.
+    validityInfoMap.clear();
+    failedConstraintInfo = null;
+    failingManagedControlValidity = null;
+    for (const constraint of constraintSet) {
+      const fieldForConstraint = controller;
+
+      const checkResult = constraint.check(fieldForConstraint, {
+        fromRequestAction,
+      });
+      if (!checkResult) {
+        newConstraintValidityState[constraint.name] = null;
+        continue;
+      }
+      const constraintValidityInfo =
+        typeof checkResult === "string"
+          ? { message: checkResult }
+          : checkResult;
+      constraintValidityInfo.messageString = constraintValidityInfo.message;
+      debugUIState(
+        `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
+      );
+      const thisConstraintFailureInfo = {
+        name: constraint.name,
+        constraint,
+        status: "warning",
+        ...constraintValidityInfo,
+        reportStatus: "not_reported",
+      };
+      validityInfoMap.set(constraint, thisConstraintFailureInfo);
+      newConstraintValidityState.valid = false;
+      newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
+      if (failedConstraintInfo) {
+        // there is already a failing value constraint, which one do we pick?
+        const constraintPicked = pickConstraintFailureInfo(
+          failedConstraintInfo,
+          thisConstraintFailureInfo,
+        );
+        if (constraintPicked === thisConstraintFailureInfo) {
+          failedConstraintInfo = thisConstraintFailureInfo;
+        }
+      } else {
+        // first failing value constraint
+        failedConstraintInfo = thisConstraintFailureInfo;
+      }
+    }
+
+    const activeFailedConstraintInfo = failedConstraintInfo;
+    if (activeFailedConstraintInfo) {
+      const titleLess = controller.controlHostProps.title === undefined;
+      if (titleLess) {
+        const element = controller.ref.current;
+        if (element) {
+          element.setAttribute(
+            "title",
+            activeFailedConstraintInfo.messageString,
+          );
+        }
+      }
+    } else {
+      const titleLess = controller.controlHostProps.title === undefined;
+      if (titleLess) {
+        const element = controller.ref.current;
+        if (element) {
+          element.removeAttribute("title");
+        }
+      }
+      const checkValidityCallEvent =
+        event || new CustomEvent("checkValidity called with no event");
+      callout.removeOpenToken(VALIDATION_TOKEN, checkValidityCallEvent);
+    }
+
+    if (
+      !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
+    ) {
+      constraintValidityState = newConstraintValidityState;
+      const element = controller.ref.current;
+      if (element) {
+        debugUIState(
+          event,
+          `${elementSig} constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
+        );
+        dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
+      }
+    }
+    return newConstraintValidityState.valid;
+  };
+
+  const reportValidity = ({ event, requester, skipFocus } = {}) => {
+    const { message } = getConstraintMessage(
+      controller,
+      failedConstraintInfo.constraint,
+      failedConstraintInfo.message,
+      { requester },
+    );
+    callout.addOpenToken(VALIDATION_TOKEN, {
+      message,
+      status: failedConstraintInfo.status,
+      anchorElement: failedConstraintInfo.target,
+      event,
+      skipFocus,
+      onClose: () => {
+        failedConstraintInfo.reportStatus = "closed";
+      },
+    });
+    failedConstraintInfo.reportStatus = "reported";
+  };
+  controlValidity.checkValidity = checkValidity;
+  controlValidity.reportValidity = reportValidity;
+  Object.defineProperty(controlValidity, "failedConstraintInfo", {
+    get: () => failedConstraintInfo,
+  });
+  Object.defineProperty(controlValidity, "failingManagedControlValidity", {
+    get: () => failingManagedControlValidity,
+  });
+  // Centralized validity sync: decides what to show/close based on the event type
+  // and the current constraint state.
+  //
+  // - Interaction constraints (readonly/disabled/busy) violated → always report them.
+  // - Value-modifying event (input, keydown...) + own action + value invalid → report.
+  // - Pure interaction event (mousedown on editable field) → close the callout:
+  //   user intends to edit, we clear the message so it doesn't block them.
+  const syncValidity = (
+    event,
+    { report = false, fromRequestAction = false } = {},
+  ) => {
+    const elementSig = getElementSignature(controller.ref.current);
+    const isValid = checkValidity({ event, fromRequestAction });
+    if (failingManagedControlValidity) {
+      // Group/form case: find the actual failing leaf and report on it.
+      // The leaf's callout is sufficient — no need to report at the group level.
+      let leafCV = failingManagedControlValidity;
+      while (
+        leafCV.failingManagedControlValidity &&
+        !leafCV.failedConstraintInfo
+      ) {
+        leafCV = leafCV.failingManagedControlValidity;
+      }
+      // Forward the report decision to the leaf — the parent already decided.
+      if (report) {
+        leafCV.reportValidity({ event });
+      }
+      return isValid;
+    }
+    if (failedConstraintInfo) {
+      if (report) {
+        debugUIState(
+          event,
+          `syncValidity ${elementSig}: has failing constraint and report=true -> reportValidity`,
+        );
+        reportValidity({ event });
+      } else if (failedConstraintInfo.status === "error") {
+        // Error callouts persist until the user explicitly dismisses them (close button, Escape).
+        // Unlike warning callouts — which can be cleared just by interacting with the control —
+        // errors require an intentional acknowledgement. The callout is removed automatically
+        // on the next action attempt via autoResetOnAction.
+        debugUIState(
+          event,
+          `syncValidity ${elementSig}: has error constraint and report=false -> keep callout open`,
+        );
+      } else {
+        debugUIState(
+          event,
+          `syncValidity ${elementSig}: has failing constraint but report=false -> close callout if any`,
+        );
+        callout.removeOpenToken(VALIDATION_TOKEN, event);
+      }
+    } else {
+      // Sync interaction state — if the control is now interactable the interaction
+      // callout token is removed, allowing the callout to close.
+      const ci = controller.rules.interaction;
+      if (ci) {
+        ci.checkInteractivity({ event });
+      }
+      // Same reason as the check above: "nothing was wrong" is the normal
+      // case and does not need saying.
+      callout.removeOpenToken(VALIDATION_TOKEN, event);
+    }
+    // Propagate a silent validity update up the controller chain.
+    // Parent controllers (group, facade) don't report — the leaf's callout is enough.
+    // They just need their validity state kept current so _attemptCommit can read it.
+    let parentController = controller.parentUIStateController;
+    while (parentController) {
+      parentController.rules.validation.checkValidity({ event });
+      parentController = parentController.parentUIStateController;
+    }
+    return isValid;
+  };
+  controlValidity.syncValidity = syncValidity;
+
+  return controlValidity;
+};
+
+const pickConstraintFailureInfo = (a, b) => {
+  const aPrio = getConstraintFailureInfoPriority(a);
+  const bPrio = getConstraintFailureInfoPriority(b);
+  if (bPrio > aPrio) {
+    return b;
+  }
+  return a;
+};
+const getConstraintFailureInfoPriority = (failureInfo) => {
+  if (failureInfo.status === "error") {
+    return 1000;
+  }
+  const { constraint } = failureInfo;
+  if (constraint.name === "required") {
+    return 100;
+  }
+  if (STANDARD_CONSTRAINT_SET.has(constraint)) {
+    return 10;
+  }
+  return 1;
+};
+
+const ErrorBoundaryContext = createContext(null);
+
+const useResetErrorBoundary = () => {
+  const resetErrorBoundary = useContext(ErrorBoundaryContext);
+  return resetErrorBoundary;
+};
+
+const DebugCommandContext = createContext(false);
+const DebugInteractionContext = createContext(false);
+const DebugFocusContext = createContext(false);
+const DebugScrollContext = createContext(false);
+const DebugPopupContext = createContext(false);
+const DebugActionContext = createContext(false);
+const DebugUIStateContext = createContext(false);
+const debugNoop = () => {};
+const eventGroupLogger = createEventGroupLogger();
+const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
+const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
+const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
+const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
+const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
+const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
+const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+
+// The hooks below expose one concern's logger to components inside <NaviDebug>.
+// Each returns the logger function enabled for that concern, or a no-op when the
+// concern is off — so call sites can `const debug = useDebugX()` unconditionally.
+// The logger is called as `debug(message, …)` or, to group a side effect under
+// the native event that caused it, `debug(event, message, …)`.
+
+/** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
+const useDebugCommand = () => {
+  const debug = useContext(DebugCommandContext);
+  return debug || debugNoop;
+};
+/** Logger for gated interactions (click/scroll/select/…), or a no-op. */
+const useDebugInteraction = () => {
+  const debug = useContext(DebugInteractionContext);
+  return debug || debugNoop;
+};
+/** Logger for focus moves and focus-visible decisions, or a no-op. */
+const useDebugFocus = () => {
+  const debug = useContext(DebugFocusContext);
+  return debug || debugNoop;
+};
+/** Logger for virtual scroll / wheel motion (drag, momentum, glide), or a no-op. */
+const useDebugScroll = () => {
+  const debug = useContext(DebugScrollContext);
+  return debug || debugNoop;
+};
+/** Logger for popover/dialog open/close/positioning, or a no-op. */
+const useDebugPopup = () => {
+  const debug = useContext(DebugPopupContext);
+  return debug || debugNoop;
+};
+/** Logger for the action lifecycle (request → run → end), or a no-op. */
+const useDebugAction = () => {
+  const debug = useContext(DebugActionContext);
+  return debug || debugNoop;
+};
+/** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
+const useDebugUIState = () => {
+  const debug = useContext(DebugUIStateContext);
+  return debug || debugNoop;
+};
+
+/**
+ * Turns on navi's color-coded console logging for everything rendered inside it.
+ * Navi has many moving parts (interactions, focus, scroll, popups, commands,
+ * actions, ui-state); each concern logs to its own console group so you can
+ * watch what navi is doing and why. Components read a concern via its hook
+ * (`useDebugScroll`, `useDebugInteraction`, …).
+ *
+ * Every prop accepts one of:
+ * - `true` — log with the built-in color-coded logger (grouped by initiator event)
+ * - a function — log with your own callback instead
+ * - `false` / omitted — disabled (the concern's hook returns a no-op)
+ *
+ * `debugAll` is the default for every other prop, so `<NaviDebug debugAll>`
+ * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
+ * `debugScroll` and `debugPopup` unless those are set explicitly, since they
+ * describe the same interaction.
+ *
+ * @param {object} props
+ * @param {boolean|Function} [props.debugAll] - Default for every concern below.
+ * @param {boolean|Function} [props.debugCommand] - navi command dispatch (`--navi-*`).
+ * @param {boolean|Function} [props.debugInteraction] - Gated interactions; also implies focus/scroll/popup.
+ * @param {boolean|Function} [props.debugFocus] - Focus moves and focus-visible decisions.
+ * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion.
+ * @param {boolean|Function} [props.debugPopup] - Popover/dialog open/close/positioning.
+ * @param {boolean|Function} [props.debugAction] - Action lifecycle.
+ * @param {boolean|Function} [props.debugUIState] - UI-state transitions and validation.
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ *
+ * @example
+ * // Log everything under this subtree
+ * <NaviDebug debugAll>
+ *   <Picker>…</Picker>
+ * </NaviDebug>
+ *
+ * @example
+ * // Only wheel/scroll motion, via a custom sink
+ * <NaviDebug debugScroll={(...args) => myLogger.log(...args)}>
+ *   <Wheel>…</Wheel>
+ * </NaviDebug>
+ */
+const NaviDebug = ({
+  debugAll,
+  debugCommand = debugAll,
+  debugInteraction = debugAll,
+  debugFocus = debugAll,
+  debugScroll = debugAll,
+  debugPopup = debugAll,
+  debugAction = debugAll,
+  debugUIState = debugAll,
+  children
+}) => {
+  if (debugCommand === true) {
+    debugCommand = debugCommandDefault;
+  }
+  if (debugInteraction === true) {
+    debugInteraction = debugInteractionDefault;
+  }
+  if (debugFocus === true || debugInteraction && debugFocus === undefined) {
+    debugFocus = debugFocusDefault;
+  }
+  if (debugScroll === true || debugInteraction && debugScroll === undefined) {
+    debugScroll = debugScrollDefault;
+  }
+  if (debugPopup === true || debugInteraction && debugPopup === undefined) {
+    debugPopup = debugPopupDefault;
+  }
+  if (debugAction === true) {
+    debugAction = debugActionDefault;
+  }
+  if (debugUIState === true) {
+    debugUIState = debugUIStateDefault;
+  }
+  return jsx(DebugCommandContext.Provider, {
+    value: debugCommand,
+    children: jsx(DebugInteractionContext.Provider, {
+      value: debugInteraction,
+      children: jsx(DebugFocusContext.Provider, {
+        value: debugFocus,
+        children: jsx(DebugScrollContext.Provider, {
+          value: debugScroll,
+          children: jsx(DebugPopupContext.Provider, {
+            value: debugPopup,
+            children: jsx(DebugActionContext.Provider, {
+              value: debugAction,
+              children: jsx(DebugUIStateContext.Provider, {
+                value: debugUIState,
+                children: children
+              })
+            })
+          })
+        })
+      })
+    })
+  });
+};
+
+const actionErrorWeakMap = new WeakMap();
+const NAVI_ACTION_ERROR_CONSTRAINT = {
+  name: "navi_action_error",
+  check: (controller) => {
+    const errorInfo = actionErrorWeakMap.get(controller);
+    if (!errorInfo) {
+      return null;
+    }
+    const { target, message } = errorInfo;
+    return {
+      status: "error",
+      target,
+      message,
+    };
+  },
+  // This should not prevent <form> submission
+  // so whenever user tries to submit the form again the error is cleared
+  // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+  autoResetOnAction: true,
+  onAutoResetOnAction: (controller) => {
+    actionErrorWeakMap.delete(controller);
+  },
+};
+registerGlobalConstraint(NAVI_ACTION_ERROR_CONSTRAINT);
+const setActionError = (controller, message, { target } = {}) => {
+  actionErrorWeakMap.set(controller, { message, target });
+};
+const clearActionError = (controller) => {
+  if (actionErrorWeakMap.has(controller)) {
+    actionErrorWeakMap.delete(controller);
+  }
+};
+
+const useExecuteAction = (
+  elementRef,
+  {
+    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    errorMapping,
+  } = {},
+) => {
+  const debugAction = useDebugAction();
+
+  // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
+  // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
+  // To change if https://github.com/preactjs/preact/issues/4754 lands
+  const [error, setError] = useState(null);
+  const resetErrorBoundary = useResetErrorBoundary();
+  useLayoutEffect(() => {
+    if (error) {
+      throw error;
+    }
+  }, [error]);
+
+  const addErrorMessage = (error, { requester } = {}) => {
+    // The error is stored on the element that owns the action (the form/element itself).
+    // The requester (e.g. submit button) is stored as the callout display target
+    // so the validation message appears on the button, not the form.
+    const element = elementRef.current;
+    let target = requester;
+    let message;
+    if (errorMapping) {
+      const errorMappingResult = errorMapping(error);
+      if (typeof errorMappingResult === "string") {
+        message = errorMappingResult;
+      } else if (Error.isError(errorMappingResult)) {
+        message = errorMappingResult;
+      } else if (isValidElement(errorMappingResult)) {
+        message = errorMappingResult;
+      } else if (
+        typeof errorMappingResult === "object" &&
+        errorMappingResult !== null
+      ) {
+        message = errorMappingResult.message || error.message;
+        target = errorMappingResult.target || target;
+      }
+    } else {
+      message = error;
+    }
+    const controller = element.__uiStateController__;
+    if (controller) {
+      setActionError(controller, message, { target });
+    }
+  };
+  const removeErrorMessage = () => {
+    const element = elementRef.current;
+    const controller = element.__uiStateController__;
+    if (controller) {
+      clearActionError(controller);
+      controller.rules.validation.checkValidity();
+    }
+  };
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const form = element.tagName === "FORM" ? element : element.form;
+    if (!form) {
+      return null;
+    }
+    const onReset = () => {
+      removeErrorMessage();
+    };
+    form.addEventListener("reset", onReset);
+    return () => {
+      form.removeEventListener("reset", onReset);
+    };
+  });
+
+  // const errorEffectRef = useRef();
+  // errorEffectRef.current = errorEffect;
+  const executeAction = useCallback(
+    (actionEvent) => {
+      const { action, actionOrigin, requester, event, method, confirmParams } =
+        actionEvent.detail;
+      const sharedActionEventDetail = {
+        action,
+        actionOrigin,
+        requester,
+        event: actionEvent,
+        method,
+      };
+      debugAction(event, "executing action, requested by", requester);
+
+      if (resetErrorBoundary) {
+        resetErrorBoundary();
+      }
+      // removeErrorMessage might be superfluous here because we autoResetOnActio
+      // which is basically doing this but sooner to allow the action to be re-executed
+      // (error is non blocking otherwise we could not ever re-submit)
+      // removeErrorMessage();
+      setError(null);
+
+      const element = elementRef.current;
+      if (!element) {
+        throw new Error(
+          "useExecuteAction: elementRef.current is null, make sure to pass a ref to an element",
+        );
+      }
+      const [triggerAbort, addAbortCallback] = createPubSub();
+      const [triggerError, addErrorCallback] = createPubSub();
+      const [triggerComplete, addCompleteCallback] = createPubSub();
+      // Either three callbacks, one per outcome, or a single one for "however
+      // this ends" — it receives `{ aborted, reason }`, `{ error }` or
+      // `{ data }`, so a caller that only needs to know the action settled
+      // (and whether it worked) does not have to register three.
+      const addSideEffect = (sideEffect) => {
+        if (typeof sideEffect === "function") {
+          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
+          addErrorCallback((error) => sideEffect({ error }));
+          addCompleteCallback((data) => sideEffect({ data }));
+          return;
+        }
+        const { abort, error, complete } = sideEffect;
+        addAbortCallback(abort);
+        addErrorCallback(error);
+        addCompleteCallback(complete);
+      };
+      addSideEffect({
+        abort: (reason) => {
+          const element = elementRef.current;
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            element
+          ) {
+            dispatchInternalCustomEvent(element, "navi_action_abort", {
+              ...sharedActionEventDetail,
+              reason,
+            });
+          }
+        },
+        error: (error) => {
+          if (errorEffect === "show_validation_message") {
+            addErrorMessage(error, { requester });
+          } else if (errorEffect === "throw") {
+            setError(error);
+          }
+
+          const element = elementRef.current;
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            element
+          ) {
+            dispatchInternalCustomEvent(element, "navi_action_error", {
+              ...sharedActionEventDetail,
+              error,
+            });
+          }
+        },
+        complete: (data) => {
+          const element = elementRef.current;
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            element
+          ) {
+            dispatchInternalCustomEvent(element, "navi_action_end", {
+              ...sharedActionEventDetail,
+              data,
+            });
+          }
+        },
+      });
+
+      const actionStartEventDetail = {
+        ...sharedActionEventDetail,
+        addSideEffect,
+      };
+      dispatchInternalCustomEvent(
+        element,
+        "navi_action_start",
+        actionStartEventDetail,
+      );
+
+      const runAction = () => {
+        return action[method]({
+          event: actionEvent,
+          reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
+          onAbort: triggerAbort,
+          onError: triggerError,
+          onComplete: triggerComplete,
+        });
+      };
+
+      if (confirmParams) {
+        // The question is asked in a popup, so the answer only comes back a
+        // few frames later — everything the action does moves behind that
+        // await. Fine here and nowhere else: "start" has already been
+        // dispatched synchronously above, which is what tells a caller
+        // waiting on a commit that the action is running (see
+        // watchActionCompletion in control_action.js), so a dialog around it
+        // already knows to stay open until the answer lands.
+        return requestConfirmation({
+          ...confirmParams,
+          anchor: requester,
+        }).then((confirmed) => {
+          if (!confirmed) {
+            debugAction(event, `action aborted (via confirm popup)`);
+            triggerAbort(`user did not confirm`);
+            return undefined;
+          }
+          return runAction();
+        });
+      }
+
+      return runAction();
+    },
+    [elementRef, errorEffect],
+  );
+
+  return executeAction;
+};
+
+const detectMac = () => {
+  // Modern way using User-Agent Client Hints API
+  if (window.navigator.userAgentData) {
+    return window.navigator.userAgentData.platform === "macOS";
+  }
+  // Fallback to userAgent string parsing
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
+};
+const isMac = detectMac();
+
+// Maps canonical browser key names to their user-friendly aliases.
+// Used for both event matching and ARIA normalization.
+const keyMapping = {
+  " ": { alias: ["space"] },
+  "escape": { alias: ["esc"] },
+  "arrowup": { alias: ["up"] },
+  "arrowdown": { alias: ["down"] },
+  "arrowleft": { alias: ["left"] },
+  "arrowright": { alias: ["right"] },
+  "delete": { alias: ["del"] },
+  // Platform-specific mappings
+  ...(isMac
+    ? { delete: { alias: ["backspace"] } }
+    : { backspace: { alias: ["delete"] } }),
+};
+
+const addManyEventListeners = (element, events) => {
+  const cleanupCallbackSet = new Set();
+  for (const event of Object.keys(events)) {
+    const callback = events[event];
+    element.addEventListener(event, callback);
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener(event, callback);
+    });
+  }
+  return () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+  };
+};
+
+/**
+ * Custom hook creating a stable callback that doesn't trigger re-renders.
+ *
+ * PROBLEM: Parent components often forget to use useCallback, causing library
+ * components to re-render unnecessarily when receiving callback props.
+ *
+ * SOLUTION: Library components can use this hook to create stable callback
+ * references internally, making them defensive against parents who don't
+ * optimize their callbacks. This ensures library components don't force
+ * consumers to think about useCallback.
+ *
+ * USAGE:
+ * ```js
+ * // Parent component (consumer) - no useCallback needed
+ * const Parent = () => {
+ *   const [count, setCount] = useState(0);
+ *
+ *   // Parent naturally creates new function reference each render
+ *   // (forgetting useCallback is common and shouldn't break performance)
+ *   return <LibraryButton onClick={(e) => setCount(count + 1)} />;
+ * };
+ *
+ * // Library component - defensive against changing callbacks
+ * const LibraryButton = ({ onClick }) => {
+ *   // ✅ Create stable reference from parent's potentially changing callback
+ *   const stableClick = useStableCallback(onClick);
+ *
+ *   // Internal expensive components won't re-render when parent updates
+ *   return <ExpensiveInternalButton onClick={stableClick} />;
+ * };
+ *
+ * // Deep internal component gets stable reference
+ * const ExpensiveInternalButton = memo(({ onClick }) => {
+ *   // This won't re-render when Parent's count changes
+ *   // But onClick will always call the latest Parent callback
+ *   return <button onClick={onClick}>Click me</button>;
+ * });
+ * ```
+ *
+ * Perfect for library components that need performance without burdening consumers.
+ */
+
+
+const useStableCallback = (callback, mapper) => {
+  const callbackRef = useRef();
+  callbackRef.current = callback;
+  const stableCallbackRef = useRef();
+
+  // Return original falsy value directly when callback is not a function
+  if (!callback) {
+    return callback;
+  }
+
+  const existingStableCallback = stableCallbackRef.current;
+  if (existingStableCallback) {
+    return existingStableCallback;
+  }
+  const stableCallback = (...args) => {
+    const currentCallback = callbackRef.current;
+    return currentCallback(...args);
+  };
+  stableCallbackRef.current = stableCallback;
+  return stableCallback;
+};
+
+const useActionEvents = (
+  elementRef,
+  {
+    actionOrigin = "action_prop",
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAllowed,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  },
+) => {
+  onCancel = useStableCallback(onCancel);
+  onRequested = useStableCallback(onRequested);
+  onPrevented = useStableCallback(onPrevented);
+  onAllowed = useStableCallback(onAllowed);
+  onStart = useStableCallback(onStart);
+  onAbort = useStableCallback(onAbort);
+  onError = useStableCallback(onError);
+  onEnd = useStableCallback(onEnd);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    return addManyEventListeners(element, {
+      navi_cancel: (e) => {
+        // cancel don't need to check for actionOrigin because
+        // it's actually unrelated to a specific actions
+        // in that sense it should likely be moved elsewhere as it's related to
+        // interaction and constraint validation, not to a specific action
+        onCancel?.(e, e.detail.reason);
+      },
+      navi_request_action: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onRequested?.(e);
+      },
+      navi_action_prevented: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onPrevented?.(e);
+      },
+      navi_action_allowed: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAllowed?.(e);
+      },
+      navi_action_start: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onStart?.(e);
+      },
+      navi_action_abort: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAbort?.(e);
+      },
+      navi_action_error: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onError?.(e.detail.error, e);
+      },
+      navi_action_end: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onEnd?.(e);
+      },
+    });
+  }, [
+    actionOrigin,
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAllowed,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
+};
+
+const activeShortcutsSignal = signal([]);
+const shortcutsMap = new Map();
+
+const areShortcutsEqual = (shortcutA, shortcutB) => {
+  return (
+    shortcutA.key === shortcutB.key &&
+    shortcutA.description === shortcutB.description &&
+    shortcutA.enabled === shortcutB.enabled
+  );
+};
+
+const areShortcutArraysEqual = (arrayA, arrayB) => {
+  if (arrayA.length !== arrayB.length) {
+    return false;
+  }
+
+  for (let i = 0; i < arrayA.length; i++) {
+    if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const updateActiveShortcuts = () => {
+  const activeElement = activeElementSignal.peek();
+  const currentActiveShortcuts = activeShortcutsSignal.peek();
+  const activeShortcuts = [];
+  for (const [element, { shortcuts }] of shortcutsMap) {
+    if (element === activeElement || element.contains(activeElement)) {
+      activeShortcuts.push(...shortcuts);
+    }
+  }
+
+  // Only update if shortcuts have actually changed
+  if (!areShortcutArraysEqual(currentActiveShortcuts, activeShortcuts)) {
+    activeShortcutsSignal.value = activeShortcuts;
+  }
+};
+effect(() => {
+  // eslint-disable-next-line no-unused-expressions
+  activeElementSignal.value;
+  updateActiveShortcuts();
+});
+const addShortcuts = (element, shortcuts) => {
+  shortcutsMap.set(element, { shortcuts });
+  updateActiveShortcuts();
+};
+const removeShortcuts = (element) => {
+  shortcutsMap.delete(element);
+  updateActiveShortcuts();
+};
+
+const useKeyboardShortcuts = (
+  elementRef,
+  shortcuts,
+  {
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    allowConcurrentActions,
+    closestFocusableSelector,
+  } = {},
+) => {
+  if (!elementRef) {
+    throw new Error(
+      "useKeyboardShortcuts requires an elementRef to attach shortcuts to.",
+    );
+  }
+
+  const executeAction = useExecuteAction(elementRef);
+  const shortcutActionIsBusyRef = useRef(false);
+  useActionEvents(elementRef, {
+    actionOrigin: "keyboard_shortcut",
+    onPrevented: onActionPrevented,
+    onAllowed: (actionEvent) => {
+      const { shortcut } = actionEvent.detail.meta || {};
+      if (!shortcut) {
+        // not a shortcut (an other interaction triggered the action, don't request it again)
+        return;
+      }
+      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
+      // otherwise setState would call that action immediately
+      // setAction(() => actionEvent.detail.action);
+      executeAction(actionEvent, {
+        requester: document.activeElement,
+      });
+    },
+    onStart: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      if (!allowConcurrentActions) {
+        shortcutActionIsBusyRef.current = true;
+      }
+      shortcut.onStart?.(e);
+      onActionStart?.(e);
+    },
+    onAbort: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onAbort?.(e);
+      onActionAbort?.(e);
+    },
+    onError: (error, e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onError?.(error, e);
+      onActionError?.(error, e);
+    },
+    onEnd: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onEnd?.(e);
+      onActionEnd?.(e);
+    },
+  });
+
+  const shortcutDeps = [];
+  for (const shortcut of shortcuts) {
+    shortcutDeps.push(
+      shortcut.key,
+      shortcut.description,
+      shortcut.enabled,
+      shortcut.confirmMessage,
+    );
+    shortcut.action = useAction(shortcut.action);
+  }
+  const onKeyDown = createOnKeyDownForShortcutArray(
+    shortcuts,
+    shortcutActionIsBusyRef,
+  );
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const focusableElement = closestFocusableSelector
+      ? element.closest(closestFocusableSelector)
+      : element;
+    focusableElement.addEventListener("keydown", onKeyDown);
+    addShortcuts(focusableElement, shortcuts);
+    return () => {
+      focusableElement.removeEventListener("keydown", onKeyDown);
+      removeShortcuts(focusableElement);
+    };
+  }, [shortcutDeps]);
+};
+
+const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
+  const shortcutsCopy = [];
+  for (const shortcutCandidate of shortcuts) {
+    shortcutsCopy.push({
+      ...shortcutCandidate,
+      handler: (keyboardEvent) => {
+        if (shortcutCandidate.handler) {
+          const returnValue = shortcutCandidate.handler(keyboardEvent);
+          // A shortcut handler returns either a plain false/null/undefined
+          // (no interaction to dispatch — e.g. the shortcut didn't apply
+          // given some runtime check), or the same { name, allowed,
+          // prevented, ... } shape dispatchRequestInteraction itself takes,
+          // which needs an actual dispatch to ever run its `allowed`/
+          // `prevented` callbacks.
+          if (!returnValue || typeof returnValue !== "object") {
+            return returnValue;
+          }
+          return dispatchRequestInteraction(keyboardEvent.currentTarget, {
+            event: keyboardEvent,
+            ...returnValue,
+          });
+        }
+        if (busyRef?.current) {
+          return false;
+        }
+        const { action } = shortcutCandidate;
+        const actionWithEvent = action.bindParams(keyboardEvent);
+        const element = keyboardEvent.currentTarget;
+        return dispatchRequestInteraction(element, {
+          event: keyboardEvent,
+          wantAction: true,
+          name: "keyboard_shortcut",
+          category: "interaction",
+          requester: document.activeElement,
+          action: actionWithEvent,
+          actionOrigin: "keyboard_shortcut",
+          confirmMessage: shortcutCandidate.confirmMessage,
+          meta: {
+            shortcut: shortcutCandidate,
+          },
+        });
+      },
+    });
+  }
+
+  return (keyboardEvent) => {
+    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+  };
+};
+const createOnKeyDownForShortcuts = (shortcuts) => {
+  const shortcutsArray = [];
+  for (const key of Object.keys(shortcuts)) {
+    const value = shortcuts[key];
+    const shortcut = { key };
+    if (typeof value === "function") {
+      shortcut.handler = value;
+    } else if (typeof value === "object" && value !== null) {
+      Object.assign(shortcut, value);
+    }
+    shortcutsArray.push(shortcut);
+  }
+  return createOnKeyDownForShortcutArray(shortcutsArray);
+};
+
+const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
+  const currentTarget = keyboardEvent.currentTarget;
+  const target = keyboardEvent.target;
+  let canIntercept;
+  if (target === currentTarget) {
+    // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
+    canIntercept = true;
+  } else {
+    // we need to check if the default action is something that we can allow to be intercepted
+    const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
+    canIntercept =
+      !defaultAction ||
+      defaultAction === "scroll" ||
+      defaultAction === "dismiss";
+  }
+  if (!canIntercept) {
+    return null;
+  }
+  for (const shortcutCandidate of shortcuts) {
+    let { enabled = true, key } = shortcutCandidate;
+    if (!enabled) {
+      continue;
+    }
+
+    if (typeof key === "function") {
+      const keyReturnValue = key(keyboardEvent);
+      if (!keyReturnValue) {
+        continue;
+      }
+      key = keyReturnValue;
+    }
+    if (!key) {
+      console.error(shortcutCandidate);
+      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
+    }
+
+    // Handle platform-specific combination objects
+    let actualCombination;
+    let crossPlatformCombination;
+    if (typeof key === "object" && key !== null) {
+      actualCombination = isMac ? key.mac : key.other;
+    } else {
+      actualCombination = key;
+      if (containsPlatformSpecificKeys(key)) {
+        crossPlatformCombination = generateCrossPlatformCombination(key);
+      }
+    }
+
+    // Check both the actual combination and cross-platform combination
+    const matchesActual =
+      actualCombination &&
+      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+    const matchesCrossPlatform =
+      crossPlatformCombination &&
+      crossPlatformCombination !== actualCombination &&
+      keyboardEventIsMatchingKeyCombination(
+        keyboardEvent,
+        crossPlatformCombination,
+      );
+
+    if (!matchesActual && !matchesCrossPlatform) {
+      continue;
+    }
+    if (typeof enabled === "function" && !enabled(keyboardEvent)) {
+      continue;
+    }
+    const returnValue = shortcutCandidate.handler(keyboardEvent);
+    if (returnValue === false) {
+      keyboardEvent.preventDefault();
+    }
+    return returnValue;
+  }
+  return null;
+};
+const containsPlatformSpecificKeys = (combination) => {
+  const lowerCombination = combination.toLowerCase();
+  const macSpecificKeys = ["command", "cmd"];
+
+  return macSpecificKeys.some((key) => lowerCombination.includes(key));
+};
+const generateCrossPlatformCombination = (combination) => {
+  let crossPlatform = combination;
+
+  if (isMac) {
+    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
+    return null;
+  }
+  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
+  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
+  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
+
+  return crossPlatform;
+};
+const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
+  if (!event.key) {
+    // Some keydown events carry no key at all — the browser synthesizes one
+    // when a native autofill/search suggestion is clicked. No key, no match.
+    return false;
+  }
+  const keys = keyCombination.toLowerCase().split("+");
+  const activeModifiers = new Set();
+  for (const eventProperty of Object.keys(modifierKeyMapping)) {
+    if (event[eventProperty]) {
+      activeModifiers.add(eventProperty);
+    }
+  }
+
+  for (const key of keys) {
+    let modifierFound = false;
+
+    // Check if this key is a modifier
+    for (const [eventProperty, config] of Object.entries(modifierKeyMapping)) {
+      const allNames = [...config.names];
+
+      // Add Mac-specific names only if we're on Mac and they exist
+      if (isMac && config.macNames) {
+        allNames.push(...config.macNames);
+      }
+
+      if (allNames.includes(key)) {
+        // Check if the corresponding event property is pressed
+        if (!event[eventProperty]) {
+          return false;
+        }
+        activeModifiers.delete(eventProperty);
+        modifierFound = true;
+        break;
+      }
+    }
+    if (modifierFound) {
+      continue;
+    }
+
+    // Check if it's a range pattern like "a-z" or "0-9"
+    if (key.includes("-") && key.length === 3) {
+      const [startChar, dash, endChar] = key;
+      if (dash === "-") {
+        // Only check ranges for single alphanumeric characters
+        const eventKey = event.key.toLowerCase();
+        if (eventKey.length !== 1) {
+          return false; // Not a single character key
+        }
+
+        // Only allow a-z and 0-9 ranges
+        const isValidRange =
+          (startChar >= "a" && endChar <= "z") ||
+          (startChar >= "0" && endChar <= "9");
+
+        if (!isValidRange) {
+          return false; // Invalid range pattern
+        }
+
+        const eventKeyCode = eventKey.charCodeAt(0);
+        const startCode = startChar.charCodeAt(0);
+        const endCode = endChar.charCodeAt(0);
+
+        if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
+          continue; // Range matched
+        }
+        return false; // Range not matched
+      }
+    }
+
+    // If it's not a modifier or range, check if it matches the actual key
+    if (!isSameKey(event.key, key)) {
+      return false;
+    }
+  }
+
+  const activeModifierNotSpecified = activeModifiers.size > 0;
+  // If any active modifier was not specified in the combination, reject the match
+  if (activeModifierNotSpecified) {
+    return false;
+  }
+
+  return true;
+};
+// Configuration for mapping shortcut key names to browser event properties
+const modifierKeyMapping = {
+  metaKey: {
+    names: ["meta"],
+    macNames: ["command", "cmd"],
+  },
+  ctrlKey: {
+    names: ["control", "ctrl"],
+  },
+  shiftKey: {
+    names: ["shift"],
+  },
+  altKey: {
+    names: ["alt"],
+    macNames: ["option"],
+  },
+};
+const isSameKey = (browserEventKey, key) => {
+  browserEventKey = browserEventKey.toLowerCase();
+  key = key.toLowerCase();
+
+  if (browserEventKey === key) {
+    return true;
+  }
+
+  // Check if either key is an alias for the other
+  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
+    const allKeys = [canonicalKey, ...config.alias];
+    if (allKeys.includes(browserEventKey) && allKeys.includes(key)) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -7289,578 +16408,6 @@ for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
 const getDefaultDisplay = (tagName) => {
   const normalizedTagName = tagName.toLowerCase();
   return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
-};
-
-/**
- * DOM utilities for navigating the control element hierarchy.
- *
- * A control is a self-contained interactive widget. Its DOM structure can be
- * either flat (host only) or layered (wrapper + host):
- *
- * Flat — the element is both the root and the host:
- * ```html
- * <button navi-control navi-control-host>Click me</button>
- * ```
- *
- * Layered — a visual wrapper surrounds a native input that is the real host:
- * ```html
- * <span navi-control>           ← wrapper: root of the control's DOM subtree
- *   <input navi-control-host /> ← host: holds controlProps, value, UI state, constraints
- * </span>
- * ```
- *
- * Attribute roles:
- *  - `navi-control`           boolean, on the wrapper/root; marks the control boundary
- *  - `navi-control-host`      boolean, on the host; set automatically by `useInteractiveProps`
- *
- * See control_proxy.js for the `navi-control-proxy-for` pattern.
- */
-
-/**
- * Returns the host element inside `el` — the element that holds the control's
- * value, UI state, and constraints (i.e. the element onto which
- * `useInteractiveProps` spreads `controlProps` and its event handlers).
- *
- * Returns `null` when `el` is itself the host (no separate wrapper).
- */
-const findControlHost = (el) => {
-  if (el.hasAttribute("navi-control-host")) {
-    return el;
-  }
-  return el.querySelector("[navi-control-host]");
-};
-const isControlRoot = (el) => {
-  return el.hasAttribute("navi-control");
-};
-const isControlHost = (el) => {
-  return el.hasAttribute("navi-control-host");
-};
-
-/**
- * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
- * has a `[data-action]` attribute.
- *
- * The search walks up `parentElement` manually (rather than using `.closest()`)
- * so it can stop at hard boundaries.
- *
- * **`[navi-control="picker"]` boundary**: a picker is a hard stop. Elements inside a picker
- * (including inside its popover content) can reach the picker itself, but nothing above it.
- * This prevents an input inside a picker from accidentally submitting a parent form.
- *
- * ```html
- * <form data-action="outer">              ← NOT found (above picker boundary)
- *   <button navi-control="picker" data-action="p">  ← found and search stops here
- *     <input navi-control-host />         ← el (in picker button area)
- *     <div popover>
- *       <input navi-control-host />       ← el (in picker popover)
- *     </div>
- *   </button>
- * </form>
- * ```
- */
-const findClosestControlWithAction = (el) => {
-  let current = el;
-  while (current) {
-    if (current.hasAttribute("data-action")) {
-      return current;
-    }
-    // Stop at a picker boundary — nothing above the picker is reachable from within.
-    if (current.getAttribute("navi-control") === "picker") {
-      return undefined;
-    }
-    current = current.parentElement;
-  }
-  return undefined;
-};
-
-/**
- * Returns the closest ancestor control element of `el` — i.e. the nearest
- * `[navi-control]` element that is not the control `el` belongs to.
- *
- * `navi-control` is only on wrapper elements, never on hosts. So
- * `el.closest("[navi-control]")` from a host returns that host's own wrapper,
- * and one more `.parentNode.closest("[navi-control]")` reaches a true ancestor:
- *
- * ```html
- * <button navi-control>              ← outer control  (returned)
- *   <span navi-control>              ← inner wrapper  (skipped via parentNode)
- *     <input navi-control-host />    ← el
- *   </span>
- * </button>
- * ```
- */
-const getParentControl = (el) => {
-  const ownControlRoot = el.closest("[navi-control]");
-  const parentControlRoot = ownControlRoot.parentNode.closest("[navi-control]");
-  return parentControlRoot;
-};
-
-/**
- * Returns the root element of the control that `el` belongs to, or `null` if
- * `el` is not part of a control.
- *
- * Use this when you have an element that may be a host (inner input) and need
- * the visual boundary of its control — e.g. to anchor a callout, track
- * mousedown interactions, or measure the control's bounding box.
- */
-const findControlRoot = (el) => {
-  if (el.hasAttribute("navi-control")) {
-    return el;
-  }
-  if (el.hasAttribute("navi-control-host")) {
-    return el.closest("[navi-control]");
-  }
-  return null;
-};
-
-const dispatchRequestSetUIState = (element, value, detail) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
-    ...detail,
-    value,
-  });
-};
-const dispatchRequestClearUIState = (element, e) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_clear_ui_state", {
-    event: e,
-  });
-};
-const dispatchRequestResetUIState = (element, e) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
-    event: e,
-  });
-};
-/**
- * @param {Element} el
- * @param {{ own?: boolean }} [options] `own`: what the element holds BY ITSELF.
- *   Only a button ever answers differently — one with no value of its own
- *   inherits the value of the control around it, which is what makes
- *   `--navi-send` on a form's button be about that form. Something asking what
- *   THIS element says (a travel command reading what the travel is about) wants
- *   the own value and would otherwise be handed the surrounding control's.
- */
-const getUIStateFromElement = (el, { own } = {}) => {
-  let uiState;
-  dispatchInternalCustomEvent(el, "navi_get_ui_state", {
-    own,
-    respondWith: (v) => {
-      uiState = v;
-    },
-  });
-  return uiState;
-};
-
-/**
- * Converts a JS value into the form expected by the browser DOM property for a
- * given control type/input type combination.
- *
- * For example:
- * - `datetime-local` inputs expect a local datetime string without timezone
- * - `number`/`range` inputs expect a numeric string or number
- * - `color` inputs require a non-empty hex string (falls back to `#000000`)
- * - All other inputs receive the value as-is (undefined → "")
- *
- * Returns either the converted value directly, or a converter function when the
- * conversion depends on the runtime value (e.g. plain inputs return `asInputValue`).
- *
- * @param {any} value - The JS value to convert.
- * @param {{ controlType: string, type: string }} options
- * @returns {any} The DOM-compatible value or a converter function.
- */
-const asControlHostValue = (
-  jsValue,
-  { controlType, type, inputMode },
-) => {
-  if (controlType === "select") {
-    // A select holds one of its options, always a string; holding nothing is
-    // the empty option, which the element spells "".
-    return asInputValue(jsValue);
-  }
-  if (controlType === "input" || controlType === "picker") {
-    if (type === "datetime-local") {
-      return asDatetimeLocalString(jsValue);
-    }
-    if (
-      type === "number" ||
-      type === "range" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
-      return asNumberString(jsValue);
-    }
-    if (type === "color") {
-      return asColorString(jsValue);
-    }
-    return asInputValue(jsValue);
-  }
-  return jsValue;
-};
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const asDatetimeLocalString = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-const asNumberString = (jsValue) => {
-  if (jsValue === undefined) {
-    return "";
-  }
-  return jsValue;
-};
-// Browser requires a non-empty value for <input type="color">.
-// When our logical value is empty we give it #000000 so it doesn't choke.
-// The UI uses the original (possibly empty) value to show the checkerboard.
-const asColorString = (jsValue) => {
-  return jsValue || "#000000";
-};
-const asInputValue = (jsValue) => {
-  if (jsValue === undefined) {
-    return "";
-  }
-  return jsValue;
-};
-
-/**
- * Reads the current logical JS value from a control host DOM element.
- *
- * Handles all navi control host element types:
- * - `<button>` — reads via `navi_get_value` custom event, falls back to `button.value`
- * - `<input type="number|range">` — parses as a number, returns `undefined` when empty
- * - `<input type="checkbox|radio">` — returns `undefined` when unchecked, otherwise reads
- *   via `navi_get_value` custom event (to preserve the original JS type of the value prop)
- * - `<input type="datetime-local">` — converts the local datetime string to an ISO 8601 string
- * - `<input type="navi_picker">` — delegates to the controller via `navi_get_ui_state`
- * - All other inputs — returns `input.value` as a string
- *
- * @param {HTMLElement} controlHost - The control host DOM element to read from.
- * @returns {any} The current logical value of the control.
- */
-const readControlValue = (controlHost) => {
-  if (
-    controlHost.tagName === "BUTTON" ||
-    controlHost.getAttribute("role") === "button"
-  ) {
-    return readValueFromButton(controlHost);
-  }
-  if (controlHost.tagName === "INPUT") {
-    // important: input.type = "navi_js"; followed by input.type; returns "text"
-    // so use getAttribute
-    const type = controlHost.getAttribute("type");
-
-    if (
-      type === "number" ||
-      type === "range" ||
-      controlHost.inputMode === "numeric" ||
-      controlHost.inputMode === "decimal"
-    ) {
-      return readNumberFromInput(controlHost);
-    }
-    if (type === "color") {
-      return readValueFromControlHost(controlHost);
-    }
-    if (type === "checkbox" || type === "radio") {
-      return readValueFromCheckableInput(controlHost);
-    }
-    if (type === "datetime-local") {
-      return readDatetimeLocalFromInput(controlHost);
-    }
-    if (type === "navi_js") {
-      return getUIStateFromElement(controlHost);
-    }
-    return readValueFromInput(controlHost);
-  }
-  if (controlHost.hasAttribute("navi-control-host")) {
-    // Non-button, non-input navi controls (e.g. Badge.Button rendered as span)
-    return readValueFromControlHost(controlHost);
-  }
-  return readValueFromElement(controlHost);
-};
-const readValueFromControlHost = (controlHost) => {
-  return readValueFromNaviCustomEvent(controlHost, controlHost.value);
-};
-const readValueFromButton = (button) => {
-  return readValueFromControlHost(button);
-};
-const readDatetimeLocalFromInput = (input) => {
-  const localDateTimeString = input.value;
-  if (localDateTimeString === "") {
-    return "";
-  }
-  const localDate = new Date(localDateTimeString);
-  if (isNaN(localDate.getTime())) {
-    return localDateTimeString;
-  }
-  return localDate.toISOString();
-};
-const readNumberFromInput = (input) => {
-  const numberString = input.value;
-  if (numberString === "") {
-    return "";
-  }
-  const asNumber = Number(numberString);
-  if (isNaN(asNumber)) {
-    return numberString;
-  }
-  return asNumber;
-};
-const readValueFromCheckableInput = (input) => {
-  const checked = input.checked;
-  if (!checked) {
-    return undefined;
-  }
-  return readValueFromControlHost(input);
-};
-const readValueFromInput = (input) => {
-  const value = input.value;
-  return value;
-};
-const readValueFromElement = (element) => {
-  const value = element.value;
-  return value;
-};
-const readValueFromNaviCustomEvent = (field, fallback) => {
-  // prefer the value given as prop (respect original type, browser would convert to string)
-  let responded;
-  let value;
-  dispatchCustomEvent(field, "navi_get_value", {
-    respondWith: (jsValue) => {
-      responded = true;
-      value = jsValue;
-    },
-  });
-  if (responded) {
-    return value;
-  }
-  return fallback;
-};
-
-// In-memory registry of all mounted ui state controllers keyed by their id.
-// Allows direct controller access without dispatching DOM events — used by external
-// callers (e.g. selectable_list) to call setUIState by id instead of via the DOM.
-const controllersById = new Map();
-
-// In-memory registry for radio controllers, keyed by input name.
-// Allows radio sibling unchecking without querying the DOM — necessary when
-// items are virtualized and their DOM element may not exist at the time.
-// Form scoping is reproduced by comparing parentUIStateController references.
-const radioControllersByName = new Map();
-
-// Registry for non-serializable JS values that cannot be written to DOM attributes as-is.
-// When a value is an object/array, we store it here and write a reference string to the DOM
-// instead of "[object Object]". Console-inspectable via window.__navi_js('id').
-// The controller id is used as key — if the controller has no id, the value is not registered.
-const naviJsRegistry = new Map();
-
-const getUIStateControllerById = (id) => controllersById.get(id);
-const getRadioSiblings = (radioUIStateController) => {
-  const siblings = radioControllersByName.get(radioUIStateController.name);
-  return siblings;
-};
-
-const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
-  const domValue = asControlHostValue(jsValue, {
-    controlType,
-    type,
-    inputMode,
-  });
-  if (isSerializableAsDomValue(domValue)) {
-    return domValue;
-  }
-  naviJsRegistry.set(id, domValue);
-  return `window.__navi_js('${id}')`;
-};
-
-window.__navi_js = (id) => naviJsRegistry.get(id);
-const isSerializableAsDomValue = (value) => {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  const type = typeof value;
-  return type === "string" || type === "number" || type === "boolean";
-};
-
-const onUIStateControllerCreated = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.set(id, uiStateController);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    let proxySet = proxyControllersByRealInputId.get(proxyFor);
-    if (!proxySet) {
-      proxySet = new Set();
-      proxyControllersByRealInputId.set(proxyFor, proxySet);
-    }
-    proxySet.add(uiStateController);
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.props.type === "radio" &&
-    name
-  ) {
-    let set = radioControllersByName.get(name);
-    if (!set) {
-      set = new Set();
-      radioControllersByName.set(name, set);
-    }
-    set.add(uiStateController);
-  }
-};
-const onUIStateControllerDestroyed = (uiStateController) => {
-  const { id, name, controlType } = uiStateController;
-  if (id) {
-    controllersById.delete(id);
-    naviJsRegistry.delete(id);
-  }
-  const proxyFor = uiStateController.props["navi-control-proxy-for"];
-  if (proxyFor) {
-    const proxySet = proxyControllersByRealInputId.get(proxyFor);
-    if (proxySet) {
-      proxySet.delete(uiStateController);
-      if (proxySet.size === 0) {
-        proxyControllersByRealInputId.delete(proxyFor);
-      }
-    }
-  }
-  if (
-    controlType === "input" &&
-    uiStateController.controlHostProps.type === "radio" &&
-    name
-  ) {
-    const set = radioControllersByName.get(name);
-    if (set) {
-      set.delete(uiStateController);
-      if (set.size === 0) {
-        radioControllersByName.delete(name);
-      }
-    }
-  }
-};
-
-/**
- * Controller-based equivalent of findControlProxyTarget.
- * Given a proxy controller, returns the real control's controller.
- * Finds the target by walking the parent controller's children — no DOM queries.
- * Returns `null` when the controller is not a proxy or the target is not found.
- */
-const findControlProxyTargetController = (controller) => {
-  const proxyFor = controller.controlHostProps["navi-control-proxy-for"];
-  if (!proxyFor) {
-    return null;
-  }
-  return getUIStateControllerById(proxyFor) ?? null;
-};
-
-// Reverse-lookup map: real-input id → the proxy controllers that reference it
-// via `navi-control-proxy-for`. A single control can be represented by several
-// proxies (an "enable"/"disable" button pair for one radio, for instance), so
-// each id holds a set. Maintained on create/destroy so lookup is O(1).
-const proxyControllersByRealInputId = new Map();
-const findProxyControllers = (realInputId) => {
-  if (!realInputId) {
-    return null;
-  }
-  return proxyControllersByRealInputId.get(realInputId) ?? null;
-};
-
-/**
- * DOM utilities for the proxy control pattern.
- *
- * Some components need a native `<input>` internally — for form submission,
- * constraint validation, or browser autofill — but the user may not want to
- * display that input at all. In those cases the input is hidden and a separate
- * visible element (the proxy) takes over the visual and interactive role.
- *
- * The typical use case is `SelectableList`: each list item acts as a styled
- * radio button, but an actual `<input type="radio">` lives hidden in the DOM
- * so form submission and validation work natively.  When users DO want to
- * display the input they want full control over its appearance, so they render
- * their own element and link it to the real input via `navi-control-proxy-for`:
- *
- * ```html
- *  <div>
- *   <input id="color_red" type="radio" name="color" value="red"  /> ← real control (hidden, drives form/validation)
- *   <input type="radio" name="proxy" value="red" />                 ← proxy (visible, delegates interactions to real input)
- * </div>
- * ```
- *
- * When the proxy is interacted with, navi events are forwarded to the real
- * control so validation, state management, and form submission all work
- * through the real input.
- *
- * Note: an alternative design would be to require users to always instantiate
- * the input explicitly — e.g. `<Selectable.Input headless />` when they don't
- * want to display it. That would remove the need for the proxy mechanism
- * entirely. For now we keep the proxy pattern.
- */
-
-
-/**
- * Given a proxy element, returns the real control it represents.
- * Returns `null` when `el` is not a proxy.
- */
-const findControlProxyTarget = (el) => {
-  const proxyFor = el.getAttribute("navi-control-proxy-for");
-  if (!proxyFor) {
-    return null;
-  }
-  return document.getElementById(proxyFor);
-};
-
-/**
- * Given a real control element, returns every proxy that visually represents
- * it — a control can have more than one (an "enable"/"disable" button pair for
- * one radio, for instance).
- *
- * Answered from the controller registry rather than the document: every proxy
- * declares itself through the `navi-control-proxy-for` prop, so the registry
- * knows them all, while asking the document means walking it in full for each
- * of the (overwhelmingly many) controls that have no proxy at all.
- *
- * Returns an empty array when no proxy exists for `el`.
- */
-const findControlProxies = (el) => {
-  if (!el.id) {
-    return [];
-  }
-  const proxyControllerSet = findProxyControllers(el.id);
-  if (!proxyControllerSet) {
-    return [];
-  }
-  const proxyElements = [];
-  for (const proxyController of proxyControllerSet) {
-    const proxyElement = proxyController.ref.current;
-    if (proxyElement) {
-      proxyElements.push(proxyElement);
-    }
-  }
-  return proxyElements;
-};
-
-/**
- * Given a real control element, returns the proxy that visually represents it.
- *
- * Use when you need a single visible stand-in for the real control — anchoring
- * a callout, for instance. Anything notifying proxies of a state change wants
- * `findControlProxies` instead, so a control represented by several of them
- * updates all of them.
- *
- * Returns `null` when no proxy exists for `el`.
- */
-const findControlProxy = (el) => {
-  const [firstProxy = null] = findControlProxies(el);
-  return firstProxy;
 };
 
 const addInputEffect = (
@@ -9651,6 +18198,11 @@ const Box = props => {
     header,
     footer,
     body,
+    // Which interactions this box answers, and with what. Read here rather than
+    // on the control, so a swipe or a hold can be declared on anything — a row, a
+    // card, a block of text — and reach the control it belongs to (which is what
+    // carries the action, and what knows it is disabled) by looking for it.
+    interactions,
     ...rest
   } = props;
   let as = asProp;
@@ -9768,7 +18320,17 @@ const Box = props => {
     boxFlow = parentBoxFlow;
   }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
+
+  // Read through a ref by the effect below: what an interaction DOES is this
+  // render, while WHEN it happens is wired once, at mount (see
+  // useInteractionsEffect).
+  const interactionsRef = useRef(null);
+  interactionsRef.current = resolveInteractions(interactions);
   const remainingPropKeySet = new Set(Object.keys(rest));
+  // The box is only a frame and one of its descendants IS the component (a Button
+  // and its content): everything, event handlers included, belongs to that
+  // descendant.
+  const shouldForwardAllToChild = Boolean(hasChildUsingForwardedProps && visualSelector && pseudoStateSelector);
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
@@ -9831,7 +18393,6 @@ const Box = props => {
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const canForwardToChild = hasChildUsingForwardedProps;
-    const shouldForwardAllToChild = canForwardToChild && visualSelector && pseudoStateSelector;
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
       const cssVar = styleContext.styleCSSVars[name];
@@ -10077,6 +18638,7 @@ const Box = props => {
     }, styleDeps);
     finalRef = useComposeElementRef(syncBox, ref);
   }
+  useInteractionsEffect(finalRef, interactionsRef);
   let innerChildren = children;
   if (separator) {
     // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
@@ -10257,7 +18819,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`
+installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -10289,7 +18851,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -10494,7 +19056,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Z = /* css */`
+installImportMetaCssBuild(import.meta);const css$Y = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -10531,7 +19093,7 @@ installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -10663,50 +19225,6 @@ const LoadingOutlineWithPortal = props => {
       })
     }), children]
   });
-};
-
-const documentUrlSignal = signal(
-  typeof window === "undefined" ? "http://localhost" : window.location.href,
-);
-const useDocumentUrl = () => {
-  return documentUrlSignal.value;
-};
-const updateDocumentUrl = (value) => {
-  documentUrlSignal.value = value;
-};
-
-const documentResourceSignal = computed(() => {
-  const documentUrl = documentUrlSignal.value;
-  const documentResource = urlToResource(documentUrl);
-  return documentResource;
-});
-const useDocumentResource = () => {
-  return documentResourceSignal.value;
-};
-const urlToResource = (url) => {
-  const scheme = urlToScheme(url);
-  if (scheme === "file") {
-    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
-    return urlAsStringWithoutFileProtocol;
-  }
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = String(url).slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
-    return urlAsStringWithoutOrigin;
-  }
-  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
-  return urlAsStringWithoutProtocol;
-};
-const urlToScheme = (url) => {
-  const urlString = String(url);
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) {
-    return "";
-  }
-  const scheme = urlString.slice(0, colonIndex);
-  return scheme;
 };
 
 const getHrefTargetInfo = (href) => {
@@ -10865,7 +19383,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$Y = /* css */`
+const css$X = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -11371,7 +19889,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -11620,2040 +20138,6 @@ const useAccentColorAttributes = (
   }, [ref, accentColor, elementSelector, colorProperty]);
 };
 
-const addIntoArray = (array, ...valuesToAdd) => {
-  if (valuesToAdd.length === 1) {
-    const [valueToAdd] = valuesToAdd;
-    const arrayWithThisValue = [];
-    for (const value of array) {
-      if (value === valueToAdd) {
-        return array;
-      }
-      arrayWithThisValue.push(value);
-    }
-    arrayWithThisValue.push(valueToAdd);
-    return arrayWithThisValue;
-  }
-
-  const existingValueSet = new Set();
-  const arrayWithTheseValues = [];
-  for (const existingValue of array) {
-    arrayWithTheseValues.push(existingValue);
-    existingValueSet.add(existingValue);
-  }
-  let hasNewValues = false;
-  for (const valueToAdd of valuesToAdd) {
-    if (existingValueSet.has(valueToAdd)) {
-      continue;
-    }
-    arrayWithTheseValues.push(valueToAdd);
-    hasNewValues = true;
-  }
-  return hasNewValues ? arrayWithTheseValues : array;
-};
-
-const removeFromArray = (array, ...valuesToRemove) => {
-  if (valuesToRemove.length === 1) {
-    const [valueToRemove] = valuesToRemove;
-    const arrayWithoutThisValue = [];
-    let found = false;
-    for (const value of array) {
-      if (value === valueToRemove) {
-        found = true;
-        continue;
-      }
-      arrayWithoutThisValue.push(value);
-    }
-    if (!found) {
-      return array;
-    }
-    return arrayWithoutThisValue;
-  }
-
-  const valuesToRemoveSet = new Set(valuesToRemove);
-  const arrayWithoutTheseValues = [];
-  let hasRemovedValues = false;
-  for (const value of array) {
-    if (valuesToRemoveSet.has(value)) {
-      hasRemovedValues = true;
-      continue;
-    }
-    arrayWithoutTheseValues.push(value);
-  }
-  return hasRemovedValues ? arrayWithoutTheseValues : array;
-};
-
-const isSignal = (value) => {
-  return getSignalType(value) !== null;
-};
-
-const BRAND_SYMBOL = Symbol.for("preact-signals");
-const getSignalType = (value) => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  if (value.brand !== BRAND_SYMBOL) {
-    return null;
-  }
-
-  if (typeof value._fn === "function") {
-    return "computed";
-  }
-
-  return "signal";
-};
-
-/**
- * jsenv/navi - createJsValueWeakMap
- *
- * Key/value cache with true ephemeron behavior and deep equality support.
- *
- * Features:
- * - Mutual retention: key keeps value alive, value keeps key alive
- * - Deep equality: different objects with same content are treated as identical keys
- * - Automatic GC: entries are eligible for collection when unreferenced
- * - Iteration support: can iterate over live entries for deep equality lookup
- *
- * Implementation:
- * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
- * - WeakRef registry enables iteration without preventing GC
- * - Primitives stored in Map (permanent retention - avoid for keys)
- *
- * Use case: Action caching where params (key) and action (value) should have
- * synchronized lifetimes while allowing natural garbage collection.
- */
-
-
-const createJsValueWeakMap = () => {
-  // Core ephemeron maps for mutual retention
-  const keyToValue = new WeakMap(); // key -> value
-  const valueToKey = new WeakMap(); // value -> key
-
-  // Registry for iteration/deep equality (holds WeakRefs)
-  const keyRegistry = new Set(); // Set of WeakRef(key)
-
-  // Primitive cache
-  const primitiveCache = new Map();
-
-  function cleanupKeyRegistry() {
-    for (const keyRef of keyRegistry) {
-      if (keyRef.deref() === undefined) {
-        keyRegistry.delete(keyRef);
-      }
-    }
-  }
-
-  return {
-    *[Symbol.iterator]() {
-      cleanupKeyRegistry();
-      for (const keyRef of keyRegistry) {
-        const key = keyRef.deref();
-        if (key && keyToValue.has(key)) {
-          yield [key, keyToValue.get(key)];
-        }
-      }
-      for (const [k, v] of primitiveCache) {
-        yield [k, v];
-      }
-    },
-
-    get(key) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        // Fast path: exact key match
-        if (keyToValue.has(key)) {
-          return keyToValue.get(key);
-        }
-
-        // Slow path: deep equality search
-        cleanupKeyRegistry();
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            return keyToValue.get(existingKey);
-          }
-        }
-        return undefined;
-      }
-      return primitiveCache.get(key);
-    },
-
-    set(key, value) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        cleanupKeyRegistry();
-
-        // Remove existing deep-equal key
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            const existingValue = keyToValue.get(existingKey);
-            keyToValue.delete(existingKey);
-            valueToKey.delete(existingValue);
-            keyRegistry.delete(keyRef);
-            break;
-          }
-        }
-
-        // Set ephemeron pair
-        keyToValue.set(key, value);
-        valueToKey.set(value, key);
-        keyRegistry.add(new WeakRef(key));
-      } else {
-        primitiveCache.set(key, value);
-      }
-    },
-
-    delete(key) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        cleanupKeyRegistry();
-
-        // Try exact match first
-        if (keyToValue.has(key)) {
-          const value = keyToValue.get(key);
-          keyToValue.delete(key);
-          valueToKey.delete(value);
-
-          // Remove from registry
-          for (const keyRef of keyRegistry) {
-            if (keyRef.deref() === key) {
-              keyRegistry.delete(keyRef);
-              break;
-            }
-          }
-          return true;
-        }
-
-        // Try deep equality
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            const value = keyToValue.get(existingKey);
-            keyToValue.delete(existingKey);
-            valueToKey.delete(value);
-            keyRegistry.delete(keyRef);
-            return true;
-          }
-        }
-        return false;
-      }
-      return primitiveCache.delete(key);
-    },
-
-    getStats: () => {
-      cleanupKeyRegistry();
-      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
-        ref.deref(),
-      ).length;
-
-      return {
-        ephemeronPairs: {
-          total: keyRegistry.size,
-          alive: aliveKeys,
-          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
-        },
-        primitive: {
-          total: primitiveCache.size,
-          note: "Primitive keys never GC'd",
-        },
-      };
-    },
-  };
-};
-
-const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
-
-const mergeTwoJsValues = (firstValue, secondValue) => {
-  const firstIsPrimitive =
-    firstValue === null ||
-    typeof firstValue !== "object" ||
-    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
-
-  if (firstIsPrimitive) {
-    return secondValue;
-  }
-  const secondIsPrimitive =
-    secondValue === null ||
-    typeof secondValue !== "object" ||
-    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
-  if (secondIsPrimitive) {
-    return secondValue;
-  }
-  const objectMerge = {};
-  const firstKeys = Object.keys(firstValue);
-  const secondKeys = Object.keys(secondValue);
-  let hasChanged = false;
-
-  // First loop: check for keys in first object and recursively merge with second
-  for (const key of firstKeys) {
-    const firstValueForKey = firstValue[key];
-    const secondHasKey = secondKeys.includes(key);
-
-    if (secondHasKey) {
-      const secondValueForKey = secondValue[key];
-      const mergedValue = mergeTwoJsValues(firstValueForKey, secondValueForKey);
-      objectMerge[key] = mergedValue;
-      if (mergedValue !== firstValueForKey) {
-        hasChanged = true;
-      }
-    } else {
-      objectMerge[key] = firstValueForKey;
-    }
-  }
-
-  for (const key of secondKeys) {
-    if (firstKeys.includes(key)) {
-      continue;
-    }
-    objectMerge[key] = secondValue[key];
-    hasChanged = true;
-  }
-
-  if (!hasChanged) {
-    return firstValue;
-  }
-  return objectMerge;
-};
-
-const MAX_ENTRIES = 5;
-
-const stringifyForDisplay = (
-  value,
-  maxDepth = 2,
-  currentDepth = 0,
-  options = {},
-) => {
-  const { asFunctionArgs = false } = options;
-  const indent = "  ".repeat(currentDepth);
-  const nextIndent = "  ".repeat(currentDepth + 1);
-
-  if (currentDepth >= maxDepth) {
-    return typeof value === "object" && value !== null
-      ? "[Object]"
-      : String(value);
-  }
-
-  if (value === null) {
-    return "null";
-  }
-  if (value === undefined) {
-    return "undefined";
-  }
-  if (typeof value === "string") {
-    return `"${value}"`;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (typeof value === "function") {
-    return `[Function ${value.name || "anonymous"}]`;
-  }
-  if (value instanceof Date) {
-    return `Date(${value.toISOString()})`;
-  }
-  if (value instanceof RegExp) {
-    return value.toString();
-  }
-
-  if (Array.isArray(value)) {
-    const openBracket = asFunctionArgs ? "(" : "[";
-    const closeBracket = asFunctionArgs ? ")" : "]";
-
-    if (value.length === 0) return `${openBracket}${closeBracket}`;
-
-    // Display arrays with only one element on a single line
-    if (value.length === 1) {
-      const item = stringifyForDisplay(
-        value[0],
-        maxDepth,
-        currentDepth + 1,
-        // Remove asFunctionArgs for nested calls
-        { ...options, asFunctionArgs: false },
-      );
-      return `${openBracket}${item}${closeBracket}`;
-    }
-
-    if (value.length > MAX_ENTRIES) {
-      const preview = value
-        .slice(0, MAX_ENTRIES)
-        .map(
-          (v) =>
-            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
-    }
-
-    const items = value.map(
-      (v) =>
-        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
-  }
-
-  if (typeof value === "object") {
-    const signalType = getSignalType(value);
-    if (signalType) {
-      const signalValue = value.peek();
-      const prefix = signalType === "computed" ? "computed" : "signal";
-      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
-    }
-
-    const entries = Object.entries(value);
-    if (entries.length === 0) return "{}";
-
-    // ✅ Inclure les clés avec valeurs undefined/null
-    const allEntries = [];
-    for (const [key, val] of entries) {
-      allEntries.push([key, val]);
-    }
-
-    // Ajouter les clés avec undefined (que Object.entries omet)
-    const descriptor = Object.getOwnPropertyDescriptors(value);
-    for (const [key, desc] of Object.entries(descriptor)) {
-      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
-        allEntries.push([key, undefined]);
-      }
-    }
-
-    // Display objects with only one key on a single line
-    if (allEntries.length === 1) {
-      const [key, val] = allEntries[0];
-      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
-        ...options,
-        asFunctionArgs: false,
-      });
-      return `{ ${key}: ${valueStr} }`;
-    }
-
-    if (allEntries.length > MAX_ENTRIES) {
-      const preview = allEntries
-        .slice(0, MAX_ENTRIES)
-        .map(
-          ([k, v]) =>
-            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
-    }
-
-    const pairs = allEntries.map(
-      ([k, v]) =>
-        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `{\n${pairs.join(",\n")}\n${indent}}`;
-  }
-
-  return String(value);
-};
-
-/**
- * Creates an effect that uses WeakRef to prevent garbage collection of referenced values.
- *
- * This utility is useful when you want to create reactive effects that watch objects
- * without preventing those objects from being garbage collected. If any of the referenced
- * values is collected, the effect automatically disposes itself.
- *
- * @param {Array} values - Array of values to create weak references for
- * @param {Function} callback - Function to call when the effect runs, receives dereferenced values as arguments
- * @returns {Function} dispose - Function to manually dispose the effect
- *
- * @example
- * ```js
- * const objectA = { name: "A" };
- * const objectB = { name: "B" };
- * const prefixSignal = signal('demo');
- *
- * const dispose = weakEffect([objectA, objectB], (a, b) => {
- *   const prefix = prefixSignal.value
- *   console.log(prefix, a.name, b.name);
- * });
- *
- * // Effect will auto-dispose if objectA or objectB where garbage collected
- * // or can be manually disposed:
- * dispose();
- * ```
- */
-const weakEffect = (values, callback) => {
-  const weakRefSet = new Set();
-  for (const value of values) {
-    weakRefSet.add(new WeakRef(value));
-  }
-  const dispose = effect(() => {
-    const values = [];
-    for (const weakRef of weakRefSet) {
-      const value = weakRef.deref();
-      if (value === undefined) {
-        dispose();
-        return;
-      }
-      values.push(value);
-    }
-    callback(...values);
-  });
-  return dispose;
-};
-
-const actionPrivatePropertiesWeakMap = new WeakMap();
-const getActionPrivateProperties = (action) => {
-  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
-  if (!actionPrivateProperties) {
-    throw new Error(`Cannot find action private properties for "${action}"`);
-  }
-  return actionPrivateProperties;
-};
-const setActionPrivateProperties = (action, properties) => {
-  actionPrivatePropertiesWeakMap.set(action, properties);
-};
-
-const IDLE = { id: "idle" };
-const RUNNING = { id: "running" };
-const ABORTED = { id: "aborted" };
-const FAILED = { id: "failed" };
-const COMPLETED = { id: "completed" };
-
-const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
-
-let DEBUG$2 = false;
-const enableDebugActions = () => {
-  DEBUG$2 = true;
-};
-
-let dispatchActions = (params) => {
-  const { requestedResult } = updateActions({
-    globalAbortSignal: new AbortController().signal,
-    abortSignal: new AbortController().signal,
-    ...params,
-  });
-  return requestedResult;
-};
-
-const dispatchSingleAction = (action, method, options) => {
-  const requestedResult = dispatchActions({
-    prerunSet: method === "prerun" ? new Set([action]) : undefined,
-    runSet: method === "run" ? new Set([action]) : undefined,
-    rerunSet: method === "rerun" ? new Set([action]) : undefined,
-    resetSet: method === "reset" ? new Set([action]) : undefined,
-    ...options,
-  });
-  if (requestedResult && typeof requestedResult.then === "function") {
-    return requestedResult.then((resolvedResult) =>
-      resolvedResult ? resolvedResult[0] : undefined,
-    );
-  }
-  return requestedResult ? requestedResult[0] : undefined;
-};
-const setActionDispatcher = (value) => {
-  dispatchActions = value;
-};
-
-const getActionDispatcher = () => dispatchActions;
-
-const rerunActions = async (actionSet, options) => {
-  return dispatchActions({
-    rerunSet: actionSet,
-    reason: "rerunActions was calle",
-    ...options,
-  });
-};
-
-/**
- * Registry that prevents prerun actions from being garbage collected.
- *
- * When an action is prerun, it might not have any active references yet
- * (e.g., the component that will use it hasn't loaded yet due to dynamic imports).
- * This registry keeps a reference to prerun actions for a configurable duration
- * to ensure they remain available when needed.
- *
- * Actions are automatically unprotected when:
- * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly stopped via .reset()
- */
-const prerunProtectionRegistry = (() => {
-  const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
-  const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
-
-  const unprotect = (action) => {
-    const protection = protectedActionMap.get(action);
-    if (protection) {
-      clearTimeout(protection.timeoutId);
-      protectedActionMap.delete(action);
-      const elapsed = Date.now() - protection.timestamp;
-      action.debug(`"${action}": GC protection removed after ${elapsed}ms`);
-    }
-  };
-
-  return {
-    protect(action) {
-      // Si déjà protégée, étendre la protection
-      if (protectedActionMap.has(action)) {
-        const existing = protectedActionMap.get(action);
-        clearTimeout(existing.timeoutId);
-      }
-
-      const timestamp = Date.now();
-      const timeoutId = setTimeout(() => {
-        unprotect(action);
-        action.debug(
-          `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
-        );
-      }, PROTECTION_DURATION);
-      protectedActionMap.set(action, { timeoutId, timestamp });
-      action.debug(
-        `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
-      );
-    },
-
-    unprotect,
-
-    isProtected(action) {
-      return protectedActionMap.has(action);
-    },
-
-    // Pour debugging
-    getProtectedActions() {
-      return Array.from(protectedActionMap.keys());
-    },
-
-    // Nettoyage manuel si nécessaire
-    clear() {
-      for (const [, protection] of protectedActionMap) {
-        clearTimeout(protection.timeoutId);
-      }
-      protectedActionMap.clear();
-    },
-  };
-})();
-
-const formatActionSet = (actionSet, prefix = "") => {
-  let message = "";
-  message += `${prefix}`;
-  for (const action of actionSet) {
-    message += "\n";
-    message += prefixFirstAndIndentRemainingLines(String(action), {
-      prefix: "  -",
-    });
-  }
-  return message;
-};
-
-const actionAbortMap = new Map();
-const actionPromiseMap = new Map();
-const activationWeakSet = createIterableWeakSet("activation");
-
-const getActivationInfo = () => {
-  const runningSet = new Set();
-  const settledSet = new Set();
-
-  for (const action of activationWeakSet) {
-    const runningState = action.runningStateSignal.peek();
-
-    if (runningState === RUNNING) {
-      runningSet.add(action);
-    } else if (
-      runningState === COMPLETED ||
-      runningState === FAILED ||
-      runningState === ABORTED
-    ) {
-      settledSet.add(action);
-    } else {
-      throw new Error(
-        `An action in the activation weak set must be RUNNING, ABORTED, FAILED or COMPLETED, found "${runningState.id}" for action "${action}"`,
-      );
-    }
-  }
-
-  return {
-    runningSet,
-    settledSet,
-  };
-};
-
-const updateActions = ({
-  globalAbortSignal,
-  abortSignal,
-  isReplace = false,
-  reason,
-  event,
-  prerunSet = new Set(),
-  runSet = new Set(),
-  rerunSet = new Set(),
-  resetSet = new Set(),
-  abortSignalMap = new Map(),
-  onComplete,
-  onAbort,
-  onError,
-} = {}) => {
-  /*
-   * Action update flow:
-   *
-   * Input: 4 sets of requested operations
-   * - prerunSet: actions to prerun (background, low priority)
-   * - runSet: actions to run (user-visible, medium priority)
-   * - rerunSet: actions to force rerun (highest priority)
-   * - resetSet: actions to reset/clear
-   *
-   * Priority resolution:
-   * - reset always wins (explicit cleanup)
-   * - rerun > run > prerun (rerun forces refresh even if already running)
-   * - An action in multiple sets triggers warnings in dev mode
-   *
-   * Output: Internal operation sets that track what will actually happen
-   * - willResetSet: actions that will be reset/cleared
-   * - willPrerunSet: actions that will be prerun
-   * - willRunSet: actions that will be run
-   * - willPromoteSet: prerun actions that become run-requested
-   * - stays*Set: actions that remain in their current state
-   */
-
-  const { runningSet, settledSet } = getActivationInfo();
-
-  if (DEBUG$2) {
-    let argSource = `reason: ${JSON.stringify(reason)}`;
-    if (isReplace) {
-      argSource += `, isReplace: true`;
-    }
-    console.group(`updateActions({ ${argSource} })`);
-    const lines = [
-      ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
-      ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
-      ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
-      ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : []),
-    ];
-    console.debug(
-      `requested operations:
-${lines.join("\n")}`,
-    );
-  }
-
-  // Internal sets that track what operations will actually be performed
-  const willResetSet = new Set();
-  const willPrerunSet = new Set();
-  const willRunSet = new Set();
-  const willPromoteSet = new Set(); // prerun -> run requested
-  const staysRunningSet = new Set();
-  const staysAbortedSet = new Set();
-  const staysFailedSet = new Set();
-  const staysCompletedSet = new Set();
-
-  // Step 1: Determine which actions will be reset
-  {
-    for (const actionToReset of resetSet) {
-      if (actionToReset.runningState !== IDLE) {
-        willResetSet.add(actionToReset);
-      }
-    }
-  }
-
-  // Step 2: Process prerun, run, and rerun sets
-  {
-    const handleActionRequest = (
-      action,
-      requestType, // "prerun", "run", or "rerun"
-    ) => {
-      const isPrerun = requestType === "prerun";
-      const isRerun = requestType === "rerun";
-
-      if (
-        action.runningState === RUNNING ||
-        action.runningState === COMPLETED
-      ) {
-        // Action is already running/completed
-        // By default, we don't interfere with already active actions
-        // Unless it's a rerun or the action is also being reset
-        if (isRerun || willResetSet.has(action)) {
-          // Force reset first, then rerun/run
-          willResetSet.add(action);
-          if (isPrerun) {
-            willPrerunSet.add(action);
-          } else {
-            willRunSet.add(action);
-          }
-        }
-        // Otherwise, ignore the request (action stays as-is)
-      } else if (isPrerun) {
-        willPrerunSet.add(action);
-      } else {
-        willRunSet.add(action);
-      }
-    };
-
-    // Process prerunSet (lowest priority)
-    for (const actionToPrerun of prerunSet) {
-      if (runSet.has(actionToPrerun) || rerunSet.has(actionToPrerun)) {
-        // run/rerun wins over prerun - skip prerun
-        continue;
-      }
-      handleActionRequest(actionToPrerun, "prerun");
-    }
-
-    // Process runSet (medium priority)
-    for (const actionToRun of runSet) {
-      if (rerunSet.has(actionToRun)) {
-        // rerun wins over run - skip run
-        continue;
-      }
-      if (actionToRun.isPrerun && actionToRun.runningState !== IDLE) {
-        // Special case: action was prerun but not yet requested to run
-        // Just promote it to "run requested" without rerunning
-        willPromoteSet.add(actionToRun);
-        continue;
-      }
-      handleActionRequest(actionToRun, "run");
-    }
-
-    // Process rerunSet (highest priority)
-    for (const actionToRerun of rerunSet) {
-      handleActionRequest(actionToRerun, "rerun");
-    }
-  }
-  const allThenableArray = [];
-
-  // Step 3: Determine which actions will stay in their current state
-  {
-    for (const actionRunning of runningSet) {
-      if (willResetSet.has(actionRunning)) ; else if (
-        willRunSet.has(actionRunning) ||
-        willPrerunSet.has(actionRunning)
-      ) ; else {
-        // an action that was running and not affected by this update
-        const actionPromise = actionPromiseMap.get(actionRunning);
-        allThenableArray.push(actionPromise);
-        staysRunningSet.add(actionRunning);
-      }
-    }
-    for (const actionSettled of settledSet) {
-      if (willResetSet.has(actionSettled)) ; else if (actionSettled.runningState === ABORTED) {
-        staysAbortedSet.add(actionSettled);
-      } else if (actionSettled.runningState === FAILED) {
-        staysFailedSet.add(actionSettled);
-      } else {
-        staysCompletedSet.add(actionSettled);
-      }
-    }
-  }
-  if (DEBUG$2) {
-    const lines = [
-      ...(willResetSet.size
-        ? [formatActionSet(willResetSet, "- will reset:")]
-        : []),
-      ...(willPrerunSet.size
-        ? [formatActionSet(willPrerunSet, "- will prerun:")]
-        : []),
-      ...(willPromoteSet.size
-        ? [formatActionSet(willPromoteSet, "- will promote:")]
-        : []),
-      ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
-      ...(staysRunningSet.size
-        ? [formatActionSet(staysRunningSet, "- stays running:")]
-        : []),
-      ...(staysAbortedSet.size
-        ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
-        : []),
-      ...(staysFailedSet.size
-        ? [formatActionSet(staysFailedSet, "- stays failed:")]
-        : []),
-      ...(staysCompletedSet.size
-        ? [formatActionSet(staysCompletedSet, "- stays completed:")]
-        : []),
-    ];
-    console.debug(`operations that will be performed:
-${lines.join("\n")}`);
-  }
-
-  // Step 4: Execute resets
-  {
-    for (const actionToReset of willResetSet) {
-      const actionToResetPrivateProperties =
-        getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performReset({
-        reason,
-        event,
-        willRunOrPrerun:
-          willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
-      });
-      activationWeakSet.delete(actionToReset);
-    }
-  }
-
-  const resultArray = []; // Store results with their execution order
-  let hasAsync = false;
-
-  // Step 5: Execute preruns and runs
-  {
-    const onActionToRunOrPrerun = (actionToPrerunOrRun, isPrerun) => {
-      const actionSpecificSignal = abortSignalMap.get(actionToPrerunOrRun);
-      const effectiveSignal = actionSpecificSignal || abortSignal;
-
-      const actionToRunPrivateProperties =
-        getActionPrivateProperties(actionToPrerunOrRun);
-      const performRunResult = actionToRunPrivateProperties.performRun({
-        globalAbortSignal,
-        abortSignal: effectiveSignal,
-        reason,
-        event,
-        isPrerun,
-        onComplete,
-        onAbort,
-        onError,
-      });
-      activationWeakSet.add(actionToPrerunOrRun);
-
-      if (performRunResult && typeof performRunResult.then === "function") {
-        actionPromiseMap.set(actionToPrerunOrRun, performRunResult);
-        allThenableArray.push(performRunResult);
-        hasAsync = true;
-        // Store async result with order info
-        resultArray.push({
-          type: "async",
-          promise: performRunResult,
-        });
-      } else {
-        // Store sync result with order info
-        resultArray.push({
-          type: "sync",
-          result: performRunResult,
-        });
-      }
-    };
-
-    // Execute preruns
-    for (const actionToPrerun of willPrerunSet) {
-      onActionToRunOrPrerun(actionToPrerun, true);
-    }
-
-    // Execute runs
-    for (const actionToRun of willRunSet) {
-      onActionToRunOrPrerun(actionToRun, false);
-    }
-
-    // Execute promotions (prerun -> run requested)
-    for (const actionToPromote of willPromoteSet) {
-      actionToPromote.isPrerunSignal.value = false;
-    }
-  }
-  if (DEBUG$2) {
-    console.groupEnd();
-  }
-
-  // Calculate requestedResult based on the execution results
-  let requestedResult;
-  if (resultArray.length === 0) {
-    requestedResult = null;
-  } else if (hasAsync) {
-    requestedResult = Promise.all(
-      resultArray.map((item) =>
-        item.type === "sync" ? item.result : item.promise,
-      ),
-    );
-  } else {
-    requestedResult = resultArray.map((item) => item.result);
-  }
-
-  const allResult = allThenableArray.length
-    ? Promise.allSettled(allThenableArray)
-    : null;
-  const runningActionSet = new Set([...willPrerunSet, ...willRunSet]);
-  return {
-    requestedResult,
-    allResult,
-    runningActionSet,
-  };
-};
-
-const NO_PARAMS = { __no_params__: true };
-const initialParamsDefault = NO_PARAMS;
-const mergeActionParams = (currentParams, newParams) => {
-  if (currentParams === NO_PARAMS) {
-    return newParams;
-  }
-  if (newParams === undefined) {
-    // Every control binds its action to its UI state signal; a control that carries
-    // no value (a button) has an undefined one. It contributes no params, which must
-    // not be confused with "the params are undefined" — the params bound by
-    // bindParams stay in place.
-    return currentParams;
-  }
-  return mergeTwoJsValues(currentParams, newParams);
-};
-
-const actionWeakMap = new WeakMap();
-const createAction = (callback, rootOptions = {}) => {
-  const existing = actionWeakMap.get(callback);
-  if (existing) {
-    return existing;
-  }
-
-  let rootAction;
-
-  const createActionCore = (options, { parentAction } = {}) => {
-    let {
-      name = callback.name || "anonymous",
-      params,
-      isPrerun = false,
-      runningState = IDLE,
-      aborted = false,
-      error = null,
-      value,
-      resultToValue,
-      valueToData,
-      dataDefault,
-      data = dataDefault,
-
-      completed = false,
-      renderLoadedAsync,
-      sideEffect = () => {},
-      meta = {},
-
-      outputSignal,
-      completeSideEffect,
-    } = options;
-    if (!Object.hasOwn(options, "params")) {
-      // even undefined should be respected it's only when not provided at all we use default
-      params = initialParamsDefault;
-    }
-    if (value === undefined && data !== undefined) {
-      value = data;
-    }
-
-    const valueInitial = value;
-    const paramsSignal = signal(params);
-    const isPrerunSignal = signal(isPrerun);
-    const runningStateSignal = signal(runningState);
-    const errorSignal = signal(error);
-    const valueSignal = signal(valueInitial);
-    const dataSignal = valueToData
-      ? computed(() => {
-          const value = valueSignal.value;
-          const data = valueToData(value);
-          return data;
-        })
-      : valueSignal;
-
-    const prerun = (options) => {
-      action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
-      return dispatchSingleAction(action, "prerun", options);
-    };
-    /**
-     * Requests the action's data. An action that is already RUNNING or
-     * COMPLETED already has it, so the request is a no-op there: use `rerun()`
-     * to force a fresh run ("refresh", "check now", any explicit user intent to
-     * go back to the network).
-     */
-    const run = (options) => {
-      action.debug(`${action}.run(${stringifyForDisplay(options)})`);
-      return dispatchSingleAction(action, "run", options);
-    };
-    /** Resets the action and runs it again, whatever state it is in. */
-    const rerun = (options) => {
-      action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
-      return dispatchSingleAction(action, "rerun", options);
-    };
-    /**
-     * Stop the action completely - this will:
-     * 1. Abort if it's currently running
-     * 2. Reset action running signal to IDLE state
-     * 3. Clean up any resources and side effects
-     * 4. Reset data/error to initial value
-     */
-    const reset = (options) => {
-      return dispatchSingleAction(action, "reset", options);
-    };
-    const abort = (reason) => {
-      if (runningState !== RUNNING) {
-        return false;
-      }
-      const actionAbort = actionAbortMap.get(action);
-      if (!actionAbort) {
-        return false;
-      }
-      action.debug(`"${action}".abort(${reason})`);
-      actionAbort(reason);
-      return true;
-    };
-
-    let action;
-
-    const childActionWeakSet = createIterableWeakSet("child_action");
-    /*
-     * Ephemeron behavior is critical here: actions must keep params alive.
-     * Without this, bindParams(params) could create a new action while code
-     * still references the old action with GC'd params. This would cause:
-     * - Duplicate actions in activationWeakSet (old + new)
-     * - Cache misses when looking up existing actions
-     * - Subtle bugs where different parts of code use different action instances
-     * The ephemeron pattern ensures params and actions have synchronized lifetimes.
-     */
-    const childActionWeakMap = createJsValueWeakMap();
-    const _bindParams = (newParamsOrSignal, options = {}) => {
-      // ✅ CAS 1: Signal direct -> proxy
-      if (isSignal(newParamsOrSignal)) {
-        const combinedParamsSignal = computed(() => {
-          const newParams = newParamsOrSignal.value;
-          const result = mergeActionParams(params, newParams);
-          return result;
-        });
-        return createActionProxyFromSignal(
-          action,
-          combinedParamsSignal,
-          options,
-        );
-      }
-
-      // ✅ CAS 2: Objet -> vérifier s'il contient des signals
-      if (isPlainObject$1(newParamsOrSignal)) {
-        const staticParams = {};
-        const signalMap = new Map();
-
-        const keyArray = Object.keys(newParamsOrSignal);
-        for (const key of keyArray) {
-          const value = newParamsOrSignal[key];
-          if (isSignal(value)) {
-            signalMap.set(key, value);
-          } else {
-            const objectSignal = value ? value[SYMBOL_OBJECT_SIGNAL] : null;
-            if (objectSignal) {
-              signalMap.set(key, objectSignal);
-            } else {
-              staticParams[key] = value;
-            }
-          }
-        }
-
-        if (signalMap.size === 0) {
-          // Pas de signals, merge statique normal
-          if (
-            params === null ||
-            typeof params !== "object" ||
-            params === NO_PARAMS
-          ) {
-            return createChildAction({
-              ...options,
-              params: newParamsOrSignal,
-            });
-          }
-          const combinedParams = mergeActionParams(params, newParamsOrSignal);
-          return createChildAction({
-            ...options,
-            params: combinedParams,
-          });
-        }
-
-        // Combiner avec les params existants pour les valeurs statiques
-        const paramsSignal = computed(() => {
-          const params = {};
-          for (const key of keyArray) {
-            const signalForThisKey = signalMap.get(key);
-            if (signalForThisKey) {
-              // eslint-disable-next-line signals/no-conditional-value-read
-              params[key] = signalForThisKey.value;
-            } else {
-              params[key] = staticParams[key];
-            }
-          }
-          return params;
-        });
-        return createActionProxyFromSignal(action, paramsSignal, options);
-      }
-
-      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
-      return createChildAction({
-        params: newParamsOrSignal,
-        ...options,
-      });
-    };
-    const bindParams = (newParamsOrSignal, options = {}) => {
-      const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
-      if (existingChildAction) {
-        return existingChildAction;
-      }
-      const childAction = _bindParams(newParamsOrSignal, options);
-      childActionWeakMap.set(newParamsOrSignal, childAction);
-      childActionWeakSet.add(childAction);
-
-      return childAction;
-    };
-
-    const createChildAction = (childOptions) => {
-      const childActionOptions = {
-        ...rootOptions,
-        ...childOptions,
-        meta: {
-          ...rootOptions.meta,
-          ...childOptions.meta,
-        },
-      };
-      const childAction = createActionCore(childActionOptions, {
-        parentAction: action,
-      });
-      return childAction;
-    };
-
-    // ✅ Implement matchAllSelfOrDescendant
-    const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
-      const matches = [];
-
-      const traverse = (currentAction) => {
-        if (currentAction.isProxy && !includeProxies) {
-          // proxy action should be ignored because the underlying action will be found anyway
-          // and if we check the proxy action we'll end up with duplicates
-          // (loading the proxy would load the action it proxies)
-          // and as they are 2 different objects they would be added to the set
-          return;
-        }
-
-        if (predicate(currentAction)) {
-          matches.push(currentAction);
-        }
-
-        // Get child actions from the current action
-        const currentActionPrivateProps =
-          getActionPrivateProperties(currentAction);
-        const childActionWeakSet = currentActionPrivateProps.childActionWeakSet;
-        for (const childAction of childActionWeakSet) {
-          traverse(childAction);
-        }
-      };
-
-      traverse(action);
-      return matches;
-    };
-
-    const actionNameSignal = signal(name);
-    const actionCallSourceSignal = signal(
-      generateActionCallSource(name, params),
-    );
-
-    {
-      // Create the action as a function that can be called directly
-      action = function actionFunction(...args) {
-        if (args.length === 0) {
-          return action.rerun();
-        }
-        const boundAction = bindParams(...args);
-        return boundAction.rerun();
-      };
-      Object.defineProperty(action, "name", {
-        configurable: true,
-        get() {
-          return actionNameSignal.value;
-        },
-      });
-      Object.defineProperty(action, "callSource", {
-        configurable: true,
-        get() {
-          return actionCallSourceSignal.value;
-        },
-        set(v) {
-          actionCallSourceSignal.value = v;
-        },
-      });
-      actionWeakMap.set(action, action);
-    }
-
-    // Assign all the action properties and methods to the function
-    Object.assign(action, {
-      isAction: true,
-      callback,
-      rootAction,
-      parentAction,
-      params,
-      isPrerun,
-      runningState,
-      aborted,
-      error,
-      value,
-      data,
-      completed,
-      prerun,
-      run,
-      rerun,
-      reset,
-      abort,
-      bindParams,
-      matchAllSelfOrDescendant, // ✅ Add the new method
-      replaceParams: (newParams) => {
-        const currentParams = paramsSignal.value;
-        const nextParams = mergeActionParams(currentParams, newParams);
-        if (nextParams === currentParams) {
-          return false;
-        }
-
-        // Update the weak map BEFORE updating the signal
-        // so that any code triggered by the signal update finds this action
-        if (parentAction) {
-          const parentActionPrivateProps =
-            getActionPrivateProperties(parentAction);
-          const parentChildActionWeakMap =
-            parentActionPrivateProps.childActionWeakMap;
-          parentChildActionWeakMap.delete(currentParams);
-          parentChildActionWeakMap.set(nextParams, action);
-        }
-
-        params = nextParams;
-        action.params = nextParams;
-        action.callSource = generateActionCallSource(name, nextParams);
-        paramsSignal.value = nextParams;
-        return true;
-      },
-      toString: () => action.callSource,
-      meta,
-      debug: (...args) => {
-        if (!meta.debug || DEBUG$2) {
-          return;
-        }
-        console.debug(...args);
-      },
-
-      paramsSignal,
-      runningStateSignal,
-      isPrerunSignal,
-      valueSignal,
-      dataSignal,
-      errorSignal,
-    });
-    Object.preventExtensions(action);
-
-    // Effects pour synchroniser les propriétés
-    {
-      weakEffect([action], (actionRef) => {
-        isPrerun = isPrerunSignal.value;
-        actionRef.isPrerun = isPrerun;
-      });
-      weakEffect([action], (actionRef) => {
-        runningState = runningStateSignal.value;
-        actionRef.runningState = runningState;
-        aborted = runningState === ABORTED;
-        actionRef.aborted = aborted;
-        completed = runningState === COMPLETED;
-        actionRef.completed = completed;
-      });
-      weakEffect([action], (actionRef) => {
-        error = errorSignal.value;
-        actionRef.error = error;
-      });
-      weakEffect([action], (actionRef) => {
-        value = valueSignal.value;
-        data = dataSignal.value;
-        actionRef.value = value;
-        actionRef.data = data;
-      });
-    }
-
-    // Propriétés privées
-    {
-      const ui = {
-        renderLoaded: null,
-        renderLoadedAsync,
-        hasRenderers: false, // Flag to track if action is bound to UI components
-      };
-      let sideEffectCleanup;
-      let completeSideEffectCleanup;
-
-      const performRun = (runParams) => {
-        const {
-          globalAbortSignal,
-          abortSignal,
-          reason,
-          event,
-          isPrerun,
-          onComplete,
-          onAbort,
-          onError,
-        } = runParams;
-
-        if (isPrerun) {
-          prerunProtectionRegistry.protect(action);
-        }
-
-        const internalAbortController = new AbortController();
-        const internalAbortSignal = internalAbortController.signal;
-        const abort = (abortReason) => {
-          runningStateSignal.value = ABORTED;
-          internalAbortController.abort(abortReason);
-          actionAbortMap.delete(action);
-          if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
-            prerunProtectionRegistry.unprotect(action);
-          }
-          if (DEBUG$2) {
-            console.log(`"${action}" aborted (reason: ${abortReason})`);
-          }
-        };
-
-        const onAbortFromSpecific = () => {
-          abort(abortSignal.reason);
-        };
-        const onAbortFromGlobal = () => {
-          abort(globalAbortSignal.reason);
-        };
-
-        if (abortSignal) {
-          abortSignal.addEventListener("abort", onAbortFromSpecific);
-        }
-        if (globalAbortSignal) {
-          globalAbortSignal.addEventListener("abort", onAbortFromGlobal);
-        }
-
-        actionAbortMap.set(action, abort);
-
-        batch(() => {
-          runningStateSignal.value = RUNNING;
-          if (!isPrerun) {
-            isPrerunSignal.value = false;
-          }
-        });
-
-        const args = [];
-        args.push(params);
-        args.push({
-          reason,
-          event,
-          signal: internalAbortSignal,
-          isPrerun,
-        });
-        const returnValue = sideEffect(...args);
-        if (typeof returnValue === "function") {
-          sideEffectCleanup = returnValue;
-        }
-
-        let runResult;
-        let rejected = false;
-        let rejectedValue;
-        const onRunEnd = () => {
-          if (abortSignal) {
-            abortSignal.removeEventListener("abort", onAbortFromSpecific);
-          }
-          if (globalAbortSignal) {
-            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
-          }
-          prerunProtectionRegistry.unprotect(action);
-          actionAbortMap.delete(action);
-          actionPromiseMap.delete(action);
-          /*
-           * Critical: dataEffect, onComplete and completeSideEffect must be batched together to prevent
-           * UI inconsistencies. The dataEffect might modify shared state (e.g.,
-           * deleting items from a store), and onLoad callbacks might trigger
-           * dependent action state changes.
-           *
-           * Without batching, the UI could render with partially updated state:
-           * - dataEffect deletes a resource from the store
-           * - UI renders immediately and tries to display the deleted resource
-           * - onLoad hasn't yet updated dependent actions to loading state
-           *
-           * Example: When deleting a resource, we need to both update the store
-           * AND put the action that loaded that resource back into loading state
-           * before the UI attempts to render the now-missing resource.
-           */
-
-          batch(() => {
-            const value = resultToValue
-              ? resultToValue(runResult, action)
-              : runResult;
-            errorSignal.value = undefined;
-            valueSignal.value = value;
-            runningStateSignal.value = COMPLETED;
-            const data = dataSignal.value;
-            if (outputSignal) {
-              outputSignal.value = data;
-            }
-            onComplete?.(data, action);
-            completeSideEffectCleanup = completeSideEffect?.(action);
-          });
-          if (DEBUG$2) {
-            console.log(`"${action}": completed`);
-          }
-          const data = dataSignal.peek();
-          return data;
-        };
-        const onRunError = (error) => {
-          if (abortSignal) {
-            abortSignal.removeEventListener("abort", onAbortFromSpecific);
-          }
-          if (globalAbortSignal) {
-            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
-          }
-          actionAbortMap.delete(action);
-          actionPromiseMap.delete(action);
-          const isAbort =
-            (internalAbortSignal.aborted &&
-              error === internalAbortSignal.reason) ||
-            error.name === "AbortError";
-          if (isAbort) {
-            runningStateSignal.value = ABORTED;
-            if (isPrerun && abortSignal.aborted) {
-              prerunProtectionRegistry.unprotect(action);
-            }
-            onAbort?.(error, { event, action, args });
-            return error;
-          }
-          if (DEBUG$2) {
-            console.log(
-              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
-            );
-          }
-          batch(() => {
-            errorSignal.value = error;
-            runningStateSignal.value = FAILED;
-            onError?.(error, { event, action, args });
-          });
-
-          if (ui.hasRenderers || onError) {
-            // When inside suspense this console.error is redundant with the error thrown by preact debug at
-            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
-            console.error(error);
-            // For UI-bound actions: error is properly handled by logging + UI display
-            // Return error instead of throwing to signal it's handled and prevent:
-            // - jsenv error overlay from appearing
-            // - error being treated as unhandled by runtime
-            return error;
-          }
-          error.action = action;
-          throw error;
-        };
-
-        try {
-          const thenableArray = [];
-          const callbackResult = callback(...args);
-          if (callbackResult && typeof callbackResult.then === "function") {
-            thenableArray.push(
-              callbackResult.then(
-                (value) => {
-                  runResult = value;
-                },
-                (e) => {
-                  rejected = true;
-                  rejectedValue = e;
-                },
-              ),
-            );
-          } else {
-            runResult = callbackResult;
-          }
-          if (ui.renderLoadedAsync && !ui.renderLoaded) {
-            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
-              (renderLoaded) => {
-                ui.renderLoaded = renderLoaded;
-              },
-              (e) => {
-                if (!rejected) {
-                  rejected = true;
-                  rejectedValue = e;
-                }
-              },
-            );
-            thenableArray.push(renderLoadedPromise);
-          }
-          if (thenableArray.length === 0) {
-            return onRunEnd();
-          }
-          return Promise.all(thenableArray).then(() => {
-            if (rejected) {
-              return onRunError(rejectedValue);
-            }
-            return onRunEnd();
-          });
-        } catch (e) {
-          return onRunError(e);
-        }
-      };
-
-      const performReset = ({ reason, willRunOrPrerun }) => {
-        abort(reason);
-        if (DEBUG$2) {
-          console.log(`"${action}": resetting (reason: ${reason})`);
-        }
-
-        prerunProtectionRegistry.unprotect(action);
-
-        if (sideEffectCleanup) {
-          sideEffectCleanup(reason);
-          sideEffectCleanup = undefined;
-        }
-        if (completeSideEffectCleanup) {
-          completeSideEffectCleanup(reason);
-          completeSideEffectCleanup = undefined;
-        }
-
-        actionPromiseMap.delete(action);
-        batch(() => {
-          if (!willRunOrPrerun) {
-            errorSignal.value = undefined;
-            valueSignal.value = valueInitial;
-            if (outputSignal) {
-              outputSignal.value = undefined;
-            }
-          }
-          isPrerunSignal.value = true;
-          runningStateSignal.value = IDLE;
-        });
-      };
-
-      const privateProperties = {
-        valueInitial,
-
-        performRun,
-        performReset,
-        ui,
-
-        nameSignal: actionNameSignal,
-        callSourceSignal: actionCallSourceSignal,
-
-        childActionWeakSet,
-        childActionWeakMap,
-      };
-      setActionPrivateProperties(action, privateProperties);
-    }
-
-    return action;
-  };
-
-  rootAction = createActionCore(rootOptions);
-  actionWeakMap.set(callback, rootAction);
-  return rootAction;
-};
-
-/**
- * Creates an action proxy that automatically updates based on signal changes.
- *
- * @param {Object} action - The base action to proxy
- * @param {Signal} paramsSignal - Signal containing parameters for the action
- * @param {Object} options - Configuration options
- * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
- *   This enables live updates - for example, performing an HTTP GET request every time
- *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.inheritData - When true, each new target action starts fresh with no inherited state.
- *   By default (false), the proxy carries over the previous target's value and error into the new action.
- *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
- *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
- *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
- *   available data — even while a newer action is in flight.
- *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
- *   on an explicit user trigger: the previous results remain visible until the new action completes.
- * @param {function} options.onChange - Optional callback triggered when the target action changes
- */
-const createActionProxyFromSignal = (
-  action,
-  paramsSignal,
-  {
-    runOnce = false,
-    rerunOnChange = false,
-    inheritData = true,
-    onChange,
-    syncParams,
-  } = {},
-) => {
-  const actionTargetChangeCallbackSet = new Set();
-  const onActionTargetChange = (callback) => {
-    actionTargetChangeCallbackSet.add(callback);
-    return () => {
-      actionTargetChangeCallbackSet.delete(callback);
-    };
-  };
-  const changeCleanupCallbackSet = new Set();
-  const triggerTargetChange = (actionTarget, previousTarget, context) => {
-    for (const changeCleanupCallback of changeCleanupCallbackSet) {
-      changeCleanupCallback();
-    }
-    changeCleanupCallbackSet.clear();
-    for (const callback of actionTargetChangeCallbackSet) {
-      const returnValue = callback(actionTarget, previousTarget, context);
-      if (typeof returnValue === "function") {
-        changeCleanupCallbackSet.add(returnValue);
-      }
-    }
-  };
-
-  let actionTarget = null;
-  let currentAction = action;
-  let currentActionPrivateProperties = getActionPrivateProperties(action);
-  let actionTargetPreviousWeakRef = null;
-
-  const createTarget = (params) => {
-    if (inheritData) {
-      const previousActionTarget = actionTargetPreviousWeakRef?.deref();
-      const previousTarget = previousActionTarget || action;
-      return action.bindParams(params, {
-        error: previousTarget.errorSignal.peek(),
-        value: previousTarget.valueSignal.peek(),
-      });
-    }
-    return action.bindParams(params);
-  };
-
-  let isUpdatingTarget = false;
-  const _updateTarget = (context) => {
-    if (isUpdatingTarget) {
-      // likely syncParams caused the paramsSignal.value to update which
-      // calls _updateTarget. But we are already in the middle of an update
-      // likely cause by an explicit call to rerun for instance
-      // so we want to keep that rerun intent and "ignore" this updateTarget call
-      // so we don't end up running the action twice (once because we dispatch change without explicitRunIntent and one for the initial run intent)
-      return;
-    }
-    isUpdatingTarget = true;
-    action.debug(`${action}._updateTarget(${stringifyForDisplay(context)})`);
-    if (syncParams) {
-      syncParams();
-    }
-    isUpdatingTarget = false;
-
-    const params = paramsSignal.peek();
-    const proxyParams = proxyParamsSignal.peek();
-    if (params !== proxyParams) {
-      proxyParamsSignal.value = params;
-    }
-    const previousActionTarget = actionTargetPreviousWeakRef?.deref();
-
-    if (params === NO_PARAMS) {
-      actionTarget = null;
-      currentAction = action;
-      currentActionPrivateProperties = getActionPrivateProperties(action);
-    } else {
-      actionTarget = createTarget(params);
-      if (previousActionTarget === actionTarget) {
-        return;
-      }
-      currentAction = actionTarget;
-      currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
-    }
-    actionTargetPreviousWeakRef = actionTarget
-      ? new WeakRef(actionTarget)
-      : null;
-    triggerTargetChange(actionTarget, previousActionTarget, context);
-  };
-
-  const proxyMethod = (method, { explicitRunIntent } = {}) => {
-    return (...args) => {
-      /*
-       * Ensure the proxy targets the correct action before method execution.
-       * This prevents race conditions where external effects run before our
-       * internal parameter synchronization effect. Using peek() avoids creating
-       * reactive dependencies within this pass-through method.
-       */
-      _updateTarget({
-        changeCause: "method_call",
-        changeCauseDetail: method,
-        explicitRunIntent,
-      });
-      return currentAction[method](...args);
-    };
-  };
-
-  const nameSignal = signal(action.name);
-  const callSourceSignal = signal(`[Proxy] ${action.callSource}`);
-  let actionProxy;
-  {
-    actionProxy = function actionProxyFunction() {
-      return actionProxy.rerun();
-    };
-    Object.defineProperty(actionProxy, "name", {
-      configurable: true,
-      get() {
-        return nameSignal.value;
-      },
-    });
-    Object.defineProperty(actionProxy, "callSource", {
-      configurable: true,
-      get() {
-        return callSourceSignal.value;
-      },
-    });
-    actionWeakMap.set(actionProxy, actionProxy);
-  }
-
-  // Create our own signal for params that we control completely
-  const proxyParamsSignal = signal(paramsSignal.value);
-  const proxySignal = (signalPropertyName, propertyName) => {
-    const signalProxy = signal();
-    let dispose;
-    onActionTargetChange(() => {
-      if (dispose) {
-        dispose();
-        dispose = undefined;
-      }
-      dispose = effect(() => {
-        const currentActionSignal = currentAction[signalPropertyName];
-        const currentActionSignalValue = currentActionSignal.value;
-        signalProxy.value = currentActionSignalValue;
-        if (propertyName) {
-          actionProxy[propertyName] = currentActionSignalValue;
-        }
-      });
-      return dispose;
-    });
-    return signalProxy;
-  };
-
-  Object.assign(actionProxy, {
-    isAction: true,
-    isProxy: true,
-    callback: undefined,
-    params: undefined,
-    isPrerun: undefined,
-    runningState: undefined,
-    aborted: undefined,
-    error: undefined,
-    value: undefined,
-    data: undefined,
-    completed: undefined,
-    prerun: proxyMethod("prerun", { explicitRunIntent: true }),
-    run: proxyMethod("run", { explicitRunIntent: true }),
-    rerun: proxyMethod("rerun", { explicitRunIntent: true }),
-    reset: proxyMethod("reset", { explicitRunIntent: true }),
-    abort: proxyMethod("abort", { explicitRunIntent: true }),
-    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
-    getCurrentAction: () => {
-      _updateTarget({
-        changeCause: "get_current_action",
-      });
-      return currentAction;
-    },
-    bindParams: () => {
-      throw new Error(
-        `bindParams() is not supported on action proxies, use the underlying action instead`,
-      );
-    },
-    replaceParams: null, // Will be set below
-    toString: () => actionProxy.callSource,
-    meta: {},
-
-    paramsSignal: proxyParamsSignal,
-    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
-    errorSignal: proxySignal("errorSignal", "error"),
-    valueSignal: proxySignal("valueSignal", "value"),
-    dataSignal: proxySignal("dataSignal", "data"),
-  });
-  Object.preventExtensions(actionProxy);
-  // Watch for changes in the original paramsSignal and update ours
-  // (original signal wins over any replaceParams calls)
-  weakEffect(
-    [paramsSignal, proxyParamsSignal],
-    (paramsSignalRef, proxyParamsSignalRef) => {
-      const newParams = paramsSignalRef.value;
-      proxyParamsSignalRef.value = newParams;
-    },
-  );
-  weakEffect([action], () => {
-    // eslint-disable-next-line no-unused-expressions
-    proxyParamsSignal.value;
-    _updateTarget({
-      changeCause: "params_signal_change",
-    });
-  });
-  onActionTargetChange((actionTarget) => {
-    const currentAction = actionTarget || action;
-    nameSignal.value = `[Proxy] ${currentAction.name}`;
-    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
-    actionProxy.callback = currentAction.callback;
-    actionProxy.params = currentAction.params;
-    actionProxy.isPrerun = currentAction.isPrerun;
-    actionProxy.runningState = currentAction.runningState;
-    actionProxy.aborted = currentAction.aborted;
-    actionProxy.error = currentAction.error;
-    actionProxy.value = currentAction.value;
-    actionProxy.data = currentAction.data;
-    actionProxy.completed = currentAction.completed;
-  });
-
-  {
-    const proxyPrivateMethod = (method) => {
-      return (...args) => currentActionPrivateProperties[method](...args);
-    };
-    const proxyPrivateProperties = {
-      get currentAction() {
-        return currentAction;
-      },
-
-      performRun: proxyPrivateMethod("performRun"),
-      performReset: proxyPrivateMethod("performReset"),
-      ui: currentActionPrivateProperties.ui,
-    };
-    onActionTargetChange((actionTarget, previousTarget) => {
-      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-      if (previousTarget && actionTarget) {
-        const previousPrivateProps = getActionPrivateProperties(previousTarget);
-        if (previousPrivateProps.ui.hasRenderers) {
-          const newPrivateProps = getActionPrivateProperties(actionTarget);
-          newPrivateProps.ui.hasRenderers = true;
-        }
-      }
-      proxyPrivateProperties.childActionWeakSet =
-        currentActionPrivateProperties.childActionWeakSet;
-    });
-    setActionPrivateProperties(actionProxy, proxyPrivateProperties);
-  }
-
-  actionProxy.replaceParams = (newParams) => {
-    if (currentAction === action) {
-      const currentParams = proxyParamsSignal.value;
-      const nextParams = mergeActionParams(currentParams, newParams);
-      if (nextParams === currentParams) {
-        return false;
-      }
-      proxyParamsSignal.value = nextParams;
-      return true;
-    }
-    if (!currentAction.replaceParams(newParams)) {
-      return false;
-    }
-    proxyParamsSignal.value = currentAction.paramsSignal.peek();
-    return true;
-  };
-
-  if (runOnce) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (!actionTargetPrevious && actionTarget) {
-        action.debug(
-          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
-        );
-        actionTarget.run({ reason: "runOnce" });
-      }
-    });
-  }
-  if (rerunOnChange) {
-    onActionTargetChange(
-      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
-        if (explicitRunIntent) {
-          return;
-        }
-        if (
-          actionTarget &&
-          actionTargetPrevious &&
-          !actionTargetPrevious.isPrerun
-        ) {
-          action.debug(
-            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
-            {
-              newTarget: actionTarget,
-              previousTarget: actionTargetPrevious,
-            },
-          );
-          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
-        }
-      },
-    );
-  }
-  if (onChange) {
-    onActionTargetChange(
-      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
-        onChange(actionTarget, actionTargetPrevious, { explicitRunIntent });
-      },
-    );
-  }
-
-  return actionProxy;
-};
-
-const generateActionCallSource = (name, params) => {
-  if (params === NO_PARAMS) {
-    return `${name}()`;
-  }
-  // Use stringifyForDisplay with asFunctionArgs option for the entire args array
-  const argsString = stringifyForDisplay([params], 3, 0, {
-    asFunctionArgs: true,
-  });
-  return `${name}${argsString}`;
-};
-
-const isPlainObject$1 = (obj) => {
-  if (typeof obj !== "object" || obj === null) {
-    return false;
-  }
-  let proto = obj;
-  while (Object.getPrototypeOf(proto) !== null) {
-    proto = Object.getPrototypeOf(proto);
-  }
-  return (
-    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
-  );
-};
-
-const COMPLETED_ACTION = createAction(() => undefined, {
-  name: "ACTION.COMPLETED",
-});
-getActionPrivateProperties(COMPLETED_ACTION).performRun({});
-
-// used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
-// when inside a <form> the form params are updated when the form element single param is updated
-const useActionBoundToOneParam = (action, paramsSignal) => {
-  if (!isSignal(paramsSignal)) {
-    throw new Error(
-      `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
-    );
-  }
-  const boundAction = useBoundAction(action, paramsSignal);
-  const getValue = useCallback(() => paramsSignal.value, []);
-  const setValue = useCallback((value) => {
-    paramsSignal.value = value;
-  }, []);
-  return [boundAction, getValue(), setValue];
-};
-// used by <details> to just call their action
-const useAction = (action, paramsSignal) => {
-  return useBoundAction(action, paramsSignal);
-};
-
-const useBoundAction = (action, actionParamsSignal) => {
-  const actionRef = useRef();
-  const actionCallbackRef = useRef();
-
-  if (!action) {
-    const existingAction = actionRef.current;
-    if (existingAction) {
-      return existingAction;
-    }
-    const noopAction = createAction(() => {}, { params: undefined });
-    const noopActionBound = actionParamsSignal
-      ? noopAction.bindParams(actionParamsSignal)
-      : noopAction;
-    actionRef.current = noopActionBound;
-    return noopActionBound;
-  }
-  const isFunction = typeof action === "function";
-  if (!isFunction) {
-    throw new TypeError(
-      `useBoundAction expects an action function or an action object, got: ${action}`,
-    );
-  }
-  if (isFunctionButNotAnActionFunction(action)) {
-    actionCallbackRef.current = action;
-    const existingAction = actionRef.current;
-    if (existingAction) {
-      return existingAction;
-    }
-    const actionFromFunction = createAction(
-      (...args) => {
-        return actionCallbackRef.current?.(...args);
-      },
-      {
-        name: action.name,
-        // We don't want to give empty params by default
-        // we want to give undefined for regular functions
-        params: undefined,
-      },
-    );
-    if (!actionParamsSignal) {
-      actionRef.current = actionFromFunction;
-      return actionFromFunction;
-    }
-    const actionBoundToParams =
-      actionFromFunction.bindParams(actionParamsSignal);
-    actionRef.current = actionBoundToParams;
-    return actionBoundToParams;
-  }
-  if (actionParamsSignal) {
-    return action.bindParams(actionParamsSignal);
-  }
-  return action;
-};
-
-const isFunctionButNotAnActionFunction = (action) => {
-  return typeof action === "function" && !action.isAction;
-};
-
 const useActionStatus = (action) => {
   if (!action) {
     return {
@@ -13696,5078 +20180,6 @@ const useActionStatus = (action) => {
     completed,
     data,
   };
-};
-
-const CONSTRAINT_NAME_TO_PROP = {
-  disabled: "disabledMessage",
-  required: "requiredMessage",
-  pattern: "patternMessage",
-  type_email: "typeMessage",
-  type_number: "typeMessage",
-  min_length: "minLengthMessage",
-  max_length: "maxLengthMessage",
-  min: "minMessage",
-  max: "maxMessage",
-  single_space: "singleSpaceMessage",
-  same_as: "sameAsMessage",
-  min_lower_letter: "minLowerLetterMessage",
-  min_upper_letter: "minUpperLetterMessage",
-  min_digit: "minDigitMessage",
-  min_special_char: "minSpecialCharMessage",
-  one_of: "oneOfMessage",
-  readonly: "readOnlyMessage",
-  available: "availableMessage",
-};
-
-const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
-  Object.values(CONSTRAINT_NAME_TO_PROP),
-);
-
-const extractMessageAndRemainingProps = (props) => {
-  const ownMessages = {};
-  const remaining = {};
-  const keyToVisit = new Set(Object.keys(props));
-  for (const key of keyToVisit) {
-    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
-      ownMessages[key] = props[key];
-    } else {
-      remaining[key] = props[key];
-    }
-  }
-  return [ownMessages, remaining];
-};
-
-const getConstraintMessage = (
-  controller,
-  constraint,
-  generatedMessage,
-  { requester },
-) => {
-  const { name: constraintName } = constraint;
-  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
-
-  // 1. Search first on the requester (e.g. the <li> that was clicked),
-  //  then fall back to element (e.g. the hidden <input>).
-  if (requester) {
-    const requesterController = requester.__uiStateController__;
-    if (requesterController && requesterController !== controller) {
-      const requesterControllerMessage = requesterController.props[propName];
-      if (requesterControllerMessage) {
-        return {
-          message: requesterControllerMessage,
-          origin: "requester controller",
-        };
-      }
-    }
-  }
-
-  const controllerMessage = controller.props[propName];
-  if (controllerMessage) {
-    return {
-      message: controllerMessage,
-      origin: "controller",
-    };
-  }
-
-  return {
-    message: generatedMessage,
-    origin: "generated message",
-  };
-};
-
-const CalloutRequestCloseContext = createContext();
-const useCalloutRequestClose = () => {
-  return useContext(CalloutRequestCloseContext);
-};
-const renderIntoCallout = (jsx$1, calloutMessageElement, {
-  requestClose
-}) => {
-  const calloutJsx = jsx(CalloutRequestCloseContext.Provider, {
-    value: requestClose,
-    children: jsx$1
-  });
-  render(calloutJsx, calloutMessageElement);
-};
-
-installImportMetaCssBuild(import.meta);/**
- * A callout component that mimics native browser validation messages.
- * Features:
- * - Positions above or below target element based on available space
- * - Follows target element during scrolling and resizing
- * - Automatically hides when target element is not visible
- * - Arrow automatically shows when pointing at a valid anchor element
- * - Centers in viewport when no anchor element provided or anchor is too big
- */
-const css$X = /* css */`
-  @layer navi {
-    .navi_callout {
-      /* A callout is parented to what it explains, so it inherits from it — and
-       an element that suppressed text selection (a list row, a drag source)
-       would make its own explanation unselectable. The message is text one
-       copies. */
-      user-select: text;
-
-      --callout-success-color: #4caf50;
-      --callout-info-color: #2196f3;
-      --callout-warning-color: #ff9800;
-      --callout-error-color: #f44336;
-
-      --callout-background-color: white;
-      --callout-icon-color: black;
-      --callout-padding: 8px;
-      --callout-z-index: 1000;
-    }
-  }
-
-  .navi_callout {
-    --x-callout-border-color: var(--x-callout-status-color);
-    --x-callout-background-color: var(--callout-background-color);
-    --x-callout-icon-color: var(--x-callout-status-color);
-    /* Default: no anchor at all (docked/centered in the viewport) — fixed
-       is the direct way to stay pinned there. Overridden to absolute below
-       only when data-anchor-scrolls is set (see its own JS-side comment,
-       right where it's set) — same reasoning as Popover's identical
-       attribute (popover.jsx's own top comment has the full case). */
-    position: fixed;
-    /* Popover resets */
-    inset: auto;
-    top: 0;
-    left: 0;
-    /* For some reason callout could end up behing elements when it's redisplayed in a dialog
-    (behind button relatively positioned in dialog footer while callout is appended into dialog body)
-    To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
-    z-index: 1;
-    /* Callout styles */
-    display: block;
-    height: auto; /* User agent reset */
-    margin: 0;
-    padding: 0; /* User agent reset */
-    color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
-    font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
-    font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
-    background: transparent;
-    border: none;
-    outline: none; /* programmatic focus may land here briefly before being redirected to close button */
-    opacity: 0;
-    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
-       left/top are NOT transitioned here, applyNewPosition drives that
-       itself via the Web Animations API instead of CSS, same mechanism
-       Popover/Dialog use. */
-    transition: opacity 0.2s ease-in-out;
-    cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
-    pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
-    overflow: visible;
-
-    &[data-anchor-scrolls] {
-      position: absolute;
-    }
-
-    &[data-status="success"] {
-      --x-callout-status-color: var(--callout-success-color);
-    }
-    &[data-status="info"] {
-      --x-callout-status-color: var(--callout-info-color);
-    }
-    &[data-status="warning"] {
-      --x-callout-status-color: var(--callout-warning-color);
-    }
-    &[data-status="error"] {
-      --x-callout-status-color: var(--callout-error-color);
-    }
-
-    .navi_callout_box {
-      position: relative;
-      border-style: solid;
-      border-color: transparent;
-
-      .navi_callout_frame {
-        position: absolute;
-        filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-        pointer-events: none;
-
-        svg {
-          position: absolute;
-          inset: 0;
-          overflow: visible;
-
-          .navi_callout_border {
-            fill: var(--x-callout-border-color);
-          }
-          .navi_callout_background {
-            fill: var(--x-callout-background-color);
-          }
-        }
-      }
-
-      .navi_callout_body {
-        --callout-icon-height: round(1.5em, 1px);
-
-        position: relative;
-        display: flex;
-        /* 85vw on small screens (<500px), then 47vw to not grow too large capped at 1000px */
-        max-width: min(85dvw, max(47dvw, 500px), 1000px);
-        padding: var(--callout-padding);
-        flex-direction: row;
-        gap: 10px;
-
-        .navi_callout_icon {
-          display: flex;
-          aspect-ratio: 1/1;
-          height: var(--callout-icon-height);
-          flex-shrink: 0;
-          align-items: center;
-          align-self: flex-start;
-          justify-content: center;
-          background-color: var(--x-callout-icon-color);
-          border-radius: 2px;
-
-          svg {
-            width: 16px;
-            height: 12px;
-            color: white;
-          }
-        }
-
-        .navi_callout_message {
-          position: relative;
-          display: block;
-          box-sizing: border-box;
-          box-decoration-break: clone;
-          align-self: center;
-          white-space: normal; /* Override in case ancetor sets nowrap */
-          word-break: break-word;
-          overflow-wrap: anywhere;
-
-          .navi_callout_error_stack {
-            max-height: 200px;
-            overflow: auto;
-          }
-          iframe {
-            display: block;
-            margin: 0;
-          }
-        }
-      }
-    }
-
-    .navi_callout_close_button_column {
-      display: flex;
-      height: var(--callout-icon-height);
-      align-self: flex-start;
-
-      .navi_callout_close_button {
-        width: 1em;
-        height: 1em;
-        padding: 0;
-        align-self: center;
-        color: currentColor;
-        font-size: inherit;
-        background: none;
-        border: none;
-        border-radius: 0.2em;
-        cursor: pointer;
-
-        &:hover {
-          background: rgba(0, 0, 0, 0.1);
-        }
-
-        &:focus-visible,
-        .navi_callout:focus-visible & {
-          outline: auto;
-        }
-
-        .navi_callout_close_button_svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-    }
-  }
-`;
-
-/**
- * Shows a callout attached to the specified element
- * @param {string} message - HTML content for the callout
- * @param {Object} options - Configuration options
- * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
- * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
- * @param {Function} [options.onClose] - Callback when callout is closed
- * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
- * @param {boolean} [options.debug=false] - Enable debug logging
- *
- * Positioning is also driven by attributes read on the anchor element itself
- * (so markup can tune a callout without going through this function):
- * - `data-callout-arrow-x="start" | "center" | "end"`: where the arrow points
- *   horizontally along the anchor — `start`/`end` target the left/right edge of
- *   the anchor's text content (inside its borders and padding), `center` targets
- *   the middle of the anchor. Without it the arrow follows the anchor's computed
- *   `text-align` (`center` → center, `right`/`end` → end, anything else → start),
- *   so it lands where the text visually begins. The arrow is always clamped to
- *   stay within the callout's own rounded corners, so a value pointing outside
- *   the callout's width sticks to the nearest side.
- * - `data-callout-position="top" | "bottom" | …`: preferred side of the anchor
- *   (defaults to `"bottom"`, flipped when there isn't enough space).
- * - `data-callout-position-fixed`: opt out of that flipping.
- * - `data-callout-anchor="<selector>"`: point at an inner element instead of the
- *   anchor itself.
- * - `data-callout-point-to-border-box` / `data-callout-point-to-content-box`:
- *   which box the callout aligns to.
- * - `data-callout-viewport-spacing="<number>"`: minimum gap with the viewport edges.
- * @returns {Object} - Callout object with properties:
- *   - {Function} close - Function to close the callout
- *   - {Function} update - Function to update message and options
- *   - {Function} updatePosition - Function to update position
- *   - {HTMLElement} element - The callout DOM element
- *   - {boolean} opened - Whether the callout is currently open
- */
-const openCallout = (message, {
-  anchorElement,
-  // status determines visual styling and behavior:
-  // "info" - polite announcement (e.g., "This element cannot be modified")
-  // "warning" - expected failure requiring user action (e.g., "Field is required")
-  // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-  // "success" - positive feedback (e.g., "Changes saved successfully")
-  // "" - neutral information
-  status = "",
-  onClose,
-  closeOnClickOutside = status === "info",
-  closeOnFocusLeave = closeOnClickOutside,
-  openingEvent,
-  showErrorStack,
-  skipFocus = false,
-  debug = () => {}
-} = {}) => {
-  import.meta.css = [css$X, "@jsenv/navi/src/control/rules/callout/callout.js"];
-  if (debug === true) {
-    debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
-  }
-  const callout = {
-    opened: true,
-    close: null,
-    status: undefined,
-    update: null,
-    updatePosition: null,
-    element: null
-  };
-  debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
-  const [teardown, addTeardown] = createPubSub(true);
-  const requestClose = (e, reason) => {
-    return dispatchCustomEvent(callout.element, "navi_request_close", {
-      event: e,
-      reason
-    });
-  };
-  const onRequestClose = event => {
-    if (!callout.opened) {
-      return;
-    }
-    const {
-      reason
-    } = event.detail;
-    const clickOrSpaceOutside = reason === "click_outside" || reason === "space_outside";
-    if (clickOrSpaceOutside) {
-      if (!closeOnClickOutside) {
-        return;
-      }
-      if (callout.status === "error") {
-        return;
-      }
-    } else if (reason === "focus_leave") {
-      if (!closeOnFocusLeave || undefined) {
-        return;
-      }
-      if (callout.status === "error") {
-        return;
-      }
-    }
-    if (debug) {
-      debug(event, `callout close (reason: ${reason})`);
-    }
-    const mousedownEvent = findEvent(event, "mousedown");
-    if (mousedownEvent) {
-      const isInsideCallout = callout.element && callout.element.contains(event.target);
-      if (isInsideCallout) {
-        debug(event, "preventing mousedown default to avoid focus change on callout close");
-        mousedownEvent.preventDefault(); // prevent focus change to the callout, let it on the input
-      }
-    }
-    callout.opened = false;
-    teardown({
-      event,
-      reason
-    });
-  };
-  if (onClose) {
-    addTeardown(({
-      event,
-      reason
-    }) => {
-      let shouldTransferFocusFromCallout = false;
-      const focusOut = findEvent(event, "focusout");
-      if (focusOut) {
-        const relatedTarget = focusOut.relatedTarget;
-        if (relatedTarget && callout.element.contains(relatedTarget)) {
-          shouldTransferFocusFromCallout = true;
-        }
-      } else {
-        const focusInsideCallout = callout.element.contains(document.activeElement);
-        if (focusInsideCallout) {
-          shouldTransferFocusFromCallout = true;
-        } else {
-          // mousedown to close callout would have given focus to the callout
-          // so we can consider focus was inside callout
-          const mousedownEvent = findEvent(event, "mousedown");
-          if (mousedownEvent) {
-            const mousedownInsideCallout = callout.element && callout.element.contains(event.target);
-            if (mousedownInsideCallout) {
-              shouldTransferFocusFromCallout = true;
-            }
-          }
-        }
-      }
-      onClose({
-        event,
-        reason,
-        shouldTransferFocusFromCallout
-      });
-    });
-  }
-  const [updateStatus, addStatusEffect, cleanupStatusEffects] = createValueEffect(undefined);
-  addTeardown(cleanupStatusEffects);
-
-  // Create and add callout to document
-  const calloutElement = createCalloutElement();
-  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
-  const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
-  calloutCloseButton.onmousedown = e => {
-    if (e.button !== 0) {
-      return;
-    }
-    requestClose(e, "mousedown_close_button");
-  };
-  // "click" is received for enter/space
-  calloutCloseButton.onclick = e => {
-    if (e.button !== 0) {
-      return;
-    }
-    requestClose(e, "click_close_button");
-  };
-  const calloutId = `navi_callout_${Date.now()}`;
-  calloutElement.id = calloutId;
-  calloutElement.style.opacity = 0;
-  const update = (newMessage, options = {}) => {
-    const prevStatus = callout.status;
-    // Connect callout with target element for accessibility
-    if (options.status && options.status !== callout.status) {
-      callout.status = options.status;
-      debug(`callout update status: ${prevStatus ?? "(none)"} -> ${options.status}`);
-      updateStatus(options.status);
-    }
-    if (Object.hasOwn(options, "closeOnClickOutside")) {
-      closeOnClickOutside = options.closeOnClickOutside;
-      if (closeOnClickOutside) {
-        closeOnFocusLeave = true;
-      }
-    }
-    if (Object.hasOwn(options, "closeOnFocusLeave")) {
-      closeOnFocusLeave = options.closeOnFocusLeave;
-    }
-    if (isValidElement(newMessage)) {
-      debug(`callout update message (jsx)`);
-      renderIntoCallout(newMessage, calloutMessageElement, {
-        requestClose
-      });
-    } else if (newMessage instanceof Node) {
-      // Handle DOM node (cloned from CSS selector)
-      debug(`callout update message (node)`);
-      calloutMessageElement.innerHTML = "";
-      calloutMessageElement.appendChild(newMessage);
-    } else if (typeof newMessage === "function") {
-      debug(`callout update message (function)`);
-      calloutMessageElement.innerHTML = "";
-      newMessage({
-        renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
-          requestClose
-        }),
-        requestClose
-      });
-    } else {
-      if (Error.isError(newMessage)) {
-        const error = newMessage;
-        newMessage = error.message;
-        if (showErrorStack && error.stack) {
-          newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
-        }
-      }
-
-      // Check if the message is a full HTML document (starts with DOCTYPE)
-      if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
-        // Create iframe to isolate the HTML document
-        const iframe = document.createElement("iframe");
-        iframe.style.border = "none";
-        iframe.style.width = "100%";
-        iframe.style.backgroundColor = "white";
-        iframe.srcdoc = newMessage;
-        debug(`callout update message (html document iframe)`);
-        // Clear existing content and add iframe
-        calloutMessageElement.innerHTML = "";
-        calloutMessageElement.appendChild(iframe);
-      } else {
-        debug(`callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`);
-        calloutMessageElement.innerHTML = newMessage;
-      }
-    }
-    // After updating content the callout size likely changed — re-position immediately
-    // while the resize observer is still settled, to avoid a ResizeObserver loop where
-    // the observer fires, triggers a check, which changes the SVG frame, which fires again.
-    if (callout.updatePosition) {
-      callout.updatePosition();
-    }
-  };
-  const originalAnchorElement = anchorElement;
-  if (anchorElement) {
-    const proxyElement = findControlProxy(anchorElement);
-    if (proxyElement) {
-      anchorElement = proxyElement;
-    }
-    const controlRoot = findControlRoot(anchorElement);
-    if (controlRoot) {
-      anchorElement = controlRoot;
-    }
-    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true
-    });
-    if (!anchorVisuallyVisibleInfo.visible) {
-      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-      if (!anchorElement) {
-        // anchorElement is not in the DOM anymore, fallback to body
-        anchorElement = document.body;
-      }
-      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
-    }
-  }
-  // Resolve the visual anchor for positioning: when data-callout-anchor is set,
-  // use the inner element it points to. anchorElement remains the container
-  // that receives data-callout and CSS vars.
-  let visualAnchorElement = anchorElement;
-  if (anchorElement && anchorElement !== document.body) {
-    const calloutAnchorSelector = anchorElement.getAttribute("data-callout-anchor");
-    if (calloutAnchorSelector) {
-      const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
-      if (resolvedAnchor) {
-        visualAnchorElement = resolvedAnchor;
-      }
-    }
-  }
-  const calloutContainer = (() => {
-    if (!anchorElement || anchorElement === document.body) {
-      return document.body;
-    }
-    const closestLabel = anchorElement.closest("label");
-    if (closestLabel) {
-      // Putting callout inside label would be problematic:
-      // - Click on callout would be catched by the browser and re-dispatched to the label
-      // -> Callout would detect a click outside and close
-      // (We could preventDefault but that would prevent click interaction on the callout like selecting callout text)
-      // (Even ignoring the click without preventDefault prevent click to select as browser use click for label)
-      // -> We put callout inside label aprent
-      const labelParent = closestLabel.parentElement;
-      return labelParent;
-    }
-    // Some elements (e.g. <input>) cannot have children
-    if (canContainCallout(anchorElement)) {
-      return anchorElement;
-    }
-    return anchorElement.parentNode || document.body;
-  })();
-  {
-    const handleClickOutside = event => {
-      if (event.button !== 0) {
-        // right click
-        return;
-      }
-      const clickTarget = event.target;
-      if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
-        return;
-      }
-      requestClose(event, "click_outside");
-    };
-    const handleSpaceOutside = event => {
-      if (event.key !== " ") {
-        return;
-      }
-      const keyTarget = event.target;
-      if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
-        return;
-      }
-      requestClose(event, "space_outside");
-    };
-    const registerClickOutsideListener = () => {
-      document.addEventListener("click", handleClickOutside, true);
-      document.addEventListener("keydown", handleSpaceOutside, true);
-      addTeardown(() => {
-        document.removeEventListener("click", handleClickOutside, true);
-        document.removeEventListener("keydown", handleSpaceOutside, true);
-      });
-    };
-    // A callout opened during a press (mousedown or pointerdown) must wait for the
-    // matching release before listening for click-outside, otherwise the same
-    // gesture's trailing click would immediately close it. Covers pointerdown too
-    // (e.g. a readonly control popping its callout from a pointerdown handler).
-    const openingDownEvent = findEvent(openingEvent, "mousedown") || findEvent(openingEvent, "pointerdown");
-    if (closeOnClickOutside && openingEvent && openingDownEvent) {
-      const upType = openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
-      debug(openingEvent, `deferring click-outside listener registration until ${upType} to avoid immediate close`);
-      const onUp = () => {
-        setTimeout(() => {
-          debug(openingEvent, `registering click-outside listener after ${upType}`);
-          registerClickOutsideListener();
-        });
-      };
-      document.addEventListener(upType, onUp, {
-        once: true,
-        capture: true
-      });
-      addTeardown(() => {
-        document.removeEventListener(upType, onUp, true);
-      });
-    } else {
-      registerClickOutsideListener();
-    }
-  }
-  {
-    if (anchorElement) {
-      // Make the callout itself focusable so that when the user clicks on a
-      // non-interactive part of it, the browser can transfer focus there.
-      // Without this, relatedTarget on focusout would be null (non-focusable
-      // elements don't receive focus), making it impossible to distinguish
-      // "clicked the callout" from "focus left the document entirely".
-      // tabIndex=-1 keeps it out of the natural tab order.
-      calloutElement.tabIndex = -1;
-      const handleFocusOut = event => {
-        const {
-          relatedTarget
-        } = event;
-        if (relatedTarget && anchorElement.contains(relatedTarget)) {
-          return;
-        }
-        if (relatedTarget && calloutElement.contains(relatedTarget)) {
-          return;
-        }
-        requestClose(event, "focus_leave");
-      };
-      anchorElement.addEventListener("focusout", handleFocusOut);
-      addTeardown(() => {
-        anchorElement.removeEventListener("focusout", handleFocusOut);
-      });
-    }
-  }
-  close_on_escape_from_anchor: {
-    if (!anchorElement) {
-      break close_on_escape_from_anchor;
-    }
-    calloutCloseButton.tabIndex = -1;
-    calloutCloseButton.setAttribute("navi-focus-delegate", "");
-    const onAnchorKeydown = e => {
-      if (e.key === "Escape") {
-        requestClose(e, "escape_key");
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    };
-    anchorElement.addEventListener("keydown", onAnchorKeydown);
-    addTeardown(() => {
-      anchorElement.removeEventListener("keydown", onAnchorKeydown);
-    });
-    // Also close when Escape reaches the callout itself
-    // e.g. when close button is focused
-    // Usually callout is inside anchor so the anchor would see the escape being pressed
-    // but callout can be appended outside anchor when anchor cannot receive children
-    const onCalloutKeydown = e => {
-      if (e.key === "Escape") {
-        requestClose(e, "escape_key");
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    };
-    calloutElement.addEventListener("keydown", onCalloutKeydown);
-    addTeardown(() => {
-      calloutElement.removeEventListener("keydown", onCalloutKeydown);
-    });
-  }
-  focus_on_open: {
-    if (!anchorElement) {
-      break focus_on_open;
-    }
-    if (skipFocus) {
-      break focus_on_open;
-    }
-    if (anchorElement.closest('[aria-hidden="true"]')) {
-      break focus_on_open;
-    }
-    // If focus is already inside the anchor, don't steal it — the user is
-    // actively typing and Escape via close_on_escape_from_anchor will work.
-    if (anchorElement.contains(document.activeElement)) {
-      break focus_on_open;
-    }
-    // Move focus into the anchor so the user can immediately press Escape to
-    // dismiss the callout. Prefer navi-focus-delegate targets (explicit intent),
-    // fall back to first generic focusable, then the callout close button for
-    // anchors with no focusable descendants (e.g. a read-only group).
-    const focusTarget = findFocusDelegateTarget(anchorElement) || findFocusable(anchorElement) || calloutCloseButton;
-    focusTarget.focus({
-      preventScroll: true
-    });
-  }
-  {
-    const handleCustomCloseEvent = e => {
-      onRequestClose(e);
-    };
-    calloutElement.addEventListener("navi_request_close", handleCustomCloseEvent);
-  }
-  Object.assign(callout, {
-    element: calloutElement,
-    update,
-    requestClose
-  });
-  addStatusEffect(status => {
-    if (status) {
-      calloutElement.setAttribute("data-status", status);
-    } else {
-      calloutElement.removeAttribute("data-status");
-    }
-    if (!status || status === "info" || status === "success") {
-      calloutElement.setAttribute("role", "status");
-    } else if (status) {
-      calloutElement.setAttribute("role", "alert");
-    }
-  });
-  if (debug) {
-    debug(openingEvent, `append callout into ${getElementSignature(calloutContainer)}`);
-  }
-  calloutContainer.appendChild(calloutElement);
-  calloutElement.showPopover();
-  addTeardown(() => {
-    calloutElement.remove();
-  });
-  if (anchorElement) {
-    // "instant", not "smooth": the positioning block further down measures
-    // anchorElement's geometry synchronously, in the same tick — a "smooth"
-    // scroll doesn't move anything until the browser gets to animate it on
-    // a later frame, so that first measurement would run against the
-    // pre-scroll position instead. Once the animation actually plays,
-    // positionCallout's own visibleRectEffect (watching document
-    // scroll to keep following the anchor) reacts to every intermediate
-    // frame of it too, and its sticky above/below choice (deliberately
-    // hysteretic, to avoid flip-flopping while the user scrolls normally)
-    // can latch onto whichever side a mid-animation frame happened to
-    // favor — even when the anchor's own final, settled position would
-    // have fit fine on the original side. Scrolling instantly collapses
-    // that whole window: by the time anything measures anchorElement, it's
-    // already at its final position, so there's no transient frame left to
-    // latch onto.
-    anchorElement.scrollIntoView({
-      behavior: "instant",
-      block: "nearest"
-    });
-    allowWheelThrough(calloutElement, visualAnchorElement);
-    anchorElement.setAttribute("data-callout", calloutId);
-    addTeardown(() => {
-      anchorElement.removeAttribute("data-callout");
-    });
-    const visualElement = (() => {
-      const visualSelector = anchorElement.getAttribute("data-visual-selector");
-      if (visualSelector) {
-        const visualElement = anchorElement.querySelector(visualSelector);
-        if (visualElement) {
-          return visualElement;
-        }
-      }
-      return anchorElement;
-    })();
-    dispatchPublicCustomEvent(visualElement, "navi_callout_open");
-    addTeardown(() => {
-      dispatchPublicCustomEvent(visualElement, "navi_callout_close");
-    });
-    addStatusEffect(status => {
-      if (!status) {
-        return () => {};
-      }
-      const statusColor = resolveCSSColor(`var(--callout-${status}-color)`, calloutElement);
-      anchorElement.setAttribute("data-callout-status", status);
-      anchorElement.style.setProperty("--callout-color", statusColor);
-      return () => {
-        anchorElement.removeAttribute("data-callout-status");
-        anchorElement.style.removeProperty("--callout-color");
-      };
-    });
-    addStatusEffect(status => {
-      if (!status || status === "info" || status === "success") {
-        visualAnchorElement.setAttribute("aria-describedby", calloutId);
-        return () => {
-          visualAnchorElement.removeAttribute("aria-describedby");
-        };
-      }
-      visualAnchorElement.setAttribute("aria-errormessage", calloutId);
-      visualAnchorElement.setAttribute("aria-invalid", "true");
-      return () => {
-        visualAnchorElement.removeAttribute("aria-errormessage");
-        visualAnchorElement.removeAttribute("aria-invalid");
-      };
-    });
-    anchorElement.callout = callout;
-    addTeardown(() => {
-      delete anchorElement.callout;
-    });
-  }
-  update(message, {
-    status
-  });
-
-  // positionCallout itself handles both "no anchorElement at all" and "a
-  // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its
-  // own doc) — nothing left to dispatch on here.
-  const positioner = positionCallout(calloutElement, visualAnchorElement, {
-    debug,
-    originalAnchorElement
-  });
-  addTeardown(() => {
-    positioner.stop();
-  });
-  // The content it just rendered changed its own size, so the check must not be
-  // deduped away on the grounds that the anchor did not move.
-  callout.updatePosition = () => positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
-  return callout;
-};
-
-// Configuration parameters for callout appearance
-const BORDER_WIDTH = 1;
-const CORNER_RADIUS = 3;
-const ARROW_WIDTH = 16;
-const ARROW_HEIGHT = 8;
-const ARROW_SPACING = 8;
-
-// HTML template for the callout
-const calloutTemplate = /* html */`
-  <div
-    class="navi_callout"
-    popover="manual"
-  >
-    <div class="navi_callout_box">
-      <div class="navi_callout_frame"></div>
-      <div class="navi_callout_body">
-        <div class="navi_callout_icon">
-          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
-          </svg>
-        </div>
-        <!-- Keep .navi_callout_message so preact controls it -->
-        <div class="navi_callout_message"></div>
-        <div class="navi_callout_close_button_column">
-          <button class="navi_callout_close_button">
-            <svg
-              class="navi_callout_close_button_svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-
-/**
- * Creates a new callout element from template
- * @returns {HTMLElement} - The callout element
- */
-const createCalloutElement = () => {
-  const div = document.createElement("div");
-  div.innerHTML = calloutTemplate;
-  const calloutElement = div.firstElementChild;
-  return calloutElement;
-};
-
-/**
- * Positions the callout — sticks to `anchorElement` with an arrow when one
- * is given, live-degrading to a plain centered box (no arrow) whenever
- * pickPositionRelativeTo's own isAnchorTooBig rejects it (see its doc in
- * visible_rect.js), or unconditionally when `anchorElement` itself is
- * omitted: either way, `hasValidAnchor` in pickPositionRelativeTo's own result
- * is the only thing that ever decides which of the two to render, fresh on
- * every visibleRectEffect check (watching `anchorElement`, or
- * `document.documentElement` when there is none) — no anchor
- * presence/size detection happens in this function at all.
- * @param {HTMLElement} calloutElement - The callout element to position
- * @param {HTMLElement} [anchorElement] - The anchor element to stick to, if any
- * @returns {Object} - Object with update and stop functions
- */
-const positionCallout = (calloutElement, anchorElement, {
-  debug,
-  originalAnchorElement = anchorElement
-} = {}) => {
-  // Read an attribute from the original anchor first, then the visual
-  // anchor (a wrapper element that doesn't carry the data-callout-*
-  // attributes) — meaningless without a real anchorElement.
-  const getAnchorAttribute = name => {
-    if (!anchorElement) {
-      return null;
-    }
-    return originalAnchorElement.getAttribute(name) ?? anchorElement.getAttribute(name);
-  };
-  // Get references to callout parts
-  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
-  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
-  let alignToAnchorBox;
-  if (anchorElement) {
-    if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
-      alignToAnchorBox = "border-box";
-    } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
-      alignToAnchorBox = "content-box";
-    } else {
-      // Smart default: form controls and buttons are tight boxes where border-box makes sense.
-      // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
-      // the arrow points at visible text rather than the outer padding/border.
-      const controHost = findControlHost(anchorElement) || anchorElement;
-      const tagName = controHost.tagName;
-      if (tagName === "INPUT" || tagName === "SELECT" || tagName === "BUTTON" || tagName === "FIELDSET") {
-        alignToAnchorBox = "border-box";
-      } else {
-        alignToAnchorBox = "content-box";
-      }
-    }
-    calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
-  }
-
-  // Drives the callout's own position: fixed/absolute switch (see
-  // .navi_callout's own CSS) — same reasoning as Popover's identical
-  // data-anchor-scrolls attribute (popover.jsx): true only for a real
-  // anchor that itself scrolls with the document — that's the one case
-  // absolute (scrolling in lockstep with it) is correct; not just "has an
-  // anchor at all", since an anchor that's itself position: fixed, or
-  // nested inside something that is (e.g. anchored to an element inside a
-  // Popover/Dialog rendered in the top layer), stays pinned to the viewport
-  // regardless of document scroll too, so the callout must stay fixed right
-  // alongside it instead — switching to absolute there would make it drift
-  // away from an anchor that never actually moves on scroll. No anchor at
-  // all (docked/centered in the viewport) also stays fixed, the default.
-  if (anchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
-    calloutElement.setAttribute("data-anchor-scrolls", "");
-  } else {
-    calloutElement.removeAttribute("data-anchor-scrolls");
-  }
-
-  // Set initial border styles
-  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
-  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  const rectEffect = visibleRectEffect(anchorElement || document.documentElement, ({
-    left: anchorLeft,
-    right: anchorRight,
-    visibilityRatio
-  }, {
-    event,
-    ancestorClosed
-  }) => {
-    if (anchorElement) {
-      if (ancestorClosed) {
-        if (calloutElement.matches(":popover-open")) {
-          if (debug) {
-            debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
-          }
-          calloutElement.hidePopover();
-        }
-        return;
-      }
-      if (!calloutElement.matches(":popover-open")) {
-        if (debug) {
-          debug(event, "showing callout because anchor is visible again");
-        }
-        calloutElement.showPopover();
-      }
-    }
-    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
-    const position = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-      alignToContainerEdgeWhenAnchorNearEdge: 20,
-      minLeft: 1,
-      // x is always center for a callout — the arrow, not positionArea's
-      // own x, is what points at the anchor horizontally.
-      positionArea: anchorElement ? getAnchorAttribute("data-callout-position") || "bottom" : "center",
-      positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
-      // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
-      // below reports which way it went).
-      positionAreaWhenAnchorIsInvalid: "center",
-      marginWithAnchor: ARROW_HEIGHT,
-      alignToAnchorBox,
-      marginWithContainer: anchorElement && (originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing")) ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0,
-      event
-    });
-    const {
-      hasValidAnchor,
-      positionY,
-      left: calloutLeft,
-      width: calloutWidth,
-      height: calloutHeight
-    } = position;
-    // data-position-y-current is written to the clone by pickPositionRelativeTo,
-    // copy it back to the real element so stickiness works on next call
-    const previousPositionY = calloutElement.getAttribute("data-position-y-current");
-    const positionYCurrent = calloutElementClone.getAttribute("data-position-y-current");
-    if (positionYCurrent) {
-      calloutElement.setAttribute("data-position-y-current", positionYCurrent);
-    } else {
-      calloutElement.removeAttribute("data-position-y-current");
-    }
-    if (debug && anchorElement && positionY !== previousPositionY) {
-      const anchorRect = anchorElement.getBoundingClientRect();
-      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
-    }
-    calloutBoxElement.style.marginTop = "";
-    calloutBoxElement.style.marginBottom = "";
-    let maxHeight;
-    if (hasValidAnchor) {
-      // Calculate arrow position to point at anchorElement element
-      let arrowLeftPosOnCallout;
-      // Determine arrow target position: explicit attribute wins, otherwise
-      // fall back to the computed text-align of the anchor element so the
-      // arrow naturally follows where the text starts.
-      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
-      const arrowPosition = arrowPositionAttribute || (() => {
-        const textAlign = getComputedStyle(anchorElement).textAlign;
-        if (textAlign === "center") {
-          return "center";
-        }
-        if (textAlign === "right" || textAlign === "end") {
-          return "end";
-        }
-        return "start";
-      })();
-      let arrowAnchorLeft;
-      calloutElement.setAttribute("data-arrow-x", arrowPosition);
-      if (arrowPosition === "start") {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the left edge of the anchorElement text content (after borders + padding)
-        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
-      } else if (arrowPosition === "center") {
-        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else {
-        // "end"
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the right edge of the anchorElement text content (before borders + padding)
-        arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
-      }
-
-      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
-      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
-      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
-      const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
-      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
-        // Arrow target is beyond the right edge of the callout — pin arrow to far right
-        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-      } else {
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
-      }
-
-      // Ensure arrow stays within callout bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = calloutWidth - minArrowPos;
-      arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the callout
-      const spaceAvailable = positionY === "top" || positionY === "inset-bottom" ? position.spaceAbove : position.spaceBelow;
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
-      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
-      const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
-      if (spaceRemainingAfterContent < 2) {
-        maxHeight = spaceAvailableForContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
-      } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
-      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-        maxHeight
-      });
-      calloutElementClone.remove();
-      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
-      const {
-        width,
-        height
-      } = calloutElement.getBoundingClientRect();
-      if (positionY === "top" || positionY === "inset-bottom") {
-        // Arrow at bottom, extending below the element
-        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
-      } else {
-        // Arrow at top, extending above the element
-        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
-      }
-      calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
-    } else {
-      // Either no anchorElement at all, or a real one isAnchorTooBig
-      // rejected (see pickPositionRelativeTo's own doc) — render as a
-      // plain centered box, no arrow, opacity never gated on the
-      // (irrelevant, once centered) anchor's own visibilityRatio.
-      calloutElement.removeAttribute("data-arrow-x");
-      const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      const maxAllowedHeight = viewportHeight - 40;
-      if (calloutHeight > maxAllowedHeight) {
-        const paddingSizes = getPaddingSizes(calloutBodyElement);
-        const paddingY = paddingSizes.top + paddingSizes.bottom;
-        const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-        maxHeight = maxAllowedHeight - spaceNeededAroundContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
-      } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
-      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-        maxHeight
-      });
-      calloutElementClone.remove();
-      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
-      const {
-        width,
-        height
-      } = calloutElement.getBoundingClientRect();
-      calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
-      calloutElement.style.opacity = 1;
-    }
-    applyNewPosition(calloutElement, position);
-  });
-  // Re-measures/repositions the callout whenever its own message body
-  // changes size (e.g. async content loading in, a filter narrowing the
-  // list) — not just when the anchor itself moves/resizes (or, with no
-  // anchorElement at all, the viewport itself resizing/scrolling). The
-  // feedback-loop guard (re-checking can itself change the message body's
-  // size) is handled internally by observeSize.
-  rectEffect.observeSize(calloutMessageElement);
-  return {
-    update: rectEffect.check,
-    stop: () => {
-      rectEffect.disconnect();
-    }
-  };
-};
-
-// Void elements and replaced elements cannot have children
-const VOID_ELEMENT_TAG_NAMES = new Set(["AREA", "BASE", "BR", "COL", "EMBED", "HR", "IMG", "INPUT", "LINK", "META", "PARAM", "SOURCE", "TRACK", "WBR"]);
-const canContainCallout = element => {
-  if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
-    return false;
-  }
-  if (element.tagName === "BUTTON" || element.getAttribute("role") === "button") {
-    // Never mount the callout inside a button, native or role="button":
-    // - a <button> cannot contain the callout's own close button
-    // - presses inside the callout would bubble into the button's own press
-    //   handlers: a preventDefault there makes the callout text unselectable,
-    //   and a handler that opens the callout re-opens it (visible blink)
-    return false;
-  }
-  return true;
-};
-const escapeHtml = string => {
-  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-};
-
-/**
- * Checks if a string is a full HTML document (starts with DOCTYPE)
- * @param {string} content - The content to check
- * @returns {boolean} - True if it looks like a complete HTML document
- */
-const isHtmlDocument = content => {
-  if (typeof content !== "string") {
-    return false;
-  }
-  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
-  const trimmed = content.trim();
-  return /^<!doctype\s+html/i.test(trimmed);
-};
-
-// It's ok to do this because the element is absolutely positioned
-// maxHeight, when provided, is applied to the clone's message so the measurement
-// accounts for the scrollbar width that will appear on the real element.
-//
-// Goal: shrink-wrap the callout body so it hugs the wrapped text with no blank
-// space to the right of shorter lines.
-//
-// The CSS "shrink-to-fit" algorithm (display:inline-block / fit-content) expands
-// the element to the widest line it *could* have given the max-width constraint,
-// not to the widest line that actually rendered. This leaves trailing whitespace
-// when text wraps at a point shorter than max-width.
-// See: https://github.com/w3c/csswg-drafts/issues/191
-//
-// Fix: use Range.getClientRects() to get one rect per rendered text line, find
-// the widest one, and set an explicit width on the body equal to that line width
-// (adjusted for the body's box-sizing and the non-message siblings — icon, gap,
-// close button). After the explicit width is set the element is exactly as wide
-// as its longest line, so no blank area remains to the right of shorter lines.
-const measureOptimalBodyWidth = (calloutElementClone, {
-  maxHeight
-} = {}) => {
-  const calloutBodyElement = calloutElementClone.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElementClone.querySelector(".navi_callout_message");
-  if (maxHeight !== undefined) {
-    calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-    calloutMessageElement.style.overflowY = "scroll";
-  } else {
-    calloutMessageElement.style.maxHeight = "";
-    calloutMessageElement.style.overflowY = "";
-  }
-  const longestLineWidth = measureLongestVisualLineWidth(calloutMessageElement);
-  if (longestLineWidth === null) {
-    return null;
-  }
-  const messageRect = calloutMessageElement.getBoundingClientRect();
-  // bodyRect.width is always the border-box size (content + padding + border).
-  // style.width interprets differently depending on box-sizing:
-  //   border-box → sets total width (includes padding) → use bodyRect.width directly
-  //   content-box → sets content only → subtract body horizontal padding first
-  const bodyRect = calloutBodyElement.getBoundingClientRect();
-  const bodyStyle = getComputedStyle(calloutBodyElement);
-  if (bodyStyle.boxSizing === "border-box") {
-    return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
-  }
-  const bodyPaddingH = parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
-  return Math.ceil(bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth);
-};
-const cloneCalloutToMeasureNaturalSize = calloutElement => {
-  // Create invisible clone to measure natural size
-  const calloutElementClone = calloutElement.cloneNode(true);
-  calloutElementClone.style.visibility = "hidden";
-  const calloutBodyElementClone = calloutElementClone.querySelector(".navi_callout_body");
-  const calloutMessageElementClone = calloutElementClone.querySelector(".navi_callout_message");
-  // Reset any constrained styles on the clone so it measures natural size
-  calloutBodyElementClone.style.width = "";
-  calloutMessageElementClone.style.maxHeight = "";
-  calloutMessageElementClone.style.overflowY = "";
-
-  // Add clone to DOM to measure
-  calloutElement.parentNode.appendChild(calloutElementClone);
-  calloutElementClone.showPopover();
-  return calloutElementClone;
-};
-
-/**
- * Generates SVG path for callout with arrow on top
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // Slight adjustment for visual balance
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path (border)
-  const outerPath = `
-      M${CORNER_RADIUS},${ARROW_HEIGHT} 
-      H${constrainedArrowPos - ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},0 
-      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
-      H${width - CORNER_RADIUS} 
-      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
-      V${adjustedHeight - CORNER_RADIUS} 
-      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
-      V${ARROW_HEIGHT + CORNER_RADIUS} 
-      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
-    `;
-
-  // Inner path (content) - keep arrow width almost the same
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
-    L${constrainedArrowPos},${BORDER_WIDTH} 
-    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
-  `;
-  return /* html */`
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for callout with arrow on bottom
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // For small border widths, keep inner arrow nearly the same size as outer
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path with rounded corners
-  const outerPath = `
-      M${CORNER_RADIUS},0 
-      H${width - CORNER_RADIUS} 
-      Q${width},0 ${width},${CORNER_RADIUS} 
-      V${contentHeight - CORNER_RADIUS} 
-      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
-      H${constrainedArrowPos + ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},${adjustedHeight} 
-      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
-      V${CORNER_RADIUS} 
-      Q0,0 ${CORNER_RADIUS},0
-    `;
-
-  // Inner path with correct arrow direction and color
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
-    V${contentHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
-    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
-    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
-    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
-    V${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
-  `;
-  return /* html */`
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for callout without arrow (simple rectangle)
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @returns {string} - SVG markup
- */
-const generateSvgWithoutArrow = (width, height) => {
-  return /* html */`
-    <svg
-      width="${width}"
-      height="${height}"
-      viewBox="0 0 ${width} ${height}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <rect
-        class="navi_callout_border"
-        x="0"
-        y="0"
-        width="${width}"
-        height="${height}"
-        rx="${CORNER_RADIUS}"
-        ry="${CORNER_RADIUS}"
-      />
-      <rect
-        class="navi_callout_background"
-        x="${BORDER_WIDTH}"
-        y="${BORDER_WIDTH}"
-        width="${width - BORDER_WIDTH * 2}"
-        height="${height - BORDER_WIDTH * 2}"
-        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-      />
-    </svg>`;
-};
-
-/**
- * Shared callout manager for displaying constraint failure callouts on a control.
- *
- * Used by both:
- *  - `control_validation.js`  — invalid value (required, pattern, etc.)
- *  - `control_interaction.js` — interaction blocked (disabled, readonly, busy)
- *
- * Usage:
- *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { message, status, anchorElement, event, skipFocus, onClose });
- *   calloutManager.removeOpenToken(myToken, event);
- *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
- *   calloutManager.callout  // current open callout or null
- */
-
-
-/**
- * Creates an opaque token used as a key for callout open reasons.
- * Each caller (validation, interaction, …) owns one token.
- */
-const createOpenToken = () => ({});
-
-/**
- * Creates a callout state manager for a controller.
- *
- * @param {object} controller - The UI state controller owning this callout.
- * @param {object} [options]
- * @param {Function} [options.addTeardown]   - Register a cleanup fn (called on controller unmount).
- * @param {Function} [options.debugFocus]    - Focus debug logger.
- * @param {Function} [options.debugPopup]  - Callout debug logger (passed as `debug` to openCallout).
- * @param {Function} [options.onOpen]        - Called after opening. May return an array of cleanup fns.
- */
-const createCalloutManager = (
-  controller,
-  { addTeardown, debugFocus, debugPopup } = {},
-) => {
-  const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
-
-  let callout = null;
-  // Tracks open tokens → their constraint info.
-  // The callout closes automatically when the last token is removed.
-  const tokens = new Map();
-
-  // Remove a token. Closes the callout only when no tokens remain.
-  // If other tokens are still active, updates the callout to show the first remaining one.
-  const removeOpenToken = (token, event) => {
-    if (!tokens.has(token)) {
-      return false;
-    }
-    tokens.delete(token);
-    if (tokens.size > 0) {
-      if (callout) {
-        const [, remainingTokenData] = tokens.entries().next().value;
-        callout.update(remainingTokenData.message, {
-          status: remainingTokenData.status,
-        });
-      }
-      return false;
-    }
-    if (!callout) {
-      return false;
-    }
-    return callout.requestClose(event, "token_removed");
-  };
-
-  // Force-close the callout regardless of active tokens (teardown / external request).
-  const requestCloseCallout = (event, debugReason) => {
-    tokens.clear();
-    if (!callout) {
-      return false;
-    }
-    return callout.requestClose(event, debugReason);
-  };
-
-  const addOpenToken = (
-    token,
-    { message, status, anchorElement, event, skipFocus, onClose } = {},
-  ) => {
-    if (!message) {
-      removeOpenToken(token, event);
-      return;
-    }
-    const calloutOptions = {
-      status,
-      closeOnClickOutside: status !== "error",
-    };
-
-    tokens.set(token, { message, status, onClose });
-    if (callout) {
-      callout.update(message, calloutOptions);
-      return;
-    }
-    const resolvedAnchorElement =
-      anchorElement || controller.ref.current;
-    const removeCloseOnCleanup = addTeardown?.(() => {
-      requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
-    });
-    // `openResults` is referenced in onClose which runs later — forward ref is intentional.
-    let openResults = [];
-    callout = openCallout(message, {
-      ...calloutOptions,
-      anchorElement: resolvedAnchorElement,
-      openingEvent: event,
-      skipFocus,
-      debug: debugPopup,
-      onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
-        removeCloseOnCleanup?.();
-        for (const result of openResults) {
-          if (typeof result === "function") {
-            result();
-          }
-        }
-        callout = null;
-        // User dismissed the callout — notify all active tokens then clear.
-        for (const [, tokenData] of tokens) {
-          tokenData.onClose?.();
-        }
-        tokens.clear();
-        const element = controller.ref.current;
-        if (
-          shouldTransferFocusFromCallout &&
-          element &&
-          !element.closest('[aria-hidden="true"]')
-        ) {
-          const focusTarget =
-            findFocusDelegateTarget(resolvedAnchorElement) ||
-            resolvedAnchorElement;
-          debugFocus(
-            closeEvent,
-            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
-          );
-          focusTarget.focus();
-        }
-      },
-    });
-    // `onOpen` can be a createPubSub publisher — its return value is an array of cleanup fns.
-    // Or just a plain callback — wrap the single return value in an array.
-    openResults = notifyCalloutOpen(event);
-  };
-
-  const calloutManager = {
-    onOpen: onCalloutOpen,
-    addOpenToken,
-    removeOpenToken,
-    requestCloseCallout,
-    get callout() {
-      return callout;
-    },
-  };
-  return calloutManager;
-};
-
-const CONSTRAINT_ATTRIBUTE_SET = new Set();
-
-const MIN_LOWER_LETTER_CONSTRAINT = {
-  name: "min_lower_letter",
-  messageAttribute: "data-min-lower-letter-message",
-  check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.controlHostProps.required;
-    if (!valueAsString && !required) {
-      return "";
-    }
-    const minAttribute = field.controlHostProps["data-min-lower-letter"];
-    if (!minAttribute) {
-      return "";
-    }
-    const min = parseInt(minAttribute, 10);
-    let numberOfLowercaseChars = 0;
-    for (const char of valueAsString) {
-      if (char >= "a" && char <= "z") {
-        numberOfLowercaseChars++;
-      }
-    }
-    if (numberOfLowercaseChars >= min) {
-      return null;
-    }
-
-    if (min === 1) {
-      const type = field.controlHostProps.type;
-      if (type === "password") {
-        return naviI18n("constraint.min_lower_letter.password.singular");
-      }
-      return naviI18n("constraint.min_lower_letter.default.singular");
-    }
-    const key = (() => {
-      const type = field.controlHostProps.type;
-      if (type === "password") {
-        return "constraint.min_lower_letter.password.plural";
-      }
-      return "constraint.min_lower_letter.default.plural";
-    })();
-    return naviI18n(key, {
-      min: String(min),
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
-
-const MIN_UPPER_LETTER_CONSTRAINT = {
-  name: "min_upper_letter",
-  messageAttribute: "data-min-upper-letter-message",
-  check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.controlHostProps.required;
-    if (!valueAsString && !required) {
-      return null;
-    }
-    const minAttribute = field.controlHostProps["data-min-upper-letter"];
-    if (!minAttribute) {
-      return null;
-    }
-    const min = parseInt(minAttribute, 10);
-    let numberOfUppercaseChars = 0;
-    for (const char of valueAsString) {
-      if (char >= "A" && char <= "Z") {
-        numberOfUppercaseChars++;
-      }
-    }
-    if (numberOfUppercaseChars >= min) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return naviI18n(`constraint.min_upper_letter.${context}.singular`);
-    }
-    return naviI18n(`constraint.min_upper_letter.${context}.plural`, {
-      min: String(min),
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
-
-const MIN_DIGIT_CONSTRAINT = {
-  name: "min_digit",
-  messageAttribute: "data-min-digit-message",
-  check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.controlHostProps.required;
-    if (!valueAsString && !required) {
-      return null;
-    }
-    const minAttribute = field.controlHostProps["data-min-digit"];
-    if (!minAttribute) {
-      return null;
-    }
-    const min = parseInt(minAttribute, 10);
-    let numberOfDigitChars = 0;
-    for (const char of valueAsString) {
-      if (char >= "0" && char <= "9") {
-        numberOfDigitChars++;
-      }
-    }
-    if (numberOfDigitChars >= min) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return naviI18n(`constraint.min_digit.${context}.singular`);
-    }
-    return naviI18n(`constraint.min_digit.${context}.plural`, {
-      min: String(min),
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
-
-const MIN_SPECIAL_CHAR_CONSTRAINT = {
-  name: "min_special_char",
-  messageAttribute: "data-min-special-char-message",
-  check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const required = field.controlHostProps.required;
-    if (!valueAsString && !required) {
-      return null;
-    }
-    const minSpecialChars = field.controlHostProps["data-min-special-char"];
-    if (!minSpecialChars) {
-      return null;
-    }
-    const min = parseInt(minSpecialChars, 10);
-    const specialCharset = field.controlHostProps["data-special-charset"];
-    if (!specialCharset) {
-      return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
-    }
-
-    let numberOfSpecialChars = 0;
-    for (const char of valueAsString) {
-      if (specialCharset.includes(char)) {
-        numberOfSpecialChars++;
-      }
-    }
-    if (numberOfSpecialChars >= min) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return naviI18n(`constraint.min_special_char.${context}.singular`, {
-        charset: specialCharset,
-      });
-    }
-    return naviI18n(`constraint.min_special_char.${context}.plural`, {
-      min: String(min),
-      charset: specialCharset,
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
-CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
-
-const ONE_OF_CONSTRAINT = {
-  name: "one_of",
-  messageAttribute: "data-one-of-message",
-  check: (field) => {
-    const oneOf = field.controlHostProps["data-one-of"];
-    if (!oneOf) {
-      return null;
-    }
-    const value = field.uiState;
-    if (value === undefined || value === "") {
-      return null;
-    }
-    const listEl = document.querySelector(oneOf);
-    if (!listEl) {
-      console.warn(
-        `One of constraint: could not find element for selector "${oneOf}"`,
-      );
-      return null;
-    }
-    const allowedValues = collectAllowedValues(listEl);
-    if (allowedValues.size === 0) {
-      return null;
-    }
-    if (allowedValues.has(value)) {
-      return null;
-    }
-    const visibleOptions = listEl.querySelectorAll(
-      "[role='option']:not([hidden])",
-    );
-    const isNoMatch = visibleOptions.length === 0;
-    const message = field.controlHostProps["data-one-of-message"];
-    const noMatchMessage = field.controlHostProps["data-one-of-no-match-message"];
-    if (isNoMatch) {
-      return noMatchMessage || naviI18n("constraint.one_of.no_match");
-    }
-    return message || naviI18n("constraint.one_of.default");
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");
-
-const collectAllowedValues = (listEl) => {
-  const values = new Set();
-  for (const optionEl of listEl.querySelectorAll("[role='option']")) {
-    const value =
-      optionEl.dataset.value ??
-      optionEl.getAttribute("value") ??
-      optionEl.textContent.trim();
-    if (value) {
-      values.add(value);
-    }
-  }
-  return values;
-};
-
-const SAME_AS_CONSTRAINT = {
-  name: "same_as",
-  messageAttribute: "data-same-as-message",
-  check: (field) => {
-    const sameAs = field.controlHostProps["data-same-as"];
-    if (sameAs === undefined) {
-      return null;
-    }
-    // Ideally we should get the sameAs using the state controller id to avoid relying on DOM here too
-    const otherField = document.querySelector(sameAs);
-    if (!otherField) {
-      console.warn(
-        `Same as constraint: could not find element for selector ${sameAs}`,
-      );
-      return null;
-    }
-    const otherFieldValue = otherField.value;
-    if (!otherFieldValue) {
-      // Reference field is empty — nothing to compare against yet.
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (valueAsString === otherFieldValue) {
-      return null;
-    }
-    const type = field.controlHostProps.type;
-    // sameAs implies the field must be filled — no need for required on a confirm field.
-    if (!valueAsString) {
-      if (type === "password") {
-        return naviI18n("constraint.same_as.missing.password");
-      }
-      if (type === "email") {
-        return naviI18n("constraint.same_as.missing.email");
-      }
-      return naviI18n("constraint.same_as.missing.default");
-    }
-    if (type === "password") {
-      return naviI18n("constraint.same_as.password");
-    }
-    if (type === "email") {
-      return naviI18n("constraint.same_as.email");
-    }
-    return naviI18n("constraint.same_as.default");
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
-
-const SINGLE_SPACE_CONSTRAINT = {
-  name: "single_space",
-  messageAttribute: "data-single-space-message",
-  check: (field) => {
-    const singleSpace = field.controlHostProps["data-single-space"];
-    if (singleSpace === undefined) {
-      return null;
-    }
-
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const hasLeadingSpace = valueAsString.startsWith(" ");
-    const hasTrailingSpace = valueAsString.endsWith(" ");
-    const hasDoubleSpace = valueAsString.includes("  ");
-    if (!hasLeadingSpace && !hasTrailingSpace && !hasDoubleSpace) {
-      return null;
-    }
-    if (hasLeadingSpace) {
-      return naviI18n("constraint.single_space.start.default");
-    }
-    if (hasTrailingSpace) {
-      return naviI18n("constraint.single_space.end.default");
-    }
-    return naviI18n("constraint.single_space.consecutive.default");
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
-
-/**
- * Pure vanilla JS time formatting utilities.
- * All functions accept an optional `{ now }` parameter for testability.
- */
-
-
-// Our own compact/custom duration notation interpolates raw numbers
-// directly (unlike Intl.DurationFormat, which groups thousands on its own,
-// e.g. "5 400 secondes") — this keeps that consistent without reimplementing
-// locale-aware grouping. Falls back to the raw value as-is for a
-// non-numeric mid-edit value (e.g. "2a"), which Intl.NumberFormat can't
-// format anyway.
-const formatCompactNumber = (value, lang) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? new Intl.NumberFormat(lang).format(n) : value;
-};
-
-/**
- * Formats a date as a human-readable day string.
- *
- * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric" }} [options]
- *
- * @example
- * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
- * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
- * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
- * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
- */
-const formatDay = (
-  date,
-  { lang = languagesSignal.value, format = "long" } = {},
-) => {
-  if (format === "numeric") {
-    return new Intl.DateTimeFormat(lang, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(date);
-  }
-  return new Intl.DateTimeFormat(lang, {
-    weekday: format, // "long", "short", or "narrow"
-    day: "numeric",
-    month: format,
-  }).format(date);
-};
-
-/**
- * Returns the day offset relative to now: -1 (yesterday), 0 (today), 1 (tomorrow), or the
- * actual number of days difference for any other date.
- */
-const getRelativeDay = (date, { now = new Date() } = {}) => {
-  const dateKey = toLocalDayKey(date);
-
-  const yesterdayDate = new Date(now);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  if (dateKey === toLocalDayKey(yesterdayDate)) {
-    return -1;
-  }
-
-  if (dateKey === toLocalDayKey(now)) {
-    return 0;
-  }
-
-  const tomorrowDate = new Date(now);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  if (dateKey === toLocalDayKey(tomorrowDate)) {
-    return 1;
-  }
-
-  const nowMidnight = new Date(now);
-  nowMidnight.setHours(0, 0, 0, 0);
-  const dateMidnight = new Date(date);
-  dateMidnight.setHours(0, 0, 0, 0);
-  return Math.round((dateMidnight - nowMidnight) / DAY);
-};
-
-/**
- * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
- */
-// ── Placeholder helpers ────────────────────────────────────────────────────
-// Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
-// using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
-// Per-language token tables cover the most common locales; unknown langs fall
-// back to "dd/mm/yyyy".
-
-const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
-
-const getToken = (key, lang) =>
-  naviI18n(`time.placeholder.${key}`, undefined, { lang });
-
-const formatDatePlaceholder = ({
-  lang = languagesSignal.value,
-} = {}) => {
-  const parts = new Intl.DateTimeFormat(lang, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  }).formatToParts(SENTINEL_DATE);
-  return parts
-    .map((p) => {
-      if (p.type === "day") {
-        return getToken("day", lang);
-      }
-      if (p.type === "month") {
-        return getToken("month", lang);
-      }
-      if (p.type === "year") {
-        return getToken("year", lang);
-      }
-      return p.value;
-    })
-    .join("");
-};
-
-const formatMonthPlaceholder = ({
-  lang = languagesSignal.value,
-  format = "long",
-} = {}) => {
-  const parts = new Intl.DateTimeFormat(lang, {
-    month: format,
-    year: "numeric",
-  }).formatToParts(SENTINEL_DATE);
-  return parts
-    .map((p) => {
-      if (p.type === "month") {
-        // Text month formats (long/short/narrow) → dash; numeric → token
-        return format === "numeric" ? "–" : getToken("month", lang);
-      }
-      if (p.type === "year") {
-        return getToken("year", lang);
-      }
-      return p.value;
-    })
-    .join("");
-};
-
-const formatWeekPlaceholder = ({
-  lang = languagesSignal.value,
-} = {}) => {
-  return `${getToken("week", lang)} xx / ${getToken(lang)}`;
-};
-
-const formatDatetimePlaceholder = ({
-  lang = languagesSignal.value,
-  format = "long",
-} = {}) => {
-  const intlOptions =
-    format === "long"
-      ? {
-          weekday: "short",
-          day: "numeric",
-          month: "long",
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      : format === "narrow"
-        ? {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }
-        : {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          };
-  const parts = new Intl.DateTimeFormat(lang, intlOptions).formatToParts(
-    SENTINEL_DATE,
-  );
-  let skipNext = false;
-  return parts
-    .map((p) => {
-      if (p.type === "weekday") {
-        skipNext = true;
-        return "";
-      }
-      if (p.type === "literal" && skipNext) {
-        skipNext = false;
-        return "";
-      }
-      skipNext = false;
-      if (p.type === "day") {
-        return getToken("day", lang);
-      }
-      if (p.type === "month") {
-        return getToken("month", lang);
-      }
-      if (p.type === "hour") {
-        return getToken("hour", lang);
-      }
-      if (p.type === "minute") {
-        return getToken("minute", lang);
-      }
-      return p.value;
-    })
-    .join("")
-    .trim();
-};
-
-// ── End placeholder helpers ────────────────────────────────────────────────
-
-const formatDayRelative = (offset, lang) => {
-  const relativeDay = new Intl.RelativeTimeFormat(lang, {
-    numeric: "auto",
-  }).format(offset, "day");
-  return relativeDay;
-};
-
-const formatMonth = (
-  date,
-  { lang = languagesSignal.value, format = "long" } = {},
-) => {
-  return new Intl.DateTimeFormat(lang, {
-    month: format, // "long", "short", or "narrow"
-    year: "numeric",
-  }).format(date);
-};
-
-/**
- * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
- */
-const formatDatetime = (
-  date,
-  { lang = languagesSignal.value, format = "long" } = {},
-) => {
-  if (format === "long") {
-    return new Intl.DateTimeFormat(lang, {
-      weekday: "short",
-      day: "numeric",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  }
-  if (format === "narrow") {
-    return new Intl.DateTimeFormat(lang, {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  }
-  // "short": no weekday
-  return new Intl.DateTimeFormat(lang, {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-/**
- * Formats a date as "14:30".
- */
-const formatTime = (date, lang) => {
-  return new Intl.DateTimeFormat(lang, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-/**
- * Formats a duration expressed in minutes as a human-readable string.
- * "long", "short", "narrow" delegate to Intl.DurationFormat.
- * "compact" uses our own notation that omits the minute symbol when hours are present.
- *
- * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
- *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
- *   Past 24 hours the default promotes to days, which reads better but hides
- *   the unit the caller works in.
- * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
- *   represents a time-of-day rather than a real duration (used by
- *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
- *   things at once, both consequences of a clock's "0" being a meaningful
- *   hour rather than "no hours":
- *   - a zero-hours component is normally dropped entirely (a real 5-minute
- *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
- *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
- *     doesn't collapse to something indistinguishable from an actual
- *     5-minute duration.
- *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
- *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
- *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
- *     formats spell out their units, so "10 heures"/"10h" reads fine there
- *     and only "compact" needs the clock shape.
- *   Must not be set for plain duration formatting.
- *
- * @example
- * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
- * formatMinuteDuration(90, { lang: "fr", format: "short" })     // "1 h et 30 min" (Intl short)
- * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
- * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
- * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
- * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
- * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
- * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
- * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
- * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
- */
-const formatMinuteDuration = (
-  minutes,
-  {
-    lang = languagesSignal.value,
-    format = "long",
-    clockStyle = false,
-    forceUnit = false,
-  } = {},
-) => {
-  if (minutes < 0) {
-    // the d/h/m split below only holds for a positive value; formatting the
-    // magnitude and putting the sign back is the only reading that works
-    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
-  }
-  if (forceUnit || (minutes === 0 && !clockStyle)) {
-    // a zero has nothing to promote to, and rendering it as an empty string
-    // would be indistinguishable from a missing value
-    return formatSingleUnit(minutes, "minute", { lang, format });
-  }
-  const totalHours = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  // a time of day never goes past 24h, and its hour part is the clock hour
-  const d = clockStyle ? 0 : Math.floor(totalHours / 24);
-  const h = clockStyle ? totalHours : totalHours % 24;
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, {
-      style: format, // "long", "short", or "narrow"
-      ...(clockStyle ? { hoursDisplay: "always" } : {}),
-    });
-    const duration = {};
-    if (d > 0) {
-      duration.days = d;
-    }
-    if (h > 0 || clockStyle || d > 0) {
-      duration.hours = h;
-    }
-    if (m > 0 || (d === 0 && h === 0)) {
-      duration.minutes = m;
-    }
-    return fmt.format(duration);
-  }
-  // format="compact": "1j12h", "1h30", "45min", "2h" — no minute symbol when hours are present
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
-  const hStr = clockStyle
-    ? String(h).padStart(2, "0")
-    : formatCompactNumber(h, lang);
-  if (d === 0 && h === 0 && !clockStyle) {
-    return `${m}${mSym}`;
-  }
-  if (m === 0) {
-    if (clockStyle) {
-      // "10h00" on a clock, "2h" for a real 2 hours duration
-      return `${hStr}${hSym}00`;
-    }
-    return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
-  }
-  return `${dStr}${hStr}${hSym}${String(m).padStart(2, "0")}`;
-};
-
-// "forceUnit": stay in the unit the value is expressed in, however big it gets
-const formatSingleUnit = (value, unit, { lang, format }) => {
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    return new Intl.DurationFormat(lang, {
-      style: format,
-      // Intl drops a zero-valued unit, and "0 minute" is the whole point here
-      [`${unit}sDisplay`]: "always",
-    }).format({
-      [`${unit}s`]: value,
-    });
-  }
-  const symbol = naviI18n(`time.duration.${unit}_symbol`, undefined, { lang });
-  return `${formatCompactNumber(value, lang)}${symbol}`;
-};
-
-/**
- * Formats a duration expressed in hours (possibly fractional) as a human-readable string.
- * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
- *
- * @param {number} hours
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in hours however
- *   big it gets ("36 heures" instead of "1 jour et 12 heures"). Ignored for a
- *   fractional value, which has no single-unit spelling.
- *
- * @example
- * formatHourDuration(1.5, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
- * formatHourDuration(1.5, { lang: "fr", format: "compact" })   // "1h30"
- * formatHourDuration(2, { lang: "en", format: "compact" })     // "2h"
- * formatHourDuration(36, { lang: "fr" })                        // "1 jour et 12 heures"
- * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
- */
-const formatHourDuration = (hours, options = {}) => {
-  const { lang = languagesSignal.value, format = "long", forceUnit } = options;
-  if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
-    return formatSingleUnit(hours, "hour", { lang, format });
-  }
-  // a fractional value has no single-unit spelling, it needs its minutes
-  const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, { ...options, forceUnit: false });
-};
-
-/**
- * Formats a duration expressed in seconds as a human-readable string.
- * "long", "short", "narrow" delegate to Intl.DurationFormat.
- * "compact" uses our own symbol-based notation.
- *
- * @param {number} seconds
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in seconds
- *   however big it gets ("90 000 secondes" instead of "1 jour et 1 heure").
- *
- * @example
- * formatSecondDuration(90, { lang: "fr" })                       // "1 minute 30 secondes" (long, default)
- * formatSecondDuration(90, { lang: "fr", format: "short" })     // "1 min. et 30 s." (Intl short)
- * formatSecondDuration(90, { lang: "fr", format: "narrow" })    // "1min 30s" (Intl narrow)
- * formatSecondDuration(90, { lang: "fr", format: "compact" })   // "1m30s" (custom)
- * formatSecondDuration(45, { lang: "en", format: "compact" })   // "45s"
- */
-const formatSecondDuration = (
-  seconds,
-  { lang = languagesSignal.value, format = "long", forceUnit = false } = {},
-) => {
-  if (seconds < 0) {
-    // the d/h/m/s split below only holds for a positive value; formatting the
-    // magnitude and putting the sign back is the only reading that works
-    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
-  }
-  if (forceUnit || seconds === 0) {
-    return formatSingleUnit(seconds, "second", { lang, format });
-  }
-  const totalHours = Math.floor(seconds / 3600);
-  const d = Math.floor(totalHours / 24);
-  const h = totalHours % 24;
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, { style: format });
-    const duration = {};
-    if (d > 0) duration.days = d;
-    if (h > 0) duration.hours = h;
-    if (m > 0) duration.minutes = m;
-    if (s > 0 || (d === 0 && h === 0 && m === 0)) duration.seconds = s;
-    return fmt.format(duration);
-  }
-  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
-  const parts = [];
-  // h/m/s are bounded by construction (never need grouping); d can be
-  // arbitrarily large for a long duration.
-  if (d > 0) parts.push(`${formatCompactNumber(d, lang)}${dSym}`);
-  if (h > 0) parts.push(`${h}${hSym}`);
-  if (m > 0) parts.push(`${m}${mSym}`);
-  if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
-  return parts.join("");
-};
-
-/**
- * Formats a duration object as a human-readable string.
- * Reads the parts directly — no conversion to seconds — so years/months/days
- * are preserved as-is and non-numeric mid-edit values (e.g. "2a") are rendered
- * with their unit symbol rather than being stringified.
- *
- * @param {{ years?: any, months?: any, weeks?: any, days?: any,
- *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
- *
- * @example
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                       // "2 heures 15 minutes" (long, default)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })     // "2 h et 15 min" (Intl short)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
- * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
- * formatDuration({ hours: 0, minutes: 0 }, { lang: "fr" })                        // "0 minute"
- * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
- */
-const formatDuration = (
-  duration,
-  { lang = languagesSignal.value, format = "long" } = {},
-) => {
-  if (typeof duration === "string") {
-    duration = parseDuration(duration) ?? {};
-  } else if (typeof duration === "number") {
-    duration = { seconds: duration };
-  }
-  const has = (key) => duration[key] !== undefined && duration[key] !== null;
-
-  // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
-  //
-  // "short" always uses our own compact symbols ("2h15", "45min") because:
-  // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
-  //    which Intl.DurationFormat style:"narrow" does not do.
-  // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
-  //    unit symbol — Intl.DurationFormat only accepts integers.
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const intlDuration = {};
-    let allNumeric = true;
-    let hasNegative = false;
-    let hasPositive = false;
-    for (const key of [
-      "years",
-      "months",
-      "weeks",
-      "days",
-      "hours",
-      "minutes",
-      "seconds",
-      "milliseconds",
-    ]) {
-      if (!has(key)) {
-        continue;
-      }
-      const n = Number(duration[key]);
-      if (!isFinite(n)) {
-        allNumeric = false;
-        break;
-      }
-      if (n < 0) {
-        hasNegative = true;
-      } else if (n > 0) {
-        hasPositive = true;
-      }
-      intlDuration[key] = n;
-    }
-    // Temporal requires all components to share the same sign.
-    // Mixed-sign values (e.g. { hours: -1, minutes: 15 }) throw a RangeError.
-    if (
-      allNumeric &&
-      Object.keys(intlDuration).length > 0 &&
-      !(hasNegative && hasPositive)
-    ) {
-      if (!hasNegative && !hasPositive) {
-        return formatSingleUnit(0, smallestUnitOf(intlDuration), {
-          lang,
-          format,
-        });
-      }
-      return new Intl.DurationFormat(lang, { style: format }).format(
-        intlDuration,
-      );
-    }
-    // Fall through to compact notation when values are non-numeric or mixed-sign
-  }
-
-  // A component explicitly present but numerically zero (e.g. the demo's own
-  // { hours: 0, minutes: 5 }) conveys no information for a genuine duration
-  // — same convention formatMinuteDuration/formatSecondDuration already
-  // follow (checking h > 0/m > 0, not merely "was a value passed") — so
-  // it's dropped here too, regardless of whether the caller included the
-  // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
-  // present — Number("2a") is NaN, never === 0 — so those keep rendering
-  // as-is with their own unit symbol. When every component is zero there is
-  // nothing left to drop, so the zero itself is rendered — see below.
-  const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
-
-  const sym = (key) =>
-    naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
-  const parts = [];
-
-  if (hasNonZero("years")) {
-    parts.push(`${formatCompactNumber(duration.years, lang)}${sym("year")}`);
-  }
-  if (hasNonZero("months")) {
-    parts.push(`${formatCompactNumber(duration.months, lang)}${sym("month")}`);
-  }
-  if (hasNonZero("weeks")) {
-    parts.push(`${formatCompactNumber(duration.weeks, lang)}${sym("week")}`);
-  }
-  if (hasNonZero("days")) {
-    parts.push(`${formatCompactNumber(duration.days, lang)}${sym("day")}`);
-  }
-
-  // Hours + minutes: when both present, pad minutes to 2 digits after the h
-  // symbol — minutes stays a plain 2-digit pad (it's always 0-59 by
-  // convention), only hours goes through grouping.
-  const hSym = sym("hour");
-  const mSym = sym("minute");
-  if (hasNonZero("hours") && hasNonZero("minutes")) {
-    parts.push(
-      `${formatCompactNumber(duration.hours, lang)}${hSym}${String(duration.minutes).padStart(2, "0")}`,
-    );
-  } else if (hasNonZero("hours")) {
-    parts.push(`${formatCompactNumber(duration.hours, lang)}${hSym}`);
-  } else if (hasNonZero("minutes")) {
-    parts.push(`${formatCompactNumber(duration.minutes, lang)}${mSym}`);
-  }
-
-  if (hasNonZero("seconds")) {
-    parts.push(
-      `${formatCompactNumber(duration.seconds, lang)}${sym("second")}`,
-    );
-  }
-  if (hasNonZero("milliseconds")) {
-    parts.push(
-      `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
-    );
-  }
-  if (parts.length > 0) {
-    return parts.join("");
-  }
-  // everything was zero: say so in the smallest unit the caller mentioned,
-  // rather than a bare "0" whose unit the reader has to guess
-  const smallestUnit = smallestUnitOf(duration);
-  return smallestUnit ? `0${sym(smallestUnit)}` : "0";
-};
-
-const UNIT_KEYS = [
-  "years",
-  "months",
-  "weeks",
-  "days",
-  "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
-];
-const smallestUnitOf = (duration) => {
-  for (const key of [...UNIT_KEYS].reverse()) {
-    if (duration[key] !== undefined && duration[key] !== null) {
-      return key.slice(0, -1); // "seconds" -> "second"
-    }
-  }
-  return null;
-};
-
-/**
- * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
- */
-const formatTimeAgo = (
-  date,
-  {
-    lang = languagesSignal.value,
-    now = new Date(),
-    bare,
-    format = "long",
-  } = {},
-) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, {
-    numeric: "auto",
-    style: format,
-  });
-  const nowMs = now instanceof Date ? now.getTime() : now;
-  const diff = date.getTime() - nowMs;
-  const absDiff = Math.abs(diff);
-
-  let value;
-  let unit;
-  if (absDiff < MINUTE) {
-    value = Math.round(diff / 1000);
-    unit = "second";
-  } else if (absDiff < HOUR) {
-    value = Math.round(diff / MINUTE);
-    unit = "minute";
-  } else if (absDiff < DAY) {
-    value = Math.round(diff / HOUR);
-    unit = "hour";
-  } else if (absDiff < 7 * DAY) {
-    value = Math.round(diff / DAY);
-    unit = "day";
-  } else if (absDiff < 30 * DAY) {
-    value = Math.round(diff / (7 * DAY));
-    unit = "week";
-  } else if (absDiff < YEAR) {
-    value = Math.round(diff / (30 * DAY));
-    unit = "month";
-  } else {
-    value = Math.round(diff / YEAR);
-    unit = "year";
-  }
-
-  if (!bare || value >= 0) {
-    return rtf.format(value, unit);
-  }
-  // Drop the leading past-tense literal ("il y a ", "ago ") — keep only integer + unit.
-  const parts = rtf.formatToParts(value, unit);
-  const integerIndex = parts.findIndex((p) => p.type === "integer");
-  return parts
-    .slice(integerIndex)
-    .map((p) => p.value)
-    .join("")
-    .trim();
-};
-
-/**
- * Formats a timed event with an optional duration window.
- *
- * States:
- * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
- * - Ongoing (start ≤ now < start+dur)  → "En cours"
- * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
- *
- * @param {Date|number} start      Start of the event (Date or ms timestamp)
- * @param {number}      durationMs Duration in milliseconds (0 = instant event)
- * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow" }} options
- *
- * @example
- * // 90 min from now
- * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure 30"
- * // currently happening (30 min window)
- * formatTimeRelative(Date.now() - 5 * 60_000, 30 * 60_000, { lang: "fr" }) // "En cours"
- * // ended 2 hours ago
- * formatTimeRelative(Date.now() - 3 * 3_600_000, 3_600_000, { lang: "fr" }) // "il y a 2 heures"
- * // short format
- * formatTimeRelative(Date.now() - 3 * 3_600_000, 0, { lang: "fr", format: "short" }) // "il y a 3 h"
- */
-const formatTimeRelative = (
-  start,
-  durationMs = 0,
-  {
-    lang = languagesSignal.value,
-    now = new Date(),
-    bare,
-    format = "long",
-  } = {},
-) => {
-  const startMs = start instanceof Date ? start.getTime() : Number(start);
-  const endMs = startMs + durationMs;
-  const nowMs = now instanceof Date ? now.getTime() : Number(now);
-
-  if (nowMs >= startMs && nowMs < endMs) {
-    return getOngoingText(lang);
-  }
-  if (nowMs >= endMs) {
-    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, { lang, now, bare, format });
-  }
-
-  const diff = startMs - nowMs;
-  return formatFuture(new Date(startMs), diff, { lang, now, format });
-};
-
-const formatFuture = (date, diff, { lang, now, format = "long" }) => {
-  const rtf = new Intl.RelativeTimeFormat(lang, {
-    numeric: "auto",
-    style: format,
-  });
-  const nowDate = now instanceof Date ? now : new Date(now);
-
-  // < 1 min
-  if (diff < MINUTE) {
-    return getLessThanMinuteText(lang);
-  }
-
-  // < 1 hour → "dans X minutes"
-  if (diff < HOUR) {
-    return rtf.format(Math.ceil(diff / MINUTE), "minute");
-  }
-
-  // 1h to 2h → "dans 1 heure 30"
-  if (diff < 2 * HOUR) {
-    const hours = Math.floor(diff / HOUR);
-    const minutes = Math.round((diff % HOUR) / MINUTE);
-    if (minutes === 0) {
-      return rtf.format(hours, "hour");
-    }
-    const duration = formatMinuteDuration(hours * 60 + minutes, {
-      lang,
-      format,
-    });
-    const template = naviI18n("time.in_duration", undefined, { lang });
-    if (template !== "time.in_duration") {
-      return template.replace("[duration]", duration);
-    }
-    return `in ${duration}`;
-  }
-
-  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
-  if (diff < 6 * HOUR) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
-  const tomorrowDate = new Date(nowDate);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
-    return formatTomorrowAt(date, lang);
-  }
-
-  // < 24h → "dans X heures"
-  if (diff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // < 7 days → "dans X jours"
-  if (diff < 7 * DAY) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-
-  // < 30 days → "dans X semaines"
-  if (diff < 30 * DAY) {
-    return rtf.format(Math.round(diff / (7 * DAY)), "week");
-  }
-
-  // months (Intl handles "le mois prochain" when value = 1)
-  if (diff < YEAR) {
-    return rtf.format(Math.round(diff / (30 * DAY)), "month");
-  }
-
-  return rtf.format(Math.round(diff / YEAR), "year");
-};
-
-const formatTomorrowAt = (date, lang) => {
-  const dayLabel = new Intl.RelativeTimeFormat(lang, {
-    numeric: "auto",
-  }).format(1, "day");
-  const hasMinutes = date.getMinutes() !== 0;
-  const timeLabel = new Intl.DateTimeFormat(lang, {
-    hour: "numeric",
-    ...(hasMinutes ? { minute: "2-digit" } : {}),
-  }).format(date);
-  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
-    lang,
-  });
-  // atTemplate is e.g. "[day] à [time]" — replace placeholders
-  if (atTemplate !== "time.tomorrow_at") {
-    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
-  }
-  // fallback: concatenate with a space
-  return `${dayLabel} ${timeLabel}`;
-};
-
-const getLessThanMinuteText = (lang) => {
-  return naviI18n("time.less_than_minute", undefined, { lang });
-};
-
-const getOngoingText = (lang) => {
-  return naviI18n("time.ongoing", undefined, { lang });
-};
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const YEAR = 365 * DAY;
-
-// Compares calendar days in local time (ignores the clock time)
-const toLocalDayKey = (date) => {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-};
-
-/**
- * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
- */
-
-
-const REQUIRED_CONSTRAINT = {
-  name: "required",
-  messageAttribute: "data-required-message",
-  check: (field) => {
-    const required = field.controlHostProps.required;
-    if (!required) {
-      return null;
-    }
-    const controlType = field.controlType;
-    const type = field.controlHostProps.type;
-
-    // radio_group controller: check aggregate uiState
-    if (controlType === "radio_group") {
-      if (field.uiState !== undefined) {
-        return null;
-      }
-      return {
-        message: naviI18n("constraint.required.radio"),
-        target: field.ref.current,
-      };
-    }
-    if (type === "radio") {
-      const parent = field.parentUIStateController;
-      if (parent) {
-        return null; // handled by parent
-      }
-      // A radio without parent, not supposed to happen
-      if (field.uiState !== undefined) {
-        return null;
-      }
-      return {
-        message: naviI18n("constraint.required.radio"),
-        target: field.ref.current,
-      };
-    }
-
-    // checkbox_group controller: check aggregate uiState array
-    if (controlType === "checkbox_group") {
-      const uiState = field.uiState;
-      if (uiState.length > 0) {
-        return null;
-      }
-      return {
-        message: naviI18n("constraint.required.checkbox_group"),
-        target: field.ref.current,
-      };
-    }
-    if (type === "checkbox") {
-      const parent = field.parentUIStateController;
-      if (parent.controlType === "checkbox_group") {
-        // handled by parent
-        return null;
-      }
-      if (field.uiState !== undefined) {
-        return null;
-      }
-      return naviI18n("constraint.required.checkbox");
-    }
-
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (valueAsString) {
-      return null;
-    }
-
-    if (type === "password") {
-      return naviI18n("constraint.required.password");
-    }
-    if (type === "email") {
-      return naviI18n("constraint.required.email");
-    }
-    if (type === "color") {
-      return naviI18n("constraint.required.color");
-    }
-    if (type === "date") {
-      return naviI18n("constraint.required.date");
-    }
-    if (type === "month") {
-      return naviI18n("constraint.required.month");
-    }
-    if (type === "week") {
-      return naviI18n("constraint.required.week");
-    }
-    if (type === "time") {
-      return naviI18n("constraint.required.time");
-    }
-    const inputMode = field.controlHostProps.inputMode;
-    if (
-      type === "number" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
-      return naviI18n("constraint.required.number");
-    }
-    if (type === "datetime-local") {
-      return naviI18n("constraint.required.datetime");
-    }
-    if (type === "file") {
-      const multiple = field.controlHostProps.multiple;
-      return multiple
-        ? naviI18n("constraint.required.file.multiple")
-        : naviI18n("constraint.required.file");
-    }
-    return naviI18n("constraint.required.default");
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("required");
-
-const PATTERN_CONSTRAINT = {
-  name: "pattern",
-  messageAttribute: "data-pattern-message",
-  check: (field) => {
-    const pattern = field.controlHostProps.pattern;
-    if (!pattern) {
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const regex = new RegExp(`^(?:${pattern})$`);
-    if (regex.test(valueAsString)) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    if (type === "email") {
-      return naviI18n("constraint.pattern.email");
-    }
-    if (type === "password") {
-      return naviI18n("constraint.pattern.password");
-    }
-    return naviI18n("constraint.pattern.default");
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("pattern");
-
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-const TYPE_EMAIL_CONSTRAINT = {
-  name: "type_email",
-  messageAttribute: "data-type-message",
-  check: (field) => {
-    const type = field.controlHostProps.type;
-    if (type !== "email") {
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    if (emailregex.test(valueAsString)) {
-      return null;
-    }
-
-    if (!valueAsString.includes("@")) {
-      return naviI18n("constraint.type.email.at", { value: valueAsString });
-    }
-    return naviI18n("constraint.type.email.invalid");
-  },
-};
-
-const MIN_LENGTH_CONSTRAINT = {
-  name: "min_length",
-  messageAttribute: "data-min-length-message",
-  check: (field) => {
-    const type = field.controlHostProps.type ?? "text";
-    const isInput =
-      field.controlType === "input" || field.controlType === "picker";
-    const isTextarea =
-      field.controlHostProps.as === "textarea" ||
-      field.controlType === "textarea";
-    if (isInput) {
-      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(type)) {
-        return null;
-      }
-    } else if (!isTextarea) {
-      return null;
-    }
-    const minLength = field.controlHostProps.minLength;
-    if (minLength === undefined) {
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString && !field.controlHostProps.required) {
-      return null;
-    }
-    const valueLength = valueAsString.length;
-    if (valueLength >= minLength) {
-      return null;
-    }
-
-    if (valueLength === 1) {
-      const singularKey = (() => {
-        if (type === "email") {
-          return `constraint.min_length.singular.email`;
-        }
-        if (type === "password") {
-          return `constraint.min_length.singular.password`;
-        }
-        return `constraint.min_length.singular.default`;
-      })();
-      return naviI18n(singularKey, {
-        min: String(minLength),
-      });
-    }
-    const pluralKey = (() => {
-      if (type === "email") {
-        return `constraint.min_length.plural.email`;
-      }
-      if (type === "password") {
-        return `constraint.min_length.plural.password`;
-      }
-      return `constraint.min_length.plural.default`;
-    })();
-    return naviI18n(pluralKey, {
-      min: String(minLength),
-      count: String(valueLength),
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("minLength");
-const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
-  "text",
-  "search",
-  "url",
-  "tel",
-  "email",
-  "password",
-]);
-
-const MAX_LENGTH_CONSTRAINT = {
-  name: "max_length",
-  messageAttribute: "data-max-length-message",
-  check: (field) => {
-    const type = field.controlHostProps.type ?? "text";
-    // A multiple selection has a length the way a string has one — how many
-    // items it holds — so it wears the same constraint under the same name. The
-    // group answers for it: a checkbox on its own holds one value, not a count.
-    if (field.controlType === "checkbox_group") {
-      const maxLength =
-        field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
-      if (maxLength === undefined) {
-        return null;
-      }
-      const uiState = field.uiState;
-      if (!Array.isArray(uiState)) {
-        return null;
-      }
-      const count = uiState.length;
-      if (count <= maxLength) {
-        return null;
-      }
-      return {
-        message: naviI18n("constraint.max_length.selection", {
-          max: String(maxLength),
-          count: String(count),
-        }),
-        target: field.ref.current,
-      };
-    }
-    const isInput =
-      field.controlType === "input" || field.controlType === "picker";
-    const isTextarea =
-      field.controlHostProps.as === "textarea" ||
-      field.controlType === "textarea";
-    if (isInput) {
-      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(type)) {
-        return null;
-      }
-    } else if (!isTextarea) {
-      return null;
-    }
-    const maxLength =
-      field.controlHostProps.maxLength ?? field.props?.maxLengthGuard;
-    if (maxLength === undefined) {
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const valueLength = valueAsString.length;
-    if (valueLength <= maxLength) {
-      return null;
-    }
-
-    const maxLengthKey = (() => {
-      if (type === "email") {
-        return `constraint.max_length.email`;
-      }
-      if (type === "password") {
-        return `constraint.max_length.password`;
-      }
-      return `constraint.max_length.default`;
-    })();
-    return naviI18n(maxLengthKey, {
-      max: String(maxLength),
-      count: String(valueLength),
-    });
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
-const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
-  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
-);
-
-const TYPE_NUMBER_CONSTRAINT = {
-  name: "type_number",
-  messageAttribute: "data-type-message",
-  check: (field) => {
-    if (field.controlType !== "input" && field.controlType !== "picker") {
-      return null;
-    }
-    const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (!isNumber) {
-      return null;
-    }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const numericValue = Number(valueAsString);
-    if (!isNaN(numericValue)) {
-      return null;
-    }
-
-    const naviType = field.controlHostProps["navi-input-type"];
-    if (naviType === "hour") {
-      return naviI18n(`constraint.type.hour.default`);
-    }
-    if (naviType === "minute") {
-      return naviI18n(`constraint.type.minute.default`);
-    }
-    if (naviType === "second") {
-      return naviI18n(`constraint.type.second.default`);
-    }
-    if (naviType === "percentage") {
-      return naviI18n(`constraint.type.percentage.default`);
-    }
-    return naviI18n(`constraint.type.number.default`);
-  },
-};
-
-// ISO date strings (YYYY-MM-DD, YYYY-MM, YYYY-Www, YYYY-MM-DDTHH:MM) are
-// zero-padded big-endian, so lexicographic comparison is equivalent to
-// chronological comparison — no need to parse into Date objects.
-const DATE_INPUT_TYPE_SET = new Set([
-  "date",
-  "month",
-  "week",
-  "datetime-local",
-]);
-
-const MIN_CONSTRAINT = {
-  name: "min",
-  messageAttribute: "data-min-message",
-  check: (field) => {
-    if (field.controlType === "duration_group") {
-      const min = field.controlHostProps.min;
-      if (min === undefined || min === null) {
-        return null;
-      }
-      if (durationContainsNaN(field.uiState)) {
-        return null;
-      }
-      const cmp = compareTwoDurations(field.uiState, min);
-      if (cmp === null || cmp >= 0) {
-        return null;
-      }
-
-      return naviI18n("constraint.min.duration.default", {
-        min: formatDuration(min),
-      });
-    }
-    if (field.controlType !== "input" && field.controlType !== "picker") {
-      return null;
-    }
-    const minString = field.controlHostProps.min;
-    if (!minString) {
-      return null;
-    }
-    const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
-      const minNumber = parseFloat(minString);
-      if (isNaN(minNumber)) {
-        return null;
-      }
-      const numericValue = Number(valueAsString);
-      if (isNaN(numericValue)) {
-        return null;
-      }
-      if (numericValue < minNumber) {
-        const naviInputType = field.controlHostProps["navi-input-type"];
-        if (naviInputType === "hour") {
-          return naviI18n(`constraint.min.hour.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "minute") {
-          return naviI18n(`constraint.min.minute.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "second") {
-          return naviI18n(`constraint.min.second.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "percentage") {
-          return naviI18n(`constraint.min.percentage.default`, {
-            min: minString,
-          });
-        }
-        return naviI18n(`constraint.min.number.default`, {
-          min: minString,
-        });
-      }
-      return null;
-    }
-    if (type === "time") {
-      const [minHours, minMinutes] = minString.split(":").map(Number);
-      const [hours, minutes] = valueAsString.split(":").map(Number);
-      if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
-        return naviI18n("constraint.min.time.default", {
-          min: minString,
-        });
-      }
-      return null;
-    }
-    // range inputs enforce boundaries via their UI and browser clamping for programmatic updates
-    // so they never need a min/max validation message.
-    if (DATE_INPUT_TYPE_SET.has(type)) {
-      if (valueAsString < minString) {
-        const todayIso = getTodayIso(type);
-        if (minString === todayIso) {
-          return naviI18n("constraint.min.date.today.default");
-        }
-        return naviI18n("constraint.min.date.default", {
-          min: formatDateIso(minString, type),
-        });
-      }
-      return null;
-    }
-    return null;
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("min");
-
-const MAX_CONSTRAINT = {
-  name: "max",
-  messageAttribute: "data-max-message",
-  check: (field) => {
-    if (field.controlType === "duration_group") {
-      const max = field.controlHostProps.max;
-      if (max === undefined || max === null) {
-        return null;
-      }
-      if (durationContainsNaN(field.uiState)) {
-        return null;
-      }
-      const cmp = compareTwoDurations(field.uiState, max);
-      if (cmp === null || cmp <= 0) {
-        return null;
-      }
-
-      return naviI18n("constraint.max.duration.default", {
-        max: formatDuration(max),
-      });
-    }
-    if (field.controlType !== "input" && field.controlType !== "picker") {
-      return null;
-    }
-    const maxString = field.controlHostProps.max;
-    if (!maxString) {
-      return null;
-    }
-    const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
-      const maxNumber = parseFloat(maxString);
-      if (isNaN(maxNumber)) {
-        return null;
-      }
-      const numericValue = Number(valueAsString);
-      if (isNaN(numericValue)) {
-        return null;
-      }
-      if (numericValue <= maxNumber) {
-        return null;
-      }
-
-      const naviInputType = field.controlHostProps["navi-input-type"];
-      if (naviInputType === "hour") {
-        return naviI18n(`constraint.max.hour.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "minute") {
-        return naviI18n(`constraint.max.minute.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "second") {
-        return naviI18n(`constraint.max.second.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "percentage") {
-        return naviI18n(`constraint.max.percentage.default`, {
-          max: maxString,
-        });
-      }
-      return naviI18n(`constraint.max.number.default`, {
-        max: maxString,
-      });
-    }
-    if (type === "time") {
-      const [maxHours, maxMinutes] = maxString.split(":").map(Number);
-      const [hours, minutes] = valueAsString.split(":").map(Number);
-      if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
-        return naviI18n("constraint.max.time.default", {
-          max: maxString,
-        });
-      }
-      return null;
-    }
-    if (DATE_INPUT_TYPE_SET.has(type)) {
-      if (valueAsString <= maxString) {
-        return null;
-      }
-
-      const todayIso = getTodayIso(type);
-      if (maxString === todayIso) {
-        return naviI18n("constraint.max.date.today.default");
-      }
-      return naviI18n("constraint.max.date.default", {
-        max: formatDateIso(maxString, type),
-      });
-    }
-    return null;
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("max");
-
-const STEP_SUPPORTED_TYPE_SET = new Set([
-  "number",
-  "time",
-  "date",
-  "month",
-  "week",
-  "datetime-local",
-]);
-
-const STEP_CONSTRAINT = {
-  name: "step",
-  messageAttribute: "data-step-message",
-  check: (field) => {
-    if (field.controlType === "duration_group") {
-      const step = field.controlHostProps.step;
-      if (!step) {
-        return null;
-      }
-      if (durationContainsNaN(field.uiState)) {
-        return null;
-      }
-      const min = field.controlHostProps.min ?? 0;
-      const valueSeconds = durationToSeconds(field.uiState);
-      if (valueSeconds === null) {
-        return null;
-      }
-      const stepSeconds =
-        typeof step === "number" ? step : durationToSeconds(step);
-      const minSeconds =
-        typeof min === "number" ? min : (durationToSeconds(min) ?? 0);
-      if (stepSeconds === null) {
-        return null;
-      }
-
-      const remainder =
-        (((valueSeconds - minSeconds) % stepSeconds) + stepSeconds) %
-        stepSeconds;
-      const epsilon = stepSeconds * 1e-9;
-      if (remainder <= epsilon || remainder >= stepSeconds - epsilon) {
-        return null;
-      }
-
-      const before = valueSeconds - remainder;
-      const after = before + stepSeconds;
-      return naviI18n("constraint.step.duration.default", {
-        step: formatDuration(stepSeconds),
-        before: formatDuration(before),
-        after: formatDuration(after),
-      });
-    }
-    if (field.controlType !== "input" && field.controlType !== "picker") {
-      return null;
-    }
-    const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumericText =
-      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
-    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
-      return null;
-    }
-    const stepRaw = field.controlHostProps.step;
-    if (!stepRaw || stepRaw === "any") {
-      return null;
-    }
-    const stepString = String(stepRaw);
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    if (!valueAsString) {
-      return null;
-    }
-    const minString = field.controlHostProps.min;
-    const isNumber = type === "number" || isNumericText;
-    if (isNumber) {
-      const step = parseFloat(stepString);
-      const base = minString ? parseFloat(minString) : 0;
-      const numericValue = Number(valueAsString);
-      if (isNaN(numericValue)) {
-        return null;
-      }
-      const remainder = (((numericValue - base) % step) + step) % step;
-      // Use a small epsilon to handle floating-point imprecision
-      const epsilon = step * 1e-9;
-      const hasMismatch = remainder > epsilon && remainder < step - epsilon;
-      if (!hasMismatch) {
-        return null;
-      }
-      const before = base + Math.floor((numericValue - base) / step) * step;
-      const after = before + step;
-      const decimals = (stepString.split(".")[1] || "").length;
-      const context = (() => {
-        const naviInputType = field.controlHostProps["navi-input-type"];
-        if (naviInputType === "hour") {
-          return `hour`;
-        }
-        if (naviInputType === "minute") {
-          return `minute`;
-        }
-        if (naviInputType === "second") {
-          return `second`;
-        }
-        if (naviInputType === "percentage") {
-          return `percentage`;
-        }
-        return `number`;
-      })();
-      return naviI18n(`constraint.step.${context}.default`, {
-        step: stepString,
-        before: before.toFixed(decimals),
-        after: after.toFixed(decimals),
-      });
-    }
-    if (type === "time") {
-      const stepSeconds = parseFloat(stepString);
-      if (!isNaN(stepSeconds)) {
-        const stepMs = stepSeconds * 1000;
-        const valueMs = timeStringToMs(valueAsString);
-        const baseMs = minString ? timeStringToMs(minString) : 0;
-        const remainder = (((valueMs - baseMs) % stepMs) + stepMs) % stepMs;
-        if (remainder === 0) {
-          return null;
-        }
-        const beforeMs = valueMs - remainder;
-        const afterMs = beforeMs + stepMs;
-        const showSeconds = stepSeconds % 60 !== 0;
-        const before = formatMsToTime(beforeMs, showSeconds);
-        const after = formatMsToTime(afterMs, showSeconds);
-        if (stepSeconds % 3600 === 0) {
-          return naviI18n("constraint.step.time.hour", {
-            step: String(stepSeconds / 3600),
-            before,
-            after,
-          });
-        }
-        if (stepSeconds % 60 === 0) {
-          return naviI18n("constraint.step.time.minute", {
-            step: String(stepSeconds / 60),
-            before,
-            after,
-          });
-        }
-        return naviI18n("constraint.step.time.second", {
-          step: stepString,
-          before,
-          after,
-        });
-      }
-    }
-    {
-      const step = parseInt(stepString, 10);
-      const baseDate = minString
-        ? new Date(`${minString}T00:00:00`)
-        : new Date(0);
-      const valueDate = new Date(`${valueAsString}T00:00:00`);
-      const diffDays = Math.round((valueDate - baseDate) / 86400000);
-      if (diffDays % step === 0) {
-        return null;
-      }
-      const beforeDays = Math.floor(diffDays / step) * step;
-      const afterDays = beforeDays + step;
-      const beforeDate = new Date(baseDate);
-      beforeDate.setDate(beforeDate.getDate() + beforeDays);
-      const afterDate = new Date(baseDate);
-      afterDate.setDate(afterDate.getDate() + afterDays);
-      return naviI18n("constraint.step.date.default", {
-        step: stepString,
-        before: formatDateIso(beforeDate.toISOString().slice(0, 10), type),
-        after: formatDateIso(afterDate.toISOString().slice(0, 10), type),
-      });
-    }
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("step");
-
-const timeStringToMs = (timeString) => {
-  const parts = timeString.split(":").map(Number);
-  const h = parts[0] || 0;
-  const m = parts[1] || 0;
-  const s = parts[2] || 0;
-  return (h * 3600 + m * 60 + s) * 1000;
-};
-
-const formatMsToTime = (ms, showSeconds) => {
-  const totalSec = Math.round(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const hh = String(h).padStart(2, "0");
-  const mm = String(m).padStart(2, "0");
-  if (!showSeconds) {
-    return `${hh}:${mm}`;
-  }
-  const ss = String(s).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-};
-
-const getTodayIso = (inputType) => {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  if (inputType === "month") {
-    return `${yyyy}-${mm}`;
-  }
-  return `${yyyy}-${mm}-${dd}`;
-};
-
-const formatDateIso = (iso, inputType) => {
-  const locale = languagesSignal.value;
-  if (inputType === "month") {
-    const date = new Date(`${iso}-01T00:00:00`);
-    return formatMonth(date, locale);
-  }
-  // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
-  const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
-  if (!isoMatch) {
-    return iso;
-  }
-  const datePart = isoMatch[1];
-  const date = new Date(`${datePart}T00:00:00`);
-  if (isNaN(date.getTime())) {
-    return iso;
-  }
-  return formatDay(date, locale);
-};
-
-/**
- * Custom form validation implementation
- *
- * This implementation addresses several limitations of the browser's native validation API:
- *
- * Limitations of native validation:
- * - Cannot programmatically detect if validation message is currently displayed
- * - No ability to dismiss messages with keyboard (e.g., Escape key)
- * - Requires complex event handling to manage validation message display
- * - Limited support for storing/managing multiple validation messages
- * - No customization of validation message appearance
- *
- * Design approach:
- * - Works alongside native validation (which acts as a fallback)
- * - Proactively detects validation issues before native validation triggers
- * - Provides complete control over validation message UX
- * - Supports keyboard navigation and dismissal
- * - Allows custom styling and positioning of validation messages
- *
- * Features:
- * - Constraint-based validation system with built-in and custom constraints
- * - Custom validation messages with different severity levels
- * - Form submission prevention on validation failure
- * - Validation on Enter key in forms or standalone inputs
- * - Escape key to dismiss validation messages
- * - Support for standard HTML validation attributes (required, pattern, type="email")
- * - Validation messages that follow the input element and adapt to viewport
- *
- * Constraint evaluation behavior:
- * This implementation differs from browser native validation in how it handles empty values.
- * Native validation typically ignores constraints (like minLength) when the input is empty,
- * only validating them once the user starts typing. This prevents developers from knowing
- * the validation state until user interaction begins.
- *
- * Our approach:
- * - When 'required' attribute is not set: behaves like native validation (ignores constraints on empty values)
- * - When 'required' attribute is set: evaluates all constraints even on empty values
- *
- * This allows for complete constraint state visibility when fields are required, enabling
- * better UX patterns like showing all validation requirements upfront.
- */
-
-
-const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
-
-const VALIDATION_TOKEN = createOpenToken();
-
-// the order matters here, the first constraint is picked first when multiple constraints fail
-// so it's better to keep the most complex constraints at the end of the list
-// so the more basic ones shows up first
-const STANDARD_CONSTRAINT_SET = new Set([
-  REQUIRED_CONSTRAINT,
-  PATTERN_CONSTRAINT,
-  TYPE_EMAIL_CONSTRAINT,
-  TYPE_NUMBER_CONSTRAINT,
-  MIN_CONSTRAINT,
-  MAX_CONSTRAINT,
-  STEP_CONSTRAINT,
-  MIN_LENGTH_CONSTRAINT,
-  MAX_LENGTH_CONSTRAINT,
-]);
-const NAVI_CONSTRAINT_SET = new Set([
-  MIN_SPECIAL_CHAR_CONSTRAINT,
-  SINGLE_SPACE_CONSTRAINT,
-  MIN_DIGIT_CONSTRAINT,
-  MIN_UPPER_LETTER_CONSTRAINT,
-  MIN_LOWER_LETTER_CONSTRAINT,
-  SAME_AS_CONSTRAINT,
-  ONE_OF_CONSTRAINT,
-]);
-const DEFAULT_CONSTRAINT_SET = new Set([
-  ...STANDARD_CONSTRAINT_SET,
-  ...NAVI_CONSTRAINT_SET,
-]);
-const registerGlobalConstraint = (customConstraint) => {
-  NAVI_CONSTRAINT_SET.add(customConstraint);
-  DEFAULT_CONSTRAINT_SET.add(customConstraint);
-};
-
-const createControlValidation = (
-  controller,
-  { callout, debugUIState },
-) => {
-  const controlValidity = {
-    registerConstraint: undefined,
-    checkValidity: undefined,
-    reportValidity: undefined,
-  };
-
-  const dynamicConstraintSet = new Set();
-  {
-    controlValidity.registerConstraint = (constraint) => {
-      if (typeof constraint === "function") {
-        constraint = {
-          name: constraint.name || "custom_function",
-          check: constraint,
-        };
-      }
-      dynamicConstraintSet.add(constraint);
-      return () => {
-        dynamicConstraintSet.delete(constraint);
-      };
-    };
-  }
-
-  let failedConstraintInfo = null;
-  let failingManagedControlValidity = null;
-  const validityInfoMap = new Map();
-  let constraintValidityState = { valid: true };
-  const getConstraintValidityState = () => constraintValidityState;
-  controlValidity.getConstraintValidityState = getConstraintValidityState;
-
-  const checkValidity = ({
-    event,
-    requester = controller.ref.current,
-    fromRequestAction,
-  } = {}) => {
-    if (fromRequestAction) {
-      for (const [, validityInfo] of validityInfoMap) {
-        if (validityInfo.constraint.autoResetOnAction) {
-          validityInfo.constraint.onAutoResetOnAction(controller);
-        }
-      }
-    }
-
-    // Never validate a proxy — always delegate to the underlying element
-    const proxyTargetController = findControlProxyTargetController(controller);
-    if (proxyTargetController) {
-      return proxyTargetController.rules.validation.checkValidity({
-        event,
-        fromRequestAction,
-        requester,
-      });
-    }
-
-    // Always check managed fields first. If any fails, stop immediately and
-    // expose the failing controlValidity so the caller can reportValidity on the right element.
-    failingManagedControlValidity = null;
-    const managedControllers = controller.getManagedControls();
-    for (const managedController of managedControllers) {
-      const managedCV = managedController.rules.validation;
-      const managedIsValid = managedCV.checkValidity({
-        event,
-        requester,
-        fromRequestAction,
-      });
-      if (!managedIsValid) {
-        failingManagedControlValidity = managedCV;
-        return false;
-      }
-    }
-
-    let newConstraintValidityState = { valid: true };
-    const constraintSet = new Set([
-      ...DEFAULT_CONSTRAINT_SET,
-      ...dynamicConstraintSet,
-    ]);
-    const elementSig = getElementSignature(controller.ref.current);
-    // Not logged: every control checks its constraints on every interaction and
-    // almost always passes, so this line alone was most of the debug output —
-    // and with devtools open, formatting it costs a frame. What matters is a
-    // constraint that FAILS, which says so below.
-    validityInfoMap.clear();
-    failedConstraintInfo = null;
-    failingManagedControlValidity = null;
-    for (const constraint of constraintSet) {
-      const fieldForConstraint = controller;
-
-      const checkResult = constraint.check(fieldForConstraint, {
-        fromRequestAction,
-      });
-      if (!checkResult) {
-        newConstraintValidityState[constraint.name] = null;
-        continue;
-      }
-      const constraintValidityInfo =
-        typeof checkResult === "string"
-          ? { message: checkResult }
-          : checkResult;
-      constraintValidityInfo.messageString = constraintValidityInfo.message;
-      debugUIState(
-        `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
-      );
-      const thisConstraintFailureInfo = {
-        name: constraint.name,
-        constraint,
-        status: "warning",
-        ...constraintValidityInfo,
-        reportStatus: "not_reported",
-      };
-      validityInfoMap.set(constraint, thisConstraintFailureInfo);
-      newConstraintValidityState.valid = false;
-      newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
-      if (failedConstraintInfo) {
-        // there is already a failing value constraint, which one do we pick?
-        const constraintPicked = pickConstraintFailureInfo(
-          failedConstraintInfo,
-          thisConstraintFailureInfo,
-        );
-        if (constraintPicked === thisConstraintFailureInfo) {
-          failedConstraintInfo = thisConstraintFailureInfo;
-        }
-      } else {
-        // first failing value constraint
-        failedConstraintInfo = thisConstraintFailureInfo;
-      }
-    }
-
-    const activeFailedConstraintInfo = failedConstraintInfo;
-    if (activeFailedConstraintInfo) {
-      const titleLess = controller.controlHostProps.title === undefined;
-      if (titleLess) {
-        const element = controller.ref.current;
-        if (element) {
-          element.setAttribute(
-            "title",
-            activeFailedConstraintInfo.messageString,
-          );
-        }
-      }
-    } else {
-      const titleLess = controller.controlHostProps.title === undefined;
-      if (titleLess) {
-        const element = controller.ref.current;
-        if (element) {
-          element.removeAttribute("title");
-        }
-      }
-      const checkValidityCallEvent =
-        event || new CustomEvent("checkValidity called with no event");
-      callout.removeOpenToken(VALIDATION_TOKEN, checkValidityCallEvent);
-    }
-
-    if (
-      !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
-    ) {
-      constraintValidityState = newConstraintValidityState;
-      const element = controller.ref.current;
-      if (element) {
-        debugUIState(
-          event,
-          `${elementSig} constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
-        );
-        dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
-      }
-    }
-    return newConstraintValidityState.valid;
-  };
-
-  const reportValidity = ({ event, requester, skipFocus } = {}) => {
-    const { message } = getConstraintMessage(
-      controller,
-      failedConstraintInfo.constraint,
-      failedConstraintInfo.message,
-      { requester },
-    );
-    callout.addOpenToken(VALIDATION_TOKEN, {
-      message,
-      status: failedConstraintInfo.status,
-      anchorElement: failedConstraintInfo.target,
-      event,
-      skipFocus,
-      onClose: () => {
-        failedConstraintInfo.reportStatus = "closed";
-      },
-    });
-    failedConstraintInfo.reportStatus = "reported";
-  };
-  controlValidity.checkValidity = checkValidity;
-  controlValidity.reportValidity = reportValidity;
-  Object.defineProperty(controlValidity, "failedConstraintInfo", {
-    get: () => failedConstraintInfo,
-  });
-  Object.defineProperty(controlValidity, "failingManagedControlValidity", {
-    get: () => failingManagedControlValidity,
-  });
-  // Centralized validity sync: decides what to show/close based on the event type
-  // and the current constraint state.
-  //
-  // - Interaction constraints (readonly/disabled/busy) violated → always report them.
-  // - Value-modifying event (input, keydown...) + own action + value invalid → report.
-  // - Pure interaction event (mousedown on editable field) → close the callout:
-  //   user intends to edit, we clear the message so it doesn't block them.
-  const syncValidity = (
-    event,
-    { report = false, fromRequestAction = false } = {},
-  ) => {
-    const elementSig = getElementSignature(controller.ref.current);
-    const isValid = checkValidity({ event, fromRequestAction });
-    if (failingManagedControlValidity) {
-      // Group/form case: find the actual failing leaf and report on it.
-      // The leaf's callout is sufficient — no need to report at the group level.
-      let leafCV = failingManagedControlValidity;
-      while (
-        leafCV.failingManagedControlValidity &&
-        !leafCV.failedConstraintInfo
-      ) {
-        leafCV = leafCV.failingManagedControlValidity;
-      }
-      // Forward the report decision to the leaf — the parent already decided.
-      if (report) {
-        leafCV.reportValidity({ event });
-      }
-      return isValid;
-    }
-    if (failedConstraintInfo) {
-      if (report) {
-        debugUIState(
-          event,
-          `syncValidity ${elementSig}: has failing constraint and report=true -> reportValidity`,
-        );
-        reportValidity({ event });
-      } else if (failedConstraintInfo.status === "error") {
-        // Error callouts persist until the user explicitly dismisses them (close button, Escape).
-        // Unlike warning callouts — which can be cleared just by interacting with the control —
-        // errors require an intentional acknowledgement. The callout is removed automatically
-        // on the next action attempt via autoResetOnAction.
-        debugUIState(
-          event,
-          `syncValidity ${elementSig}: has error constraint and report=false -> keep callout open`,
-        );
-      } else {
-        debugUIState(
-          event,
-          `syncValidity ${elementSig}: has failing constraint but report=false -> close callout if any`,
-        );
-        callout.removeOpenToken(VALIDATION_TOKEN, event);
-      }
-    } else {
-      // Sync interaction state — if the control is now interactable the interaction
-      // callout token is removed, allowing the callout to close.
-      const ci = controller.rules.interaction;
-      if (ci) {
-        ci.checkInteractivity({ event });
-      }
-      // Same reason as the check above: "nothing was wrong" is the normal
-      // case and does not need saying.
-      callout.removeOpenToken(VALIDATION_TOKEN, event);
-    }
-    // Propagate a silent validity update up the controller chain.
-    // Parent controllers (group, facade) don't report — the leaf's callout is enough.
-    // They just need their validity state kept current so _attemptCommit can read it.
-    let parentController = controller.parentUIStateController;
-    while (parentController) {
-      parentController.rules.validation.checkValidity({ event });
-      parentController = parentController.parentUIStateController;
-    }
-    return isValid;
-  };
-  controlValidity.syncValidity = syncValidity;
-
-  return controlValidity;
-};
-
-const pickConstraintFailureInfo = (a, b) => {
-  const aPrio = getConstraintFailureInfoPriority(a);
-  const bPrio = getConstraintFailureInfoPriority(b);
-  if (bPrio > aPrio) {
-    return b;
-  }
-  return a;
-};
-const getConstraintFailureInfoPriority = (failureInfo) => {
-  if (failureInfo.status === "error") {
-    return 1000;
-  }
-  const { constraint } = failureInfo;
-  if (constraint.name === "required") {
-    return 100;
-  }
-  if (STANDARD_CONSTRAINT_SET.has(constraint)) {
-    return 10;
-  }
-  return 1;
-};
-
-const ErrorBoundaryContext = createContext(null);
-
-const useResetErrorBoundary = () => {
-  const resetErrorBoundary = useContext(ErrorBoundaryContext);
-  return resetErrorBoundary;
-};
-
-const DebugCommandContext = createContext(false);
-const DebugInteractionContext = createContext(false);
-const DebugFocusContext = createContext(false);
-const DebugScrollContext = createContext(false);
-const DebugPopupContext = createContext(false);
-const DebugActionContext = createContext(false);
-const DebugUIStateContext = createContext(false);
-const debugNoop = () => {};
-const eventGroupLogger = createEventGroupLogger();
-const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
-const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
-const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
-const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
-const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
-const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
-const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
-
-// The hooks below expose one concern's logger to components inside <NaviDebug>.
-// Each returns the logger function enabled for that concern, or a no-op when the
-// concern is off — so call sites can `const debug = useDebugX()` unconditionally.
-// The logger is called as `debug(message, …)` or, to group a side effect under
-// the native event that caused it, `debug(event, message, …)`.
-
-/** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
-const useDebugCommand = () => {
-  const debug = useContext(DebugCommandContext);
-  return debug || debugNoop;
-};
-/** Logger for gated interactions (click/scroll/select/…), or a no-op. */
-const useDebugInteraction = () => {
-  const debug = useContext(DebugInteractionContext);
-  return debug || debugNoop;
-};
-/** Logger for focus moves and focus-visible decisions, or a no-op. */
-const useDebugFocus = () => {
-  const debug = useContext(DebugFocusContext);
-  return debug || debugNoop;
-};
-/** Logger for virtual scroll / wheel motion (drag, momentum, glide), or a no-op. */
-const useDebugScroll = () => {
-  const debug = useContext(DebugScrollContext);
-  return debug || debugNoop;
-};
-/** Logger for popover/dialog open/close/positioning, or a no-op. */
-const useDebugPopup = () => {
-  const debug = useContext(DebugPopupContext);
-  return debug || debugNoop;
-};
-/** Logger for the action lifecycle (request → run → end), or a no-op. */
-const useDebugAction = () => {
-  const debug = useContext(DebugActionContext);
-  return debug || debugNoop;
-};
-/** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
-const useDebugUIState = () => {
-  const debug = useContext(DebugUIStateContext);
-  return debug || debugNoop;
-};
-
-/**
- * Turns on navi's color-coded console logging for everything rendered inside it.
- * Navi has many moving parts (interactions, focus, scroll, popups, commands,
- * actions, ui-state); each concern logs to its own console group so you can
- * watch what navi is doing and why. Components read a concern via its hook
- * (`useDebugScroll`, `useDebugInteraction`, …).
- *
- * Every prop accepts one of:
- * - `true` — log with the built-in color-coded logger (grouped by initiator event)
- * - a function — log with your own callback instead
- * - `false` / omitted — disabled (the concern's hook returns a no-op)
- *
- * `debugAll` is the default for every other prop, so `<NaviDebug debugAll>`
- * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
- * `debugScroll` and `debugPopup` unless those are set explicitly, since they
- * describe the same interaction.
- *
- * @param {object} props
- * @param {boolean|Function} [props.debugAll] - Default for every concern below.
- * @param {boolean|Function} [props.debugCommand] - navi command dispatch (`--navi-*`).
- * @param {boolean|Function} [props.debugInteraction] - Gated interactions; also implies focus/scroll/popup.
- * @param {boolean|Function} [props.debugFocus] - Focus moves and focus-visible decisions.
- * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion.
- * @param {boolean|Function} [props.debugPopup] - Popover/dialog open/close/positioning.
- * @param {boolean|Function} [props.debugAction] - Action lifecycle.
- * @param {boolean|Function} [props.debugUIState] - UI-state transitions and validation.
- * @param {import("ignore:preact").ComponentChildren} props.children
- *
- * @example
- * // Log everything under this subtree
- * <NaviDebug debugAll>
- *   <Picker>…</Picker>
- * </NaviDebug>
- *
- * @example
- * // Only wheel/scroll motion, via a custom sink
- * <NaviDebug debugScroll={(...args) => myLogger.log(...args)}>
- *   <Wheel>…</Wheel>
- * </NaviDebug>
- */
-const NaviDebug = ({
-  debugAll,
-  debugCommand = debugAll,
-  debugInteraction = debugAll,
-  debugFocus = debugAll,
-  debugScroll = debugAll,
-  debugPopup = debugAll,
-  debugAction = debugAll,
-  debugUIState = debugAll,
-  children
-}) => {
-  if (debugCommand === true) {
-    debugCommand = debugCommandDefault;
-  }
-  if (debugInteraction === true) {
-    debugInteraction = debugInteractionDefault;
-  }
-  if (debugFocus === true || debugInteraction && debugFocus === undefined) {
-    debugFocus = debugFocusDefault;
-  }
-  if (debugScroll === true || debugInteraction && debugScroll === undefined) {
-    debugScroll = debugScrollDefault;
-  }
-  if (debugPopup === true || debugInteraction && debugPopup === undefined) {
-    debugPopup = debugPopupDefault;
-  }
-  if (debugAction === true) {
-    debugAction = debugActionDefault;
-  }
-  if (debugUIState === true) {
-    debugUIState = debugUIStateDefault;
-  }
-  return jsx(DebugCommandContext.Provider, {
-    value: debugCommand,
-    children: jsx(DebugInteractionContext.Provider, {
-      value: debugInteraction,
-      children: jsx(DebugFocusContext.Provider, {
-        value: debugFocus,
-        children: jsx(DebugScrollContext.Provider, {
-          value: debugScroll,
-          children: jsx(DebugPopupContext.Provider, {
-            value: debugPopup,
-            children: jsx(DebugActionContext.Provider, {
-              value: debugAction,
-              children: jsx(DebugUIStateContext.Provider, {
-                value: debugUIState,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
-
-const actionErrorWeakMap = new WeakMap();
-const NAVI_ACTION_ERROR_CONSTRAINT = {
-  name: "navi_action_error",
-  check: (controller) => {
-    const errorInfo = actionErrorWeakMap.get(controller);
-    if (!errorInfo) {
-      return null;
-    }
-    const { target, message } = errorInfo;
-    return {
-      status: "error",
-      target,
-      message,
-    };
-  },
-  // This should not prevent <form> submission
-  // so whenever user tries to submit the form again the error is cleared
-  // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-  autoResetOnAction: true,
-  onAutoResetOnAction: (controller) => {
-    actionErrorWeakMap.delete(controller);
-  },
-};
-registerGlobalConstraint(NAVI_ACTION_ERROR_CONSTRAINT);
-const setActionError = (controller, message, { target } = {}) => {
-  actionErrorWeakMap.set(controller, { message, target });
-};
-const clearActionError = (controller) => {
-  if (actionErrorWeakMap.has(controller)) {
-    actionErrorWeakMap.delete(controller);
-  }
-};
-
-const useExecuteAction = (
-  elementRef,
-  {
-    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
-    errorMapping,
-  } = {},
-) => {
-  const debugAction = useDebugAction();
-
-  // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
-  // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
-  // To change if https://github.com/preactjs/preact/issues/4754 lands
-  const [error, setError] = useState(null);
-  const resetErrorBoundary = useResetErrorBoundary();
-  useLayoutEffect(() => {
-    if (error) {
-      throw error;
-    }
-  }, [error]);
-
-  const addErrorMessage = (error, { requester } = {}) => {
-    // The error is stored on the element that owns the action (the form/element itself).
-    // The requester (e.g. submit button) is stored as the callout display target
-    // so the validation message appears on the button, not the form.
-    const element = elementRef.current;
-    let target = requester;
-    let message;
-    if (errorMapping) {
-      const errorMappingResult = errorMapping(error);
-      if (typeof errorMappingResult === "string") {
-        message = errorMappingResult;
-      } else if (Error.isError(errorMappingResult)) {
-        message = errorMappingResult;
-      } else if (isValidElement(errorMappingResult)) {
-        message = errorMappingResult;
-      } else if (
-        typeof errorMappingResult === "object" &&
-        errorMappingResult !== null
-      ) {
-        message = errorMappingResult.message || error.message;
-        target = errorMappingResult.target || target;
-      }
-    } else {
-      message = error;
-    }
-    const controller = element.__uiStateController__;
-    if (controller) {
-      setActionError(controller, message, { target });
-    }
-  };
-  const removeErrorMessage = () => {
-    const element = elementRef.current;
-    const controller = element.__uiStateController__;
-    if (controller) {
-      clearActionError(controller);
-      controller.rules.validation.checkValidity();
-    }
-  };
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-    const form = element.tagName === "FORM" ? element : element.form;
-    if (!form) {
-      return null;
-    }
-    const onReset = () => {
-      removeErrorMessage();
-    };
-    form.addEventListener("reset", onReset);
-    return () => {
-      form.removeEventListener("reset", onReset);
-    };
-  });
-
-  // const errorEffectRef = useRef();
-  // errorEffectRef.current = errorEffect;
-  const executeAction = useCallback(
-    (actionEvent) => {
-      const { action, actionOrigin, requester, event, method, confirmParams } =
-        actionEvent.detail;
-      const sharedActionEventDetail = {
-        action,
-        actionOrigin,
-        requester,
-        event: actionEvent,
-        method,
-      };
-      debugAction(event, "executing action, requested by", requester);
-
-      if (resetErrorBoundary) {
-        resetErrorBoundary();
-      }
-      // removeErrorMessage might be superfluous here because we autoResetOnActio
-      // which is basically doing this but sooner to allow the action to be re-executed
-      // (error is non blocking otherwise we could not ever re-submit)
-      // removeErrorMessage();
-      setError(null);
-
-      const element = elementRef.current;
-      if (!element) {
-        throw new Error(
-          "useExecuteAction: elementRef.current is null, make sure to pass a ref to an element",
-        );
-      }
-      const [triggerAbort, addAbortCallback] = createPubSub();
-      const [triggerError, addErrorCallback] = createPubSub();
-      const [triggerComplete, addCompleteCallback] = createPubSub();
-      // Either three callbacks, one per outcome, or a single one for "however
-      // this ends" — it receives `{ aborted, reason }`, `{ error }` or
-      // `{ data }`, so a caller that only needs to know the action settled
-      // (and whether it worked) does not have to register three.
-      const addSideEffect = (sideEffect) => {
-        if (typeof sideEffect === "function") {
-          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
-          addErrorCallback((error) => sideEffect({ error }));
-          addCompleteCallback((data) => sideEffect({ data }));
-          return;
-        }
-        const { abort, error, complete } = sideEffect;
-        addAbortCallback(abort);
-        addErrorCallback(error);
-        addCompleteCallback(complete);
-      };
-      addSideEffect({
-        abort: (reason) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_abort", {
-              ...sharedActionEventDetail,
-              reason,
-            });
-          }
-        },
-        error: (error) => {
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error, { requester });
-          } else if (errorEffect === "throw") {
-            setError(error);
-          }
-
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_error", {
-              ...sharedActionEventDetail,
-              error,
-            });
-          }
-        },
-        complete: (data) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_end", {
-              ...sharedActionEventDetail,
-              data,
-            });
-          }
-        },
-      });
-
-      const actionStartEventDetail = {
-        ...sharedActionEventDetail,
-        addSideEffect,
-      };
-      dispatchInternalCustomEvent(
-        element,
-        "navi_action_start",
-        actionStartEventDetail,
-      );
-
-      const runAction = () => {
-        return action[method]({
-          event: actionEvent,
-          reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
-          onAbort: triggerAbort,
-          onError: triggerError,
-          onComplete: triggerComplete,
-        });
-      };
-
-      if (confirmParams) {
-        // The question is asked in a popup, so the answer only comes back a
-        // few frames later — everything the action does moves behind that
-        // await. Fine here and nowhere else: "start" has already been
-        // dispatched synchronously above, which is what tells a caller
-        // waiting on a commit that the action is running (see
-        // watchActionCompletion in control_action.js), so a dialog around it
-        // already knows to stay open until the answer lands.
-        return requestConfirmation({
-          ...confirmParams,
-          anchor: requester,
-        }).then((confirmed) => {
-          if (!confirmed) {
-            debugAction(event, `action aborted (via confirm popup)`);
-            triggerAbort(`user did not confirm`);
-            return undefined;
-          }
-          return runAction();
-        });
-      }
-
-      return runAction();
-    },
-    [elementRef, errorEffect],
-  );
-
-  return executeAction;
-};
-
-/**
- * A control placed inside a region that expands on click — a `<summary>`, an
- * accordion header carrying `aria-expanded` — has its click read twice: once by
- * the control it was aimed at, once by the region around it. The second reading
- * is never wanted; a menu opened from a collapsed row should not also unfold the
- * row.
- *
- * Cancelling the click is the only way to stop the region: a `<summary>` runs
- * its default action after the propagation, so `stopPropagation` does not reach
- * it. And it can only be done once the control has taken the click for itself —
- * navi refuses an interaction on an already-cancelled event (see
- * `onRequestInteraction`), so cancelling any earlier silences the control
- * instead of the region.
- *
- * That moment — right after an interaction was allowed — only exists inside
- * navi, which is why the cancellation lives here rather than in application code.
- */
-
-const CLICK_TO_EXPAND_SELECTOR = "summary, [aria-expanded]";
-// A popup is written inside whatever opened it, but it is not part of it on
-// screen: a control inside a popup must not be read as a click on the region
-// the popup happens to be nested in.
-const POPUP_SELECTOR = "[navi-control='popover'], [navi-control='dialog']";
-
-/**
- * Cancels `event` when the control consumed a click that a surrounding
- * click-to-expand region would otherwise read as "unfold me".
- *
- * Does nothing when cancelling the click would also cancel what the control
- * itself does with it (a link navigating, a checkbox toggling): there, the two
- * behaviours cannot be separated and the control's own comes first.
- */
-const preventClickToExpand = (element, event) => {
-  if (!event || event.type !== "click") {
-    return;
-  }
-  if (event.defaultPrevented) {
-    return;
-  }
-  if (!clickDefaultActionIsInert(element, event)) {
-    return;
-  }
-  const parentElement = element.parentElement;
-  if (!parentElement) {
-    return;
-  }
-  // From the parent: a control that opens something carries its own
-  // `aria-expanded` and would find itself.
-  const clickToExpandRegion = findClickToExpandRegion(parentElement);
-  if (!clickToExpandRegion) {
-    return;
-  }
-  event.preventDefault();
-};
-
-const findClickToExpandRegion = (element) => {
-  let ancestor = element;
-  while (ancestor) {
-    // Tested first: a popup carries `aria-expanded` of its own, so it would
-    // otherwise pass for the region containing its own content.
-    if (ancestor.matches(POPUP_SELECTOR)) {
-      return null;
-    }
-    if (ancestor.matches(CLICK_TO_EXPAND_SELECTOR)) {
-      return ancestor;
-    }
-    ancestor = ancestor.parentElement;
-  }
-  return null;
-};
-
-const clickDefaultActionIsInert = (element, event) => {
-  if (!isInertOnClick(element)) {
-    return false;
-  }
-  // The activation belongs to what was clicked, which can be deeper than the
-  // control host (a button inside it) or above it (a label wrapping it).
-  const { target } = event;
-  if (target && target !== element && target.nodeType === 1) {
-    let ancestor = target;
-    while (ancestor) {
-      if (!isInertOnClick(ancestor)) {
-        return false;
-      }
-      ancestor = ancestor.parentElement;
-    }
-  }
-  return true;
-};
-
-const NON_INERT_INPUT_TYPE_SET = new Set([
-  "checkbox",
-  "radio",
-  "submit",
-  "reset",
-  "image",
-  "file",
-]);
-
-const isInertOnClick = (element) => {
-  const { tagName } = element;
-  if (tagName === "A" || tagName === "AREA") {
-    return !element.hasAttribute("href");
-  }
-  if (tagName === "LABEL") {
-    // A label forwards the click to its control, whose activation would be
-    // cancelled along with the click.
-    return false;
-  }
-  if (tagName === "INPUT") {
-    return !NON_INERT_INPUT_TYPE_SET.has(element.type);
-  }
-  if (tagName === "BUTTON") {
-    return element.type === "button";
-  }
-  if (tagName === "SELECT") {
-    // The click opens the option list; cancelling it leaves the select shut.
-    return false;
-  }
-  return true;
-};
-
-const BUSY_CONSTRAINT = {
-  name: "busy",
-  messageAttribute: "data-busy-message",
-  // True for as long as an action runs and false again right after, with
-  // nothing to re-check it in between: a title written from it would still be
-  // saying "this action is in progress" over a button that has been idle for
-  // minutes. The callout says it live while it lasts, which is where that
-  // message belongs (see control_interaction.js).
-  transient: true,
-  // Unlike readonly/disabled, a busy element DOES block its parent from
-  // submitting — the element is mid-operation and cannot safely participate.
-  check: (field) => {
-    const isBusy = isControlBusy(field);
-    if (!isBusy) {
-      return null;
-    }
-
-    const isButton = field.controlType === "button";
-    const message = isButton
-      ? naviI18n("constraint.busy.button")
-      : naviI18n("constraint.busy.default");
-    return { message, status: "info" };
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
-
-// Asked source by source rather than off the rendered `aria-busy`, which
-// conflates them and is a frame behind: that attribute is written during
-// render, so it still says "true" for the whole tick in which an action
-// settles — and that tick is exactly when this gets asked (an action's own
-// completion side effect walking the surface around it: a popup deciding
-// whether it may finally close, a slide whether it may move on).
-//
-// The action's running state is a signal, so it is already right there. A
-// control busy only because the group above is running the action it asked for
-// has no state of its own to read — the group's answer IS its answer, so it
-// asks upward and inherits the same live reading.
-const isControlBusy = (field) => {
-  if (field.loadingFromOwnProp) {
-    return true;
-  }
-  const { boundAction } = field;
-  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
-    return true;
-  }
-  if (field.loadingFromParent) {
-    const parent = field.parentUIStateController;
-    return parent ? isControlBusy(parent) : false;
-  }
-  return false;
-};
-
-const DISABLED_CONSTRAINT = {
-  name: "disabled",
-  messageAttribute: "data-disabled-message",
-  check: (field) => {
-    const disabled = field.controlHostProps.disabled;
-    if (!disabled) {
-      return null;
-    }
-
-    const type = field.controlHostProps.type;
-    let message;
-    if (type === "radio") {
-      message = naviI18n(`constraint.disabled.radio`);
-    } else if (type === "checkbox") {
-      message = naviI18n(`constraint.disabled.checkbox`);
-    } else {
-      message = naviI18n(`constraint.disabled.default`);
-    }
-    // A disabled element does not block its parent from submitting.
-    return { message, status: "info", ignoredByParents: true };
-  },
-};
-CONSTRAINT_ATTRIBUTE_SET.add("disabled");
-CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
-
-const READONLY_CONSTRAINT = {
-  name: "readonly",
-  messageAttribute: "data-readonly-message",
-  check: (field) => {
-    const readOnly = Boolean(
-      field.controlHostProps.readOnly ||
-      field.controlHostProps["aria-readonly"] === "true",
-    );
-    if (!readOnly) {
-      return null;
-    }
-
-    // A selection guarding its length (see maxLengthGuard) is what holds this
-    // one back, so max_length is what refuses it: same name, same message, same
-    // `maxLengthMessage` to say it in the caller's own words. Read-only is only
-    // how it is expressed on the item.
-    const parent = field.parentUIStateController;
-    if (parent?.isChildBlockedByMaxLengthGuard?.(field)) {
-      return {
-        name: MAX_LENGTH_CONSTRAINT.name,
-        constraint: MAX_LENGTH_CONSTRAINT,
-        message: naviI18n("constraint.guard.max_length.selection", {
-          max: String(parent.props.maxLengthGuard),
-        }),
-        status: "info",
-        ignoredByParents: true,
-      };
-    }
-
-    // A readonly element does not block its parent from submitting — mirrors
-    // standard HTML form behaviour where readonly inputs are submitted as-is.
-    return {
-      message: readOnlyMessage(field),
-      status: "info",
-      ignoredByParents: true,
-    };
-  },
-};
-// CONSTRAINT_ATTRIBUTE_SET.add("readOnly"); // not all control support this attr
-CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
-CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
-
-const readOnlyMessage = (field) => {
-  // Read-only for a reason the control named itself. Only one so far: a send
-  // button held back by the form above it, which holds nothing new (see
-  // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
-  // button, it is the form still waiting for a change, so that is what it says.
-  // Read off the reason rather than off the form's state: a button read-only for
-  // its own reasons, inside a form that happens to be unchanged, is not waiting
-  // for anything.
-  if (field.controlHostProps["data-readonly-reason"] === "form-unchanged") {
-    return naviI18n("constraint.readonly.awaiting_change");
-  }
-  if (field.controlType === "button") {
-    return naviI18n("constraint.readonly.button");
-  }
-  return naviI18n("constraint.readonly.default");
-};
-
-/**
- * Interaction gate: decides whether a user interaction is allowed to proceed
- * based solely on the control's interactivity state (disabled / read-only / busy).
- *
- * Does NOT know about actions or validity — those are handled separately:
- * - Action dispatch + validity: `control_action.js` / `dispatchRequestAction`
- * - Validity checking: `control_validation.js`
- *
- * Each UI state controller gets its own `controlInteraction` instance (created by
- * `createControlInteraction`) just like it gets a `controlValidity` instance.
- *
- * Flow:
- *   user interaction
- *   → dispatchRequestInteraction
- *   → "navi_request_interaction" event
- *   → onRequestInteraction
- *       → check disabled / read-only / busy (via controller.controlInteraction)
- *       → if blocked  → prevented()
- *       → if allowed  → allowed()
- *         → (in allowed callback) setUIState(value)
- *         → (in allowed callback) dispatchRequestAction(element, { action, event })
- */
-
-
-const INTERACTION_TOKEN = createOpenToken();
-
-const INTERACTION_CONSTRAINT_SET = new Set([
-  DISABLED_CONSTRAINT,
-  BUSY_CONSTRAINT,
-  READONLY_CONSTRAINT,
-]);
-
-/**
- * Per-controller interactivity state manager.
- * Checks whether the control is currently interactive (not disabled/readonly/busy).
- * Shows a callout when interaction is blocked.
- * Knows nothing about validity or actions.
- *
- * @param {object} controller - The UI state controller.
- * @param {object} callout    - Shared callout manager from `controller.rules.callout`.
- */
-const createControlInteraction = (
-  controller,
-  { callout, debugInteraction },
-) => {
-  let interactionFailedConstraintInfo = null;
-  let failingManagedInteraction = null;
-  // The title this rule put on the element, if any (see checkInteractivity).
-  let titleWritten = null;
-
-  const checkInteractivity = ({ event } = {}) => {
-    interactionFailedConstraintInfo = null;
-    for (const constraint of INTERACTION_CONSTRAINT_SET) {
-      const checkResult = constraint.check(controller);
-      if (!checkResult) {
-        continue;
-      }
-      const constraintInfo =
-        typeof checkResult === "string"
-          ? { message: checkResult }
-          : checkResult;
-      interactionFailedConstraintInfo = {
-        name: constraint.name,
-        constraint,
-        ...constraintInfo,
-      };
-      break;
-    }
-    // Check managed controls — a non-interactable child blocks the parent,
-    // UNLESS the child's failing constraint has `ignoredByParents: true`
-    // (e.g. a disabled child inside a group should not prevent the group from acting).
-    // Only the children that are reachable alongside the parent take part: a
-    // picker's popup content is excluded, see getInteractionBlockingControls.
-    failingManagedInteraction = null;
-    if (!interactionFailedConstraintInfo) {
-      for (const mc of controller.getInteractionBlockingControls()) {
-        const mci = mc.rules.interaction;
-        if (!mci) {
-          continue;
-        }
-        const canInteract = mci.checkInteractivity({ event });
-        if (canInteract) {
-          continue;
-        }
-        const failedInfo = mci.interactionFailedConstraintInfo;
-        if (failedInfo?.ignoredByParents) {
-          continue;
-        }
-        failingManagedInteraction = mci;
-        break;
-      }
-    }
-
-    // Keep title attribute in sync for accessibility.
-    const titleLess = !controller.controlHostProps?.title;
-    if (titleLess) {
-      const element = controller.ref.current;
-      if (element) {
-        if (interactionFailedConstraintInfo) {
-          // Only what stays true: a title is written once and read whenever the
-          // pointer rests on the element, so a constraint that comes and goes
-          // on its own (busy, see its own `transient`) would leave it telling a
-          // story that ended — "this action is in progress" over a button that
-          // has been idle for minutes. Those say what they have to say through
-          // the callout, live, while it lasts.
-          if (!interactionFailedConstraintInfo.constraint?.transient) {
-            // The same message the callout would show, not the generated one:
-            // a control that says why in its own words (readOnlyMessage and
-            // friends) says it wherever the reason is read.
-            const { message } = getConstraintMessage(
-              controller,
-              interactionFailedConstraintInfo.constraint,
-              interactionFailedConstraintInfo.message,
-              {},
-            );
-            element.setAttribute("title", message);
-            // Remembered so it can be taken back below.
-            titleWritten = message;
-          }
-        } else if (titleWritten !== null) {
-          // Only what this rule wrote, and only if nothing has changed it since
-          // — a title from validation (which owns its own, see
-          // control_validation.js) or from anywhere else is not ours to remove.
-          if (element.getAttribute("title") === titleWritten) {
-            element.removeAttribute("title");
-          }
-          titleWritten = null;
-        }
-      }
-    }
-
-    const canInteract =
-      !interactionFailedConstraintInfo && !failingManagedInteraction;
-    // When the control is now interactable, remove the interaction token
-    // so the callout closes if no other tokens (e.g. validation) are active.
-    if (canInteract) {
-      callout.removeOpenToken(INTERACTION_TOKEN, event);
-    }
-    return canInteract;
-  };
-
-  const reportInteractivity = ({ event } = {}) => {
-    if (failingManagedInteraction) {
-      // Report on the specific child that is blocking, not the parent.
-      failingManagedInteraction.reportInteractivity({ event });
-      return;
-    }
-    debugInteraction(
-      event,
-      `reportInteractivity (${interactionFailedConstraintInfo.name})`,
-    );
-    const { message } = getConstraintMessage(
-      controller,
-      interactionFailedConstraintInfo.constraint,
-      interactionFailedConstraintInfo.message,
-      {},
-    );
-    callout.addOpenToken(INTERACTION_TOKEN, {
-      message,
-      status: interactionFailedConstraintInfo.status,
-      anchorElement: interactionFailedConstraintInfo.target,
-      event,
-      skipFocus: true,
-    });
-  };
-
-  const controlInteraction = {
-    checkInteractivity,
-    reportInteractivity,
-  };
-  Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
-    get: () => interactionFailedConstraintInfo,
-  });
-  Object.defineProperty(controlInteraction, "failingManagedInteraction", {
-    get: () => failingManagedInteraction,
-  });
-  return controlInteraction;
-};
-
-const dispatchRequestInteraction = (
-  element,
-  { event, name = "", prevented, allowed, always, ...detailRest } = {},
-) => {
-  const controlHost = findControlHost(element) || element;
-  return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
-    event,
-    name,
-    prevented,
-    allowed,
-    always,
-    ...detailRest,
-  });
-};
-
-const onRequestInteraction = (
-  requestInteractionCustomEvent,
-  { debugInteraction },
-) => {
-  const {
-    event,
-    name,
-    bypassInteractivity = false,
-    prevented,
-    allowed,
-    always,
-  } = requestInteractionCustomEvent.detail;
-
-  const onPrevented = (reason) => {
-    debugInteraction(event, `"${name}" prevented (${reason})`);
-    requestInteractionCustomEvent.preventDefault();
-    prevented?.();
-    always?.();
-  };
-
-  if (event.defaultPrevented) {
-    onPrevented("event.defaultPrevented");
-    return false;
-  }
-
-  if (POINTER_DOWN_TYPE_SET.has(event.type) && event.button !== 0) {
-    onPrevented(`non-primary mouse button (${event.button})`);
-    return false;
-  }
-
-  const currentTarget = requestInteractionCustomEvent.currentTarget;
-  const controlHost = findControlHost(currentTarget) || currentTarget;
-  const controller = controlHost.__uiStateController__;
-
-  if (controller && !bypassInteractivity) {
-    const ci = controller?.rules.interaction;
-    if (ci) {
-      const canInteract = ci.checkInteractivity({ event });
-      if (!canInteract) {
-        const failedInfo =
-          ci.interactionFailedConstraintInfo ??
-          ci.failingManagedInteraction?.interactionFailedConstraintInfo;
-        const reason = failedInfo
-          ? `failing interaction constraint "${failedInfo.name}"`
-          : "not interactable";
-        ci.reportInteractivity({ event });
-        onPrevented(reason);
-        return false;
-      }
-    }
-  }
-
-  debugInteraction(event, `"${name}" allowed`);
-  allowed?.();
-  always?.();
-  // The click served this control; it must not serve a second time whatever
-  // unfolds around it (see click_to_expand.js).
-  preventClickToExpand(controlHost, event);
-  return true;
-};
-
-const POINTER_DOWN_TYPE_SET = new Set(["pointerdown", "mousedown", "click"]);
-
-/**
- * Action gate: decides whether a requested action should execute, based on
- * the control's current validity state.
- *
- * This is intentionally separate from the interaction gate (`control_interaction.js`):
- * - Interaction gate: "can the user interact with this control at all?" (disabled/readonly/busy)
- * - Action gate: "should this specific action execute?" (required, pattern, etc.)
- *
- * Typical call sequence from `control_hooks.jsx`:
- *   1. `dispatchRequestInteraction(element, { ... })` — interactivity check
- *   2. In the `allowed` callback: `setUIState(value)` — update state
- *   3. Still in `allowed`: `dispatchRequestAction(element, { action, event })` — action gate
- *
- * `dispatchRequestAction` assumes `checkValidity` has already been called (it is called
- * by `setUIState` on every state change). It re-checks with `fromRequestAction: true`
- * to trigger any `autoResetOnAction` side effects, then reads the validity state to
- * decide whether to report the failure or fire `navi_action_allowed`.
- */
-
-
-/**
- * Requests that `action` be executed on `element`.
- *
- * - Resolves any proxy target (so navi_action_* fires on the real element).
- * - Calls `syncValidity` to update callout state and determine validity.
- * - If invalid: calls `reportValidity`, dispatches `navi_action_prevented`, returns false.
- * - If valid:   dispatches `navi_action_allowed`, returns true.
- *
- * Pass `action: "auto"` for form submits — the `onnavi_action_allowed` handler
- * in `control_hooks.jsx` will resolve it to the element's bound action.
- */
-const dispatchRequestAction = (
-  element,
-  {
-    event,
-    name = "dispatchRequestAction",
-    prevented,
-    allowed,
-    always,
-    ...actionOptions // action, requester, actionOrigin, method, meta
-  } = {},
-) => {
-  return dispatchRequestInteraction(element, {
-    event,
-    name,
-    prevented,
-    allowed: () => {
-      allowed?.();
-      return tryActionAfterInteractionAllowed(element, {
-        event,
-        ...actionOptions,
-      });
-    },
-    always,
-  });
-};
-
-/**
- * Dispatches an action and reports whether it outlived the dispatch.
- *
- * "start" is dispatched synchronously (see `use_execute_action.js`), so an
- * action that has not settled by the time `dispatchAction` returns is
- * asynchronous — which is the question anything waiting on a commit actually
- * asks before acting on it: a dialog before closing, `--navi-send` before
- * moving to the next slide.
- *
- * `whenSucceeded` registers what to do once it completes, and only then: an
- * error or an abort leaves whatever the action left in front of the user
- * (a validation message, an aborted state) instead.
- *
- * @param {Element} element - The element the action is dispatched on.
- * @param {() => any} dispatchAction
- * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void }}
- */
-const watchActionCompletion = (element, dispatchAction) => {
-  let running = false;
-  let onSuccess = null;
-  const onActionStart = (actionStartEvent) => {
-    running = true;
-    actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
-      running = false;
-      if (error || aborted) {
-        return;
-      }
-      // A microtask later, not right here: this runs inside the `batch()` that
-      // settles the action (see actions.js), and a bound action mirrors its
-      // running state through a signal effect the batch defers — so the action
-      // still reads as running until the batch ends. What waits for a commit
-      // asks exactly that question next (the interaction gate, on the way to
-      // closing a popup), and must not be told the action is still going.
-      // Null for an action that settled before the caller ever asked to wait
-      // (a synchronous one): it goes out through the caller's own normal path.
-      queueMicrotask(() => {
-        onSuccess?.();
-      });
-    });
-  };
-  element.addEventListener("navi_action_start", onActionStart);
-  let result;
-  try {
-    result = dispatchAction();
-  } finally {
-    element.removeEventListener("navi_action_start", onActionStart);
-  }
-  return {
-    result,
-    isRunning: running,
-    whenSucceeded: (callback) => {
-      onSuccess = callback;
-    },
-  };
-};
-
-const tryActionAfterInteractionAllowed = (
-  element,
-  {
-    event,
-    action = "auto",
-    requester,
-    actionOrigin = "action_prop",
-    method = "rerun",
-    meta = {},
-    reportOnInvalid,
-    onInvalid,
-  },
-) => {
-  const controlHost = findControlHost(element) || element;
-  const controller = controlHost.__uiStateController__;
-  // Whether the control being asked owns the work, or is only a way of asking
-  // for it. A button with no action of its own still comes through here (it
-  // gets a placeholder action so its own navi_action_* events exist), then
-  // hands the real request to its command's target — a submit button to the
-  // form around it, which comes back through here with that same button as
-  // requester.
-  const hasOwnAction = Boolean(controller?.props.action);
-
-  // What the requester asks before the action runs at all, read off it rather
-  // than passed down from each call site: a confirmation belongs to the button
-  // the user pressed, whichever route brought the request here. Only asked on
-  // the request that carries the real work, or the same press would ask twice.
-  const confirmParams =
-    hasOwnAction || requester !== controlHost
-      ? getConfirmParams(requester)
-      : undefined;
-
-  // Resolve proxy so navi_action_* fires on the real control element.
-  let elementForAction = controlHost;
-  let uiState;
-  if (controller) {
-    const proxyTargetController = findControlProxyTargetController(controller);
-    if (proxyTargetController) {
-      elementForAction = proxyTargetController.ref.current;
-    }
-    const activeController = proxyTargetController ?? controller;
-    uiState = activeController?.uiState;
-  }
-
-  // Validity gate: re-check (handles autoResetOnAction side effects), then read
-  // the result and decide whether to report/prevent/allow.
-  const cv = controller?.rules.validation;
-  if (cv) {
-    const isValid = cv.syncValidity(event, {
-      report: reportOnInvalid ?? hasOwnAction,
-      fromRequestAction: true,
-    });
-    if (!isValid) {
-      onInvalid?.();
-      if (action === "auto" || action?.isAction) {
-        dispatchInternalCustomEvent(elementForAction, "navi_action_prevented", {
-          event,
-          requester,
-          actionOrigin,
-          action,
-          method,
-          meta,
-        });
-      }
-      return false;
-    }
-  }
-
-  if (action === "auto" || action?.isAction) {
-    // A control that commits gets the last word on whether this particular
-    // value is worth acting on — see Form's own `shouldRequestAction`, which
-    // is where "nothing changed since the last send" is decided. Everything
-    // before this still ran (the interaction gate, the constraints), and the
-    // caller is still told the send went through: what follows a send (a slide
-    // moving on, a popup closing) is about the user being done, not about
-    // whether there was anything to send.
-    if (controller?.shouldRequestAction?.(uiState) === false) {
-      return true;
-    }
-    dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
-      event,
-      requester,
-      uiState,
-      actionOrigin,
-      action,
-      method,
-      meta,
-      confirmParams,
-    });
-  }
-  return true;
 };
 
 /**
@@ -19091,11 +20503,23 @@ document.body.addEventListener(
   { capture: true },
 );
 
+/**
+ * @param {Element} element The element asking — the command's source, and the
+ *   anchor a popup opens on unless `anchor` says otherwise.
+ * @param {string} command
+ * @param {Event} event What the user did.
+ * @param {object} [options]
+ * @param {boolean} [options.optional] No suitable target is not a warning.
+ * @param {any} [options.value] Carried to whoever answers.
+ * @param {Element} [options.anchor] Where a popup this opens should be placed,
+ *   when that is not the element asking: a menu opened by a press belongs at the
+ *   point the press happened, and the row that was pressed is not that point.
+ */
 const triggerNaviCommand = (
   element,
   command,
   event,
-  { optional, value } = {},
+  { optional, value, anchor } = {},
 ) => {
   const naviCommand =
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
@@ -19114,6 +20538,7 @@ const triggerNaviCommand = (
   const execute = naviCommand.commandHandler(element, event, {
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
     argument: command.includes(":") ? commandArgument(command) : undefined,
+    anchor,
   });
   if (!execute) {
     if (optional) {
@@ -19704,7 +21129,7 @@ registerNaviCommand("--navi-back", (source, event) => {
   };
 });
 
-registerNaviCommand("--navi-toggle", (source, event) => {
+registerNaviCommand("--navi-toggle", (source, event, { anchor } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -19720,11 +21145,12 @@ registerNaviCommand("--navi-toggle", (source, event) => {
       return dispatchCustomEvent(target, customEventName, {
         event,
         source: resolveCommandProxySource(source),
+        anchor,
       });
     },
   };
 });
-registerNaviCommand("--navi-open", (source, event) => {
+registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -19733,9 +21159,13 @@ registerNaviCommand("--navi-open", (source, event) => {
   return {
     target,
     implementation: () => {
+      // The popup reads `anchor` first and falls back to the source (see
+      // onnavi_request_open in popover.jsx), so saying nothing keeps the old
+      // behaviour: the element asking is the element opened against.
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
         source: resolveCommandProxySource(source),
+        anchor,
       });
     },
   };
@@ -24137,649 +25567,6 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
   })
 };
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
-
-const detectMac = () => {
-  // Modern way using User-Agent Client Hints API
-  if (window.navigator.userAgentData) {
-    return window.navigator.userAgentData.platform === "macOS";
-  }
-  // Fallback to userAgent string parsing
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
-};
-const isMac = detectMac();
-
-// Maps canonical browser key names to their user-friendly aliases.
-// Used for both event matching and ARIA normalization.
-const keyMapping = {
-  " ": { alias: ["space"] },
-  "escape": { alias: ["esc"] },
-  "arrowup": { alias: ["up"] },
-  "arrowdown": { alias: ["down"] },
-  "arrowleft": { alias: ["left"] },
-  "arrowright": { alias: ["right"] },
-  "delete": { alias: ["del"] },
-  // Platform-specific mappings
-  ...(isMac
-    ? { delete: { alias: ["backspace"] } }
-    : { backspace: { alias: ["delete"] } }),
-};
-
-const addManyEventListeners = (element, events) => {
-  const cleanupCallbackSet = new Set();
-  for (const event of Object.keys(events)) {
-    const callback = events[event];
-    element.addEventListener(event, callback);
-    cleanupCallbackSet.add(() => {
-      element.removeEventListener(event, callback);
-    });
-  }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-  };
-};
-
-/**
- * Custom hook creating a stable callback that doesn't trigger re-renders.
- *
- * PROBLEM: Parent components often forget to use useCallback, causing library
- * components to re-render unnecessarily when receiving callback props.
- *
- * SOLUTION: Library components can use this hook to create stable callback
- * references internally, making them defensive against parents who don't
- * optimize their callbacks. This ensures library components don't force
- * consumers to think about useCallback.
- *
- * USAGE:
- * ```js
- * // Parent component (consumer) - no useCallback needed
- * const Parent = () => {
- *   const [count, setCount] = useState(0);
- *
- *   // Parent naturally creates new function reference each render
- *   // (forgetting useCallback is common and shouldn't break performance)
- *   return <LibraryButton onClick={(e) => setCount(count + 1)} />;
- * };
- *
- * // Library component - defensive against changing callbacks
- * const LibraryButton = ({ onClick }) => {
- *   // ✅ Create stable reference from parent's potentially changing callback
- *   const stableClick = useStableCallback(onClick);
- *
- *   // Internal expensive components won't re-render when parent updates
- *   return <ExpensiveInternalButton onClick={stableClick} />;
- * };
- *
- * // Deep internal component gets stable reference
- * const ExpensiveInternalButton = memo(({ onClick }) => {
- *   // This won't re-render when Parent's count changes
- *   // But onClick will always call the latest Parent callback
- *   return <button onClick={onClick}>Click me</button>;
- * });
- * ```
- *
- * Perfect for library components that need performance without burdening consumers.
- */
-
-
-const useStableCallback = (callback, mapper) => {
-  const callbackRef = useRef();
-  callbackRef.current = callback;
-  const stableCallbackRef = useRef();
-
-  // Return original falsy value directly when callback is not a function
-  if (!callback) {
-    return callback;
-  }
-
-  const existingStableCallback = stableCallbackRef.current;
-  if (existingStableCallback) {
-    return existingStableCallback;
-  }
-  const stableCallback = (...args) => {
-    const currentCallback = callbackRef.current;
-    return currentCallback(...args);
-  };
-  stableCallbackRef.current = stableCallback;
-  return stableCallback;
-};
-
-const useActionEvents = (
-  elementRef,
-  {
-    actionOrigin = "action_prop",
-    /**
-     * @param {Event} e - L'événement original
-     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
-     */
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAllowed,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  },
-) => {
-  onCancel = useStableCallback(onCancel);
-  onRequested = useStableCallback(onRequested);
-  onPrevented = useStableCallback(onPrevented);
-  onAllowed = useStableCallback(onAllowed);
-  onStart = useStableCallback(onStart);
-  onAbort = useStableCallback(onAbort);
-  onError = useStableCallback(onError);
-  onEnd = useStableCallback(onEnd);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-
-    return addManyEventListeners(element, {
-      navi_cancel: (e) => {
-        // cancel don't need to check for actionOrigin because
-        // it's actually unrelated to a specific actions
-        // in that sense it should likely be moved elsewhere as it's related to
-        // interaction and constraint validation, not to a specific action
-        onCancel?.(e, e.detail.reason);
-      },
-      navi_request_action: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onRequested?.(e);
-      },
-      navi_action_prevented: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onPrevented?.(e);
-      },
-      navi_action_allowed: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAllowed?.(e);
-      },
-      navi_action_start: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onStart?.(e);
-      },
-      navi_action_abort: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAbort?.(e);
-      },
-      navi_action_error: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onError?.(e.detail.error, e);
-      },
-      navi_action_end: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onEnd?.(e);
-      },
-    });
-  }, [
-    actionOrigin,
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAllowed,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  ]);
-};
-
-const activeShortcutsSignal = signal([]);
-const shortcutsMap = new Map();
-
-const areShortcutsEqual = (shortcutA, shortcutB) => {
-  return (
-    shortcutA.key === shortcutB.key &&
-    shortcutA.description === shortcutB.description &&
-    shortcutA.enabled === shortcutB.enabled
-  );
-};
-
-const areShortcutArraysEqual = (arrayA, arrayB) => {
-  if (arrayA.length !== arrayB.length) {
-    return false;
-  }
-
-  for (let i = 0; i < arrayA.length; i++) {
-    if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-const updateActiveShortcuts = () => {
-  const activeElement = activeElementSignal.peek();
-  const currentActiveShortcuts = activeShortcutsSignal.peek();
-  const activeShortcuts = [];
-  for (const [element, { shortcuts }] of shortcutsMap) {
-    if (element === activeElement || element.contains(activeElement)) {
-      activeShortcuts.push(...shortcuts);
-    }
-  }
-
-  // Only update if shortcuts have actually changed
-  if (!areShortcutArraysEqual(currentActiveShortcuts, activeShortcuts)) {
-    activeShortcutsSignal.value = activeShortcuts;
-  }
-};
-effect(() => {
-  // eslint-disable-next-line no-unused-expressions
-  activeElementSignal.value;
-  updateActiveShortcuts();
-});
-const addShortcuts = (element, shortcuts) => {
-  shortcutsMap.set(element, { shortcuts });
-  updateActiveShortcuts();
-};
-const removeShortcuts = (element) => {
-  shortcutsMap.delete(element);
-  updateActiveShortcuts();
-};
-
-const useKeyboardShortcuts = (
-  elementRef,
-  shortcuts,
-  {
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    allowConcurrentActions,
-    closestFocusableSelector,
-  } = {},
-) => {
-  if (!elementRef) {
-    throw new Error(
-      "useKeyboardShortcuts requires an elementRef to attach shortcuts to.",
-    );
-  }
-
-  const executeAction = useExecuteAction(elementRef);
-  const shortcutActionIsBusyRef = useRef(false);
-  useActionEvents(elementRef, {
-    actionOrigin: "keyboard_shortcut",
-    onPrevented: onActionPrevented,
-    onAllowed: (actionEvent) => {
-      const { shortcut } = actionEvent.detail.meta || {};
-      if (!shortcut) {
-        // not a shortcut (an other interaction triggered the action, don't request it again)
-        return;
-      }
-      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
-      // otherwise setState would call that action immediately
-      // setAction(() => actionEvent.detail.action);
-      executeAction(actionEvent, {
-        requester: document.activeElement,
-      });
-    },
-    onStart: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      if (!allowConcurrentActions) {
-        shortcutActionIsBusyRef.current = true;
-      }
-      shortcut.onStart?.(e);
-      onActionStart?.(e);
-    },
-    onAbort: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onAbort?.(e);
-      onActionAbort?.(e);
-    },
-    onError: (error, e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onError?.(error, e);
-      onActionError?.(error, e);
-    },
-    onEnd: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onEnd?.(e);
-      onActionEnd?.(e);
-    },
-  });
-
-  const shortcutDeps = [];
-  for (const shortcut of shortcuts) {
-    shortcutDeps.push(
-      shortcut.key,
-      shortcut.description,
-      shortcut.enabled,
-      shortcut.confirmMessage,
-    );
-    shortcut.action = useAction(shortcut.action);
-  }
-  const onKeyDown = createOnKeyDownForShortcutArray(
-    shortcuts,
-    shortcutActionIsBusyRef,
-  );
-  useEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-    const focusableElement = closestFocusableSelector
-      ? element.closest(closestFocusableSelector)
-      : element;
-    focusableElement.addEventListener("keydown", onKeyDown);
-    addShortcuts(focusableElement, shortcuts);
-    return () => {
-      focusableElement.removeEventListener("keydown", onKeyDown);
-      removeShortcuts(focusableElement);
-    };
-  }, [shortcutDeps]);
-};
-
-const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
-  const shortcutsCopy = [];
-  for (const shortcutCandidate of shortcuts) {
-    shortcutsCopy.push({
-      ...shortcutCandidate,
-      handler: (keyboardEvent) => {
-        if (shortcutCandidate.handler) {
-          const returnValue = shortcutCandidate.handler(keyboardEvent);
-          // A shortcut handler returns either a plain false/null/undefined
-          // (no interaction to dispatch — e.g. the shortcut didn't apply
-          // given some runtime check), or the same { name, allowed,
-          // prevented, ... } shape dispatchRequestInteraction itself takes,
-          // which needs an actual dispatch to ever run its `allowed`/
-          // `prevented` callbacks.
-          if (!returnValue || typeof returnValue !== "object") {
-            return returnValue;
-          }
-          return dispatchRequestInteraction(keyboardEvent.currentTarget, {
-            event: keyboardEvent,
-            ...returnValue,
-          });
-        }
-        if (busyRef?.current) {
-          return false;
-        }
-        const { action } = shortcutCandidate;
-        const actionWithEvent = action.bindParams(keyboardEvent);
-        const element = keyboardEvent.currentTarget;
-        return dispatchRequestInteraction(element, {
-          event: keyboardEvent,
-          wantAction: true,
-          name: "keyboard_shortcut",
-          category: "interaction",
-          requester: document.activeElement,
-          action: actionWithEvent,
-          actionOrigin: "keyboard_shortcut",
-          confirmMessage: shortcutCandidate.confirmMessage,
-          meta: {
-            shortcut: shortcutCandidate,
-          },
-        });
-      },
-    });
-  }
-
-  return (keyboardEvent) => {
-    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
-  };
-};
-const createOnKeyDownForShortcuts = (shortcuts) => {
-  const shortcutsArray = [];
-  for (const key of Object.keys(shortcuts)) {
-    const value = shortcuts[key];
-    const shortcut = { key };
-    if (typeof value === "function") {
-      shortcut.handler = value;
-    } else if (typeof value === "object" && value !== null) {
-      Object.assign(shortcut, value);
-    }
-    shortcutsArray.push(shortcut);
-  }
-  return createOnKeyDownForShortcutArray(shortcutsArray);
-};
-
-const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  const currentTarget = keyboardEvent.currentTarget;
-  const target = keyboardEvent.target;
-  let canIntercept;
-  if (target === currentTarget) {
-    // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
-    canIntercept = true;
-  } else {
-    // we need to check if the default action is something that we can allow to be intercepted
-    const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
-    canIntercept =
-      !defaultAction ||
-      defaultAction === "scroll" ||
-      defaultAction === "dismiss";
-  }
-  if (!canIntercept) {
-    return null;
-  }
-  for (const shortcutCandidate of shortcuts) {
-    let { enabled = true, key } = shortcutCandidate;
-    if (!enabled) {
-      continue;
-    }
-
-    if (typeof key === "function") {
-      const keyReturnValue = key(keyboardEvent);
-      if (!keyReturnValue) {
-        continue;
-      }
-      key = keyReturnValue;
-    }
-    if (!key) {
-      console.error(shortcutCandidate);
-      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
-    }
-
-    // Handle platform-specific combination objects
-    let actualCombination;
-    let crossPlatformCombination;
-    if (typeof key === "object" && key !== null) {
-      actualCombination = isMac ? key.mac : key.other;
-    } else {
-      actualCombination = key;
-      if (containsPlatformSpecificKeys(key)) {
-        crossPlatformCombination = generateCrossPlatformCombination(key);
-      }
-    }
-
-    // Check both the actual combination and cross-platform combination
-    const matchesActual =
-      actualCombination &&
-      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
-    const matchesCrossPlatform =
-      crossPlatformCombination &&
-      crossPlatformCombination !== actualCombination &&
-      keyboardEventIsMatchingKeyCombination(
-        keyboardEvent,
-        crossPlatformCombination,
-      );
-
-    if (!matchesActual && !matchesCrossPlatform) {
-      continue;
-    }
-    if (typeof enabled === "function" && !enabled(keyboardEvent)) {
-      continue;
-    }
-    const returnValue = shortcutCandidate.handler(keyboardEvent);
-    if (returnValue === false) {
-      keyboardEvent.preventDefault();
-    }
-    return returnValue;
-  }
-  return null;
-};
-const containsPlatformSpecificKeys = (combination) => {
-  const lowerCombination = combination.toLowerCase();
-  const macSpecificKeys = ["command", "cmd"];
-
-  return macSpecificKeys.some((key) => lowerCombination.includes(key));
-};
-const generateCrossPlatformCombination = (combination) => {
-  let crossPlatform = combination;
-
-  if (isMac) {
-    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
-    return null;
-  }
-  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
-  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
-  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
-
-  return crossPlatform;
-};
-const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
-  if (!event.key) {
-    // Some keydown events carry no key at all — the browser synthesizes one
-    // when a native autofill/search suggestion is clicked. No key, no match.
-    return false;
-  }
-  const keys = keyCombination.toLowerCase().split("+");
-  const activeModifiers = new Set();
-  for (const eventProperty of Object.keys(modifierKeyMapping)) {
-    if (event[eventProperty]) {
-      activeModifiers.add(eventProperty);
-    }
-  }
-
-  for (const key of keys) {
-    let modifierFound = false;
-
-    // Check if this key is a modifier
-    for (const [eventProperty, config] of Object.entries(modifierKeyMapping)) {
-      const allNames = [...config.names];
-
-      // Add Mac-specific names only if we're on Mac and they exist
-      if (isMac && config.macNames) {
-        allNames.push(...config.macNames);
-      }
-
-      if (allNames.includes(key)) {
-        // Check if the corresponding event property is pressed
-        if (!event[eventProperty]) {
-          return false;
-        }
-        activeModifiers.delete(eventProperty);
-        modifierFound = true;
-        break;
-      }
-    }
-    if (modifierFound) {
-      continue;
-    }
-
-    // Check if it's a range pattern like "a-z" or "0-9"
-    if (key.includes("-") && key.length === 3) {
-      const [startChar, dash, endChar] = key;
-      if (dash === "-") {
-        // Only check ranges for single alphanumeric characters
-        const eventKey = event.key.toLowerCase();
-        if (eventKey.length !== 1) {
-          return false; // Not a single character key
-        }
-
-        // Only allow a-z and 0-9 ranges
-        const isValidRange =
-          (startChar >= "a" && endChar <= "z") ||
-          (startChar >= "0" && endChar <= "9");
-
-        if (!isValidRange) {
-          return false; // Invalid range pattern
-        }
-
-        const eventKeyCode = eventKey.charCodeAt(0);
-        const startCode = startChar.charCodeAt(0);
-        const endCode = endChar.charCodeAt(0);
-
-        if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
-          continue; // Range matched
-        }
-        return false; // Range not matched
-      }
-    }
-
-    // If it's not a modifier or range, check if it matches the actual key
-    if (!isSameKey(event.key, key)) {
-      return false;
-    }
-  }
-
-  const activeModifierNotSpecified = activeModifiers.size > 0;
-  // If any active modifier was not specified in the combination, reject the match
-  if (activeModifierNotSpecified) {
-    return false;
-  }
-
-  return true;
-};
-// Configuration for mapping shortcut key names to browser event properties
-const modifierKeyMapping = {
-  metaKey: {
-    names: ["meta"],
-    macNames: ["command", "cmd"],
-  },
-  ctrlKey: {
-    names: ["control", "ctrl"],
-  },
-  shiftKey: {
-    names: ["shift"],
-  },
-  altKey: {
-    names: ["alt"],
-    macNames: ["option"],
-  },
-};
-const isSameKey = (browserEventKey, key) => {
-  browserEventKey = browserEventKey.toLowerCase();
-  key = key.toLowerCase();
-
-  if (browserEventKey === key) {
-    return true;
-  }
-
-  // Check if either key is an alias for the other
-  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
-    const allKeys = [canonicalKey, ...config.alias];
-    if (allKeys.includes(browserEventKey) && allKeys.includes(key)) {
-      return true;
-    }
-  }
-
-  return false;
-};
 
 /**
  * Decides which element receives focus when a container (popover, dialog, …)
@@ -33958,130 +34745,6 @@ const useUITransitionContentId = value => {
   }, []);
 };
 
-const arraySignal = (initialValue = []) => {
-  const theSignal = signal(initialValue);
-
-  const add = (...args) => {
-    theSignal.value = addIntoArray(theSignal.peek(), ...args);
-  };
-  const remove = (...args) => {
-    theSignal.value = removeFromArray(theSignal.peek(), ...args);
-  };
-
-  return [theSignal, add, remove];
-};
-
-const executeWithCleanup = (fn, cleanup) => {
-  let isThenable;
-  try {
-    const result = fn();
-    isThenable = result && typeof result.then === "function";
-    if (isThenable) {
-      return (async () => {
-        try {
-          return await result;
-        } finally {
-          cleanup();
-        }
-      })();
-    }
-    return result;
-  } finally {
-    if (!isThenable) {
-      cleanup();
-    }
-  }
-};
-
-let DEBUG$1 = false;
-const enableDebugOnDocumentLoading = () => {
-  DEBUG$1 = true;
-};
-
-const windowIsLoadingSignal = signal(true);
-if (document.readyState === "complete") {
-  windowIsLoadingSignal.value = false;
-} else {
-  document.addEventListener("readystatechange", () => {
-    if (document.readyState === "complete") {
-      windowIsLoadingSignal.value = false;
-    }
-  });
-}
-
-const [
-  documentLoadingRouteArraySignal,
-  addToDocumentLoadingRouteArraySignal,
-  removeFromDocumentLoadingRouteArraySignal,
-] = arraySignal([]);
-const routingWhile = (fn, routeNames = []) => {
-  if (DEBUG$1 && routeNames.length > 0) {
-    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
-  }
-  addToDocumentLoadingRouteArraySignal(...routeNames);
-  return executeWithCleanup(fn, () => {
-    removeFromDocumentLoadingRouteArraySignal(...routeNames);
-    if (DEBUG$1 && routeNames.length > 0) {
-      console.debug(
-        `routingWhile: Removed routes from loading state:`,
-        routeNames,
-        "state after removing:",
-        documentLoadingRouteArraySignal.peek(),
-      );
-    }
-  });
-};
-
-const [
-  documentLoadingActionArraySignal,
-  addToDocumentLoadingActionArraySignal,
-  removeFromDocumentLoadingActionArraySignal,
-] = arraySignal([]);
-const workingWhile = (fn, actionNames = []) => {
-  if (DEBUG$1 && actionNames.length > 0) {
-    console.debug(
-      `workingWhile: Adding actions to loading state:`,
-      actionNames,
-    );
-  }
-  addToDocumentLoadingActionArraySignal(...actionNames);
-  return executeWithCleanup(fn, () => {
-    removeFromDocumentLoadingActionArraySignal(...actionNames);
-    if (DEBUG$1 && actionNames.length > 0) {
-      console.debug(
-        `routingWhile: Removed action from loading state:`,
-        actionNames,
-        "start after removing:",
-        documentLoadingActionArraySignal.peek(),
-      );
-    }
-  });
-};
-
-const documentIsBusySignal = computed(() => {
-  return (
-    documentLoadingRouteArraySignal.value.length > 0 ||
-    documentLoadingActionArraySignal.value.length > 0
-  );
-});
-
-computed(() => {
-  const windowIsLoading = windowIsLoadingSignal.value;
-  const routesLoading = documentLoadingRouteArraySignal.value;
-  const actionsLoading = documentLoadingActionArraySignal.value;
-  const reasonArray = [];
-  if (windowIsLoading) {
-    reasonArray.push("window_loading");
-  }
-  if (routesLoading.length > 0) {
-    reasonArray.push("document_routing");
-  }
-  if (actionsLoading.length > 0) {
-    reasonArray.push("document_working");
-  }
-  return reasonArray;
-});
-
 const documentStateSignal = signal(null);
 const useDocumentState = () => {
   return documentStateSignal.value;
@@ -34270,14 +34933,6 @@ const setupBrowserIntegrationViaHistory = ({
       if (e.defaultPrevented) {
         return;
       }
-      // Nothing here declared a route, so there is nothing to route to: the
-      // page is a plain document and a link in it is a plain link. Taking it
-      // over anyway would push the url and then have nothing to show for it —
-      // the address bar moves and the page does not (see applyRouting's own
-      // "not called yet" branch, which is where that used to end up).
-      if (!isRouting()) {
-        return;
-      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
@@ -34286,14 +34941,30 @@ const setupBrowserIntegrationViaHistory = ({
         return;
       }
       const href = linkElement.href;
-      const { isEmpty, isSameOrigin, isAnchor } = getHrefTargetInfo(href);
-      if (
-        isEmpty ||
+      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
+        getHrefTargetInfo(href);
+      if (isEmpty || !isSameOrigin) {
         // Let link to other origins be handled by the browser
-        !isSameOrigin ||
-        // Ignore anchor navigation (same page, different hash)
-        isAnchor
-      ) {
+        return;
+      }
+      if (isAnchor) {
+        // Fragment navigation belongs to the browser: it owns the indicated
+        // part of the document, and taking it over would cost `:target` and the
+        // focus handling that come with it.
+        if (isCurrent) {
+          // Except this one, which the browser answers with a scroll and
+          // nothing else: same pathname, same hash, so no event and no url
+          // change reaches whoever is waiting on the designated element.
+          rearmUrlTarget();
+        }
+        return;
+      }
+      // Nothing here declared a route, so there is nothing to route to: the
+      // page is a plain document and a link in it is a plain link. Taking it
+      // over anyway would push the url and then have nothing to show for it —
+      // the address bar moves and the page does not (see applyRouting's own
+      // "not called yet" branch, which is where that used to end up).
+      if (!isRouting()) {
         return;
       }
       e.preventDefault();
@@ -34322,6 +34993,14 @@ const setupBrowserIntegrationViaHistory = ({
       navigationType: "traverse",
       state,
     });
+  });
+
+  // A fragment navigation is left to the browser (see the click handler above):
+  // it owns the indicated part of the document, and taking it over would cost
+  // `:target` and the focus handling that come with it. The document url still
+  // has to follow it — nothing else here would notice that it moved.
+  window.addEventListener("hashchange", () => {
+    updateDocumentUrl(window.location.href);
   });
 
   const navTo = async (url, { replace, state } = {}) => {
@@ -51945,6 +52624,9 @@ const ListUI = props => {
     error,
     horizontal,
     spacing,
+    overflow,
+    overflowX,
+    overflowY,
     ...rest
   } = props;
   // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
@@ -52168,6 +52850,9 @@ const ListUI = props => {
       renderWindow: renderWindow,
       virtual: virtual,
       pendingScrollRef: pendingScrollRef,
+      overflow: overflow,
+      overflowX: overflowX,
+      overflowY: overflowY,
       children: content
     })
   });
@@ -52332,11 +53017,17 @@ const ListContent = ({
   renderWindow,
   virtual,
   pendingScrollRef,
+  overflow,
+  overflowX,
+  overflowY,
   children
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
-  return jsx("div", {
+  return jsx(Box, {
     className: "navi_list_scroll_container",
+    overflow: overflow,
+    overflowX: overflowX,
+    overflowY: overflowY,
     children: jsx(UnorderedList, {
       role: role,
       fallback: fallback,
@@ -67590,5 +68281,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

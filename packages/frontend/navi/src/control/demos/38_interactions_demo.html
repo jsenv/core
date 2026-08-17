@@ -59,8 +59,8 @@
         border-radius: 4px;
       }
 
-      /* Une « liste » : ce qui dépasse d'une ligne balayée est coupé par la
-         liste, pas par la ligne. */
+      /* A "list": what sticks out of a swiped row is clipped by the list, not by
+         the row. */
       .rows {
         border: 1px solid #dde3ec;
         border-radius: 8px;
@@ -86,8 +86,8 @@
         font-size: 13px;
       }
 
-      /* Ce qu'on découvre derrière la ligne : exactement la bande qu'elle vient
-         de quitter, donc large de ce qu'elle a parcouru. */
+      /* What is revealed behind the row: exactly the strip it has just left, so as
+         wide as the distance it covered. */
       .trail {
         position: absolute;
         top: 0;
@@ -133,7 +133,7 @@
         background: #2f5fa8;
       }
 
-      /* Cas nominal : la liste à gauche, ce qui est ouvert à droite. */
+      /* The nominal case: the list on the left, what is open on the right. */
       .file_item {
         padding: 8px 12px;
         font-size: 14px;
@@ -157,8 +157,8 @@
         color: #9aa6b6;
       }
 
-      /* Le menu du clic long : une carte, une action en tête, les autres à la
-         suite. */
+      /* The held-press menu: a card, the main action at its head, the others
+         below. */
       .mail_menu {
         min-width: 232px;
         border-radius: 10px;
@@ -243,8 +243,8 @@
         cursor: grab;
       }
 
-      /* Un papier jaune : ce que quelqu'un a écrit à la main, posé sur ce qu'on
-         regarde. */
+      /* A yellow paper: what SOMEBODY wrote by hand, stuck on what one is looking
+         at. */
       .note {
         position: relative;
         max-width: 260px;
@@ -256,15 +256,16 @@
         border-radius: 2px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
         rotate: -1.2deg;
-        /* Ce qui est porté n'est ni soulevé ni ombré : un papier qu'on décroche
-           n'est pas un objet qu'on présente. Le geste lit ces deux valeurs sur
-           l'original et les applique à la copie. */
+        /* What is carried is neither lifted nor shadowed: a paper being taken off
+           is not an object being presented. The gesture reads both values off the
+           original and applies them to the copy. */
         --drag-clone-scale: 1;
         --drag-clone-shadow: none;
       }
-      /* L'endroit d'où le papier vient, le temps qu'il traverse l'écran. Le geste
-         laisse l'original en place mais masqué ; un pseudo-élément qui redevient
-         visible perce ce masque, et c'est tout ce qu'on veut voir — la place vide. */
+      /* Where the paper came from, for as long as it crosses the screen. The
+         gesture leaves the original in place but hidden; a pseudo-element turning
+         visible again pierces that mask, and that is all one wants to see — the
+         empty place. */
       .note[navi-drag-clone-source]::after {
         position: absolute;
         inset: 0;
@@ -274,7 +275,11 @@
         content: "";
       }
 
-      /* Un plateau, et des jetons qu'on y déplace. */
+      /* A board, and tokens moved around on it. `overflow: auto` rather than
+         `hidden`: it is what makes the board a scroll container, and only a scroll
+         container can hold what is dragged inside it. Nothing ever scrolls — a
+         token moves by transform, and a transform adds nothing to the scroll
+         size. */
       .board {
         position: relative;
         height: 220px;
@@ -283,14 +288,14 @@
           repeating-linear-gradient(90deg, #eef1f6 0 1px, transparent 1px 24px);
         border: 1px solid #dde3ec;
         border-radius: 8px;
-        overflow: hidden;
+        overflow: auto;
       }
       .board_small {
         width: 220px;
         height: 140px;
       }
-      /* Celui-ci ne coupe pas ce qui en sort: son jeton peut être emmené
-         n'importe où. */
+      /* This one is no scroll container and clips nothing: its token can be taken
+         anywhere on the page. */
       .board_open {
         border-style: dashed;
         overflow: visible;
@@ -400,7 +405,7 @@
             previous={{ href: "./37_select_demo.html", label: "Select" }}
           />
           <div class="demo-section">
-            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <h2 style="margin: 0 0 4px">Contents</h2>
             <DocumentToc />
           </div>
           <NominalDemo />
@@ -417,7 +422,7 @@
         </Box>
       );
 
-      // ── Cas nominal ───────────────────────────────────────────────────────
+      // ── Nominal case ───────────────────────────────────────────────────────
 
       const FILES = ["notes.md", "budget.csv", "photo.png", "brouillon.txt"];
 
@@ -426,9 +431,9 @@
         const [opened, setOpened] = useState(null);
         return (
           <div class="demo-section">
-            <Heading id="nominal">Cas nominal</Heading>
+            <Heading id="nominal">Nominal case</Heading>
             <p class="legend">
-              Clic pour sélectionner, double clic pour ouvrir.
+              Click to select, double click to open.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" width="220px">
@@ -478,7 +483,7 @@
         );
       };
 
-      // ── États ─────────────────────────────────────────────────────────────
+      // ── States ─────────────────────────────────────────────────────────────
 
       const StatesDemo = () => {
         const [entries, push, clear] = useCallLog();
@@ -489,7 +494,7 @@
         };
         return (
           <div class="demo-section">
-            <Heading id="states">États</Heading>
+            <Heading id="states">States</Heading>
             <p class="desc">
               Sur un contrôle, une interaction passe par la même porte qu'un
               clic.
@@ -519,7 +524,7 @@
         );
       };
 
-      // ── Surfaces déjà draggable ───────────────────────────────────────────
+      // ── Already-draggable surfaces ───────────────────────────────────────────
 
       // Un carré de couleur en data: URI, pour avoir une vraie <img> sans réseau.
       const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
@@ -532,7 +537,7 @@
         return (
           <>
             <Heading level={3} id="swipe-draggable">
-              Sur des surfaces déjà draggable
+              On already-draggable surfaces
             </Heading>
             <p class="desc">
               Commencer le geste sur la vignette, puis sur le lien, puis sur le
@@ -556,7 +561,7 @@
         );
       };
 
-      // ── Quelle interaction a demandé ──────────────────────────────────────
+      // ── What the swipe said ──────────────────────────────────────
 
       const SwipeDetail = () => {
         const [entries, push, clear] = useCallLog();
@@ -576,11 +581,11 @@
         return (
           <>
             <Heading level={3} id="swipe-detail">
-              Ce que le balayage a dit
+              What the swipe said
             </Heading>
             <p class="desc">
-              <code>findEvent(event, "swipe_right").detail</code> : l'axe, le
-              signe, la distance, la taille, la progression.
+              <code>findEvent(event, "swipe_right").detail</code>: the axis, the
+              sign, the distance, the size, the progress.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption='{ swipe_right: "request_action", longpress: "request_action" }'>
@@ -600,14 +605,14 @@
         );
       };
 
-      // ── Ce que la ligne fait pendant l'attente ────────────────────────────
+      // ── While the answer takes its time ────────────────────────────
 
       const SwipeWhileRunning = () => {
         const [archived, setArchived] = useState([]);
         return (
           <>
             <Heading level={3} id="swipe-running">
-              Pendant l'attente
+              While the answer takes its time
             </Heading>
             <p class="legend">
               Balayer une ligne vers la droite, puis répondre depuis le backend
@@ -648,21 +653,21 @@
         );
       };
 
-      // ── Balayage ──────────────────────────────────────────────────────────
+      // ── Swipe ──────────────────────────────────────────────────────────
 
       const SwipeDemo = () => {
         const [entries, push, clear] = useCallLog();
         const log = (name) => (event) => push(name, undefined, event);
         return (
           <div class="demo-section">
-            <Heading id="swipe">Balayage</Heading>
+            <Heading id="swipe">Swipe</Heading>
             <p class="desc">
-              À la souris comme au doigt : la ligne suit, et revient si on la
-              lâche trop tôt.
+              With a mouse as with a finger: the row follows, and comes back if it
+              is let go of too early.
             </p>
 
             <Heading level={3} id="swipe-one-way">
-              Un seul côté
+              One side only
             </Heading>
             <Box className="rows" flex="y" spacing="0">
               <Row
@@ -680,7 +685,7 @@
             </Box>
 
             <Heading level={3} id="swipe-both-ways">
-              Les deux
+              Both sides
             </Heading>
             <Box className="rows">
               <Row
@@ -707,9 +712,9 @@
               data-swipe-threshold
             </Heading>
             <p class="legend">
-              Quelle fraction de la ligne il faut tirer pour que lâcher aille au
-              bout. Une fraction et jamais une distance : le même geste doit
-              vouloir dire la même chose sur un téléphone et sur un grand écran.
+              What fraction of the row has to be pulled for letting go to go
+              through with it. A fraction and never a distance: the same gesture
+              must mean the same thing on a phone and on a wide screen.
             </p>
             <Box className="rows">
               <Row
@@ -738,16 +743,16 @@
         );
       };
 
-      // ── Appui long ────────────────────────────────────────────────────────
+      // ── Held press ────────────────────────────────────────────────────────
 
       const LongPressDemo = () => {
         const [entries, push, clear] = useCallLog();
         const log = (name) => (event) => push(name, undefined, event);
         return (
           <div class="demo-section">
-            <Heading id="longpress">Appui long</Heading>
+            <Heading id="longpress">Held press</Heading>
             <p class="legend">
-              Maintenir enfoncé sans bouger, au doigt comme à la souris.
+              Hold it down without moving, with a finger as with a mouse.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ longpress }">
@@ -758,7 +763,7 @@
             </Box>
 
             <Heading level={3} id="longpress-contextmenu">
-              Et le menu contextuel
+              And the context menu
             </Heading>
             <p class="legend">
               Clic droit sur chacun des deux. Un appui long ne prend pas le menu
@@ -791,9 +796,8 @@
               data-longpress-delay
             </Heading>
             <p class="legend">
-              Combien de temps la pression doit tenir. Sous le délai du menu
-              système, pour que la pression soit répondue avant que ce menu ne
-              s'ouvre.
+              How long the press has to hold. Under the system menu's own delay, so
+              that the press is answered before that menu would open.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="450 ms (par défaut)">
@@ -845,14 +849,14 @@
         );
       };
 
-      // ── Clavier ───────────────────────────────────────────────────────────
+      // ── Keyboard ───────────────────────────────────────────────────────────
 
       const KeyboardDemo = () => {
         const [entries, push, clear] = useCallLog();
         const logAction = (value, { event }) => push("action", value, event);
         return (
           <div class="demo-section">
-            <Heading id="keyboard">Clavier</Heading>
+            <Heading id="keyboard">Keyboard</Heading>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption='{ "keyboard:ctrl+backspace": "request_action" }'>
                 <Button
@@ -878,7 +882,7 @@
         );
       };
 
-      // ── Une interaction à soi ─────────────────────────────────────────────
+      // ── An interaction of your own ─────────────────────────────────────────────
 
       // Trois clics dans la seconde : navi n'en a pas, l'appli l'enregistre.
       // `setup` ne tourne qu'une fois par élément, donc le compte est une simple
@@ -914,10 +918,10 @@
         const [fired, setFired] = useState(0);
         return (
           <div class="demo-section">
-            <Heading id="custom">Une interaction à soi</Heading>
+            <Heading id="custom">An interaction of your own</Heading>
             <p class="desc">
-              <code>defineInteractionDetector</code> : la porte par laquelle
-              passent aussi les balayages et les raccourcis de navi.
+              <code>defineInteractionDetector</code>: the same door navi's own
+              swipes and shortcuts come through.
             </p>
             <Box flex="x" spacing="xl" alignY="start">
               <Variant caption="{ triple_click: fn }">
@@ -942,7 +946,7 @@
         );
       };
 
-      // ── Réordonner ────────────────────────────────────────────────────────
+      // ── Reorder ────────────────────────────────────────────────────────
 
       const TASKS = [
         { id: "task_1", label: "Relancer le devis" },
@@ -1027,7 +1031,7 @@
 
       const ReorderDemo = () => (
         <div class="demo-section">
-          <Heading id="reorder">Réordonner</Heading>
+          <Heading id="reorder">Reorder</Heading>
           <p class="legend">
             Attraper une tâche par sa poignée et la déposer sur une autre. À la
             souris quelques pixels suffisent, au doigt il faut la tenir.
@@ -1039,7 +1043,7 @@
         </div>
       );
 
-      // ── Jeter ─────────────────────────────────────────────────────────────
+      // ── Toss ─────────────────────────────────────────────────────────────
 
       const NOTES = [
         "Terrain 3, au fond à gauche",
@@ -1051,7 +1055,7 @@
         const [tossed, setTossed] = useState([]);
         return (
           <div class="demo-section">
-            <Heading id="toss">Jeter</Heading>
+            <Heading id="toss">Toss</Heading>
             <p class="legend">
               Attraper un papier — il se soulève — puis l'envoyer loin et vite :
               il sort de l'écran. Trop court ou trop lent, il se raccroche.
@@ -1137,7 +1141,7 @@
         );
       };
 
-      // ── Déplacer ──────────────────────────────────────────────────────────
+      // ── Move ──────────────────────────────────────────────────────────
 
       const Token = ({ label, ...rest }) => (
         <Box className="token" {...rest}>
@@ -1153,10 +1157,10 @@
         };
         return (
           <div class="demo-section">
-            <Heading id="move">Déplacer</Heading>
+            <Heading id="move">Move</Heading>
             <p class="legend">
-              Attraper un jeton et le poser ailleurs : il reste où on l'a mis.
-              C'est le jeton lui-même qui voyage, pas une copie.
+              Grab a token and put it somewhere else: it stays where it was put. It
+              is the token itself that travels, not a copy.
             </p>
             <Box className="board">
               <Token
@@ -1236,7 +1240,7 @@
         );
       };
 
-      // ── Combinaisons ──────────────────────────────────────────────────────
+      // ── Combinations ──────────────────────────────────────────────────────
       //
       // Plusieurs interactions sur un même élément: c'est là qu'on vérifie qu'elles
       // ne se marchent pas dessus. Une section par PAIRE qui partage une entrée —
@@ -1247,10 +1251,10 @@
         const log = (name) => (event) => push(name, undefined, event);
         return (
           <div class="demo-section">
-            <Heading id="combinations">Combinaisons</Heading>
+            <Heading id="combinations">Combinations</Heading>
 
             <Heading level={3} id="longpress-and-swipe">
-              Appui long et balayage
+              Held press and swipe
             </Heading>
             <p class="legend">
               La même pression : le doigt part sur le côté, c'est un balayage ;
@@ -1270,7 +1274,7 @@
             <CallLog entries={entries} onClear={clear} />
 
             <Heading level={3} id="reorder-and-toss">
-              Réordonner et jeter
+              Reorder and toss
             </Heading>
             <p class="legend">
               Le même lâcher : déposée sur une autre tâche, la ligne l'échange ;
@@ -1286,7 +1290,7 @@
         );
       };
 
-      // ── Cas concrets ─────────────────────────────────────────────────────
+      // ── Concrete cases ─────────────────────────────────────────────────────
       //
       // Chacun met plusieurs interactions sur un même composant, ce qu'aucune
       // section par geste ne montre: c'est là qu'on voit l'arbitrage. Il en
@@ -1295,12 +1299,12 @@
 
       const ConcreteCasesDemo = () => (
         <div class="demo-section">
-          <Heading id="concrete">Cas concrets</Heading>
+          <Heading id="concrete">Concrete cases</Heading>
           <MailboxCase />
         </div>
       );
 
-      // ── Cas concret : une boîte mail ──────────────────────────────────────
+      // ── Concrete case: a mailbox ──────────────────────────────────────
 
       const MAILS = [
         {
@@ -1354,12 +1358,12 @@
         return (
           <>
             <Heading level={3} id="mailbox">
-              Une boîte mail
+              A mailbox
             </Heading>
             <p class="legend">
-              Clic pour ouvrir, balayage à droite pour archiver, balayage à
-              gauche pour marquer lu ou non lu, appui long pour le menu — qui
-              s'ouvre là où le doigt s'est posé, pendant qu'il est encore posé.
+              Click to open, swipe right to archive, swipe left to mark read or
+              unread, hold to get the menu — which opens where the finger landed,
+              while it is still down.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
