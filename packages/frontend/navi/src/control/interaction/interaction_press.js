@@ -52,11 +52,11 @@
  * wants the right click to do what the hold does says so, with `contextmenu`
  * beside it.
  *
- * What is deliberately NOT here: `longpress` opening a popup while the finger is
- * still down. The `pointerup` that ends the press is then an interaction OUTSIDE
- * the popup, and the browser's own light dismiss closes it on the spot — decided
- * from the recorded pointerdown, not something a gesture can take back. Opening on
- * release is what works meanwhile.
+ * A hold CAN open a popup while the finger is still down — a menu appearing under
+ * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
+ * and owns its own dismissal, so the `pointerup` that ends the press is not read as
+ * an interaction outside it (the browser's light dismiss, which would close it on
+ * that very event, only applies to `popover="auto"`).
  */
 
 import {

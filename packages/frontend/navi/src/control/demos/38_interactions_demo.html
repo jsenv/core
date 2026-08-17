@@ -167,15 +167,6 @@
         color: #6b7482;
         font-size: 13px;
       }
-      .mail_menu {
-        display: flex;
-        padding: 10px 16px;
-        flex-wrap: wrap;
-        gap: 8px;
-        background: #f2f5fa;
-        border-top: 1px solid #e3e9f2;
-      }
-
       .thumb {
         width: 40px;
         height: 40px;
@@ -198,6 +189,7 @@
         findEvent,
         Link,
         List,
+        Popover,
         Text,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -827,7 +819,8 @@
             <Heading id="mailbox">Cas concret : une boîte mail</Heading>
             <p class="legend">
               Clic pour ouvrir, balayage à droite pour archiver, balayage à
-              gauche pour marquer lu ou non lu, appui long pour le menu.
+              gauche pour marquer lu ou non lu, appui long pour le menu — qui
+              s'ouvre pendant que le doigt est encore posé.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
@@ -866,20 +859,6 @@
                           },
                         }}
                       />
-                      {menuId === mail.id ? (
-                        <div className="mail_menu">
-                          <Button action={() => archive(mail.id)}>
-                            Archiver
-                          </Button>
-                          <Button action={() => setMenuId(null)}>
-                            Épingler
-                          </Button>
-                          <Button action={() => setMenuId(null)}>
-                            Signaler
-                          </Button>
-                          <Button action={() => setMenuId(null)}>Fermer</Button>
-                        </div>
-                      ) : null}
                     </List.Item>
                   ))}
                 </List>
@@ -897,6 +876,25 @@
                 )}
               </div>
             </Box>
+            {/* Un seul popover pour toute la liste : il s'ancre à la ligne dont
+                l'id est dans menuId, et une liste n'en montre qu'un à la fois.
+                L'ancre est passée par id — c'est celui que List.Item pose sur son
+                élément. */}
+            <Popover
+              open={Boolean(menuId)}
+              anchor={menuId ?? undefined}
+              positionArea="bottom"
+              padding="xs"
+              borderRadius="8px"
+              pointerInteractionOutsideEffect="close"
+              onClose={() => setMenuId(null)}
+            >
+              <Box flex="y" spacing="xs" alignX="stretch">
+                <Button action={() => archive(menuId)}>Archiver</Button>
+                <Button action={() => setMenuId(null)}>Épingler</Button>
+                <Button action={() => setMenuId(null)}>Signaler</Button>
+              </Box>
+            </Popover>
             {archived.length ? (
               <Box paddingY="s">
                 <Button action={() => setArchived([])}>
