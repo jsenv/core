@@ -68,6 +68,9 @@ export {
   findDescendant,
 } from "./src/traversal.js";
 
+// interaction
+export { suppressClickAfterGesture } from "./src/interaction/click_suppression.js";
+export { waitForPressHeld } from "./src/interaction/press_held.js";
 // interaction/focus
 export {
   activeElementSignal,
@@ -123,8 +126,10 @@ export {
   createDragGestureController,
   isPrimaryButtonEvent,
 } from "./src/interaction/drag/drag_gesture.js";
-export { createDragToMoveGestureController } from "./src/interaction/drag/drag_to_move.js";
-export { startDragToReorder } from "./src/interaction/drag/drag_to_reorder.js";
+export {
+  createDragToMoveGestureController,
+  startDragTo,
+} from "./src/interaction/drag/drag_to.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
 export {
   scrollRoomTowards,

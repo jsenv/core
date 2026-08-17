@@ -11,6 +11,7 @@
 
 import { dispatchPublicCustomEvent } from "../../dom_events.js";
 import { createPubSub } from "../../pub_sub.js";
+import { suppressClickAfterGesture } from "../click_suppression.js";
 import { findFocusable } from "../focus/find_focusable.js";
 import { isolateInteractions } from "../isolate_interactions.js";
 
@@ -419,34 +420,8 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const markAsStarted = () => {
-      // Suppress the click that the browser fires after pointerup following a real drag.
-      // The capture phase runs before any element onClick handler.
-      const suppressClick = (clickEvent) => {
-        clickEvent.stopPropagation();
-        clickEvent.preventDefault();
-        stopSuppressingClick();
-      };
-      // That click is dispatched AFTER the pointerup that ends the drag, so
-      // this cannot be taken down with the gesture — it would be gone one event
-      // too early, and the drag would end on the link it started from being
-      // followed. It goes once it has swallowed the click, or at the next press
-      // if the drag produced none: a click is always preceded by a press, so a
-      // suppressor that outlives one press can never reach the click of
-      // another.
-      const stopSuppressingClick = () => {
-        document.removeEventListener("click", suppressClick, {
-          capture: true,
-        });
-        document.removeEventListener("pointerdown", stopSuppressingClick, {
-          capture: true,
-        });
-      };
-      document.addEventListener("click", suppressClick, { capture: true });
-      addReleaseCallback(() => {
-        document.addEventListener("pointerdown", stopSuppressingClick, {
-          capture: true,
-        });
-      });
+      const clickSuppressionIsOver = suppressClickAfterGesture();
+      addReleaseCallback(clickSuppressionIsOver);
       // Everything this gesture puts on the document is in place, and undoable,
       // BEFORE anybody is told it started: a listener may end the gesture from
       // inside this very notification — that is how a press becomes a drag (see

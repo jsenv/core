@@ -1,0 +1,1530 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Interactions demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 20px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      h4 {
+        margin: 14px 0 4px;
+        color: #6b7482;
+        font-size: 0.85rem;
+        font-family: ui-monospace, monospace;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .legend {
+        margin: 0 0 12px;
+        padding: 8px 12px;
+        color: #37474f;
+        font-size: 13px;
+        background: #eef4fd;
+        border-left: 3px solid #2f5fa8;
+        border-radius: 4px;
+      }
+
+      /* A "list": what sticks out of a swiped row is clipped by the list, not by
+         the row. */
+      .rows {
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        padding: 14px 16px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #1f2733;
+        font-size: 14px;
+        text-align: left;
+        background: white;
+      }
+      .row_title {
+        font-weight: 500;
+      }
+      .row_body {
+        color: #6b7482;
+        font-size: 13px;
+      }
+
+      /* What is revealed behind the row: exactly the strip it has just left, so as
+         wide as the distance it covered. */
+      .trail {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .trail_start {
+        right: 100%;
+        width: var(--swipe-pulled);
+        padding-right: 16px;
+        justify-content: flex-end;
+        opacity: calc(var(--swipe-progress) * 3);
+      }
+      .trail_end {
+        left: 100%;
+        width: calc(-1 * var(--swipe-pulled));
+        padding-left: 16px;
+        justify-content: flex-start;
+        opacity: calc(var(--swipe-progress) * -3);
+      }
+      .trail_archive {
+        background: #9aa6b6;
+      }
+      [data-swipe-past-threshold] .trail_archive {
+        background: #1e8e5a;
+      }
+      .trail_delete {
+        background: #d8a3a3;
+      }
+      [data-swipe-past-threshold] .trail_delete {
+        background: #c62828;
+      }
+      .trail_unread {
+        background: #a8b4c8;
+      }
+      [data-swipe-past-threshold] .trail_unread {
+        background: #2f5fa8;
+      }
+
+      /* The nominal case: the list on the left, what is open on the right. */
+      .file_item {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .file_marker {
+        width: 10px;
+        color: #2f5fa8;
+        font-weight: 700;
+      }
+      .opened_pane {
+        min-width: 220px;
+        min-height: 120px;
+        padding: 16px;
+        color: #37474f;
+        font-size: 14px;
+        background: #fafbfd;
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+      }
+      .opened_pane_empty {
+        color: #9aa6b6;
+      }
+
+      /* The held-press menu: a card, the main action at its head, the others
+         below. */
+      .mail_menu {
+        min-width: 232px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .mail_menu_item {
+        display: flex;
+        width: 100%;
+        padding: 10px 14px;
+        align-items: center;
+        gap: 12px;
+        color: #1f2733;
+        font: inherit;
+        font-size: 14px;
+        text-align: left;
+        background: none;
+        border: 0;
+        cursor: default;
+      }
+      .mail_menu_item:hover {
+        background: #eef1f6;
+      }
+      .mail_menu_item_primary {
+        color: white;
+        font-weight: 600;
+        background: #1f2733;
+      }
+      .mail_menu_item_primary:hover {
+        background: #2b3646;
+      }
+      .mail_menu_item_primary .mail_menu_icon {
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: 4px;
+      }
+      .mail_menu_item_danger {
+        color: #c62828;
+      }
+      .mail_menu_icon {
+        display: flex;
+        width: 20px;
+        height: 20px;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .mail_dot {
+        width: 8px;
+        height: 8px;
+        flex: none;
+        background: #2f5fa8;
+        border-radius: 50%;
+      }
+      .mail_dot_read {
+        background: transparent;
+      }
+      .mail_from {
+        font-weight: 600;
+      }
+      .mail_subject {
+        color: #6b7482;
+        font-size: 13px;
+      }
+      .task {
+        padding: 10px 14px;
+        font-size: 14px;
+        background: white;
+      }
+      /* What the pointer carries. navi writes `navi-drag-clone` on the copy and
+         `navi-drag-clone-source` on the original left in place — that is how both
+         are dressed. An element has no background unless something gave it one, and
+         a transparent copy cannot be seen: the background is the page's call, not
+         the gesture's. */
+      .task[navi-drag-clone] {
+        background: white;
+        border-radius: 6px;
+      }
+      .task_handle {
+        color: #9aa6b6;
+        font-size: 16px;
+        cursor: grab;
+      }
+
+      /* A yellow paper: what SOMEBODY wrote by hand, stuck on what one is looking
+         at. */
+      .note {
+        position: relative;
+        max-width: 260px;
+        padding: 10px 14px;
+        color: #4a3f14;
+        font-size: 13px;
+        line-height: 1.4;
+        background: #fdf3b8;
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        rotate: -1.2deg;
+        /* What is carried is neither lifted nor shadowed: a paper being taken off
+           is not an object being presented. The gesture reads both values off the
+           original and applies them to the copy. */
+        --drag-clone-scale: 1;
+        --drag-clone-shadow: none;
+      }
+      /* Where the paper came from, for as long as it crosses the screen. The
+         gesture leaves the original in place but hidden; a pseudo-element turning
+         visible again pierces that mask, and that is all one wants to see — the
+         empty place. */
+      .note[navi-drag-clone-source]::after {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.07);
+        border-radius: 2px;
+        visibility: visible;
+        content: "";
+      }
+
+      /* A board, and tokens moved around on it. `overflow: auto` rather than
+         `hidden`: it is what makes the board a scroll container, and only a scroll
+         container can hold what is dragged inside it. Nothing ever scrolls — a
+         token moves by transform, and a transform adds nothing to the scroll
+         size. */
+      .board {
+        position: relative;
+        height: 220px;
+        background:
+          repeating-linear-gradient(0deg, #eef1f6 0 1px, transparent 1px 24px),
+          repeating-linear-gradient(90deg, #eef1f6 0 1px, transparent 1px 24px);
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow: auto;
+      }
+      .board_small {
+        width: 220px;
+        height: 140px;
+      }
+      /* This one is no scroll container and clips nothing: its token can be taken
+         anywhere on the page. */
+      .board_open {
+        border-style: dashed;
+        overflow: visible;
+      }
+      .token {
+        position: absolute;
+        display: flex;
+        width: 64px;
+        height: 64px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        background: #2f5fa8;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+      .token[data-grabbed] {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+      }
+
+      .thumb {
+        width: 40px;
+        height: 40px;
+        flex: none;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        CloseSvg,
+        defineInteractionDetector,
+        ExclamationSvg,
+        EyeClosedSvg,
+        EyeSvg,
+        findEvent,
+        Icon,
+        Link,
+        List,
+        Popover,
+        StarSvg,
+        Text,
+        triggerNaviCommand,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const ARCHIVE_TRAIL = { className: "trail_archive", label: "Archive" };
+      const DELETE_TRAIL = { className: "trail_delete", label: "Delete" };
+
+      // A swipeable row: a Box, neither a link nor a button — an interaction does
+      // not need a control to be read.
+      const Row = ({ title, body, trailStart, trailEnd, ...rest }) => (
+        <Box className="row" {...rest}>
+          {trailStart ? (
+            <span className={`trail trail_start ${trailStart.className}`}>
+              {trailStart.label}
+            </span>
+          ) : null}
+          {trailEnd ? (
+            <span className={`trail trail_end ${trailEnd.className}`}>
+              {trailEnd.label}
+            </span>
+          ) : null}
+          <span className="row_title">{title}</span>
+          <span className="row_body">{body}</span>
+        </Box>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Interactions"
+            previous={{ href: "./37_select_demo.html", label: "Select" }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Contents</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <SwipeDemo />
+          <LongPressDemo />
+          <KeyboardDemo />
+          <ReorderDemo />
+          <TossDemo />
+          <MoveDemo />
+          <CustomDetectorDemo />
+          <CombinationsDemo />
+          <ConcreteCasesDemo />
+        </Box>
+      );
+
+      // ── Nominal case ───────────────────────────────────────────────────────
+
+      const FILES = ["notes.md", "budget.csv", "photo.png", "brouillon.txt"];
+
+      const NominalDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [opened, setOpened] = useState(null);
+        return (
+          <div class="demo-section">
+            <Heading id="nominal">Nominal case</Heading>
+            <p class="legend">Click to select, double click to open.</p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box className="rows" width="220px">
+                <List>
+                  {FILES.map((file) => (
+                    <List.Item
+                      key={file}
+                      id={file}
+                      className="file_item"
+                      // Inline rather than a class: the list has a background of
+                      // its own, and a class of the page would lose against it.
+                      style={
+                        selected === file
+                          ? { backgroundColor: "#dde9fb" }
+                          : undefined
+                      }
+                      interactions={{
+                        click: () => setSelected(file),
+                        dblclick: () => setOpened(file),
+                      }}
+                    >
+                      <Box flex="x" spacing="xs" alignY="center">
+                        <span className="file_marker">
+                          {selected === file ? "▸" : ""}
+                        </span>
+                        <span>{file}</span>
+                      </Box>
+                    </List.Item>
+                  ))}
+                </List>
+              </Box>
+              <div class="opened_pane">
+                {opened ? (
+                  <Box flex="y" spacing="xs">
+                    <strong>{opened}</strong>
+                    <Text size="s" color="#6b7482">
+                      open
+                    </Text>
+                  </Box>
+                ) : (
+                  <span class="opened_pane_empty">nothing open</span>
+                )}
+              </div>
+            </Box>
+          </div>
+        );
+      };
+
+      // ── States ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        const swipeAndHold = {
+          swipe_right: log("swipe_right"),
+          longpress: log("longpress"),
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="states">States</Heading>
+            <p class="desc">
+              On a control, an interaction goes through the same gate as a
+              click.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="normal">
+                <Button interactions={swipeAndHold}>Hold</Button>
+              </Variant>
+              <Variant caption="readOnly">
+                <Button readOnly interactions={swipeAndHold}>
+                  Hold
+                </Button>
+              </Variant>
+              <Variant caption="disabled">
+                <Button disabled interactions={swipeAndHold}>
+                  Hold
+                </Button>
+              </Variant>
+              <Variant caption="loading">
+                <Button loading interactions={swipeAndHold}>
+                  Hold
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Already-draggable surfaces ───────────────────────────────────────────
+
+      // A coloured square as a data: URI, so there is a real <img> and no network.
+      const THUMB_SRC = `data:image/svg+xml,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#2f5fa8"/></svg>',
+      )}`;
+
+      const SwipeOnDraggableSurface = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <>
+            <Heading level={3} id="swipe-draggable">
+              On already-draggable surfaces
+            </Heading>
+            <p class="desc">
+              Start the gesture on the thumbnail, then on the link, then on the
+              text.
+            </p>
+            <Box className="rows">
+              <Row
+                title={
+                  <Box flex="x" spacing="s" alignY="center">
+                    <img class="thumb" src={THUMB_SRC} alt="" />
+                    <Link href="https://jsenv.dev">jsenv.dev</Link>
+                  </Box>
+                }
+                body="an image and a link inside the row"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("swipe_right") }}
+              />
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      // ── What the swipe said ──────────────────────────────────────
+
+      const SwipeDetail = () => {
+        const [entries, push, clear] = useCallLog();
+        const archiveOrDelete = (value, { event }) => {
+          const swipe = findEvent(event, "swipe_right");
+          if (!swipe) {
+            push("action", "no swipe", event);
+            return;
+          }
+          const { progress } = swipe.detail;
+          push(
+            progress > 0.8 ? "delete" : "archive",
+            `progress ${progress.toFixed(2)}`,
+            event,
+          );
+        };
+        return (
+          <>
+            <Heading level={3} id="swipe-detail">
+              What the swipe said
+            </Heading>
+            <p class="desc">
+              <code>findEvent(event, "swipe_right").detail</code>: the axis, the
+              sign, the distance, the size, the progress.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption='{ swipe_right: "request_action", longpress: "request_action" }'>
+                <Button
+                  action={archiveOrDelete}
+                  interactions={{
+                    swipe_right: "request_action",
+                    longpress: "request_action",
+                  }}
+                >
+                  Swipe, or hold
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      // ── While the answer takes its time ────────────────────────────
+
+      const SwipeWhileRunning = () => {
+        const [archived, setArchived] = useState([]);
+        return (
+          <>
+            <Heading level={3} id="swipe-running">
+              While the answer takes its time
+            </Heading>
+            <p class="legend">
+              Swipe a row to the right, then answer from the backend below. The
+              row stays out for as long as the call has not answered, and comes
+              back whether it succeeded or failed.
+            </p>
+            <FakeBackend value={{ archived: [] }}>
+              {({ action }) => (
+                <Box className="rows" flex="y">
+                  {["Marc", "Lea", "Sofia"]
+                    .filter((name) => !archived.includes(name))
+                    .map((name) => (
+                      <Row
+                        key={name}
+                        title={name}
+                        body="swipe to the right"
+                        trailStart={ARCHIVE_TRAIL}
+                        interactions={{
+                          // A promise: the swipe waits for it to settle.
+                          swipe_right: async () => {
+                            await action({ archived: [name] });
+                            setArchived((previous) => [...previous, name]);
+                          },
+                        }}
+                      />
+                    ))}
+                </Box>
+              )}
+            </FakeBackend>
+            {archived.length ? (
+              <Box paddingY="s">
+                <Button action={() => setArchived([])}>
+                  Restore {archived.length}
+                </Button>
+              </Box>
+            ) : null}
+          </>
+        );
+      };
+
+      // ── Swipe ──────────────────────────────────────────────────────────
+
+      const SwipeDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="swipe">Swipe</Heading>
+            <p class="desc">
+              With a mouse as with a finger: the row follows, and comes back if
+              it is let go of too early.
+            </p>
+
+            <Heading level={3} id="swipe-one-way">
+              One side only
+            </Heading>
+            <Box className="rows" flex="y" spacing="0">
+              <Row
+                title="swipe_right"
+                body="to the right"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("swipe_right") }}
+              />
+              <Row
+                title="swipe_left"
+                body="to the left"
+                trailEnd={DELETE_TRAIL}
+                interactions={{ swipe_left: log("swipe_left") }}
+              />
+            </Box>
+
+            <Heading level={3} id="swipe-both-ways">
+              Both sides
+            </Heading>
+            <Box className="rows">
+              <Row
+                title="swipe_right + swipe_left"
+                body="two gestures, two effects"
+                trailStart={ARCHIVE_TRAIL}
+                trailEnd={DELETE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  swipe_left: log("swipe_left"),
+                }}
+              />
+            </Box>
+
+            <SwipeOnDraggableSurface />
+            <SwipeDetail />
+            <SwipeWhileRunning />
+
+            <Heading level={3} id="swipe-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="swipe-threshold">
+              data-swipe-threshold
+            </Heading>
+            <p class="legend">
+              What fraction of the row has to be pulled for letting go to go
+              through with it. A fraction and never a distance: the same gesture
+              must mean the same thing on a phone and on a wide screen.
+            </p>
+            <Box className="rows">
+              <Row
+                title="0.33"
+                body="default"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.33") }}
+              />
+              <Row
+                title="0.15"
+                body="let go of early, it leaves"
+                data-swipe-threshold="0.15"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.15") }}
+              />
+              <Row
+                title="0.8"
+                body="it has to be crossed"
+                data-swipe-threshold="0.8"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{ swipe_right: log("0.8") }}
+              />
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Held press ────────────────────────────────────────────────────────
+
+      const LongPressDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="longpress">Held press</Heading>
+            <p class="legend">
+              Hold it down without moving, with a finger as with a mouse.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ longpress }">
+                <Button interactions={{ longpress: log("longpress") }}>
+                  Hold
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={3} id="longpress-contextmenu">
+              And the context menu
+            </Heading>
+            <p class="legend">
+              Right click on each of the two. A held press does not take the
+              browser's menu: a right click comes from the other button, it is
+              not the press being read. To make it do what the held press does,
+              write it beside.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ longpress } — right click: the browser menu">
+                <Button interactions={{ longpress: log("longpress") }}>
+                  Right click here
+                </Button>
+              </Variant>
+              <Variant caption="{ longpress, contextmenu } — right click: the interaction">
+                <Button
+                  interactions={{
+                    longpress: log("longpress"),
+                    contextmenu: log("contextmenu"),
+                  }}
+                >
+                  Right click here
+                </Button>
+              </Variant>
+            </Box>
+            <Heading level={3} id="longpress-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="longpress-delay">
+              data-longpress-delay
+            </Heading>
+            <p class="legend">
+              How long the press has to hold. Under the system menu's own delay,
+              so that the press is answered before that menu would open.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="450 ms (default)">
+                <Button interactions={{ longpress: log("450") }}>Hold</Button>
+              </Variant>
+              <Variant caption='data-longpress-delay="1200"'>
+                <Button
+                  data-longpress-delay="1200"
+                  interactions={{ longpress: log("1200") }}
+                >
+                  Hold
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={4} id="longpress-slop">
+              data-longpress-slop
+            </Heading>
+            <p class="legend">
+              How many pixels the finger may drift during the wait before the
+              press is abandoned. Hold for 1.2 s while moving slowly by a
+              centimetre: at 8 px nothing fires, at 60 px it does.
+            </p>
+            <Box
+              flex="x"
+              spacing="xl"
+              alignY="start"
+              data-longpress-delay="1200"
+            >
+              <Variant caption="8 px (default) — the drift cancels it">
+                <Button interactions={{ longpress: log("slop 8") }}>
+                  Hold while moving
+                </Button>
+              </Variant>
+              <Variant caption='data-longpress-slop="60" — the drift is tolerated'>
+                <Button
+                  data-longpress-slop="60"
+                  interactions={{ longpress: log("slop 60") }}
+                >
+                  Hold while moving
+                </Button>
+              </Variant>
+            </Box>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Keyboard ───────────────────────────────────────────────────────────
+
+      const KeyboardDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const logAction = (value, { event }) => push("action", value, event);
+        return (
+          <div class="demo-section">
+            <Heading id="keyboard">Keyboard</Heading>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption='{ "keyboard:ctrl+backspace": "request_action" }'>
+                <Button
+                  action={logAction}
+                  interactions={{ "keyboard:ctrl+backspace": "request_action" }}
+                >
+                  Focus then ctrl+backspace
+                </Button>
+              </Variant>
+              <Variant caption='{ "keyboard:shift+a": fn }'>
+                <Button
+                  interactions={{
+                    "keyboard:shift+a": (event) =>
+                      push("keyboard:shift+a", undefined, event),
+                  }}
+                >
+                  Focus then shift+a
+                </Button>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Reorder ────────────────────────────────────────────────────────
+
+      const TASKS = [
+        { id: "task_1", label: "Chase the quote" },
+        { id: "task_2", label: "Book the pitch" },
+        { id: "task_3", label: "Send the photos" },
+        { id: "task_4", label: "Pay the licence" },
+        { id: "task_5", label: "Find a keeper" },
+      ];
+
+      const moveBefore = (order, fromId, toId) => {
+        const withoutMoved = order.filter((id) => id !== fromId);
+        if (toId === null) {
+          return [...withoutMoved, fromId];
+        }
+        const at = withoutMoved.indexOf(toId);
+        return [
+          ...withoutMoved.slice(0, at),
+          fromId,
+          ...withoutMoved.slice(at),
+        ];
+      };
+
+      const TaskList = ({ name, interactionsFor }) => {
+        // The ids the elements carry are the ones the gesture hands back (`fromId`,
+        // `toId`, `id`), so they are what the order holds — two lists on one page
+        // cannot share the ids of TASKS.
+        const items = TASKS.map((task) => ({
+          ...task,
+          id: `${name}_${task.id}`,
+        }));
+        const [order, setOrder] = useState(items.map((item) => item.id));
+        const reorder = (event) => {
+          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+          // A transition name is unique per document, so it is the app that writes
+          // it and the app that starts the transition.
+          const transition = document.startViewTransition(() => {
+            syncCloneWithDropTarget();
+            setOrder((previous) => moveBefore(previous, fromId, toId));
+          });
+          return transition.finished;
+        };
+        const toss = (event) => {
+          setOrder((previous) =>
+            previous.filter((id) => id !== event.detail.id),
+          );
+        };
+        return (
+          <>
+            <Box className="rows" width="320px">
+              <List>
+                {order.map((id) => {
+                  const task = items.find((candidate) => candidate.id === id);
+                  return (
+                    <List.Item
+                      key={id}
+                      id={id}
+                      className="task"
+                      data-view-transition-name={id}
+                      interactions={interactionsFor({ reorder, toss })}
+                    >
+                      <Box flex="x" spacing="s" alignY="center">
+                        <span className="task_handle" data-drag-handle>
+                          ⠿
+                        </span>
+                        <span>{task.label}</span>
+                      </Box>
+                    </List.Item>
+                  );
+                })}
+              </List>
+            </Box>
+            {order.length < items.length ? (
+              <Box paddingY="s">
+                <Button action={() => setOrder(items.map((item) => item.id))}>
+                  Restore {items.length - order.length}
+                </Button>
+              </Box>
+            ) : null}
+          </>
+        );
+      };
+
+      const ReorderDemo = () => (
+        <div class="demo-section">
+          <Heading id="reorder">Reorder</Heading>
+          <p class="legend">
+            Grab a task by its handle and drop it onto another one. With a mouse
+            a few pixels are enough; with a finger it has to be held.
+          </p>
+          <TaskList
+            name="reorder"
+            interactionsFor={({ reorder }) => ({ reorder })}
+          />
+        </div>
+      );
+
+      // ── Toss ─────────────────────────────────────────────────────────────
+
+      const NOTES = [
+        "Pitch 3, far left",
+        "Bring a light shirt",
+        "The gate closes at 10pm",
+      ];
+
+      const TossDemo = () => {
+        const [tossed, setTossed] = useState([]);
+        return (
+          <div class="demo-section">
+            <Heading id="toss">Toss</Heading>
+            <p class="legend">
+              Grab a paper and send it far and fast: it leaves the screen. Too
+              short or too slow and it goes back up. Answering from the backend
+              decides whether it is really off or comes back.
+            </p>
+            <FakeBackend value={{ tossed: [] }}>
+              {({ action }) => (
+                <Box flex="y" spacing="m" alignX="start">
+                  {NOTES.filter((note) => !tossed.includes(note)).map(
+                    (note) => (
+                      <Box
+                        key={note}
+                        id={`note_${NOTES.indexOf(note)}`}
+                        className="note"
+                        interactions={{
+                          toss: async () => {
+                            await action({ tossed: [note] });
+                            setTossed((previous) => [...previous, note]);
+                          },
+                        }}
+                      >
+                        {note}
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              )}
+            </FakeBackend>
+            {tossed.length ? (
+              <Box paddingY="s">
+                <Button action={() => setTossed([])}>
+                  Restore {tossed.length}
+                </Button>
+              </Box>
+            ) : null}
+
+            <Heading level={3} id="toss-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="toss-thresholds">
+              data-toss-distance et data-toss-speed
+            </Heading>
+            <p class="legend">
+              Tossing asks for both at once: far, and fast. One without the
+              other is moving the thing while hesitating, and nothing is lost on
+              a hesitation. The first paper leaves on the slightest firm
+              gesture, the second asks you to insist.
+            </p>
+            <TossThresholds />
+          </div>
+        );
+      };
+
+      const TossThresholds = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => () => push("toss", name, undefined);
+        return (
+          <>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Box
+                className="note"
+                id="note_easy"
+                data-toss-distance="40"
+                data-toss-speed="0.15"
+                interactions={{ toss: log("40 px, 0.15 px/ms") }}
+              >
+                Tossed easily
+              </Box>
+              <Box
+                className="note"
+                id="note_hard"
+                data-toss-distance="300"
+                data-toss-speed="1"
+                interactions={{ toss: log("300 px, 1 px/ms") }}
+              >
+                Asks you to insist
+              </Box>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      // ── Move ──────────────────────────────────────────────────────────
+
+      const Token = ({ label, ...rest }) => (
+        <Box className="token" {...rest}>
+          {label}
+        </Box>
+      );
+
+      const MoveDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const logMove = (name) => (event) => {
+          const { x, y } = event.detail;
+          push(name, `${Math.round(x)}, ${Math.round(y)}`, event);
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="move">Move</Heading>
+            <p class="legend">
+              Grab a token and put it somewhere else: it stays where it was put.
+              It is the token itself that travels, not a copy.
+            </p>
+            <Box className="board">
+              <Token
+                id="token_free"
+                label="free"
+                style={{ left: "16px", top: "16px" }}
+                interactions={{ move: logMove("free") }}
+              />
+            </Box>
+
+            <Heading level={3} id="move-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="move-axis">
+              data-drag-axis
+            </Heading>
+            <p class="legend">
+              A token held to one axis. Said nothing, a move goes wherever it is
+              put; a reordered list, for its part, follows its own.
+            </p>
+            <Box className="board">
+              <Token
+                id="token_x"
+                label="x"
+                data-drag-axis="x"
+                style={{ left: "16px", top: "40px" }}
+                interactions={{ move: logMove("x") }}
+              />
+              <Token
+                id="token_y"
+                label="y"
+                data-drag-axis="y"
+                style={{ left: "140px", top: "40px" }}
+                interactions={{ move: logMove("y") }}
+              />
+            </Box>
+
+            <Heading level={4} id="move-free">
+              data-drag-free
+            </Heading>
+            <p class="legend">
+              By default a token does not leave what holds it — drag the first
+              one against an edge and it stops there. The second board gives
+              that freedom back: its token can be taken anywhere on the page.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  held inside its board
+                </Text>
+                <Box className="board board_small">
+                  <Token
+                    id="token_held"
+                    label="held"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("held") }}
+                  />
+                </Box>
+              </Box>
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  data-drag-free
+                </Text>
+                <Box className="board board_small board_open" data-drag-free>
+                  <Token
+                    id="token_loose"
+                    label="free"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("free of the board") }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── An interaction of your own: triple click ─────────────────────────────────────────────
+
+      // Three clicks within a second: navi has no such thing, the app registers it.
+      // `setup` runs once per element, so the count is a plain closure variable.
+      defineInteractionDetector({
+        name: "triple_click",
+        claims: (type) => type === "triple_click",
+        setup: (element, trigger) => {
+          let count = 0;
+          let timeout = null;
+          const onClick = (clickEvent) => {
+            count++;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              count = 0;
+            }, 1000);
+            if (count < 3) {
+              return;
+            }
+            count = 0;
+            trigger(clickEvent);
+          };
+          element.addEventListener("click", onClick);
+          return () => {
+            clearTimeout(timeout);
+            element.removeEventListener("click", onClick);
+          };
+        },
+      });
+
+      const CustomDetectorDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const [fired, setFired] = useState(0);
+        return (
+          <div class="demo-section">
+            <Heading id="custom">
+              An interaction of your own: triple click
+            </Heading>
+            <p class="desc">
+              <code>defineInteractionDetector</code>: the same door navi's own
+              swipes and shortcuts come through.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ triple_click: fn }">
+                <Button
+                  action={(value, { event }) => push("click", undefined, event)}
+                  interactions={{
+                    triple_click: (event) => {
+                      setFired((previous) => previous + 1);
+                      push("triple_click", undefined, event);
+                    },
+                  }}
+                >
+                  Click three times
+                </Button>
+              </Variant>
+              <Variant caption="fired">
+                <Text>{fired} times</Text>
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Combinations ──────────────────────────────────────────────────────
+      //
+      // Several interactions on one element: this is where one checks they do not
+      // walk over each other. One section per PAIR that shares an input — a press, a
+      // release — and not one per imaginable combination.
+
+      const CombinationsDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="combinations">Combinations</Heading>
+
+            <Heading level={3} id="longpress-and-swipe">
+              Held press and swipe
+            </Heading>
+            <p class="legend">
+              The same press: the finger leaves sideways and it is a swipe, it
+              does not move and it is a held press. Never both.
+            </p>
+            <Box className="rows">
+              <Row
+                title="swipe_right + longpress"
+                body="leave sideways, or do not move"
+                trailStart={ARCHIVE_TRAIL}
+                interactions={{
+                  swipe_right: log("swipe_right"),
+                  longpress: log("longpress"),
+                }}
+              />
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="reorder-and-toss">
+              Reorder and toss
+            </Heading>
+            <p class="legend">
+              The same release: dropped onto another task, the row swaps with
+              it; sent far and fast, it is tossed. A row that can be tossed has
+              to be able to leave its list, so the gesture gives it that freedom
+              — with <code>reorder</code> alone it stays shut inside.
+            </p>
+            <TaskList
+              name="both"
+              interactionsFor={({ reorder, toss }) => ({ reorder, toss })}
+            />
+          </div>
+        );
+      };
+
+      // ── Concrete cases ─────────────────────────────────────────────────────
+      //
+      // Each puts several interactions on one component, which no per-gesture
+      // section shows: this is where the arbitration is visible. More will come —
+      // one per situation that actually happened, never one per possible
+      // combination.
+
+      const ConcreteCasesDemo = () => (
+        <div class="demo-section">
+          <Heading id="concrete">Concrete cases</Heading>
+          <MailboxCase />
+        </div>
+      );
+
+      // ── Concrete case: a mailbox ──────────────────────────────────────
+
+      const MAILS = [
+        {
+          id: "1",
+          from: "Sofia Mendes",
+          subject: "Quote to review before Thursday",
+        },
+        { id: "2", from: "GitHub", subject: "3 activities on jsenv/core" },
+        { id: "3", from: "Marc Aubert", subject: "Photos from the conference" },
+        {
+          id: "4",
+          from: "Lea Fournier",
+          subject: "Shall we move the 3pm call?",
+        },
+      ];
+
+      const MailboxCase = () => {
+        const [archived, setArchived] = useState([]);
+        const [read, setRead] = useState(["3"]);
+        // The menu is not a state of this component: it opens by command, like a
+        // picker, and closes on its own. What is left here is the only thing the
+        // command does not say — which message it is about.
+        const [menuMailId, setMenuMailId] = useState(null);
+        const [openedId, setOpenedId] = useState(null);
+        const visible = MAILS.filter((mail) => !archived.includes(mail.id));
+        const opened = MAILS.find((mail) => mail.id === openedId);
+        // Where the press happened: a one-pixel square that gets moved, because an
+        // anchor is an element and a point is not one.
+        const anchorPointRef = useRef(null);
+        const openMenuAt = (mail, interactionEvent) => {
+          const press = interactionEvent.detail.event;
+          const anchorPoint = anchorPointRef.current;
+          anchorPoint.style.left = `${press.clientX}px`;
+          anchorPoint.style.top = `${press.clientY}px`;
+          setMenuMailId(mail.id);
+          triggerNaviCommand(
+            interactionEvent.target,
+            "--navi-open",
+            interactionEvent,
+            { anchor: anchorPoint },
+          );
+        };
+        const closeMenu = (event) => {
+          triggerNaviCommand(event.currentTarget, "--navi-close", event, {
+            optional: true,
+          });
+        };
+        const archive = (id) => {
+          setArchived((previous) => [...previous, id]);
+        };
+        return (
+          <>
+            <Heading level={3} id="mailbox">
+              A mailbox
+            </Heading>
+            <p class="legend">
+              Click to open, swipe right to archive, swipe left to mark read or
+              unread, hold to get the menu — which opens where the finger
+              landed, while it is still down.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box className="rows" expandX>
+                <List overflowX="hidden">
+                  {visible.map((mail) => (
+                    <List.Item key={mail.id} id={mail.id}>
+                      <Row
+                        title={
+                          <Box flex="x" spacing="s" alignY="center">
+                            <span
+                              className={`mail_dot ${read.includes(mail.id) ? "mail_dot_read" : ""}`}
+                            />
+                            <span className="mail_from">{mail.from}</span>
+                          </Box>
+                        }
+                        body={
+                          <span className="mail_subject">{mail.subject}</span>
+                        }
+                        trailStart={ARCHIVE_TRAIL}
+                        trailEnd={{
+                          className: "trail_unread",
+                          label: read.includes(mail.id) ? "Unread" : "Read",
+                        }}
+                        // Which popover the command opens: it is not above the row
+                        // in the DOM, so it cannot be found on its own.
+                        commandfor="mail_menu"
+                        interactions={{
+                          click: () => setOpenedId(mail.id),
+                          swipe_right: () => archive(mail.id),
+                          swipe_left: () => {
+                            setRead((previous) =>
+                              previous.includes(mail.id)
+                                ? previous.filter((id) => id !== mail.id)
+                                : [...previous, mail.id],
+                            );
+                          },
+                          longpress: (event) => openMenuAt(mail, event),
+                        }}
+                      />
+                    </List.Item>
+                  ))}
+                </List>
+              </Box>
+              <div class="opened_pane">
+                {opened ? (
+                  <Box flex="y" spacing="xs">
+                    <strong>{opened.from}</strong>
+                    <Text size="s" color="#6b7482">
+                      {opened.subject}
+                    </Text>
+                  </Box>
+                ) : (
+                  <span class="opened_pane_empty">nothing open</span>
+                )}
+              </div>
+            </Box>
+            {/* One popover for the whole list — a list only ever shows one at a
+                time. It has no `open` prop: --navi-open is what opens it, and the
+                command carries the anchor. */}
+            <div
+              ref={anchorPointRef}
+              style={{
+                position: "fixed",
+                width: "1px",
+                height: "1px",
+                pointerEvents: "none",
+              }}
+            />
+            <Popover
+              id="mail_menu"
+              positionArea="bottom-right"
+              padding="0"
+              borderRadius="10px"
+              pointerInteractionOutsideEffect="close"
+            >
+              <Box flex="y" className="mail_menu">
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item mail_menu_item_primary"
+                  onClick={(event) => {
+                    setOpenedId(menuMailId);
+                    closeMenu(event);
+                  }}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </span>
+                  Open the message
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={(event) => {
+                    setRead((previous) =>
+                      previous.filter((id) => id !== menuMailId),
+                    );
+                    closeMenu(event);
+                  }}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <EyeClosedSvg />
+                    </Icon>
+                  </span>
+                  Mark as unread
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={closeMenu}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </span>
+                  Pin
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={closeMenu}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <ExclamationSvg />
+                    </Icon>
+                  </span>
+                  Report as spam
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item mail_menu_item_danger"
+                  onClick={(event) => {
+                    archive(menuMailId);
+                    closeMenu(event);
+                  }}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <CloseSvg />
+                    </Icon>
+                  </span>
+                  Delete
+                </Box>
+              </Box>
+            </Popover>
+            {archived.length ? (
+              <Box paddingY="s">
+                <Button action={() => setArchived([])}>
+                  Restore {archived.length}
+                </Button>
+              </Box>
+            ) : null}
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

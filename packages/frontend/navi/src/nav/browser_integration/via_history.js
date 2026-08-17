@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
@@ -164,14 +165,6 @@ export const setupBrowserIntegrationViaHistory = ({
       if (e.defaultPrevented) {
         return;
       }
-      // Nothing here declared a route, so there is nothing to route to: the
-      // page is a plain document and a link in it is a plain link. Taking it
-      // over anyway would push the url and then have nothing to show for it —
-      // the address bar moves and the page does not (see applyRouting's own
-      // "not called yet" branch, which is where that used to end up).
-      if (!isRouting()) {
-        return;
-      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
@@ -180,14 +173,30 @@ export const setupBrowserIntegrationViaHistory = ({
         return;
       }
       const href = linkElement.href;
-      const { isEmpty, isSameOrigin, isAnchor } = getHrefTargetInfo(href);
-      if (
-        isEmpty ||
+      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
+        getHrefTargetInfo(href);
+      if (isEmpty || !isSameOrigin) {
         // Let link to other origins be handled by the browser
-        !isSameOrigin ||
-        // Ignore anchor navigation (same page, different hash)
-        isAnchor
-      ) {
+        return;
+      }
+      if (isAnchor) {
+        // Fragment navigation belongs to the browser: it owns the indicated
+        // part of the document, and taking it over would cost `:target` and the
+        // focus handling that come with it.
+        if (isCurrent) {
+          // Except this one, which the browser answers with a scroll and
+          // nothing else: same pathname, same hash, so no event and no url
+          // change reaches whoever is waiting on the designated element.
+          rearmUrlTarget();
+        }
+        return;
+      }
+      // Nothing here declared a route, so there is nothing to route to: the
+      // page is a plain document and a link in it is a plain link. Taking it
+      // over anyway would push the url and then have nothing to show for it —
+      // the address bar moves and the page does not (see applyRouting's own
+      // "not called yet" branch, which is where that used to end up).
+      if (!isRouting()) {
         return;
       }
       e.preventDefault();
@@ -216,6 +225,14 @@ export const setupBrowserIntegrationViaHistory = ({
       navigationType: "traverse",
       state,
     });
+  });
+
+  // A fragment navigation is left to the browser (see the click handler above):
+  // it owns the indicated part of the document, and taking it over would cost
+  // `:target` and the focus handling that come with it. The document url still
+  // has to follow it — nothing else here would notice that it moved.
+  window.addEventListener("hashchange", () => {
+    updateDocumentUrl(window.location.href);
   });
 
   const navTo = async (url, { replace, state } = {}) => {

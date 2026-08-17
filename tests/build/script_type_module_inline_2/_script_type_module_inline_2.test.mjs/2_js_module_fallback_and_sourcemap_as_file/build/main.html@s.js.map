@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "../../../../packages/internal/js-module-fallback/src/client/s.js"
+    "../../../../packages/node_modules/@jsenv/js-module-fallback/src/client/s.js"
   ],
   "names": [
     "loadRegistry",

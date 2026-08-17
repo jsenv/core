@@ -51,6 +51,11 @@ consistency across the app, not from any single call site.
   `<Interpolate>` for one sentence, `createI18n` for the app's registry,
   `naviI18n` for navi's own texts. Read it before writing a user-visible
   sentence, and before overriding a navi message.
+- `docs/interactions.md` — the `interactions` prop: making a component answer a
+  swipe, a held press, a shortcut, and registering a gesture navi does not have.
+  Read it before reading the pointer by hand — who owns a press between nested
+  boxes, and what a touch may do, are decided before the first pixel moves and
+  cannot be got right from outside navi.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - `docs/navigation.md` — how to build navigation: declaring routes
@@ -84,6 +89,9 @@ consistency across the app, not from any single call site.
 - **Field components** (`Input`, `Select`, `Checkbox`, etc.) take an `action`
   prop to respond to interaction — this is the standard wiring, not
   `onChange` + manual state.
+- **A gesture is named, not read by hand**: `interactions={{ swipe_right: … }}`
+  on any `Box` (so on any component). Never a `pointerdown` listener of your own
+  — see `docs/interactions.md`.
 - **Texts**: a user-visible sentence containing a value is written as one
   template with `[placeholder]`s (`interpolateText` / `<Interpolate>`), not cut
   into JSX fragments or concatenations. Beyond a handful of texts, an app

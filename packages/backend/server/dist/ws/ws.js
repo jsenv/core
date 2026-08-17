@@ -418,7 +418,9 @@ function requirePermessageDeflate () {
 	            (typeof opts.serverMaxWindowBits === 'number' &&
 	              opts.serverMaxWindowBits > params.server_max_window_bits))) ||
 	        (typeof opts.clientMaxWindowBits === 'number' &&
-	          !params.client_max_window_bits)
+	          (typeof params.client_max_window_bits === 'number'
+	            ? opts.clientMaxWindowBits > params.client_max_window_bits
+	            : !params.client_max_window_bits))
 	      ) {
 	        return false;
 	      }

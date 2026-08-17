@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.7.46",
+  "version": "1.8.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,11 +21,11 @@
     "@jsenv/core": "*"
   },
   "dependencies": {
-    "@babel/plugin-transform-react-jsx": "7.28.6",
-    "@babel/plugin-transform-react-jsx-development": "7.27.1",
-    "@babel/plugin-transform-react-jsx-source": "7.27.1",
-    "@jsenv/ast": "6.9.0",
-    "@jsenv/plugin-commonjs": "2.11.19",
+    "@babel/plugin-transform-react-jsx": "7.29.7",
+    "@babel/plugin-transform-react-jsx-development": "7.29.7",
+    "@babel/plugin-transform-react-jsx-source": "7.29.7",
+    "@jsenv/ast": "6.9.1",
+    "@jsenv/plugin-commonjs": "2.11.20",
     "@jsenv/sourcemap": "1.4.2",
     "@jsenv/url-meta": "8.5.7",
     "react-refresh": "0.18.0"
@@ -36,7 +36,7 @@
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../plugin-explorer",
     "@jsenv/plugin-react": "./",
-    "playwright": "1.61.1",
+    "playwright": "1.62.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
