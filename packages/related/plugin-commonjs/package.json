@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.11.19",
+  "version": "2.11.20",
   "type": "module",
   "repository": {
     "type": "git",
@@ -27,16 +27,16 @@
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
-    "cjs-module-lexer": "2.2.0",
+    "cjs-module-lexer": "2.2.1",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.12",
-    "rollup": "4.62.2",
+    "rollup": "4.62.4",
     "rollup-plugin-polyfill-node": "0.13.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../tooling/assert",
     "@jsenv/core": "../../",
-    "playwright": "1.61.1"
+    "playwright": "1.62.1"
   },
   "publishConfig": {
     "access": "public"

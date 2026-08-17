@@ -35,7 +35,7 @@
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
-    "playwright": "1.61.1"
+    "playwright": "1.62.1"
   },
   "publishConfig": {
     "access": "public"

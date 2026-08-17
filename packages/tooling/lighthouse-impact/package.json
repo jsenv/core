@@ -37,7 +37,7 @@
     "@jsenv/assert": "../assert",
     "@jsenv/lighthouse-impact": "./",
     "@jsenv/server": "../../backend/server",
-    "playwright": "1.61.1"
+    "playwright": "1.62.1"
   },
   "publishConfig": {
     "access": "public"
