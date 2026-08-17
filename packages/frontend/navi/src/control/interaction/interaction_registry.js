@@ -87,7 +87,11 @@ const detectors = [];
  *     that re-rendered mid-gesture — which is most of them, since answering an
  *     interaction usually changes something.
  *   - `perform(type, event)`: answer an interaction whose event already exists
- *     (a native one). Returns a promise while something is still going, else null.
+ *     (a native one). Returns null when nothing ran (the gate refused, no control
+ *     to ask), else a promise: resolved once the effect worked, rejected when it
+ *     did not. "Nothing ran" and "ran and failed" are different answers — a row
+ *     pulled out comes back either way, something thrown away only comes back if
+ *     the throw failed.
  *   - `request(type, detail, originalEvent)`: dispatch the interaction as an event
  *     of its own name, then answer it. Same return, plus null when the dispatch
  *     was prevented.
@@ -191,9 +195,14 @@ export const useInteractionProps = (interactions, { ref }) => {
     return null;
   }
 
-  // Answers one interaction, and reports back whether something is still going —
-  // a promise, or null for an interaction that is already over. A swipe waits on
-  // it before letting the row it pulled out come back.
+  // Answers one interaction, and reports back what became of it:
+  // - null when nothing ran at all — the gate refused, there was no control to
+  //   ask, the interaction was prevented;
+  // - a promise otherwise, resolved once the effect worked and REJECTED when it
+  //   did not (an error, an abort). "Nothing ran" and "ran and failed" have to be
+  //   told apart: what a detector does about them is not the same — a row pulled
+  //   out comes back either way, but something thrown away only comes back if the
+  //   throw failed.
   const perform = (type, interactionEvent) => {
     const element = ref.current;
     if (!element) {
@@ -222,12 +231,27 @@ export const useInteractionProps = (interactions, { ref }) => {
           requester: controlHost,
         }),
       );
-      if (completion.result === false || !completion.isRunning) {
+      if (completion.result === false) {
+        // The gate turned the request down and has said why where it happened.
         return null;
       }
-      return new Promise((resolve) => {
-        completion.whenSettled(resolve);
-      });
+      if (!completion.isRunning) {
+        // Synchronous: it is already done, and done is not the same as refused.
+        return settled(Promise.resolve());
+      }
+      return settled(
+        new Promise((resolve, reject) => {
+          completion.whenSettled((outcome) => {
+            if (outcome.error) {
+              reject(outcome.error);
+            } else if (outcome.aborted) {
+              reject(new Error(`aborted: ${outcome.reason}`));
+            } else {
+              resolve(outcome.data);
+            }
+          });
+        }),
+      );
     }
     if (effect === REQUEST_UI_ACTION) {
       if (!controlHost) {
@@ -241,10 +265,12 @@ export const useInteractionProps = (interactions, { ref }) => {
       // The value it already holds, set again: a ui action is what says the user
       // acted, and everything listening for one (a command, a group above) hears
       // it whether or not the value moved.
+      let allowed = false;
       dispatchRequestInteraction(controlHost, {
         event: interactionEvent,
         name,
         allowed: () => {
+          allowed = true;
           dispatchRequestSetUIState(
             controlHost,
             getUIStateFromElement(controlHost),
@@ -252,10 +278,12 @@ export const useInteractionProps = (interactions, { ref }) => {
           );
         },
       });
-      return null;
+      return allowed ? settled(Promise.resolve()) : null;
     }
+    let ran = false;
     let returnValue;
     const run = () => {
+      ran = true;
       returnValue = effect(interactionEvent);
     };
     if (controlHost) {
@@ -270,10 +298,13 @@ export const useInteractionProps = (interactions, { ref }) => {
     } else {
       run();
     }
-    if (returnValue && typeof returnValue.then === "function") {
-      return returnValue;
+    if (!ran) {
+      return null;
     }
-    return null;
+    if (returnValue && typeof returnValue.then === "function") {
+      return settled(returnValue);
+    }
+    return settled(Promise.resolve(returnValue));
   };
 
   const request = (type, detail, originalEvent) => {
@@ -294,6 +325,15 @@ export const useInteractionProps = (interactions, { ref }) => {
       return null;
     }
     return perform(type, interactionEvent);
+  };
+
+  // A rejection nobody is listening for is a console warning about something
+  // already reported where it happened (a validation message on the control). The
+  // promise handed out keeps rejecting — a detector that has something to undo
+  // needs to hear it — but it is no longer "unhandled".
+  const settled = (promise) => {
+    promise.catch(() => {});
+    return promise;
   };
 
   const readConfig = (attribute, defaultValue) => {

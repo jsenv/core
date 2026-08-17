@@ -150,6 +150,55 @@
         color: #9aa6b6;
       }
 
+      /* Le menu du clic long : une carte, une action en tête, les autres à la
+         suite. */
+      .mail_menu {
+        min-width: 232px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .mail_menu_item {
+        display: flex;
+        width: 100%;
+        padding: 10px 14px;
+        align-items: center;
+        gap: 12px;
+        color: #1f2733;
+        font: inherit;
+        font-size: 14px;
+        text-align: left;
+        background: none;
+        border: 0;
+        cursor: default;
+      }
+      .mail_menu_item:hover {
+        background: #eef1f6;
+      }
+      .mail_menu_item_primary {
+        color: white;
+        font-weight: 600;
+        background: #1f2733;
+      }
+      .mail_menu_item_primary:hover {
+        background: #2b3646;
+      }
+      .mail_menu_item_primary .mail_menu_icon {
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: 4px;
+      }
+      .mail_menu_item_danger {
+        color: #c62828;
+      }
+      .mail_menu_icon {
+        display: flex;
+        width: 20px;
+        height: 20px;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+      }
+
       .mail_dot {
         width: 8px;
         height: 8px;
@@ -167,6 +216,50 @@
         color: #6b7482;
         font-size: 13px;
       }
+      /* Un papier jaune scotché : ce que quelqu'un a écrit à la main, posé sur
+         ce qu'on regarde. */
+      .note_slot {
+        position: relative;
+      }
+      .note {
+        max-width: 260px;
+        padding: 10px 14px;
+        color: #4a3f14;
+        font-size: 13px;
+        line-height: 1.4;
+        background: #fdf3b8;
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        rotate: -1.2deg;
+      }
+      .note[data-grabbed] {
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+        rotate: -2.5deg;
+        cursor: grabbing;
+      }
+      /* Il revient se raccrocher. La transition s'enlève à la fin, sinon la
+         prise suivante traînerait derrière le doigt. */
+      .note[data-settling] {
+        transition: translate 0.28s ease-out;
+      }
+      /* Il part dans la direction du geste, jusqu'à sortir de l'écran. */
+      .note[data-thrown] {
+        opacity: 0;
+        transition:
+          translate 320ms ease-out,
+          opacity 320ms ease-out;
+      }
+      /* L'endroit d'où il vient, pendant qu'il traverse l'écran : la place
+         gardée est vide sans ça, et un blanc se lit comme un défaut de mise en
+         page. */
+      .note_shadow {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.06);
+        border-radius: 2px;
+        rotate: -1.2deg;
+      }
+
       .thumb {
         width: 40px;
         height: 40px;
@@ -181,15 +274,25 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        createDragToMoveGestureController,
+        dragAfterIntent,
+      } from "@jsenv/dom";
       import {
         Box,
         Button,
+        CloseSvg,
         defineInteractionDetector,
+        ExclamationSvg,
+        EyeClosedSvg,
+        EyeSvg,
         findEvent,
+        Icon,
         Link,
         List,
         Popover,
+        StarSvg,
         Text,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
@@ -260,6 +363,7 @@
           <WhichInteractionDemo />
           <RunningDemo />
           <CustomDetectorDemo />
+          <SwipeOutDemo />
           <MailboxDemo />
         </Box>
       );
@@ -786,6 +890,211 @@
         );
       };
 
+      // ── Cas concret : un geste à soi, swipe_out ───────────────────────────
+
+      /*
+       * Jeter un papier: le prendre, l'envoyer loin et vite, et il ne revient pas.
+       *
+       * navi n'a pas ce geste et n'a pas à l'avoir — il est écrit ici, dans
+       * l'appli, avec les deux moitiés que @jsenv/dom fournit déjà: dragAfterIntent
+       * pour « quand est-ce que c'est une prise ? », et le contrôleur de
+       * déplacement pour le reste. Ce que le registre apporte: le nom marche dans
+       * `interactions` comme les autres, la porte disabled/readOnly est la même, et
+       * `request` rend une promesse — donc « il est parti » et « il revient parce
+       * que ça a échoué » se distinguent sans rien écrire de plus.
+       *
+       * Attraper demande 380 ms de doigt immobile: assez pour ne jamais décrocher
+       * un mot en faisant défiler, assez peu pour ne pas se demander si ça marche.
+       * Jeter demande les DEUX à la fois, loin et vite: l'un sans l'autre, c'est
+       * déplacer le papier en hésitant, et un mot ne se perd pas sur une
+       * hésitation.
+       */
+      const NOTE_GRAB_DELAY = 380;
+      const NOTE_GRAB_SLOP = 8;
+      const NOTE_THROW_DISTANCE = 110;
+      const NOTE_THROW_SPEED = 0.45;
+      const NOTE_FLIGHT_MS = 320;
+
+      defineInteractionDetector({
+        name: "swipe_out",
+        claims: (type) => type === "swipe_out",
+        setup: ({ ref, request, readConfig }) => ({
+          // Celui qui lit le pointeur se marque lui-même: sans ça, tirer le papier
+          // vers la droite tirerait aussi la page vers l'onglet d'à côté, et le
+          // voyage — qui arrive après — tuerait la prise.
+          "data-no-drag-travel": "",
+          "onPointerDown": (pointerDownEvent) => {
+            const element = ref.current;
+            const distanceToThrow = readConfig(
+              "data-swipe-out-distance",
+              NOTE_THROW_DISTANCE,
+            );
+            const speedToThrow = readConfig(
+              "data-swipe-out-speed",
+              NOTE_THROW_SPEED,
+            );
+            dragAfterIntent(
+              pointerDownEvent,
+              () =>
+                grabNote(element, pointerDownEvent, request, {
+                  distanceToThrow,
+                  speedToThrow,
+                }),
+              {
+                longPressDelay: readConfig(
+                  "data-swipe-out-delay",
+                  NOTE_GRAB_DELAY,
+                ),
+                longPressSlop: readConfig(
+                  "data-swipe-out-slop",
+                  NOTE_GRAB_SLOP,
+                ),
+                // le téléphone confirme la prise: c'est le seul retour qu'on ait
+                // au doigt, le papier étant caché par le pouce qui le tient
+                onPress: () => {
+                  window.navigator.vibrate?.(10);
+                },
+              },
+            );
+          },
+        }),
+      });
+
+      const grabNote = (
+        element,
+        pointerDownEvent,
+        request,
+        { distanceToThrow, speedToThrow },
+      ) => {
+        const controller = createDragToMoveGestureController({
+          name: "swipe_out",
+          // il doit pouvoir sortir de ce qui le porte, et de l'écran: c'est le
+          // geste. Par défaut le papier serait retenu dans sa zone de défilement,
+          // exactement ce qu'un jet doit franchir
+          areaConstraint: "none",
+          // ce que devient le papier quand le doigt s'ouvre, c'est nous qui le
+          // disons
+          releasePositionEffect: "manual",
+        });
+        const gesture = controller.grabViaPointer(pointerDownEvent, {
+          element,
+        });
+        if (!gesture) {
+          return null;
+        }
+        const hideShadow = showNoteShadow(element);
+        gesture.addReleaseCallback((gestureInfo) => {
+          const { xDelta, yDelta } = gestureInfo.layout;
+          const distance = Math.hypot(xDelta, yDelta);
+          const comeBack = () => {
+            delete element.dataset.thrown;
+            element.dataset.settling = "";
+            element.style.translate = "";
+            gestureInfo.cancelPosition?.();
+            element.addEventListener(
+              "transitionend",
+              () => {
+                delete element.dataset.settling;
+              },
+              { once: true },
+            );
+            hideShadow();
+          };
+          if (
+            distance < distanceToThrow ||
+            gestureInfo.velocity < speedToThrow
+          ) {
+            comeBack();
+            return;
+          }
+          element.dataset.thrown = "";
+          element.style.translate = `${(xDelta / distance) * 900}px ${
+            (yDelta / distance) * 900
+          }px`;
+          const pending = request(
+            "swipe_out",
+            { x: xDelta, y: yDelta, distance, velocity: gestureInfo.velocity },
+            gestureInfo.releaseEvent ?? pointerDownEvent,
+          );
+          if (!pending) {
+            comeBack();
+            return;
+          }
+          // Il est parti: l'empreinte s'en va avec la réponse, il n'y a plus
+          // d'endroit d'où il vient. Si le serveur refuse, il revient — il existe
+          // encore, l'écran doit le dire.
+          pending.then(hideShadow, comeBack);
+        });
+        return gesture;
+      };
+
+      // Un clone de ce qui est parti, à sa place, le temps du vol: il a déjà la
+      // bonne largeur et la bonne hauteur, donc rien à mesurer.
+      const showNoteShadow = (element) => {
+        const slot = element.parentElement;
+        const shadow = document.createElement("div");
+        shadow.className = "note_shadow";
+        shadow.setAttribute("inert", "");
+        shadow.setAttribute("aria-hidden", "true");
+        slot.appendChild(shadow);
+        return () => {
+          shadow.remove();
+        };
+      };
+
+      const NOTES = [
+        "Terrain 3, au fond à gauche",
+        "Apporter un maillot clair",
+        "Le portail se ferme à 22h",
+      ];
+
+      const SwipeOutDemo = () => {
+        const [thrown, setThrown] = useState([]);
+        return (
+          <div class="demo-section">
+            <Heading id="swipe-out">
+              Cas concret : un geste à soi, swipe_out
+            </Heading>
+            <p class="legend">
+              Maintenir un papier une demi-seconde, puis l'envoyer loin et vite
+              : il sort de l'écran. Trop court ou trop lent, il se raccroche.
+              Répondre depuis le backend décide s'il est vraiment décroché ou
+              s'il revient.
+            </p>
+            <FakeBackend value={{ thrown: [] }}>
+              {({ action }) => (
+                <Box flex="y" spacing="m" alignX="start">
+                  {NOTES.filter((note) => !thrown.includes(note)).map(
+                    (note) => (
+                      <Box key={note} className="note_slot">
+                        <Box
+                          className="note"
+                          interactions={{
+                            swipe_out: async () => {
+                              await action({ thrown: [note] });
+                              setThrown((previous) => [...previous, note]);
+                            },
+                          }}
+                        >
+                          {note}
+                        </Box>
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              )}
+            </FakeBackend>
+            {thrown.length ? (
+              <Box paddingY="s">
+                <Button action={() => setThrown([])}>
+                  Rétablir {thrown.length}
+                </Button>
+              </Box>
+            ) : null}
+          </div>
+        );
+      };
+
       // ── Cas concret : une boîte mail ──────────────────────────────────────
 
       const MAILS = [
@@ -806,21 +1115,25 @@
       const MailboxDemo = () => {
         const [archived, setArchived] = useState([]);
         const [read, setRead] = useState(["3"]);
-        const [menuId, setMenuId] = useState(null);
+        const [menu, setMenu] = useState(null);
         const [openedId, setOpenedId] = useState(null);
         const visible = MAILS.filter((mail) => !archived.includes(mail.id));
         const opened = MAILS.find((mail) => mail.id === openedId);
+        // Le menu s'ouvre là où le doigt s'est posé, pas sur la ligne : le point
+        // d'ancrage est un carré d'un pixel placé aux coordonnées de la pression.
+        const anchorPointRef = useRef(null);
         const archive = (id) => {
           setArchived((previous) => [...previous, id]);
-          setMenuId(null);
+          setMenu(null);
         };
+        const closeMenu = () => setMenu(null);
         return (
           <div class="demo-section">
             <Heading id="mailbox">Cas concret : une boîte mail</Heading>
             <p class="legend">
               Clic pour ouvrir, balayage à droite pour archiver, balayage à
               gauche pour marquer lu ou non lu, appui long pour le menu — qui
-              s'ouvre pendant que le doigt est encore posé.
+              s'ouvre là où le doigt s'est posé, pendant qu'il est encore posé.
             </p>
             <Box flex="x" spacing="l" alignY="start">
               <Box className="rows" expandX>
@@ -854,8 +1167,13 @@
                                 : [...previous, mail.id],
                             );
                           },
-                          longpress: () => {
-                            setMenuId(menuId === mail.id ? null : mail.id);
+                          longpress: (event) => {
+                            const press = event.detail.event;
+                            setMenu({
+                              id: mail.id,
+                              x: press.clientX,
+                              y: press.clientY,
+                            });
                           },
                         }}
                       />
@@ -876,23 +1194,104 @@
                 )}
               </div>
             </Box>
-            {/* Un seul popover pour toute la liste : il s'ancre à la ligne dont
-                l'id est dans menuId, et une liste n'en montre qu'un à la fois.
-                L'ancre est passée par id — c'est celui que List.Item pose sur son
-                élément. */}
+            {/* Un seul popover pour toute la liste — une liste n'en montre qu'un
+                à la fois — ancré au point où la pression a eu lieu. */}
+            {menu ? (
+              <div
+                ref={anchorPointRef}
+                style={{
+                  position: "fixed",
+                  left: `${menu.x}px`,
+                  top: `${menu.y}px`,
+                  width: "1px",
+                  height: "1px",
+                  pointerEvents: "none",
+                }}
+              />
+            ) : null}
             <Popover
-              open={Boolean(menuId)}
-              anchor={menuId ?? undefined}
-              positionArea="bottom"
-              padding="xs"
-              borderRadius="8px"
+              open={Boolean(menu)}
+              anchor={anchorPointRef}
+              positionArea="bottom-right"
+              padding="0"
+              borderRadius="10px"
               pointerInteractionOutsideEffect="close"
-              onClose={() => setMenuId(null)}
+              onClose={closeMenu}
             >
-              <Box flex="y" spacing="xs" alignX="stretch">
-                <Button action={() => archive(menuId)}>Archiver</Button>
-                <Button action={() => setMenuId(null)}>Épingler</Button>
-                <Button action={() => setMenuId(null)}>Signaler</Button>
+              <Box flex="y" className="mail_menu">
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item mail_menu_item_primary"
+                  onClick={() => {
+                    setOpenedId(menu.id);
+                    closeMenu();
+                  }}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <EyeSvg />
+                    </Icon>
+                  </span>
+                  Ouvrir le message
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={() => {
+                    setRead((previous) =>
+                      previous.filter((id) => id !== menu.id),
+                    );
+                    closeMenu();
+                  }}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <EyeClosedSvg />
+                    </Icon>
+                  </span>
+                  Marquer comme non lu
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={closeMenu}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </span>
+                  Épingler
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item"
+                  onClick={closeMenu}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <ExclamationSvg />
+                    </Icon>
+                  </span>
+                  Signaler comme indésirable
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  className="mail_menu_item mail_menu_item_danger"
+                  onClick={() => archive(menu.id)}
+                >
+                  <span className="mail_menu_icon">
+                    <Icon>
+                      <CloseSvg />
+                    </Icon>
+                  </span>
+                  Supprimer
+                </Box>
               </Box>
             </Popover>
             {archived.length ? (
