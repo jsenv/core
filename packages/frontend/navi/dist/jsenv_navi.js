@@ -11763,7 +11763,11 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
  * interaction_registry.js) — navi has no private one.
  *
  * `contextmenu` is the only one that takes something away: the browser's own menu
- * would cover the answer to the request it is.
+ * would cover the answer to the request it is. It takes it away AFTER, though —
+ * a native interaction IS its own event, the very one the gate reads, and a gate
+ * refuses what is already `defaultPrevented`. Cancelling first would therefore
+ * make the interaction refuse itself, and no right click could ever get through.
+ * So: ask, and only cover the browser's menu once something answered.
  */
 
 
@@ -11781,10 +11785,13 @@ defineInteractionDetector({
   setup: (element, trigger, { types }) => {
     const listeners = types.map((type) => {
       const listener = (nativeEvent) => {
-        if (type === "contextmenu") {
+        const performed = trigger(type, nativeEvent);
+        if (type === "contextmenu" && performed) {
+          // Something answered the request, so the browser's own menu would only
+          // cover it. Nothing answered (the gate refused, a listener said "not
+          // this time"): the right click stays what it was, and opens the menu.
           nativeEvent.preventDefault();
         }
-        trigger(type, nativeEvent);
       };
       element.addEventListener(type, listener);
       return [type, listener];
@@ -11827,8 +11834,9 @@ installImportMetaCssBuild(import.meta);/**
  * that — and says where it is up to, for the caller to draw the rest with:
  *
  * - `--swipe-pulled`: how far it has come, signed, in px.
- * - `--swipe-progress`: the same as a fraction of the element, signed. Inherited,
- *   so anything inside the element can read it.
+ * - `--swipe-progress`: the same as a fraction of the element, signed.
+ *
+ * Both inherit, so anything inside the element can read them.
  * - `[data-swiping="left|right|up|down"]`: which way, while a finger holds it.
  * - `[data-swipe-past-threshold]`: letting go now would go through with it.
  *
@@ -11910,8 +11918,10 @@ const LONGPRESS_ATTRIBUTE = "data-longpress";
 import.meta.css = [/* css */`
   /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
      what a swipe reveals behind the element is drawn from this, and an undeclared
-     custom property only ever jumps from one value to the next. Inherited, so
-     anything inside the element can read it. */
+     custom property only ever jumps from one value to the next. Both inherited,
+     because what is drawn from them is drawn by a CHILD of the swiped element:
+     the trail behind a row is inside the row, and a value that stopped at the
+     element itself would reach 0 exactly where it is read. */
   @property --swipe-progress {
     syntax: "<number>";
     inherits: true;
@@ -11919,7 +11929,7 @@ import.meta.css = [/* css */`
   }
   @property --swipe-pulled {
     syntax: "<length>";
-    inherits: false;
+    inherits: true;
     initial-value: 0px;
   }
 
@@ -25725,7 +25735,28 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     color: var(--x-button-color);
     background: none;
     border: none;
-    border-radius: var(--button-border-radius);
+    /* Squared from the outside, corner by corner: a Group asks the member it
+       joins for square corners along the seam, and the button it means may
+       arrive wrapped (in a tooltip, in a link), so the ask travels down as
+       inherited custom properties rather than as a selector aimed at the
+       button. Each corner falls back to the button's own radius when nothing
+       asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--button-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--button-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--button-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--button-border-radius)
+    );
     outline: none;
     cursor: var(--x-button-cursor);
     touch-action: manipulation;
@@ -25733,6 +25764,14 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_button_content {
+      /* The ask stops here: this element is the button's frame, so what is
+         inside it (a popover the button opens, a button of its own) is no
+         longer at the seam. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       position: relative;
       display: inherit;
       box-sizing: border-box;
@@ -27745,6 +27784,15 @@ const css$V = /* css */`
   }
 
   .navi_dialog {
+    /* A popup renders inside its opener's own subtree, so a corner claimed from
+       the outside (see group.jsx) would otherwise reach the controls in here.
+       It stops at the popup: what a popup holds is never at a seam of the group
+       its opener belongs to. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     /* Computed once, reused by both max-width itself and min-width's own
        clamp below (see its comment for why) — avoids repeating the same
        min(..., ...) expression twice. */
@@ -29014,6 +29062,15 @@ const css$U = /* css */`
   }
 
   .navi_popover {
+    /* A popup renders inside its opener's own subtree, so a corner claimed from
+       the outside (see group.jsx) would otherwise reach the controls in here.
+       It stops at the popup: what a popup holds is never at a seam of the group
+       its opener belongs to. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
       var(--container-position-remaining-width, var(--popover-maxmax-width)),
@@ -45669,6 +45726,14 @@ const inputCss = /* css */`
     }
 
     .navi_input_slot {
+      /* A corner claimed from the outside (see group.jsx) is the frame's, and
+         what lives in here is not the frame — a button in a slot, the content
+         of a popup — so the ask stops at this boundary. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       margin-right: var(--slot-spacing, calc(2px + 0.1em));
       margin-left: var(--slot-spacing, calc(2px + 0.1em));
       color: #5e4e4e;
@@ -47099,11 +47164,19 @@ const css$B = /* css */`
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
 
-    /* Squaring the joined corners is said on the direct child alone: a navi
-       control declares the radius of its frame on its own root, and whatever
-       inner element actually draws the frame inherits it. .navi_button_content
-       is the exception — a button's frame sits on it and a button can arrive
-       wrapped (a tooltip, a link), so it is named on its own. */
+    /* Two ways of asking for a square corner, and no selector ever reaching
+       inside a member:
+       - the property, on the member itself: a navi control declares the radius
+         of its frame on its own root, and the inner element that draws that
+         frame inherits it;
+       - the custom property, which travels: a member can be an enrobage (a
+         tooltip, a link) around the control that carries the frame, so the ask
+         also goes down as --x-corner-*-radius, which a control reads as an
+         override of its own radius. Private (the --x- prefix): navi's own
+         controls answer it, an app never writes it. Whoever answers it also
+         stops it (see .navi_button_content in button_ui.jsx), so a button
+         deeper in — the clear cross in a picker's slot, the Save of a form in
+         a popup the member opens — never mistakes itself for the seam. */
 
     /* Members overlap by the width of one border, so along each seam one of the
        two borders covers the other. Whichever member the user is on has to be
@@ -47121,8 +47194,15 @@ const css$B = /* css */`
       position: relative;
       z-index: var(--navi-z-index-control-hovered);
     }
+    /* Three spellings for one thing — the member showing a focus ring. Some
+       controls take the focus on their own root (a button); others wrap a real
+       input and draw the ring on their frame while the keyboard is held
+       somewhere inside (a picker, a spin). The ring is what must not be sliced,
+       so the member holding it is raised whether it wears the state itself or
+       merely contains it. */
     > *:focus-visible,
-    > *[data-focus-visible] {
+    > *[data-focus-visible],
+    > *:has([data-focus-visible]) {
       position: relative;
       z-index: var(--navi-z-index-control-focused);
     }
@@ -47133,31 +47213,28 @@ const css$B = /* css */`
         margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
       }
       > *:first-child:not(:only-child) {
+        --x-corner-top-right-radius: 0;
+        --x-corner-bottom-right-radius: 0;
+
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
-
-        .navi_button_content {
-          border-top-right-radius: 0 !important;
-          border-bottom-right-radius: 0 !important;
-        }
       }
 
       > *:last-child:not(:only-child) {
+        --x-corner-top-left-radius: 0;
+        --x-corner-bottom-left-radius: 0;
+
         border-top-left-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
-
-        .navi_button_content {
-          border-top-left-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
       }
 
       > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
+        --x-corner-top-left-radius: 0;
+        --x-corner-top-right-radius: 0;
+        --x-corner-bottom-right-radius: 0;
+        --x-corner-bottom-left-radius: 0;
 
-        .navi_button_content {
-          border-radius: 0 !important;
-        }
+        border-radius: 0 !important;
       }
     }
 
@@ -47167,31 +47244,28 @@ const css$B = /* css */`
         margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
       }
       > *:first-child:not(:only-child) {
+        --x-corner-bottom-right-radius: 0;
+        --x-corner-bottom-left-radius: 0;
+
         border-bottom-right-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
-
-        .navi_button_content {
-          border-bottom-right-radius: 0 !important;
-          border-bottom-left-radius: 0 !important;
-        }
       }
 
       > *:last-child:not(:only-child) {
+        --x-corner-top-left-radius: 0;
+        --x-corner-top-right-radius: 0;
+
         border-top-left-radius: 0 !important;
         border-top-right-radius: 0 !important;
-
-        .navi_button_content {
-          border-top-left-radius: 0 !important;
-          border-top-right-radius: 0 !important;
-        }
       }
 
       > *:not(:first-child):not(:last-child) {
-        border-radius: 0 !important;
+        --x-corner-top-left-radius: 0;
+        --x-corner-top-right-radius: 0;
+        --x-corner-bottom-right-radius: 0;
+        --x-corner-bottom-left-radius: 0;
 
-        .navi_button_content {
-          border-radius: 0 !important;
-        }
+        border-radius: 0 !important;
       }
     }
   }
@@ -47205,8 +47279,15 @@ const Group = ({
   import.meta.css = [css$B, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
-    "data-vertical": vertical ? "" : undefined,
-    row: row,
+    "data-vertical": vertical ? "" : undefined
+    /* A group draws one frame around its members, so they must share their
+       top and bottom edges. A block box lays them out inline, where they
+       align on baselines instead: a member whose content carries no text —
+       the swatch of a color picker — has no baseline of its own, the one
+       synthesized from its bottom edge does not land where its neighbours'
+       text does, and the member rides a few pixels off, slicing the frame.
+       Flex aligns the edges, in both directions. */,
+    flex: vertical ? "y" : "x",
     ...props,
     children: children
   });
@@ -57431,6 +57512,14 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       }
     }
     .navi_picker_right_slot {
+      /* A corner claimed from the outside (see group.jsx) is the frame's, and
+         what lives in here is not the frame — a button in a slot, the content
+         of a popup — so the ask stops at this boundary. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       display: inline-flex;
       height: 1em;
       height: 1lh;

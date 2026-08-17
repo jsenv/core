@@ -124,7 +124,14 @@ export const Group = ({ children, row, vertical = row, ...props }) => {
     <Box
       baseClassName="navi_group"
       data-vertical={vertical ? "" : undefined}
-      row={row}
+      /* A group draws one frame around its members, so they must share their
+         top and bottom edges. A block box lays them out inline, where they
+         align on baselines instead: a member whose content carries no text —
+         the swatch of a color picker — has no baseline of its own, the one
+         synthesized from its bottom edge does not land where its neighbours'
+         text does, and the member rides a few pixels off, slicing the frame.
+         Flex aligns the edges, in both directions. */
+      flex={vertical ? "y" : "x"}
       {...props}
     >
       {children}
