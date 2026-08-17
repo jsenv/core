@@ -142,7 +142,7 @@ const css = /* css */ `
     .navi_side_panel_head,
     .navi_side_panel_foot {
       position: sticky;
-      z-index: 1;
+      z-index: var(--navi-z-index-sticky);
       background-color: var(--navi-popup-background-color);
     }
     /* The separator token, not the popup border: these lines split two

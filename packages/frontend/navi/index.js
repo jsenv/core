@@ -1,4 +1,5 @@
 import "./src/navi_css_vars.js";
+import "./src/navi_z_indexes.js";
 // The element the URL designates — the one whose id is the hash — shows itself
 // when it renders, which in an app is long after the browser stopped caring.
 // Imported for its effect: neither the element nor the page has to opt in.

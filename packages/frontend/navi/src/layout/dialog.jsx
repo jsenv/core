@@ -200,7 +200,7 @@ const css = /* css */ `
     position: absolute;
     inset: unset;
     /* Custom renderer only — see openLocalDialogCount above */
-    z-index: calc(var(--navi-popup-z-index) + var(--dialog-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--dialog-stack-order, 0));
     min-width: min(
       max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
       var(--x-dialog-max-width)

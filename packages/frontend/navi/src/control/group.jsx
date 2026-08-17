@@ -1,3 +1,9 @@
+/**
+ * A row or column of controls sharing one frame: the borders where two of them
+ * meet are drawn once instead of twice, and only the outer corners stay
+ * rounded. See docs/control_group.md.
+ */
+
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 
 const css = /* css */ `
@@ -10,15 +16,26 @@ const css = /* css */ `
        is the exception — a button's frame sits on it and a button can arrive
        wrapped (a tooltip, a link), so it is named on its own. */
 
+    /* Members overlap by the width of one border, so along each seam one of the
+       two borders covers the other. Whichever member the user is on has to be
+       the one on top: it is the one whose border changes color, and the one
+       whose focus ring goes all the way around — half a ring, cut by the
+       neighbour painted after it, is what this avoids. z-index needs a
+       positioned element to mean anything, hence position: relative.
+       Deliberately not paired with isolation: isolate — a stacking context
+       here would also trap the popup of a picker held in the group, which
+       counts on its own band reaching the whole page. What keeps these two
+       values from escaping is instead that everything they could reach is a
+       band above them (see navi_z_indexes.js). */
     > *:hover,
     > *[data-hover] {
       position: relative;
-      z-index: 1;
+      z-index: var(--navi-z-index-control-hovered);
     }
     > *:focus-visible,
     > *[data-focus-visible] {
       position: relative;
-      z-index: 1;
+      z-index: var(--navi-z-index-control-focused);
     }
 
     /* Horizontal (default): Cumulative margin for border overlap */

@@ -13,7 +13,18 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Group, Box, Button, Input, Separator, Label } from "@jsenv/navi";
+      import {
+        Group,
+        Box,
+        Button,
+        Input,
+        List,
+        Picker,
+        Select,
+        Separator,
+        Label,
+        Text,
+      } from "@jsenv/navi";
 
       const BasicBoxesDemo = () => {
         return (
@@ -282,10 +293,205 @@
         );
       };
 
+      const SIDE_OPTIONS = ["Gauche", "Droite", "Les deux"];
+      const LEVEL_OPTIONS = [
+        "Niveau 1",
+        "Niveau 2",
+        "Niveau 3",
+        "Niveau 4",
+        "Niveau 5",
+      ];
+      const CITY_OPTIONS = ["Bordeaux", "Lyon", "Paris"];
+
+      const SettingRow = ({ name, label, options, value, setValue }) => {
+        return (
+          <Picker
+            name={name}
+            value={value}
+            ui={
+              <Box row spacing="xs">
+                <Text bold>{label}</Text>
+                <Text>{value === undefined ? "—" : value}</Text>
+              </Box>
+            }
+            maxLines={2}
+            expandX
+            paddingX="m"
+            paddingY="m"
+            borderRadius="m"
+            uiAction={setValue}
+            action={setValue}
+          >
+            <List selectable>
+              {options.map((option, i) => (
+                <List.Item
+                  selectable
+                  key={option}
+                  id={`${name}_${option}`}
+                  index={i}
+                  value={option}
+                  selected={value === option}
+                  padding="s"
+                  spacing="s"
+                >
+                  {option}
+                </List.Item>
+              ))}
+            </List>
+          </Picker>
+        );
+      };
+
+      const SettingRowsDemo = () => {
+        const [side, setSide] = useState(undefined);
+        const [level, setLevel] = useState("Niveau 4");
+        const [city, setCity] = useState(undefined);
+
+        return (
+          <Box>
+            <h3>Setting Rows</h3>
+            <Box width="420">
+              <Group row>
+                <SettingRow
+                  name="setting_side"
+                  label="Côté préféré"
+                  options={SIDE_OPTIONS}
+                  value={side}
+                  setValue={setSide}
+                />
+                <SettingRow
+                  name="setting_level"
+                  label="Niveau"
+                  options={LEVEL_OPTIONS}
+                  value={level}
+                  setValue={setLevel}
+                />
+                <SettingRow
+                  name="setting_city"
+                  label="Ville où je joue le plus souvent"
+                  options={CITY_OPTIONS}
+                  value={city}
+                  setValue={setCity}
+                />
+              </Group>
+            </Box>
+          </Box>
+        );
+      };
+
+      const PickerElementsDemo = () => {
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 3: Pickers</h2>
+            <Box spacing="l">
+              <SettingRowsDemo />
+
+              <Box>
+                <h3>Single Picker</h3>
+                <Group>
+                  <Picker name="picker_alone" type="date" />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Pickers</h3>
+                <Group>
+                  <Picker
+                    name="picker_date_first"
+                    type="date"
+                    defaultValue="2026-01-15"
+                  />
+                  <Picker name="picker_time_middle" type="time" />
+                  <Picker
+                    name="picker_color_last"
+                    type="color"
+                    defaultValue="#4f81e0"
+                  />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Pickers - Vertical</h3>
+                <Group row>
+                  <Picker
+                    name="picker_date_top"
+                    type="date"
+                    defaultValue="2026-01-15"
+                  />
+                  <Picker name="picker_time_center" type="time" />
+                  <Picker
+                    name="picker_color_bottom"
+                    type="color"
+                    defaultValue="#4f81e0"
+                  />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Picker with Button, Input and Select</h3>
+                <Group>
+                  <Button>Today</Button>
+                  <Picker
+                    name="picker_mixed"
+                    type="date"
+                    defaultValue="2026-01-15"
+                  />
+                  <Input placeholder="Note" />
+                  <Select name="select_mixed">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                  </Select>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Custom Border Radius</h3>
+                <Group>
+                  <Picker
+                    name="picker_radius_first"
+                    type="date"
+                    borderRadius="12px"
+                    defaultValue="2026-01-15"
+                  />
+                  <Picker
+                    name="picker_radius_last"
+                    type="time"
+                    borderRadius="12px"
+                  />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>States</h3>
+                <Group>
+                  <Picker
+                    name="picker_state_default"
+                    type="date"
+                    defaultValue="2026-01-15"
+                  />
+                  <Picker
+                    name="picker_state_readonly"
+                    type="date"
+                    defaultValue="2026-01-15"
+                    readOnly
+                  />
+                  <Picker
+                    name="picker_state_disabled"
+                    type="date"
+                    defaultValue="2026-01-15"
+                    disabled
+                  />
+                </Group>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const BorderlessDemo = () => {
         return (
           <Box background="white" padding="l" borderRadius="m">
-            <h2>Part 3: Borderless Groups</h2>
+            <h2>Part 4: Borderless Groups</h2>
             <Box spacing="l">
               <h3>Checkbox Items - No Borders</h3>
               <Box background="orange" padding="l" width="200">
@@ -345,7 +551,7 @@
 
         return (
           <Box background="white" padding="l" borderRadius="m">
-            <h2>Part 4: Interactive Group Demo</h2>
+            <h2>Part 5: Interactive Group Demo</h2>
             <Box spacing="l">
               <Box column spacing="m">
                 <Button onClick={addBlock}>Add Block</Button>
@@ -418,13 +624,88 @@
         );
       };
 
+      const OverlapDemo = () => {
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 6: Overlap Order</h2>
+            <Box spacing="l">
+              <Box>
+                <h3>Focus ring held on the middle member</h3>
+                <Group>
+                  <Button>Left</Button>
+                  <Button pseudoState={{ ":focus-visible": true }}>
+                    Center
+                  </Button>
+                  <Button>Right</Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Same, members pinned to zIndex 0</h3>
+                <Group>
+                  <Button style={{ zIndex: 0 }}>Left</Button>
+                  <Button
+                    style={{ zIndex: 0 }}
+                    pseudoState={{ ":focus-visible": true }}
+                  >
+                    Center
+                  </Button>
+                  <Button style={{ zIndex: 0 }}>Right</Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Hover held on the middle member</h3>
+                <Group>
+                  <Button variant="border">Left</Button>
+                  <Button variant="border" pseudoState={{ ":hover": true }}>
+                    Center
+                  </Button>
+                  <Button variant="border">Right</Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Same, members pinned to zIndex 0</h3>
+                <Group>
+                  <Button variant="border" style={{ zIndex: 0 }}>
+                    Left
+                  </Button>
+                  <Button
+                    variant="border"
+                    style={{ zIndex: 0 }}
+                    pseudoState={{ ":hover": true }}
+                  >
+                    Center
+                  </Button>
+                  <Button variant="border" style={{ zIndex: 0 }}>
+                    Right
+                  </Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Tab through</h3>
+                <Group>
+                  <Input placeholder="First" />
+                  <Input placeholder="Second" />
+                  <Input placeholder="Third" />
+                </Group>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const App = () => {
         return (
           <Box spacing="xl">
             <BasicBoxesDemo />
             <InputElementsDemo />
+            <PickerElementsDemo />
             <BorderlessDemo />
             <InteractiveDemo />
+            <OverlapDemo />
           </Box>
         );
       };

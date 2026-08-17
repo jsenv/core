@@ -3,7 +3,7 @@
  * using @jsenv/navi as intended.
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, startDragToTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -11,8 +11,66 @@ import { useContext, useLayoutEffect, useCallback, useRef, useState, useEffect, 
 import { jsx, jsxs, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
-import { createPortal, Suspense, forwardRef } from "preact/compat";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
+import { createPortal, Suspense, forwardRef } from "preact/compat";
+
+installImportMetaCssBuild(import.meta);/**
+ * Every z-index navi can be seen competing on, in one place, ordered.
+ *
+ * The point is the overview: reading this file must be enough to know what
+ * paints over what, and adding a value here forces the question "against
+ * what?" to be answered before a number is written. These are not meant as a
+ * theming surface — override one only to get out of a conflict with an app
+ * that cannot move.
+ *
+ * What belongs here: anything whose stacking is decided against an element
+ * from ANOTHER component — a bar, a popup, a control raising itself above the
+ * neighbour it overlaps. A z-index that only orders a component's own parts
+ * (a shadow under its own content, a checkbox mark over its own box) stays a
+ * literal next to the rule that needs it: it says "above my sibling", nothing
+ * more, and routing it through a token would only dilute the overview.
+ *
+ * The bands are decades apart so a band can grow without reaching the next
+ * one, and so a value read in a devtools panel says which band it came from.
+ *
+ * Read docs/z_index.md first — DOM order and `isolation: isolate` come before
+ * any of these, and a number is the last resort, not the first tool.
+ */
+
+const css$10 = /* css */`
+  @layer navi {
+    :root {
+      /* A control that overlaps its neighbours (the members of a Group share
+         one border along each seam) and has to paint in front of them while
+         the user is on it: its border color change, then its focus ring, which
+         a neighbour painted later would otherwise slice in half. Focus above
+         hover, since a focused member can sit next to a hovered one. */
+      --navi-z-index-control-hovered: 1;
+      --navi-z-index-control-focused: 2;
+
+      /* Kept stuck while something scrolls under it: a list header, the head
+         and foot of a side panel, a table's sticky cells. Above raised
+         controls — a control scrolling past must go under the header that
+         pins the column it belongs to, never over it. */
+      --navi-z-index-sticky: 10;
+
+      /* Pinned to the viewport, over the whole page: FixedBar. A decade of its
+         own and well above the sticky band, so that no sticky cell and no
+         hovered control can ever be seen crossing it. */
+      --navi-z-index-bar: 100;
+
+      /* Popups: Dialog/Popover with layer="local", their backdrop, and the
+         validation callouts. Above everything the page can produce, which is
+         the whole point of the gap — a popup never has to guess. Each opened
+         popup adds its stack order on top, so the last one opened wins.
+         Dialog/Popover with layer="top" use the browser top layer instead and
+         appear in no scale at all. */
+      --navi-z-index-popup: 1000;
+      --navi-z-index-callout: var(--navi-z-index-popup);
+    }
+  }
+`;
+import.meta.css = [css$10, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -7583,7 +7641,7 @@ const css$_ = /* css */`
       --callout-background-color: white;
       --callout-icon-color: black;
       --callout-padding: 8px;
-      --callout-z-index: 1000;
+      --callout-z-index: var(--navi-z-index-callout);
     }
   }
 
@@ -11697,6 +11755,647 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
   return value;
 };
 
+/**
+ * The interactions the browser already has an event for.
+ *
+ * Nothing to detect: the name IS the event type, so this listens and says it
+ * happened. Registered through the same door an application uses (see
+ * interaction_registry.js) — navi has no private one.
+ *
+ * `contextmenu` is the only one that takes something away: the browser's own menu
+ * would cover the answer to the request it is.
+ */
+
+
+const NATIVE_TYPE_SET = new Set([
+  "mousedown",
+  "mouseup",
+  "click",
+  "dblclick",
+  "contextmenu",
+]);
+
+defineInteractionDetector({
+  name: "native",
+  claims: (type) => NATIVE_TYPE_SET.has(type),
+  setup: (element, trigger, { types }) => {
+    const listeners = types.map((type) => {
+      const listener = (nativeEvent) => {
+        if (type === "contextmenu") {
+          nativeEvent.preventDefault();
+        }
+        trigger(type, nativeEvent);
+      };
+      element.addEventListener(type, listener);
+      return [type, listener];
+    });
+    return () => {
+      for (const [type, listener] of listeners) {
+        element.removeEventListener(type, listener);
+      }
+    };
+  },
+});
+
+installImportMetaCssBuild(import.meta);/**
+ * What a press can turn out to be: a swipe, or a hold.
+ *
+ * One detector for both, because they dispute the SAME press and something has to
+ * arbitrate them in one place — read apart, a hold that drifts three pixels both
+ * opens the menu and starts putting the row away. A finger lands; it leaves
+ * sideways (a swipe), it stays still (a hold), it lifts at once (a click, which is
+ * not this detector's business).
+ *
+ * Naming the interactions in `interactions` rather than letting one callback read
+ * the pointer is what lets this know, BEFORE the first pixel, which of them the
+ * element takes. Two things depend on knowing that early:
+ *
+ * - **The arbitration between nested boxes.** A row swiped sideways lives inside a
+ *   container that travels sideways too, and the innermost box must take the axis
+ *   it walks — read from the DOM at the press, and only from there (see axesLeftBy
+ *   in @jsenv/dom). The axis comes from the name (`swipe_left` and `swipe_right`
+ *   say `x`), so the attribute is written at render time. Written during the
+ *   gesture it would arrive too late: a browser decides what a touch may do when
+ *   the touch BEGINS. Same for `touch-action` and iOS's callout below, which is
+ *   why they are a stylesheet and not a line of JS in the pointerdown.
+ *
+ * - **The click a gesture leaves behind.** A hold ends with a `pointerup`, so the
+ *   browser follows it with a `click` on whatever the finger was over — a link,
+ *   and the page navigates as well as opening the menu.
+ *
+ * A swipe makes the element follow the finger — there is nothing to decide about
+ * that — and says where it is up to, for the caller to draw the rest with:
+ *
+ * - `--swipe-pulled`: how far it has come, signed, in px.
+ * - `--swipe-progress`: the same as a fraction of the element, signed. Inherited,
+ *   so anything inside the element can read it.
+ * - `[data-swiping="left|right|up|down"]`: which way, while a finger holds it.
+ * - `[data-swipe-past-threshold]`: letting go now would go through with it.
+ *
+ * WHAT is revealed behind is the caller's: navi does not know what putting a row
+ * away looks like. A trail is usually a child of the swiped element sized off
+ * `--swipe-pulled`, which is what makes those values reachable from CSS at all — a
+ * sibling could not read them.
+ *
+ * A swipe is its own gesture, not the drag-to-travel of a slide container: it
+ * borrows the same reader (`startDragToTravel`, whose axis lock, resistance, flick
+ * and click-swallowing are exactly what a swipe needs) with its own settings, and
+ * it is those settings that differ — a third of a row rather than a third of a
+ * screen, tuned per element with `data-swipe-threshold`.
+ *
+ * A hold does NOT take the context menu with it. Declaring one says what a held
+ * FINGER does — a finger held down being the system's own context-menu gesture,
+ * which is why that one is refused while the wait runs (see waitForPressHeld). A
+ * right click is not that press: it comes from the other button and it is the
+ * user asking for the browser's menu, so it keeps opening it. An element that
+ * wants the right click to do what the hold does says so, with `contextmenu`
+ * beside it.
+ *
+ * A hold CAN open a popup while the finger is still down — a menu appearing under
+ * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
+ * and owns its own dismissal, so the `pointerup` that ends the press is not read as
+ * an interaction outside it (the browser's light dismiss, which would close it on
+ * that very event, only applies to `popover="auto"`).
+ */
+
+// The axis each swipe names, which is the whole reason they are named rather than
+// counted: an element that takes a horizontal swipe has to say so in the DOM
+// before it is touched.
+const AXIS_BY_SWIPE_TYPE = {
+  swipe_left: "x",
+  swipe_right: "x",
+  swipe_up: "y",
+  swipe_down: "y"
+};
+// Which way the content goes. A drag towards positive x moves the row right, which
+// is a swipe right — and, for the travel underneath, the direction that brings in
+// what comes BEFORE (`travelBack`).
+const SWIPE_TYPE_BY_AXIS = {
+  x: {
+    positive: "swipe_right",
+    negative: "swipe_left"
+  },
+  y: {
+    positive: "swipe_down",
+    negative: "swipe_up"
+  }
+};
+
+// How much of the element has to be pulled for letting go to go through with it. A
+// FRACTION and never a distance: the same gesture must mean the same thing on a
+// phone and on a wide screen. Speed answers on its own on top of this — a brief
+// flick counts whatever the distance covered.
+const SWIPE_THRESHOLD_DEFAULT = 0.33;
+// Under the system context-menu delay, so the press is answered before the menu it
+// would otherwise open.
+const LONGPRESS_DELAY_DEFAULT = 450;
+// Past this the finger is going somewhere: it swipes, it does not hold.
+const LONGPRESS_SLOP_DEFAULT = 8;
+// How long the element takes to reach where the gesture leaves it, or to come
+// back. Written into the CSS below from here: the state is cleaned up when the
+// movement is over, so a duration living only in the stylesheet would be a timing
+// JS has to know and cannot read reliably.
+const SETTLE_DURATION_MS = 200;
+
+// Read off the element or off any ancestor carrying it, so a whole list is tuned
+// in one place and a stylesheet can read the same value.
+const SWIPE_THRESHOLD_ATTRIBUTE = "data-swipe-threshold";
+const LONGPRESS_DELAY_ATTRIBUTE = "data-longpress-delay";
+const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
+
+// Which axes this element takes a swipe on, and that it takes a hold: said in the
+// DOM at render time, for the CSS below and for the boxes above to read.
+const SWIPE_AXES_ATTRIBUTE = "data-swipe";
+const LONGPRESS_ATTRIBUTE = "data-longpress";
+import.meta.css = [/* css */`
+  /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
+     what a swipe reveals behind the element is drawn from this, and an undeclared
+     custom property only ever jumps from one value to the next. Inherited, so
+     anything inside the element can read it. */
+  @property --swipe-progress {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+  @property --swipe-pulled {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  /* What a touch may do on an element that takes a swipe: the axis the swipe walks
+     is taken, the other is left to the page — so a row is swiped sideways and the
+     list still scrolls under the same finger. */
+  [${SWIPE_AXES_ATTRIBUTE}="x"] {
+    touch-action: pan-y;
+  }
+  [${SWIPE_AXES_ATTRIBUTE}="y"] {
+    touch-action: pan-x;
+  }
+  [${SWIPE_AXES_ATTRIBUTE}="xy"] {
+    touch-action: none;
+  }
+
+  /* iOS shows its callout (Copy / Look Up) and selects the word under the finger on
+     a press held still, and does not always route that through an event that can be
+     refused. Same reason as the drag sources in @jsenv/dom: it has to be true
+     before the finger lands. */
+  [${LONGPRESS_ATTRIBUTE}] {
+    -webkit-touch-callout: none;
+  }
+
+  /* The element follows the finger. The translate property rather than a transform,
+     so whatever transform the element (or its theme) already has is left alone. */
+  [data-swiping="left"],
+  [data-swiping="right"] {
+    translate: var(--swipe-pulled) 0;
+  }
+  [data-swiping="up"],
+  [data-swiping="down"] {
+    translate: 0 var(--swipe-pulled);
+  }
+  /* No transition while the finger holds it — the element is where the hand put
+     it — and one when the hand lets go. */
+  [data-swipe-settling] {
+    transition: translate ${SETTLE_DURATION_MS}ms ease-out;
+  }
+`, "@jsenv/navi/src/control/interaction/interaction_press.js"];
+defineInteractionDetector({
+  name: "press",
+  claims: type => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
+  setup: (element, trigger, {
+    types,
+    readConfig
+  }) => {
+    let axes = "";
+    for (const type of types) {
+      const axis = AXIS_BY_SWIPE_TYPE[type];
+      if (axis && !axes.includes(axis)) {
+        axes += axis;
+      }
+    }
+    const hasLongPress = types.includes("longpress");
+    const undo = [];
+    const mark = (attribute, value) => {
+      element.setAttribute(attribute, value);
+      undo.push(() => {
+        element.removeAttribute(attribute);
+      });
+    };
+    if (axes) {
+      mark(SWIPE_AXES_ATTRIBUTE, axes);
+      // Read by the boxes ABOVE this one: an axis swiped here is not theirs to
+      // travel (see axesLeftBy).
+      mark("data-travel-by-drag", axes);
+      // …and nothing inside hands its leftover scroll to the page while the
+      // element is being pulled.
+      mark("data-drag-travel", axes);
+
+      // A link and an image are draggable without anyone asking, and a native
+      // drag IS press-and-move: the browser claims the gesture, takes the pointer
+      // events with it and paints a ghost of the row the hand is trying to swipe.
+      // Two things are needed, and neither covers the other:
+      // - `draggable` refuses it on the element itself, before it starts;
+      // - a swipe is usually a row with a link or a thumbnail INSIDE it, and
+      //   those are draggable in their own right. `dragstart` bubbles, so
+      //   refusing it here refuses theirs too — and it is the only refusal every
+      //   browser honours (`-webkit-user-drag` is one engine's).
+      // The cost is stated rather than worked around: an element that takes a
+      // swipe cannot also be dragged out of the page, because there is one
+      // gesture and it cannot mean both.
+      mark("draggable", "false");
+      const onDragStart = dragStartEvent => {
+        dragStartEvent.preventDefault();
+      };
+      element.addEventListener("dragstart", onDragStart);
+      undo.push(() => {
+        element.removeEventListener("dragstart", onDragStart);
+      });
+    }
+    if (hasLongPress) {
+      mark(LONGPRESS_ATTRIBUTE, "");
+    }
+    const onPointerDown = pointerDownEvent => {
+      if (pointerDownEvent.button !== 0) {
+        return;
+      }
+      let swipe = null;
+      let press = null;
+      if (axes) {
+        swipe = startSwipe(pointerDownEvent, {
+          element,
+          axes,
+          types,
+          trigger,
+          threshold: readConfig(SWIPE_THRESHOLD_ATTRIBUTE, SWIPE_THRESHOLD_DEFAULT),
+          // The axis is the definitive word on what this press is: a finger that
+          // has picked one is swiping, not holding. The slop below cancels most
+          // holds before this (it is the smaller distance), but a press that
+          // resolves the axis without drifting — a mouse, a flick — has to be
+          // taken from the wait too.
+          onSwipeStart: () => {
+            press?.cancel();
+            press = null;
+          }
+        });
+      }
+      if (hasLongPress) {
+        press = waitForPressHeld(pointerDownEvent, {
+          delay: readConfig(LONGPRESS_DELAY_ATTRIBUTE, LONGPRESS_DELAY_DEFAULT),
+          slop: readConfig(LONGPRESS_SLOP_ATTRIBUTE, LONGPRESS_SLOP_DEFAULT),
+          onPressHeld: (pressEvent, {
+            endPress
+          }) => {
+            // The hold won the arbitration: the swipe never got the distance it
+            // needed, and must not get it from whatever the finger does next.
+            swipe?.stop();
+            swipe = null;
+            const clickSuppressionIsOver = suppressClickAfterGesture();
+            const onPointerEnd = () => {
+              window.removeEventListener("pointerup", onPointerEnd, true);
+              window.removeEventListener("pointercancel", onPointerEnd, true);
+              endPress();
+              clickSuppressionIsOver();
+            };
+            window.addEventListener("pointerup", onPointerEnd, true);
+            window.addEventListener("pointercancel", onPointerEnd, true);
+            trigger("longpress", pressEvent, {
+              pointerType: pressEvent.pointerType
+            });
+          }
+        });
+      }
+    };
+    element.addEventListener("pointerdown", onPointerDown);
+    undo.push(() => {
+      element.removeEventListener("pointerdown", onPointerDown);
+    });
+    return () => {
+      for (const undoOne of undo) {
+        undoOne();
+      }
+    };
+  }
+});
+const startSwipe = (pointerDownEvent, {
+  element,
+  axes,
+  types,
+  trigger,
+  threshold,
+  onSwipeStart
+}) => {
+  let settleTimeout = null;
+  const paint = ({
+    pulled,
+    progress,
+    type
+  }) => {
+    element.style.setProperty("--swipe-pulled", `${pulled}px`);
+    element.style.setProperty("--swipe-progress", progress);
+    element.setAttribute("data-swiping", type.slice("swipe_".length));
+    element.toggleAttribute("data-swipe-past-threshold", Math.abs(progress) >= threshold);
+  };
+  const forget = () => {
+    clearTimeout(settleTimeout);
+    element.removeAttribute("data-swiping");
+    element.removeAttribute("data-swipe-past-threshold");
+    element.removeAttribute("data-swipe-settling");
+    element.style.removeProperty("--swipe-pulled");
+    element.style.removeProperty("--swipe-progress");
+  };
+  // Where the gesture leaves the element, and later back to rest. Cleaned up on a
+  // timeout rather than on transitionend: a swipe let go of at the very edge has
+  // nothing left to move (the pull is clamped to the element's size), and a
+  // movement that does not happen reports no end.
+  const settleTo = ({
+    pulled,
+    progress,
+    type
+  }, {
+    thenForget = true
+  } = {}) => {
+    clearTimeout(settleTimeout);
+    element.setAttribute("data-swipe-settling", "");
+    paint({
+      pulled,
+      progress,
+      type
+    });
+    if (thenForget) {
+      settleTimeout = setTimeout(forget, SETTLE_DURATION_MS);
+    }
+  };
+  return startDragToTravel(pointerDownEvent, {
+    element,
+    axes,
+    commitRatio: threshold,
+    onStart: ({
+      axis
+    }) => {
+      const {
+        positive,
+        negative
+      } = SWIPE_TYPE_BY_AXIS[axis];
+      const hasPositive = types.includes(positive);
+      const hasNegative = types.includes(negative);
+      if (!hasPositive && !hasNegative) {
+        return false;
+      }
+      const {
+        width,
+        height
+      } = element.getBoundingClientRect();
+      const size = axis === "x" ? width : height;
+      if (!size) {
+        return false;
+      }
+      onSwipeStart();
+      clearTimeout(settleTimeout);
+      element.removeAttribute("data-swipe-settling");
+      // A side nothing is declared for is not refused, it resists: the gesture is
+      // answered (something moves) while saying there is nothing that way.
+      return {
+        size,
+        travelBack: hasPositive,
+        travelOn: hasNegative
+      };
+    },
+    onPull: ({
+      axis,
+      pulled,
+      progress
+    }) => {
+      paint({
+        pulled,
+        progress,
+        type: swipeTypeOf(axis, pulled)
+      });
+    },
+    onEnd: ({
+      axis,
+      pulled,
+      size,
+      sign,
+      travels,
+      event
+    }) => {
+      const type = swipeTypeOf(axis, pulled);
+      const restingPlace = {
+        pulled: 0,
+        progress: 0,
+        type
+      };
+      if (!travels) {
+        settleTo(restingPlace);
+        return;
+      }
+      // Out, and out is where it stays for as long as the answer takes: a row that
+      // comes back and leaves again says the gesture was not understood.
+      settleTo({
+        pulled: sign * size,
+        progress: sign,
+        type
+      }, {
+        thenForget: false
+      });
+      const pending = trigger(type, event, {
+        axis,
+        sign,
+        pulled,
+        size,
+        progress: pulled / size
+      });
+      if (!pending) {
+        settleTo(restingPlace);
+        return;
+      }
+      // However it ended, the element comes back: a failure leaves the row in
+      // place and it can be tried again, and a success is the caller's to answer
+      // (a list that redemands its rows, a row that leaves). Nothing here makes it
+      // disappear — navi does not know what "put away" means.
+      const comeBack = () => {
+        settleTo(restingPlace);
+      };
+      pending.then(comeBack, comeBack);
+    },
+    // Nothing to put back: onGiveUp only ever comes from a press that never became
+    // a swipe, so nothing was painted by it.
+    onGiveUp: () => {}
+  });
+};
+const swipeTypeOf = (axis, pulled) => {
+  const {
+    positive,
+    negative
+  } = SWIPE_TYPE_BY_AXIS[axis];
+  return pulled > 0 ? positive : negative;
+};
+
+/**
+ * `move`, `reorder`, `toss` — one grab, and what letting go of it means.
+ *
+ * All three are the same gesture: the element is picked up and carried. What
+ * differs is the answer at the release, so one detector reads them all — it is one
+ * press, and something has to arbitrate it.
+ *
+ *   interactions={{ reorder: moveBefore, toss: remove }}
+ *   interactions={{ move: remember }}
+ *
+ * `reorder` and `toss` combine: a task dragged onto another changes places, the
+ * same task thrown far and fast is gotten rid of. `move` does not combine with
+ * `reorder` — an element either goes where it is put or takes a place in a list,
+ * and the two answers cannot both be true of one release.
+ *
+ * `move` carries the element ITSELF and leaves it where it was put; the other two
+ * carry a copy and put the original back. That is the same difference said in
+ * layout terms: something moved has a new place of its own, something reordered
+ * had its place taken by the list.
+ *
+ * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
+ * copy carried above the page while the original keeps its place in the layout, the
+ * drop hint, the drop targets found by intersection, the no-op drops filtered out,
+ * the flight of a thrown copy and its return when the answer refuses. This says
+ * which elements are the items, how they are named, and what a given release means.
+ *
+ * WHICH ELEMENTS. Every element declaring `reorder` marks itself, so the set of
+ * items IS the set of elements that declared it — no selector to pass, nothing to
+ * keep in sync with the markup, and an item that must not move simply does not
+ * declare it. An element that only declares `toss` marks nothing: it is not a place
+ * anything lands.
+ *
+ * HOW THEY ARE NAMED: by `id`. A reorder is answered in terms of what moved and
+ * what it landed before, and a DOM index cannot say it — a list draws fewer rows
+ * than it has, and a search reorders them.
+ *
+ * WHAT COMES BACK, in the interaction's own detail:
+ *
+ *   interactions={{
+ *     reorder: (event) => {
+ *       const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+ *       return document.startViewTransition(() => {
+ *         syncCloneWithDropTarget();
+ *         setOrder(moveBefore(order, fromId, toId));
+ *       }).finished;
+ *     },
+ *     toss: (event) => remove(event.detail.id),
+ *   }}
+ *
+ * `toId` is null for a drop at the end. `syncCloneWithDropTarget` must be called
+ * synchronously inside the transition callback, next to the state change, so the
+ * copy is captured where it lands rather than where it was let go of.
+ *
+ * And the promise matters in both cases: the gesture holds its copy until the
+ * answer settles. Returning the transition is what makes a landing continuous; a
+ * `toss` that rejects brings the copy back, because the thing still exists and the
+ * screen has to say so.
+ *
+ * Starting a document transition is the application's call and not navi's: a
+ * `view-transition-name` must be unique per document, so only the application can
+ * name what moves.
+ *
+ * What the copy LOOKS like is the application's too. A copy of a transparent
+ * element is invisible — a row usually gets its background from the list around it,
+ * which the copy has left — so it is dressed through the attributes the gesture
+ * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
+ */
+
+
+const MOVE = "move";
+const REORDER = "reorder";
+const TOSS = "toss";
+
+// What makes an element a place something can land, written by the detector itself.
+const REORDERABLE_ATTRIBUTE = "data-reorderable";
+// Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
+// every outcome — a list runs one way, and something being put somewhere goes
+// wherever it is put.
+const AXIS_ATTRIBUTE = "data-drag-axis";
+const DELAY_ATTRIBUTE = "data-drag-delay";
+const SLOP_ATTRIBUTE = "data-drag-slop";
+const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
+const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
+const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
+
+defineInteractionDetector({
+  name: "drag",
+  claims: (type) => type === MOVE || type === REORDER || type === TOSS,
+  setup: (element, trigger, { types, readConfig }) => {
+    const canMove = types.includes(MOVE);
+    const canReorder = types.includes(REORDER);
+    const canToss = types.includes(TOSS);
+    // Read at setup rather than at the press: a container can say it, and it is
+    // what the gesture is about rather than something it discovers.
+    const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
+    const axes =
+      axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
+      // A list runs one way, and reordering walks it. Anything else goes wherever
+      // the hand takes it: a thing put somewhere has two axes to be put along, and
+      // a throw goes where it was thrown.
+      (canReorder && !canToss ? "y" : "xy");
+
+    if (canReorder) {
+      element.setAttribute(REORDERABLE_ATTRIBUTE, "");
+    }
+    // What @jsenv/dom puts on a drag source: no iOS callout, and the touch left to
+    // the scroll until the press becomes a grab. Its value is the axis the
+    // SURROUNDINGS scroll on, which for a list is the axis the list runs on.
+    element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+
+    const onPointerDown = (pointerDownEvent) => {
+      // What this element says a release can mean. The gesture then runs only what
+      // those need — no copy for a move, no drop hint for something that can only
+      // be thrown away.
+      startDragTo(pointerDownEvent, types, {
+        draggedElement: element,
+        // Nothing to land on when nothing reorders.
+        itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
+        getItemId: (itemElement) => itemElement.id,
+        direction: { x: axes.includes("x"), y: axes.includes("y") },
+        // Where it may go, said in the DOM. A thing that is put somewhere stays
+        // inside what one can SEE of its container ("scrollport", not "scroll":
+        // the scrollable area can be far larger than the box, and "inside the box"
+        // is what a hand expects). `data-drag-free` lifts that. Left alone for a
+        // throw, which frees the area on its own — it has to be able to leave.
+        areaConstraint: element.closest(`[data-drag-free]`)
+          ? "none"
+          : canMove
+            ? "scrollport"
+            : undefined,
+        threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+        longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
+        longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
+        tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
+        tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
+        // Handed straight back in all three cases: what `trigger` returns is a
+        // promise while the answer is still going, which is what the gesture waits
+        // on before it lets go of what it carries.
+        onReorder: (fromId, toId, syncCloneWithDropTarget) =>
+          trigger(REORDER, pointerDownEvent, {
+            fromId,
+            toId,
+            syncCloneWithDropTarget,
+          }),
+        onToss: ({ gestureInfo }) =>
+          trigger(TOSS, pointerDownEvent, {
+            id: element.id,
+            velocity: gestureInfo.velocity,
+            x: gestureInfo.layout.xDelta,
+            y: gestureInfo.layout.yDelta,
+          }),
+        onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
+      });
+    };
+    element.addEventListener("pointerdown", onPointerDown);
+
+    return () => {
+      element.removeAttribute(REORDERABLE_ATTRIBUTE);
+      element.removeAttribute("data-drag-source");
+      element.removeEventListener("pointerdown", onPointerDown);
+    };
+  },
+});
+
 const isSignal = (value) => {
   return getSignalType(value) !== null;
 };
@@ -15398,6 +16097,43 @@ const isSameKey = (browserEventKey, key) => {
 
   return false;
 };
+
+/**
+ * `"keyboard:ctrl+backspace"` — an interaction asked for with keys.
+ *
+ * The name carries the shortcut, so a control says what a shortcut DOES in the
+ * same place it says what a swipe does, rather than in a separate shortcut list
+ * whose entries then have to find their way back to the action.
+ *
+ * The shortcut itself is not parsed here: `createOnKeyDownForShortcuts` already
+ * knows what "ctrl+backspace" means, which keys a control may take without
+ * swallowing what the browser owed them, and which it may not.
+ *
+ * The interaction is dispatched under its full name, colon included, so
+ * `findEvent(event, "keyboard:ctrl+backspace")` gets back to it — the shortcut
+ * that asked is what the action wants to know, not that a key went down.
+ */
+
+
+const KEYBOARD_PREFIX = "keyboard:";
+
+defineInteractionDetector({
+  name: "keyboard",
+  claims: (type) => type.startsWith(KEYBOARD_PREFIX),
+  setup: (element, trigger, { types }) => {
+    const shortcuts = {};
+    for (const type of types) {
+      shortcuts[type.slice(KEYBOARD_PREFIX.length)] = (keyboardEvent) => {
+        trigger(type, keyboardEvent);
+      };
+    }
+    const onKeyDown = createOnKeyDownForShortcuts(shortcuts);
+    element.addEventListener("keydown", onKeyDown);
+    return () => {
+      element.removeEventListener("keydown", onKeyDown);
+    };
+  },
+});
 
 /**
  * Merges a component's base className with className received from props.
@@ -27033,7 +27769,7 @@ const css$V = /* css */`
     position: absolute;
     inset: unset;
     /* Custom renderer only — see openLocalDialogCount above */
-    z-index: calc(var(--navi-popup-z-index) + var(--dialog-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--dialog-stack-order, 0));
     min-width: min(
       max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
       var(--x-dialog-max-width)
@@ -28302,7 +29038,7 @@ const css$U = /* css */`
        most-recently-opened local popover always outranks an earlier one,
        regardless of DOM position — a plain positioned div gets no free
        "last shown wins" the way the top-layer renderer does. */
-    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
     max-width: var(--x-popover-max-width);
     min-height: min(
@@ -28435,7 +29171,7 @@ const css$U = /* css */`
        instance still resolve via DOM order (content rendered after its own
        backdrop, see this file's top comment), so this only needs to beat
        *other* popovers' own backdrop/content, not its own. */
-    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     margin: 0;
     padding: 0;
     background: transparent;
@@ -41486,7 +42222,7 @@ const css$L = /* css */`
 
   .navi_fixed_bar {
     position: fixed;
-    z-index: 1;
+    z-index: var(--navi-z-index-bar);
     display: flex;
     box-sizing: border-box;
     margin: auto;
@@ -46354,32 +47090,53 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * A row or column of controls sharing one frame: the borders where two of them
+ * meet are drawn once instead of twice, and only the outer corners stay
+ * rounded. See docs/control_group.md.
+ */
+const css$B = /* css */`
   .navi_group {
-    --group-border-width: 1px;
+    --group-border-width: var(--navi-control-border-width);
 
+    /* Squaring the joined corners is said on the direct child alone: a navi
+       control declares the radius of its frame on its own root, and whatever
+       inner element actually draws the frame inherits it. .navi_button_content
+       is the exception — a button's frame sits on it and a button can arrive
+       wrapped (a tooltip, a link), so it is named on its own. */
+
+    /* Members overlap by the width of one border, so along each seam one of the
+       two borders covers the other. Whichever member the user is on has to be
+       the one on top: it is the one whose border changes color, and the one
+       whose focus ring goes all the way around — half a ring, cut by the
+       neighbour painted after it, is what this avoids. z-index needs a
+       positioned element to mean anything, hence position: relative.
+       Deliberately not paired with isolation: isolate — a stacking context
+       here would also trap the popup of a picker held in the group, which
+       counts on its own band reaching the whole page. What keeps these two
+       values from escaping is instead that everything they could reach is a
+       band above them (see navi_z_indexes.js). */
     > *:hover,
     > *[data-hover] {
       position: relative;
-      z-index: 1;
+      z-index: var(--navi-z-index-control-hovered);
     }
     > *:focus-visible,
     > *[data-focus-visible] {
       position: relative;
-      z-index: 1;
+      z-index: var(--navi-z-index-control-focused);
     }
 
     /* Horizontal (default): Cumulative margin for border overlap */
     &:not([data-vertical]) {
       > *:not(:first-child) {
-        margin-left: calc(var(--border-width) * -1);
+        margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
       }
       > *:first-child:not(:only-child) {
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-top-right-radius: 0 !important;
           border-bottom-right-radius: 0 !important;
         }
@@ -46389,8 +47146,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
         border-top-left-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-top-left-radius: 0 !important;
           border-bottom-left-radius: 0 !important;
         }
@@ -46399,8 +47155,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
       > *:not(:first-child):not(:last-child) {
         border-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-radius: 0 !important;
         }
       }
@@ -46409,14 +47164,13 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
     /* Vertical: Cumulative margin for border overlap */
     &[data-vertical] {
       > *:not(:first-child) {
-        margin-top: calc(var(--group-border-width) * -1);
+        margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
       }
       > *:first-child:not(:only-child) {
         border-bottom-right-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-bottom-right-radius: 0 !important;
           border-bottom-left-radius: 0 !important;
         }
@@ -46426,8 +47180,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
         border-top-left-radius: 0 !important;
         border-top-right-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-top-left-radius: 0 !important;
           border-top-right-radius: 0 !important;
         }
@@ -46436,8 +47189,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
       > *:not(:first-child):not(:last-child) {
         border-radius: 0 !important;
 
-        .navi_button_content,
-        .navi_native_input {
+        .navi_button_content {
           border-radius: 0 !important;
         }
       }
@@ -52387,7 +53139,7 @@ const css$v = /* css */`
     position: sticky;
     top: 0;
     left: 0;
-    z-index: 1;
+    z-index: var(--navi-z-index-sticky);
     order: -2;
   }
   .navi_list_fallback,
@@ -52494,7 +53246,7 @@ const css$v = /* css */`
     position: sticky;
     right: 0;
     bottom: 0;
-    z-index: 1;
+    z-index: var(--navi-z-index-sticky);
     order: 2;
   }
 
@@ -52510,7 +53262,7 @@ const css$v = /* css */`
     .navi_list_item_group_label {
       position: sticky;
       top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: 1;
+      z-index: var(--navi-z-index-sticky);
       display: block;
       background-color: var(--list-group-label-background-color);
       user-select: none;
@@ -56622,6 +57374,11 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
+    /* The frame is drawn by the box, but its radius is declared here, on the
+       control root, like every other navi control does — so anything styling
+       the picker from the outside (a Group squaring the corners it joins) has
+       one element to talk to, and the box follows. */
+    border-radius: var(--picker-border-radius);
 
     .navi_picker_box {
       position: relative;
@@ -56643,7 +57400,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       border-width: var(--picker-border-width);
       border-style: solid;
       border-color: var(--x-picker-border-color);
-      border-radius: var(--picker-border-radius);
+      border-radius: inherit;
       outline-width: var(--picker-outline-width);
       outline-style: none;
       outline-color: var(--picker-outline-color);
@@ -62536,6 +63293,13 @@ const createIsolatedItemTracker = () => {
   return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
 };
 
+/**
+ * The table's own scale: these order the table's parts among themselves and are
+ * derived from each other, never written as literals twice. They stay under the
+ * bands of src/navi_z_indexes.js, which is where anything competing with
+ * another component belongs.
+ */
+
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -67954,7 +68718,7 @@ const css = /* css */`
     .navi_side_panel_head,
     .navi_side_panel_foot {
       position: sticky;
-      z-index: 1;
+      z-index: var(--navi-z-index-sticky);
       background-color: var(--navi-popup-background-color);
     }
     /* The separator token, not the popup border: these lines split two

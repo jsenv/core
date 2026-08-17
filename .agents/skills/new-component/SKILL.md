@@ -30,6 +30,19 @@ request (see the constraints in
 - `useActionBoundToFormParams` for form integration
 - Validation via `@jsenv/validation`
 
+### Controls that can be grouped
+
+A control declares the radius of its frame on its own root element, and the
+inner element that actually paints the frame takes `border-radius: inherit`.
+That is what lets `<Group>` join controls into a single frame — it squares the
+corners of its direct children and knows nothing of their internals. A radius
+declared on an inner element instead leaves round corners in the middle of a
+group, and no amount of CSS in `group.jsx` can fix it from outside.
+
+Assembling controls into one framed row/column is `<Group>`'s job too — never
+hand-write negative margins or per-member radius resets. See
+[packages/frontend/navi/docs/control_group.md](../../../packages/frontend/navi/docs/control_group.md).
+
 ### Navigation Components
 
 - Enhanced `<a>` tags with action execution for links

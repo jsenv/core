@@ -447,7 +447,7 @@ const css = /* css */ `
     position: sticky;
     top: 0;
     left: 0;
-    z-index: 1;
+    z-index: var(--navi-z-index-sticky);
     order: -2;
   }
   .navi_list_fallback,
@@ -554,7 +554,7 @@ const css = /* css */ `
     position: sticky;
     right: 0;
     bottom: 0;
-    z-index: 1;
+    z-index: var(--navi-z-index-sticky);
     order: 2;
   }
 
@@ -570,7 +570,7 @@ const css = /* css */ `
     .navi_list_item_group_label {
       position: sticky;
       top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: 1;
+      z-index: var(--navi-z-index-sticky);
       display: block;
       background-color: var(--list-group-label-background-color);
       user-select: none;

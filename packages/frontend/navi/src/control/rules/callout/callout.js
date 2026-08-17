@@ -53,7 +53,7 @@ const css = /* css */ `
       --callout-background-color: white;
       --callout-icon-color: black;
       --callout-padding: 8px;
-      --callout-z-index: 1000;
+      --callout-z-index: var(--navi-z-index-callout);
     }
   }
 

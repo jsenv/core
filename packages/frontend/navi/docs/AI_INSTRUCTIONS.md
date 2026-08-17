@@ -44,7 +44,11 @@ consistency across the app, not from any single call site.
   `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, and
   scroll inside a `Dialog`/`Popover`. Read it before writing CSS to make
   something scroll — navi almost certainly already has the prop.
-- `docs/z_index.md` — stacking: why DOM order is the first tool, what a
+- `docs/control_group.md` — `<Group>`: several controls reading as one framed
+  object (one border per seam, radius on the outer corners only). Read it
+  before placing bordered controls against each other, and before writing
+  negative margins or `border-radius: 0` by hand to make them join.
+- `docs/z_index.md` (and its tokens in `src/navi_z_indexes.js`) — stacking: why DOM order is the first tool, what a
   `z-index` without `isolation: isolate` actually competes against, and the
   values navi's own popups/bars/tables use. Read it before writing a `z-index`.
 - `docs/i18n.md` — where the texts an app displays live: `interpolateText` /

@@ -1,3 +1,10 @@
+/**
+ * The table's own scale: these order the table's parts among themselves and are
+ * derived from each other, never written as literals twice. They stay under the
+ * bands of src/navi_z_indexes.js, which is where anything competing with
+ * another component belongs.
+ */
+
 export const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */

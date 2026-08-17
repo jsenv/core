@@ -55,7 +55,7 @@ const css = /* css */ `
 
   .navi_fixed_bar {
     position: fixed;
-    z-index: 1;
+    z-index: var(--navi-z-index-bar);
     display: flex;
     box-sizing: border-box;
     margin: auto;

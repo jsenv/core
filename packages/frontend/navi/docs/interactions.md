@@ -249,7 +249,37 @@ it:
 ```
 
 Reusing the item's own class is the point: the copy is that item, so it is styled
-as that item plus whatever being carried changes.
+as that item plus whatever being carried changes. The copy is a real element in the
+page, in the top layer, and everything about its look is reachable from CSS —
+including these, read off the dragged element so a whole list or a single item can
+answer:
+
+| Variable              | What it changes                                               |
+| --------------------- | ------------------------------------------------------------- |
+| `--drag-clone-shadow` | what being lifted casts; `none` for something that flies flat |
+| `--drag-clone-scale`  | how much bigger it gets once picked up                        |
+
+**What stays behind is the source, not a hole.** The original is never taken out of
+the page — it keeps its place in the layout and wears `navi-drag-clone-source`,
+which only makes it `visibility: hidden`. So a mark left where the thing was — an
+imprint, a dashed outline, the shape a note was pinned on — is drawn ON that
+element and not next to it, and its parts have to say `visibility: visible` to come
+back from the hidden source:
+
+```css
+.paper[navi-drag-clone-source]::after {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed currentColor;
+  opacity: 0.35;
+  visibility: visible;
+  content: "";
+}
+```
+
+It stays until the answer settles, which is what makes it say where the thing left
+from for as long as the question is open — and if the answer refuses, the copy comes
+back to it.
 
 `data-drag-axis` says which axes the drag walks, and its default is not the same
 for every outcome: `reorder` alone walks the list (`y`, or `x` for a list that runs

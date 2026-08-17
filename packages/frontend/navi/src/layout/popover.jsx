@@ -165,7 +165,7 @@ const css = /* css */ `
        most-recently-opened local popover always outranks an earlier one,
        regardless of DOM position — a plain positioned div gets no free
        "last shown wins" the way the top-layer renderer does. */
-    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
     max-width: var(--x-popover-max-width);
     min-height: min(
@@ -298,7 +298,7 @@ const css = /* css */ `
        instance still resolve via DOM order (content rendered after its own
        backdrop, see this file's top comment), so this only needs to beat
        *other* popovers' own backdrop/content, not its own. */
-    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     margin: 0;
     padding: 0;
     background: transparent;

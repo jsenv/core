@@ -69,22 +69,46 @@ context is how a value ends up tuned to a symptom.
 
 ## 5. The values navi plays with
 
-| What                                                        | Value                                         | Notes                                                                                                                                                                         |
-| ----------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Top layer (`Dialog`/`Popover` with `layer="top"`)           | above everything                              | Browser top layer — no `z-index` involved, nothing in the page can beat it                                                                                                    |
-| `Dialog`/`Popover` with `layer="local"`, and their backdrop | `--navi-popup-z-index` (1000) `+ stack order` | The stack order increments per open, so the last opened wins                                                                                                                  |
-| Callout (validation messages)                               | `--callout-z-index` (1000)                    |                                                                                                                                                                               |
-| `FixedBar`                                                  | 1                                             | `position: fixed` — it opens its own stacking context, but competes in the root one at 1, which is exactly why a stray `z-index: 2` anywhere on the page lands in front of it |
-| `List` sticky group labels, `List` footer                   | 1                                             | Local to the list                                                                                                                                                             |
-| `Table` (sticky cells, drag, resize)                        | 1–7, see `src/control/table/z_indexes.js`     | Derived from each other, never literals                                                                                                                                       |
+They all live in `src/navi_z_indexes.js`, as tokens, in one ordered list — the
+file is the overview, this table is its summary. Bands are a decade apart so
+one can grow without reaching the next, and so a value seen in devtools says
+which band it came from.
 
-Two things to read from this table:
+| Band                                                                                           | Token                                                              | Value                        |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
+| Top layer (`Dialog`/`Popover` with `layer="top"`)                                              | —                                                                  | above everything             |
+| `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                              | `--navi-z-index-popup`, `--navi-z-index-callout`                   | 1000 `+ stack order`         |
+| `FixedBar`                                                                                     | `--navi-z-index-bar`                                               | 100                          |
+| Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot | `--navi-z-index-sticky`                                            | 10                           |
+| A `Group` member under the pointer, then the one holding focus                                 | `--navi-z-index-control-hovered`, `--navi-z-index-control-focused` | 1, 2                         |
+| `Table` sticky cells, drag, resize                                                             | `src/control/table/z_indexes.js`                                   | 1–7, derived from each other |
 
-- navi itself keeps its values low and relative, except for popups, which sit
-  at 1000 precisely so nothing has to guess;
-- an app that writes a number above 1 is already competing with `FixedBar`.
-  Write `isolation: isolate` on the parent instead, and the number stops
-  meaning anything outside it.
+What to read from it:
+
+- **The order matters more than the numbers.** A bar is above anything the page
+  scrolls, a popup above the bar, and a control raising itself above its
+  neighbour is at the bottom — a hovered control crossing the top bar is the
+  bug the gaps exist to make impossible.
+- **A z-index that only orders a component's own parts stays a literal** next to
+  the rule that needs it. Tokens are for what is decided against another
+  component; putting "above my own sibling" in the global list would only
+  dilute it.
+- **An app writing its own number is competing with this scale.** Write
+  `isolation: isolate` on the parent instead, and the number stops meaning
+  anything outside it.
+
+### Why a `Group` member is not isolated
+
+`Group` overlaps its members by one border width, so the one the user is on has
+to paint over its neighbour — otherwise its focus ring is sliced in half by the
+member that comes after it in the DOM. DOM order cannot express "whichever one
+is hovered", so this is a legitimate `z-index`.
+
+`isolation: isolate` on the group would contain those two values, but it would
+also contain the popup of a `Picker` held in the group: its 1000 would become
+local, and the popup would be capped inside the group instead of covering the
+page. So the group is deliberately not isolated, and what keeps its 1 and 2
+harmless is the scale above them.
 
 ## A card that stacks three layers with no `z-index`
 
