@@ -1,16 +1,16 @@
-# [GET_PAGE binds params and passes the range signal](../../resource_graph_page.test.js)
+# [GET_RANGE binds params and passes the range signal](../../resource_graph_range.test.js)
 
 ```js
 let paramsSeen;
 let signalSeen;
 const GAME = resource("game", {
-  GET_PAGE: async (params, { signal }) => {
+  GET_RANGE: async (params, { signal }) => {
     paramsSeen = params;
     signalSeen = signal;
     return { items: [], start: params.start, count: 0 };
   },
 });
-const radarGames = GAME.GET_PAGE.bindParams({ radar: 7 });
+const radarGames = GAME.GET_RANGE.bindParams({ radar: 7 });
 
 const abortController = new AbortController();
 await radarGames({ start: 0, limit: 10, signal: abortController.signal });

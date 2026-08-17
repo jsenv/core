@@ -167,17 +167,39 @@ const requestConfirmation = async ({ message, content, anchor }) => {
 };
 
 /**
- * Interpolates a template string, replacing [key] placeholders with values.
- * Values can be strings or JSX elements (when allowJsx is true).
- * Returns a plain string when all replacements are strings, or a Preact
- * fragment when JSX values are present and allowJsx is enabled.
+ * Interpolates a template string, replacing `[key]` placeholders with values.
+ *
+ * Usable on its own — no i18n instance required — whenever a sentence should
+ * stay readable as one string instead of being cut into JSX expressions or
+ * concatenations. `<Interpolate>` is the JSX form of this function, and
+ * `createI18n` runs every translation through it. See `docs/i18n.md`.
  *
  * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
  * because it does not conflict with JSX syntax, JavaScript template literals,
  * or common punctuation in translated strings.
  *
- * Pass `allowJsx: true` to enable VNode replacements (used by <Interpolate>).
- * Without it, all values are coerced to strings.
+ * @param {string} template
+ *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
+ *   untouched, as is any template when `replacements` is missing.
+ * @param {object} [replacements]
+ *   Values keyed by placeholder name. A key can be:
+ *   - a direct name — `[name]` ← `{ name: "Alice" }`
+ *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
+ *     `"item.label"` key wins over the path)
+ *
+ *   A value that is a function is called at that point, so an expensive or
+ *   lazily-known replacement is only computed when the placeholder is actually
+ *   present in this language's template.
+ *
+ *   A placeholder with no matching value is left in the output as-is
+ *   (`"[name]"`), making the gap visible rather than silently empty.
+ * @param {object} [options]
+ * @param {boolean} [options.allowJsx=false]
+ *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
+ *   value warns and is coerced to a string.
+ * @returns {string|import("preact").VNode}
+ *   A plain string when every replacement is a string, a Preact fragment when
+ *   at least one VNode was interpolated with `allowJsx`.
  */
 const interpolateText = (
   template,
@@ -288,8 +310,7 @@ if (typeof window !== "undefined") {
  * because that happens to be the browser's or the user's own preference.
  *
  * `null` (the default) means no restriction at all: every language the
- * browser/user prefers is allowed through, matching this module's previous,
- * unrestricted behavior.
+ * browser/user prefers is allowed through.
  */
 const supportedLanguagesSignal = signal(null);
 
@@ -376,29 +397,44 @@ const languagesSignal = computed(() => {
 });
 
 /**
- * Creates a lightweight i18n instance for translating text in the current locale.
+ * Creates a lightweight i18n instance: a central place where an app declares
+ * its texts once and reads them back translated into the active language.
+ *
+ * Worth using even in a single-language app — one registry beats strings
+ * scattered across components, and adding a second language later becomes a
+ * data change instead of a refactor. See `docs/i18n.md` for how to choose
+ * between the two key styles below and how this relates to `naviI18n`.
  *
  * @param {object} [options]
  * @param {string} [options.keyLang]
  *   When set, each key also serves as its own translation for `keyLang`.
- *   This allows writing keys directly in that language (typically English) so
- *   only other languages need to be registered:
+ *   This allows writing keys directly in that language (typically the language
+ *   the app is written in) so only *other* languages need registering:
  *
  *   ```js
  *   const i18n = createI18n({ keyLang: "en" });
  *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
- *   i18n("Hello [name]!", { name: "Alice" }); // "Hello Alice!"    (en — key is template)
- *   i18n("Hello [name]!", { name: "Alice" }); // "Bonjour Alice !" (fr)
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
  *   ```
  *
- *   Without `keyLang`, keys are opaque identifiers and all languages (including
- *   the fallback) must be registered explicitly:
+ *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
+ *   registered stays opaque and comes back as-is.
+ *
+ *   Without `keyLang`, keys are opaque identifiers and every language
+ *   (including the one the app was written in) must be registered explicitly:
  *
  *   ```js
  *   const i18n = createI18n();
  *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
- *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
+ *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
  *   ```
+ *
+ * @param {string} [options.fallbackLang]
+ *   Language consulted when the active language has no translation for a key
+ *   — per key, not per language: a partially translated language falls through
+ *   to `fallbackLang` only for the keys it is missing. Without it, a missing
+ *   translation returns the key itself.
  *
  * @param {string|string[]} [options.runtimeLang]
  *   The active language (BCP 47 tag or ordered array of tags) — named
@@ -413,7 +449,7 @@ const languagesSignal = computed(() => {
  *
  * ---
  *
- * ## Bulk registration
+ * ## Registration
  *
  * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
  *
@@ -422,18 +458,31 @@ const languagesSignal = computed(() => {
  * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
  * (useful when loading a JSON translation file).
  *
+ * All three accumulate: registering a key that already exists overwrites that
+ * one key and leaves the rest of the language untouched. This is what lets an
+ * app override a single built-in navi text without redeclaring the others.
+ *
  * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
  * parent (`"fr"`) that it does not explicitly override:
  * ```js
  * i18n.addLangKeys("fr", { hello: "Bonjour !" });
  * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
  * ```
+ * Inheritance is resolved at registration time, so register the parent first.
  *
  * ---
  *
- * @returns {Function & { add, addAll, addLangKeys, format, languageMap }}
- *   A callable function — `i18n(key, values?, { lang? })` — with the same
- *   signature as `i18n.format()`. `format` is kept as an alias.
+ * ## Reading
+ *
+ * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
+ * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
+ * Returns `key` itself when nothing matches, so an untranslated string still
+ * renders something readable. `i18n.format` is an alias of this call.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
+ * i.e. how to tell "no translation" apart from "translation equal to the key".
+ *
+ * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
@@ -442,12 +491,10 @@ const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // resolve to, so it's what invalidates their own small caches.
   let languageMapVersion = 0;
 
-  // Explicit runtimeLang stays fixed for this instance's lifetime (matches
-  // the previous behavior exactly). Without one, re-read languagesSignal.value
-  // fresh on every call instead of freezing it here via languagesSignal.peek()
-  // once — that would silently ignore setPreferredLanguage()/
-  // setSupportedLanguages() (see lang_signal.js) for the rest of this
-  // instance's life.
+  // Without an explicit runtimeLang, languagesSignal.value is re-read fresh on
+  // every call rather than frozen here via languagesSignal.peek() — freezing it
+  // would silently ignore setPreferredLanguage()/setSupportedLanguages() (see
+  // lang_signal.js) for the rest of this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
 
   // matchBestLang does real work (a Map lookup per candidate, a possible
@@ -622,39 +669,49 @@ const matchBestLang = (lang, languageMap) => {
 };
 
 /**
- * The shared i18n instance for all @jsenv/navi components.
+ * The shared i18n instance holding every text @jsenv/navi components display
+ * on their own — validation messages, button labels, empty-list messages,
+ * relative time wording…
  *
- * Use `naviI18n.add(key, { lang: "translation" })` to register or override
- * any text used by navi components. The active language is read from
- * `languagesSignal` (see lang_signal.js — combines the browser's own
- * `navigator.languages`, an optional `setPreferredLanguage()` user override,
- * and an optional `setSupportedLanguages()` app-wide allow-list), live on
- * every lookup.
+ * It is navi's texts, not the application's: an app registers its own texts in
+ * its own `createI18n()` instance and reaches for `naviI18n` only to change
+ * what navi itself says, or to add a language navi does not ship. Keys here are
+ * opaque identifiers (`"list.empty"`), never the English sentence — the
+ * opposite of what an app is advised to do. `docs/i18n.md` explains why.
  *
- * Built-in keys (can be overridden):
- *   - `"time.less_than_minute"` — e.g. "in less than a minute"
- *   - `"time.ongoing"`          — e.g. "Ongoing"
- *   - `"time.tomorrow_at"`      — e.g. "[day] at [time]" ([day] and [time] are placeholders)
- *   - `"time.midnight"`         — e.g. "midnight"
+ * The active language is read from `languagesSignal` (see lang_signal.js —
+ * combines the browser's own `navigator.languages`, an optional
+ * `setPreferredLanguage()` user override, and an optional
+ * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
+ *
+ * Built-in key namespaces, all overridable — the registrations below are the
+ * exhaustive list, read them to find the exact key to override:
+ *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
+ *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
+ *   - `"spin.*"`       — the ends of a steppable range
+ *   - `"list.*"`       — empty/no-match/failed-rows messages
+ *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"constraint.*"` — every field validation message
+ *
+ * Unit names get two derived keys, both optional: `<unit>__plural` and
+ * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
+ * derived key is missing, and to `Intl.NumberFormat` when the unit itself is
+ * not registered at all — so only units Intl gets wrong need registering.
  *
  * @example
  * import { naviI18n } from "@jsenv/navi";
  *
- * // Register unit translations for Quantity:
- * naviI18n.add("minute",         { en: "minute",  fr: "minute"  });
- * naviI18n.add("minute__plural", { en: "minutes", fr: "minutes" });
- *
- * // Register multiple keys at once:
- * naviI18n.addAll({
- *   minute:           { en: "minute",  fr: "minute"  },
- *   minute__plural:   { en: "minutes", fr: "minutes" },
- * });
- *
  * // Override a built-in text:
  * naviI18n.add("time.ongoing", { fr: "En cours…" });
  *
- * // Load a full language pack at once:
- * naviI18n.addLangKeys("fr", { minute: "minute", "minute__plural": "minutes" });
+ * // Teach navi a language it does not ship:
+ * naviI18n.addLangKeys("ja", { "list.empty": "項目がありません。" });
+ *
+ * // Register unit translations used by <Quantity>/<Unit>:
+ * naviI18n.addAll({
+ *   ticket:         { en: "ticket",  fr: "billet"  },
+ *   ticket__plural: { en: "tickets", fr: "billets" },
+ * });
  */
 const naviI18n = createI18n();
 
@@ -30480,7 +30537,7 @@ const getParamScope = (params) => {
 };
 
 /*
- * GET_PAGE: reading a resource one slice at a time, for a list that draws its
+ * GET_RANGE: reading a resource one slice at a time, for a list that draws its
  * rows as it goes (`<List.Items itemsAction>`).
  *
  * It is on purpose not an action. An action keeps the one response it got and
@@ -30496,16 +30553,16 @@ const getParamScope = (params) => {
  * list is holding is the one it was given.
  *
  * The reader is a function, so a list feeds on it the way it feeds on any other
- * source: `itemsAction={GAME.GET_PAGE.bindParams({ radar })}`.
+ * source: `itemsAction={GAME.GET_RANGE.bindParams({ radar })}`.
  */
 
 
-const createPageReader = (
+const createRangeReader = (
   actionName,
   callback,
   { store, params: boundParams },
 ) => {
-  const readPage = async (range = {}) => {
+  const readRange = async (range = {}) => {
     const { signal, ...rangeParams } = range;
     const paramsResolved = { ...resolveParams(boundParams), ...rangeParams };
     const result = await callback(paramsResolved, { signal });
@@ -30520,7 +30577,7 @@ const createPageReader = (
       const startAsked = rangeParams.start;
       if (startAsked === undefined || startAsked < 0) {
         throw new TypeError(
-          `${actionName} must say where the page lands (start), it was asked for ${describeRangeAsked(rangeParams)}.`,
+          `${actionName} must say where the range lands (start), it was asked for ${describeRangeAsked(rangeParams)}.`,
         );
       }
       start = startAsked;
@@ -30530,19 +30587,19 @@ const createPageReader = (
     }
     return { items, start, count };
   };
-  Object.defineProperty(readPage, "name", { value: actionName });
-  readPage.isPageReader = true;
-  readPage.bindParams = (paramsToBind) => {
-    return createPageReader(actionName, callback, {
+  Object.defineProperty(readRange, "name", { value: actionName });
+  readRange.isRangeReader = true;
+  readRange.bindParams = (paramsToBind) => {
+    return createRangeReader(actionName, callback, {
       store,
       params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
     });
   };
-  return readPage;
+  return readRange;
 };
 
 // Params bound to a reader may be signals (the radar currently on screen); the
-// value they hold when the page is asked for is the one the page is about.
+// value they hold when the range is asked for is the one the range is about.
 const resolveParams = (params) => {
   if (!params) {
     return {};
@@ -30600,18 +30657,18 @@ const debug$2 = (args) => {
  * - GET / POST / PUT / PATCH → the full item object, e.g. `{ id, name }`
  * - DELETE                   → the id or `{ id }` of the removed item
  * - GET_MANY / POST_MANY / … → an array of item objects
- * - GET_PAGE                 → `{ items, start, count }`, one slice of the collection
+ * - GET_RANGE                 → `{ items, start, count }`, one slice of the collection
  *
- * `GET_PAGE` is a reader rather than an action: it keeps no value and takes no place in
+ * `GET_RANGE` is a reader rather than an action: it keeps no value and takes no place in
  * the rerun graph, so a `<List.Items>` can feed on it slice by slice
- * (`itemsAction={USER.GET_PAGE.bindParams({ team })}`).
+ * (`itemsAction={USER.GET_RANGE.bindParams({ team })}`).
  *
  * A sub-resource of the backend (`/games/:id/candidates`) must be modelled with a
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
  * verb's callback.
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_PAGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"` (or the first `uniqueKeys` entry)
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
  * @see docs/resource.md — relationships, callback return contracts, decision table
@@ -30635,7 +30692,7 @@ const resource = (
 
     GET,
     GET_MANY,
-    GET_PAGE,
+    GET_RANGE,
     POST,
     POST_MANY,
     PUT,
@@ -30701,7 +30758,7 @@ const resource = (
     restCallbacks: {
       GET,
       GET_MANY,
-      GET_PAGE,
+      GET_RANGE,
       POST,
       POST_MANY,
       PUT,
@@ -31783,11 +31840,11 @@ ${originalActionName} source location: ${locationInfo}`,
     if (restCallback === undefined) {
       continue;
     }
-    if (restCallbackKey === "GET_PAGE") {
-      // A page is read, never kept: no action, no place in the rerun graph
-      // (see resource_page_reader.js).
-      stateFacade.GET_PAGE = createPageReader(
-        `${name}.GET_PAGE`,
+    if (restCallbackKey === "GET_RANGE") {
+      // A range is read, never kept: no action, no place in the rerun graph
+      // (see resource_range_reader.js).
+      stateFacade.GET_RANGE = createRangeReader(
+        `${name}.GET_RANGE`,
         restCallback,
         { store, params },
       );
@@ -54314,15 +54371,15 @@ const VISIBILITY_HIDDEN_STYLE = {
  * before it knows how many there are), `limit` (how many rows), and
  * `before`/`after`/`around` (the id of a row to count from, for a source
  * paginating by cursor). Answer with the rows (an array — that is all of
- * them), or with a page the way a Content-Range does: `{ items, start, count }`
+ * them), or with a range the way a Content-Range does: `{ items, start, count }`
  * — these rows, at this place, out of that many. May be async. The range also
  * carries a `signal`, aborted when the list stops wanting those rows (the
  * window has moved on) — pass it to fetch to call the request off.
  *
- * A resource answers through its page reader:
- * `itemsAction={GAME.GET_PAGE.bindParams({ radar })}` — the rows are upserted
+ * A resource answers through its range reader:
+ * `itemsAction={GAME.GET_RANGE.bindParams({ radar })}` — the rows are upserted
  * into the store on their way in, so the list draws store items rather than
- * copies of the JSON. The list holds the pages, the store holds the objects
+ * copies of the JSON. The list holds the slices, the store holds the objects
  * (see docs/resource.md).
  *
  * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
@@ -54857,7 +54914,7 @@ const useItemStore = ({
         let result;
         try {
           if (typeof itemsAction !== "function") {
-            throw new TypeError(`itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its page reader: itemsAction={RESOURCE.GET_PAGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`);
+            throw new TypeError(`itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its range reader: itemsAction={RESOURCE.GET_RANGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`);
           }
           result = itemsAction(range);
         } catch (e) {
@@ -65944,16 +66001,35 @@ const CodeBox = ({
  */
 
 /**
- * Renders a template string with [key] placeholders replaced by props.
- * Replacement values can be strings or JSX elements.
- * Returns a plain string when all replacements are strings, a fragment otherwise.
+ * Renders a template string with `[key]` placeholders replaced by props.
+ * Every prop other than `children` is a replacement value; values can be
+ * strings or JSX elements. Returns a plain string when all replacements are
+ * strings, a fragment otherwise.
  *
  * Keeps the full sentence readable in one place and makes the string
- * i18n-ready, since the template contains no JSX expressions.
+ * i18n-ready, since the template contains no JSX expressions. `children` must
+ * be a plain string for interpolation to happen.
+ *
+ * Placeholder resolution (dot-paths, function values, unmatched placeholders
+ * left visible) is `interpolateText`'s — read its JSDoc for the details, and
+ * `docs/i18n.md` for how this fits with `naviI18n`/`createI18n`.
  *
  * @example
- * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="votre zone">
- *   Données limitées à [radiusKm] autour de [zoneName].
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="your area">
+ *   Data limited to [radiusKm] around [zoneName].
+ * </Interpolate>
+ *
+ * @example
+ * // translated template: the sentence comes from i18n, the JSX from here.
+ * // With keyLang, the key is the sentence itself — same string as above, so
+ * // moving a hardcoded <Interpolate> to i18n is wrapping it in a call.
+ * const i18n = createI18n({ keyLang: "en" });
+ * i18n.add("Data limited to [radiusKm] around [zoneName].", {
+ *   fr: "Données limitées à [radiusKm] autour de [zoneName].",
+ * });
+ *
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="your area">
+ *   {i18n("Data limited to [radiusKm] around [zoneName].")}
  * </Interpolate>
  */
 const Interpolate = ({
@@ -67514,5 +67590,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

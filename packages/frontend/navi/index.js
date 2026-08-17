@@ -201,6 +201,7 @@ export { BadgeList } from "./src/text/badge_list.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { Color } from "./src/text/color.jsx";
+export { createI18n } from "./src/text/i18n.js";
 export { formatNumber } from "./src/text/format_number.js";
 export {
   formatDatetime,

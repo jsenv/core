@@ -47,6 +47,10 @@ consistency across the app, not from any single call site.
 - `docs/z_index.md` — stacking: why DOM order is the first tool, what a
   `z-index` without `isolation: isolate` actually competes against, and the
   values navi's own popups/bars/tables use. Read it before writing a `z-index`.
+- `docs/i18n.md` — where the texts an app displays live: `interpolateText` /
+  `<Interpolate>` for one sentence, `createI18n` for the app's registry,
+  `naviI18n` for navi's own texts. Read it before writing a user-visible
+  sentence, and before overriding a navi message.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - `docs/navigation.md` — how to build navigation: declaring routes
@@ -80,6 +84,12 @@ consistency across the app, not from any single call site.
 - **Field components** (`Input`, `Select`, `Checkbox`, etc.) take an `action`
   prop to respond to interaction — this is the standard wiring, not
   `onChange` + manual state.
+- **Texts**: a user-visible sentence containing a value is written as one
+  template with `[placeholder]`s (`interpolateText` / `<Interpolate>`), not cut
+  into JSX fragments or concatenations. Beyond a handful of texts, an app
+  declares them in its own `createI18n()` instance — using the English text
+  itself as the key, whereas navi's `naviI18n` uses opaque keys. Application
+  texts never go into `naviI18n`. See `docs/i18n.md`.
 - **View transitions**: navi components animate their own changes
   (`itemTransition` on `List`, `RouteTravel` for routes) and never decide for
   the whole document. Two things are the application's call, not navi's:

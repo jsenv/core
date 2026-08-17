@@ -1,39 +1,49 @@
 import { createI18n } from "./i18n.js";
 
 /**
- * The shared i18n instance for all @jsenv/navi components.
+ * The shared i18n instance holding every text @jsenv/navi components display
+ * on their own — validation messages, button labels, empty-list messages,
+ * relative time wording…
  *
- * Use `naviI18n.add(key, { lang: "translation" })` to register or override
- * any text used by navi components. The active language is read from
- * `languagesSignal` (see lang_signal.js — combines the browser's own
- * `navigator.languages`, an optional `setPreferredLanguage()` user override,
- * and an optional `setSupportedLanguages()` app-wide allow-list), live on
- * every lookup.
+ * It is navi's texts, not the application's: an app registers its own texts in
+ * its own `createI18n()` instance and reaches for `naviI18n` only to change
+ * what navi itself says, or to add a language navi does not ship. Keys here are
+ * opaque identifiers (`"list.empty"`), never the English sentence — the
+ * opposite of what an app is advised to do. `docs/i18n.md` explains why.
  *
- * Built-in keys (can be overridden):
- *   - `"time.less_than_minute"` — e.g. "in less than a minute"
- *   - `"time.ongoing"`          — e.g. "Ongoing"
- *   - `"time.tomorrow_at"`      — e.g. "[day] at [time]" ([day] and [time] are placeholders)
- *   - `"time.midnight"`         — e.g. "midnight"
+ * The active language is read from `languagesSignal` (see lang_signal.js —
+ * combines the browser's own `navigator.languages`, an optional
+ * `setPreferredLanguage()` user override, and an optional
+ * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
+ *
+ * Built-in key namespaces, all overridable — the registrations below are the
+ * exhaustive list, read them to find the exact key to override:
+ *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
+ *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
+ *   - `"spin.*"`       — the ends of a steppable range
+ *   - `"list.*"`       — empty/no-match/failed-rows messages
+ *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"constraint.*"` — every field validation message
+ *
+ * Unit names get two derived keys, both optional: `<unit>__plural` and
+ * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
+ * derived key is missing, and to `Intl.NumberFormat` when the unit itself is
+ * not registered at all — so only units Intl gets wrong need registering.
  *
  * @example
  * import { naviI18n } from "@jsenv/navi";
  *
- * // Register unit translations for Quantity:
- * naviI18n.add("minute",         { en: "minute",  fr: "minute"  });
- * naviI18n.add("minute__plural", { en: "minutes", fr: "minutes" });
- *
- * // Register multiple keys at once:
- * naviI18n.addAll({
- *   minute:           { en: "minute",  fr: "minute"  },
- *   minute__plural:   { en: "minutes", fr: "minutes" },
- * });
- *
  * // Override a built-in text:
  * naviI18n.add("time.ongoing", { fr: "En cours…" });
  *
- * // Load a full language pack at once:
- * naviI18n.addLangKeys("fr", { minute: "minute", "minute__plural": "minutes" });
+ * // Teach navi a language it does not ship:
+ * naviI18n.addLangKeys("ja", { "list.empty": "項目がありません。" });
+ *
+ * // Register unit translations used by <Quantity>/<Unit>:
+ * naviI18n.addAll({
+ *   ticket:         { en: "ticket",  fr: "billet"  },
+ *   ticket__plural: { en: "tickets", fr: "billets" },
+ * });
  */
 export const naviI18n = createI18n();
 

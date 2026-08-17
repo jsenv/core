@@ -29,6 +29,10 @@ between related actions. Parent/child relations are first-class — `.one`,
 
 **`Text`** and related components (`Title`, `Paragraph`, `Code`, `Caption`) handle typography consistently across the app.
 
+## Texts & i18n
+
+`interpolateText`/`Interpolate` keep a sentence containing values readable as one string, and `createI18n` gives the app a single place holding its wording — worth it even with one language. `naviI18n` is where navi's own texts (validation messages, button labels, relative time) can be overridden or translated. See [docs/i18n.md](./docs/i18n.md).
+
 ## Icons
 
 Icons are a piece that is often missing or painful in web projects. The `Icon` component makes icons behave like text — they scale with font size, inherit color, and align naturally in any layout. No sizing hacks, no SVG wrangling.

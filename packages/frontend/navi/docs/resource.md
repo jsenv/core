@@ -25,7 +25,7 @@ Each callback returns the data to upsert into the store:
 | GET / POST / PUT / PATCH | the full item object, `{ id, … }` |
 | DELETE                   | the id, or `{ id }`               |
 | GET_MANY / POST_MANY / … | an array of item objects          |
-| GET_PAGE                 | `{ items, start, count }` (below) |
+| GET_RANGE                | `{ items, start, count }` (below) |
 
 Actions are read in components through the action system (`useAsyncData`,
 `<Button action>`, …) — see [actions.md](./actions.md).
@@ -48,18 +48,18 @@ it yourself is the point:
   else to land (see [When the backend answers a sub-route with the whole
   parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)).
 
-A list that loads its rows page by page is **not** one of those cases — that is
-`GET_PAGE`, right below.
+A list that loads its rows a slice at a time is **not** one of those cases — that is
+`GET_RANGE`, right below.
 
-## `GET_PAGE`: feeding a list that loads as it scrolls
+## `GET_RANGE`: feeding a list that loads as it scrolls
 
 A `<List.Items>` asks for the rows it is about to draw and keeps what it gets.
-`GET_PAGE` is the resource's answer to that question — one slice at a time:
+`GET_RANGE` is the resource's answer to that question — one slice at a time:
 
 ```js
 const GAME = resource("game", {
   GET: ({ id }) => fetchJson(`/games/${id}`),
-  GET_PAGE: ({ radar, start, limit }) =>
+  GET_RANGE: ({ radar, start, limit }) =>
     fetchJson(`/radars/${radar.id}/games?start=${start}&limit=${limit}`),
   // { items: [{ id, … }, …], start: 20, count: 137 }
 });
@@ -68,7 +68,7 @@ const GAME = resource("game", {
 ```jsx
 <List.Items
   count={radar.match_count}
-  itemsAction={GAME.GET_PAGE.bindParams({ radar })}
+  itemsAction={GAME.GET_RANGE.bindParams({ radar })}
   renderItem={(game) => <GameCard game={game} />}
 />
 ```
@@ -76,7 +76,7 @@ const GAME = resource("game", {
 The callback receives the bound params merged with the range the list asks for
 (`start`, `end`, `limit`, `before`, `after`, `around`, `count`), and a `signal`
 as second argument — aborted when the list stops wanting those rows. It returns
-a page the way a `Content-Range` does: **`{ items, start, count }`** — these
+a range the way a `Content-Range` does: **`{ items, start, count }`** — these
 rows, at this place, out of that many. `start` may be omitted when the list
 asked for a positive one; `count` defaults to `start + items.length` (a source
 that does not know its total). The items are upserted on their way in, so the
@@ -98,12 +98,12 @@ makes a change detectable), so the one the list is holding is the one it was
 given. Relations are not concerned: they are keyed by owner, and a row reading
 `game.candidates` reads the shared collection whatever object carries it.
 
-`GET_PAGE` is a **reader, not an action**. It keeps no value and takes no place
+`GET_RANGE` is a **reader, not an action**. It keeps no value and takes no place
 in the rerun graph, which is what makes it usable per slice:
 
-- the list already holds the pages it received and glues them back together —
+- the list already holds the slices it received and glues them back together —
   a second memory holding one of them would fight it;
-- a `POST` invalidating "the collection" would otherwise send every page ever
+- a `POST` invalidating "the collection" would otherwise send every slice ever
   loaded back to the network at once.
 
 What it does not give is membership: an item that leaves the collection stays on

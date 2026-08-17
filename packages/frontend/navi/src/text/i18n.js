@@ -2,29 +2,44 @@ import { interpolateText } from "./interpolate_text.js";
 import { languagesSignal } from "./lang_signal.js";
 
 /**
- * Creates a lightweight i18n instance for translating text in the current locale.
+ * Creates a lightweight i18n instance: a central place where an app declares
+ * its texts once and reads them back translated into the active language.
+ *
+ * Worth using even in a single-language app — one registry beats strings
+ * scattered across components, and adding a second language later becomes a
+ * data change instead of a refactor. See `docs/i18n.md` for how to choose
+ * between the two key styles below and how this relates to `naviI18n`.
  *
  * @param {object} [options]
  * @param {string} [options.keyLang]
  *   When set, each key also serves as its own translation for `keyLang`.
- *   This allows writing keys directly in that language (typically English) so
- *   only other languages need to be registered:
+ *   This allows writing keys directly in that language (typically the language
+ *   the app is written in) so only *other* languages need registering:
  *
  *   ```js
  *   const i18n = createI18n({ keyLang: "en" });
  *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
- *   i18n("Hello [name]!", { name: "Alice" }); // "Hello Alice!"    (en — key is template)
- *   i18n("Hello [name]!", { name: "Alice" }); // "Bonjour Alice !" (fr)
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
  *   ```
  *
- *   Without `keyLang`, keys are opaque identifiers and all languages (including
- *   the fallback) must be registered explicitly:
+ *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
+ *   registered stays opaque and comes back as-is.
+ *
+ *   Without `keyLang`, keys are opaque identifiers and every language
+ *   (including the one the app was written in) must be registered explicitly:
  *
  *   ```js
  *   const i18n = createI18n();
  *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
- *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
+ *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
  *   ```
+ *
+ * @param {string} [options.fallbackLang]
+ *   Language consulted when the active language has no translation for a key
+ *   — per key, not per language: a partially translated language falls through
+ *   to `fallbackLang` only for the keys it is missing. Without it, a missing
+ *   translation returns the key itself.
  *
  * @param {string|string[]} [options.runtimeLang]
  *   The active language (BCP 47 tag or ordered array of tags) — named
@@ -39,7 +54,7 @@ import { languagesSignal } from "./lang_signal.js";
  *
  * ---
  *
- * ## Bulk registration
+ * ## Registration
  *
  * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
  *
@@ -48,18 +63,31 @@ import { languagesSignal } from "./lang_signal.js";
  * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
  * (useful when loading a JSON translation file).
  *
+ * All three accumulate: registering a key that already exists overwrites that
+ * one key and leaves the rest of the language untouched. This is what lets an
+ * app override a single built-in navi text without redeclaring the others.
+ *
  * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
  * parent (`"fr"`) that it does not explicitly override:
  * ```js
  * i18n.addLangKeys("fr", { hello: "Bonjour !" });
  * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
  * ```
+ * Inheritance is resolved at registration time, so register the parent first.
  *
  * ---
  *
- * @returns {Function & { add, addAll, addLangKeys, format, languageMap }}
- *   A callable function — `i18n(key, values?, { lang? })` — with the same
- *   signature as `i18n.format()`. `format` is kept as an alias.
+ * ## Reading
+ *
+ * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
+ * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
+ * Returns `key` itself when nothing matches, so an untranslated string still
+ * renders something readable. `i18n.format` is an alias of this call.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
+ * i.e. how to tell "no translation" apart from "translation equal to the key".
+ *
+ * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
@@ -68,12 +96,10 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // resolve to, so it's what invalidates their own small caches.
   let languageMapVersion = 0;
 
-  // Explicit runtimeLang stays fixed for this instance's lifetime (matches
-  // the previous behavior exactly). Without one, re-read languagesSignal.value
-  // fresh on every call instead of freezing it here via languagesSignal.peek()
-  // once — that would silently ignore setPreferredLanguage()/
-  // setSupportedLanguages() (see lang_signal.js) for the rest of this
-  // instance's life.
+  // Without an explicit runtimeLang, languagesSignal.value is re-read fresh on
+  // every call rather than frozen here via languagesSignal.peek() — freezing it
+  // would silently ignore setPreferredLanguage()/setSupportedLanguages() (see
+  // lang_signal.js) for the rest of this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
 
   // matchBestLang does real work (a Map lookup per candidate, a possible

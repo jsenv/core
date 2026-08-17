@@ -3258,15 +3258,15 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * before it knows how many there are), `limit` (how many rows), and
  * `before`/`after`/`around` (the id of a row to count from, for a source
  * paginating by cursor). Answer with the rows (an array — that is all of
- * them), or with a page the way a Content-Range does: `{ items, start, count }`
+ * them), or with a range the way a Content-Range does: `{ items, start, count }`
  * — these rows, at this place, out of that many. May be async. The range also
  * carries a `signal`, aborted when the list stops wanting those rows (the
  * window has moved on) — pass it to fetch to call the request off.
  *
- * A resource answers through its page reader:
- * `itemsAction={GAME.GET_PAGE.bindParams({ radar })}` — the rows are upserted
+ * A resource answers through its range reader:
+ * `itemsAction={GAME.GET_RANGE.bindParams({ radar })}` — the rows are upserted
  * into the store on their way in, so the list draws store items rather than
- * copies of the JSON. The list holds the pages, the store holds the objects
+ * copies of the JSON. The list holds the slices, the store holds the objects
  * (see docs/resource.md).
  *
  * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
@@ -3849,7 +3849,7 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
         try {
           if (typeof itemsAction !== "function") {
             throw new TypeError(
-              `itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its page reader: itemsAction={RESOURCE.GET_PAGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`,
+              `itemsAction must be a function, received ${itemsAction}. A resource feeds a list through its range reader: itemsAction={RESOURCE.GET_RANGE.bindParams(...)} — its other actions keep one response and cannot answer a range.`,
             );
           }
           result = itemsAction(range);

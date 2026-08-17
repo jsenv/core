@@ -46,8 +46,7 @@ if (typeof window !== "undefined") {
  * because that happens to be the browser's or the user's own preference.
  *
  * `null` (the default) means no restriction at all: every language the
- * browser/user prefers is allowed through, matching this module's previous,
- * unrestricted behavior.
+ * browser/user prefers is allowed through.
  */
 export const supportedLanguagesSignal = signal(null);
 

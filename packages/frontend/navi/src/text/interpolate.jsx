@@ -46,16 +46,35 @@ import { interpolateText } from "./interpolate_text.js";
  */
 
 /**
- * Renders a template string with [key] placeholders replaced by props.
- * Replacement values can be strings or JSX elements.
- * Returns a plain string when all replacements are strings, a fragment otherwise.
+ * Renders a template string with `[key]` placeholders replaced by props.
+ * Every prop other than `children` is a replacement value; values can be
+ * strings or JSX elements. Returns a plain string when all replacements are
+ * strings, a fragment otherwise.
  *
  * Keeps the full sentence readable in one place and makes the string
- * i18n-ready, since the template contains no JSX expressions.
+ * i18n-ready, since the template contains no JSX expressions. `children` must
+ * be a plain string for interpolation to happen.
+ *
+ * Placeholder resolution (dot-paths, function values, unmatched placeholders
+ * left visible) is `interpolateText`'s — read its JSDoc for the details, and
+ * `docs/i18n.md` for how this fits with `naviI18n`/`createI18n`.
  *
  * @example
- * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="votre zone">
- *   Données limitées à [radiusKm] autour de [zoneName].
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="your area">
+ *   Data limited to [radiusKm] around [zoneName].
+ * </Interpolate>
+ *
+ * @example
+ * // translated template: the sentence comes from i18n, the JSX from here.
+ * // With keyLang, the key is the sentence itself — same string as above, so
+ * // moving a hardcoded <Interpolate> to i18n is wrapping it in a call.
+ * const i18n = createI18n({ keyLang: "en" });
+ * i18n.add("Data limited to [radiusKm] around [zoneName].", {
+ *   fr: "Données limitées à [radiusKm] autour de [zoneName].",
+ * });
+ *
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="your area">
+ *   {i18n("Data limited to [radiusKm] around [zoneName].")}
  * </Interpolate>
  */
 export const Interpolate = ({ children, ...replacements }) => {

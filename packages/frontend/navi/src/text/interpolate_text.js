@@ -1,17 +1,39 @@
 import { Fragment, h, isValidElement } from "preact";
 
 /**
- * Interpolates a template string, replacing [key] placeholders with values.
- * Values can be strings or JSX elements (when allowJsx is true).
- * Returns a plain string when all replacements are strings, or a Preact
- * fragment when JSX values are present and allowJsx is enabled.
+ * Interpolates a template string, replacing `[key]` placeholders with values.
+ *
+ * Usable on its own — no i18n instance required — whenever a sentence should
+ * stay readable as one string instead of being cut into JSX expressions or
+ * concatenations. `<Interpolate>` is the JSX form of this function, and
+ * `createI18n` runs every translation through it. See `docs/i18n.md`.
  *
  * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
  * because it does not conflict with JSX syntax, JavaScript template literals,
  * or common punctuation in translated strings.
  *
- * Pass `allowJsx: true` to enable VNode replacements (used by <Interpolate>).
- * Without it, all values are coerced to strings.
+ * @param {string} template
+ *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
+ *   untouched, as is any template when `replacements` is missing.
+ * @param {object} [replacements]
+ *   Values keyed by placeholder name. A key can be:
+ *   - a direct name — `[name]` ← `{ name: "Alice" }`
+ *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
+ *     `"item.label"` key wins over the path)
+ *
+ *   A value that is a function is called at that point, so an expensive or
+ *   lazily-known replacement is only computed when the placeholder is actually
+ *   present in this language's template.
+ *
+ *   A placeholder with no matching value is left in the output as-is
+ *   (`"[name]"`), making the gap visible rather than silently empty.
+ * @param {object} [options]
+ * @param {boolean} [options.allowJsx=false]
+ *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
+ *   value warns and is coerced to a string.
+ * @returns {string|import("preact").VNode}
+ *   A plain string when every replacement is a string, a Preact fragment when
+ *   at least one VNode was interpolated with `allowJsx`.
  */
 export const interpolateText = (
   template,

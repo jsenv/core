@@ -1,8 +1,8 @@
-# [GET_PAGE returns store items](../../resource_graph_page.test.js)
+# [GET_RANGE returns store items](../../resource_graph_range.test.js)
 
 ```js
 const GAME = resource("game", {
-  GET_PAGE: async ({ start, limit }) => ({
+  GET_RANGE: async ({ start, limit }) => ({
     items: Array.from({ length: limit }, (_, index) => ({
       id: start + index,
       name: `game ${start + index}`,
@@ -13,15 +13,15 @@ const GAME = resource("game", {
   PATCH: async ({ id, ...props }) => ({ id, ...props }),
 });
 
-const page = await GAME.GET_PAGE({ start: 10, limit: 2 });
-const rowGiven = page.items[0];
+const range = await GAME.GET_RANGE({ start: 10, limit: 2 });
+const rowGiven = range.items[0];
 const rowIsStoreItem = rowGiven === GAME.store.select(10);
 await GAME.PATCH({ id: 10, name: "renamed" });
 
 return {
-  start: page.start,
-  count: page.count,
-  ids: page.items.map((item) => item.id),
+  start: range.start,
+  count: range.count,
+  ids: range.items.map((item) => item.id),
   rowIsStoreItem,
   // A write replaces the item, so a row following its own fields reads
   // them from the store (RESOURCE.useById) rather than from what it holds
