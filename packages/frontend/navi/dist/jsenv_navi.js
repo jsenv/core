@@ -12304,6 +12304,30 @@ const swipeTypeOf = (axis, pulled) => {
  * `view-transition-name` must be unique per document, so only the application can
  * name what moves.
  *
+ * WHEN THE PRESS BECOMES A HOLD: `grab`.
+ *
+ *   interactions={{ toss: remove, grab: () => navigator.vibrate?.(10) }}
+ *
+ * The three above all answer the RELEASE, and between the press and the release
+ * there is one instant that counts for the hand making the gesture: the one where
+ * the object stops being pressed and starts being held. `grab` is that instant,
+ * and it is the same one whichever way the drag was entered — a finger held still,
+ * a mouse travelled a few pixels.
+ *
+ * It matters most where it is least visible. On a screen the held object is under
+ * the thumb that hides it, so the only feedback available is the one that is felt;
+ * without it the hand waits, doubts the press was heard, and lets go too early. A
+ * vibration is the usual answer, but nothing here is about vibration — a sound, a
+ * class, a measure are the same moment.
+ *
+ * It is told, not asked: `grab` reports, so what it returns is not waited on and
+ * preventing its event does not call the gesture off. And it is not an interaction
+ * on its own — declared without one of the three above there is no gesture for it
+ * to be the beginning of.
+ *
+ * A `longpress` needs nothing of this: it already happens at the moment the hold
+ * is acquired rather than at the release (see interaction_press.js).
+ *
  * What the copy LOOKS like is the application's too. A copy of a transparent
  * element is invisible — a row usually gets its background from the list around it,
  * which the copy has left — so it is dressed through the attributes the gesture
@@ -12314,6 +12338,8 @@ const swipeTypeOf = (axis, pulled) => {
 const MOVE = "move";
 const REORDER = "reorder";
 const TOSS = "toss";
+// The moment the press stops being a press and becomes a hold on the object.
+const GRAB = "grab";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
@@ -12329,11 +12355,16 @@ const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
 
 defineInteractionDetector({
   name: "drag",
-  claims: (type) => type === MOVE || type === REORDER || type === TOSS,
+  claims: (type) =>
+    type === MOVE || type === REORDER || type === TOSS || type === GRAB,
   setup: (element, trigger, { types, readConfig }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
     const canToss = types.includes(TOSS);
+    if (!canMove && !canReorder && !canToss) {
+      return undefined;
+    }
+    const tellsWhenGrabbed = types.includes(GRAB);
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
     const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
@@ -12352,11 +12383,15 @@ defineInteractionDetector({
     // SURROUNDINGS scroll on, which for a list is the axis the list runs on.
     element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
 
+    // What a release can mean, which is not all of what was declared: "grab" is a
+    // moment, not an outcome, and the gesture must not read it as one.
+    const effects = types.filter((type) => type !== GRAB);
+
     const onPointerDown = (pointerDownEvent) => {
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
       // be thrown away.
-      startDragTo(pointerDownEvent, types, {
+      startDragTo(pointerDownEvent, effects, {
         draggedElement: element,
         // Nothing to land on when nothing reorders.
         itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
@@ -12377,6 +12412,19 @@ defineInteractionDetector({
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
         tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
         tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
+        // The one moment the gesture has that is not a release. Said here rather
+        // than from the press that led to it, because the press is only one of the
+        // two ways in: a finger holds still, a mouse travels a few pixels, and it
+        // is the same instant — the object is now held. Nothing is done with what
+        // comes back: this says something happened, it does not ask for work.
+        onDragStart: tellsWhenGrabbed
+          ? (gestureInfo) => {
+              trigger(GRAB, pointerDownEvent, {
+                pointerType: pointerDownEvent.pointerType,
+                gestureInfo,
+              });
+            }
+          : undefined,
         // Handed straight back in all three cases: what `trigger` returns is a
         // promise while the answer is still going, which is what the gesture waits
         // on before it lets go of what it carries.

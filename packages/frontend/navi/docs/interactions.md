@@ -63,6 +63,7 @@ condition: `{ swipe_right: canArchive && archive }`.
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
 | `longpress`                                            | a press held still                             |
 | `move` `reorder` `toss`                                | the element carried, and what letting go means |
+| `grab`                                                 | the instant a drag takes hold of it            |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
@@ -227,6 +228,39 @@ name what moves.
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
+
+### Saying the grab is acquired: `grab`
+
+The three above answer the **release**. Between the press and the release there is
+one instant that counts for the hand: the one where the object stops being pressed
+and starts being held. `grab` is that instant — the same one whichever way the drag
+was entered, a finger held still or a mouse travelled a few pixels.
+
+```jsx
+<Box
+  interactions={{
+    toss: (event) => remove(event.detail.id),
+    grab: () => navigator.vibrate?.(10),
+  }}
+/>
+```
+
+It matters most where it is least visible. On a screen the held object is under the
+thumb that hides it, so the only feedback available is the one that is felt; without
+it the hand waits, doubts the press was heard, and lets go too early — the whole
+gesture fails, not its decoration. With a mouse the grab is acquired after a few
+pixels and the object has visibly moved, so the answer is already there.
+
+Nothing here is about vibration: a sound, a class, a measure are the same moment.
+
+`grab` **reports, it does not ask**: what it returns is not waited on, and
+preventing its event does not call the gesture off. And it is not an interaction on
+its own — declared without `move`, `reorder` or `toss` there is no gesture for it to
+be the beginning of, and a dev warning says so. Its detail carries `pointerType` and
+the `gestureInfo`.
+
+A `longpress` needs none of this: it already happens at the moment the hold is
+acquired, not at the release.
 
 ### Dressing the clone
 
@@ -400,6 +434,8 @@ container above it does not take the gesture:
   the registry.
 - `src/control/interaction/interaction_press.js` — swipes and holds, and what a
   swipe writes on the element.
+- `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `toss` and
+  the `grab` moment.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
