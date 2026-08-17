@@ -12,6 +12,7 @@ import {
 
 export const initAutoreload = ({ mainFilePath }) => {
   let debug = false;
+  let fullReloadRequested = false;
   const reloader = {
     urlHotMetas,
     status: {
@@ -64,6 +65,14 @@ export const initAutoreload = ({ mainFilePath }) => {
     },
     currentExecution: null,
     reload: () => {
+      if (fullReloadRequested) {
+        // The document is already being replaced; anything we would do here
+        // dies with the current page. Calling window.location.reload() again
+        // would abort the navigation already in flight (net::ERR_ABORTED).
+        // This happens for a single file edit: the change is sent first, then
+        // the prune of the urls it no longer references arrives a few ms later.
+        return;
+      }
       const someEffectIsFullReload = reloader.changes.value.some(
         (reloadMessage) => {
           if (reloadMessage.type === "full") {
@@ -90,6 +99,7 @@ export const initAutoreload = ({ mainFilePath }) => {
         },
       );
       if (someEffectIsFullReload) {
+        fullReloadRequested = true;
         dispatchBeforeFullReload();
         reloadHtmlPage();
         return;
