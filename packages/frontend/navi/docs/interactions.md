@@ -165,55 +165,60 @@ import { defineInteractionDetector } from "@jsenv/navi";
 defineInteractionDetector({
   name: "triple_click",
   claims: (type) => type === "triple_click",
-  setup: ({ request, state }) => ({
-    onClick: (clickEvent) => {
-      state.count = (state.count || 0) + 1;
-      clearTimeout(state.timeout);
-      state.timeout = setTimeout(() => {
-        state.count = 0;
+  setup: (element, trigger) => {
+    let count = 0;
+    let timeout = null;
+    const onClick = (clickEvent) => {
+      count++;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        count = 0;
       }, 1000);
-      if (state.count < 3) {
+      if (count < 3) {
         return;
       }
-      state.count = 0;
-      request("triple_click", {}, clickEvent);
-    },
-  }),
+      count = 0;
+      trigger(clickEvent);
+    };
+    element.addEventListener("click", onClick);
+    return () => {
+      clearTimeout(timeout);
+      element.removeEventListener("click", onClick);
+    };
+  },
 });
 ```
 
+`setup(element, trigger, { types, readConfig })` runs **once per element** and
+returns how to undo whatever it did. Listeners, attributes, anything: it is a
+plain setup and teardown, so a detector counts what it needs in its own closure
+and nothing has to hold state on its behalf.
+
 `claims` takes a **set** of names rather than one, because interactions sharing an
 input have to be arbitrated together — a swipe, a hold and a click dispute the
-same press, and read apart they walk over each other.
+same press, and read apart they walk over each other. `types` (third argument) is
+which of them were actually declared here.
 
-`setup` runs on **every render** and returns props to put on the element (event
-handlers, attributes). It must not call hooks, and anything counted between two
-events lives in `state` — a closure variable would go back to its initial value
-under a component that re-rendered mid-gesture, which is most of them.
+`trigger(type, originalEvent, detail)` says the interaction happened. Called with
+a single event — `trigger(event)` — the type is the detector's own, which only
+works when exactly one of its names is declared. When `originalEvent.type` is
+already the interaction's name (a native one), that event IS the interaction and
+no second one is dispatched.
 
-What `setup` receives:
+It returns **`null` when nothing ran** (the gate refused, no control to ask, the
+interaction event was prevented) and otherwise a **promise**: resolved once the
+effect worked, rejected when it did not. Those two answers are not the same and a
+detector usually treats them differently — a row pulled out comes back either
+way, something thrown off the screen only comes back if the throw failed.
 
-- `types` — the claimed names actually declared;
-- `state` — this detector's own object, the same one across renders of that
-  element;
-- `request(type, detail, originalEvent)` — dispatch the interaction as an event of
-  its own name, then answer it;
-- `perform(type, event)` — answer an interaction whose event already exists (a
-  native one);
-- `readConfig(attribute, defaultValue)` — a number read off the element or any
-  ancestor;
-- `ref` — the element.
-
-`request`/`perform` return **`null` when nothing ran** (the gate refused, no
-control to ask, the event was prevented) and otherwise a **promise**: resolved
-once the effect worked, rejected when it did not. Those two answers are not the
-same and a detector usually treats them differently — a row pulled out comes back
-either way, something thrown off the screen only comes back if the throw failed.
+`readConfig(attribute, defaultValue)` reads a number off the element or any
+ancestor carrying that attribute, so a whole list is tuned in one place.
 
 A detector that reads the pointer must mark itself in the DOM so a travelling
-container above it does not take the gesture: return `"data-no-drag-travel": ""`
-among its props (see `docs/drag_to_travel.md`). navi's own swipes do the
-equivalent with `data-travel-by-drag`.
+container above it does not take the gesture:
+`element.setAttribute("data-no-drag-travel", "")`, undone in the teardown (see
+`docs/drag_to_travel.md`). navi's own swipes do the equivalent with
+`data-travel-by-drag`.
 
 ## Things worth knowing before guessing
 

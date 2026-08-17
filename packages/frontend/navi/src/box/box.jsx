@@ -53,11 +53,11 @@
 
 import { normalizeStyles } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
-import { useCallback, useContext } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
 import {
   resolveInteractions,
-  useInteractionProps,
+  useInteractionsEffect,
 } from "../control/interaction/interactions.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -455,6 +455,12 @@ export const Box = (props) => {
     boxFlow = parentBoxFlow;
   }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
+
+  // Read through a ref by the effect below: what an interaction DOES is this
+  // render, while WHEN it happens is wired once, at mount (see
+  // useInteractionsEffect).
+  const interactionsRef = useRef(null);
+  interactionsRef.current = resolveInteractions(interactions);
 
   const remainingPropKeySet = new Set(Object.keys(rest));
   // The box is only a frame and one of its descendants IS the component (a Button
@@ -854,6 +860,7 @@ export const Box = (props) => {
     }, styleDeps);
     finalRef = useComposeElementRef(syncBox, ref);
   }
+  useInteractionsEffect(finalRef, interactionsRef);
 
   let innerChildren = children;
   if (separator) {
@@ -870,40 +877,6 @@ export const Box = (props) => {
         {innerChildren}
       </BoxForwardedPropsContext.Provider>
     );
-  }
-
-  interaction_props: {
-    const interactionProps = useInteractionProps(
-      resolveInteractions(interactions),
-      { ref: finalRef },
-    );
-    if (!interactionProps) {
-      break interaction_props;
-    }
-    for (const key of Object.keys(interactionProps)) {
-      const interactionValue = interactionProps[key];
-      // An event an interaction reads goes where this box's other handlers go:
-      // when the box is only a frame around the element that is really the
-      // component (a Button and its content), that element is the one listening.
-      const target =
-        key.startsWith("on") && shouldForwardAllToChild
-          ? childForwardedProps
-          : selfForwardedProps;
-      const existingValue = target[key];
-      if (
-        typeof interactionValue === "function" &&
-        typeof existingValue === "function"
-      ) {
-        // The caller's handler first, then what the interaction does with the
-        // same event.
-        target[key] = (...args) => {
-          existingValue(...args);
-          interactionValue(...args);
-        };
-        continue;
-      }
-      target[key] = interactionValue;
-    }
   }
 
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;

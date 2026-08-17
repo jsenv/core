@@ -836,26 +836,32 @@
       // ── Une interaction à soi ─────────────────────────────────────────────
 
       // Trois clics dans la seconde : navi n'en a pas, l'appli l'enregistre.
-      // Le compte vit dans `state`, qui est le même d'un rendu à l'autre — une
-      // variable de la closure repartirait de zéro au premier re-rendu, donc au
-      // premier clic.
+      // `setup` ne tourne qu'une fois par élément, donc le compte est une simple
+      // variable de la closure.
       defineInteractionDetector({
         name: "triple_click",
         claims: (type) => type === "triple_click",
-        setup: ({ request, state }) => ({
-          onClick: (clickEvent) => {
-            state.count = (state.count || 0) + 1;
-            clearTimeout(state.timeout);
-            state.timeout = setTimeout(() => {
-              state.count = 0;
+        setup: (element, trigger) => {
+          let count = 0;
+          let timeout = null;
+          const onClick = (clickEvent) => {
+            count++;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              count = 0;
             }, 1000);
-            if (state.count < 3) {
+            if (count < 3) {
               return;
             }
-            state.count = 0;
-            request("triple_click", {}, clickEvent);
-          },
-        }),
+            count = 0;
+            trigger(clickEvent);
+          };
+          element.addEventListener("click", onClick);
+          return () => {
+            clearTimeout(timeout);
+            element.removeEventListener("click", onClick);
+          };
+        },
       });
 
       const CustomDetectorDemo = () => {
@@ -901,7 +907,7 @@
        * pour « quand est-ce que c'est une prise ? », et le contrôleur de
        * déplacement pour le reste. Ce que le registre apporte: le nom marche dans
        * `interactions` comme les autres, la porte disabled/readOnly est la même, et
-       * `request` rend une promesse — donc « il est parti » et « il revient parce
+       * `trigger` rend une promesse — donc « il est parti » et « il revient parce
        * que ça a échoué » se distinguent sans rien écrire de plus.
        *
        * Attraper demande 380 ms de doigt immobile: assez pour ne jamais décrocher
@@ -919,27 +925,24 @@
       defineInteractionDetector({
         name: "swipe_out",
         claims: (type) => type === "swipe_out",
-        setup: ({ ref, request, readConfig }) => ({
+        setup: (element, trigger, { readConfig }) => {
           // Celui qui lit le pointeur se marque lui-même: sans ça, tirer le papier
           // vers la droite tirerait aussi la page vers l'onglet d'à côté, et le
           // voyage — qui arrive après — tuerait la prise.
-          "data-no-drag-travel": "",
-          "onPointerDown": (pointerDownEvent) => {
-            const element = ref.current;
-            const distanceToThrow = readConfig(
-              "data-swipe-out-distance",
-              NOTE_THROW_DISTANCE,
-            );
-            const speedToThrow = readConfig(
-              "data-swipe-out-speed",
-              NOTE_THROW_SPEED,
-            );
+          element.setAttribute("data-no-drag-travel", "");
+          const onPointerDown = (pointerDownEvent) => {
             dragAfterIntent(
               pointerDownEvent,
               () =>
-                grabNote(element, pointerDownEvent, request, {
-                  distanceToThrow,
-                  speedToThrow,
+                grabNote(element, pointerDownEvent, trigger, {
+                  distanceToThrow: readConfig(
+                    "data-swipe-out-distance",
+                    NOTE_THROW_DISTANCE,
+                  ),
+                  speedToThrow: readConfig(
+                    "data-swipe-out-speed",
+                    NOTE_THROW_SPEED,
+                  ),
                 }),
               {
                 longPressDelay: readConfig(
@@ -957,14 +960,19 @@
                 },
               },
             );
-          },
-        }),
+          };
+          element.addEventListener("pointerdown", onPointerDown);
+          return () => {
+            element.removeAttribute("data-no-drag-travel");
+            element.removeEventListener("pointerdown", onPointerDown);
+          };
+        },
       });
 
       const grabNote = (
         element,
         pointerDownEvent,
-        request,
+        trigger,
         { distanceToThrow, speedToThrow },
       ) => {
         const controller = createDragToMoveGestureController({
@@ -1012,10 +1020,10 @@
           element.style.translate = `${(xDelta / distance) * 900}px ${
             (yDelta / distance) * 900
           }px`;
-          const pending = request(
+          const pending = trigger(
             "swipe_out",
-            { x: xDelta, y: yDelta, distance, velocity: gestureInfo.velocity },
             gestureInfo.releaseEvent ?? pointerDownEvent,
+            { x: xDelta, y: yDelta, distance, velocity: gestureInfo.velocity },
           );
           if (!pending) {
             comeBack();

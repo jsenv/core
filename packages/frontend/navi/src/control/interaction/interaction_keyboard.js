@@ -22,15 +22,17 @@ const KEYBOARD_PREFIX = "keyboard:";
 defineInteractionDetector({
   name: "keyboard",
   claims: (type) => type.startsWith(KEYBOARD_PREFIX),
-  setup: ({ types, request }) => {
+  setup: (element, trigger, { types }) => {
     const shortcuts = {};
     for (const type of types) {
       shortcuts[type.slice(KEYBOARD_PREFIX.length)] = (keyboardEvent) => {
-        request(type, {}, keyboardEvent);
+        trigger(type, keyboardEvent);
       };
     }
-    return {
-      onKeyDown: createOnKeyDownForShortcuts(shortcuts),
+    const onKeyDown = createOnKeyDownForShortcuts(shortcuts);
+    element.addEventListener("keydown", onKeyDown);
+    return () => {
+      element.removeEventListener("keydown", onKeyDown);
     };
   },
 });

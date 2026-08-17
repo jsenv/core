@@ -171,7 +171,7 @@ import.meta.css = /* css */ `
 defineInteractionDetector({
   name: "press",
   claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
-  setup: ({ types, ref, request, readConfig }) => {
+  setup: (element, trigger, { types, readConfig }) => {
     let axes = "";
     for (const type of types) {
       const axis = AXIS_BY_SWIPE_TYPE[type];
@@ -181,9 +181,49 @@ defineInteractionDetector({
     }
     const hasLongPress = types.includes("longpress");
 
+    const undo = [];
+    const mark = (attribute, value) => {
+      element.setAttribute(attribute, value);
+      undo.push(() => {
+        element.removeAttribute(attribute);
+      });
+    };
+    if (axes) {
+      mark(SWIPE_AXES_ATTRIBUTE, axes);
+      // Read by the boxes ABOVE this one: an axis swiped here is not theirs to
+      // travel (see axesLeftBy).
+      mark("data-travel-by-drag", axes);
+      // …and nothing inside hands its leftover scroll to the page while the
+      // element is being pulled.
+      mark("data-drag-travel", axes);
+
+      // A link and an image are draggable without anyone asking, and a native
+      // drag IS press-and-move: the browser claims the gesture, takes the pointer
+      // events with it and paints a ghost of the row the hand is trying to swipe.
+      // Two things are needed, and neither covers the other:
+      // - `draggable` refuses it on the element itself, before it starts;
+      // - a swipe is usually a row with a link or a thumbnail INSIDE it, and
+      //   those are draggable in their own right. `dragstart` bubbles, so
+      //   refusing it here refuses theirs too — and it is the only refusal every
+      //   browser honours (`-webkit-user-drag` is one engine's).
+      // The cost is stated rather than worked around: an element that takes a
+      // swipe cannot also be dragged out of the page, because there is one
+      // gesture and it cannot mean both.
+      mark("draggable", "false");
+      const onDragStart = (dragStartEvent) => {
+        dragStartEvent.preventDefault();
+      };
+      element.addEventListener("dragstart", onDragStart);
+      undo.push(() => {
+        element.removeEventListener("dragstart", onDragStart);
+      });
+    }
+    if (hasLongPress) {
+      mark(LONGPRESS_ATTRIBUTE, "");
+    }
+
     const onPointerDown = (pointerDownEvent) => {
-      const element = ref.current;
-      if (!element || pointerDownEvent.button !== 0) {
+      if (pointerDownEvent.button !== 0) {
         return;
       }
       let swipe = null;
@@ -194,7 +234,7 @@ defineInteractionDetector({
           element,
           axes,
           types,
-          request,
+          trigger,
           threshold: readConfig(
             SWIPE_THRESHOLD_ATTRIBUTE,
             SWIPE_THRESHOLD_DEFAULT,
@@ -228,53 +268,29 @@ defineInteractionDetector({
             };
             window.addEventListener("pointerup", onPointerEnd, true);
             window.addEventListener("pointercancel", onPointerEnd, true);
-            request(
-              "longpress",
-              { pointerType: pressEvent.pointerType },
-              pressEvent,
-            );
+            trigger("longpress", pressEvent, {
+              pointerType: pressEvent.pointerType,
+            });
           },
         });
       }
     };
+    element.addEventListener("pointerdown", onPointerDown);
+    undo.push(() => {
+      element.removeEventListener("pointerdown", onPointerDown);
+    });
 
-    const props = { onPointerDown };
-    if (axes) {
-      props[SWIPE_AXES_ATTRIBUTE] = axes;
-      // Read by the boxes ABOVE this one: an axis swiped here is not theirs to
-      // travel (see axesLeftBy).
-      props["data-travel-by-drag"] = axes;
-      // …and nothing inside hands its leftover scroll to the page while the
-      // element is being pulled.
-      props["data-drag-travel"] = axes;
-
-      // A link and an image are draggable without anyone asking, and a native
-      // drag IS press-and-move: the browser claims the gesture, takes the
-      // pointer events with it and paints a ghost of the row the hand is trying
-      // to swipe. Two things are needed, and neither covers the other:
-      // - `draggable` refuses it on the element itself, before it starts;
-      // - a swipe is usually a row with a link or a thumbnail INSIDE it, and
-      //   those are draggable in their own right. `dragstart` bubbles, so
-      //   refusing it here refuses theirs too — and it is the only refusal every
-      //   browser honours (`-webkit-user-drag` is one engine's).
-      // The cost is stated rather than worked around: an element that takes a
-      // swipe cannot also be dragged out of the page, because there is one
-      // gesture and it cannot mean both.
-      props.draggable = false;
-      props.onDragStart = (dragStartEvent) => {
-        dragStartEvent.preventDefault();
-      };
-    }
-    if (hasLongPress) {
-      props[LONGPRESS_ATTRIBUTE] = "";
-    }
-    return props;
+    return () => {
+      for (const undoOne of undo) {
+        undoOne();
+      }
+    };
   },
 });
 
 const startSwipe = (
   pointerDownEvent,
-  { element, axes, types, request, threshold, onSwipeStart },
+  { element, axes, types, trigger, threshold, onSwipeStart },
 ) => {
   let settleTimeout = null;
   const paint = ({ pulled, progress, type }) => {
@@ -346,11 +362,13 @@ const startSwipe = (
         { pulled: sign * size, progress: sign, type },
         { thenForget: false },
       );
-      const pending = request(
-        type,
-        { axis, sign, pulled, size, progress: pulled / size },
-        event,
-      );
+      const pending = trigger(type, event, {
+        axis,
+        sign,
+        pulled,
+        size,
+        progress: pulled / size,
+      });
       if (!pending) {
         settleTo(restingPlace);
         return;

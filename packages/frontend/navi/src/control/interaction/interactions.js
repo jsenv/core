@@ -14,5 +14,5 @@ import "./interaction_keyboard.js";
 export {
   defineInteractionDetector,
   resolveInteractions,
-  useInteractionProps,
+  useInteractionsEffect,
 } from "./interaction_registry.js";
