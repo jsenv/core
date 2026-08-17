@@ -1,4 +1,8 @@
 import "./src/navi_css_vars.js";
+// The element the URL designates — the one whose id is the hash — shows itself
+// when it renders, which in an app is long after the browser stopped caring.
+// Imported for its effect: neither the element nor the page has to opt in.
+import "./src/nav/url_target/url_target.js";
 
 // actions
 // Importing this also registers the popup an action with a `confirm` asks its
@@ -95,6 +99,10 @@ export { Route } from "./src/nav/route.jsx";
 export { RouteTravel } from "./src/nav/route_travel.jsx";
 export { anyMatchingRouteSignal, routeAction } from "./src/nav/route_action.js";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
+export {
+  setUrlTargetOptions,
+  useUrlTargetId,
+} from "./src/nav/url_target/url_target.js";
 // Navigation/components
 export { Link } from "./src/nav/link/link.jsx";
 export { Nav } from "./src/nav/link/nav.jsx";

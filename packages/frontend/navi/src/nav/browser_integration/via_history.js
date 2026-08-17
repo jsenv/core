@@ -218,6 +218,14 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
+  // A fragment navigation is left to the browser (see the click handler above):
+  // it owns the indicated part of the document, and taking it over would cost
+  // `:target` and the focus handling that come with it. The document url still
+  // has to follow it — nothing else here would notice that it moved.
+  window.addEventListener("hashchange", () => {
+    updateDocumentUrl(window.location.href);
+  });
+
   const navTo = async (url, { replace, state } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
