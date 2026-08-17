@@ -251,6 +251,14 @@ export const inputCss = /* css */ `
     }
 
     .navi_input_slot {
+      /* A corner claimed from the outside (see group.jsx) is the frame's, and
+         what lives in here is not the frame — a button in a slot, the content
+         of a popup — so the ask stops at this boundary. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       margin-right: var(--slot-spacing, calc(2px + 0.1em));
       margin-left: var(--slot-spacing, calc(2px + 0.1em));
       color: #5e4e4e;

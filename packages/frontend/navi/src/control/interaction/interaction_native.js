@@ -6,7 +6,11 @@
  * interaction_registry.js) — navi has no private one.
  *
  * `contextmenu` is the only one that takes something away: the browser's own menu
- * would cover the answer to the request it is.
+ * would cover the answer to the request it is. It takes it away AFTER, though —
+ * a native interaction IS its own event, the very one the gate reads, and a gate
+ * refuses what is already `defaultPrevented`. Cancelling first would therefore
+ * make the interaction refuse itself, and no right click could ever get through.
+ * So: ask, and only cover the browser's menu once something answered.
  */
 
 import { defineInteractionDetector } from "./interaction_registry.js";
@@ -25,10 +29,13 @@ defineInteractionDetector({
   setup: (element, trigger, { types }) => {
     const listeners = types.map((type) => {
       const listener = (nativeEvent) => {
-        if (type === "contextmenu") {
+        const performed = trigger(type, nativeEvent);
+        if (type === "contextmenu" && performed) {
+          // Something answered the request, so the browser's own menu would only
+          // cover it. Nothing answered (the gate refused, a listener said "not
+          // this time"): the right click stays what it was, and opens the menu.
           nativeEvent.preventDefault();
         }
-        trigger(type, nativeEvent);
       };
       element.addEventListener(type, listener);
       return [type, listener];

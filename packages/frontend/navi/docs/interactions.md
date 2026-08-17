@@ -109,17 +109,18 @@ in dev.
 navi makes the element follow the finger — there is nothing to decide about
 that — and says where the gesture is up to:
 
-| Written on the element                   | Meaning                                   |
-| ---------------------------------------- | ----------------------------------------- |
-| `--swipe-pulled`                         | how far it has come, signed, in px        |
-| `--swipe-progress`                       | the same as a fraction, signed, inherited |
-| `[data-swiping="left\|right\|up\|down"]` | which way, while a finger holds it        |
-| `[data-swipe-past-threshold]`            | letting go now would go through with it   |
+| Written on the element                   | Meaning                                 |
+| ---------------------------------------- | --------------------------------------- |
+| `--swipe-pulled`                         | how far it has come, signed, in px      |
+| `--swipe-progress`                       | the same as a fraction, signed          |
+| `[data-swiping="left\|right\|up\|down"]` | which way, while a finger holds it      |
+| `[data-swipe-past-threshold]`            | letting go now would go through with it |
 
 WHAT is revealed behind is yours: navi does not know what putting a row away
 looks like. A trail is usually a child of the swiped element sized off
-`--swipe-pulled` — which is what makes those values reachable from CSS at all, a
-sibling could not read them.
+`--swipe-pulled`. Both values inherit, so a child reads them; a sibling cannot,
+which is why the trail goes inside — and it travels with the row, since what
+navi translates is the element that declares the gesture.
 
 ```css
 .trail {

@@ -176,6 +176,15 @@ const css = /* css */ `
   }
 
   .navi_dialog {
+    /* A popup renders inside its opener's own subtree, so a corner claimed from
+       the outside (see group.jsx) would otherwise reach the controls in here.
+       It stops at the popup: what a popup holds is never at a seam of the group
+       its opener belongs to. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     /* Computed once, reused by both max-width itself and min-width's own
        clamp below (see its comment for why) — avoids repeating the same
        min(..., ...) expression twice. */

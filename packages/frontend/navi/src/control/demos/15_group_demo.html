@@ -379,12 +379,54 @@
         );
       };
 
+      const PopupFormRow = ({ name, label }) => {
+        return (
+          <Picker
+            name={name}
+            ui={
+              <Box row spacing="xs">
+                <Text bold>{label}</Text>
+                <Text>—</Text>
+              </Box>
+            }
+            maxLines={2}
+            expandX
+            paddingX="m"
+            paddingY="m"
+            borderRadius="m"
+          >
+            <Box padding="m" spacing="m">
+              <Input placeholder={label} />
+              <Box column spacing="s" alignX="end">
+                <Button>Annuler</Button>
+                <Button>Enregistrer</Button>
+              </Box>
+            </Box>
+          </Picker>
+        );
+      };
+
+      const PopupButtonsDemo = () => {
+        return (
+          <Box>
+            <h3>Buttons inside a member's popup</h3>
+            <Box width="420">
+              <Group row>
+                <PopupFormRow name="popup_form_first" label="Prénom" />
+                <PopupFormRow name="popup_form_last" label="Ville" />
+              </Group>
+            </Box>
+          </Box>
+        );
+      };
+
       const PickerElementsDemo = () => {
         return (
           <Box background="white" padding="l" borderRadius="m">
             <h2>Part 3: Pickers</h2>
             <Box spacing="l">
               <SettingRowsDemo />
+              <PopupButtonsDemo />
 
               <Box>
                 <h3>Single Picker</h3>

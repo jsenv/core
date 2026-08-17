@@ -46,7 +46,7 @@ Live examples: `src/control/demos/15_group_demo.html`.
 - **Corners**: the first member loses the radius on the side that joins, the
   last one loses it on the other side, and any member in between loses all
   four. A single member keeps its own radius — a group of one looks like the
-  control alone.
+  control alone. The ask is made twice, in two forms — see below.
 - **Overlap order**: the member under the pointer, and the member showing a
   focus ring, paint above their neighbours (`position: relative` plus
   `--navi-z-index-control-hovered` / `-focused`). Without it the border color
@@ -62,14 +62,21 @@ and takes any `Box` prop for its own layout.
 
 ## Writing a control that belongs in a group
 
-A group squares the corners of its **direct children** — it addresses the
-control root, never the elements inside it. So a control declares the radius
-of its frame on its own root element, and whatever inner element actually
-paints the frame takes `border-radius: inherit`:
+A group never writes a selector that reaches inside a member — a member's
+subtree holds more than the member (a `Picker` renders its popup inside
+itself, not in a portal; a control carries buttons of its own, like the clear
+cross in a slot), and a rule matching "some descendant" finds all of them. It
+asks for a square corner in two forms instead, and a control answers with
+whichever fits.
+
+**The property, on the member itself.** A control declares the radius of its
+frame on its own root, and whatever inner element paints that frame takes
+`border-radius: inherit`. The group sets the property on the root; the frame
+follows.
 
 ```css
 .navi_thing {
-  /* The radius is declared here even though the frame below draws it */
+  /* Declared here even though the box below is what draws it */
   border-radius: var(--thing-border-radius);
 
   .navi_thing_box {
@@ -78,6 +85,36 @@ paints the frame takes `border-radius: inherit`:
   }
 }
 ```
+
+**The custom property, which travels.** A member is not always the control
+that carries the frame: a button can arrive wrapped in a tooltip or a link, at
+any depth. So the group also sets `--x-corner-top-left-radius` and its three
+siblings on the member, and a control that can arrive wrapped reads them as an
+override of its own radius. The `--x-` prefix says what they are: navi's
+internal wiring between a group and its members, not a surface an app writes
+to (an app changes a radius with the `borderRadius` prop, which lands in the
+fallback below and is what the corner keeps everywhere the group has no claim):
+
+```css
+.navi_thing {
+  border-top-left-radius: var(
+    --x-corner-top-left-radius,
+    var(--thing-border-radius)
+  );
+  /* …and the three others */
+}
+```
+
+**Whoever answers the ask also stops it.** Custom properties inherit all the
+way down, so the control that consumed a corner sets the four back to
+`initial` on the first element inside it — otherwise a button in a slot, or the
+Save button of a form in an open popup, reads a corner meant for the row that
+opened it. `Popover` and `Dialog` stop it too, at their own root: nothing a
+popup holds is at a seam.
+
+Reference: `.navi_button_content` in `button_ui.jsx` (a button reads then
+stops), `.navi_picker_right_slot`, `.navi_input_slot`, `.navi_popover`,
+`.navi_dialog`.
 
 A control that declares its radius on an inner element instead is invisible to
 `Group`: it keeps round corners in the middle of the row, and no rule written

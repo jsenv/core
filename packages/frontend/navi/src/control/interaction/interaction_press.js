@@ -28,8 +28,9 @@
  * that — and says where it is up to, for the caller to draw the rest with:
  *
  * - `--swipe-pulled`: how far it has come, signed, in px.
- * - `--swipe-progress`: the same as a fraction of the element, signed. Inherited,
- *   so anything inside the element can read it.
+ * - `--swipe-progress`: the same as a fraction of the element, signed.
+ *
+ * Both inherit, so anything inside the element can read them.
  * - `[data-swiping="left|right|up|down"]`: which way, while a finger holds it.
  * - `[data-swipe-past-threshold]`: letting go now would go through with it.
  *
@@ -114,8 +115,10 @@ const LONGPRESS_ATTRIBUTE = "data-longpress";
 import.meta.css = /* css */ `
   /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
      what a swipe reveals behind the element is drawn from this, and an undeclared
-     custom property only ever jumps from one value to the next. Inherited, so
-     anything inside the element can read it. */
+     custom property only ever jumps from one value to the next. Both inherited,
+     because what is drawn from them is drawn by a CHILD of the swiped element:
+     the trail behind a row is inside the row, and a value that stopped at the
+     element itself would reach 0 exactly where it is read. */
   @property --swipe-progress {
     syntax: "<number>";
     inherits: true;
@@ -123,7 +126,7 @@ import.meta.css = /* css */ `
   }
   @property --swipe-pulled {
     syntax: "<length>";
-    inherits: false;
+    inherits: true;
     initial-value: 0px;
   }
 

@@ -121,7 +121,28 @@ const css = /* css */ `
     color: var(--x-button-color);
     background: none;
     border: none;
-    border-radius: var(--button-border-radius);
+    /* Squared from the outside, corner by corner: a Group asks the member it
+       joins for square corners along the seam, and the button it means may
+       arrive wrapped (in a tooltip, in a link), so the ask travels down as
+       inherited custom properties rather than as a selector aimed at the
+       button. Each corner falls back to the button's own radius when nothing
+       asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--button-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--button-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--button-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--button-border-radius)
+    );
     outline: none;
     cursor: var(--x-button-cursor);
     touch-action: manipulation;
@@ -129,6 +150,14 @@ const css = /* css */ `
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_button_content {
+      /* The ask stops here: this element is the button's frame, so what is
+         inside it (a popover the button opens, a button of its own) is no
+         longer at the seam. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       position: relative;
       display: inherit;
       box-sizing: border-box;

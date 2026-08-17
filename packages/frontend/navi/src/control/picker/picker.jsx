@@ -219,6 +219,14 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
+      /* A corner claimed from the outside (see group.jsx) is the frame's, and
+         what lives in here is not the frame — a button in a slot, the content
+         of a popup — so the ask stops at this boundary. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       display: inline-flex;
       height: 1em;
       height: 1lh;

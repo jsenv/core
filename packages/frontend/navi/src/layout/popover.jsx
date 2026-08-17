@@ -141,6 +141,15 @@ const css = /* css */ `
   }
 
   .navi_popover {
+    /* A popup renders inside its opener's own subtree, so a corner claimed from
+       the outside (see group.jsx) would otherwise reach the controls in here.
+       It stops at the popup: what a popup holds is never at a seam of the group
+       its opener belongs to. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
       var(--container-position-remaining-width, var(--popover-maxmax-width)),
