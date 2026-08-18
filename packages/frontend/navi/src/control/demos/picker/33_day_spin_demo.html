@@ -60,10 +60,10 @@
         setupRoutes,
         stateSignal,
       } from "@jsenv/navi";
-      import { CallLog, useCallLog } from "./utils/call_log.jsx";
-      import { DemoHeader } from "../../internal/demo_header.jsx";
-      import { DocumentToc } from "../../internal/document_toc.jsx";
-      import { FakeBackend } from "../../internal/fake_backend.jsx";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
