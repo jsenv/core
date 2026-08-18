@@ -133,6 +133,26 @@ const css = /* css */ `
     --list-border-width-default: 0px;
   }
 
+  /* Same reasoning, for the corners: a dialog squares off whatever corner
+     lands on its container's own (see the data-flush-* rules in dialog.jsx —
+     a bottom sheet from dockedOnTouch squares its two bottom ones). A list
+     drawn right against that corner has to square the same one, otherwise its
+     own radius carves a notch out of the popup's square corner. Direct child
+     only: any deeper and the list is presumably inset from the popup's edge,
+     where its own radius is the right one. */
+  .navi_dialog[data-flush-top][data-flush-left] > .navi_list_container {
+    border-top-left-radius: 0;
+  }
+  .navi_dialog[data-flush-top][data-flush-right] > .navi_list_container {
+    border-top-right-radius: 0;
+  }
+  .navi_dialog[data-flush-bottom][data-flush-right] > .navi_list_container {
+    border-bottom-right-radius: 0;
+  }
+  .navi_dialog[data-flush-bottom][data-flush-left] > .navi_list_container {
+    border-bottom-left-radius: 0;
+  }
+
   .navi_list_container {
     --x-list-border-radius: var(--list-border-radius);
     --x-list-border-width: var(
@@ -3123,7 +3143,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  * @param {boolean} [props.selectable]
  *   The item participates in selection (radio or checkbox depending on whether
  *   the parent List has `multiple`). Requires `value` and typically a
- *   <SelectableInput /> child.
+ *   <SelectableInput /> child. Inherited from `<List selectable>` — pass
+ *   `false` for a row that is only there to be read, and nothing otherwise.
  * @param {any} [props.value]
  *   The JS value emitted by the list's action/uiAction when this item is
  *   selected. Can be any type (string, number, object…).

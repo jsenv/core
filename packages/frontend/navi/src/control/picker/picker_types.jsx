@@ -57,7 +57,7 @@ export const PickerTypeResolver = (props) => {
 const PickerText = (props) => {
   const Next = useNextResolver();
 
-  return <Next icon={<PencilSvg />} {...props} />;
+  return <Next rightSlotIcon={<PencilSvg />} {...props} />;
 };
 
 // The popup holds a group of named controls — a `<Form>`, or a `<ControlGroup>`
@@ -120,7 +120,12 @@ const PickerColor = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerColorUI />} icon={<ColorSvg />} type="color" {...props} />
+    <Next
+      ui={<PickerColorUI />}
+      rightSlotIcon={<ColorSvg />}
+      type="color"
+      {...props}
+    />
   );
 };
 export const PickerColorUI = () => {
@@ -139,7 +144,12 @@ const PickerDate = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerDateUI />} icon={<CalendarSvg />} {...props} type="date" />
+    <Next
+      ui={<PickerDateUI />}
+      rightSlotIcon={<CalendarSvg />}
+      {...props}
+      type="date"
+    />
   );
 };
 export const PickerDateUI = (props) => {
@@ -171,7 +181,7 @@ const PickerMonth = (props) => {
   return (
     <Next
       ui={<PickerMonthUI />}
-      icon={<CalendarSvg />}
+      rightSlotIcon={<CalendarSvg />}
       {...props}
       type="month"
     />
@@ -199,7 +209,12 @@ const PickerWeek = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerWeekUI />} icon={<CalendarSvg />} {...props} type="week" />
+    <Next
+      ui={<PickerWeekUI />}
+      rightSlotIcon={<CalendarSvg />}
+      {...props}
+      type="week"
+    />
   );
 };
 export const PickerWeekUI = (props) => {
@@ -224,7 +239,12 @@ const PickerTime = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerTimeUI />} icon={<ClockSvg />} {...props} type="time" />
+    <Next
+      ui={<PickerTimeUI />}
+      rightSlotIcon={<ClockSvg />}
+      {...props}
+      type="time"
+    />
   );
 };
 export const PickerTimeUI = (props) => {
@@ -251,7 +271,7 @@ const PickerDuration = (props) => {
   return (
     <Next
       ui={<PickerDurationUI />}
-      icon={<DurationSvg />}
+      rightSlotIcon={<DurationSvg />}
       {...props}
       type="text"
       navi-input-type="duration"
@@ -282,7 +302,7 @@ const PickerDatetime = (props) => {
   return (
     <Next
       ui={<PickerDatetimeUI />}
-      icon={<CalendarSvg />}
+      rightSlotIcon={<CalendarSvg />}
       {...props}
       type="datetime-local"
     />
@@ -310,7 +330,12 @@ const PickerFile = (props) => {
   const Next = useNextResolver();
 
   return (
-    <Next ui={<PickerFileUI />} icon={<FileSvg />} type="file" {...props} />
+    <Next
+      ui={<PickerFileUI />}
+      rightSlotIcon={<FileSvg />}
+      type="file"
+      {...props}
+    />
   );
 };
 export const PickerFileUI = () => {

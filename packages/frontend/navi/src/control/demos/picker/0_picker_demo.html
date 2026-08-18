@@ -752,13 +752,15 @@
             <Field vertical>
               <Label>
                 Custom icon{" "}
-                <code style={{ fontWeight: "normal" }}>(icon prop)</code>
+                <code style={{ fontWeight: "normal" }}>
+                  (rightSlotIcon prop)
+                </code>
               </Label>
               <Picker
                 name="icon_custom"
                 value="Hello world"
                 action={() => {}}
-                icon={<VioletSquareIcon />}
+                rightSlotIcon={<VioletSquareIcon />}
               >
                 <BasicPickerContent />
               </Picker>
@@ -792,7 +794,7 @@
                       value="Hello world"
                       action={() => {}}
                       size={size}
-                      icon={<VioletSquareIcon />}
+                      rightSlotIcon={<VioletSquareIcon />}
                     >
                       <BasicPickerContent />
                     </Picker>
@@ -807,7 +809,7 @@
                       value="Hello world"
                       action={() => {}}
                       size={size}
-                      icon={<CalendarSvg />}
+                      rightSlotIcon={<CalendarSvg />}
                     >
                       <BasicPickerContent />
                     </Picker>
@@ -827,7 +829,7 @@
                 value=""
                 action={() => {}}
                 ui={<TallPickerUI label="Custom UI with bigger height" />}
-                icon={<VioletSquareIcon />}
+                rightSlotIcon={<VioletSquareIcon />}
               >
                 <BasicPickerContent />
               </Picker>
@@ -845,7 +847,7 @@
                 action={() => {}}
                 width="260px"
                 maxLines={3}
-                icon={<VioletSquareIcon />}
+                rightSlotIcon={<VioletSquareIcon />}
               >
                 <BasicPickerContent />
               </Picker>

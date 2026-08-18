@@ -369,6 +369,28 @@ const css = /* css */ `
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
     }
+    /* discrete: no box at rest, a background on hover — the same word Button
+       uses, and the same drawing. What is read is the value, not the field
+       around it; the chevron in the right slot is what still says it opens. */
+    &[data-variant="discrete"] {
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+
+      &[data-hover] {
+        --x-picker-border-color: transparent;
+        --x-picker-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        --x-picker-border-color: transparent;
+        --x-picker-background-color: transparent;
+      }
+    }
     &[data-variant="headless"] {
       --x-picker-padding-top: 0;
       --x-picker-padding-right: 0;
@@ -400,8 +422,8 @@ const PickerButton = (props) => {
   const {
     ref,
     variant,
-    icon,
-    iconSize = "inherit",
+    rightSlotIcon,
+    rightSlotIconSize = "inherit",
     placeholder,
     ui,
     maxLines = 1,
@@ -449,8 +471,8 @@ const PickerButton = (props) => {
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
       variant={undefined}
-      icon={undefined}
-      iconSize={undefined}
+      rightSlotIcon={undefined}
+      rightSlotIconSize={undefined}
       ui={undefined}
       maxLines={undefined}
       popupWidthFitContent={undefined}
@@ -595,7 +617,7 @@ const PickerButton = (props) => {
                 flex
                 align="center"
               >
-                <Icon size={iconSize} lineOverflow="allow">
+                <Icon size={rightSlotIconSize} lineOverflow="allow">
                   <CloseSvg />
                 </Icon>
               </Button>
@@ -603,8 +625,12 @@ const PickerButton = (props) => {
               // lineOverflow: what sits in the slot is an affordance, not a
               // character — a caller asking for a bigger one wants it bigger,
               // not capped at the height of the line it sits on
-              <Icon size={iconSize} lineOverflow="allow">
-                {icon === undefined ? <ChevronDownSvg /> : icon}
+              <Icon size={rightSlotIconSize} lineOverflow="allow">
+                {rightSlotIcon === undefined ? (
+                  <ChevronDownSvg />
+                ) : (
+                  rightSlotIcon
+                )}
               </Icon>
             )}
           </span>
@@ -723,6 +749,8 @@ const PickerStyleCSSVars = {
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
   "popoverMaxHeight": "--picker-popover-max-height",
+  "dialogMaxWidth": "--picker-dialog-max-width",
+  "dialogMaxHeight": "--picker-dialog-max-height",
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
@@ -801,11 +829,14 @@ const PickerFirstResolver = (props) => {
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless",
- *   icon?: import("preact").ComponentChildren,
+ *   variant?: "icon" | "headless" | "discrete",
+ *   rightSlotIcon?: import("preact").ComponentChildren,
+ *   rightSlotIconSize?: number | string,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
+ *   dialogMaxWidth?: number | string,
+ *   dialogMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
  *   clearable?: boolean,
@@ -813,6 +844,9 @@ const PickerFirstResolver = (props) => {
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
+ *   marginWithContainer?: number | string,
+ *   escapeEffect?: "cancel" | "close",
+ *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
@@ -832,6 +866,13 @@ const PickerFirstResolver = (props) => {
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
+ * @param {import("preact").ComponentChildren} [rightSlotIcon] What the right
+ *   slot draws in place of the chevron. It is the whole slot, not an addition
+ *   to it: the picker then no longer says on its own that it opens, so pass
+ *   something that does.
+ * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
+ *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
+ *   cross. "inherit" takes the picker's own font size.
  * @param {number|string} [slotSpacing] Gap kept between what sits in the right
  *   slot (the chevron, or the clear button) and the picker's own edge — same
  *   prop name Input uses for its own slots. Accepts a spacing token ("s",
@@ -839,6 +880,25 @@ const PickerFirstResolver = (props) => {
  *   horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
+ * @param {number|string} [dialogMaxWidth] Ceiling on the dialog's width, the
+ *   one `dialogExpand`/`dialogExpandX` grows up to — what makes an expanded
+ *   dialog a large sheet rather than a full screen. Capped in turn by the
+ *   container minus `marginWithContainer`.
+ * @param {number|string} [dialogMaxHeight] Same, on the height.
+ * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
+ *   picker. "cancel" puts back the value the picker had at open, and a dialog
+ *   picker also goes back in history — so anything written to the url while it
+ *   was open (a route `stateSignal`, a search param) goes back with it. "close"
+ *   makes Escape say what clicking outside says: keep what was chosen, close.
+ * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
+ *   What a click outside the popup does: close and keep ("close"), close and
+ *   put back the value at open ("cancel"), or nothing at all ("capture").
+ * @param {number|string} [marginWithContainer] Minimum gap kept between the
+ *   popup and the edges of what contains it (the viewport, or the picker's own
+ *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
+ *   well as its placement, so what an expanded dialog leaves visible around
+ *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
+ *   Dialog's own 3vvw in dialog mode.
  */
 export const Picker = createComponentResolver([
   PickerFirstResolver,

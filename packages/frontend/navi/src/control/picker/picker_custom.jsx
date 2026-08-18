@@ -93,6 +93,12 @@ const css = /* css */ `
         --dialog-outline-width: var(--picker-outline-width);
         --dialog-outline-color: var(--picker-outline-color);
 
+        /* No fallback on purpose (same as --popover-max-height above): unset
+           picker props leave these declarations invalid at computed-value
+           time, so the dialog keeps its own ceilings. */
+        --dialog-max-width: var(--picker-dialog-max-width);
+        --dialog-max-height: var(--picker-dialog-max-height);
+
         /* Dialog itself already sizes min-width off --anchor-width — only
            the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
@@ -212,7 +218,18 @@ const PickerNative = (props) => {
 };
 
 const PickerCustom = (props) => {
-  const { ref, mode: modeProp, open, defaultOpen } = props;
+  const {
+    ref,
+    mode: modeProp,
+    open,
+    defaultOpen,
+    // What Escape means for this picker. "cancel" (the default) puts back the
+    // value the picker had at open and, for a dialog, goes back in history —
+    // so everything written to the url while it was open goes back too.
+    // "close" makes Escape say the same thing as clicking outside: keep what
+    // was chosen, close the popup.
+    escapeEffect = "cancel",
+  } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
   // Captured before the fallback chain below overwrites props.id — needed to
@@ -244,6 +261,7 @@ const PickerCustom = (props) => {
   // otherwise leak through PickerContentInsidePopup's own ...rest).
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
+  delete pickerProps.escapeEffect;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -523,10 +541,11 @@ const PickerCustom = (props) => {
           if (!openController.opened) {
             return null;
           }
+          const isCancel = escapeEffect === "cancel";
           return {
-            name: "escape_to_cancel",
+            name: isCancel ? "escape_to_cancel" : "escape_to_close",
             allowed: () => {
-              requestClose(e, { isCancel: true });
+              requestClose(e, { isCancel });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
           };
@@ -701,8 +720,6 @@ const PickerContentInsidePopup = (props) => {
           marginWithContainer === undefined && isPopover
             ? popoverSpacing
             : marginWithContainer
-              ? 10
-              : marginWithContainer
         }
         scrollCapture={scrollCapture}
         pointerInteractionOutsideEffect={

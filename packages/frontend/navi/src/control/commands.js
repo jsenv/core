@@ -339,7 +339,9 @@ registerNaviCommand("--navi-reset", (source, event) => {
  * - an open popup: it closes. The popup was there for the duration of one
  *   decision, and the send just made it. A picker already does this when the
  *   send targets the popup itself (executeNaviDefine); a form inside one is the
- *   same act, a level down;
+ *   same act, a level down. A popup opened from another popup answers for
+ *   itself only — say `data-after-send="--navi-send"` on the sending control
+ *   to make the decision travel up to the surface holding it;
  * - the document: nothing. A form on a page stays where it is.
  */
 // What follows a send that went through — and it is asked of the button that
@@ -393,7 +395,21 @@ registerNaviCommand("--navi-send", (source, event) => {
   if (target.getAttribute("aria-expanded") === "true") {
     return {
       target,
-      implementation: () => executeNaviDefine(source, event, target),
+      implementation: () => {
+        const result = executeNaviDefine(source, event, target);
+        // Only what was explicitly asked for: the surface above a popup is not
+        // answered by a decision taken inside it (see resolveAfterSend), so a
+        // popup opened from another popup closes alone unless the send says
+        // otherwise. Triggered from the target — the popup that just closed no
+        // longer holds the source.
+        const afterSend =
+          source.getAttribute("data-after-send") ||
+          target.getAttribute("data-after-send");
+        if (afterSend) {
+          triggerNaviCommand(target, afterSend, event, { optional: true });
+        }
+        return result;
+      },
     };
   }
 

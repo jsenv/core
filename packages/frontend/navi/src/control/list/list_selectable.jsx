@@ -212,6 +212,11 @@ const css = /* css */ `
 `;
 
 const SelectableListMultipleContext = createContext(false);
+// A row of a selectable list is selectable — the list is what decides, and a
+// row says nothing unless it wants out (`selectable={false}` on a row that is
+// only there to be read). Also set to false by a non-selectable list, so a list
+// nested inside a selectable row does not inherit the outer list's answer.
+const ListSelectableContext = createContext(false);
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
@@ -221,7 +226,11 @@ export const ListSelectableResolver = (props) => {
   if (props.selectable) {
     return <ListSelectable {...props} />;
   }
-  return <Next {...props} />;
+  return (
+    <ListSelectableContext.Provider value={false}>
+      <Next {...props} />
+    </ListSelectableContext.Provider>
+  );
 };
 const ListSelectable = (props) => {
   const Next = useNextResolver();
@@ -506,9 +515,11 @@ const ListSelectable = (props) => {
     </Next>
   );
   return (
-    <SelectableListMultipleContext.Provider value={multiple}>
-      {listVnode}
-    </SelectableListMultipleContext.Provider>
+    <ListSelectableContext.Provider value={true}>
+      <SelectableListMultipleContext.Provider value={multiple}>
+        {listVnode}
+      </SelectableListMultipleContext.Provider>
+    </ListSelectableContext.Provider>
   );
 };
 
@@ -516,8 +527,18 @@ const SelectableRealInputContext = createContext(null);
 
 export const ListItemSelectableResolver = (props) => {
   const Next = useNextResolver();
-  if (props.selectable) {
-    return <ListItemSelectable {...props} />;
+  const listSelectable = useContext(ListSelectableContext);
+  // A header/footer row is a title, not a choice — it stays out even in a
+  // selectable list. (A skeleton row never reaches here: its own resolver runs
+  // before this one.)
+  const isHeaderOrFooter = Boolean(props.header || props.footer);
+  const selectable =
+    props.selectable ??
+    (isHeaderOrFooter || props.role === "presentation"
+      ? false
+      : listSelectable);
+  if (selectable) {
+    return <ListItemSelectable {...props} selectable />;
   }
   return <Next {...props} />;
 };
@@ -540,6 +561,10 @@ const ListItemSelectable = (props) => {
     selected,
     pointed,
     selectableArea = "all",
+    // The row's own click handler, kept out of the control props below: those
+    // describe the hidden input that carries the selection, and a caller
+    // writing onClick on a <List.Item> is talking about the row they see.
+    onClick,
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
@@ -590,6 +615,7 @@ const ListItemSelectable = (props) => {
         ...basePseudoState,
       }}
       ref={props.ref}
+      onClick={onClick}
       selectable={undefined}
       navi-selectable-area-all={selectableArea === "all" ? "" : undefined}
     >

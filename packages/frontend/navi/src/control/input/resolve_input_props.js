@@ -69,12 +69,13 @@ const NAVI_TYPE_DEFAULTS = {
  */
 /**
  * A bound signal that carries a default of its own says the same thing on every
- * control: the control starts there and is otherwise uncontrolled (it
- * write-syncs the signal), which is what makes a form read the value shown as a
- * SUGGESTION rather than as something it already holds. Written once and used
- * by everything that takes a `signal` — a wheel that skipped this was the same
- * signal meaning two different things depending on which control it was handed
- * to (see wheel.jsx).
+ * control: the control starts there and stays uncontrolled, which is what makes
+ * a form read the value shown as a SUGGESTION rather than as something it
+ * already holds. Uncontrolled here is about what the control HOLDS, not about
+ * whether it follows the signal — the binding stays two-way either way (see
+ * stateFromSignal in control_hooks.jsx). Written once and used by everything
+ * that takes a `signal`, so one signal cannot mean two different things
+ * depending on which control it was handed to.
  */
 export const seedDefaultValueFromSignal = (props) => {
   const signalOptions = props.signal?.options;
@@ -96,11 +97,11 @@ export const seedDefaultValueFromSignal = (props) => {
 
 export const resolveInputProps = (props) => {
   // `signal` carries a bound state signal. It is left on `props` on purpose:
-  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
-  // `onUIAction` (ui_state_controller.js) writes user interactions back into
-  // it. Here we only derive input defaults (type/min/max, defaultValue/
-  // defaultChecked) from the signal's `options`, so the control ends up
-  // uncontrolled-with-default while still write-syncing the signal.
+  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and to
+  // follow it, and `onUIAction` (ui_state_controller.js) writes user
+  // interactions back into it. Here we only derive input defaults (type/min/max,
+  // defaultValue/defaultChecked) from the signal's `options`, so the control
+  // ends up uncontrolled-with-default while still bound to the signal.
   const signal = props.signal;
   if (signal) {
     const signalOptions = signal.options;

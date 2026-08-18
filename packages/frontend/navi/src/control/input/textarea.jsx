@@ -233,12 +233,26 @@ const usePlaceholderHeight = (ref, placeholder) => {
       );
     };
     measure();
+    // Measuring writes the variable that sets this element's own height, and
+    // mutating layout from inside a resize callback is what makes the browser
+    // report "ResizeObserver loop completed with undelivered notifications".
+    // So the write waits for the frame that resize produced.
+    let measureFrame = null;
+    const requestMeasure = () => {
+      if (measureFrame !== null) {
+        return;
+      }
+      measureFrame = requestAnimationFrame(() => {
+        measureFrame = null;
+        measure();
+      });
+    };
     // The placeholder wraps against the available width, so a new width is a
     // new number of lines. Height changes are ignored: this measure is what
     // causes them, and reacting to them would be reacting to ourselves.
     const resizeObserver = new ResizeObserver(() => {
       if (textareaEl.clientWidth !== widthMeasured) {
-        measure();
+        requestMeasure();
       }
     });
     resizeObserver.observe(textareaEl);
@@ -251,6 +265,9 @@ const usePlaceholderHeight = (ref, placeholder) => {
     };
     textareaEl.addEventListener("input", onInput);
     return () => {
+      if (measureFrame !== null) {
+        cancelAnimationFrame(measureFrame);
+      }
       resizeObserver.disconnect();
       textareaEl.removeEventListener("input", onInput);
     };

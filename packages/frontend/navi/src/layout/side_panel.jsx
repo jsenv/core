@@ -14,6 +14,7 @@ import { stringifyStyle } from "@jsenv/dom";
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
+import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 
 const css = /* css */ `
   .navi_side_panel {
@@ -132,6 +133,20 @@ const css = /* css */ `
       }
     }
 
+    /* What a touch may do on a panel that closes by being pushed back (see
+       swipe_to_close.js): a left/right panel scrolls its own content
+       downwards and travels sideways, so the two never compete and the
+       browser is told to leave the sideways one alone — which also keeps a
+       swipe near the screen edge from being read as "go back" instead. A
+       top/bottom panel travels the way it scrolls: nothing can be given away
+       there without losing the scroll, so the gesture is settled by
+       swipe_to_close.js's own reading of what is still scrollable, and the
+       browser keeps both axes. */
+    &[data-swipe-to-close][navi-side="left"],
+    &[data-swipe-to-close][navi-side="right"] {
+      touch-action: pan-y;
+    }
+
     /* Sticky regardless of side: the panel's own content always stacks
        (and scrolls) top-to-bottom, whether the panel itself is docked to
        the left/right or the top/bottom of the viewport/container — so
@@ -210,6 +225,11 @@ const css = /* css */ `
  *   navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
+ * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
+ *   towards the edge it is docked to closes it: the panel follows the
+ *   pointer and finishes leaving (or comes back to rest) when it is
+ *   released. Set to `false` for a panel that must only ever be dismissed
+ *   deliberately. See `swipe_to_close.js` for when the gesture is claimed.
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
@@ -235,12 +255,15 @@ export const SidePanel = ({
   minHeight,
   animation,
   closeOnClickOutside = false,
+  swipeToClose = true,
   mode,
   layer = "top",
   className,
   ...rest
 }) => {
   import.meta.css = css;
+
+  const onSwipePointerDown = swipeToClose ? createSwipeToClose(side) : null;
 
   return (
     <Popup
@@ -261,7 +284,18 @@ export const SidePanel = ({
       minHeight={toCssLength(minHeight)}
       className={withPropsClassName("navi_side_panel", className)}
       navi-side={side}
+      data-swipe-to-close={swipeToClose ? "" : undefined}
+      // The axis the panel travels on when it is pushed back, said to the
+      // shared gesture layer: it keeps the panel's scrolling from spilling onto
+      // the page, and it is what a box travelling inside the panel reads to
+      // know this axis is already walked (see @jsenv/dom's drag_to_travel).
+      data-drag-travel={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
+      data-travel-by-drag={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
       {...rest}
+      onPointerDown={(pointerDownEvent) => {
+        rest.onPointerDown?.(pointerDownEvent);
+        onSwipePointerDown?.(pointerDownEvent);
+      }}
       style={{
         "--navi-side-panel-width": toCssLength(width, "width"),
         "--navi-side-panel-height": toCssLength(height, "height"),

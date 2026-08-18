@@ -96,12 +96,19 @@ const css = /* css */ `
      travelling. */
   .navi_route_travel {
     position: relative;
-    /* The gesture takes the axis the pages travel on and leaves the other one
-       to the page, so a list still scrolls under the same finger. */
-    touch-action: pan-y;
-  }
-  .navi_route_travel[data-axis="y"] {
-    touch-action: pan-x;
+
+    /* What a touch may do here — only where a touch travels at all
+       (data-travel-by-drag, set from travelByDrag): the axis the pages travel
+       on is taken, the other one is left to the page, so a list still scrolls
+       under the same finger. A box that takes no gesture takes no axis either:
+       it is a plain box around the page, and everything in it scrolls as it
+       would anywhere else. Same reading as SlideContainer's own. */
+    &[data-travel-by-drag="x"] {
+      touch-action: pan-y;
+    }
+    &[data-travel-by-drag="y"] {
+      touch-action: pan-x;
+    }
   }
 
   /* Only while a travel of OURS is playing: everything below changes how the
@@ -321,6 +328,11 @@ const css = /* css */ `
  *   aimed at, and three swipes back and forth must not bury the way out of the
  *   page under six entries. A tab pressed is the other case and pushes, which
  *   is what its <Link> already does.
+ *
+ * Every other prop lands on the box itself (`id`, `data-testid`, `className`,
+ * …), which is how one of these is named: a page can hold several — a row of
+ * sections inside the box the whole application travels in — and the class they
+ * share plus their axis are not enough to tell them apart from the outside.
  *
  * The pages are cut at the edge of this box while they travel, which is written
  * on the transition's own pseudo-elements — no overflow of the document reaches

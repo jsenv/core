@@ -613,7 +613,8 @@ export const useUIStateController = (
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
       controller.parentUIStateController = parentUIStateController;
-      const { value, hasStateProp, state, stateInitial } = controlInfo;
+      const { value, hasStateProp, state, stateInitial, stateFromSignal } =
+        controlInfo;
       controller.value = value;
       if (hasStateProp) {
         controller.hasStateProp = true;
@@ -622,9 +623,27 @@ export const useUIStateController = (
           controller.state = state;
           controller.setUIState(state, new CustomEvent("state_prop_change"));
         }
-      } else if (controller.hasStateProp) {
-        controller.hasStateProp = false;
-        controller.state = stateInitial;
+      } else {
+        if (controller.hasStateProp) {
+          controller.hasStateProp = false;
+          controller.state = stateInitial;
+        }
+        if (controlInfo.signal) {
+          // The other half of a bound signal: the control follows it when
+          // something else writes it. Compared against `state` (what the signal
+          // last said), never against the ui state — otherwise typing into an
+          // uncontrolled control would be undone on the next render. A write
+          // coming from the control itself lands here with the value already in
+          // place, and setUIState treats an unchanged state as a no-op.
+          const currentState = controller.state;
+          if (!compareTwoJsValues(stateFromSignal, currentState)) {
+            controller.state = stateFromSignal;
+            controller.setUIState(
+              stateFromSignal,
+              new CustomEvent("state_prop_change"),
+            );
+          }
+        }
       }
       return {
         ref: props.ref,
@@ -904,10 +923,9 @@ export const useUIGroupStateController = (
   const hasValueProp = Object.hasOwn(props, "value");
   const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
-  // with the signal's current value as what it starts on. Write-back is already
-  // handled (see applyState's own boundSignal), so this is the half that makes
-  // `signal` two-way on a group: the children are placed from it when they
-  // register, exactly as they would be from a defaultValue.
+  // with the signal's current value as what it starts on. Write-back is handled
+  // by applyState's own boundSignal; the read half is below: children are
+  // placed from it when they register, and again whenever it moves.
   const boundSignal = hasValueProp ? undefined : props.signal;
   const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
   const { id, name, value, uiAction } = props;
@@ -1325,6 +1343,7 @@ export const useUIGroupStateController = (
       const { controller } = s;
       const prevValue = controller.value;
       const prevHasValueProp = controller.hasValueProp;
+      const prevDefaultValue = controller.defaultValue;
       controller.props = props;
       controller.ref = ref;
       controller.id = id;
@@ -1352,6 +1371,31 @@ export const useUIGroupStateController = (
           childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(value);
+      }
+      if (
+        boundSignal &&
+        !hasValueProp &&
+        !compareTwoJsValues(defaultValue, prevDefaultValue)
+      ) {
+        // The signal moved from the outside: the children are placed from it
+        // again, exactly as they were when they registered. Without this a
+        // group would answer a write to its own signal by silently writing its
+        // former value back over it on the next child interaction.
+        const propagateDownEvent = new CustomEvent(
+          "propagate_down_set_ui_state",
+          { detail: {} },
+        );
+        for (const childUIStateController of childUIStateControllerArray) {
+          if (!shouldPropagateStateToChild(childUIStateController)) continue;
+          if (childUIStateController.hasStateProp) continue;
+          const childNewState = controller.distributeChildUIState(
+            defaultValue,
+            childUIStateController,
+          );
+          if (childNewState === CANNOT_DERIVE) continue;
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
+        }
+        controller.syncInternalState(defaultValue);
       }
 
       return {

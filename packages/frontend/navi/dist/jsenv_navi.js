@@ -21855,7 +21855,9 @@ registerNaviCommand("--navi-reset", (source, event) => {
  * - an open popup: it closes. The popup was there for the duration of one
  *   decision, and the send just made it. A picker already does this when the
  *   send targets the popup itself (executeNaviDefine); a form inside one is the
- *   same act, a level down;
+ *   same act, a level down. A popup opened from another popup answers for
+ *   itself only — say `data-after-send="--navi-send"` on the sending control
+ *   to make the decision travel up to the surface holding it;
  * - the document: nothing. A form on a page stays where it is.
  */
 // What follows a send that went through — and it is asked of the button that
@@ -21909,7 +21911,21 @@ registerNaviCommand("--navi-send", (source, event) => {
   if (target.getAttribute("aria-expanded") === "true") {
     return {
       target,
-      implementation: () => executeNaviDefine(source, event, target),
+      implementation: () => {
+        const result = executeNaviDefine(source, event, target);
+        // Only what was explicitly asked for: the surface above a popup is not
+        // answered by a decision taken inside it (see resolveAfterSend), so a
+        // popup opened from another popup closes alone unless the send says
+        // otherwise. Triggered from the target — the popup that just closed no
+        // longer holds the source.
+        const afterSend =
+          source.getAttribute("data-after-send") ||
+          target.getAttribute("data-after-send");
+        if (afterSend) {
+          triggerNaviCommand(target, afterSend, event, { optional: true });
+        }
+        return result;
+      },
     };
   }
 
@@ -23384,7 +23400,8 @@ const useUIStateController = (
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
       controller.parentUIStateController = parentUIStateController;
-      const { value, hasStateProp, state, stateInitial } = controlInfo;
+      const { value, hasStateProp, state, stateInitial, stateFromSignal } =
+        controlInfo;
       controller.value = value;
       if (hasStateProp) {
         controller.hasStateProp = true;
@@ -23393,9 +23410,27 @@ const useUIStateController = (
           controller.state = state;
           controller.setUIState(state, new CustomEvent("state_prop_change"));
         }
-      } else if (controller.hasStateProp) {
-        controller.hasStateProp = false;
-        controller.state = stateInitial;
+      } else {
+        if (controller.hasStateProp) {
+          controller.hasStateProp = false;
+          controller.state = stateInitial;
+        }
+        if (controlInfo.signal) {
+          // The other half of a bound signal: the control follows it when
+          // something else writes it. Compared against `state` (what the signal
+          // last said), never against the ui state — otherwise typing into an
+          // uncontrolled control would be undone on the next render. A write
+          // coming from the control itself lands here with the value already in
+          // place, and setUIState treats an unchanged state as a no-op.
+          const currentState = controller.state;
+          if (!compareTwoJsValues(stateFromSignal, currentState)) {
+            controller.state = stateFromSignal;
+            controller.setUIState(
+              stateFromSignal,
+              new CustomEvent("state_prop_change"),
+            );
+          }
+        }
       }
       return {
         ref: props.ref,
@@ -23675,10 +23710,9 @@ const useUIGroupStateController = (
   const hasValueProp = Object.hasOwn(props, "value");
   const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
-  // with the signal's current value as what it starts on. Write-back is already
-  // handled (see applyState's own boundSignal), so this is the half that makes
-  // `signal` two-way on a group: the children are placed from it when they
-  // register, exactly as they would be from a defaultValue.
+  // with the signal's current value as what it starts on. Write-back is handled
+  // by applyState's own boundSignal; the read half is below: children are
+  // placed from it when they register, and again whenever it moves.
   const boundSignal = hasValueProp ? undefined : props.signal;
   const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
   const { id, name, value, uiAction } = props;
@@ -24096,6 +24130,7 @@ const useUIGroupStateController = (
       const { controller } = s;
       const prevValue = controller.value;
       const prevHasValueProp = controller.hasValueProp;
+      const prevDefaultValue = controller.defaultValue;
       controller.props = props;
       controller.ref = ref;
       controller.id = id;
@@ -24123,6 +24158,31 @@ const useUIGroupStateController = (
           childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(value);
+      }
+      if (
+        boundSignal &&
+        !hasValueProp &&
+        !compareTwoJsValues(defaultValue, prevDefaultValue)
+      ) {
+        // The signal moved from the outside: the children are placed from it
+        // again, exactly as they were when they registered. Without this a
+        // group would answer a write to its own signal by silently writing its
+        // former value back over it on the next child interaction.
+        const propagateDownEvent = new CustomEvent(
+          "propagate_down_set_ui_state",
+          { detail: {} },
+        );
+        for (const childUIStateController of childUIStateControllerArray) {
+          if (!shouldPropagateStateToChild(childUIStateController)) continue;
+          if (childUIStateController.hasStateProp) continue;
+          const childNewState = controller.distributeChildUIState(
+            defaultValue,
+            childUIStateController,
+          );
+          if (childNewState === CANNOT_DERIVE) continue;
+          childUIStateController.setUIState(childNewState, propagateDownEvent);
+        }
+        controller.syncInternalState(defaultValue);
       }
 
       return {
@@ -25248,6 +25308,13 @@ const createControlInfo = (props, {
   const signal = Object.hasOwn(props, "signal") ? props.signal : undefined;
   // For a checkbox/radio the signal holds the boolean checked state, not the value.
   let signalHoldsChecked = false;
+  // What the signal says the control shows, re-read on every render. A signal
+  // carrying a default of its own seeds `defaultValue` (resolveInputProps), so
+  // such a control is uncontrolled — but the binding still has to work in both
+  // directions: whoever writes the signal from the outside expects the control
+  // to move. This is what the controller re-syncs on (see useUIStateController),
+  // and an emptied signal puts the control back on its suggestion.
+  let stateFromSignal;
   if (controlType === "input") {
     if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
@@ -25259,10 +25326,13 @@ const createControlInfo = (props, {
         stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
         // resolveInputProps may seed defaultChecked from a bound signal's
-        // default: the control stays uncontrolled and only write-syncs the
-        // signal (onUIAction).
+        // default: the control stays uncontrolled and follows the signal
+        // through stateFromSignal.
         hasStateProp = false;
         stateInitial = value;
+        if (signal) {
+          stateFromSignal = signal.value ? value : undefined;
+        }
       } else if (signal) {
         // A bound signal with no resolved default: its live value seeds state.
         hasStateProp = true;
@@ -25289,6 +25359,9 @@ const createControlInfo = (props, {
         // url or set by whoever owns it. Taking the default here would show a
         // suggestion in place of the value on every reload.
         stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
+        if (signal) {
+          stateFromSignal = stateInitial;
+        }
       } else if (signal) {
         // A plain bound signal with no default (e.g. Wheel): its live value
         // seeds and controls the state.
@@ -25322,6 +25395,9 @@ const createControlInfo = (props, {
       // Same precedence as an input above: the signal's value is the answer,
       // defaultValue only the suggestion to start from.
       stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
+      if (signal) {
+        stateFromSignal = stateInitial;
+      }
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;
@@ -25345,6 +25421,7 @@ const createControlInfo = (props, {
     value,
     signal,
     signalHoldsChecked,
+    stateFromSignal,
     readOnlySupported,
     disabledSupported
   };
@@ -36881,12 +36958,19 @@ const css$R = /* css */`
      travelling. */
   .navi_route_travel {
     position: relative;
-    /* The gesture takes the axis the pages travel on and leaves the other one
-       to the page, so a list still scrolls under the same finger. */
-    touch-action: pan-y;
-  }
-  .navi_route_travel[data-axis="y"] {
-    touch-action: pan-x;
+
+    /* What a touch may do here — only where a touch travels at all
+       (data-travel-by-drag, set from travelByDrag): the axis the pages travel
+       on is taken, the other one is left to the page, so a list still scrolls
+       under the same finger. A box that takes no gesture takes no axis either:
+       it is a plain box around the page, and everything in it scrolls as it
+       would anywhere else. Same reading as SlideContainer's own. */
+    &[data-travel-by-drag="x"] {
+      touch-action: pan-y;
+    }
+    &[data-travel-by-drag="y"] {
+      touch-action: pan-x;
+    }
   }
 
   /* Only while a travel of OURS is playing: everything below changes how the
@@ -37106,6 +37190,11 @@ const css$R = /* css */`
  *   aimed at, and three swipes back and forth must not bury the way out of the
  *   page under six entries. A tab pressed is the other case and pushes, which
  *   is what its <Link> already does.
+ *
+ * Every other prop lands on the box itself (`id`, `data-testid`, `className`,
+ * …), which is how one of these is named: a page can hold several — a row of
+ * sections inside the box the whole application travels in — and the class they
+ * share plus their axis are not enough to tell them apart from the outside.
  *
  * The pages are cut at the edge of this box while they travel, which is written
  * on the transition's own pseudo-elements — no overflow of the document reaches
@@ -46723,12 +46812,13 @@ const NAVI_TYPE_DEFAULTS = {
  */
 /**
  * A bound signal that carries a default of its own says the same thing on every
- * control: the control starts there and is otherwise uncontrolled (it
- * write-syncs the signal), which is what makes a form read the value shown as a
- * SUGGESTION rather than as something it already holds. Written once and used
- * by everything that takes a `signal` — a wheel that skipped this was the same
- * signal meaning two different things depending on which control it was handed
- * to (see wheel.jsx).
+ * control: the control starts there and stays uncontrolled, which is what makes
+ * a form read the value shown as a SUGGESTION rather than as something it
+ * already holds. Uncontrolled here is about what the control HOLDS, not about
+ * whether it follows the signal — the binding stays two-way either way (see
+ * stateFromSignal in control_hooks.jsx). Written once and used by everything
+ * that takes a `signal`, so one signal cannot mean two different things
+ * depending on which control it was handed to.
  */
 const seedDefaultValueFromSignal = (props) => {
   const signalOptions = props.signal?.options;
@@ -46750,11 +46840,11 @@ const seedDefaultValueFromSignal = (props) => {
 
 const resolveInputProps = (props) => {
   // `signal` carries a bound state signal. It is left on `props` on purpose:
-  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
-  // `onUIAction` (ui_state_controller.js) writes user interactions back into
-  // it. Here we only derive input defaults (type/min/max, defaultValue/
-  // defaultChecked) from the signal's `options`, so the control ends up
-  // uncontrolled-with-default while still write-syncing the signal.
+  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and to
+  // follow it, and `onUIAction` (ui_state_controller.js) writes user
+  // interactions back into it. Here we only derive input defaults (type/min/max,
+  // defaultValue/defaultChecked) from the signal's `options`, so the control
+  // ends up uncontrolled-with-default while still bound to the signal.
   const signal = props.signal;
   if (signal) {
     const signalOptions = signal.options;
@@ -51371,6 +51461,12 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
         --dialog-outline-width: var(--picker-outline-width);
         --dialog-outline-color: var(--picker-outline-color);
 
+        /* No fallback on purpose (same as --popover-max-height above): unset
+           picker props leave these declarations invalid at computed-value
+           time, so the dialog keeps its own ceilings. */
+        --dialog-max-width: var(--picker-dialog-max-width);
+        --dialog-max-height: var(--picker-dialog-max-height);
+
         /* Dialog itself already sizes min-width off --anchor-width — only
            the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
@@ -51489,7 +51585,13 @@ const PickerCustom = props => {
     ref,
     mode: modeProp,
     open,
-    defaultOpen
+    defaultOpen,
+    // What Escape means for this picker. "cancel" (the default) puts back the
+    // value the picker had at open and, for a dialog, goes back in history —
+    // so everything written to the url while it was open goes back too.
+    // "close" makes Escape say the same thing as clicking outside: keep what
+    // was chosen, close the popup.
+    escapeEffect = "cancel"
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -51521,6 +51623,7 @@ const PickerCustom = props => {
   // otherwise leak through PickerContentInsidePopup's own ...rest).
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
+  delete pickerProps.escapeEffect;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -51789,11 +51892,12 @@ const PickerCustom = props => {
           if (!openController.opened) {
             return null;
           }
+          const isCancel = escapeEffect === "cancel";
           return {
-            name: "escape_to_cancel",
+            name: isCancel ? "escape_to_cancel" : "escape_to_close",
             allowed: () => {
               requestClose(e, {
-                isCancel: true
+                isCancel
               });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             }
@@ -51952,7 +52056,7 @@ const PickerContentInsidePopup = props => {
       animation: animation,
       positionArea: isPopover ? positionArea ?? (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)") : positionArea,
       marginWithAnchor: isPopover ? popoverSpacing : undefined,
-      marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer ? 10 : marginWithContainer,
+      marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer,
       scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
       focusCapture: isPopover ? focusCapture : undefined,
@@ -52845,6 +52949,11 @@ installImportMetaCssBuild(import.meta);const css$w = /* css */`
   }
 `;
 const SelectableListMultipleContext = createContext(false);
+// A row of a selectable list is selectable — the list is what decides, and a
+// row says nothing unless it wants out (`selectable={false}` on a row that is
+// only there to be read). Also set to false by a non-selectable list, so a list
+// nested inside a selectable row does not inherit the outer list's answer.
+const ListSelectableContext = createContext(false);
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
@@ -52855,8 +52964,11 @@ const ListSelectableResolver = props => {
       ...props
     });
   }
-  return jsx(Next, {
-    ...props
+  return jsx(ListSelectableContext.Provider, {
+    value: false,
+    children: jsx(Next, {
+      ...props
+    })
   });
 };
 const ListSelectable = props => {
@@ -53146,17 +53258,27 @@ const ListSelectable = props => {
       children: props.children
     })
   });
-  return jsx(SelectableListMultipleContext.Provider, {
-    value: multiple,
-    children: listVnode
+  return jsx(ListSelectableContext.Provider, {
+    value: true,
+    children: jsx(SelectableListMultipleContext.Provider, {
+      value: multiple,
+      children: listVnode
+    })
   });
 };
 const SelectableRealInputContext = createContext(null);
 const ListItemSelectableResolver = props => {
   const Next = useNextResolver();
-  if (props.selectable) {
+  const listSelectable = useContext(ListSelectableContext);
+  // A header/footer row is a title, not a choice — it stays out even in a
+  // selectable list. (A skeleton row never reaches here: its own resolver runs
+  // before this one.)
+  const isHeaderOrFooter = Boolean(props.header || props.footer);
+  const selectable = props.selectable ?? (isHeaderOrFooter || props.role === "presentation" ? false : listSelectable);
+  if (selectable) {
     return jsx(ListItemSelectable, {
-      ...props
+      ...props,
+      selectable: true
     });
   }
   return jsx(Next, {
@@ -53182,6 +53304,10 @@ const ListItemSelectable = props => {
     selected,
     pointed,
     selectableArea = "all",
+    // The row's own click handler, kept out of the control props below: those
+    // describe the hidden input that carries the selection, and a caller
+    // writing onClick on a <List.Item> is talking about the row they see.
+    onClick,
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
@@ -53236,6 +53362,7 @@ const ListItemSelectable = props => {
       ...basePseudoState
     },
     ref: props.ref,
+    onClick: onClick,
     selectable: undefined,
     "navi-selectable-area-all": selectableArea === "all" ? "" : undefined,
     children: [jsx(SelectableRealInput, {
@@ -53512,6 +53639,26 @@ const css$v = /* css */`
   :where([popover], dialog) > .navi_list_container,
   .navi_list_container[popover] {
     --list-border-width-default: 0px;
+  }
+
+  /* Same reasoning, for the corners: a dialog squares off whatever corner
+     lands on its container's own (see the data-flush-* rules in dialog.jsx —
+     a bottom sheet from dockedOnTouch squares its two bottom ones). A list
+     drawn right against that corner has to square the same one, otherwise its
+     own radius carves a notch out of the popup's square corner. Direct child
+     only: any deeper and the list is presumably inset from the popup's edge,
+     where its own radius is the right one. */
+  .navi_dialog[data-flush-top][data-flush-left] > .navi_list_container {
+    border-top-left-radius: 0;
+  }
+  .navi_dialog[data-flush-top][data-flush-right] > .navi_list_container {
+    border-top-right-radius: 0;
+  }
+  .navi_dialog[data-flush-bottom][data-flush-right] > .navi_list_container {
+    border-bottom-right-radius: 0;
+  }
+  .navi_dialog[data-flush-bottom][data-flush-left] > .navi_list_container {
+    border-bottom-left-radius: 0;
   }
 
   .navi_list_container {
@@ -56359,7 +56506,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  * @param {boolean} [props.selectable]
  *   The item participates in selection (radio or checkbox depending on whether
  *   the parent List has `multiple`). Requires `value` and typically a
- *   <SelectableInput /> child.
+ *   <SelectableInput /> child. Inherited from `<List selectable>` — pass
+ *   `false` for a row that is only there to be read, and nothing otherwise.
  * @param {any} [props.value]
  *   The JS value emitted by the list's action/uiAction when this item is
  *   selected. Can be any type (string, number, object…).
@@ -57661,7 +57809,7 @@ const PickerTypeResolver = props => {
 const PickerText = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    icon: jsx(PencilSvg, {}),
+    rightSlotIcon: jsx(PencilSvg, {}),
     ...props
   });
 };
@@ -57740,7 +57888,7 @@ const PickerColor = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerColorUI, {}),
-    icon: jsx(ColorSvg, {}),
+    rightSlotIcon: jsx(ColorSvg, {}),
     type: "color",
     ...props
   });
@@ -57764,7 +57912,7 @@ const PickerDate = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerDateUI, {}),
-    icon: jsx(CalendarSvg, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "date"
   });
@@ -57796,7 +57944,7 @@ const PickerMonth = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerMonthUI, {}),
-    icon: jsx(CalendarSvg, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "month"
   });
@@ -57827,7 +57975,7 @@ const PickerWeek = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerWeekUI, {}),
-    icon: jsx(CalendarSvg, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "week"
   });
@@ -57858,7 +58006,7 @@ const PickerTime = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerTimeUI, {}),
-    icon: jsx(ClockSvg, {}),
+    rightSlotIcon: jsx(ClockSvg, {}),
     ...props,
     type: "time"
   });
@@ -57888,7 +58036,7 @@ const PickerDuration = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerDurationUI, {}),
-    icon: jsx(DurationSvg, {}),
+    rightSlotIcon: jsx(DurationSvg, {}),
     ...props,
     type: "text",
     "navi-input-type": "duration"
@@ -57919,7 +58067,7 @@ const PickerDatetime = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerDatetimeUI, {}),
-    icon: jsx(CalendarSvg, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "datetime-local"
   });
@@ -57948,7 +58096,7 @@ const PickerFile = props => {
   const Next = useNextResolver();
   return jsx(Next, {
     ui: jsx(PickerFileUI, {}),
-    icon: jsx(FileSvg, {}),
+    rightSlotIcon: jsx(FileSvg, {}),
     type: "file",
     ...props
   });
@@ -58288,6 +58436,28 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
     }
+    /* discrete: no box at rest, a background on hover — the same word Button
+       uses, and the same drawing. What is read is the value, not the field
+       around it; the chevron in the right slot is what still says it opens. */
+    &[data-variant="discrete"] {
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --x-picker-border-color: transparent;
+      --x-picker-background-color: transparent;
+
+      &[data-hover] {
+        --x-picker-border-color: transparent;
+        --x-picker-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        --x-picker-border-color: transparent;
+        --x-picker-background-color: transparent;
+      }
+    }
     &[data-variant="headless"] {
       --x-picker-padding-top: 0;
       --x-picker-padding-right: 0;
@@ -58318,8 +58488,8 @@ const PickerButton = props => {
   const {
     ref,
     variant,
-    icon,
-    iconSize = "inherit",
+    rightSlotIcon,
+    rightSlotIconSize = "inherit",
     placeholder,
     ui,
     maxLines = 1,
@@ -58364,8 +58534,8 @@ const PickerButton = props => {
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars,
     variant: undefined,
-    icon: undefined,
-    iconSize: undefined,
+    rightSlotIcon: undefined,
+    rightSlotIconSize: undefined,
     ui: undefined,
     maxLines: undefined,
     popupWidthFitContent: undefined,
@@ -58502,7 +58672,7 @@ const PickerButton = props => {
           flex: true,
           align: "center",
           children: jsx(Icon, {
-            size: iconSize,
+            size: rightSlotIconSize,
             lineOverflow: "allow",
             children: jsx(CloseSvg, {})
           })
@@ -58511,9 +58681,9 @@ const PickerButton = props => {
         // character — a caller asking for a bigger one wants it bigger,
         // not capped at the height of the line it sits on
         jsx(Icon, {
-          size: iconSize,
+          size: rightSlotIconSize,
           lineOverflow: "allow",
-          children: icon === undefined ? jsx(ChevronDownSvg$1, {}) : icon
+          children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
         })
       })]
     }), jsx(ControlFacadeChildrenWrapper, {
@@ -58604,6 +58774,8 @@ const PickerStyleCSSVars = {
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
   "popoverMaxHeight": "--picker-popover-max-height",
+  "dialogMaxWidth": "--picker-dialog-max-width",
+  "dialogMaxHeight": "--picker-dialog-max-height",
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
@@ -58683,11 +58855,14 @@ const PickerFirstResolver = props => {
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless",
- *   icon?: import("ignore:preact").ComponentChildren,
+ *   variant?: "icon" | "headless" | "discrete",
+ *   rightSlotIcon?: import("ignore:preact").ComponentChildren,
+ *   rightSlotIconSize?: number | string,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
+ *   dialogMaxWidth?: number | string,
+ *   dialogMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
  *   clearable?: boolean,
@@ -58695,6 +58870,9 @@ const PickerFirstResolver = props => {
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
+ *   marginWithContainer?: number | string,
+ *   escapeEffect?: "cancel" | "close",
+ *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   ref?: import("ignore:preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
@@ -58714,6 +58892,13 @@ const PickerFirstResolver = props => {
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
+ * @param {import("ignore:preact").ComponentChildren} [rightSlotIcon] What the right
+ *   slot draws in place of the chevron. It is the whole slot, not an addition
+ *   to it: the picker then no longer says on its own that it opens, so pass
+ *   something that does.
+ * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
+ *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
+ *   cross. "inherit" takes the picker's own font size.
  * @param {number|string} [slotSpacing] Gap kept between what sits in the right
  *   slot (the chevron, or the clear button) and the picker's own edge — same
  *   prop name Input uses for its own slots. Accepts a spacing token ("s",
@@ -58721,6 +58906,25 @@ const PickerFirstResolver = props => {
  *   horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
+ * @param {number|string} [dialogMaxWidth] Ceiling on the dialog's width, the
+ *   one `dialogExpand`/`dialogExpandX` grows up to — what makes an expanded
+ *   dialog a large sheet rather than a full screen. Capped in turn by the
+ *   container minus `marginWithContainer`.
+ * @param {number|string} [dialogMaxHeight] Same, on the height.
+ * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
+ *   picker. "cancel" puts back the value the picker had at open, and a dialog
+ *   picker also goes back in history — so anything written to the url while it
+ *   was open (a route `stateSignal`, a search param) goes back with it. "close"
+ *   makes Escape say what clicking outside says: keep what was chosen, close.
+ * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
+ *   What a click outside the popup does: close and keep ("close"), close and
+ *   put back the value at open ("cancel"), or nothing at all ("capture").
+ * @param {number|string} [marginWithContainer] Minimum gap kept between the
+ *   popup and the edges of what contains it (the viewport, or the picker's own
+ *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
+ *   well as its placement, so what an expanded dialog leaves visible around
+ *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
+ *   Dialog's own 3vvw in dialog mode.
  */
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.UI = PickerDefaultUI;
@@ -60540,12 +60744,26 @@ const usePlaceholderHeight = (ref, placeholder) => {
       textareaEl.style.setProperty("--x-textarea-placeholder-height", `${contentHeight}px`);
     };
     measure();
+    // Measuring writes the variable that sets this element's own height, and
+    // mutating layout from inside a resize callback is what makes the browser
+    // report "ResizeObserver loop completed with undelivered notifications".
+    // So the write waits for the frame that resize produced.
+    let measureFrame = null;
+    const requestMeasure = () => {
+      if (measureFrame !== null) {
+        return;
+      }
+      measureFrame = requestAnimationFrame(() => {
+        measureFrame = null;
+        measure();
+      });
+    };
     // The placeholder wraps against the available width, so a new width is a
     // new number of lines. Height changes are ignored: this measure is what
     // causes them, and reacting to them would be reacting to ourselves.
     const resizeObserver = new ResizeObserver(() => {
       if (textareaEl.clientWidth !== widthMeasured) {
-        measure();
+        requestMeasure();
       }
     });
     resizeObserver.observe(textareaEl);
@@ -60558,6 +60776,9 @@ const usePlaceholderHeight = (ref, placeholder) => {
     };
     textareaEl.addEventListener("input", onInput);
     return () => {
+      if (measureFrame !== null) {
+        cancelAnimationFrame(measureFrame);
+      }
       resizeObserver.disconnect();
       textareaEl.removeEventListener("input", onInput);
     };
@@ -69586,6 +69807,150 @@ const ViewportLayout = props => {
   });
 };
 
+/**
+ * Pushing a side panel back the way it came in closes it: the panel follows
+ * the finger while it travels, and letting go either finishes the departure or
+ * brings it back to rest — whichever the travel was already heading to.
+ *
+ * Reading the pointer is not done here: when a press becomes a gesture, which
+ * axis it leans on, how fast it was going when it was let go, who else has a
+ * claim on it (a field, a scroller with room left, a box inside the panel that
+ * travels the same way) is one gesture system for the whole codebase
+ * (@jsenv/dom's startDragToTravel). A panel closing is a travel of exactly one
+ * box, towards the edge it is docked to and nowhere else — which is all this
+ * file has to say.
+ *
+ * The release travel is driven here (Web Animations) rather than handed to the
+ * exit transition the `animation` prop may install: its pace is what is left to
+ * cover, which a CSS transition written for a full-size travel cannot know, and
+ * two movements on the same property would contradict each other. So CSS
+ * transitions are suppressed on the panel for the whole gesture, release
+ * included, and restored once the panel has either left or come back.
+ */
+
+
+// What a full-size release travel takes; a shorter one takes proportionally
+// less, so the panel keeps the same speed whenever the finger let go.
+const TRAVEL_DURATION = 220;
+
+// Which way a panel docked to each side travels — read by the panel itself to
+// say so in the DOM, which is how a box travelling INSIDE it (a row of slides,
+// a route travel) knows that axis is already walked.
+const SWIPE_AXIS_BY_SIDE = {
+  left: "x",
+  right: "x",
+  top: "y",
+  bottom: "y",
+};
+// Which way the finger pushes to send the panel back where it came from, in
+// screen coordinates: positive is right/down, the same sign the gesture reports.
+const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
+
+/**
+ * Builds the `pointerdown` handler a side panel docked to `side` answers with.
+ */
+const createSwipeToClose = (side) => {
+  const axis = SWIPE_AXIS_BY_SIDE[side];
+  const closeDirection = CLOSE_DIRECTION_BY_SIDE[side];
+
+  return (pointerDownEvent) => {
+    const panelEl = pointerDownEvent.currentTarget;
+    if (panelEl.getAttribute("aria-expanded") !== "true") {
+      return;
+    }
+
+    // Where the panel stands, written on it directly: the gesture reports a
+    // distance in screen coordinates, which is exactly what a translate takes.
+    const paint = (distance) => {
+      panelEl.style.translate =
+        axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+    };
+    const restore = () => {
+      panelEl.style.translate = "";
+      panelEl.style.transitionProperty = "";
+      panelEl.style.userSelect = "";
+    };
+    // The resting value is written first and the animation only covers the way
+    // to it: both end on the same number, so nothing is seen changing when the
+    // animation hands the panel back to its own style.
+    const travelTo = (from, to, onArrival) => {
+      const covered = from > to ? from - to : to - from;
+      paint(to);
+      const animation = panelEl.animate(
+        [
+          { translate: translateOf(axis, from) },
+          { translate: translateOf(axis, to) },
+        ],
+        {
+          duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
+          easing: "ease-out",
+        },
+      );
+      animation.finished.then(onArrival, () => {});
+    };
+    const close = (event) => {
+      triggerNaviCommand(panelEl, "--navi-close", event);
+      if (panelEl.getAttribute("aria-expanded") === "true") {
+        // Refused: the panel is staying, so it goes back where it was.
+        travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
+        return;
+      }
+      restore();
+    };
+
+    startDragToTravel(pointerDownEvent, {
+      element: panelEl,
+      axes: axis,
+      onStart: ({ sign, target }) => {
+        if (sign !== closeDirection) {
+          // Pushing the panel further in is not a travel: there is nowhere that
+          // way, and reading it as one would make the panel lean at every
+          // gesture that starts by going the wrong way.
+          return false;
+        }
+        const size = sizeOf(panelEl, axis);
+        if (!size) {
+          return false;
+        }
+        // Something else with a better claim on the gesture: a scroller between
+        // the finger and the panel, with room left that way.
+        if (scrollRoomTowards(target, panelEl, axis, sign)) {
+          return false;
+        }
+        panelEl.style.transitionProperty = "none";
+        panelEl.style.userSelect = "none";
+        // What the first pixels of the gesture may have started selecting is
+        // not a selection, it is the beginning of this travel.
+        window.getSelection().removeAllRanges();
+        // The way out is the only way there is anything: pulling the other way
+        // leans against a wall and comes back.
+        return {
+          size,
+          travelBack: closeDirection > 0,
+          travelOn: closeDirection < 0,
+        };
+      },
+      onPull: ({ pulled }) => {
+        paint(pulled);
+      },
+      onEnd: ({ pulled, size, travels, event }) => {
+        if (travels) {
+          travelTo(pulled, size * closeDirection, () => close(event));
+          return;
+        }
+        travelTo(pulled, 0, restore);
+      },
+    });
+  };
+};
+
+const sizeOf = (element, axis) => {
+  const rect = element.getBoundingClientRect();
+  return axis === "x" ? rect.width : rect.height;
+};
+const translateOf = (axis, distance) =>
+  axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+
 installImportMetaCssBuild(import.meta);/**
  * A drawer docked flush to a viewport (or container) edge, built on top of
  * `Popup`. Sizing, the perpendicular-axis fill, and the flush-edge
@@ -69714,6 +70079,20 @@ const css = /* css */`
       }
     }
 
+    /* What a touch may do on a panel that closes by being pushed back (see
+       swipe_to_close.js): a left/right panel scrolls its own content
+       downwards and travels sideways, so the two never compete and the
+       browser is told to leave the sideways one alone — which also keeps a
+       swipe near the screen edge from being read as "go back" instead. A
+       top/bottom panel travels the way it scrolls: nothing can be given away
+       there without losing the scroll, so the gesture is settled by
+       swipe_to_close.js's own reading of what is still scrollable, and the
+       browser keeps both axes. */
+    &[data-swipe-to-close][navi-side="left"],
+    &[data-swipe-to-close][navi-side="right"] {
+      touch-action: pan-y;
+    }
+
     /* Sticky regardless of side: the panel's own content always stacks
        (and scrolls) top-to-bottom, whether the panel itself is docked to
        the left/right or the top/bottom of the viewport/container — so
@@ -69792,6 +70171,11 @@ const css = /* css */`
  *   navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
+ * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
+ *   towards the edge it is docked to closes it: the panel follows the
+ *   pointer and finishes leaving (or comes back to rest) when it is
+ *   released. Set to `false` for a panel that must only ever be dismissed
+ *   deliberately. See `swipe_to_close.js` for when the gesture is claimed.
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
@@ -69817,12 +70201,14 @@ const SidePanel = ({
   minHeight,
   animation,
   closeOnClickOutside = false,
+  swipeToClose = true,
   mode,
   layer = "top",
   className,
   ...rest
 }) => {
   import.meta.css = [css, "@jsenv/navi/src/layout/side_panel.jsx"];
+  const onSwipePointerDown = swipeToClose ? createSwipeToClose(side) : null;
   return jsx(Popup, {
     mode: mode,
     open: open,
@@ -69843,7 +70229,20 @@ const SidePanel = ({
     minHeight: toCssLength(minHeight),
     className: withPropsClassName("navi_side_panel", className),
     "navi-side": side,
+    "data-swipe-to-close": swipeToClose ? "" : undefined
+    // The axis the panel travels on when it is pushed back, said to the
+    // shared gesture layer: it keeps the panel's scrolling from spilling onto
+    // the page, and it is what a box travelling inside the panel reads to
+    // know this axis is already walked (see @jsenv/dom's drag_to_travel).
+    ,
+
+    "data-drag-travel": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined,
+    "data-travel-by-drag": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined,
     ...rest,
+    onPointerDown: pointerDownEvent => {
+      rest.onPointerDown?.(pointerDownEvent);
+      onSwipePointerDown?.(pointerDownEvent);
+    },
     style: {
       "--navi-side-panel-width": toCssLength(width, "width"),
       "--navi-side-panel-height": toCssLength(height, "height"),

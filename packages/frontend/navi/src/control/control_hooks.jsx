@@ -937,6 +937,13 @@ const createControlInfo = (props, { controlType }) => {
   const signal = Object.hasOwn(props, "signal") ? props.signal : undefined;
   // For a checkbox/radio the signal holds the boolean checked state, not the value.
   let signalHoldsChecked = false;
+  // What the signal says the control shows, re-read on every render. A signal
+  // carrying a default of its own seeds `defaultValue` (resolveInputProps), so
+  // such a control is uncontrolled — but the binding still has to work in both
+  // directions: whoever writes the signal from the outside expects the control
+  // to move. This is what the controller re-syncs on (see useUIStateController),
+  // and an emptied signal puts the control back on its suggestion.
+  let stateFromSignal;
 
   if (controlType === "input") {
     if (typeProp === "checkbox" || typeProp === "radio") {
@@ -952,10 +959,13 @@ const createControlInfo = (props, { controlType }) => {
         stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
         // resolveInputProps may seed defaultChecked from a bound signal's
-        // default: the control stays uncontrolled and only write-syncs the
-        // signal (onUIAction).
+        // default: the control stays uncontrolled and follows the signal
+        // through stateFromSignal.
         hasStateProp = false;
         stateInitial = value;
+        if (signal) {
+          stateFromSignal = signal.value ? value : undefined;
+        }
       } else if (signal) {
         // A bound signal with no resolved default: its live value seeds state.
         hasStateProp = true;
@@ -988,6 +998,9 @@ const createControlInfo = (props, { controlType }) => {
           signal && signal.value !== undefined
             ? signal.value
             : props.defaultValue;
+        if (signal) {
+          stateFromSignal = stateInitial;
+        }
       } else if (signal) {
         // A plain bound signal with no default (e.g. Wheel): its live value
         // seeds and controls the state.
@@ -1030,6 +1043,9 @@ const createControlInfo = (props, { controlType }) => {
         signal && signal.value !== undefined
           ? signal.value
           : props.defaultValue;
+      if (signal) {
+        stateFromSignal = stateInitial;
+      }
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;
@@ -1057,6 +1073,7 @@ const createControlInfo = (props, { controlType }) => {
     value,
     signal,
     signalHoldsChecked,
+    stateFromSignal,
 
     readOnlySupported,
     disabledSupported,
