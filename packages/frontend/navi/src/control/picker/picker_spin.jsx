@@ -28,6 +28,7 @@
  * instead of moving it into a slide that is about to leave.
  */
 
+import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -51,8 +52,13 @@ import {
   LoadingContext,
   ReadOnlyContext,
 } from "../control_context.js";
-import { useControlUIState } from "../control_hooks.jsx";
+import {
+  ControlgroupChildrenWrapper,
+  useControlUIState,
+  useControlgroupProps,
+} from "../control_hooks.jsx";
 import { Input } from "../input/input.jsx";
+import { useInputGroup } from "../input/use_input_group.js";
 import { openCallout } from "../rules/callout/callout.js";
 import {
   dispatchRequestResetUIState,
@@ -309,6 +315,92 @@ const css = /* css */ `
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
   }
+
+  /* ── SpinGroup ─────────────────────────────────────────────────────────────
+     Several spins read as one value: an hour is "7h30", not a 7 next to a 30.
+     So the frame goes around the group, the spins inside give theirs up, and
+     what sits between them (an "h", a ":") is inside the frame with them. */
+  .navi_spin_group {
+    /* What the loading outline is drawn around. */
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
+    outline-width: var(--navi-focus-outline-width);
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: 0px;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+  }
+  /* A value one PICKS has nowhere of its own to wear a ring — its middle is a
+     container that hands the ring over (data-focus-outline-delegate) — so the
+     group wears it for that spin. A value one TYPES keeps its own, on the
+     field: the spins in a group are edited one at a time, and the ring is what
+     says which one the keyboard is in. */
+  .navi_spin_group[data-focus-visible],
+  .navi_spin_group:has([data-focus-outline-delegate][data-focus-visible]) {
+    outline-style: solid;
+  }
+  .navi_spin_group .navi_picker_spin {
+    border: none;
+    border-radius: 0;
+  }
+  /* The corners of the group belong to the spins sitting in them, and through
+     them to their chevrons, which are rounded by whatever their spin is. */
+  .navi_spin_group > .navi_picker_spin:first-child {
+    border-start-start-radius: inherit;
+    border-end-start-radius: inherit;
+  }
+  .navi_spin_group > .navi_picker_spin:last-child {
+    border-start-end-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  .navi_spin_group .navi_picker_spin[data-focus-visible],
+  .navi_spin_group
+    .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]),
+  .navi_spin_group .navi_picker_spin:has(.navi_input[data-focus-visible]) {
+    outline-style: none;
+  }
+  /* Fading the frame is the group's to do, since the frame is the group's. */
+  .navi_spin_group[data-readonly],
+  .navi_spin_group[data-loading] {
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 45%,
+      transparent
+    );
+  }
+  .navi_spin_group[data-disabled] {
+    color: color-mix(in srgb, currentColor 40%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent
+    );
+  }
+  /* As tall as the spins beside it, so what it says lands on their line. */
+  .navi_spin_group_separator {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    color: inherit;
+    white-space: nowrap;
+    user-select: none;
+  }
+  /* The "h" fades with the values it sits between: it is one control, and a
+     word left black beside two grey numbers reads as half a control out of
+     service. Same mixes as the spins' own (see above). */
+  .navi_spin_group[data-readonly] .navi_spin_group_separator,
+  .navi_spin_group[data-loading] .navi_spin_group_separator {
+    color: color-mix(in srgb, currentColor 60%, transparent);
+  }
+  .navi_spin_group[data-disabled] .navi_spin_group_separator {
+    color: color-mix(in srgb, currentColor 40%, transparent);
+  }
 `;
 
 /**
@@ -352,6 +444,9 @@ const css = /* css */ `
  *   the field IS the middle, and nothing travels. Without it the value is
  *   picked — a headless picker behind three slides that travel one step at a
  *   press.
+ * @param {(value: any) => any} [formatValue] How a typed value is written once
+ *   one leaves the field — padding a number to two digits, trimming a word.
+ *   Only for an `editable` spin; a value that is picked is never mid-edit.
  * @param {object} [controlProps] Anything else the control in the middle takes
  *   (`inputMode`, `maxLength`, `placeholder`…).
  * @param {number} [step=1] How many steps a press covers.
@@ -396,11 +491,13 @@ export const Spin = ({
   valueAtStep,
   compareValues = compareValuesDefault,
   renderValue = renderValueDefault,
+  formatValue,
   controlProps,
   vertical,
   readOnly,
   disabled,
   loading,
+  size,
   maxLines,
   previousLabel,
   nextLabel,
@@ -408,6 +505,10 @@ export const Spin = ({
 }) => {
   import.meta.css = css;
   const id = useId();
+  // What the group around it says, when there is one: how big the whole thing
+  // is written is said once, on the group, and every spin in it follows.
+  const group = useContext(SpinGroupContext);
+  const sizeResolved = size ?? group?.size;
   const containerId = `${id}_values`;
   const controlId = `${id}_control`;
   // The control holds the value, and it is asked rather than shadowed:
@@ -618,6 +719,7 @@ export const Spin = ({
       alignY="center"
       // The states this box draws itself: the ring above is the one that is
       // asked for by hand (pseudoState) as well as held for real.
+      size={sizeResolved}
       pseudoClasses={PICKER_SPIN_PSEUDO_CLASSES}
       styleCSSVars={PICKER_SPIN_STYLE_CSS_VARS}
       data-vertical={vertical ? "" : undefined}
@@ -646,16 +748,38 @@ export const Spin = ({
             readOnly={readOnly}
             disabled={disabled}
             loading={loading}
-            // No frame of its own inside a frame, and no ring of its own
-            // either: the spin draws both (see the CSS above), and an outline
-            // of zero width is how a field stands down without its focus
-            // state being touched.
+            // The field is written as big as the box around it: a size that
+            // only grew the chevrons would be half a size.
+            size={sizeResolved}
+            // No frame of its own inside a frame: the spin draws it (see the
+            // CSS above). The ring is the spin's too — an outline of zero width
+            // is how a field stands down without its focus state being touched
+            // — except inside a group, where the frame belongs to the group and
+            // the ring stays on the field: the spins are typed into one at a
+            // time, and the ring is what says which one holds the keyboard.
             variant="discrete"
-            outlineWidth="0"
+            outlineWidth={group ? undefined : "0"}
             textAlign="center"
             expandX
             uiAction={(valueNext, event) => {
               uiAction?.(valueNext, stepEventRef.current ?? event);
+            }}
+            // What was typed, written the way the spin writes it: "7" becomes
+            // "07" in a field where the value beside it reads "00". Done on
+            // leaving rather than on each keystroke — a "0" turned into "00"
+            // under the caret is a field that fights back while one types.
+            onBlur={(e) => {
+              controlProps?.onBlur?.(e);
+              if (!formatValue) {
+                return;
+              }
+              if (valueHeld === undefined || valueHeld === "") {
+                return;
+              }
+              const valueFormatted = formatValue(valueHeld);
+              if (valueFormatted !== valueHeld) {
+                setValue(valueFormatted, e);
+              }
             }}
           />
         ) : (
@@ -863,6 +987,124 @@ const compareValuesDefault = (a, b) => {
 const renderValueDefault = (value) => String(value ?? "");
 
 /**
+ * Several spins read as one value: "7h30" is an hour, not a 7 beside a 30. The
+ * frame goes around the group, the spins inside give theirs up, and what is
+ * written between them — an "h", a ":", a word — sits inside the frame with
+ * them.
+ *
+ * A group IS a control: its named spins aggregate into `{ hour: …, minute: … }`
+ * for the form around it, and `aggregateChildStates`/`distributeChildUIState`
+ * turn that into whatever the group is really worth instead ("07:30", a number
+ * of minutes) — one value in both directions, so the group can be driven by a
+ * single `value`/`signal` like any other control. `TimeSpin` is that, for a
+ * time of day.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: any,
+ *   defaultValue?: any,
+ *   signal?: import("@preact/signals").Signal<any>,
+ *   aggregateChildStates?: (childUIStateControllers: any[]) => any,
+ *   distributeChildUIState?: (groupState: any, childUIStateController: any) => any,
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * Everything a box takes is taken here too — `width`, `borderWidth`,
+ * `borderRadius`, `backgroundColor`: the frame is the group's, and its corners
+ * are passed on to the spins sitting in them.
+ */
+export const SpinGroup = (props) => {
+  import.meta.css = css;
+  const { size } = props;
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const groupRef = props.ref;
+  // Two digit fields side by side are filled the way a date or a code is: the
+  // hour reaching its two digits moves on to the minutes, and Left/Right at
+  // either end of a field walk between them.
+  useInputGroup(groupRef);
+
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
+    useControlgroupProps(props, {
+      allowCapture: true,
+      wantRequesterButtonState: true,
+      controlType: "control_group",
+      stateType: "object",
+      cascadeValidationToChildren: true,
+      aggregateChildStates: props.aggregateChildStates,
+      distributeChildUIState: props.distributeChildUIState,
+    });
+  const { children } = controlgroupProps;
+  const { readOnly, disabled, loading } = childrenWrapperProps;
+
+  return (
+    <Box
+      {...controlgroupRootProps}
+      {...controlgroupProps}
+      // Consumed by the group hook above; blanked after the spreads so they do
+      // not reach the DOM as unknown attributes.
+      aggregateChildStates={undefined}
+      distributeChildUIState={undefined}
+      baseClassName="navi_spin_group"
+      pseudoClasses={SPIN_GROUP_PSEUDO_CLASSES}
+      // What the frame and what sits between the spins are drawn from: the
+      // spins fade themselves, and the group is what holds those two.
+      data-readonly={readOnly ? "" : undefined}
+      data-disabled={disabled ? "" : undefined}
+      data-loading={loading ? "" : undefined}
+    >
+      {/* Around the whole group, the way a button wears it: the value on its
+          way somewhere is the hour, not one of the two numbers in it. */}
+      <LoadingOutline
+        loading={loading}
+        color="var(--navi-loader-color)"
+        inset={-2}
+      />
+      <SpinGroupContext.Provider value={{ size }}>
+        <ControlgroupChildrenWrapper
+          {...childrenWrapperProps}
+          // The group's name says where its value lands in the form; each spin
+          // inside is named on its own.
+          name={undefined}
+        >
+          {children}
+        </ControlgroupChildrenWrapper>
+      </SpinGroupContext.Provider>
+    </Box>
+  );
+};
+
+// Lets a group hand down what is said once for all the spins in it (how big
+// they are written), and lets a spin know it is in one at all — which is what
+// moves the frame and the focus ring off the spin and onto the group.
+const SpinGroupContext = createContext(null);
+const SPIN_GROUP_PSEUDO_CLASSES = [
+  ":focus-within",
+  // Nothing focuses the group for real — a spin inside it takes the keyboard —
+  // but it is where the ring is drawn, so a demo can hold it there.
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+
+/**
+ * SpinGroup.Separator — what is written between two spins ("h", ":", a word).
+ * It stands as tall as they do, so what it says lands on their line.
+ */
+const SpinGroupSeparator = ({ children, ...rest }) => (
+  <Box
+    as="span"
+    {...rest}
+    className="navi_spin_group_separator"
+    aria-hidden="true"
+  >
+    {children}
+  </Box>
+);
+SpinGroup.Separator = SpinGroupSeparator;
+
+/**
  * A whole number one steps through and types into: the field IS the middle, so
  * the value can be typed as readily as stepped, and the two chevrons stand
  * above and below it by default — sideways they would be where the caret
@@ -874,16 +1116,21 @@ const renderValueDefault = (value) => String(value ?? "");
  *   min?: number,
  *   max?: number,
  *   step?: number,
+ *   pad?: number,
  *   [key: string]: any,
  * }>}
  * @param {number} [min=0] The lowest number one can reach; `max` is the
  *   highest. They also bound what typing can produce, and how wide the field
  *   is asked to be (see `maxLength`).
+ * @param {number} [pad] How many digits the number is written on, zeroes in
+ *   front of it: `pad={2}` writes 0 as "00". What an hour, a minute or a
+ *   second is read as — a clock says "07:00", never "7:0".
  */
 export const NumberSpin = ({
   min = 0,
   max,
   step = 1,
+  pad,
   vertical = true,
   growsUpward = true,
   controlProps,
@@ -897,20 +1144,52 @@ export const NumberSpin = ({
     max={max}
     step={step}
     vertical={vertical}
-    fallbackValue={min}
-    valueAtStep={(value, count) => numberAtStep(value, count, min)}
+    fallbackValue={padNumber(min, pad)}
+    valueAtStep={(value, count) =>
+      padNumber(numberAtStep(value, count, min), pad)
+    }
     compareValues={(a, b) => Number(a) - Number(b)}
+    formatValue={(value) => padNumber(value, pad)}
     controlProps={{
       // The numeric keypad on a phone, and — through
       // input_resolver_mode — the "this field is full" event a group of
       // fields moves along on (see useInputGroup).
       inputMode: "numeric",
-      maxLength: max === undefined ? undefined : String(max).length,
+      maxLength: numberMaxLength(max, pad),
       ...controlProps,
     }}
     {...rest}
   />
 );
+
+// The number as it is written: "7" where nothing was asked, "07" where two
+// digits were. A value mid-edit that is not a number is left alone — one is
+// typing, and rewriting what is under the caret is not the moment.
+const padNumber = (value, pad) => {
+  if (!pad) {
+    return value;
+  }
+  const number = Number(value);
+  if (value === "" || value === undefined || Number.isNaN(number)) {
+    return value;
+  }
+  const negative = number < 0;
+  const digits = String(negative ? -number : number).padStart(pad, "0");
+  return negative ? `-${digits}` : digits;
+};
+
+// How many characters the field takes: what the biggest number is worth, or
+// what the padding writes, whichever is longer.
+const numberMaxLength = (max, pad) => {
+  if (max === undefined) {
+    return pad;
+  }
+  const maxLength = String(max).length;
+  if (pad && pad > maxLength) {
+    return pad;
+  }
+  return maxLength;
+};
 
 // One step away, bounds included: a step past `max` is a real number that
 // simply is not allowed, and Spin is the one that reads it as "nothing that

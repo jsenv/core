@@ -152,7 +152,12 @@ export {
   DaySpin,
   NumberSpin,
   Spin,
+  SpinGroup,
 } from "./src/control/picker/picker_spin.jsx";
+export {
+  TimeRangeSpin,
+  TimeSpin,
+} from "./src/control/picker/preset/spin_time.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";

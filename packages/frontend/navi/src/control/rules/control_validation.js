@@ -68,6 +68,7 @@ import {
 import { ONE_OF_CONSTRAINT } from "./validation/one_of_constraint.js";
 import { SAME_AS_CONSTRAINT } from "./validation/same_as_constraint.js";
 import { SINGLE_SPACE_CONSTRAINT } from "./validation/single_space_constraint.js";
+import { TIME_RANGE_CONSTRAINT } from "./validation/time_range_constraint.js";
 import {
   MAX_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
@@ -106,6 +107,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
   ONE_OF_CONSTRAINT,
+  TIME_RANGE_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,

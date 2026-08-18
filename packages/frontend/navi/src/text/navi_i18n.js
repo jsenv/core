@@ -260,6 +260,31 @@ naviI18n.addAll({
   },
 });
 
+// Time spin messages — what a clock writes between an hour and its minutes,
+// and how the two ends of a span are named.
+naviI18n.addAll({
+  "time.hour_separator": {
+    en: ":",
+    fr: "h",
+  },
+  "time.hour_label": {
+    en: "Hours",
+    fr: "Heures",
+  },
+  "time.minute_label": {
+    en: "Minutes",
+    fr: "Minutes",
+  },
+  "time_range.from": {
+    en: "From",
+    fr: "De",
+  },
+  "time_range.to": {
+    en: "to",
+    fr: "à",
+  },
+});
+
 // List messages — override any key to customize list messages
 naviI18n.addAll({
   "list.empty": {
@@ -405,6 +430,10 @@ naviI18n.addAll({
   "constraint.same_as.default": {
     fr: "Ce champ doit être identique au précédent.",
     en: "This field must match the previous one.",
+  },
+  "constraint.time_range.default": {
+    fr: "L'heure de fin doit être après l'heure de début.",
+    en: "The end time must be after the start time.",
   },
   "constraint.required.checkbox": {
     fr: "Veuillez cocher cette case.",

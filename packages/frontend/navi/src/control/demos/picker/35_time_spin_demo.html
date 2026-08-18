@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Time spin demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Label,
+        Link,
+        NumberSpin,
+        SpinGroup,
+        Text,
+        TimeRangeSpin,
+        TimeSpin,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const timeSignal = stateSignal("07:00", { id: "time" });
+      const DEMO_SIGNALS = [timeSignal];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Time spin"
+            previous={{ href: "./33_day_spin_demo.html", label: "Day spin" }}
+          />
+          <TableOfContents />
+          <BasicsDemo />
+          <StatesDemo />
+          <RangeDemo />
+          <ValidationDemo />
+          <MinuteStepDemo />
+          <CustomizationDemo />
+          <GroupDemo />
+          <ValueDemo />
+        </Box>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <Box flex alignY="center" spacing="m">
+            <h2 style="margin: 0; flex: 1">Sommaire</h2>
+            <Button
+              onClick={() => {
+                for (const signal of DEMO_SIGNALS) {
+                  signal.value = undefined;
+                }
+              }}
+            >
+              Tout réinitialiser
+            </Button>
+          </Box>
+          <DocumentToc />
+        </div>
+      );
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      // ── Basics ────────────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="desc">Une heure : les heures, un « h », les minutes.</p>
+          <TimeSpin signal={timeSignal} />
+        </div>
+      );
+
+      // ── States ────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <TimeSpin defaultValue="07:00" />
+            </Variant>
+            <Variant caption="readOnly">
+              <TimeSpin defaultValue="07:00" readOnly />
+            </Variant>
+            <Variant caption="disabled">
+              <TimeSpin defaultValue="07:00" disabled />
+            </Variant>
+            <Variant caption="loading">
+              <TimeSpin defaultValue="07:00" loading />
+            </Variant>
+            {/* Held rather than obtenu au clavier : l'anneau est autour du
+                groupe, pas autour du champ qui a le focus. */}
+            <Variant caption="focus visible">
+              <TimeSpin
+                defaultValue="07:00"
+                pseudoState={{ ":focus-visible": true }}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Range ─────────────────────────────────────────────────────────────
+
+      const RangeDemo = () => (
+        <div class="demo-section">
+          <Heading id="range">Plage horaire</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="TimeRangeSpin">
+              <TimeRangeSpin defaultValue={{ start: "07:00", end: "21:00" }} />
+            </Variant>
+            <Variant caption="startLabel={null} endLabel={<Text>→</Text>}">
+              <TimeRangeSpin
+                defaultValue={{ start: "07:00", end: "21:00" }}
+                startLabel={null}
+                endLabel={<Text>→</Text>}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Validation ────────────────────────────────────────────────────────
+
+      const ValidationCase = ({ id, title, defaultValue }) => {
+        const [entries, pushCall, clearCalls] = useCallLog();
+        return (
+          <>
+            <Heading level={3} id={id}>
+              {title}
+            </Heading>
+            <Form
+              action={({ opening }) => {
+                pushCall("action", opening);
+              }}
+            >
+              <Box flex="y" spacing="m" alignX="start">
+                <Field flex="y" spacing="xs">
+                  <Label>Horaires d'ouverture</Label>
+                  <TimeRangeSpin name="opening" defaultValue={defaultValue} />
+                </Field>
+                <Button type="submit">Enregistrer</Button>
+                <CallLog entries={entries} onClear={clearCalls} />
+              </Box>
+            </Form>
+          </>
+        );
+      };
+
+      const ValidationDemo = () => (
+        <div class="demo-section">
+          <Heading id="validation">Validation</Heading>
+          <ValidationCase
+            id="validation-valid"
+            title="7h00 → 21h00"
+            defaultValue={{ start: "07:00", end: "21:00" }}
+          />
+          <ValidationCase
+            id="validation-invalid"
+            title="21h00 → 7h00"
+            defaultValue={{ start: "21:00", end: "07:00" }}
+          />
+        </div>
+      );
+
+      // ── minuteStep ────────────────────────────────────────────────────────
+
+      const MinuteStepDemo = () => (
+        <div class="demo-section">
+          <Heading id="minute-step">minuteStep</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut (1)">
+              <TimeSpin defaultValue="07:00" />
+            </Variant>
+            <Variant caption="minuteStep={15}">
+              <TimeSpin defaultValue="07:00" minuteStep={15} />
+            </Variant>
+            <Variant caption="minuteStep={30}">
+              <TimeRangeSpin
+                defaultValue={{ start: "07:00", end: "21:00" }}
+                minuteStep={30}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Customization ─────────────────────────────────────────────────────
+
+      const CustomizationDemo = () => (
+        <div class="demo-section">
+          <Heading id="customization">Customization</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <TimeSpin defaultValue="07:00" />
+            </Variant>
+            <Variant caption='separator=":"'>
+              <TimeSpin defaultValue="07:00" separator=":" />
+            </Variant>
+            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
+              <TimeSpin
+                defaultValue="07:00"
+                borderColor="#1a73e8"
+                borderRadius="10px"
+              />
+            </Variant>
+            <Variant caption='size="xxs"'>
+              <TimeSpin defaultValue="07:00" size="xxs" />
+            </Variant>
+            <Variant caption='size="xxl"'>
+              <TimeSpin defaultValue="07:00" size="xxl" />
+            </Variant>
+            <Variant caption='size="xxl" sur une plage'>
+              <TimeRangeSpin
+                defaultValue={{ start: "07:00", end: "21:00" }}
+                size="xxl"
+              />
+            </Variant>
+            <Variant caption="pad={0}">
+              <TimeSpin defaultValue="07:00" pad={0} />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── SpinGroup ─────────────────────────────────────────────────────────
+
+      const GroupDemo = () => (
+        <div class="demo-section">
+          <Heading id="spin-group">SpinGroup</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="deux NumberSpin, chacun le sien">
+              <Box flex spacing="s" alignY="center">
+                <NumberSpin name="hour" min={0} max={23} pad={2} />
+                <Text>h</Text>
+                <NumberSpin name="minute" min={0} max={59} pad={2} />
+              </Box>
+            </Variant>
+            <Variant caption="les deux dans un SpinGroup">
+              <SpinGroup>
+                <NumberSpin name="hour" min={0} max={23} pad={2} />
+                <SpinGroup.Separator>h</SpinGroup.Separator>
+                <NumberSpin name="minute" min={0} max={59} pad={2} />
+              </SpinGroup>
+            </Variant>
+            <Variant caption="pad : sans, puis pad={2}">
+              <Box flex spacing="l" alignY="center">
+                <NumberSpin name="minute_bare" min={0} max={59} />
+                <NumberSpin name="minute_pad" min={0} max={59} pad={2} />
+              </Box>
+            </Variant>
+            <Variant caption='trois spins, séparateur ":"'>
+              <SpinGroup>
+                <NumberSpin name="hour" min={0} max={23} pad={2} />
+                <SpinGroup.Separator>:</SpinGroup.Separator>
+                <NumberSpin name="minute" min={0} max={59} pad={2} />
+                <SpinGroup.Separator>:</SpinGroup.Separator>
+                <NumberSpin name="second" min={0} max={59} pad={2} />
+              </SpinGroup>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Value ─────────────────────────────────────────────────────────────
+
+      const ValueDemo = () => (
+        <div class="demo-section">
+          <Heading id="value">
+            Simulation backend : ce qui part, et quand
+          </Heading>
+          <Heading level={3} id="value-time">
+            Une heure
+          </Heading>
+          <FakeBackend value={{ start_at: "09:30" }}>
+            {({ value: backendValue, action }) => (
+              <Form action={action}>
+                <Box flex spacing="m" alignY="end">
+                  <Field flex="y" spacing="xs">
+                    <Label>Début</Label>
+                    <TimeSpin name="start_at" value={backendValue.start_at} />
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+
+          <Heading level={3} id="value-range">
+            Une plage
+          </Heading>
+          <FakeBackend value={{ opening: { start: "07:00", end: "21:00" } }}>
+            {({ value: backendValue, action }) => (
+              <Form action={action}>
+                <Box flex spacing="m" alignY="end">
+                  <Field flex="y" spacing="xs">
+                    <Label>Horaires d'ouverture</Label>
+                    <TimeRangeSpin
+                      name="opening"
+                      value={backendValue.opening}
+                    />
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
