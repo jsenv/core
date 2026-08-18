@@ -385,6 +385,10 @@
       }
       .padel_card {
         border-radius: 10px;
+        /* What the card is first: a click chooses who stands there. The gesture
+           leaves the cursor alone for exactly this reason — a hand insisting on
+           the drag would talk over the choice. */
+        cursor: pointer;
       }
       /* The box a card occupies on the court, in a class rather than in the style
          attribute: the copy being carried is that same element and dresses itself
@@ -406,15 +410,60 @@
       .padel_piece_b {
         background: #b8512f;
       }
-      .padel_avatar {
+      .padel_name {
         display: flex;
-        width: 38px;
-        height: 38px;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+      }
+      .padel_card_remove {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: flex;
+        width: 20px;
+        height: 20px;
+        padding: 0;
         align-items: center;
         justify-content: center;
-        font-size: 15px;
-        background: rgba(255, 255, 255, 0.22);
-        border-radius: 50%;
+        color: inherit;
+        background: transparent;
+        border: none;
+        border-radius: 5px;
+        opacity: 0.55;
+        cursor: pointer;
+      }
+      .padel_card_remove svg {
+        width: 9px;
+        height: 9px;
+      }
+      .padel_card_remove:hover {
+        background: rgba(255, 255, 255, 0.28);
+        opacity: 1;
+      }
+
+      /* ── What tells a card it can be picked up ───────────────────────────
+         Nothing on a screen says "this is grabbable" on its own, and a board one
+         may drag on is worth nothing if nobody tries. Each of these is a
+         different bet on what makes a hand try, and one word switches between
+         them. */
+      .padel_grip {
+        position: absolute;
+        top: 3px;
+        left: 7px;
+        display: none;
+        font-size: 13px;
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .padel[data-padel-drag-hint="grip"] .padel_grip {
+        display: block;
+      }
+      .padel[data-padel-drag-hint="shadow"] .padel_piece {
+        transition: box-shadow 0.15s ease;
+      }
+      .padel[data-padel-drag-hint="shadow"] .padel_piece:hover {
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.38);
       }
       /* The copy is carried in a box of its own, where a place on the court means
          nothing: it fills that box instead. Said of what is INSIDE the carrier
@@ -1771,11 +1820,11 @@
       // whole of what `land` leaves to the application: where one can come down.
 
       const PADEL_PLAYERS = [
-        { id: "lea", label: "Léa", initial: "L", team: "a" },
-        { id: "marc", label: "Marc", initial: "M", team: "a" },
-        { id: "sofia", label: "Sofia", initial: "S", team: "b" },
-        { id: "yanis", label: "Yanis", initial: "Y", team: "b" },
-        { id: "damien", label: "Damien", initial: "D", team: "a" },
+        { id: "lea", label: "Léa", team: "a" },
+        { id: "marc", label: "Marc", team: "a" },
+        { id: "sofia", label: "Sofia", team: "b" },
+        { id: "yanis", label: "Yanis", team: "b" },
+        { id: "damien", label: "Damien", team: "a" },
       ];
 
       // How two players change places, once they are on their way. Each is a
@@ -1786,6 +1835,16 @@
         { id: "over_under", label: "One over, one under" },
         { id: "cross", label: "Both step aside" },
         { id: "orbit", label: "Orbit (aside and over)" },
+      ];
+
+      // What tells the hand a card can be taken. The cursor cannot say it here —
+      // the card is a click first — so it has to be said in the card itself. Each
+      // of these is a rule of the page stylesheet keyed on the same attribute, so
+      // trying one is changing a word.
+      const PADEL_DRAG_HINTS = [
+        { id: "none", label: "Nothing" },
+        { id: "grip", label: "A grip on the card" },
+        { id: "shadow", label: "It casts a shadow under the pointer" },
       ];
 
       // The pairs worth watching: the collision is not the same when the two are
@@ -1871,7 +1930,8 @@
 
         const swap = (fromId, toId, syncCloneWithDropTarget) => {
           const roles = { [fromId]: PADEL_OVER };
-          const displacedId = lineup[padelPlaceOf(lineup, toId)];
+          const toPlaceId = padelPlaceOf(lineup, toId);
+          const displacedId = lineup[toPlaceId];
           if (displacedId) {
             roles[displacedId] = PADEL_UNDER;
           }
@@ -1892,8 +1952,15 @@
           }
           // A transition name is unique per document, so it is the app that writes
           // it and the app that starts the transition.
+          // A quarter is bigger than the card standing in it, so the copy comes
+          // down on whatever occupies that card's box — the player already there,
+          // or the empty slot waiting — and not on the quarter itself.
+          const landingElement =
+            (displacedId && document.getElementById(displacedId)) ||
+            document.getElementById(`${toPlaceId}__free`) ||
+            toElement;
           const transition = document.startViewTransition(() => {
-            syncCloneWithDropTarget?.();
+            syncCloneWithDropTarget?.(landingElement);
             setSwapRoles(roles);
             setLineup((previous) => padelSwap(previous, fromId, toId));
           });
@@ -1925,6 +1992,10 @@
           }));
         };
 
+        const leavePlace = (placeId) => {
+          setLineup((previous) => ({ ...previous, [placeId]: null }));
+        };
+
         const reset = () => {
           setLineup(initialLineup);
         };
@@ -1937,6 +2008,7 @@
           swap,
           land,
           takePlace,
+          leavePlace,
           reset,
           playerIdAt,
           viewTransitionNameOf,
@@ -1951,6 +2023,7 @@
         variant,
         viewTransitionName,
         className = "",
+        onRemove,
         ...rest
       }) => {
         const player = padelPlayerOf(playerId);
@@ -1963,10 +2036,26 @@
             // travels, the places stay where they are.
             style={{ ...rest.style, viewTransitionName }}
           >
-            {variant === "card" ? (
-              <span className="padel_avatar">{player.initial}</span>
+            {variant === "card" ? <span className="padel_grip">⠿</span> : null}
+            <span className="padel_name">{player.label}</span>
+            {onRemove ? (
+              // The press on it is none of the gesture's business: without this the
+              // card would be picked up from the cross like from anywhere else. And
+              // the click stops here, or the card would read it as "someone else".
+              <button
+                type="button"
+                className="padel_card_remove"
+                data-drag-ignore
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove();
+                }}
+              >
+                <Icon>
+                  <CloseSvg />
+                </Icon>
+              </button>
             ) : null}
-            {player.label}
           </Box>
         );
       };
@@ -1997,7 +2086,12 @@
         zoned__near_right: null,
       };
 
-      const PadelZonedCase = ({ swapStyle, onSwapStyleChange }) => {
+      const PadelZonedCase = ({
+        swapStyle,
+        onSwapStyleChange,
+        dragHint,
+        onDragHintChange,
+      }) => {
         const court = usePadelCourt({
           prefix: "zoned",
           initialLineup: PADEL_ZONED_LINEUP,
@@ -2026,11 +2120,13 @@
               The court is cut in four and a player is in one of the four, never
               between two. Anywhere in a quarter is that quarter, so the aim is
               the zone and not the card: free, the player goes there; taken, the
-              two change places at the release. A free place asks for someone by
-              being clicked.
+              two change places at the release. A card is also a picker of who
+              stands there — a click gives the place to the next of the squad —
+              and its cross sends the player off; neither of the two is a press
+              on the card itself.
             </p>
             <Box flex="y" spacing="m" alignX="start">
-              <div class="padel padel_zoned">
+              <div class="padel padel_zoned" data-padel-drag-hint={dragHint}>
                 <PadelCourtLines />
                 {/* The places, said by the board: a quarter receives without ever
                     being carried, so it declares no interaction — `data-droppable`
@@ -2051,6 +2147,9 @@
                     return (
                       <button
                         key={zone.id}
+                        // Not a place — the quarter is — but the box a card takes
+                        // in it, which is where a copy has to come down.
+                        id={`${placeId}__free`}
                         type="button"
                         class="padel_free padel_free_zone padel_card_box"
                         style={padelCardStyle(zone)}
@@ -2068,7 +2167,11 @@
                       className="padel_card_box"
                       viewTransitionName={court.viewTransitionNameOf(playerId)}
                       style={padelCardStyle(zone)}
+                      onRemove={() => court.leavePlace(placeId)}
                       interactions={{
+                        // The card is a picker of who stands there: a click gives
+                        // the place to the next of the squad who is not out yet.
+                        click: () => court.takePlace(placeId),
                         land: court.land,
                         grab: () => window.navigator.vibrate?.(10),
                       }}
@@ -2089,6 +2192,22 @@
                     {PADEL_SWAP_STYLES.map((style) => (
                       <option key={style.id} value={style.id}>
                         {style.label}
+                      </option>
+                    ))}
+                  </select>
+                </Box>
+                <Box flex="y" spacing="xs" alignX="start">
+                  <Text size="s" color="#666">
+                    What says they can be moved
+                  </Text>
+                  <select
+                    class="padel_style_select"
+                    value={dragHint}
+                    onChange={(event) => onDragHintChange(event.target.value)}
+                  >
+                    {PADEL_DRAG_HINTS.map((hint) => (
+                      <option key={hint.id} value={hint.id}>
+                        {hint.label}
                       </option>
                     ))}
                   </select>
@@ -2127,7 +2246,7 @@
         tokens__near_right: null,
       };
 
-      const PadelTokensCase = ({ swapStyle }) => {
+      const PadelTokensCase = ({ swapStyle, dragHint }) => {
         const court = usePadelCourt({
           prefix: "tokens",
           initialLineup: PADEL_TOKENS_LINEUP,
@@ -2143,7 +2262,7 @@
               aim is the token and a place is exactly its size. The same swap
               answers it — a place is a place, whatever draws it.
             </p>
-            <div class="padel padel_tokens">
+            <div class="padel padel_tokens" data-padel-drag-hint={dragHint}>
               <PadelCourtLines />
               {PADEL_SPOTS.map((spot) => {
                 const placeId = `tokens__${spot.id}`;
@@ -2188,13 +2307,16 @@
 
       const PadelCase = () => {
         const [swapStyle, setSwapStyle] = useState("slide");
+        const [dragHint, setDragHint] = useState("grip");
         return (
           <>
             <PadelZonedCase
               swapStyle={swapStyle}
               onSwapStyleChange={setSwapStyle}
+              dragHint={dragHint}
+              onDragHintChange={setDragHint}
             />
-            <PadelTokensCase swapStyle={swapStyle} />
+            <PadelTokensCase swapStyle={swapStyle} dragHint={dragHint} />
           </>
         );
       };

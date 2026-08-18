@@ -53,6 +53,8 @@
         Form,
         Label,
         Link,
+        CloseSvg,
+        Icon,
         NumberSpin,
         Picker,
         SpinGroup,
@@ -398,18 +400,20 @@
                 <Picker
                   type="form"
                   name="when"
-                  width="360px"
+                  width="440px"
                   clearable
                   mode="dialog"
                   dockedOnTouch
-                  paddingY="s"
+                  paddingX="m"
+                  paddingY="m"
+                  borderRadius="10px"
                   ui={
                     <Box flex="y" alignX="start">
                       <Text weight="bold" size="s">
                         Quand
                       </Text>
-                      <Text color="#555">
-                        {rangeLabel(opening) ?? "Toute la journée"}
+                      <Text color="#6b7280">
+                        {rangeLabel(opening) ?? "N'importe quelle heure"}
                       </Text>
                     </Box>
                   }
@@ -418,12 +422,34 @@
                     push("uiAction", value);
                   }}
                 >
-                  <Box padding="m">
-                    <TimeRangeSpin
-                      defaultValue={opening ?? OPENING_DEFAULT}
-                      minuteStep={15}
-                      minDuration={30}
-                    />
+                  <Box flex="y" overflow="auto" expandY>
+                    <Box header flex alignY="center" spacing="xs" padding="m">
+                      <Text expandX bold>
+                        À quelle heure ?
+                      </Text>
+                      <Button
+                        command="--navi-close"
+                        icon
+                        variant="discrete"
+                        padding="xs"
+                        size="xl"
+                        marginRight="-xs"
+                        aria-label="Fermer"
+                      >
+                        <Icon color="#6b7280">
+                          <CloseSvg />
+                        </Icon>
+                      </Button>
+                    </Box>
+                    <Box body flex="y" spacing="m" padding="m" alignX="center">
+                      <TimeRangeSpin
+                        defaultValue={opening ?? OPENING_DEFAULT}
+                        minuteStep={15}
+                        minDuration={30}
+                        size="xl"
+                        timeProps={{ borderRadius: "10px" }}
+                      />
+                    </Box>
                   </Box>
                 </Picker>
               </Box>

@@ -153,13 +153,17 @@ const css = /* css */ `
   }
 
   /* WHO CAN START A DRAG, said in the cursor.
-     A handle drags on the spot, so it shows the hand. A source only drags once
-     the intent shows (a few pixels of travel, or a long press) — a plain click
-     stays a click — but the text inside it cannot be selected (the gesture takes
-     the pointer), so an I-beam over it would promise something that does not
-     happen: it reads as a plain surface instead. An opted-out area keeps both
-     its cursor and its selection, and never starts a drag (see the check in
-     startDragTo).
+     A handle exists only to drag, so it shows the hand. A source does not, and
+     the gesture must not claim its cursor: it drags only once the intent shows
+     (a few pixels of travel, or a long press), a plain click on it stays a
+     click, and it is usually something else FIRST — a link, a card one opens.
+     The cursor says what the element is, and a hand insisting on the one thing
+     it can also be would talk over that. So it is left alone — default, and not
+     an I-beam, because the text inside cannot be selected either (the gesture
+     takes the pointer) — and whoever puts the drag there asks for the hand when
+     a grab really is the first thing the element offers.
+     An opted-out area keeps both its cursor and its selection, and never starts
+     a drag (see the check in startDragTo).
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself.
      Only the resting cursor is set here: what it becomes once a drag is under
@@ -788,6 +792,8 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   `onLand(fromId, toId, syncCloneWithDropTarget)` — it came down on `toId`, which
  *   is an element and never null: nothing under the copy is a cancelled release.
  *   The copy is held until what comes back settles, exactly like `onReorder`.
+ *   `syncCloneWithDropTarget` takes an element when the place is not the shape of
+ *   what stands on it: the copy then takes THAT box instead of the target's.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
@@ -1201,8 +1207,13 @@ const startDragToCarryCopy = (
           // so the copy stays where the user released it when the transform goes.
           setCloneViewportRect(cloneWrapper, cloneWrapper);
           gestureInfo.cancelPosition();
-          const syncCloneWithDropTarget = () => {
-            setCloneViewportRect(cloneWrapper, targetElement);
+          // Where the copy comes down is not always the thing it came down ON: a
+          // place of a board can be larger than what stands on it, and the copy
+          // has to keep its own size and land where the item will be. Said with
+          // an element, because the caller has one — the piece already standing
+          // there, the empty slot waiting.
+          const syncCloneWithDropTarget = (landingElement = targetElement) => {
+            setCloneViewportRect(cloneWrapper, landingElement);
             // Removing this attr drops the CSS scale, so the browser captures the
             // copy at scale 1 as the "new" state.
             clone.removeAttribute("navi-drag-clone");

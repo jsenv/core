@@ -74,6 +74,15 @@ const css = /* css */ `
       --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
     }
+    /* Written in what it is written with, for a value one TYPES: a field is as
+       wide as the digits in it and no wider, so the room around them has to
+       come from here — and the two chevrons, which take the same, are then big
+       enough to be aimed at with a finger. Said as a default, so a padding prop
+       still wins. */
+    .navi_picker_spin:has(> .navi_picker_spin_middle > .navi_input) {
+      --picker-spin-padding-x-default: 0.6em;
+      --picker-spin-padding-y-default: 0.25em;
+    }
   }
 
   .navi_picker_spin {
@@ -205,6 +214,15 @@ const css = /* css */ `
     min-width: 0;
     flex: 1 1 auto;
   }
+  /* The same room around a value one TYPES as around one one picks (the
+     [data-slide] rule below writes it there): without it the column is as
+     narrow as the two digits in it, and a number pressed against both sides
+     reads as a field too small for what it holds. On the middle rather than on
+     the field, which draws its own background from edge to edge. */
+  .navi_picker_spin_middle:has(> .navi_input) {
+    padding-right: var(--x-picker-spin-padding-right);
+    padding-left: var(--x-picker-spin-padding-left);
+  }
   /* Where the padding lands: all four sides on the value, the two vertical
      ones on the chevrons below — the same number above and below is what makes
      the three one line rather than three boxes, while sideways it is the room
@@ -282,8 +300,19 @@ const css = /* css */ `
     aspect-ratio: 1;
     justify-content: center;
   }
+  /* Standing up, a chevron takes the whole width and whatever height is left
+     over: a box taller than the three pieces in it (a height of its own, room
+     asked for around the value) would otherwise leave a strip of nothing
+     between the chevron and the border, and one pressing what looks like the
+     bottom of the box would hit nothing. */
   .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
     width: 100%;
+    height: auto;
+    min-height: calc(
+      1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom)
+    );
+    flex: 1 0 auto;
     justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner

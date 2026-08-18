@@ -36,6 +36,11 @@
  * `toId` is an element and never null: a copy over nothing is a release that meant
  * nothing, and the interaction does not happen at all.
  *
+ * `syncCloneWithDropTarget` takes an element here, which `reorder` has no use for:
+ * a place of a board can be larger than what stands on it (a quarter of a court, a
+ * square holding a smaller piece), and the copy has to come down where the piece
+ * will be rather than filling the place. Left alone, it lands on the place itself.
+ *
  * WHICH ELEMENTS ARE PLACES: those marked `data-droppable`, and only those.
  * Declaring `land` says an element can be CARRIED, which on a board is a different
  * thing from being somewhere one can be put: a zone receives without ever being

@@ -134,6 +134,7 @@ const padTwo = (value) => String(value).padStart(2, "0");
  *   minuteStep?: number,
  *   minDuration?: number,
  *   pad?: number,
+ *   timeProps?: object,
  *   loop?: boolean,
  *   size?: string,
  *   startLabel?: import("preact").ComponentChildren,
@@ -147,6 +148,9 @@ const padTwo = (value) => String(value).padStart(2, "0");
  *   `null` for neither.
  * @param {number} [minuteStep=1] How many minutes a press on a minute chevron
  *   covers, on both times.
+ * @param {object} [timeProps] Anything a `TimeSpin` takes, said once for both
+ *   of them — a radius, a width. `startTimeProps`/`endTimeProps` say it to one
+ *   of the two, and win over this one.
  * @param {number} [minDuration=0] How long the span must last at least, in
  *   minutes. Zero by default: a span of no length is a span all the same, only
  *   one that goes backwards is not. Checked when the form is sent, and the
@@ -160,6 +164,7 @@ export const TimeRangeSpin = ({
   size,
   startLabel = naviI18n("time_range.from"),
   endLabel = naviI18n("time_range.to"),
+  timeProps,
   startTimeProps,
   endTimeProps,
   ...rest
@@ -177,6 +182,7 @@ export const TimeRangeSpin = ({
         pad={pad}
         loop={loop}
         size={size}
+        {...timeProps}
         {...startTimeProps}
       />
       {endLabel === null ? null : <Text size={size}>{endLabel}</Text>}
@@ -191,6 +197,7 @@ export const TimeRangeSpin = ({
         // the time one would have to move is (see time_range_constraint.js).
         data-time-after={startId}
         data-time-min-duration={minDuration}
+        {...timeProps}
         {...endTimeProps}
       />
     </ControlGroup>
