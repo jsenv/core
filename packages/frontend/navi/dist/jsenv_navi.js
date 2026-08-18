@@ -1459,6 +1459,31 @@ naviI18n.addAll({
   },
 });
 
+// Time spin messages — what a clock writes between an hour and its minutes,
+// and how the two ends of a span are named.
+naviI18n.addAll({
+  "time.hour_separator": {
+    en: ":",
+    fr: "h",
+  },
+  "time.hour_label": {
+    en: "Hours",
+    fr: "Heures",
+  },
+  "time.minute_label": {
+    en: "Minutes",
+    fr: "Minutes",
+  },
+  "time_range.from": {
+    en: "From",
+    fr: "De",
+  },
+  "time_range.to": {
+    en: "to",
+    fr: "à",
+  },
+});
+
 // List messages — override any key to customize list messages
 naviI18n.addAll({
   "list.empty": {
@@ -1604,6 +1629,14 @@ naviI18n.addAll({
   "constraint.same_as.default": {
     fr: "Ce champ doit être identique au précédent.",
     en: "This field must match the previous one.",
+  },
+  "constraint.time_after.default": {
+    fr: "L'heure de fin ne peut pas être avant l'heure de début.",
+    en: "The end time cannot be before the start time.",
+  },
+  "constraint.time_after.min_duration": {
+    fr: "La plage doit durer au moins <strong>[duration]</strong> minutes.",
+    en: "The span must last at least <strong>[duration]</strong> minutes.",
   },
   "constraint.required.checkbox": {
     fr: "Veuillez cocher cette case.",
@@ -2258,6 +2291,9 @@ const generateSignalId = () => {
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @param {"string" | "number" | "boolean"} [options.itemType] - For array type: type of the array items.
+ *   Used when reading the value back from a url search param, where everything is a string:
+ *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
@@ -5321,7 +5357,13 @@ const buildQueryString = (params) => {
 
       // Handle array values - join with commas
       if (Array.isArray(value)) {
-        if (value.length === 0) ; else {
+        if (value.length === 0) {
+          // Empty array - written as "key=", the form extractSearchParams reads
+          // back as []. Omitting the param entirely would mean "absent" which
+          // resolves to the default value, making "nothing selected"
+          // inexpressible for a signal whose default is non-empty.
+          searchParamPairs.push(`${encodedKey}=`);
+        } else {
           const encodedValue = value
             .map((item) => encodeURIComponent(String(item)))
             .join(",");
@@ -5346,6 +5388,26 @@ const buildQueryString = (params) => {
   }
 
   return searchParamPairs.join("&");
+};
+
+/**
+ * Cast an array item read from the URL into the item type declared on the
+ * signal (`stateSignal([], { type: "array", itemType: "number" })`).
+ *
+ * Without it every item comes back as a string and the value no longer equals
+ * what was assigned, so the URL→signal sync overwrites the signal with strings.
+ * Declared explicitly rather than guessed, so a "42" string item stays a string
+ * unless the signal says otherwise.
+ */
+const castStringToItemType = (item, itemType) => {
+  if (itemType === "number" || itemType === "float") {
+    const numberValue = Number(item);
+    return isNaN(numberValue) ? item : numberValue;
+  }
+  if (itemType === "boolean") {
+    return item === "true" || item === "1" || item === "";
+  }
+  return item;
 };
 
 /**
@@ -5385,6 +5447,7 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
 
     const connection = queryConnectionMap.get(key);
     const signalType = connection ? connection.type : null;
+    const itemType = connection ? connection.itemType : null;
 
     // Cast value based on signal type
     if (signalType === "array") {
@@ -5399,7 +5462,8 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
         params[key] = rawValue
           .split(",")
           .map((item) => decodeURIComponent(item))
-          .filter((item) => item.trim() !== "");
+          .filter((item) => item.trim() !== "")
+          .map((item) => castStringToItemType(item, itemType));
       }
     } else if (signalType === "number" || signalType === "float") {
       const decodedValue = decodeURIComponent(rawValue);
@@ -7010,7 +7074,7 @@ const getUIStateFromElement = (el, { own } = {}) => {
  */
 const asControlHostValue = (
   jsValue,
-  { controlType, type, inputMode },
+  { controlType, type, inputMode, pad },
 ) => {
   if (controlType === "select") {
     // A select holds one of its options, always a string; holding nothing is
@@ -7027,7 +7091,7 @@ const asControlHostValue = (
       inputMode === "numeric" ||
       inputMode === "decimal"
     ) {
-      return asNumberString(jsValue);
+      return asNumberString(jsValue, pad);
     }
     if (type === "color") {
       return asColorString(jsValue);
@@ -7051,11 +7115,24 @@ const asDatetimeLocalString = (dateTimeString) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
-const asNumberString = (jsValue) => {
+// `pad` is how many digits the number is WRITTEN on — an hour is held as 7 and
+// shown as "07". Held and shown are two things here, the way they are for a
+// datetime-local above: what the field says is derived from what the control
+// holds, and reading it back (readNumberFromInput) gives the number again.
+const asNumberString = (jsValue, pad) => {
   if (jsValue === undefined) {
     return "";
   }
-  return jsValue;
+  if (!pad || jsValue === "" || jsValue === null) {
+    return jsValue;
+  }
+  const number = Number(jsValue);
+  if (Number.isNaN(number)) {
+    return jsValue;
+  }
+  const negative = number < 0;
+  const digits = String(negative ? -number : number).padStart(Number(pad), "0");
+  return negative ? `-${digits}` : digits;
 };
 // Browser requires a non-empty value for <input type="color">.
 // When our logical value is empty we give it #000000 so it doesn't choke.
@@ -7207,11 +7284,15 @@ const getRadioSiblings = (radioUIStateController) => {
   return siblings;
 };
 
-const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
+const toDomValue = (
+  jsValue,
+  { controlType, id, type, inputMode, pad },
+) => {
   const domValue = asControlHostValue(jsValue, {
     controlType,
     type,
     inputMode,
+    pad,
   });
   if (isSerializableAsDomValue(domValue)) {
     return domValue;
@@ -12243,24 +12324,58 @@ const swipeTypeOf = (axis, pulled) => {
 };
 
 /**
- * `move`, `reorder`, `toss` — one grab, and what letting go of it means.
+ * `move`, `reorder`, `land`, `toss` — one grab, and what letting go of it means.
  *
- * All three are the same gesture: the element is picked up and carried. What
+ * All four are the same gesture: the element is picked up and carried. What
  * differs is the answer at the release, so one detector reads them all — it is one
  * press, and something has to arbitrate it.
  *
  *   interactions={{ reorder: moveBefore, toss: remove }}
+ *   interactions={{ land: swapPlaces }}
  *   interactions={{ move: remember }}
  *
- * `reorder` and `toss` combine: a task dragged onto another changes places, the
- * same task thrown far and fast is gotten rid of. `move` does not combine with
- * `reorder` — an element either goes where it is put or takes a place in a list,
- * and the two answers cannot both be true of one release.
+ * `toss` combines with `reorder` and with `land`: a task dragged onto another
+ * changes places, the same task thrown far and fast is gotten rid of. The three
+ * others do not combine with each other — an element either goes where it is put,
+ * takes a place in a list, or comes down on a place, and no two of those answers
+ * can both be true of one release.
  *
- * `move` carries the element ITSELF and leaves it where it was put; the other two
+ * `move` carries the element ITSELF and leaves it where it was put; the others
  * carry a copy and put the original back. That is the same difference said in
  * layout terms: something moved has a new place of its own, something reordered
  * had its place taken by the list.
+ *
+ * `reorder` VS `land`: both come down on an item, and what separates them is what
+ * a place IS. A row of a list is a place BETWEEN two others — free by construction,
+ * so the answer is an insertion, and putting a row back where it already was is a
+ * no-op. A place of a board is a place of its own, which may already be taken — so
+ * nothing is inserted, nothing is a no-op, and the answer is simply "this one came
+ * down on that one". What that means is the application's: take the place, swap the
+ * two, refuse.
+ *
+ *   interactions={{ land: (event) => {
+ *     const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+ *     …
+ *   }}}
+ *
+ * `toId` is an element and never null: a copy over nothing is a release that meant
+ * nothing, and the interaction does not happen at all.
+ *
+ * `syncCloneWithDropTarget` takes an element here, which `reorder` has no use for:
+ * a place of a board can be larger than what stands on it (a quarter of a court, a
+ * square holding a smaller piece), and the copy has to come down where the piece
+ * will be rather than filling the place. Left alone, it lands on the place itself.
+ *
+ * WHICH ELEMENTS ARE PLACES: those marked `data-droppable`, and only those.
+ * Declaring `land` says an element can be CARRIED, which on a board is a different
+ * thing from being somewhere one can be put: a zone receives without ever being
+ * carried, a piece is carried without ever receiving, and both at once is a third
+ * case (dropped on a piece, the two swap). A list has no such distinction — every
+ * row is both, which is why `reorder` needs no marker in the markup.
+ *
+ * The set of places is looked for inside the carried element's PARENT, so a place
+ * and a piece are siblings: a piece nested inside its place would see only that
+ * one, and have nowhere else to go.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -12268,8 +12383,8 @@ const swipeTypeOf = (axis, pulled) => {
  * the flight of a thrown copy and its return when the answer refuses. This says
  * which elements are the items, how they are named, and what a given release means.
  *
- * WHICH ELEMENTS. Every element declaring `reorder` marks itself, so the set of
- * items IS the set of elements that declared it — no selector to pass, nothing to
+ * WHICH ELEMENTS, for `reorder`. Every element declaring it marks itself, so the
+ * set of items IS the set of elements that declared it — no selector to pass, nothing to
  * keep in sync with the markup, and an item that must not move simply does not
  * declare it. An element that only declares `toss` marks nothing: it is not a place
  * anything lands.
@@ -12308,7 +12423,7 @@ const swipeTypeOf = (axis, pulled) => {
  *
  *   interactions={{ toss: remove, grab: () => navigator.vibrate?.(10) }}
  *
- * The three above all answer the RELEASE, and between the press and the release
+ * The four above all answer the RELEASE, and between the press and the release
  * there is one instant that counts for the hand making the gesture: the one where
  * the object stops being pressed and starts being held. `grab` is that instant,
  * and it is the same one whichever way the drag was entered — a finger held still,
@@ -12322,7 +12437,7 @@ const swipeTypeOf = (axis, pulled) => {
  *
  * It is told, not asked: `grab` reports, so what it returns is not waited on and
  * preventing its event does not call the gesture off. And it is not an interaction
- * on its own — declared without one of the three above there is no gesture for it
+ * on its own — declared without one of the four above there is no gesture for it
  * to be the beginning of.
  *
  * A `longpress` needs nothing of this: it already happens at the moment the hold
@@ -12337,12 +12452,19 @@ const swipeTypeOf = (axis, pulled) => {
 
 const MOVE = "move";
 const REORDER = "reorder";
+// "drop" is taken: it is the name of the platform's own drag-and-drop event, and
+// an interaction is dispatched as an event of its own name — so anything listening
+// for a file being dropped on the page would get this one and read it as such.
+const LAND = "land";
 const TOSS = "toss";
 // The moment the press stops being a press and becomes a hold on the object.
 const GRAB = "grab";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
+// The same for `land`, except the markup is what writes it: a place of a board is
+// not the same thing as a piece of it (see the top of this file).
+const DROPPABLE_ATTRIBUTE = "data-droppable";
 // Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
@@ -12356,12 +12478,17 @@ const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
 defineInteractionDetector({
   name: "drag",
   claims: (type) =>
-    type === MOVE || type === REORDER || type === TOSS || type === GRAB,
+    type === MOVE ||
+    type === REORDER ||
+    type === LAND ||
+    type === TOSS ||
+    type === GRAB,
   setup: (element, trigger, { types, readConfig }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
+    const canLand = types.includes(LAND);
     const canToss = types.includes(TOSS);
-    if (!canMove && !canReorder && !canToss) {
+    if (!canMove && !canReorder && !canLand && !canToss) {
       return undefined;
     }
     const tellsWhenGrabbed = types.includes(GRAB);
@@ -12371,9 +12498,9 @@ defineInteractionDetector({
     const axes =
       axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
       // A list runs one way, and reordering walks it. Anything else goes wherever
-      // the hand takes it: a thing put somewhere has two axes to be put along, and
-      // a throw goes where it was thrown.
-      (canReorder && !canToss ? "y" : "xy");
+      // the hand takes it: a board has places all around, a thing put somewhere has
+      // two axes to be put along, and a throw goes where it was thrown.
+      (canReorder && !canLand && !canToss ? "y" : "xy");
 
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
@@ -12394,7 +12521,11 @@ defineInteractionDetector({
       startDragTo(pointerDownEvent, effects, {
         draggedElement: element,
         // Nothing to land on when nothing reorders.
-        itemSelector: canReorder ? `[${REORDERABLE_ATTRIBUTE}]` : undefined,
+        itemSelector: canLand
+          ? `[${DROPPABLE_ATTRIBUTE}]`
+          : canReorder
+            ? `[${REORDERABLE_ATTRIBUTE}]`
+            : undefined,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
         // Where it may go, said in the DOM. A thing that is put somewhere stays
@@ -12430,6 +12561,12 @@ defineInteractionDetector({
         // on before it lets go of what it carries.
         onReorder: (fromId, toId, syncCloneWithDropTarget) =>
           trigger(REORDER, pointerDownEvent, {
+            fromId,
+            toId,
+            syncCloneWithDropTarget,
+          }),
+        onLand: (fromId, toId, syncCloneWithDropTarget) =>
+          trigger(LAND, pointerDownEvent, {
             fromId,
             toId,
             syncCloneWithDropTarget,
@@ -14716,6 +14853,62 @@ const SINGLE_SPACE_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
 
+// A time that must not land before another one: the field says which one it
+// comes after (data-time-after, the id of the control holding it) and how much
+// room there must be between the two at least (data-time-min-duration, in
+// minutes — zero by default, so a span of no length is a span all the same).
+// Carried by the LATER of the two: it is the one that would have to move, so it
+// is the one the answer is about.
+const TIME_RANGE_CONSTRAINT = {
+  name: "time_after",
+  messageAttribute: "data-time-after-message",
+  check: (field) => {
+    const after = field.controlHostProps["data-time-after"];
+    if (after === undefined) {
+      return null;
+    }
+    const otherController = getUIStateControllerById(after);
+    if (!otherController) {
+      console.warn(`Time after constraint: no control with id "${after}"`);
+      return null;
+    }
+    const timeBefore = minutesFromTime(otherController.uiState);
+    const timeAfter = minutesFromTime(field.uiState);
+    if (timeBefore === null || timeAfter === null) {
+      return null;
+    }
+    const minDuration = Number(
+      field.controlHostProps["data-time-min-duration"] ?? 0,
+    );
+    const duration = timeAfter - timeBefore;
+    if (duration >= minDuration) {
+      return null;
+    }
+    if (minDuration > 0) {
+      return naviI18n("constraint.time_after.min_duration").replace(
+        "[duration]",
+        String(minDuration),
+      );
+    }
+    return naviI18n("constraint.time_after.default");
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-time-after");
+CONSTRAINT_ATTRIBUTE_SET.add("data-time-min-duration");
+
+// "HH:MM" as a number of minutes, which is what two times are compared and
+// subtracted as. Anything else is a time nobody has finished writing.
+const minutesFromTime = (time) => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})$/.exec(time);
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
 /**
  * Custom form validation implementation
  *
@@ -14785,6 +14978,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_LOWER_LETTER_CONSTRAINT,
   SAME_AS_CONSTRAINT,
   ONE_OF_CONSTRAINT,
+  TIME_RANGE_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,
@@ -17048,6 +17242,7 @@ const resolveSpacingSize = (size, element, property = "padding") => {
 };
 
 const COLOR_KEYWORD_MAP = {
+  primary: "var(--navi-color-primary)",
   secondary: "var(--navi-color-secondary)",
   emphasis: "var(--navi-color-emphasis)",
   discrete: "var(--navi-color-discrete)",
@@ -22144,6 +22339,7 @@ const CONTROL_ATTRIBUTE_SET = new Set([
 
   // "ui-action-target",
   "navi-input-type",
+  "navi-value-pad",
   "navi-control-proxy-for",
   "navi-command-proxy-for",
   "navi-command-target",
@@ -23408,6 +23604,12 @@ const useUIGroupStateController = (
   const debugUIGroup = useDebugUIState();
   const debugFocus = useDebugFocus();
 
+  // What the group is worth is one key per child (or one item per child) only
+  // as long as nobody said otherwise: a group with its own aggregate is worth
+  // whatever IT says — a "HH:MM", an ISO duration — and the shape checks in
+  // setUIState below are about the default shape, not about that one.
+  const stateShapeIsTheDefaultOne =
+    !aggregateChildStates && !distributeChildUIState;
   const defaults = GROUP_DEFAULTS[controlType] ?? GROUP_DEFAULTS[stateType];
   const resolvedChildControlFilter =
     childControlFilter ?? defaults?.childControlFilter ?? null;
@@ -23581,6 +23783,7 @@ const useUIGroupStateController = (
         setUIState: (newUIState, e) => {
           if (
             stateType === "object" &&
+            stateShapeIsTheDefaultOne &&
             (newUIState === null || typeof newUIState !== "object")
           ) {
             console.warn(
@@ -23589,7 +23792,11 @@ const useUIGroupStateController = (
             );
             return;
           }
-          if (stateType === "array" && !Array.isArray(newUIState)) {
+          if (
+            stateType === "array" &&
+            stateShapeIsTheDefaultOne &&
+            !Array.isArray(newUIState)
+          ) {
             console.warn(
               `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
               newUIState,
@@ -24321,7 +24528,10 @@ const useControlProps = (props, {
       controlType,
       id: props.id,
       type: props.type,
-      inputMode: props.inputMode
+      inputMode: props.inputMode,
+      // How the value is WRITTEN where it is held one way and shown another —
+      // a number on two digits ("07" for 7). See asControlHostValue.
+      pad: props["navi-value-pad"]
     });
     return {
       value: domValue
@@ -24330,6 +24540,13 @@ const useControlProps = (props, {
   const syncDomState = (newUIState, e) => {
     const el = props.ref.current;
     if (!el) {
+      return;
+    }
+    // The field one is typing in is where the value comes FROM, and what is in
+    // it already says this: writing it back in the form it is shown in ("07"
+    // for a 7 just typed) would move the caret and stop the person mid-number.
+    // What is shown is derived again when the field is left (see below).
+    if (document.activeElement === el && readControlValue(el) === newUIState) {
       return;
     }
     const domProps = toDomProps(newUIState);
@@ -24919,9 +25136,32 @@ const useControlProps = (props, {
       onPaste,
       onInput
     });
+    // A value written in a form of its own ("07" for the number 7) is derived
+    // again when the field is left: while it is being typed into, what is in
+    // the field is what the person is writing and nothing rewrites it (see
+    // syncDomState). Only for such a control — for every other one the field
+    // already shows exactly what is held, and there is nothing to derive.
+    if (props["navi-value-pad"]) {
+      const onBlurFromProps = controlHostProps.onBlur;
+      controlHostProps.onBlur = e => {
+        onBlurFromProps?.(e);
+        // Read from the field: what was just typed is in there, whatever the
+        // control has had time to settle on.
+        const el = e.currentTarget;
+        syncDomState(readControlValue(el), e);
+      };
+    }
   }
   const uiState = uiStateController.uiStateSignal.peek();
   const domProps = toDomProps(uiState);
+  {
+    // Same as syncDomState: a field being typed into keeps its own text, so a
+    // render happening mid-number does not put the caret back at the end.
+    const el = props.ref.current;
+    if (el && document.activeElement === el && readControlValue(el) === uiState) {
+      domProps.value = el.value;
+    }
+  }
   Object.assign(controlHostProps, domProps);
   return [controlRootProps, controlHostProps, {
     uiStateController
@@ -25061,17 +25301,26 @@ const createControlInfo = (props, {
 };
 // color, radio, image, file etc do not support readonly
 const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set(["text", "date", "datetime-local", "email", "month", "number", "password", "search", "tel", "time", "url", "week"]);
-const useReadOnlyUncontrolled = (props, controlInfo) => {
-  if (!controlInfo.hasStateProp) {
-    return false;
-  }
+// Who, if anyone, is listening to what this control is worth: a handler of its
+// own, a bound signal, a command — or the form/group around it, which is the
+// one that will send the value and hand a new one back. Held apart from the
+// warning below so a group can ask the same question a single control does: a
+// control with a `value` and nobody listening cannot be changed by hand, and
+// that is true whatever the control is.
+const useIsControlListenedTo = props => {
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const formContext = useContext(FormContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const controlled = props.signal ||
+  return Boolean(props.signal ||
   // a bound signal is written back on uiAction → interactive
-  props.uiAction || props.action || formContext || parentUIStateController || isProxy || props.command;
-  if (controlled) {
+  props.uiAction || props.action || formContext || parentUIStateController || isProxy || props.command);
+};
+const useReadOnlyUncontrolled = (props, controlInfo) => {
+  const listenedTo = useIsControlListenedTo(props);
+  if (!controlInfo.hasStateProp) {
+    return false;
+  }
+  if (listenedTo) {
     return false;
   }
   if (
@@ -25117,9 +25366,12 @@ const useControlgroupProps = (props, {
     cascadeValidationToChildren
   });
   const [boundAction] = useActionBoundToOneParam(action, uiGroupStateController.uiStateSignal);
-  // Mirror single-input behaviour: a controlled value with no handler makes the
-  // group read-only so children don't appear interactive when they can't change.
-  const implicitReadOnly = uiGroupStateController.hasValueProp && !action && !props.uiAction;
+  // Mirror single-input behaviour: a controlled value with nobody listening
+  // makes the group read-only so children don't appear interactive when they
+  // can't change. A form or a group around it IS someone listening — that is
+  // what will send the value and hand a new one back.
+  const listenedTo = useIsControlListenedTo(props);
+  const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;
   if (implicitReadOnly && !props.readOnly) {
     props.readOnly = true;
   }
@@ -44930,20 +45182,16 @@ const InputModeNumericOrDecimal = props => {
         return;
       }
       const input = e.currentTarget;
-      let maxLength;
-      const maxLengthProp = input.maxLength;
-      if (maxLengthProp === -1) {
+      let maxLength = input.maxLength;
+      if (maxLength === -1) {
         const naviMaxLengthAttr = input.getAttribute("navi-max-length");
-        if (naviMaxLengthAttr === null) {
-          // no max length
-          return;
-        }
-        maxLength = Number(naviMaxLengthAttr);
+        maxLength = naviMaxLengthAttr === null ? undefined : Number(naviMaxLengthAttr);
       }
-      if (input.value.length < maxLength) {
+      const caretAtEnd = input.selectionStart === input.value.length;
+      if (!caretAtEnd) {
         return;
       }
-      if (input.selectionStart !== maxLength) {
+      if (!isFull(input, maxLength)) {
         return;
       }
       // Field is full and caret is at the end: notify listeners then
@@ -44952,7 +45200,11 @@ const InputModeNumericOrDecimal = props => {
       const allowed = dispatchPublicCustomEvent(input, "navi_input_full", {
         event: e
       });
-      if (allowed) {
+      // Only for a value being typed: selecting focuses the field, and a
+      // value set from elsewhere (a chevron, a form) has nobody typing — on a
+      // phone that focus raises the on-screen keyboard over the page. Same
+      // question useInputGroup asks before moving along to the next field.
+      if (allowed && e.isTrusted) {
         input.select();
       }
     },
@@ -44967,6 +45219,32 @@ const InputModeNumericOrDecimal = props => {
       }
     }
   });
+};
+
+// A field is full when there is no room for another digit — and room is not
+// only a number of characters: an hour of two digits at most is also full at
+// "7", because 7 followed by anything is past the 23 it accepts. Both are the
+// same question ("can one more digit still land here?"), so both move the
+// person filling it in along to the next field.
+const isFull = (input, maxLength) => {
+  const value = input.value;
+  if (value === "") {
+    return false;
+  }
+  if (maxLength !== undefined && value.length >= maxLength) {
+    return true;
+  }
+  const max = input.max === "" ? undefined : Number(input.max);
+  if (max === undefined || Number.isNaN(max)) {
+    return false;
+  }
+  // The smallest number one more digit could make: a zero appended to what is
+  // already there.
+  const withOneMoreDigit = Number(`${value}0`);
+  if (Number.isNaN(withOneMoreDigit)) {
+    return false;
+  }
+  return withOneMoreDigit > max;
 };
 
 // hum il manque le faire de request interaction ici
@@ -50366,6 +50644,228 @@ const toDate = (value, parseString) => {
   return null;
 };
 
+/**
+ * Wraps multiple inputs together and handles keyboard navigation and paste
+ * distribution between them.
+ *
+ * Keyboard navigation:
+ *   ArrowRight at the end of an input moves focus to the next input.
+ *   ArrowLeft at the start of an input moves focus to the previous input.
+ *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
+ *
+ * Paste distribution:
+ *   When an input has a data-separator attribute, pasting a string that
+ *   contains that separator (e.g. "27/04/1990" into a day input with
+ *   data-separator="/") splits the text on each separator and fills the
+ *   corresponding sub-inputs in order.
+ */
+const useInputGroup = (ref) => {
+  const debugFocus = useDebugFocus();
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return () => {};
+    }
+
+    const getInputs = () =>
+      Array.from(el.querySelectorAll(".navi_control_input"));
+
+    const focusInput = (input) => {
+      input.focus();
+      input.select();
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
+        return;
+      }
+      const active = document.activeElement;
+      if (!isTextInputElement(active) || !el.contains(active)) {
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        const allSelected =
+          active.selectionStart === 0 &&
+          active.selectionEnd === active.value.length;
+        const atEnd =
+          allSelected ||
+          (active.selectionStart === active.value.length &&
+            active.selectionEnd === active.value.length);
+        if (!atEnd) {
+          return;
+        }
+        const inputs = getInputs();
+        const idx = inputs.indexOf(active);
+        if (idx === -1) {
+          debugFocus(
+            e,
+            "InputGroup ArrowRight on non group input → do nothing",
+          );
+          return;
+        }
+        if (idx === inputs.length - 1) {
+          debugFocus(
+            e,
+            "InputGroup ArrowRight at end of last input → do nothing",
+          );
+          return;
+        }
+
+        debugFocus(
+          e,
+          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
+          idx,
+          idx + 1,
+        );
+        e.preventDefault();
+        focusInput(inputs[idx + 1]);
+        return;
+      }
+      const allSelected =
+        active.selectionStart === 0 &&
+        active.selectionEnd === active.value.length;
+      const atStart =
+        allSelected ||
+        (active.selectionStart === 0 && active.selectionEnd === 0);
+      if (!atStart) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(active);
+      if (idx === 0) {
+        return;
+      }
+      debugFocus(
+        e,
+        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
+        idx,
+        idx - 1,
+      );
+      e.preventDefault();
+      focusInput(inputs[idx - 1]);
+    };
+
+    const handleNaviInputFull = (e) => {
+      if (!e.detail.event?.isTrusted) {
+        // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
+        return;
+      }
+      const input = e.detail.event.currentTarget;
+      if (!el.contains(input)) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(input);
+      if (idx === -1) {
+        return;
+      }
+      if (idx === inputs.length - 1) {
+        return;
+      }
+      const nextInput = inputs[idx + 1];
+      debugFocus(
+        e,
+        "InputGroup navi_input_full on input -> move to next input",
+        input,
+        nextInput,
+      );
+      e.preventDefault();
+      focusInput(nextInput);
+    };
+
+    // const handlePaste = (e) => {
+    //   const active = document.activeElement;
+    //   if (!isTextInputElement(active) || !el.contains(active)) {
+    //     return;
+    //   }
+    //   const inputs = getInputs();
+    //   const startIdx = inputs.indexOf(active);
+    //   if (startIdx === -1) {
+    //     return;
+    //   }
+    //   const pastedText = e.clipboardData?.getData("text") ?? "";
+    //   if (!pastedText) {
+    //     return;
+    //   }
+    //   // Only intercept when the pasted text contains at least one separator
+    //   // from the inputs starting at the focused position.
+    //   const remainingInputs = inputs.slice(startIdx);
+    //   const hasSeparatorMatch = remainingInputs.some(
+    //     (input) =>
+    //       input.dataset.separator &&
+    //       pastedText.includes(input.dataset.separator),
+    //   );
+    //   if (!hasSeparatorMatch) {
+    //     return;
+    //   }
+    //   e.preventDefault();
+    //   let remaining = pastedText;
+    //   let lastFilledIdx = startIdx;
+    //   for (let i = 0; i < remainingInputs.length; i++) {
+    //     const input = remainingInputs[i];
+    //     const separator = input.dataset.separator;
+    //     let part;
+    //     if (separator && remaining.includes(separator)) {
+    //       const sepIdx = remaining.indexOf(separator);
+    //       part = remaining.slice(0, sepIdx);
+    //       remaining = remaining.slice(sepIdx + separator.length);
+    //     } else {
+    //       part = remaining;
+    //       remaining = "";
+    //     }
+    //     requestSubPaste(input, part, e);
+    //     lastFilledIdx = startIdx + i;
+    //     if (remaining === "") {
+    //       break;
+    //     }
+    //   }
+    //   focusInput(inputs[lastFilledIdx]);
+    // };
+
+    el.addEventListener("keydown", handleKeyDown, { capture: true });
+    el.addEventListener("navi_input_full", handleNaviInputFull);
+    // el.addEventListener("paste", handlePaste, { capture: true });
+    return () => {
+      el.removeEventListener("keydown", handleKeyDown, { capture: true });
+      el.removeEventListener("navi_input_full", handleNaviInputFull);
+      // el.removeEventListener("paste", handlePaste, { capture: true });
+    };
+  }, [debugFocus]);
+};
+
+// const requestSubPaste = (input, value, event) => {
+//   dispatchRequestInteraction(input, {
+//     event,
+//     name: "subpaste",
+//     allowed: () => {
+//       dispatchRequestSetUIState(input, value, { event });
+//     },
+//   });
+// };
+
+const isTextInputElement = (el) => {
+  if (!el) {
+    return false;
+  }
+  if (el.tagName === "TEXTAREA") {
+    return true;
+  }
+  if (el.tagName !== "INPUT") {
+    return false;
+  }
+  const type = el.type || "text";
+  return (
+    type === "text" ||
+    type === "search" ||
+    type === "url" ||
+    type === "tel" ||
+    type === "email" ||
+    type === "password" ||
+    type === "number"
+  );
+};
+
 // When a component render a prop that can be anything (js value of preact element)
 // make sure it cannot throw during render by converting it to a string if it's not a valid preact element or a primitive value
 const renderSafe = (value) => {
@@ -53403,6 +53903,14 @@ const css$v = /* css */`
         font-size: 0.75em;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+      }
+
+      /* A group whose rows all failed the search keeps its height (its rows are
+         still there, invisible) — the label must disappear with them, otherwise
+         the list shows a title standing over nothing. Same aria-hidden + inert
+         pair as the rows themselves. */
+      &[aria-hidden="true"][inert] {
+        opacity: 0;
       }
     }
     .navi_list_item_group_list {
@@ -56523,6 +57031,14 @@ const ListItemGroup = ({
 }) => {
   const groupId = useId();
   const groupTracker = useItemTracker();
+  const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  const groupItemCount = groupTracker.countSignal.value;
+  const groupNoMatchCount = groupTracker.noMatchCountSignal.value;
+  // Every row of this group failed the search: the label has nothing left to
+  // title. "remove" empties the group on its own (and hiddenWhileEmpty takes it
+  // out of the flow), "muted" keeps the rows readable so the label stays useful
+  // — only "invisible_and_inert" would leave a title floating over blank space.
+  const labelHidden = searchNoMatchMode === "invisible_and_inert" && groupNoMatchCount > 0 && groupNoMatchCount === groupItemCount;
   const groupRef = useRef(null);
   const labelRef = useRef(null);
   useDisplayedLayoutEffect(labelRef, labelEl => {
@@ -56544,7 +57060,9 @@ const ListItemGroup = ({
       ref: labelRef,
       id: groupId,
       className: "navi_list_item_group_label",
-      role: "presentation"
+      role: "presentation",
+      "aria-hidden": labelHidden ? "true" : undefined,
+      inert: labelHidden ? true : undefined
       // eslint-disable-next-line react/no-unknown-property
       ,
 
@@ -58200,6 +58718,15 @@ const css$q = /* css */`
       --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
     }
+    /* Written in what it is written with, for a value one TYPES: a field is as
+       wide as the digits in it and no wider, so the room around them has to
+       come from here — and the two chevrons, which take the same, are then big
+       enough to be aimed at with a finger. Said as a default, so a padding prop
+       still wins. */
+    .navi_picker_spin:has(> .navi_picker_spin_middle > .navi_input) {
+      --picker-spin-padding-x-default: 0.6em;
+      --picker-spin-padding-y-default: 0.25em;
+    }
   }
 
   .navi_picker_spin {
@@ -58331,6 +58858,16 @@ const css$q = /* css */`
     min-width: 0;
     flex: 1 1 auto;
   }
+  /* The same room around a value one TYPES as around one one picks (the
+     [data-slide] rule below writes it there): without it the column is as
+     narrow as the two digits in it, and a number pressed against both sides
+     reads as a field too small for what it holds. Handed to the field as its
+     own padding rather than kept by the middle: the field then IS the column —
+     it fills it, and a click anywhere in it lands on the caret. */
+  .navi_picker_spin_middle > .navi_input {
+    --padding-right: var(--x-picker-spin-padding-right);
+    --padding-left: var(--x-picker-spin-padding-left);
+  }
   /* Where the padding lands: all four sides on the value, the two vertical
      ones on the chevrons below — the same number above and below is what makes
      the three one line rather than three boxes, while sideways it is the room
@@ -58408,8 +58945,19 @@ const css$q = /* css */`
     aspect-ratio: 1;
     justify-content: center;
   }
+  /* Standing up, a chevron takes the whole width and whatever height is left
+     over: a box taller than the three pieces in it (a height of its own, room
+     asked for around the value) would otherwise leave a strip of nothing
+     between the chevron and the border, and one pressing what looks like the
+     bottom of the box would hit nothing. */
   .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
     width: 100%;
+    height: auto;
+    min-height: calc(
+      1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom)
+    );
+    flex: 1 0 auto;
     justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner
@@ -58440,6 +58988,92 @@ const css$q = /* css */`
     > .navi_picker_spin_way_out[data-way-out="end"] {
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
+  }
+
+  /* ── SpinGroup ─────────────────────────────────────────────────────────────
+     Several spins read as one value: an hour is "7h30", not a 7 next to a 30.
+     So the frame goes around the group, the spins inside give theirs up, and
+     what sits between them (an "h", a ":") is inside the frame with them. */
+  .navi_spin_group {
+    /* What the loading outline is drawn around. */
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
+    outline-width: var(--navi-focus-outline-width);
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: 0px;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+  }
+  /* A value one PICKS has nowhere of its own to wear a ring — its middle is a
+     container that hands the ring over (data-focus-outline-delegate) — so the
+     group wears it for that spin. A value one TYPES keeps its own, on the
+     field: the spins in a group are edited one at a time, and the ring is what
+     says which one the keyboard is in. */
+  .navi_spin_group[data-focus-visible],
+  .navi_spin_group:has([data-focus-outline-delegate][data-focus-visible]) {
+    outline-style: solid;
+  }
+  .navi_spin_group .navi_picker_spin {
+    border: none;
+    border-radius: 0;
+  }
+  /* The corners of the group belong to the spins sitting in them, and through
+     them to their chevrons, which are rounded by whatever their spin is. */
+  .navi_spin_group > .navi_picker_spin:first-child {
+    border-start-start-radius: inherit;
+    border-end-start-radius: inherit;
+  }
+  .navi_spin_group > .navi_picker_spin:last-child {
+    border-start-end-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  .navi_spin_group .navi_picker_spin[data-focus-visible],
+  .navi_spin_group
+    .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]),
+  .navi_spin_group .navi_picker_spin:has(.navi_input[data-focus-visible]) {
+    outline-style: none;
+  }
+  /* Fading the frame is the group's to do, since the frame is the group's. */
+  .navi_spin_group[data-readonly],
+  .navi_spin_group[data-loading] {
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 45%,
+      transparent
+    );
+  }
+  .navi_spin_group[data-disabled] {
+    color: color-mix(in srgb, currentColor 40%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent
+    );
+  }
+  /* As tall as the spins beside it, so what it says lands on their line. */
+  .navi_spin_group_separator {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    color: inherit;
+    white-space: nowrap;
+    user-select: none;
+  }
+  /* The "h" fades with the values it sits between: it is one control, and a
+     word left black beside two grey numbers reads as half a control out of
+     service. Same mixes as the spins' own (see above). */
+  .navi_spin_group[data-readonly] .navi_spin_group_separator,
+  .navi_spin_group[data-loading] .navi_spin_group_separator {
+    color: color-mix(in srgb, currentColor 60%, transparent);
+  }
+  .navi_spin_group[data-disabled] .navi_spin_group_separator {
+    color: color-mix(in srgb, currentColor 40%, transparent);
   }
 `;
 
@@ -58533,6 +59167,7 @@ const Spin = ({
   readOnly,
   disabled,
   loading,
+  size,
   maxLines,
   previousLabel,
   nextLabel,
@@ -58540,6 +59175,10 @@ const Spin = ({
 }) => {
   import.meta.css = [css$q, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
+  // What the group around it says, when there is one: how big the whole thing
+  // is written is said once, on the group, and every spin in it follows.
+  const group = useContext(SpinGroupContext);
+  const sizeResolved = size ?? group?.size;
   const containerId = `${id}_values`;
   const controlId = `${id}_control`;
   // The control holds the value, and it is asked rather than shadowed:
@@ -58666,7 +59305,19 @@ const Spin = ({
   // it in this spin, so one can keep going with the keys where one was. Found
   // in the middle rather than by id — a field's id lands on the box around it,
   // and what takes the keyboard is the input inside.
+  //
+  // Not under a finger: focusing a field on a phone raises the on-screen
+  // keyboard over half the page, and someone pressing a chevron is stepping
+  // through values, not about to type one. With a mouse the opposite is true —
+  // one presses once and then keeps going with the arrow keys — so the keyboard
+  // is put back where it was. Which one it is comes from the pointer that
+  // started the press (same convention as button_ui.jsx and
+  // use_autoselect_read_only.js).
+  const wayOutPointerTypeRef = useRef(null);
   const focusMiddle = () => {
+    if (wayOutPointerTypeRef.current === "touch") {
+      return;
+    }
     const target = editable ? middleRef.current?.querySelector(".navi_control_input") : document.getElementById(containerId);
     target?.focus({
       preventScroll: true
@@ -58686,6 +59337,9 @@ const Spin = ({
     const isNext = atStart ? startIsNext : !startIsNext;
     return jsx(WayOut, {
       atStart: atStart,
+      onPointerDown: e => {
+        wayOutPointerTypeRef.current = e.pointerType;
+      },
       unavailableMessage: wayOutMessage(atStart ? startAllowed : endAllowed, isNext ? "spin.nothing_after" : "spin.nothing_before"),
       label: isNext ? nextLabel ?? naviI18n("spin.next") : previousLabel ?? naviI18n("spin.previous"),
       onPress: e => {
@@ -58713,6 +59367,7 @@ const Spin = ({
     // asked for by hand (pseudoState) as well as held for real.
     ,
 
+    size: sizeResolved,
     pseudoClasses: PICKER_SPIN_PSEUDO_CLASSES,
     styleCSSVars: PICKER_SPIN_STYLE_CSS_VARS,
     "data-vertical": vertical ? "" : undefined,
@@ -58737,14 +59392,21 @@ const Spin = ({
         readOnly: readOnly,
         disabled: disabled,
         loading: loading
-        // No frame of its own inside a frame, and no ring of its own
-        // either: the spin draws both (see the CSS above), and an outline
-        // of zero width is how a field stands down without its focus
-        // state being touched.
+        // The field is written as big as the box around it: a size that
+        // only grew the chevrons would be half a size.
+        ,
+
+        size: sizeResolved
+        // No frame of its own inside a frame: the spin draws it (see the
+        // CSS above). The ring is the spin's too — an outline of zero width
+        // is how a field stands down without its focus state being touched
+        // — except inside a group, where the frame belongs to the group and
+        // the ring stays on the field: the spins are typed into one at a
+        // time, and the ring is what says which one holds the keyboard.
         ,
 
         variant: "discrete",
-        outlineWidth: "0",
+        outlineWidth: group ? undefined : "0",
         textAlign: "center",
         expandX: true,
         uiAction: (valueNext, event) => {
@@ -58868,6 +59530,7 @@ const WayOut = ({
   unavailableMessage,
   label,
   onPress,
+  onPointerDown,
   children
 }) => jsx(Box, {
   as: "span",
@@ -58914,6 +59577,7 @@ const WayOut = ({
   onClick: e => {
     e.preventDefault();
   },
+  onPointerDown: onPointerDown,
   onMouseDown: e => {
     // No focus, no text selection: the keyboard is put on the middle below.
     e.preventDefault();
@@ -58965,6 +59629,122 @@ const compareValuesDefault = (a, b) => {
 const renderValueDefault = value => String(value ?? "");
 
 /**
+ * Several spins read as one value: "7h30" is an hour, not a 7 beside a 30. The
+ * frame goes around the group, the spins inside give theirs up, and what is
+ * written between them — an "h", a ":", a word — sits inside the frame with
+ * them.
+ *
+ * A group IS a control: its named spins aggregate into `{ hour: …, minute: … }`
+ * for the form around it, and `aggregateChildStates`/`distributeChildUIState`
+ * turn that into whatever the group is really worth instead ("07:30", a number
+ * of minutes) — one value in both directions, so the group can be driven by a
+ * single `value`/`signal` like any other control. `TimeSpin` is that, for a
+ * time of day.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: any,
+ *   defaultValue?: any,
+ *   signal?: import("@preact/signals").Signal<any>,
+ *   aggregateChildStates?: (childUIStateControllers: any[]) => any,
+ *   distributeChildUIState?: (groupState: any, childUIStateController: any) => any,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * Everything a box takes is taken here too — `width`, `borderWidth`,
+ * `borderRadius`, `backgroundColor`: the frame is the group's, and its corners
+ * are passed on to the spins sitting in them.
+ */
+const SpinGroup = props => {
+  import.meta.css = [css$q, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  const {
+    size
+  } = props;
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const groupRef = props.ref;
+  // Two digit fields side by side are filled the way a date or a code is: the
+  // hour reaching its two digits moves on to the minutes, and Left/Right at
+  // either end of a field walk between them.
+  useInputGroup(groupRef);
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
+    allowCapture: true,
+    wantRequesterButtonState: true,
+    controlType: "control_group",
+    stateType: "object",
+    cascadeValidationToChildren: true,
+    aggregateChildStates: props.aggregateChildStates,
+    distributeChildUIState: props.distributeChildUIState
+  });
+  const {
+    children
+  } = controlgroupProps;
+  const {
+    readOnly,
+    disabled,
+    loading
+  } = childrenWrapperProps;
+  return jsxs(Box, {
+    ...controlgroupRootProps,
+    ...controlgroupProps,
+    // Consumed by the group hook above; blanked after the spreads so they do
+    // not reach the DOM as unknown attributes.
+    aggregateChildStates: undefined,
+    distributeChildUIState: undefined,
+    baseClassName: "navi_spin_group",
+    pseudoClasses: SPIN_GROUP_PSEUDO_CLASSES
+    // What the frame and what sits between the spins are drawn from: the
+    // spins fade themselves, and the group is what holds those two.
+    ,
+
+    "data-readonly": readOnly ? "" : undefined,
+    "data-disabled": disabled ? "" : undefined,
+    "data-loading": loading ? "" : undefined,
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--navi-loader-color)",
+      inset: -2
+    }), jsx(SpinGroupContext.Provider, {
+      value: {
+        size
+      },
+      children: jsx(ControlgroupChildrenWrapper, {
+        ...childrenWrapperProps,
+        // The group's name says where its value lands in the form; each spin
+        // inside is named on its own.
+        name: undefined,
+        children: children
+      })
+    })]
+  });
+};
+
+// Lets a group hand down what is said once for all the spins in it (how big
+// they are written), and lets a spin know it is in one at all — which is what
+// moves the frame and the focus ring off the spin and onto the group.
+const SpinGroupContext = createContext(null);
+const SPIN_GROUP_PSEUDO_CLASSES = [":focus-within",
+// Nothing focuses the group for real — a spin inside it takes the keyboard —
+// but it is where the ring is drawn, so a demo can hold it there.
+":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+
+/**
+ * SpinGroup.Separator — what is written between two spins ("h", ":", a word).
+ * It stands as tall as they do, so what it says lands on their line.
+ */
+const SpinGroupSeparator = ({
+  children,
+  ...rest
+}) => jsx(Box, {
+  as: "span",
+  ...rest,
+  className: "navi_spin_group_separator",
+  "aria-hidden": "true",
+  children: children
+});
+SpinGroup.Separator = SpinGroupSeparator;
+
+/**
  * A whole number one steps through and types into: the field IS the middle, so
  * the value can be typed as readily as stepped, and the two chevrons stand
  * above and below it by default — sideways they would be where the caret
@@ -58976,16 +59756,26 @@ const renderValueDefault = value => String(value ?? "");
  *   min?: number,
  *   max?: number,
  *   step?: number,
+ *   pad?: number,
+ *   loop?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {number} [min=0] The lowest number one can reach; `max` is the
  *   highest. They also bound what typing can produce, and how wide the field
  *   is asked to be (see `maxLength`).
+ * @param {boolean} [loop] The numbers go round: the step after `max` is `min`,
+ *   and the one before `min` is `max`. Both ends have to be known for that.
+ * @param {number} [pad] How many digits the number is written on, zeroes in
+ *   front of it: `pad={2}` writes 0 as "00". What an hour, a minute or a second
+ *   is read as — a clock says "07:00", never "7:0". Only the way it is written:
+ *   what the control holds, and what a form carries, is the number itself.
  */
 const NumberSpin = ({
   min = 0,
   max,
   step = 1,
+  pad,
+  loop,
   vertical = true,
   growsUpward = true,
   controlProps,
@@ -58999,29 +59789,64 @@ const NumberSpin = ({
   step: step,
   vertical: vertical,
   fallbackValue: min,
-  valueAtStep: (value, count) => numberAtStep(value, count, min),
+  valueAtStep: (value, count) => numberAtStep(value, count, {
+    min,
+    max,
+    loop
+  }),
   compareValues: (a, b) => Number(a) - Number(b),
   controlProps: {
     // The numeric keypad on a phone, and — through
     // input_resolver_mode — the "this field is full" event a group of
     // fields moves along on (see useInputGroup).
-    inputMode: "numeric",
-    maxLength: max === undefined ? undefined : String(max).length,
+    "inputMode": "numeric",
+    "maxLength": numberMaxLength(max, pad),
+    // What the number is HELD as stays a number; `pad` is how it is written
+    // in the field (see asControlHostValue).
+    "navi-value-pad": pad,
     ...controlProps
   },
   ...rest
 });
 
+// How many characters the field takes: what the biggest number is worth, or
+// what the padding writes, whichever is longer.
+const numberMaxLength = (max, pad) => {
+  if (max === undefined) {
+    return pad;
+  }
+  const maxLength = String(max).length;
+  if (pad && pad > maxLength) {
+    return pad;
+  }
+  return maxLength;
+};
+
 // One step away, bounds included: a step past `max` is a real number that
 // simply is not allowed, and Spin is the one that reads it as "nothing that
 // way" — clamping here would answer the chevron before it had a chance to say
 // so. A field mid-edit holding nothing (or nothing numeric) starts from `min`.
-const numberAtStep = (value, count, min) => {
+//
+// Unless the numbers go round: the step after the last one is the first, so
+// the value handed back is always one Spin can reach and no chevron ever says
+// there is nothing that way. Going round needs both ends to be known — a
+// stretch open at one end has no other end to come back from.
+const numberAtStep = (value, count, {
+  min,
+  max,
+  loop
+}) => {
   const number = Number(value);
   if (value === "" || value === undefined || Number.isNaN(number)) {
     return min;
   }
-  return number + count;
+  const numberNext = number + count;
+  if (!loop || max === undefined) {
+    return numberNext;
+  }
+  const valueCount = max - min + 1;
+  const offset = numberNext - min;
+  return min + (offset % valueCount + valueCount) % valueCount;
 };
 
 /**
@@ -59153,6 +59978,212 @@ const addDays = (day, count) => {
   const date = dayToDate(day);
   date.setDate(date.getDate() + count);
   return dateToDay(date);
+};
+
+/**
+ * A time of day, and a span between two of them, written the way a clock
+ * writes them: two digits, an "h" (a ":" in English) between hours and
+ * minutes, and one frame around the whole thing — "07h00" is one value, not a
+ * 7 beside a 0.
+ *
+ * `TimeSpin` is a `SpinGroup` of two `NumberSpin`s: it takes and hands back a
+ * single "HH:MM", so a form carries one field for it. `TimeRangeSpin` is two
+ * of those, and it carries `{ start, end }` — with the one rule such a pair
+ * always has, "the end comes after the start", checked when the form is sent
+ * (see time_range_constraint.js).
+ */
+
+const HOUR_MAX = 23;
+const MINUTE_MAX = 59;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   minuteStep?: number,
+ *   pad?: number,
+ *   loop?: boolean,
+ *   separator?: import("ignore:preact").ComponentChildren,
+ *   hourLabel?: string,
+ *   minuteLabel?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The time shown, as "HH:MM".
+ * @param {number} [minuteStep=1] How many minutes a press on a minute chevron
+ *   covers — 15 for quarters of an hour.
+ * @param {boolean} [loop=true] The hours and the minutes go round: 23h then 0h,
+ *   59 minutes then 0. What a clock does — and there is no first or last hour
+ *   of a day to stop at. Say `loop={false}` for two ends one cannot step past.
+ * @param {number} [pad=2] How many digits an hour and a minute are written on:
+ *   a clock says "07:00", never "7:0". Say `pad={0}` for the bare numbers.
+ * @param {import("ignore:preact").ComponentChildren} [separator] What is written
+ *   between the hours and the minutes. "h" in French, ":" elsewhere.
+ * Everything a box takes is taken here too — `width`, `borderRadius`, `size`.
+ */
+const TimeSpin = ({
+  minuteStep = 1,
+  pad = 2,
+  loop = true,
+  separator = naviI18n("time.hour_separator"),
+  hourLabel = naviI18n("time.hour_label"),
+  minuteLabel = naviI18n("time.minute_label"),
+  ...rest
+}) => jsxs(SpinGroup, {
+  aggregateChildStates: aggregateTime,
+  distributeChildUIState: distributeTime,
+  ...rest,
+  children: [jsx(NumberSpin, {
+    name: "hour",
+    min: 0,
+    max: HOUR_MAX,
+    pad: pad,
+    loop: loop,
+    controlProps: {
+      "aria-label": hourLabel
+    }
+  }), jsx(SpinGroup.Separator, {
+    children: separator
+  }), jsx(NumberSpin, {
+    name: "minute",
+    min: 0,
+    max: MINUTE_MAX,
+    step: minuteStep,
+    pad: pad,
+    loop: loop,
+    controlProps: {
+      "aria-label": minuteLabel
+    }
+  })]
+});
+
+// The two fields as one value, "HH:MM" — and nothing at all while one of them
+// is empty: half a time is not a time, and a form has nothing to send about it.
+const aggregateTime = childUIStateControllers => {
+  let hour = "";
+  let minute = "";
+  for (const child of childUIStateControllers) {
+    if (child.name === "hour") {
+      hour = child.uiState ?? "";
+    }
+    if (child.name === "minute") {
+      minute = child.uiState ?? "";
+    }
+  }
+  if (hour === "" || minute === "") {
+    return undefined;
+  }
+  return `${padTwo(hour)}:${padTwo(minute)}`;
+};
+
+// The way back: what the group is set to (a picked value, a form being reset)
+// lands on the field it belongs to.
+const distributeTime = (groupState, childUIStateController) => {
+  const parts = parseTime(groupState);
+  if (!parts) {
+    return undefined;
+  }
+  return parts[childUIStateController.name];
+};
+const parseTime = time => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
+  if (!match) {
+    return null;
+  }
+  // Numbers: what an hour and a minute are held as. How they are written —
+  // "07" — is the field's business (see NumberSpin's `pad`).
+  return {
+    hour: Number(match[1]),
+    minute: Number(match[2])
+  };
+};
+const padTwo = value => String(value).padStart(2, "0");
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: { start?: string, end?: string },
+ *   defaultValue?: { start?: string, end?: string },
+ *   minuteStep?: number,
+ *   minDuration?: number,
+ *   pad?: number,
+ *   timeProps?: object,
+ *   loop?: boolean,
+ *   size?: string,
+ *   startLabel?: import("ignore:preact").ComponentChildren,
+ *   endLabel?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {{ start?: string, end?: string }} [value] The span shown, as two
+ *   "HH:MM".
+ * @param {import("ignore:preact").ComponentChildren} [startLabel] What is written
+ *   before the first time ("De"), and `endLabel` between the two ("à"). Say
+ *   `null` for neither.
+ * @param {number} [minuteStep=1] How many minutes a press on a minute chevron
+ *   covers, on both times.
+ * @param {object} [timeProps] Anything a `TimeSpin` takes, said once for both
+ *   of them — a radius, a width. `startTimeProps`/`endTimeProps` say it to one
+ *   of the two, and win over this one.
+ * @param {number} [minDuration=0] How long the span must last at least, in
+ *   minutes. Zero by default: a span of no length is a span all the same, only
+ *   one that goes backwards is not. Checked when the form is sent, and the
+ *   answer is given on the end time.
+ */
+const TimeRangeSpin = ({
+  minuteStep = 1,
+  minDuration = 0,
+  pad = 2,
+  loop = true,
+  size,
+  startLabel = naviI18n("time_range.from"),
+  endLabel = naviI18n("time_range.to"),
+  timeProps,
+  startTimeProps,
+  endTimeProps,
+  ...rest
+}) => {
+  const startId = useId();
+  return jsxs(ControlGroup, {
+    flex: true,
+    alignY: "center",
+    spacing: "s",
+    size: size,
+    ...rest,
+    children: [startLabel === null ? null : jsx(Text, {
+      size: size,
+      children: startLabel
+    }), jsx(TimeSpin, {
+      id: startId,
+      name: "start",
+      minuteStep: minuteStep,
+      pad: pad,
+      loop: loop,
+      size: size,
+      ...timeProps,
+      ...startTimeProps
+    }), endLabel === null ? null : jsx(Text, {
+      size: size,
+      children: endLabel
+    }), jsx(TimeSpin, {
+      name: "end",
+      minuteStep: minuteStep,
+      pad: pad,
+      loop: loop,
+      size: size
+      // Which time it comes after, and how much room there must be between
+      // the two: said on the LATER of the two, so the answer is given where
+      // the time one would have to move is (see time_range_constraint.js).
+      ,
+      "data-time-after": startId,
+      "data-time-min-duration": minDuration,
+      ...timeProps,
+      ...endTimeProps
+    })]
+  });
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
@@ -59573,228 +60604,6 @@ const formatIntlUnit = (unit, {
   } catch {
     return null;
   }
-};
-
-/**
- * Wraps multiple inputs together and handles keyboard navigation and paste
- * distribution between them.
- *
- * Keyboard navigation:
- *   ArrowRight at the end of an input moves focus to the next input.
- *   ArrowLeft at the start of an input moves focus to the previous input.
- *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
- *
- * Paste distribution:
- *   When an input has a data-separator attribute, pasting a string that
- *   contains that separator (e.g. "27/04/1990" into a day input with
- *   data-separator="/") splits the text on each separator and fills the
- *   corresponding sub-inputs in order.
- */
-const useInputGroup = (ref) => {
-  const debugFocus = useDebugFocus();
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return () => {};
-    }
-
-    const getInputs = () =>
-      Array.from(el.querySelectorAll(".navi_control_input"));
-
-    const focusInput = (input) => {
-      input.focus();
-      input.select();
-    };
-
-    const handleKeyDown = (e) => {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
-        return;
-      }
-      const active = document.activeElement;
-      if (!isTextInputElement(active) || !el.contains(active)) {
-        return;
-      }
-      if (e.key === "ArrowRight") {
-        const allSelected =
-          active.selectionStart === 0 &&
-          active.selectionEnd === active.value.length;
-        const atEnd =
-          allSelected ||
-          (active.selectionStart === active.value.length &&
-            active.selectionEnd === active.value.length);
-        if (!atEnd) {
-          return;
-        }
-        const inputs = getInputs();
-        const idx = inputs.indexOf(active);
-        if (idx === -1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight on non group input → do nothing",
-          );
-          return;
-        }
-        if (idx === inputs.length - 1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight at end of last input → do nothing",
-          );
-          return;
-        }
-
-        debugFocus(
-          e,
-          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
-          idx,
-          idx + 1,
-        );
-        e.preventDefault();
-        focusInput(inputs[idx + 1]);
-        return;
-      }
-      const allSelected =
-        active.selectionStart === 0 &&
-        active.selectionEnd === active.value.length;
-      const atStart =
-        allSelected ||
-        (active.selectionStart === 0 && active.selectionEnd === 0);
-      if (!atStart) {
-        return;
-      }
-      const inputs = getInputs();
-      const idx = inputs.indexOf(active);
-      if (idx === 0) {
-        return;
-      }
-      debugFocus(
-        e,
-        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
-        idx,
-        idx - 1,
-      );
-      e.preventDefault();
-      focusInput(inputs[idx - 1]);
-    };
-
-    const handleNaviInputFull = (e) => {
-      if (!e.detail.event?.isTrusted) {
-        // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
-        return;
-      }
-      const input = e.detail.event.currentTarget;
-      if (!el.contains(input)) {
-        return;
-      }
-      const inputs = getInputs();
-      const idx = inputs.indexOf(input);
-      if (idx === -1) {
-        return;
-      }
-      if (idx === inputs.length - 1) {
-        return;
-      }
-      const nextInput = inputs[idx + 1];
-      debugFocus(
-        e,
-        "InputGroup navi_input_full on input -> move to next input",
-        input,
-        nextInput,
-      );
-      e.preventDefault();
-      focusInput(nextInput);
-    };
-
-    // const handlePaste = (e) => {
-    //   const active = document.activeElement;
-    //   if (!isTextInputElement(active) || !el.contains(active)) {
-    //     return;
-    //   }
-    //   const inputs = getInputs();
-    //   const startIdx = inputs.indexOf(active);
-    //   if (startIdx === -1) {
-    //     return;
-    //   }
-    //   const pastedText = e.clipboardData?.getData("text") ?? "";
-    //   if (!pastedText) {
-    //     return;
-    //   }
-    //   // Only intercept when the pasted text contains at least one separator
-    //   // from the inputs starting at the focused position.
-    //   const remainingInputs = inputs.slice(startIdx);
-    //   const hasSeparatorMatch = remainingInputs.some(
-    //     (input) =>
-    //       input.dataset.separator &&
-    //       pastedText.includes(input.dataset.separator),
-    //   );
-    //   if (!hasSeparatorMatch) {
-    //     return;
-    //   }
-    //   e.preventDefault();
-    //   let remaining = pastedText;
-    //   let lastFilledIdx = startIdx;
-    //   for (let i = 0; i < remainingInputs.length; i++) {
-    //     const input = remainingInputs[i];
-    //     const separator = input.dataset.separator;
-    //     let part;
-    //     if (separator && remaining.includes(separator)) {
-    //       const sepIdx = remaining.indexOf(separator);
-    //       part = remaining.slice(0, sepIdx);
-    //       remaining = remaining.slice(sepIdx + separator.length);
-    //     } else {
-    //       part = remaining;
-    //       remaining = "";
-    //     }
-    //     requestSubPaste(input, part, e);
-    //     lastFilledIdx = startIdx + i;
-    //     if (remaining === "") {
-    //       break;
-    //     }
-    //   }
-    //   focusInput(inputs[lastFilledIdx]);
-    // };
-
-    el.addEventListener("keydown", handleKeyDown, { capture: true });
-    el.addEventListener("navi_input_full", handleNaviInputFull);
-    // el.addEventListener("paste", handlePaste, { capture: true });
-    return () => {
-      el.removeEventListener("keydown", handleKeyDown, { capture: true });
-      el.removeEventListener("navi_input_full", handleNaviInputFull);
-      // el.removeEventListener("paste", handlePaste, { capture: true });
-    };
-  }, [debugFocus]);
-};
-
-// const requestSubPaste = (input, value, event) => {
-//   dispatchRequestInteraction(input, {
-//     event,
-//     name: "subpaste",
-//     allowed: () => {
-//       dispatchRequestSetUIState(input, value, { event });
-//     },
-//   });
-// };
-
-const isTextInputElement = (el) => {
-  if (!el) {
-    return false;
-  }
-  if (el.tagName === "TEXTAREA") {
-    return true;
-  }
-  if (el.tagName !== "INPUT") {
-    return false;
-  }
-  const type = el.type || "text";
-  return (
-    type === "text" ||
-    type === "search" ||
-    type === "url" ||
-    type === "tel" ||
-    type === "email" ||
-    type === "password" ||
-    type === "number"
-  );
 };
 
 installImportMetaCssBuild(import.meta);const css$n = /* css */`
@@ -69182,5 +69991,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
