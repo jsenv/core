@@ -1,34 +1,34 @@
 /**
- * `move`, `reorder`, `drop`, `toss` — one grab, and what letting go of it means.
+ * `move`, `reorder`, `land`, `toss` — one grab, and what letting go of it means.
  *
  * All four are the same gesture: the element is picked up and carried. What
  * differs is the answer at the release, so one detector reads them all — it is one
  * press, and something has to arbitrate it.
  *
  *   interactions={{ reorder: moveBefore, toss: remove }}
- *   interactions={{ drop: swapPlaces }}
+ *   interactions={{ land: swapPlaces }}
  *   interactions={{ move: remember }}
  *
- * `toss` combines with `reorder` and with `drop`: a task dragged onto another
+ * `toss` combines with `reorder` and with `land`: a task dragged onto another
  * changes places, the same task thrown far and fast is gotten rid of. The three
  * others do not combine with each other — an element either goes where it is put,
- * takes a place in a list, or lands on something, and no two of those answers can
- * both be true of one release.
+ * takes a place in a list, or comes down on a place, and no two of those answers
+ * can both be true of one release.
  *
  * `move` carries the element ITSELF and leaves it where it was put; the others
  * carry a copy and put the original back. That is the same difference said in
  * layout terms: something moved has a new place of its own, something reordered
  * had its place taken by the list.
  *
- * `reorder` VS `drop`: both land on an item, and what separates them is what a
- * place IS. A row of a list is a place BETWEEN two others — free by construction,
- * so the answer is an insertion and dropping a row back where it already was is a
- * no-op. A square of a board is a place of its own, which may already be taken —
- * so nothing is inserted, nothing is a no-op, and the answer is simply "this one
- * landed on that one". What that means is the application's: take the place, swap
- * the two, refuse.
+ * `reorder` VS `land`: both come down on an item, and what separates them is what
+ * a place IS. A row of a list is a place BETWEEN two others — free by construction,
+ * so the answer is an insertion, and putting a row back where it already was is a
+ * no-op. A place of a board is a place of its own, which may already be taken — so
+ * nothing is inserted, nothing is a no-op, and the answer is simply "this one came
+ * down on that one". What that means is the application's: take the place, swap the
+ * two, refuse.
  *
- *   interactions={{ drop: (event) => {
+ *   interactions={{ land: (event) => {
  *     const { fromId, toId, syncCloneWithDropTarget } = event.detail;
  *     …
  *   }}}
@@ -36,10 +36,16 @@
  * `toId` is an element and never null: a copy over nothing is a release that meant
  * nothing, and the interaction does not happen at all.
  *
- * WHICH ELEMENTS ARE PLACES, for `drop`: every element declaring it, plus anything
- * marked `data-droppable` in the markup. That second door is what a board needs and
- * a list does not — an empty square receives without ever being carried, so it has
- * no interaction to declare, and it must still be somewhere the hand can go.
+ * WHICH ELEMENTS ARE PLACES: those marked `data-droppable`, and only those.
+ * Declaring `land` says an element can be CARRIED, which on a board is a different
+ * thing from being somewhere one can be put: a zone receives without ever being
+ * carried, a piece is carried without ever receiving, and both at once is a third
+ * case (dropped on a piece, the two swap). A list has no such distinction — every
+ * row is both, which is why `reorder` needs no marker in the markup.
+ *
+ * The set of places is looked for inside the carried element's PARENT, so a place
+ * and a piece are siblings: a piece nested inside its place would see only that
+ * one, and have nowhere else to go.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -119,15 +125,18 @@ import { defineInteractionDetector } from "./interaction_registry.js";
 
 const MOVE = "move";
 const REORDER = "reorder";
-const DROP = "drop";
+// "drop" is taken: it is the name of the platform's own drag-and-drop event, and
+// an interaction is dispatched as an event of its own name — so anything listening
+// for a file being dropped on the page would get this one and read it as such.
+const LAND = "land";
 const TOSS = "toss";
 // The moment the press stops being a press and becomes a hold on the object.
 const GRAB = "grab";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
-// The same for `drop`, except the markup may write it too: a place that only ever
-// receives has no interaction of its own to declare.
+// The same for `land`, except the markup is what writes it: a place of a board is
+// not the same thing as a piece of it (see the top of this file).
 const DROPPABLE_ATTRIBUTE = "data-droppable";
 // Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
 // every outcome — a list runs one way, and something being put somewhere goes
@@ -144,33 +153,33 @@ defineInteractionDetector({
   claims: (type) =>
     type === MOVE ||
     type === REORDER ||
-    type === DROP ||
+    type === LAND ||
     type === TOSS ||
     type === GRAB,
   setup: (element, trigger, { types, readConfig }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
-    const canDrop = types.includes(DROP);
+    const canLand = types.includes(LAND);
     const canToss = types.includes(TOSS);
-    if (!canMove && !canReorder && !canDrop && !canToss) {
+    if (!canMove && !canReorder && !canLand && !canToss) {
       // Only "grab": there is no gesture to be taken by, so there is no moment to
       // be told about either.
       if (import.meta.dev) {
         console.warn(
-          `interactions: "${GRAB}" says when a drag takes hold, so it needs a drag to say it about. Declare it beside "${MOVE}", "${REORDER}", "${DROP}" or "${TOSS}".`,
+          `interactions: "${GRAB}" says when a drag takes hold, so it needs a drag to say it about. Declare it beside "${MOVE}", "${REORDER}", "${LAND}" or "${TOSS}".`,
         );
       }
       return undefined;
     }
     const tellsWhenGrabbed = types.includes(GRAB);
-    if (import.meta.dev && canMove && (canReorder || canDrop)) {
+    if (import.meta.dev && canMove && (canReorder || canLand)) {
       console.warn(
-        `interactions: "move" and "${canReorder ? REORDER : DROP}" cannot both answer one release — an element either goes where it is put, or takes the place the list/board gives it. "${canReorder ? REORDER : DROP}" wins here.`,
+        `interactions: "move" and "${canReorder ? REORDER : LAND}" cannot both answer one release — an element either goes where it is put, or takes the place the list/board gives it. "${canReorder ? REORDER : LAND}" wins here.`,
       );
     }
-    if (import.meta.dev && canReorder && canDrop) {
+    if (import.meta.dev && canReorder && canLand) {
       console.warn(
-        `interactions: "reorder" and "drop" cannot both answer one release — a release either takes a place between two items or lands on one. "drop" wins here.`,
+        `interactions: "reorder" and "land" cannot both answer one release — a release either takes a place between two items or comes down on one. "land" wins here.`,
       );
     }
     // Read at setup rather than at the press: a container can say it, and it is
@@ -181,13 +190,10 @@ defineInteractionDetector({
       // A list runs one way, and reordering walks it. Anything else goes wherever
       // the hand takes it: a board has places all around, a thing put somewhere has
       // two axes to be put along, and a throw goes where it was thrown.
-      (canReorder && !canDrop && !canToss ? "y" : "xy");
+      (canReorder && !canLand && !canToss ? "y" : "xy");
 
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
-    }
-    if (canDrop) {
-      element.setAttribute(DROPPABLE_ATTRIBUTE, "");
     }
     // What @jsenv/dom puts on a drag source: no iOS callout, and the touch left to
     // the scroll until the press becomes a grab. Its value is the axis the
@@ -205,7 +211,7 @@ defineInteractionDetector({
       startDragTo(pointerDownEvent, effects, {
         draggedElement: element,
         // Nothing to land on when nothing reorders.
-        itemSelector: canDrop
+        itemSelector: canLand
           ? `[${DROPPABLE_ATTRIBUTE}]`
           : canReorder
             ? `[${REORDERABLE_ATTRIBUTE}]`
@@ -249,8 +255,8 @@ defineInteractionDetector({
             toId,
             syncCloneWithDropTarget,
           }),
-        onDrop: (fromId, toId, syncCloneWithDropTarget) =>
-          trigger(DROP, pointerDownEvent, {
+        onLand: (fromId, toId, syncCloneWithDropTarget) =>
+          trigger(LAND, pointerDownEvent, {
             fromId,
             toId,
             syncCloneWithDropTarget,
@@ -269,7 +275,6 @@ defineInteractionDetector({
 
     return () => {
       element.removeAttribute(REORDERABLE_ATTRIBUTE);
-      element.removeAttribute(DROPPABLE_ATTRIBUTE);
       element.removeAttribute("data-drag-source");
       element.removeEventListener("pointerdown", onPointerDown);
     };

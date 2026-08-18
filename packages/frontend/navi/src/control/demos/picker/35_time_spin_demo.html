@@ -45,6 +45,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -53,6 +54,7 @@
         Label,
         Link,
         NumberSpin,
+        Picker,
         SpinGroup,
         Text,
         TimeRangeSpin,
@@ -93,6 +95,7 @@
           <MinuteStepDemo />
           <CustomizationDemo />
           <GroupDemo />
+          <IntegrationDemo />
           <ValueDemo />
         </Box>
       );
@@ -130,7 +133,7 @@
         <div class="demo-section">
           <Heading id="nominal">Cas nominal</Heading>
           <p class="desc">Une heure : les heures, un « h », les minutes.</p>
-          <TimeSpin signal={timeSignal} />
+          <TimeSpin signal={timeSignal} size="xl" />
         </div>
       );
 
@@ -186,7 +189,7 @@
 
       // ── Validation ────────────────────────────────────────────────────────
 
-      const ValidationCase = ({ id, title, defaultValue }) => {
+      const ValidationCase = ({ id, title, defaultValue, minDuration }) => {
         const [entries, pushCall, clearCalls] = useCallLog();
         return (
           <>
@@ -201,7 +204,11 @@
               <Box flex="y" spacing="m" alignX="start">
                 <Field flex="y" spacing="xs">
                   <Label>Horaires d'ouverture</Label>
-                  <TimeRangeSpin name="opening" defaultValue={defaultValue} />
+                  <TimeRangeSpin
+                    name="opening"
+                    defaultValue={defaultValue}
+                    minDuration={minDuration}
+                  />
                 </Field>
                 <Button type="submit">Enregistrer</Button>
                 <CallLog entries={entries} onClear={clearCalls} />
@@ -223,6 +230,17 @@
             id="validation-invalid"
             title="21h00 → 7h00"
             defaultValue={{ start: "21:00", end: "07:00" }}
+          />
+          <ValidationCase
+            id="validation-empty-span"
+            title="7h00 → 7h00"
+            defaultValue={{ start: "07:00", end: "07:00" }}
+          />
+          <ValidationCase
+            id="validation-min-duration"
+            title="7h00 → 7h15, minDuration={30}"
+            defaultValue={{ start: "07:00", end: "07:15" }}
+            minDuration={30}
           />
         </div>
       );
@@ -325,6 +343,67 @@
           </Box>
         </div>
       );
+
+      // ── Integration ───────────────────────────────────────────────────────
+
+      const OPENING_DEFAULT = { start: "07:00", end: "21:00" };
+      // "07:00" → "7h", "07:30" → "7h30" : ce qu'on lit sur le déclencheur.
+      const timeLabel = (time) => {
+        const [hour, minute] = time.split(":");
+        const hourLabel = String(Number(hour));
+        return minute === "00" ? `${hourLabel}h` : `${hourLabel}h${minute}`;
+      };
+      const rangeLabel = (range) =>
+        range ? `${timeLabel(range.start)}-${timeLabel(range.end)}` : undefined;
+
+      const IntegrationDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const [opening, setOpening] = useState(OPENING_DEFAULT);
+        return (
+          <div class="demo-section">
+            <Heading id="integration">Intégration</Heading>
+            <p class="desc">
+              Sur écran tactile, le popup vient se coller en bas de l'écran.
+            </p>
+            <Box flex="y" spacing="l" alignX="start">
+              <Box>
+                <Picker
+                  type="form"
+                  name="when"
+                  width="360px"
+                  clearable
+                  mode="dialog"
+                  dockedOnTouch
+                  paddingY="s"
+                  ui={
+                    <Box flex="y" alignX="start">
+                      <Text weight="bold" size="s">
+                        Quand
+                      </Text>
+                      <Text color="#555">
+                        {rangeLabel(opening) ?? "Toute la journée"}
+                      </Text>
+                    </Box>
+                  }
+                  uiAction={(value) => {
+                    setOpening(value);
+                    push("uiAction", value);
+                  }}
+                >
+                  <Box padding="m">
+                    <TimeRangeSpin
+                      defaultValue={opening ?? OPENING_DEFAULT}
+                      minuteStep={15}
+                      minDuration={30}
+                    />
+                  </Box>
+                </Picker>
+              </Box>
+              <CallLog entries={entries} onClear={clear} />
+            </Box>
+          </div>
+        );
+      };
 
       // ── Value ─────────────────────────────────────────────────────────────
 

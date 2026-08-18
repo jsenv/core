@@ -13,12 +13,12 @@
  *   stable row of items to look between.
  * - **toss**: it is gotten rid of. The same copy, for the opposite reason: the
  *   original stays until the answer says it is really gone.
- * - **drop**: it lands ON something. Also a copy, and the closest to `reorder` —
- *   the difference is what a target IS: a row of a list is a place BETWEEN two
- *   others, whereas a square of a board is a place of its own, which may already
- *   be taken. So nothing is inserted and nothing is a no-op: the answer is "this
- *   one landed on that one", and what that means (take it, swap with it, refuse)
- *   is the caller's.
+ * - **land**: it comes down ON something. Also a copy, and the closest to
+ *   `reorder` — the difference is what a target IS: a row of a list is a place
+ *   BETWEEN two others, whereas a square of a board is a place of its own, which
+ *   may already be taken. So nothing is inserted and nothing is a no-op: the
+ *   answer is "this one came down on that one", and what that means (take the
+ *   place, swap the two, refuse) is the caller's.
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
  * those need runs: no copy for a move, no drop hint for something that can only be
@@ -764,11 +764,11 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("move"|"reorder"|"toss"|"drop")[]} effects
- *   What letting go of this element can mean. `reorder`, `toss` and `drop` carry a
+ * @param {("move"|"reorder"|"toss"|"land")[]} effects
+ *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
  *   copy; `move` carries the element itself. Asking for `move` and `reorder`
  *   together is asking one release to mean two things, and so is asking for
- *   `reorder` and `drop`.
+ *   `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
@@ -784,10 +784,10 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   It was thrown away. The copy leaves the screen while this runs and comes back
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
- * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onDrop]
- *   `onDrop(fromId, toId, syncCloneWithDropTarget)` — it landed on `toId`, which is
- *   an element and never null: nothing under the copy is a cancelled release. The
- *   copy is held until what comes back settles, exactly like `onReorder`.
+ * @param {function} [options.onLand]
+ *   `onLand(fromId, toId, syncCloneWithDropTarget)` — it came down on `toId`, which
+ *   is an element and never null: nothing under the copy is a cancelled release.
+ *   The copy is held until what comes back settles, exactly like `onReorder`.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
@@ -823,23 +823,23 @@ export const startDragTo = (
   }
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
-  const canDrop = effects.includes("drop");
-  if (canReorder || canToss || canDrop) {
+  const canLand = effects.includes("land");
+  if (canReorder || canToss || canLand) {
     if (import.meta.dev && effects.includes("move")) {
       console.warn(
-        `startDragTo: "move" and "reorder"/"toss"/"drop" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
+        `startDragTo: "move" and "reorder"/"toss"/"land" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
       );
     }
-    if (import.meta.dev && canReorder && canDrop) {
+    if (import.meta.dev && canReorder && canLand) {
       console.warn(
-        `startDragTo: "reorder" and "drop" cannot both answer one release — a release either takes a place between two items or lands on one. "drop" wins.`,
+        `startDragTo: "reorder" and "land" cannot both answer one release — a release either takes a place between two items or comes down on one. "land" wins.`,
       );
     }
     return startDragToCarryCopy(event, {
       draggedElement,
       canReorder,
       canToss,
-      canDrop,
+      canLand,
       ...options,
     });
   }
@@ -922,7 +922,7 @@ const resolveDropMeaning = ({
   hasDropTarget,
   canReorder,
   canToss,
-  canDrop,
+  canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
 }) => {
@@ -934,8 +934,8 @@ const resolveDropMeaning = ({
     }
   }
   if (hasDropTarget) {
-    if (canDrop) {
-      return "drop";
+    if (canLand) {
+      return "land";
     }
     if (canReorder) {
       return "reorder";
@@ -958,7 +958,7 @@ const startDragToCarryCopy = (
     draggedElement,
     canReorder,
     canToss,
-    canDrop,
+    canLand,
     // Something that can be thrown away has to be able to LEAVE. The default of
     // the layer below keeps what is dragged inside its scroll area, which is right
     // for a reorder (a row belongs to its list) and makes a throw impossible — the
@@ -973,13 +973,13 @@ const startDragToCarryCopy = (
     itemSelector,
     getItemId,
     onReorder,
-    onDrop,
+    onLand,
     onToss,
     tossDistance,
     tossSpeed,
     // A list runs one way and reordering walks it; a board has places all around,
     // so something landing on one of them goes wherever the hand takes it.
-    direction = canDrop ? { x: true, y: true } : { x: false, y: true },
+    direction = canLand ? { x: true, y: true } : { x: false, y: true },
     threshold,
     longPress,
     longPressDelay,
@@ -1023,7 +1023,7 @@ const startDragToCarryCopy = (
       // No place to land, no hint: an element that can only be thrown away has
       // nowhere to be put. What the hint LOOKS like follows what a place is here —
       // a line in the gap between two items, or the place itself lit up.
-      const dropHintEl = canDrop
+      const dropHintEl = canLand
         ? createDropSurface()
         : canReorder
           ? createDropHint()
@@ -1080,14 +1080,14 @@ const startDragToCarryCopy = (
           // The edges of a LIST: above the first row means the top of it, below
           // the last one means the end of it. A board has no such reading — away
           // from every place is away from every place.
-          fallbackToEdge: !canDrop,
+          fallbackToEdge: !canLand,
         });
         gestureInfo.dropTargetInfo = dropTargetInfo || null;
         if (!dropTargetInfo) {
           clearDropHint();
           return;
         }
-        if (canDrop) {
+        if (canLand) {
           // The whole element is the target, so which of its edges the copy came
           // in by says nothing: there is no gap to be on one side of.
           const dropElement = dropTargetInfo.element;
@@ -1179,7 +1179,7 @@ const startDragToCarryCopy = (
         // throw is asked about first: it is the more insistent of the two, and a
         // hand that sent the thing across the screen has not asked for it to swap
         // places with whatever it happened to fly over.
-        const hasDropTarget = canDrop
+        const hasDropTarget = canLand
           ? currentReleaseElement !== undefined
           : currentBeforeElement !== undefined;
         const dropMeans = resolveDropMeaning({
@@ -1187,7 +1187,7 @@ const startDragToCarryCopy = (
           hasDropTarget,
           canReorder,
           canToss,
-          canDrop,
+          canLand,
           tossDistance,
           tossSpeed,
         });
@@ -1222,9 +1222,9 @@ const startDragToCarryCopy = (
             // place.
             await settleCloneBack(cloneWrapper, draggedElement);
           }
-        } else if (dropMeans === "drop") {
+        } else if (dropMeans === "land") {
           await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
-            onDrop(
+            onLand(
               getItemId(draggedElement),
               getItemId(currentReleaseElement),
               syncCloneWithDropTarget,

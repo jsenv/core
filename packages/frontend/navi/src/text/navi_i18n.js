@@ -431,9 +431,13 @@ naviI18n.addAll({
     fr: "Ce champ doit être identique au précédent.",
     en: "This field must match the previous one.",
   },
-  "constraint.time_range.default": {
-    fr: "L'heure de fin doit être après l'heure de début.",
-    en: "The end time must be after the start time.",
+  "constraint.time_after.default": {
+    fr: "L'heure de fin ne peut pas être avant l'heure de début.",
+    en: "The end time cannot be before the start time.",
+  },
+  "constraint.time_after.min_duration": {
+    fr: "La plage doit durer au moins <strong>[duration]</strong> minutes.",
+    en: "The span must last at least <strong>[duration]</strong> minutes.",
   },
   "constraint.required.checkbox": {
     fr: "Veuillez cocher cette case.",

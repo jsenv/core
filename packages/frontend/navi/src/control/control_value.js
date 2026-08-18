@@ -21,7 +21,7 @@ import { getUIStateFromElement } from "./ui_state_dom.js";
  */
 export const asControlHostValue = (
   jsValue,
-  { controlType, type, inputMode },
+  { controlType, type, inputMode, pad },
 ) => {
   if (controlType === "select") {
     // A select holds one of its options, always a string; holding nothing is
@@ -38,7 +38,7 @@ export const asControlHostValue = (
       inputMode === "numeric" ||
       inputMode === "decimal"
     ) {
-      return asNumberString(jsValue);
+      return asNumberString(jsValue, pad);
     }
     if (type === "color") {
       return asColorString(jsValue);
@@ -62,11 +62,24 @@ const asDatetimeLocalString = (dateTimeString) => {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
-const asNumberString = (jsValue) => {
+// `pad` is how many digits the number is WRITTEN on — an hour is held as 7 and
+// shown as "07". Held and shown are two things here, the way they are for a
+// datetime-local above: what the field says is derived from what the control
+// holds, and reading it back (readNumberFromInput) gives the number again.
+const asNumberString = (jsValue, pad) => {
   if (jsValue === undefined) {
     return "";
   }
-  return jsValue;
+  if (!pad || jsValue === "" || jsValue === null) {
+    return jsValue;
+  }
+  const number = Number(jsValue);
+  if (Number.isNaN(number)) {
+    return jsValue;
+  }
+  const negative = number < 0;
+  const digits = String(negative ? -number : number).padStart(Number(pad), "0");
+  return negative ? `-${digits}` : digits;
 };
 // Browser requires a non-empty value for <input type="color">.
 // When our logical value is empty we give it #000000 so it doesn't choke.

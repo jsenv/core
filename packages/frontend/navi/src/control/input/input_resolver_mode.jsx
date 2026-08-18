@@ -24,20 +24,17 @@ const InputModeNumericOrDecimal = (props) => {
           return;
         }
         const input = e.currentTarget;
-        let maxLength;
-        const maxLengthProp = input.maxLength;
-        if (maxLengthProp === -1) {
+        let maxLength = input.maxLength;
+        if (maxLength === -1) {
           const naviMaxLengthAttr = input.getAttribute("navi-max-length");
-          if (naviMaxLengthAttr === null) {
-            // no max length
-            return;
-          }
-          maxLength = Number(naviMaxLengthAttr);
+          maxLength =
+            naviMaxLengthAttr === null ? undefined : Number(naviMaxLengthAttr);
         }
-        if (input.value.length < maxLength) {
+        const caretAtEnd = input.selectionStart === input.value.length;
+        if (!caretAtEnd) {
           return;
         }
-        if (input.selectionStart !== maxLength) {
+        if (!isFull(input, maxLength)) {
           return;
         }
         // Field is full and caret is at the end: notify listeners then
@@ -46,7 +43,11 @@ const InputModeNumericOrDecimal = (props) => {
         const allowed = dispatchPublicCustomEvent(input, "navi_input_full", {
           event: e,
         });
-        if (allowed) {
+        // Only for a value being typed: selecting focuses the field, and a
+        // value set from elsewhere (a chevron, a form) has nobody typing — on a
+        // phone that focus raises the on-screen keyboard over the page. Same
+        // question useInputGroup asks before moving along to the next field.
+        if (allowed && e.isTrusted) {
           input.select();
         } else {
           // e.preventDefault();
@@ -66,6 +67,32 @@ const InputModeNumericOrDecimal = (props) => {
       }}
     />
   );
+};
+
+// A field is full when there is no room for another digit — and room is not
+// only a number of characters: an hour of two digits at most is also full at
+// "7", because 7 followed by anything is past the 23 it accepts. Both are the
+// same question ("can one more digit still land here?"), so both move the
+// person filling it in along to the next field.
+const isFull = (input, maxLength) => {
+  const value = input.value;
+  if (value === "") {
+    return false;
+  }
+  if (maxLength !== undefined && value.length >= maxLength) {
+    return true;
+  }
+  const max = input.max === "" ? undefined : Number(input.max);
+  if (max === undefined || Number.isNaN(max)) {
+    return false;
+  }
+  // The smallest number one more digit could make: a zero appended to what is
+  // already there.
+  const withOneMoreDigit = Number(`${value}0`);
+  if (Number.isNaN(withOneMoreDigit)) {
+    return false;
+  }
+  return withOneMoreDigit > max;
 };
 
 // hum il manque le faire de request interaction ici

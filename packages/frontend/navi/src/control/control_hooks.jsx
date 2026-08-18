@@ -195,6 +195,9 @@ export const useControlProps = (
       id: props.id,
       type: props.type,
       inputMode: props.inputMode,
+      // How the value is WRITTEN where it is held one way and shown another —
+      // a number on two digits ("07" for 7). See asControlHostValue.
+      pad: props["navi-value-pad"],
     });
     return {
       value: domValue,
@@ -203,6 +206,13 @@ export const useControlProps = (
   const syncDomState = (newUIState, e) => {
     const el = props.ref.current;
     if (!el) {
+      return;
+    }
+    // The field one is typing in is where the value comes FROM, and what is in
+    // it already says this: writing it back in the form it is shown in ("07"
+    // for a 7 just typed) would move the caret and stop the person mid-number.
+    // What is shown is derived again when the field is left (see below).
+    if (document.activeElement === el && readControlValue(el) === newUIState) {
       return;
     }
     const domProps = toDomProps(newUIState);
@@ -852,10 +862,37 @@ export const useControlProps = (
       onPaste,
       onInput,
     });
+    // A value written in a form of its own ("07" for the number 7) is derived
+    // again when the field is left: while it is being typed into, what is in
+    // the field is what the person is writing and nothing rewrites it (see
+    // syncDomState). Only for such a control — for every other one the field
+    // already shows exactly what is held, and there is nothing to derive.
+    if (props["navi-value-pad"]) {
+      const onBlurFromProps = controlHostProps.onBlur;
+      controlHostProps.onBlur = (e) => {
+        onBlurFromProps?.(e);
+        // Read from the field: what was just typed is in there, whatever the
+        // control has had time to settle on.
+        const el = e.currentTarget;
+        syncDomState(readControlValue(el), e);
+      };
+    }
   }
 
   const uiState = uiStateController.uiStateSignal.peek();
   const domProps = toDomProps(uiState);
+  {
+    // Same as syncDomState: a field being typed into keeps its own text, so a
+    // render happening mid-number does not put the caret back at the end.
+    const el = props.ref.current;
+    if (
+      el &&
+      document.activeElement === el &&
+      readControlValue(el) === uiState
+    ) {
+      domProps.value = el.value;
+    }
+  }
   Object.assign(controlHostProps, domProps);
 
   return [controlRootProps, controlHostProps, { uiStateController }];
@@ -1050,22 +1087,32 @@ const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([
   "url",
   "week",
 ]);
-const useReadOnlyUncontrolled = (props, controlInfo) => {
-  if (!controlInfo.hasStateProp) {
-    return false;
-  }
+// Who, if anyone, is listening to what this control is worth: a handler of its
+// own, a bound signal, a command — or the form/group around it, which is the
+// one that will send the value and hand a new one back. Held apart from the
+// warning below so a group can ask the same question a single control does: a
+// control with a `value` and nobody listening cannot be changed by hand, and
+// that is true whatever the control is.
+const useIsControlListenedTo = (props) => {
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const formContext = useContext(FormContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const controlled =
+  return Boolean(
     props.signal || // a bound signal is written back on uiAction → interactive
     props.uiAction ||
     props.action ||
     formContext ||
     parentUIStateController ||
     isProxy ||
-    props.command;
-  if (controlled) {
+    props.command,
+  );
+};
+const useReadOnlyUncontrolled = (props, controlInfo) => {
+  const listenedTo = useIsControlListenedTo(props);
+  if (!controlInfo.hasStateProp) {
+    return false;
+  }
+  if (listenedTo) {
     return false;
   }
   if (
@@ -1124,10 +1171,12 @@ export const useControlgroupProps = (
     action,
     uiGroupStateController.uiStateSignal,
   );
-  // Mirror single-input behaviour: a controlled value with no handler makes the
-  // group read-only so children don't appear interactive when they can't change.
-  const implicitReadOnly =
-    uiGroupStateController.hasValueProp && !action && !props.uiAction;
+  // Mirror single-input behaviour: a controlled value with nobody listening
+  // makes the group read-only so children don't appear interactive when they
+  // can't change. A form or a group around it IS someone listening — that is
+  // what will send the value and hand a new one back.
+  const listenedTo = useIsControlListenedTo(props);
+  const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;
   if (implicitReadOnly && !props.readOnly) {
     if (import.meta.dev) {
       console.warn(

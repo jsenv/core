@@ -318,23 +318,30 @@
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
       }
 
-      /* A padel court, upright: 10 m by 20 m, so half as wide as it is long. */
+      /* A padel court, symbolic rather than measured: upright, a net across the
+         middle, and four places big enough to read a name in. */
       .padel {
         position: relative;
-        aspect-ratio: 1 / 2;
-        width: 240px;
+        width: 300px;
+        height: 400px;
         background: #2f6f52;
         border: 3px solid #cfd8e3;
-        border-radius: 3px;
-        /* Read by the drop hint, which is drawn inside the court: what lands here
-           is a round token, so the place lit up under it is round too. */
-        --drop-surface-border-radius: 50%;
+        border-radius: 6px;
+        /* Read by the drop hint, which is drawn inside the court. */
         --drop-surface-border-color: #ffd54a;
         --drop-surface-background-color: rgba(255, 213, 74, 0.28);
       }
+      /* A quarter of the court is what is lit up. */
+      .padel_zoned {
+        --drop-surface-border-radius: 10px;
+      }
+      /* A player is: the place is exactly the token standing on it. */
+      .padel_tokens {
+        --drop-surface-border-radius: 50%;
+      }
       .padel_line {
         position: absolute;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.55);
         pointer-events: none;
       }
       .padel_line_service {
@@ -342,33 +349,33 @@
         width: 100%;
         height: 2px;
       }
-      /* The centre line only runs from a service line to the net. */
       .padel_line_center {
-        top: 34.75%;
+        top: 25%;
         left: calc(50% - 1px);
         width: 2px;
-        height: 30.5%;
+        height: 50%;
       }
       /* The net crosses the court and the two side walls with it. */
       .padel_line_net {
-        top: calc(50% - 2px);
+        top: calc(50% - 3px);
         left: -3px;
         width: calc(100% + 6px);
-        height: 4px;
+        height: 6px;
         background: #f0f3f7;
       }
+      .padel_zone {
+        position: absolute;
+        width: 50%;
+        height: 50%;
+      }
 
-      .padel_place {
+      .padel_piece {
         position: absolute;
         display: flex;
-        width: 46px;
-        height: 46px;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        translate: -50% -50%;
-      }
-      .padel_player {
+        gap: 8px;
         color: white;
         font-weight: 600;
         font-size: 13px;
@@ -376,17 +383,166 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         --drag-clone-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
       }
-      .padel_player_b {
+      .padel_card {
+        border-radius: 10px;
+      }
+      .padel_token {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        translate: -50% -50%;
+      }
+      .padel_piece_b {
         background: #b8512f;
+      }
+      .padel_avatar {
+        display: flex;
+        width: 38px;
+        height: 38px;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        background: rgba(255, 255, 255, 0.22);
+        border-radius: 50%;
       }
       /* The copy is carried in a box of its own, where a place on the court means
          nothing: it fills that box instead. */
-      [navi-drag-clone].padel_place {
+      [navi-drag-clone].padel_piece {
         position: static;
+        width: 100%;
+        height: 100%;
         translate: none;
       }
+
+      /* A place waiting for someone: dashed, and the way to put someone there. */
       .padel_free {
-        border: 2px dashed rgba(255, 255, 255, 0.55);
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 22px;
+        background: transparent;
+        border: 2px dashed rgba(255, 255, 255, 0.45);
+        cursor: pointer;
+      }
+      .padel_free:hover {
+        color: white;
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .padel_free_zone {
+        inset: 6px;
+        border-radius: 10px;
+      }
+      .padel_free_token {
+        width: 46px;
+        height: 46px;
+        font-size: 16px;
+        border-radius: 50%;
+        translate: -50% -50%;
+      }
+
+      /* ── How two players change places ──────────────────────────────────
+         The travel itself is the browser's: a group morphs from the old box to
+         the new one, and two players swapping cross in a straight line, through
+         each other. What a style adds rides on the image pair INSIDE that group,
+         where a translate/scale composes with the morph rather than replacing it.
+         Which of the two does what is said by the NAME each of them takes for the
+         length of the swap — a ::view-transition pseudo can be selected by nothing
+         else. */
+      ::view-transition-group(padel_swap_over) {
+        z-index: 20;
+      }
+      ::view-transition-group(padel_swap_under) {
+        z-index: 1;
+      }
+      ::view-transition-group(padel_swap_over),
+      ::view-transition-group(padel_swap_under),
+      ::view-transition-image-pair(padel_swap_over),
+      ::view-transition-image-pair(padel_swap_under) {
+        animation-duration: var(--padel-swap-duration, 520ms);
+        animation-timing-function: ease-in-out;
+      }
+
+      /* One is lifted over the other, which dips under it. */
+      html[data-padel-swap="over_under"]::view-transition-image-pair(
+          padel_swap_over
+        ) {
+        animation-name: padel_swap_lift;
+      }
+      html[data-padel-swap="over_under"]::view-transition-image-pair(
+          padel_swap_under
+        ) {
+        animation-name: padel_swap_dip;
+      }
+
+      /* Both step aside, each on its own side of the line between them, so they
+         go around each other instead of through. */
+      html[data-padel-swap="cross"]::view-transition-image-pair(
+          padel_swap_over
+        ) {
+        animation-name: padel_swap_aside;
+      }
+      html[data-padel-swap="cross"]::view-transition-image-pair(
+          padel_swap_under
+        ) {
+        animation-name: padel_swap_aside_back;
+      }
+
+      /* The two together: they turn around a common centre, one above the other. */
+      html[data-padel-swap="orbit"]::view-transition-image-pair(
+          padel_swap_over
+        ) {
+        animation-name: padel_swap_aside, padel_swap_lift;
+      }
+      html[data-padel-swap="orbit"]::view-transition-image-pair(
+          padel_swap_under
+        ) {
+        animation-name: padel_swap_aside_back, padel_swap_dip;
+      }
+
+      @keyframes padel_swap_lift {
+        50% {
+          filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.45));
+          scale: 1.22;
+        }
+      }
+      @keyframes padel_swap_dip {
+        50% {
+          filter: brightness(0.85);
+          scale: 0.78;
+        }
+      }
+      /* Sideways to the line between the two, which is where the collision is:
+         the amount and its direction are measured at the swap and left on the
+         document, the only place the pseudo tree inherits from. */
+      @keyframes padel_swap_aside {
+        50% {
+          translate: var(--padel-swap-aside-x, 0px)
+            var(--padel-swap-aside-y, 0px);
+        }
+      }
+      @keyframes padel_swap_aside_back {
+        50% {
+          translate: calc(-1 * var(--padel-swap-aside-x, 0px))
+            calc(-1 * var(--padel-swap-aside-y, 0px));
+        }
+      }
+
+      .padel_controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .padel_style_select {
+        padding: 4px 8px;
+        color: #1f2733;
+        font-size: 13px;
+        font-family: inherit;
+        background: white;
+        border: 1px solid #cfd8e3;
+        border-radius: 6px;
       }
 
       .thumb {
@@ -1367,7 +1523,7 @@
         <div class="demo-section">
           <Heading id="concrete">Concrete cases</Heading>
           <MailboxCase />
-          <PadelCourtCase />
+          <PadelCase />
         </div>
       );
 
@@ -1597,58 +1753,252 @@
       };
 
       // ── Concrete case: a padel court ──────────────────────────────────
+      //
+      // Two boards, the same rule. What changes between them is what a PLACE is —
+      // a quarter of the court, or the player standing there — and that is the
+      // whole of what `land` leaves to the application: where one can come down.
 
-      // A place is said in percentages of the court, so it holds whatever size the
-      // court is drawn at.
-      const PADEL_SPOTS = [
-        { id: "padel_spot_left_far", x: 28, y: 18 },
-        { id: "padel_spot_right_far", x: 72, y: 18 },
-        { id: "padel_spot_left_near", x: 28, y: 82 },
-        { id: "padel_spot_right_near", x: 72, y: 82 },
-      ];
       const PADEL_PLAYERS = [
-        { id: "padel_lea", label: "L\u00e9a", team: "a" },
-        { id: "padel_marc", label: "Marc", team: "a" },
-        { id: "padel_sofia", label: "Sofia", team: "b" },
+        { id: "lea", label: "Léa", initial: "L", team: "a" },
+        { id: "marc", label: "Marc", initial: "M", team: "a" },
+        { id: "sofia", label: "Sofia", initial: "S", team: "b" },
+        { id: "yanis", label: "Yanis", initial: "Y", team: "b" },
+        { id: "damien", label: "Damien", initial: "D", team: "a" },
       ];
-      const PADEL_LINEUP = {
-        padel_spot_left_far: "padel_lea",
-        padel_spot_right_far: "padel_marc",
-        padel_spot_left_near: "padel_sofia",
-        padel_spot_right_near: null,
-      };
 
-      // Which spot an id names: the one holding that player, or — for the id of an
-      // empty spot, which is a place and nobody — that spot itself. Both kinds come
-      // back from the gesture, because both kinds are places one can land on.
-      const padelSpotOf = (lineup, id) => {
+      // How two players change places, once they are on their way. Each is a
+      // stylesheet rule keyed on the same attribute, so trying one is changing a
+      // word — see the ::view-transition rules in the page style.
+      const PADEL_SWAP_STYLES = [
+        { id: "slide", label: "Slide (the browser's own)" },
+        { id: "over_under", label: "One over, one under" },
+        { id: "cross", label: "Both step aside" },
+        { id: "orbit", label: "Orbit (aside and over)" },
+      ];
+
+      // The pairs worth watching: the collision is not the same when the two are
+      // side by side, facing each other across the net, or opposite corners.
+      const PADEL_SWAP_TRIALS = [
+        { label: "Side by side", from: "far_left", to: "far_right" },
+        { label: "Face to face", from: "far_left", to: "near_left" },
+        { label: "Diagonal", from: "far_right", to: "near_left" },
+      ];
+
+      // The names the two taking part in a swap answer to while it lasts: a
+      // ::view-transition pseudo can be selected by name and by nothing else, so
+      // the role has to BE the name.
+      const PADEL_OVER = "padel_swap_over";
+      const PADEL_UNDER = "padel_swap_under";
+
+      const PadelCourtLines = () => (
+        <>
+          <span class="padel_line padel_line_service" style="top: 25%" />
+          <span class="padel_line padel_line_service" style="top: 75%" />
+          <span class="padel_line padel_line_center" />
+          <span class="padel_line padel_line_net" />
+        </>
+      );
+
+      // The ids the elements carry are the ones the gesture hands back, and an id
+      // is unique per document — so a player of one court is not the same id as the
+      // same player on the other, and who it is is read back from it.
+      const padelPlayerOf = (playerId) =>
+        PADEL_PLAYERS.find((candidate) =>
+          playerId.endsWith(`__${candidate.id}`),
+        );
+
+      // Which place an id names: the one holding that player, or — for the id of a
+      // place, which is somewhere and nobody — that place itself. Both kinds come
+      // back from the gesture, because both kinds are things one can come down on.
+      const padelPlaceOf = (lineup, id) => {
         const holder = Object.keys(lineup).find(
-          (spotId) => lineup[spotId] === id,
+          (placeId) => lineup[placeId] === id,
         );
         return holder || id;
       };
 
-      // One rule for both answers: the two places exchange what they hold, and a
+      // One rule for every answer: the two places exchange what they hold, and a
       // free place holds nobody.
       const padelSwap = (lineup, fromId, toId) => {
-        const fromSpot = padelSpotOf(lineup, fromId);
-        const toSpot = padelSpotOf(lineup, toId);
+        const fromPlace = padelPlaceOf(lineup, fromId);
+        const toPlace = padelPlaceOf(lineup, toId);
         return {
           ...lineup,
-          [fromSpot]: lineup[toSpot],
-          [toSpot]: lineup[fromSpot],
+          [fromPlace]: lineup[toPlace],
+          [toPlace]: lineup[fromPlace],
         };
       };
 
-      const PadelCourtCase = () => {
-        const [lineup, setLineup] = useState(PADEL_LINEUP);
-        const drop = (event) => {
-          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+      // Sideways to the line between the two, which is the direction there is room
+      // in: side by side they part vertically, face to face horizontally, and along
+      // a diagonal they part across it. Measured here because it is a property of
+      // THIS swap, and left on the document because the ::view-transition tree
+      // inherits from there and from nowhere else.
+      const padelWriteAsideVector = (fromElement, toElement) => {
+        const root = document.documentElement;
+        const from = fromElement.getBoundingClientRect();
+        const to = toElement.getBoundingClientRect();
+        const xDelta = to.left + to.width / 2 - (from.left + from.width / 2);
+        const yDelta = to.top + to.height / 2 - (from.top + from.height / 2);
+        const distance = Math.hypot(xDelta, yDelta);
+        if (!distance) {
+          root.style.setProperty("--padel-swap-aside-x", "0px");
+          root.style.setProperty("--padel-swap-aside-y", "0px");
+          return;
+        }
+        const aside = distance * 0.42;
+        root.style.setProperty(
+          "--padel-swap-aside-x",
+          `${(-yDelta / distance) * aside}px`,
+        );
+        root.style.setProperty(
+          "--padel-swap-aside-y",
+          `${(xDelta / distance) * aside}px`,
+        );
+      };
+
+      const usePadelCourt = ({ prefix, initialLineup, swapStyle }) => {
+        const [lineup, setLineup] = useState(initialLineup);
+        // Which of the two is over and which is under, said as the name each one
+        // takes. It is state and not a DOM write of its own, because the render
+        // happening inside the transition would put the plain names straight back.
+        const [swapRoles, setSwapRoles] = useState(null);
+
+        const swap = (fromId, toId, syncCloneWithDropTarget) => {
+          const roles = { [fromId]: PADEL_OVER };
+          const displacedId = lineup[padelPlaceOf(lineup, toId)];
+          if (displacedId) {
+            roles[displacedId] = PADEL_UNDER;
+          }
+          const fromElement = document.getElementById(fromId);
+          const toElement = document.getElementById(toId);
+          // Before the transition starts, because the old state is captured the
+          // moment it does: what the element is called then is the name the
+          // stylesheet has to find.
+          for (const id of Object.keys(roles)) {
+            document.getElementById(id).style.viewTransitionName = roles[id];
+          }
+          document.documentElement.dataset.padelSwap = swapStyle;
+          if (displacedId) {
+            padelWriteAsideVector(fromElement, toElement);
+          } else {
+            // Nobody to go around: a place taken by no one is walked into.
+            padelWriteAsideVector(fromElement, fromElement);
+          }
+          // A transition name is unique per document, so it is the app that writes
+          // it and the app that starts the transition.
           const transition = document.startViewTransition(() => {
-            syncCloneWithDropTarget();
+            syncCloneWithDropTarget?.();
+            setSwapRoles(roles);
             setLineup((previous) => padelSwap(previous, fromId, toId));
           });
+          transition.finished.then(() => {
+            setSwapRoles(null);
+          });
           return transition.finished;
+        };
+
+        const land = (event) => {
+          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+          return swap(fromId, toId, syncCloneWithDropTarget);
+        };
+
+        // Who comes on when a free place is asked for someone: the first of the
+        // squad who is not already out there.
+        const takePlace = (placeId) => {
+          const playerIdsOnCourt = Object.values(lineup);
+          const player = PADEL_PLAYERS.find(
+            (candidate) =>
+              !playerIdsOnCourt.includes(`${prefix}__${candidate.id}`),
+          );
+          if (!player) {
+            return;
+          }
+          setLineup((previous) => ({
+            ...previous,
+            [placeId]: `${prefix}__${player.id}`,
+          }));
+        };
+
+        const reset = () => {
+          setLineup(initialLineup);
+        };
+
+        const playerIdAt = (placeId) => lineup[placeId];
+        const viewTransitionNameOf = (playerId) =>
+          swapRoles?.[playerId] || "none";
+
+        return {
+          swap,
+          land,
+          takePlace,
+          reset,
+          playerIdAt,
+          viewTransitionNameOf,
+        };
+      };
+
+      // A player, wherever they stand: the piece that is carried. It is drawn
+      // beside the places rather than inside one — what can be landed on is looked
+      // for among its siblings.
+      const PadelPlayer = ({
+        playerId,
+        variant,
+        viewTransitionName,
+        ...rest
+      }) => {
+        const player = padelPlayerOf(playerId);
+        return (
+          <Box
+            id={playerId}
+            className={`padel_piece padel_${variant} padel_piece_${player.team}`}
+            {...rest}
+            // The name a document transition moves it under: it is the player who
+            // travels, the places stay where they are.
+            style={{ ...rest.style, viewTransitionName }}
+          >
+            {variant === "card" ? (
+              <span className="padel_avatar">{player.initial}</span>
+            ) : null}
+            {player.label}
+          </Box>
+        );
+      };
+
+      // ── The court cut in four ───────────────────────────
+
+      const PADEL_ZONES = [
+        { id: "far_left", x: 0, y: 0 },
+        { id: "far_right", x: 50, y: 0 },
+        { id: "near_left", x: 0, y: 50 },
+        { id: "near_right", x: 50, y: 50 },
+      ];
+      const PADEL_ZONED_LINEUP = {
+        zoned__far_left: "zoned__lea",
+        zoned__far_right: "zoned__marc",
+        zoned__near_left: "zoned__sofia",
+        zoned__near_right: null,
+      };
+
+      const PadelZonedCase = ({ swapStyle, onSwapStyleChange }) => {
+        const court = usePadelCourt({
+          prefix: "zoned",
+          initialLineup: PADEL_ZONED_LINEUP,
+          swapStyle,
+        });
+        const swapTrial = (trial) => {
+          const fromPlaceId = `zoned__${trial.from}`;
+          const toPlaceId = `zoned__${trial.to}`;
+          const travellerId =
+            court.playerIdAt(fromPlaceId) || court.playerIdAt(toPlaceId);
+          if (!travellerId) {
+            return;
+          }
+          const targetId =
+            travellerId === court.playerIdAt(fromPlaceId)
+              ? toPlaceId
+              : fromPlaceId;
+          court.swap(travellerId, targetId);
         };
         return (
           <>
@@ -1656,51 +2006,184 @@
               A padel court
             </Heading>
             <p class="legend">
-              Take a player to another place: free, they go there; taken, the
-              two change places at the release. The empty place receives without
-              ever being carried, so it declares no interaction — it says{" "}
-              <code>data-droppable</code> and that is all it needs.
+              The court is cut in four and a player is in one of the four, never
+              between two. Anywhere in a quarter is that quarter, so the aim is
+              the zone and not the card: free, the player goes there; taken, the
+              two change places at the release. A free place asks for someone by
+              being clicked.
             </p>
-            <div class="padel">
-              <span class="padel_line padel_line_service" style="top: 34.75%" />
-              <span class="padel_line padel_line_service" style="top: 65.25%" />
-              <span class="padel_line padel_line_center" />
-              <span class="padel_line padel_line_net" />
-              {PADEL_SPOTS.map((spot) => {
-                const place = { left: `${spot.x}%`, top: `${spot.y}%` };
-                const playerId = lineup[spot.id];
-                if (!playerId) {
+            <Box flex="x" spacing="l" alignY="start">
+              <div class="padel padel_zoned">
+                <PadelCourtLines />
+                {/* The places, said by the board: a quarter receives without ever
+                    being carried, so it declares no interaction — `data-droppable`
+                    is all it needs to be somewhere the hand can go. */}
+                {PADEL_ZONES.map((zone) => {
+                  const placeId = `zoned__${zone.id}`;
                   return (
                     <div
-                      key={spot.id}
-                      id={spot.id}
-                      class="padel_place padel_free"
-                      style={place}
+                      key={zone.id}
+                      id={placeId}
+                      class="padel_zone"
+                      style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
                       data-droppable
+                    >
+                      {court.playerIdAt(placeId) ? null : (
+                        <button
+                          type="button"
+                          class="padel_free padel_free_zone"
+                          onClick={() => court.takePlace(placeId)}
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {PADEL_ZONES.map((zone) => {
+                  const playerId = court.playerIdAt(`zoned__${zone.id}`);
+                  if (!playerId) {
+                    return null;
+                  }
+                  return (
+                    <PadelPlayer
+                      key={playerId}
+                      playerId={playerId}
+                      variant="card"
+                      viewTransitionName={court.viewTransitionNameOf(playerId)}
+                      style={{
+                        left: `calc(${zone.x}% + 6px)`,
+                        top: `calc(${zone.y}% + 6px)`,
+                        width: "calc(50% - 12px)",
+                        height: "calc(50% - 12px)",
+                      }}
+                      interactions={{
+                        land: court.land,
+                        grab: () => window.navigator.vibrate?.(10),
+                      }}
                     />
                   );
+                })}
+              </div>
+              <Box flex="y" spacing="m" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
+                  <Text size="s" color="#666">
+                    How they change places
+                  </Text>
+                  <select
+                    class="padel_style_select"
+                    value={swapStyle}
+                    onChange={(event) => onSwapStyleChange(event.target.value)}
+                  >
+                    {PADEL_SWAP_STYLES.map((style) => (
+                      <option key={style.id} value={style.id}>
+                        {style.label}
+                      </option>
+                    ))}
+                  </select>
+                </Box>
+                <Box flex="y" spacing="xs" alignX="start">
+                  <Text size="s" color="#666">
+                    Swap two of them
+                  </Text>
+                  <div class="padel_controls">
+                    {PADEL_SWAP_TRIALS.map((trial) => (
+                      <Button key={trial.label} action={() => swapTrial(trial)}>
+                        {trial.label}
+                      </Button>
+                    ))}
+                    <Button action={court.reset}>Reset</Button>
+                  </div>
+                </Box>
+              </Box>
+            </Box>
+          </>
+        );
+      };
+
+      // ── The players themselves as the places ────────────
+
+      const PADEL_SPOTS = [
+        { id: "far_left", x: 28, y: 25 },
+        { id: "far_right", x: 72, y: 25 },
+        { id: "near_left", x: 28, y: 75 },
+        { id: "near_right", x: 72, y: 75 },
+      ];
+      const PADEL_TOKENS_LINEUP = {
+        tokens__far_left: "tokens__lea",
+        tokens__far_right: "tokens__marc",
+        tokens__near_left: "tokens__sofia",
+        tokens__near_right: null,
+      };
+
+      const PadelTokensCase = ({ swapStyle }) => {
+        const court = usePadelCourt({
+          prefix: "tokens",
+          initialLineup: PADEL_TOKENS_LINEUP,
+          swapStyle,
+        });
+        return (
+          <>
+            <Heading level={3} id="padel_tokens">
+              The same court, where the players are the places
+            </Heading>
+            <p class="legend">
+              No zone here: what one comes down on is the other player, so the
+              aim is the token and a place is exactly its size. The same swap
+              answers it — a place is a place, whatever draws it.
+            </p>
+            <div class="padel padel_tokens">
+              <PadelCourtLines />
+              {PADEL_SPOTS.map((spot) => {
+                const placeId = `tokens__${spot.id}`;
+                const playerId = court.playerIdAt(placeId);
+                const place = { left: `${spot.x}%`, top: `${spot.y}%` };
+                if (!playerId) {
+                  return (
+                    <button
+                      key={spot.id}
+                      type="button"
+                      id={placeId}
+                      class="padel_free padel_free_token"
+                      style={place}
+                      onClick={() => court.takePlace(placeId)}
+                      data-droppable
+                    >
+                      +
+                    </button>
+                  );
                 }
-                const player = PADEL_PLAYERS.find(
-                  (candidate) => candidate.id === playerId,
-                );
                 return (
-                  <Box
+                  <PadelPlayer
                     key={playerId}
-                    id={playerId}
-                    className={`padel_place padel_player padel_player_${player.team}`}
-                    // The name a document transition moves it under: it is the
-                    // player who travels, the places stay where they are.
-                    style={{ ...place, viewTransitionName: playerId }}
+                    playerId={playerId}
+                    variant="token"
+                    viewTransitionName={court.viewTransitionNameOf(playerId)}
+                    style={place}
+                    // Carried AND landed on: a player is a piece of the board and a
+                    // place of it at once, which is what makes the answer a swap.
+                    data-droppable
                     interactions={{
-                      drop,
+                      land: court.land,
                       grab: () => window.navigator.vibrate?.(10),
                     }}
-                  >
-                    {player.label}
-                  </Box>
+                  />
                 );
               })}
             </div>
+          </>
+        );
+      };
+
+      const PadelCase = () => {
+        const [swapStyle, setSwapStyle] = useState("over_under");
+        return (
+          <>
+            <PadelZonedCase
+              swapStyle={swapStyle}
+              onSwapStyleChange={setSwapStyle}
+            />
+            <PadelTokensCase swapStyle={swapStyle} />
           </>
         );
       };

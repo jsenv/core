@@ -23,11 +23,15 @@ export const getRadioSiblings = (radioUIStateController) => {
   return siblings;
 };
 
-export const toDomValue = (jsValue, { controlType, id, type, inputMode }) => {
+export const toDomValue = (
+  jsValue,
+  { controlType, id, type, inputMode, pad },
+) => {
   const domValue = asControlHostValue(jsValue, {
     controlType,
     type,
     inputMode,
+    pad,
   });
   if (isSerializableAsDomValue(domValue)) {
     return domValue;

@@ -878,6 +878,12 @@ export const useUIGroupStateController = (
   const debugUIGroup = useDebugUIState();
   const debugFocus = useDebugFocus();
 
+  // What the group is worth is one key per child (or one item per child) only
+  // as long as nobody said otherwise: a group with its own aggregate is worth
+  // whatever IT says — a "HH:MM", an ISO duration — and the shape checks in
+  // setUIState below are about the default shape, not about that one.
+  const stateShapeIsTheDefaultOne =
+    !aggregateChildStates && !distributeChildUIState;
   const defaults = GROUP_DEFAULTS[controlType] ?? GROUP_DEFAULTS[stateType];
   const resolvedChildControlFilter =
     childControlFilter ?? defaults?.childControlFilter ?? null;
@@ -1051,6 +1057,7 @@ export const useUIGroupStateController = (
         setUIState: (newUIState, e) => {
           if (
             stateType === "object" &&
+            stateShapeIsTheDefaultOne &&
             (newUIState === null || typeof newUIState !== "object")
           ) {
             console.warn(
@@ -1059,7 +1066,11 @@ export const useUIGroupStateController = (
             );
             return;
           }
-          if (stateType === "array" && !Array.isArray(newUIState)) {
+          if (
+            stateType === "array" &&
+            stateShapeIsTheDefaultOne &&
+            !Array.isArray(newUIState)
+          ) {
             console.warn(
               `[${controlType}] setUIState received a non-array value: ${JSON.stringify(newUIState)} (expected an array). Ignoring.`,
               newUIState,

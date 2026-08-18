@@ -11,6 +11,8 @@
  * (see time_range_constraint.js).
  */
 
+import { useId } from "preact/hooks";
+
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlGroup } from "../../control_group.jsx";
@@ -110,7 +112,9 @@ const parseTime = (time) => {
   if (!match) {
     return null;
   }
-  return { hour: padTwo(match[1]), minute: padTwo(match[2]) };
+  // Numbers: what an hour and a minute are held as. How they are written —
+  // "07" — is the field's business (see NumberSpin's `pad`).
+  return { hour: Number(match[1]), minute: Number(match[2]) };
 };
 
 const padTwo = (value) => String(value).padStart(2, "0");
@@ -121,6 +125,7 @@ const padTwo = (value) => String(value).padStart(2, "0");
  *   value?: { start?: string, end?: string },
  *   defaultValue?: { start?: string, end?: string },
  *   minuteStep?: number,
+ *   minDuration?: number,
  *   pad?: number,
  *   size?: string,
  *   startLabel?: import("preact").ComponentChildren,
@@ -134,9 +139,14 @@ const padTwo = (value) => String(value).padStart(2, "0");
  *   `null` for neither.
  * @param {number} [minuteStep=1] How many minutes a press on a minute chevron
  *   covers, on both times.
+ * @param {number} [minDuration=0] How long the span must last at least, in
+ *   minutes. Zero by default: a span of no length is a span all the same, only
+ *   one that goes backwards is not. Checked when the form is sent, and the
+ *   answer is given on the end time.
  */
 export const TimeRangeSpin = ({
   minuteStep = 1,
+  minDuration = 0,
   pad = 2,
   size,
   startLabel = naviI18n("time_range.from"),
@@ -144,35 +154,34 @@ export const TimeRangeSpin = ({
   startTimeProps,
   endTimeProps,
   ...rest
-}) => (
-  <ControlGroup
-    flex
-    alignY="center"
-    spacing="s"
-    size={size}
-    // The one rule a span always has, checked when the form is sent: what the
-    // two times are worth together is the group's to answer for, not either
-    // time's.
-    data-time-range=""
-    {...rest}
-  >
-    {/* The words are written as big as the times they name: one span, one
-        size. */}
-    {startLabel === null ? null : <Text size={size}>{startLabel}</Text>}
-    <TimeSpin
-      name="start"
-      minuteStep={minuteStep}
-      pad={pad}
-      size={size}
-      {...startTimeProps}
-    />
-    {endLabel === null ? null : <Text size={size}>{endLabel}</Text>}
-    <TimeSpin
-      name="end"
-      minuteStep={minuteStep}
-      pad={pad}
-      size={size}
-      {...endTimeProps}
-    />
-  </ControlGroup>
-);
+}) => {
+  const startId = useId();
+  return (
+    <ControlGroup flex alignY="center" spacing="s" size={size} {...rest}>
+      {/* The words are written as big as the times they name: one span, one
+          size. */}
+      {startLabel === null ? null : <Text size={size}>{startLabel}</Text>}
+      <TimeSpin
+        id={startId}
+        name="start"
+        minuteStep={minuteStep}
+        pad={pad}
+        size={size}
+        {...startTimeProps}
+      />
+      {endLabel === null ? null : <Text size={size}>{endLabel}</Text>}
+      <TimeSpin
+        name="end"
+        minuteStep={minuteStep}
+        pad={pad}
+        size={size}
+        // Which time it comes after, and how much room there must be between
+        // the two: said on the LATER of the two, so the answer is given where
+        // the time one would have to move is (see time_range_constraint.js).
+        data-time-after={startId}
+        data-time-min-duration={minDuration}
+        {...endTimeProps}
+      />
+    </ControlGroup>
+  );
+};

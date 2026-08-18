@@ -444,9 +444,6 @@ const css = /* css */ `
  *   the field IS the middle, and nothing travels. Without it the value is
  *   picked — a headless picker behind three slides that travel one step at a
  *   press.
- * @param {(value: any) => any} [formatValue] How a typed value is written once
- *   one leaves the field — padding a number to two digits, trimming a word.
- *   Only for an `editable` spin; a value that is picked is never mid-edit.
  * @param {object} [controlProps] Anything else the control in the middle takes
  *   (`inputMode`, `maxLength`, `placeholder`…).
  * @param {number} [step=1] How many steps a press covers.
@@ -491,7 +488,6 @@ export const Spin = ({
   valueAtStep,
   compareValues = compareValuesDefault,
   renderValue = renderValueDefault,
-  formatValue,
   controlProps,
   vertical,
   readOnly,
@@ -645,7 +641,19 @@ export const Spin = ({
   // it in this spin, so one can keep going with the keys where one was. Found
   // in the middle rather than by id — a field's id lands on the box around it,
   // and what takes the keyboard is the input inside.
+  //
+  // Not under a finger: focusing a field on a phone raises the on-screen
+  // keyboard over half the page, and someone pressing a chevron is stepping
+  // through values, not about to type one. With a mouse the opposite is true —
+  // one presses once and then keeps going with the arrow keys — so the keyboard
+  // is put back where it was. Which one it is comes from the pointer that
+  // started the press (same convention as button_ui.jsx and
+  // use_autoselect_read_only.js).
+  const wayOutPointerTypeRef = useRef(null);
   const focusMiddle = () => {
+    if (wayOutPointerTypeRef.current === "touch") {
+      return;
+    }
     const target = editable
       ? middleRef.current?.querySelector(".navi_control_input")
       : document.getElementById(containerId);
@@ -667,6 +675,9 @@ export const Spin = ({
     return (
       <WayOut
         atStart={atStart}
+        onPointerDown={(e) => {
+          wayOutPointerTypeRef.current = e.pointerType;
+        }}
         unavailableMessage={wayOutMessage(
           atStart ? startAllowed : endAllowed,
           isNext ? "spin.nothing_after" : "spin.nothing_before",
@@ -763,23 +774,6 @@ export const Spin = ({
             expandX
             uiAction={(valueNext, event) => {
               uiAction?.(valueNext, stepEventRef.current ?? event);
-            }}
-            // What was typed, written the way the spin writes it: "7" becomes
-            // "07" in a field where the value beside it reads "00". Done on
-            // leaving rather than on each keystroke — a "0" turned into "00"
-            // under the caret is a field that fights back while one types.
-            onBlur={(e) => {
-              controlProps?.onBlur?.(e);
-              if (!formatValue) {
-                return;
-              }
-              if (valueHeld === undefined || valueHeld === "") {
-                return;
-              }
-              const valueFormatted = formatValue(valueHeld);
-              if (valueFormatted !== valueHeld) {
-                setValue(valueFormatted, e);
-              }
             }}
           />
         ) : (
@@ -899,6 +893,7 @@ const WayOut = ({
   unavailableMessage,
   label,
   onPress,
+  onPointerDown,
   children,
 }) => (
   <Box
@@ -934,6 +929,7 @@ const WayOut = ({
     onClick={(e) => {
       e.preventDefault();
     }}
+    onPointerDown={onPointerDown}
     onMouseDown={(e) => {
       // No focus, no text selection: the keyboard is put on the middle below.
       e.preventDefault();
@@ -1123,8 +1119,9 @@ SpinGroup.Separator = SpinGroupSeparator;
  *   highest. They also bound what typing can produce, and how wide the field
  *   is asked to be (see `maxLength`).
  * @param {number} [pad] How many digits the number is written on, zeroes in
- *   front of it: `pad={2}` writes 0 as "00". What an hour, a minute or a
- *   second is read as — a clock says "07:00", never "7:0".
+ *   front of it: `pad={2}` writes 0 as "00". What an hour, a minute or a second
+ *   is read as — a clock says "07:00", never "7:0". Only the way it is written:
+ *   what the control holds, and what a form carries, is the number itself.
  */
 export const NumberSpin = ({
   min = 0,
@@ -1144,39 +1141,23 @@ export const NumberSpin = ({
     max={max}
     step={step}
     vertical={vertical}
-    fallbackValue={padNumber(min, pad)}
-    valueAtStep={(value, count) =>
-      padNumber(numberAtStep(value, count, min), pad)
-    }
+    fallbackValue={min}
+    valueAtStep={(value, count) => numberAtStep(value, count, min)}
     compareValues={(a, b) => Number(a) - Number(b)}
-    formatValue={(value) => padNumber(value, pad)}
     controlProps={{
       // The numeric keypad on a phone, and — through
       // input_resolver_mode — the "this field is full" event a group of
       // fields moves along on (see useInputGroup).
-      inputMode: "numeric",
-      maxLength: numberMaxLength(max, pad),
+      "inputMode": "numeric",
+      "maxLength": numberMaxLength(max, pad),
+      // What the number is HELD as stays a number; `pad` is how it is written
+      // in the field (see asControlHostValue).
+      "navi-value-pad": pad,
       ...controlProps,
     }}
     {...rest}
   />
 );
-
-// The number as it is written: "7" where nothing was asked, "07" where two
-// digits were. A value mid-edit that is not a number is left alone — one is
-// typing, and rewriting what is under the caret is not the moment.
-const padNumber = (value, pad) => {
-  if (!pad) {
-    return value;
-  }
-  const number = Number(value);
-  if (value === "" || value === undefined || Number.isNaN(number)) {
-    return value;
-  }
-  const negative = number < 0;
-  const digits = String(negative ? -number : number).padStart(pad, "0");
-  return negative ? `-${digits}` : digits;
-};
 
 // How many characters the field takes: what the biggest number is worth, or
 // what the padding writes, whichever is longer.

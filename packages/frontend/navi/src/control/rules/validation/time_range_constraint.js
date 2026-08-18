@@ -1,30 +1,59 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { getUIStateControllerById } from "../../controller_registry.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
-// The one rule a span of time always has: it ends after it starts. Carried by
-// the group holding both times rather than by either of them — neither is
-// wrong on its own, it is the pair that does not hold together.
+// A time that must not land before another one: the field says which one it
+// comes after (data-time-after, the id of the control holding it) and how much
+// room there must be between the two at least (data-time-min-duration, in
+// minutes — zero by default, so a span of no length is a span all the same).
+// Carried by the LATER of the two: it is the one that would have to move, so it
+// is the one the answer is about.
 export const TIME_RANGE_CONSTRAINT = {
-  name: "time_range",
-  messageAttribute: "data-time-range-message",
+  name: "time_after",
+  messageAttribute: "data-time-after-message",
   check: (field) => {
-    if (field.controlHostProps["data-time-range"] === undefined) {
+    const after = field.controlHostProps["data-time-after"];
+    if (after === undefined) {
       return null;
     }
-    const value = field.uiState;
-    if (!value || typeof value !== "object") {
+    const otherController = getUIStateControllerById(after);
+    if (!otherController) {
+      console.warn(`Time after constraint: no control with id "${after}"`);
       return null;
     }
-    const { start, end } = value;
-    if (!start || !end) {
+    const timeBefore = minutesFromTime(otherController.uiState);
+    const timeAfter = minutesFromTime(field.uiState);
+    if (timeBefore === null || timeAfter === null) {
       return null;
     }
-    // "HH:MM" against "HH:MM": written that way, the order of two times IS
-    // their alphabetical order.
-    if (end > start) {
+    const minDuration = Number(
+      field.controlHostProps["data-time-min-duration"] ?? 0,
+    );
+    const duration = timeAfter - timeBefore;
+    if (duration >= minDuration) {
       return null;
     }
-    return naviI18n("constraint.time_range.default");
+    if (minDuration > 0) {
+      return naviI18n("constraint.time_after.min_duration").replace(
+        "[duration]",
+        String(minDuration),
+      );
+    }
+    return naviI18n("constraint.time_after.default");
   },
 };
-CONSTRAINT_ATTRIBUTE_SET.add("data-time-range");
+CONSTRAINT_ATTRIBUTE_SET.add("data-time-after");
+CONSTRAINT_ATTRIBUTE_SET.add("data-time-min-duration");
+
+// "HH:MM" as a number of minutes, which is what two times are compared and
+// subtracted as. Anything else is a time nobody has finished writing.
+const minutesFromTime = (time) => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})$/.exec(time);
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
+};
