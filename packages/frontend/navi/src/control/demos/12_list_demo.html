@@ -1203,7 +1203,7 @@
         "Dragonfruit",
       ];
 
-      const LetterGroupedList = ({ initialQuery = "" }) => {
+      const LetterGroupedList = ({ initialQuery = "", searchNoMatchMode }) => {
         const [filter, setFilter] = useState(initialQuery);
         const [sorted, getItemMatchInfo] = useSearchText(
           filter,
@@ -1227,7 +1227,13 @@
               uiAction={setFilter}
               expandX
             />
-            <List searchText={filter} borderWidth="1" borderRadius="6" expandX>
+            <List
+              searchText={filter}
+              searchNoMatchMode={searchNoMatchMode}
+              borderWidth="1"
+              borderRadius="6"
+              expandX
+            >
               {[...groupMap.entries()].map(([letter, items]) => (
                 <ListItemGroup key={letter} label={letter} hiddenWhileEmpty>
                   {items.map((item) => (
@@ -1257,6 +1263,10 @@
             <LetterGroupedList />
             <LetterGroupedList initialQuery="ap" />
             <LetterGroupedList initialQuery="berry" />
+            <LetterGroupedList
+              initialQuery="berry"
+              searchNoMatchMode="invisible_and_inert"
+            />
           </Box>
         </div>
       );

@@ -583,6 +583,14 @@ const css = /* css */ `
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
+
+      /* A group whose rows all failed the search keeps its height (its rows are
+         still there, invisible) — the label must disappear with them, otherwise
+         the list shows a title standing over nothing. Same aria-hidden + inert
+         pair as the rows themselves. */
+      &[aria-hidden="true"][inert] {
+        opacity: 0;
+      }
     }
     .navi_list_item_group_list {
       display: flex;
@@ -3901,6 +3909,17 @@ export const ListItemGroup = ({
 }) => {
   const groupId = useId();
   const groupTracker = useItemTracker();
+  const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  const groupItemCount = groupTracker.countSignal.value;
+  const groupNoMatchCount = groupTracker.noMatchCountSignal.value;
+  // Every row of this group failed the search: the label has nothing left to
+  // title. "remove" empties the group on its own (and hiddenWhileEmpty takes it
+  // out of the flow), "muted" keeps the rows readable so the label stays useful
+  // — only "invisible_and_inert" would leave a title floating over blank space.
+  const labelHidden =
+    searchNoMatchMode === "invisible_and_inert" &&
+    groupNoMatchCount > 0 &&
+    groupNoMatchCount === groupItemCount;
   const groupRef = useRef(null);
   const labelRef = useRef(null);
   useDisplayedLayoutEffect(
@@ -3933,6 +3952,8 @@ export const ListItemGroup = ({
         id={groupId}
         className="navi_list_item_group_label"
         role="presentation"
+        aria-hidden={labelHidden ? "true" : undefined}
+        inert={labelHidden ? true : undefined}
         // eslint-disable-next-line react/no-unknown-property
         navi-default={typeof label === "string" ? "" : undefined}
       >
