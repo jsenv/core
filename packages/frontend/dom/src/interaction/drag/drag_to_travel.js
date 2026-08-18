@@ -91,15 +91,6 @@ import.meta.css = /* css */ `
   [data-drag-travel*="y"] * {
     overscroll-behavior-y: contain !important;
   }
-  :root[${WALKING_ATTRIBUTE}] {
-    /* A drag over text selects it on the way, and the blue trail says the
-       gesture was understood as something else. Not from the press: a press on
-       text IS how one selects it, and only a press that has become a travel has
-       said it was about something else — which is also why this cannot be the
-       whole answer, and why the selection made meanwhile is dropped by hand
-       (see dropSelection). */
-    user-select: none;
-  }
 `;
 
 // How far a pointer goes before it is a travel rather than a click: below this
@@ -180,29 +171,6 @@ const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
     element = element.parentElement;
   }
   return left;
-};
-
-/**
- * What the browser painted blue while it was still allowed to think this press
- * was about text.
- *
- * A mouse dragged across a page selects what it crosses, and it starts doing so
- * from the first pixel — while this is still spending ten of them deciding
- * whether the press is a travel at all. By the time it is one, a trail is
- * already there. `user-select: none` (see the CSS) stops it GROWING, it does not
- * take back what was made, and a selection already under way goes on being
- * extended by some browsers whatever the property says.
- *
- * So it is dropped, and dropped again as it comes back. The cause is outside —
- * one gesture, two things answering it, and the browser answers first — and
- * cannot be removed from here; what can be removed is its trace, on every frame
- * of a travel that is walking.
- */
-const dropSelection = () => {
-  const selection = window.getSelection();
-  if (selection && !selection.isCollapsed) {
-    selection.removeAllRanges();
-  }
 };
 
 /**
@@ -529,9 +497,6 @@ export const startDragToTravel = (
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       }
-      // Whatever the press was taken for until now, it was taken for something
-      // else (see dropSelection).
-      dropSelection();
       const { axis } = travel;
       let pulled = pullOf(gestureInfo);
       // Which side is being pulled in: dragging to the right brings in what is
@@ -592,10 +557,6 @@ export const startDragToTravel = (
         return;
       }
       finish();
-      // Last chance: the pointer moves once more as it goes up, and by then the
-      // attribute above is off — so a trail made on that last move would be the
-      // one that stays (see dropSelection).
-      dropSelection();
       const { axis, size, pulled, slack } = travel;
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
       const velocity =

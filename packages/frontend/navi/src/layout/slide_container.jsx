@@ -146,12 +146,6 @@ const css = /* css */ `
     &[data-travel-by-drag="xy"] {
       touch-action: none;
     }
-    /* A drag is not a selection: without this a mouse pulling a slide paints
-       the text it passes over blue. */
-    &[data-slide-dragging] {
-      user-select: none;
-    }
-
     /* Outside the box, which is where an outline is drawn by default: nothing
        inside can paint over it (the slides are all within), and this box's own
        overflow does not clip it either — an element's outline is not its own
@@ -1758,7 +1752,6 @@ export const SlideContainer = ({
         drag.pull = { x: 0, y: 0, [axis]: slack };
         drag.progress = slack / size;
         stageDrag(drag);
-        containerRef.current.toggleAttribute("data-slide-dragging", true);
         // From here the box is busy, whichever input asked: a wheel gesture and
         // a press must not both be moving the same track.
         dragRef.current = drag;
@@ -1777,7 +1770,6 @@ export const SlideContainer = ({
       },
       onEnd: ({ axis, sign, travels, event }) => {
         dragRef.current = null;
-        containerRef.current?.removeAttribute("data-slide-dragging");
         if (!travels) {
           returnToRest(drag);
           return;

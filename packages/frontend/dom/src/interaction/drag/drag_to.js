@@ -159,9 +159,10 @@ const css = /* css */ `
      click, and it is usually something else FIRST — a link, a card one opens.
      The cursor says what the element is, and a hand insisting on the one thing
      it can also be would talk over that. So it is left alone — default, and not
-     an I-beam, because the text inside cannot be selected either (the gesture
-     takes the pointer) — and whoever puts the drag there asks for the hand when
-     a grab really is the first thing the element offers.
+     an I-beam, because dragging across the text does not select it (the gesture
+     takes the pointer; see the selectstart refused in drag_gesture.js) — and
+     whoever puts the drag there asks for the hand when a grab really is the
+     first thing the element offers.
      An opted-out area keeps both its cursor and its selection, and never starts
      a drag (see the check in startDragTo).
      Controls inside a source keep their own cursor: cursor is inherited, and
@@ -174,11 +175,9 @@ const css = /* css */ `
   }
   [data-drag-source] {
     cursor: default;
-    user-select: none;
   }
   [data-drag-ignore] {
     cursor: auto;
-    user-select: auto;
   }
 
   [navi-drag-clone-source] {

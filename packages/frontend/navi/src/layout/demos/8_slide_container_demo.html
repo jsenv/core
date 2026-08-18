@@ -944,6 +944,98 @@
         </SlideContainer>
       );
 
+      // A scroller INSIDE a slide, on the very axis the slides travel: the same
+      // wheel and the same finger are wanted by both, and the one under the
+      // pointer answers first — the list scrolls, and hands the gesture over
+      // only once it has nowhere left to go that way (see scrollRoomTowards).
+      // `travelByScroll="y"` on purpose: a wheel going down is the page's own
+      // gesture and a vertical container has to ask for it before it takes it —
+      // which is also what makes this the case worth showing, since without it
+      // there is nothing for the list to win.
+      const MANY_FRUITS = [
+        "apple",
+        "banana",
+        "cherry",
+        "date",
+        "elderberry",
+        "fig",
+        "grape",
+        "honeydew",
+        "kiwi",
+        "lemon",
+        "mango",
+        "nectarine",
+        "orange",
+        "papaya",
+        "quince",
+        "raspberry",
+        "strawberry",
+        "tangerine",
+      ];
+      const ScrollInSlides = () => (
+        <SlideContainer
+          duration={useSlideDuration()}
+          layout="column"
+          travelByScroll="y"
+        >
+          <Slide id="scroll_list" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>a long list</Text>
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Text size="s" color="#666">
+                Wheel (or swipe) over the list: it scrolls. Only once it has
+                reached its end does the gesture travel to the slide below.
+              </Text>
+              {/* No id on purpose: this section is rendered three times over
+                  (in the document, in a dialog, in a popover) */}
+              <List borderWidth="1" borderRadius="4" maxHeight="120">
+                {MANY_FRUITS.map((fruit) => (
+                  <List.Item key={fruit} paddingX="m" paddingY="s">
+                    {fruit}
+                  </List.Item>
+                ))}
+              </List>
+              <Text size="s" color="#666">
+                …and outside the list, the wheel travels straight away.
+              </Text>
+            </Box>
+          </Slide>
+          <Slide id="scroll_below" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>below</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Text>the list handed the gesture over</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // Dragging a slide is not selecting what is written on it — and the text
+      // is still text. Both halves are the case: a drag across the paragraph
+      // leaves no blue trail, and a double click on a word, a ctrl+A, or a
+      // selection begun outside the box and dragged through it still select.
+      const SelectionSlides = () => (
+        <SlideContainer duration={useSlideDuration()} width="260px">
+          <DemoSlide id="selection_first" title="first" direction="next">
+            <Text>
+              Drag this paragraph sideways and the slide travels — nothing here
+              turns blue on the way. Double click a word, though, and it is
+              selected like any other text.
+            </Text>
+          </DemoSlide>
+          <DemoSlide id="selection_second" title="second" direction="previous">
+            <Text>
+              Same here: the gesture belongs to the slides, the words belong to
+              whoever wants to copy them.
+            </Text>
+          </DemoSlide>
+        </SlideContainer>
+      );
+
       // The map, made visible. A slide container shows one slide and hides the
       // rest — each is already laid out at its own place, and the track slides
       // the whole map under a window one cell wide. Here the window is made
@@ -2152,6 +2244,33 @@
               Content={ListInSlides}
               documentClassName="in-document-capped"
             />
+          </section>
+
+          <section class="demo-section" id="scroll-in-a-slide">
+            <Heading id="scroll-in-a-slide">A scroller inside a slide</Heading>
+            <p>
+              The list and the slides want the same gesture. The one under the
+              pointer answers first: the list scrolls until it has nowhere left
+              to go that way, and only then does the wheel (or the finger)
+              travel to the slide below. Aim outside the list and it travels
+              straight away.
+            </p>
+            <ThreeWays
+              id="scroll_in_slide"
+              Content={ScrollInSlides}
+              documentClassName="in-document-capped"
+            />
+          </section>
+
+          <section class="demo-section" id="selection">
+            <Heading id="selection">Dragging is not selecting</Heading>
+            <p>
+              A drag across the words travels the slides and leaves no blue
+              trail behind it — but the text is still text. Double click a word,
+              press ctrl+A, or begin a selection in this very paragraph and drag
+              through the box: all of them still select.
+            </p>
+            <ThreeWays id="selection" Content={SelectionSlides} />
           </section>
 
           <section class="demo-section" id="map">

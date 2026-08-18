@@ -563,6 +563,70 @@ export const createDragGestureController = (options = {}) => {
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
+    /*
+     * A press that starts a drag is not a press that starts a selection: the
+     * browser sees a pointer going down on text and moving, and that is its
+     * own gesture — the words under the finger turn blue while the element
+     * travels, and the selection outlives the release.
+     *
+     * Refused from the grab, before any threshold: whether the press becomes a
+     * drag is decided a few pixels later, but the selection is decided at the
+     * FIRST move, and by then it is too late to say no.
+     *
+     * `user-select: none` would say it in CSS, but it would say it to
+     * everybody: the element would stop being selectable even when nobody is
+     * dragging it. Here it is refused for the length of one gesture.
+     */
+    const preventSelectStart = (selectStartEvent) => {
+      selectStartEvent.preventDefault();
+    };
+    document.addEventListener("selectstart", preventSelectStart);
+    // A press also puts an end to the selection the page was already holding,
+    // the way the browser's own press does: refusing selectstart keeps a new
+    // selection from being made, it says nothing about the one painted before
+    // — which would otherwise sit there through a gesture that has nothing to
+    // do with it.
+    collapseSelection();
+    dragGesture.addReleaseCallback(() => {
+      document.removeEventListener("selectstart", preventSelectStart);
+    });
+    /*
+     * Refusing every selection also refuses the one a press is entitled to
+     * make: a double click selects the word under it, and that selection is
+     * over before the pointer has gone anywhere. It is made here instead,
+     * spelled out (see selectWordAtPoint) rather than left to a browser
+     * heuristic that cannot tell a drag from a click.
+     *
+     * On the document and outliving the gesture, because the gesture is
+     * already over when the second click completes: dblclick comes after
+     * mouseup, the gesture ends at pointerup. It is dropped when it fires, and
+     * otherwise when the next press installs its own — a listener waiting for
+     * a double click that never comes costs nothing until then.
+     */
+    removePendingDoubleClickListener();
+    const onDoubleClick = (dblclickEvent) => {
+      removePendingDoubleClickListener = NOOP;
+      // A drag that happened is a gesture, not a click: the second press of a
+      // double click can be the one that drags, and what it drags must not end
+      // up selected too.
+      if (dragGesture.gestureInfo.started) {
+        return;
+      }
+      // Text the page says is not selectable stays not selectable: a
+      // programmatic selection goes through `user-select: none` in every
+      // engine — it is a rule about what the USER may start, and the browser
+      // does not read it back when asked directly. Read here so that doing the
+      // browser's work does not also undo what the page asked of it.
+      if (!isSelectable(dblclickEvent.target)) {
+        return;
+      }
+      selectWordAtPoint(dblclickEvent.clientX, dblclickEvent.clientY);
+    };
+    document.addEventListener("dblclick", onDoubleClick, { once: true });
+    removePendingDoubleClickListener = () => {
+      removePendingDoubleClickListener = NOOP;
+      document.removeEventListener("dblclick", onDoubleClick);
+    };
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
@@ -753,4 +817,59 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     writable: false,
     value: object[propertyName],
   });
+};
+
+const NOOP = () => {};
+let removePendingDoubleClickListener = NOOP;
+
+// What a double click selects when the browser is allowed to do it itself: the
+// word around the caret the click lands on.
+const selectWordAtPoint = (x, y) => {
+  const caretRange = createCaretRange(x, y);
+  if (!caretRange) {
+    return;
+  }
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(caretRange);
+  // "word" is not a position a Range can be built from — it is a movement the
+  // selection knows how to make, and the caret walking to both of its edges is
+  // what draws the word.
+  if (selection.modify) {
+    selection.modify("move", "backward", "word");
+    selection.modify("extend", "forward", "word");
+  }
+};
+
+const createCaretRange = (x, y) => {
+  if (document.caretPositionFromPoint) {
+    const caretPosition = document.caretPositionFromPoint(x, y);
+    if (!caretPosition) {
+      return null;
+    }
+    const range = document.createRange();
+    range.setStart(caretPosition.offsetNode, caretPosition.offset);
+    range.collapse(true);
+    return range;
+  }
+  if (document.caretRangeFromPoint) {
+    return document.caretRangeFromPoint(x, y);
+  }
+  return null;
+};
+
+const isSelectable = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return true;
+  }
+  const computedStyle = window.getComputedStyle(element);
+  const userSelect = computedStyle.userSelect || computedStyle.webkitUserSelect;
+  return userSelect !== "none";
+};
+
+const collapseSelection = () => {
+  const selection = window.getSelection();
+  if (selection && !selection.isCollapsed) {
+    selection.removeAllRanges();
+  }
 };
