@@ -9093,11 +9093,47 @@ const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
   onPressCancel,
   onPress
 }) => {
+  /*
+   * WHETHER a touchmove can be refused at all is decided when the touch BEGINS,
+   * from the non-passive listeners present at that moment — and on this path the
+   * gesture, which is what refuses it (see preventTouchScroll in
+   * drag_gesture.js), is only born once the wait is over. By then the browser has
+   * long made up its mind: every touchmove it hands over is already
+   * `cancelable: false`, the refusal does nothing, and the page scrolls away with
+   * the object still under the finger — until the touch is taken for a scroll and
+   * the pointer stream is cancelled, which is the drag dying mid-gesture.
+   *
+   * So the listener the decision looks for is put down with the FINGER, before
+   * anyone knows whether this press is a drag. It refuses nothing — a press that
+   * is still only a press must leave the scroll alone, which is exactly what the
+   * wait is there to tell apart. Its only job is to be there, so that the
+   * refusal made later is one the browser still listens to.
+   */
+  const keepTouchRefusable = () => {
+    // Being registered IS the whole of it — see above.
+  };
+  const grabTarget = grabEvent.target;
+  window.addEventListener("touchmove", keepTouchRefusable, {
+    passive: false,
+    capture: true
+  });
+  grabTarget.addEventListener("touchmove", keepTouchRefusable, {
+    passive: false
+  });
+  const stopKeepingTouchRefusable = () => {
+    window.removeEventListener("touchmove", keepTouchRefusable, {
+      capture: true
+    });
+    grabTarget.removeEventListener("touchmove", keepTouchRefusable);
+  };
   waitForPressHeld(grabEvent, {
     delay: longPressDelay,
     slop: longPressSlop,
     onPressStart,
-    onPressCancel,
+    onPressCancel: pointerEvent => {
+      stopKeepingTouchRefusable();
+      onPressCancel?.(pointerEvent);
+    },
     onPressHeld: (pressEvent, {
       endPress
     }) => {
@@ -9107,10 +9143,14 @@ const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
       // for every way a drag can begin.
       const dragGesture = startDragGesture(dragGestureInitializer);
       if (!dragGesture) {
+        stopKeepingTouchRefusable();
         endPress();
         return;
       }
-      dragGesture.addReleaseCallback(endPress);
+      dragGesture.addReleaseCallback(() => {
+        stopKeepingTouchRefusable();
+        endPress();
+      });
     }
   });
 };
