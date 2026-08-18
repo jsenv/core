@@ -13,6 +13,12 @@
  *   stable row of items to look between.
  * - **toss**: it is gotten rid of. The same copy, for the opposite reason: the
  *   original stays until the answer says it is really gone.
+ * - **drop**: it lands ON something. Also a copy, and the closest to `reorder` —
+ *   the difference is what a target IS: a row of a list is a place BETWEEN two
+ *   others, whereas a square of a board is a place of its own, which may already
+ *   be taken. So nothing is inserted and nothing is a no-op: the answer is "this
+ *   one landed on that one", and what that means (take it, swap with it, refuse)
+ *   is the caller's.
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
  * those need runs: no copy for a move, no drop hint for something that can only be
@@ -118,6 +124,32 @@ const css = /* css */ `
   .navi_drop_hint_cap[data-side="end"] {
     right: calc(-1 * var(--drop-hint-arrow-size, 11px));
     rotate: 90deg;
+  }
+
+  /* WHERE IT LANDS, when landing is ON a thing rather than between two: the
+     place itself is lit up, because there is no gap to draw a line in. Fixed
+     and in the top layer for the same reasons as the line above. */
+  .navi_drop_surface {
+    position: fixed;
+    inset: auto;
+    top: var(--drop-target-top);
+    left: var(--drop-target-left);
+    display: none;
+    box-sizing: border-box;
+    width: var(--drop-target-width);
+    height: var(--drop-target-height);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: var(--drop-surface-background-color, rgba(68, 118, 255, 0.16));
+    border: var(--drop-surface-border-width, 2px) solid
+      var(--drop-surface-border-color, #4476ff);
+    border-radius: var(--drop-surface-border-radius, 6px);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .navi_drop_surface[data-drop-over]:popover-open {
+    display: block;
   }
 
   /* WHO CAN START A DRAG, said in the cursor.
@@ -732,10 +764,11 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("move"|"reorder"|"toss")[]} effects
- *   What letting go of this element can mean. `reorder` and `toss` carry a copy;
- *   `move` carries the element itself. Asking for `move` and `reorder` together is
- *   asking one release to mean two things.
+ * @param {("move"|"reorder"|"toss"|"drop")[]} effects
+ *   What letting go of this element can mean. `reorder`, `toss` and `drop` carry a
+ *   copy; `move` carries the element itself. Asking for `move` and `reorder`
+ *   together is asking one release to mean two things, and so is asking for
+ *   `reorder` and `drop`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
@@ -751,6 +784,10 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   It was thrown away. The copy leaves the screen while this runs and comes back
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
+ * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onDrop]
+ *   `onDrop(fromId, toId, syncCloneWithDropTarget)` — it landed on `toId`, which is
+ *   an element and never null: nothing under the copy is a cancelled release. The
+ *   copy is held until what comes back settles, exactly like `onReorder`.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
@@ -786,16 +823,23 @@ export const startDragTo = (
   }
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
-  if (canReorder || canToss) {
+  const canDrop = effects.includes("drop");
+  if (canReorder || canToss || canDrop) {
     if (import.meta.dev && effects.includes("move")) {
       console.warn(
-        `startDragTo: "move" and "reorder"/"toss" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
+        `startDragTo: "move" and "reorder"/"toss"/"drop" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
+      );
+    }
+    if (import.meta.dev && canReorder && canDrop) {
+      console.warn(
+        `startDragTo: "reorder" and "drop" cannot both answer one release — a release either takes a place between two items or lands on one. "drop" wins.`,
       );
     }
     return startDragToCarryCopy(event, {
       draggedElement,
       canReorder,
       canToss,
+      canDrop,
       ...options,
     });
   }
@@ -878,6 +922,7 @@ const resolveDropMeaning = ({
   hasDropTarget,
   canReorder,
   canToss,
+  canDrop,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
 }) => {
@@ -888,8 +933,13 @@ const resolveDropMeaning = ({
       return "toss";
     }
   }
-  if (canReorder && hasDropTarget) {
-    return "reorder";
+  if (hasDropTarget) {
+    if (canDrop) {
+      return "drop";
+    }
+    if (canReorder) {
+      return "reorder";
+    }
   }
   return "cancel";
 };
@@ -898,8 +948,9 @@ const resolveDropMeaning = ({
  * A COPY of the element is carried, and the original keeps its place in the
  * layout — which is what makes a reorder possible at all: nothing else moves
  * while the hand looks for a place, so there is a stable row of items to look
- * between. A throw uses the same copy for the opposite reason: the original stays
- * until the answer says it is really gone.
+ * between. A landing on a place of a board is the same, and a throw uses that copy
+ * for the opposite reason: the original stays until the answer says it is really
+ * gone.
  */
 const startDragToCarryCopy = (
   event,
@@ -907,6 +958,7 @@ const startDragToCarryCopy = (
     draggedElement,
     canReorder,
     canToss,
+    canDrop,
     // Something that can be thrown away has to be able to LEAVE. The default of
     // the layer below keeps what is dragged inside its scroll area, which is right
     // for a reorder (a row belongs to its list) and makes a throw impossible — the
@@ -921,10 +973,13 @@ const startDragToCarryCopy = (
     itemSelector,
     getItemId,
     onReorder,
+    onDrop,
     onToss,
     tossDistance,
     tossSpeed,
-    direction = { x: false, y: true },
+    // A list runs one way and reordering walks it; a board has places all around,
+    // so something landing on one of them goes wherever the hand takes it.
+    direction = canDrop ? { x: true, y: true } : { x: false, y: true },
     threshold,
     longPress,
     longPressDelay,
@@ -966,12 +1021,17 @@ const startDragToCarryCopy = (
       dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
       // No place to land, no hint: an element that can only be thrown away has
-      // nowhere to be put.
-      const dropHintEl = canReorder ? createDropHint() : null;
+      // nowhere to be put. What the hint LOOKS like follows what a place is here —
+      // a line in the gap between two items, or the place itself lit up.
+      const dropHintEl = canDrop
+        ? createDropSurface()
+        : canReorder
+          ? createDropHint()
+          : null;
       if (dropHintEl) {
-        // In the list it draws into, which is where its own vars are set: the
-        // shape of a drop line is a property of the list, and reading it from
-        // there is inheritance rather than a hand-off.
+        // In the container it draws into, which is where its own vars are set: the
+        // shape of a drop hint is a property of the list or board it belongs to,
+        // and reading it from there is inheritance rather than a hand-off.
         draggedElement.parentElement.appendChild(dropHintEl);
       }
       // The hint first, the clone second: that order is what stacks them in the
@@ -989,10 +1049,12 @@ const startDragToCarryCopy = (
           return;
         }
         dropHintEl.removeAttribute("data-drop-edge");
+        dropHintEl.removeAttribute("data-drop-over");
         dropHintEl.style.removeProperty("--drop-target-top");
         dropHintEl.style.removeProperty("--drop-target-bottom");
         dropHintEl.style.removeProperty("--drop-target-left");
         dropHintEl.style.removeProperty("--drop-target-width");
+        dropHintEl.style.removeProperty("--drop-target-height");
       };
 
       const clearDropHint = () => {
@@ -1015,11 +1077,42 @@ const startDragToCarryCopy = (
         }
 
         const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
-          fallbackToEdge: true,
+          // The edges of a LIST: above the first row means the top of it, below
+          // the last one means the end of it. A board has no such reading — away
+          // from every place is away from every place.
+          fallbackToEdge: !canDrop,
         });
         gestureInfo.dropTargetInfo = dropTargetInfo || null;
         if (!dropTargetInfo) {
           clearDropHint();
+          return;
+        }
+        if (canDrop) {
+          // The whole element is the target, so which of its edges the copy came
+          // in by says nothing: there is no gap to be on one side of.
+          const dropElement = dropTargetInfo.element;
+          if (dropElement === currentReleaseElement) {
+            return;
+          }
+          currentReleaseElement = dropElement;
+          const dropRect = dropElement.getBoundingClientRect();
+          dropHintEl.setAttribute("data-drop-over", "");
+          dropHintEl.style.setProperty(
+            "--drop-target-top",
+            `${dropRect.top}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-left",
+            `${dropRect.left}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-width",
+            `${dropRect.width}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-height",
+            `${dropRect.height}px`,
+          );
           return;
         }
         // Convert {element, edge} to a beforeElement using the items array
@@ -1086,15 +1179,36 @@ const startDragToCarryCopy = (
         // throw is asked about first: it is the more insistent of the two, and a
         // hand that sent the thing across the screen has not asked for it to swap
         // places with whatever it happened to fly over.
-        const hasDropTarget = currentBeforeElement !== undefined;
+        const hasDropTarget = canDrop
+          ? currentReleaseElement !== undefined
+          : currentBeforeElement !== undefined;
         const dropMeans = resolveDropMeaning({
           gestureInfo,
           hasDropTarget,
           canReorder,
           canToss,
+          canDrop,
           tossDistance,
           tossSpeed,
         });
+
+        // The copy stops where the hand left it, and the answer is given a way to
+        // take it the rest of the way — synchronously, inside a view transition, so
+        // it is captured where it lands rather than where it was let go of.
+        const landCopyOn = async (targetElement, answer) => {
+          const clone = cloneWrapper.firstElementChild;
+          // Bake the current visual position (transform included) into the CSS vars
+          // so the copy stays where the user released it when the transform goes.
+          setCloneViewportRect(cloneWrapper, cloneWrapper);
+          gestureInfo.cancelPosition();
+          const syncCloneWithDropTarget = () => {
+            setCloneViewportRect(cloneWrapper, targetElement);
+            // Removing this attr drops the CSS scale, so the browser captures the
+            // copy at scale 1 as the "new" state.
+            clone.removeAttribute("navi-drag-clone");
+          };
+          await answer(syncCloneWithDropTarget);
+        };
 
         if (dropMeans === "toss") {
           // Bake the position the hand left it at, so the flight starts from
@@ -1108,27 +1222,22 @@ const startDragToCarryCopy = (
             // place.
             await settleCloneBack(cloneWrapper, draggedElement);
           }
-        } else if (dropMeans === "reorder" && hasDropTarget) {
-          const clone = cloneWrapper.firstElementChild;
-          // Bake the current visual position (transform included) into the CSS vars
-          // so the clone stays where the user released it when we clear the transform.
-          setCloneViewportRect(cloneWrapper, cloneWrapper);
-          gestureInfo.cancelPosition();
-          const fromId = getItemId(draggedElement);
-          const toId = currentBeforeElement
-            ? getItemId(currentBeforeElement)
-            : null;
-          // provide onReorder a way to synchronously move the clone to the drop target
-          // (meant to be used inside a startViewTransition callback)
-          const syncCloneWithDropTarget = () => {
-            // Snap the CSS-var position to the drop target rect so the browser
-            // captures the "new" state at the landing position.
-            setCloneViewportRect(cloneWrapper, currentReleaseElement);
-            // Removing this attr drops the CSS scale(1.15), so the browser
-            // captures the clone at scale 1 as the "new" state.
-            clone.removeAttribute("navi-drag-clone");
-          };
-          await onReorder(fromId, toId, syncCloneWithDropTarget);
+        } else if (dropMeans === "drop") {
+          await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
+            onDrop(
+              getItemId(draggedElement),
+              getItemId(currentReleaseElement),
+              syncCloneWithDropTarget,
+            ),
+          );
+        } else if (dropMeans === "reorder") {
+          await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
+            onReorder(
+              getItemId(draggedElement),
+              currentBeforeElement ? getItemId(currentBeforeElement) : null,
+              syncCloneWithDropTarget,
+            ),
+          );
         }
         draggedElement.removeAttribute("navi-drag-clone-source");
         cloneWrapper.remove();
@@ -1201,6 +1310,15 @@ const createDropHint = () => {
   const div = document.createElement("div");
   div.innerHTML = dropHintTemplate.trim();
   return div.firstElementChild;
+};
+
+const createDropSurface = () => {
+  const div = document.createElement("div");
+  div.className = "navi_drop_surface";
+  // Manual, like the copy it accompanies: it is opened and closed with the drag
+  // and must survive an Escape or a click elsewhere.
+  div.setAttribute("popover", "manual");
+  return div;
 };
 
 /**

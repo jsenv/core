@@ -318,6 +318,77 @@
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
       }
 
+      /* A padel court, upright: 10 m by 20 m, so half as wide as it is long. */
+      .padel {
+        position: relative;
+        aspect-ratio: 1 / 2;
+        width: 240px;
+        background: #2f6f52;
+        border: 3px solid #cfd8e3;
+        border-radius: 3px;
+        /* Read by the drop hint, which is drawn inside the court: what lands here
+           is a round token, so the place lit up under it is round too. */
+        --drop-surface-border-radius: 50%;
+        --drop-surface-border-color: #ffd54a;
+        --drop-surface-background-color: rgba(255, 213, 74, 0.28);
+      }
+      .padel_line {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.8);
+        pointer-events: none;
+      }
+      .padel_line_service {
+        left: 0;
+        width: 100%;
+        height: 2px;
+      }
+      /* The centre line only runs from a service line to the net. */
+      .padel_line_center {
+        top: 34.75%;
+        left: calc(50% - 1px);
+        width: 2px;
+        height: 30.5%;
+      }
+      /* The net crosses the court and the two side walls with it. */
+      .padel_line_net {
+        top: calc(50% - 2px);
+        left: -3px;
+        width: calc(100% + 6px);
+        height: 4px;
+        background: #f0f3f7;
+      }
+
+      .padel_place {
+        position: absolute;
+        display: flex;
+        width: 46px;
+        height: 46px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        translate: -50% -50%;
+      }
+      .padel_player {
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        background: #2f5fa8;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        --drag-clone-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+      }
+      .padel_player_b {
+        background: #b8512f;
+      }
+      /* The copy is carried in a box of its own, where a place on the court means
+         nothing: it fills that box instead. */
+      [navi-drag-clone].padel_place {
+        position: static;
+        translate: none;
+      }
+      .padel_free {
+        border: 2px dashed rgba(255, 255, 255, 0.55);
+      }
+
       .thumb {
         width: 40px;
         height: 40px;
@@ -1296,6 +1367,7 @@
         <div class="demo-section">
           <Heading id="concrete">Concrete cases</Heading>
           <MailboxCase />
+          <PadelCourtCase />
         </div>
       );
 
@@ -1520,6 +1592,115 @@
                 </Button>
               </Box>
             ) : null}
+          </>
+        );
+      };
+
+      // ── Concrete case: a padel court ──────────────────────────────────
+
+      // A place is said in percentages of the court, so it holds whatever size the
+      // court is drawn at.
+      const PADEL_SPOTS = [
+        { id: "padel_spot_left_far", x: 28, y: 18 },
+        { id: "padel_spot_right_far", x: 72, y: 18 },
+        { id: "padel_spot_left_near", x: 28, y: 82 },
+        { id: "padel_spot_right_near", x: 72, y: 82 },
+      ];
+      const PADEL_PLAYERS = [
+        { id: "padel_lea", label: "L\u00e9a", team: "a" },
+        { id: "padel_marc", label: "Marc", team: "a" },
+        { id: "padel_sofia", label: "Sofia", team: "b" },
+      ];
+      const PADEL_LINEUP = {
+        padel_spot_left_far: "padel_lea",
+        padel_spot_right_far: "padel_marc",
+        padel_spot_left_near: "padel_sofia",
+        padel_spot_right_near: null,
+      };
+
+      // Which spot an id names: the one holding that player, or — for the id of an
+      // empty spot, which is a place and nobody — that spot itself. Both kinds come
+      // back from the gesture, because both kinds are places one can land on.
+      const padelSpotOf = (lineup, id) => {
+        const holder = Object.keys(lineup).find(
+          (spotId) => lineup[spotId] === id,
+        );
+        return holder || id;
+      };
+
+      // One rule for both answers: the two places exchange what they hold, and a
+      // free place holds nobody.
+      const padelSwap = (lineup, fromId, toId) => {
+        const fromSpot = padelSpotOf(lineup, fromId);
+        const toSpot = padelSpotOf(lineup, toId);
+        return {
+          ...lineup,
+          [fromSpot]: lineup[toSpot],
+          [toSpot]: lineup[fromSpot],
+        };
+      };
+
+      const PadelCourtCase = () => {
+        const [lineup, setLineup] = useState(PADEL_LINEUP);
+        const drop = (event) => {
+          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+          const transition = document.startViewTransition(() => {
+            syncCloneWithDropTarget();
+            setLineup((previous) => padelSwap(previous, fromId, toId));
+          });
+          return transition.finished;
+        };
+        return (
+          <>
+            <Heading level={3} id="padel">
+              A padel court
+            </Heading>
+            <p class="legend">
+              Take a player to another place: free, they go there; taken, the
+              two change places at the release. The empty place receives without
+              ever being carried, so it declares no interaction — it says{" "}
+              <code>data-droppable</code> and that is all it needs.
+            </p>
+            <div class="padel">
+              <span class="padel_line padel_line_service" style="top: 34.75%" />
+              <span class="padel_line padel_line_service" style="top: 65.25%" />
+              <span class="padel_line padel_line_center" />
+              <span class="padel_line padel_line_net" />
+              {PADEL_SPOTS.map((spot) => {
+                const place = { left: `${spot.x}%`, top: `${spot.y}%` };
+                const playerId = lineup[spot.id];
+                if (!playerId) {
+                  return (
+                    <div
+                      key={spot.id}
+                      id={spot.id}
+                      class="padel_place padel_free"
+                      style={place}
+                      data-droppable
+                    />
+                  );
+                }
+                const player = PADEL_PLAYERS.find(
+                  (candidate) => candidate.id === playerId,
+                );
+                return (
+                  <Box
+                    key={playerId}
+                    id={playerId}
+                    className={`padel_place padel_player padel_player_${player.team}`}
+                    // The name a document transition moves it under: it is the
+                    // player who travels, the places stay where they are.
+                    style={{ ...place, viewTransitionName: playerId }}
+                    interactions={{
+                      drop,
+                      grab: () => window.navigator.vibrate?.(10),
+                    }}
+                  >
+                    {player.label}
+                  </Box>
+                );
+              })}
+            </div>
           </>
         );
       };
