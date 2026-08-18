@@ -37,7 +37,6 @@ import {
   isPrimaryButtonEvent,
 } from "./drag_gesture.js";
 import { getDropTargetInfo } from "./drop_target_detection.js";
-import { moveCSSVars } from "./move_css_vars.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
@@ -50,13 +49,14 @@ const TOSS_DURATION_MS = 320;
 const TOSS_DISTANCE = 900;
 
 const css = /* css */ `
-  /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
-     for the last one is the very bottom of the scroll area — drawn inside it,
-     the line would push the scrollable area a few pixels further and make a
+  /* IT COSTS THE LIST NOTHING: the hint lands on the edge of a row, which for
+     the last one is the very bottom of the scroll area — a line taking up room
+     there would push the scrollable area a few pixels further and make a
      scrollbar appear (or hide the hint under it) exactly when one is trying to
-     drop at the end. Placed in the body and positioned in viewport
-     coordinates, it can sit anywhere, overhang the list, and cost nothing to
-     the layout. Fixed, like the clone it accompanies. */
+     drop at the end. Being fixed is what avoids it: a fixed box has the
+     viewport as containing block, so it is left out of the scrollable overflow
+     of every ancestor and can overhang the list freely. Same for the clone it
+     accompanies. */
   .navi_drop_hint {
     /* A popover, so it lands in the top layer: no z-index to bid against the
        page, and nothing it can be hidden behind. Shown BEFORE the clone, which
@@ -98,8 +98,8 @@ const css = /* css */ `
   /* A chevron at each end, pointing in: the line alone is easy to lose against
      a list of borders and separators, two arrows read as "here" at a glance
      (same idea as the table's column drop preview). They overhang the line,
-     which costs nothing now that the hint is out of the scrollable area — and
-     the more they stick out, the easier they are to spot. */
+     which costs nothing to a box left out of the scrollable area — and the more
+     they stick out, the easier they are to spot. */
   .navi_drop_hint_cap {
     position: absolute;
     top: 50%;
@@ -166,13 +166,10 @@ const css = /* css */ `
     color: inherit;
     background: transparent;
     border: none;
-    /* A var, and read from the dragged element (see dragCSSVars): what being
-       carried LOOKS like belongs to whoever owns the thing — a row lifted off a
-       list wants this shadow, a sheet of paper leaving a board wants none, and its
-       shade is a theme's business either way. */
-    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
+    /* Carries the chain down to the copy, for an item whose own radius is an
+       "inherit" from the list around it. */
+    border-radius: inherit;
     opacity: 0.95;
-    transition: box-shadow 0.15s ease;
     pointer-events: none;
     /* Nothing in a copy being carried by a pointer is text to select: the
        selection belongs to the original, which is still in the page. This is the
@@ -195,17 +192,23 @@ const css = /* css */ `
   }
 
   [navi-drag-clone] {
+    /* Cast by the copy itself rather than by the box around it, so it takes the
+       shape of the thing — a rounded row throws a rounded shadow. Its value is a
+       var read on the copy, which IS the dragged element: what being carried
+       looks like belongs to whoever owns the thing — a row lifted off a list
+       wants this shadow, a sheet of paper leaving a board wants none, and its
+       shade is a theme's business either way. */
+    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
     transform: scale(var(--drag-clone-scale, 1.03));
     transform-origin: var(--drag-origin);
-    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.15s ease;
   }
 
   @starting-style {
-    [navi-drag-clone-wrapper] {
-      box-shadow: none;
-    }
-
     [navi-drag-clone] {
+      box-shadow: none;
       transform: scale(1);
     }
   }
@@ -213,17 +216,6 @@ const css = /* css */ `
 // At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
 import.meta.css = css;
-
-const dragCSSVars = [
-  "--drop-hint-size",
-  "--drop-hint-background-color",
-  "--drop-hint-border-radius",
-  "--drop-hint-margin-x",
-  "--drop-hint-margin-y",
-  "--drop-hint-arrow-size",
-  "--drag-clone-scale",
-  "--drag-clone-shadow",
-];
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -234,9 +226,9 @@ const dragCSSVars = [
  *   reorders anything by accident.
  * - Clones the grabbed element and moves the clone while the original stays hidden in place
  *   (keeps the layout intact so other items don't shift during the drag).
- * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
- *   dragged element and moved to `document.documentElement` for the duration of the drag so
- *   the drop-hint and clone — both in `document.body` — can inherit them.
+ * - The clone and the drop-hint live in the dragged element's own parent, so the CSS vars
+ *   that dress them (`--drag-clone-shadow`, `--drop-hint-size`, …) reach them by plain
+ *   inheritance, and so do the rules the list writes for its items.
  * - Shows a drop-hint line indicating where the item will land.
  * - Drop-target detection is intersection-based: the clone's bounding rect is compared
  *   against every item that matches `itemSelector` in the scroll container.
@@ -958,13 +950,6 @@ const startDragToCarryCopy = (
     () => {
       const cloneWrapper = createDragClone(draggedElement, event);
       draggedElement.setAttribute("navi-drag-clone-source", "");
-      // Move drag related CSS vars from the element to the document
-      // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
-      const restoreCSSVars = moveCSSVars(
-        dragCSSVars,
-        draggedElement,
-        document.documentElement,
-      );
 
       const gestureController = createDragToMoveGestureController({
         direction,
@@ -984,7 +969,10 @@ const startDragToCarryCopy = (
       // nowhere to be put.
       const dropHintEl = canReorder ? createDropHint() : null;
       if (dropHintEl) {
-        document.body.appendChild(dropHintEl);
+        // In the list it draws into, which is where its own vars are set: the
+        // shape of a drop line is a property of the list, and reading it from
+        // there is inheritance rather than a hand-off.
+        draggedElement.parentElement.appendChild(dropHintEl);
       }
       // The hint first, the clone second: that order is what stacks them in the
       // top layer.
@@ -1093,7 +1081,6 @@ const startDragToCarryCopy = (
       dragGesture.addReleaseCallback(async (gestureInfo) => {
         clearDropHintDOM();
         dropHintEl?.remove();
-        restoreCSSVars();
 
         // What THIS release means, from what the element said it can answer. A
         // throw is asked about first: it is the more insistent of the two, and a
@@ -1281,17 +1268,6 @@ const createDragClone = (element, pointerEvent) => {
     "--drag-origin",
     `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
   );
-  // The clone is appended to document.body, so it loses inherited styles
-  // from the original parent. Copy the computed inherited properties that
-  // are most likely to affect visual appearance.
-  const computedStyle = getComputedStyle(element.parentElement);
-  for (const property of INHERITED_PROPERTIES_TO_COPY_SET) {
-    wrapper.style.setProperty(
-      property,
-      computedStyle.getPropertyValue(property),
-    );
-  }
-
   const elementClone = element.cloneNode(true);
   // A deep copy copies the ids too, and two elements answering to one id is a
   // document that lies: getElementById picks whichever comes first, an anchor
@@ -1310,18 +1286,13 @@ const createDragClone = (element, pointerEvent) => {
   elementClone.style.viewTransitionName = "navi-drag-clone";
 
   wrapper.appendChild(elementClone);
-  document.body.appendChild(wrapper);
+  // Beside the thing it copies, so it stands where that thing stands: every
+  // inherited value and every custom property the original reads, the copy reads
+  // too, and a rule written for an item in this list finds the copy as well. The
+  // top layer is what lets it stay there — a popover is painted above the page
+  // whatever its depth in the tree, and being fixed keeps it out of the
+  // scrollable overflow of the list it sits in.
+  element.parentElement.appendChild(wrapper);
 
   return wrapper;
 };
-const INHERITED_PROPERTIES_TO_COPY_SET = new Set([
-  "color",
-  "font-family",
-  "font-size",
-  "font-weight",
-  "font-style",
-  "line-height",
-  "letter-spacing",
-  // in case the item has border-radius: inherit. The clone can inherit too
-  "border-radius",
-]);
