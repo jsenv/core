@@ -379,9 +379,11 @@
         background: #2f5fa8;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         --drag-clone-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
-        /* What is carried is the card, at the size it has on the court: it is
-           lifted by its shadow and by nothing else. */
-        --drag-clone-scale: 1;
+        /* Just enough for the card to leave the court under the hand. It comes
+           back down to 1 as the copy lands — the copy drops its lift inside the
+           transition, so the browser morphs the size along with the travel and
+           there is no step at the landing. */
+        --drag-clone-scale: 1.06;
       }
       .padel_card {
         border-radius: 10px;

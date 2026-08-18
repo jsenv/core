@@ -288,6 +288,83 @@ land: (event) => {
 };
 ```
 
+#### Naming what travels
+
+**The copy is already named, and it is the copy that does the visible travel.**
+The wrapper carrying it answers to `navi-drag-clone-wrapper`, the copy inside it
+to `navi-drag-clone`, and `syncCloneWithDropTarget` moves that box onto the
+destination inside the callback — so the piece the hand let go of slides to its
+place whether the application names anything or not. What is left to name is the
+OTHER one: the piece that was standing there and has to go the other way.
+
+**And the original is hidden for the whole landing**, not only for the drag: it
+wears `navi-drag-clone-source` (`visibility: hidden`) until the promise returned
+by `land` settles, because the copy stands for it until then. An element that
+paints nothing is still captured — the group gets an empty image — so a name put
+on the source is a group fading in from nothing, or out into nothing, over the
+copy that is doing the real travel. That is what a swap looks like when it fades
+instead of sliding.
+
+Both follow from one rule: **a name rides the element that MOVES, and that
+element has to be visible at both ends of the transition.** Where the places are
+fixed and the pieces are drawn into them, nothing moves — two boxes change
+content, and hand-writing a name on each so that it "follows the player" names a
+journey whose start or end is the hidden source. Key the piece by WHO it is and
+let it be re-parented:
+
+```jsx
+{places.map((place) => {
+  const playerId = lineupAt(place.id);
+  // Keyed by the player: the same DOM node walks from one place to the other,
+  // so the browser has something to morph — and the displaced one was visible
+  // before and is visible after.
+  return <Piece key={playerId} id={playerId} style={boxOf(place)} … />;
+})}
+```
+
+**The name is written twice, and neither write is redundant.** The old state is
+captured the moment `startViewTransition` is called, before any render, so the
+name must be on the DOM by then — written by hand, on the element. The render
+happening inside the callback would then put the plain name straight back, so
+the same name must also come from state. Clear that state when `finished`
+resolves: a name left behind is claimed twice by the next transition, and that
+one is dropped for it.
+
+```jsx
+land: (event) => {
+  const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+  const displacedId = playerAt(toId);
+  const roles = { [fromId]: OVER, [displacedId]: UNDER };
+  for (const id of Object.keys(roles)) {
+    document.getElementById(id).style.viewTransitionName = roles[id];
+  }
+  const transition = document.startViewTransition(() => {
+    syncCloneWithDropTarget(document.getElementById(displacedId));
+    setSwapRoles(roles); // the render inside the callback keeps the names
+    setLineup((previous) => swapPlaces(previous, fromId, toId));
+  });
+  transition.finished.then(() => setSwapRoles(null));
+  return transition.finished;
+};
+```
+
+The roles are names because a `::view-transition` pseudo can be selected by name
+and by nothing else — which is also how one of the two is told to pass over the
+other, and how the travel is given a length worth a card crossing a board rather
+than a menu opening. Both the group and the image pair are addressed: the morph
+lives in one, anything a style adds rides in the other.
+
+```css
+::view-transition-group(swap_over) {
+  z-index: 20;
+}
+::view-transition-group(swap_over),
+::view-transition-image-pair(swap_over) {
+  animation-duration: 420ms;
+  animation-timing-function: ease-in-out;
+}
+```
+
 The hint follows what a place is: a line drawn in the gap for `reorder`, the
 place itself lit up for `land`. Both are drawn inside the carried element's
 parent, so the variables dressing them are read from the list or the board and
