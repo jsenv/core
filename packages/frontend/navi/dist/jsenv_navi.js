@@ -3,7 +3,7 @@
  * using @jsenv/navi as intended.
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -12550,10 +12550,11 @@ defineInteractionDetector({
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
     }
-    // What @jsenv/dom puts on a drag source: no iOS callout, and the touch left to
-    // the scroll until the press becomes a grab. Its value is the axis the
-    // SURROUNDINGS scroll on, which for a list is the axis the list runs on.
-    element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+    // What @jsenv/dom puts on a drag source: no iOS callout, the touch left to
+    // the scroll until the press becomes a grab, and the listener that lets the
+    // grab take it back. Its argument is the axis the SURROUNDINGS scroll on,
+    // which for a list is the axis the list runs on.
+    const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab" is a
     // moment, not an outcome, and the gesture must not read it as one.
@@ -12630,7 +12631,7 @@ defineInteractionDetector({
 
     return () => {
       element.removeAttribute(REORDERABLE_ATTRIBUTE);
-      element.removeAttribute("data-drag-source");
+      unmarkDragSource();
       element.removeEventListener("pointerdown", onPointerDown);
     };
   },
@@ -26901,7 +26902,19 @@ const findFocusTarget = (containerEl) => {
   // Neither is dropped, both are simply tried later — step 3 below for the
   // first, and for the second the restore transferFocus does before ever
   // calling here.
-  const skip = (element) => isRestorableAutofocus(element);
+  //
+  // Skipped for good, unlike the two above: an element hidden from assistive
+  // technology is not a place the focus can land at all. Something aria-hidden
+  // and out of the tab order is a value holder standing behind what one
+  // actually uses — a spin's headless picker behind its slides, say — and
+  // landing there puts a ring on it, raises a phone's keyboard over the panel
+  // that just opened, and has the browser complain about a focused aria-hidden
+  // element. What one came to use is further down the same container.
+  const isHiddenFromAssistiveTech = (element) =>
+    Boolean(element.closest?.(`[aria-hidden="true"]`));
+
+  const skip = (element) =>
+    isRestorableAutofocus(element) || isHiddenFromAssistiveTech(element);
 
   // Every mark, not just the first: a mark is only worth stopping at if it
   // leads somewhere focusable. One inside a screen waiting its turn (an inert
