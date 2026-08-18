@@ -8623,6 +8623,72 @@ const createDragGestureController = (options = {}) => {
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
+    /*
+     * A press that starts a drag is not a press that starts a selection: the
+     * browser sees a pointer going down on text and moving, and that is its
+     * own gesture — the words under the finger turn blue while the element
+     * travels, and the selection outlives the release.
+     *
+     * Refused from the grab, before any threshold: whether the press becomes a
+     * drag is decided a few pixels later, but the selection is decided at the
+     * FIRST move, and by then it is too late to say no.
+     *
+     * `user-select: none` would say it in CSS, but it would say it to
+     * everybody: the element would stop being selectable even when nobody is
+     * dragging it. Here it is refused for the length of one gesture.
+     */
+    const preventSelectStart = selectStartEvent => {
+      selectStartEvent.preventDefault();
+    };
+    document.addEventListener("selectstart", preventSelectStart);
+    // A press also puts an end to the selection the page was already holding,
+    // the way the browser's own press does: refusing selectstart keeps a new
+    // selection from being made, it says nothing about the one painted before
+    // — which would otherwise sit there through a gesture that has nothing to
+    // do with it.
+    collapseSelection();
+    dragGesture.addReleaseCallback(() => {
+      document.removeEventListener("selectstart", preventSelectStart);
+    });
+    /*
+     * Refusing every selection also refuses the one a press is entitled to
+     * make: a double click selects the word under it, and that selection is
+     * over before the pointer has gone anywhere. It is made here instead,
+     * spelled out (see selectWordAtPoint) rather than left to a browser
+     * heuristic that cannot tell a drag from a click.
+     *
+     * On the document and outliving the gesture, because the gesture is
+     * already over when the second click completes: dblclick comes after
+     * mouseup, the gesture ends at pointerup. It is dropped when it fires, and
+     * otherwise when the next press installs its own — a listener waiting for
+     * a double click that never comes costs nothing until then.
+     */
+    removePendingDoubleClickListener();
+    const onDoubleClick = dblclickEvent => {
+      removePendingDoubleClickListener = NOOP;
+      // A drag that happened is a gesture, not a click: the second press of a
+      // double click can be the one that drags, and what it drags must not end
+      // up selected too.
+      if (dragGesture.gestureInfo.started) {
+        return;
+      }
+      // Text the page says is not selectable stays not selectable: a
+      // programmatic selection goes through `user-select: none` in every
+      // engine — it is a rule about what the USER may start, and the browser
+      // does not read it back when asked directly. Read here so that doing the
+      // browser's work does not also undo what the page asked of it.
+      if (!isSelectable(dblclickEvent.target)) {
+        return;
+      }
+      selectWordAtPoint(dblclickEvent.clientX, dblclickEvent.clientY);
+    };
+    document.addEventListener("dblclick", onDoubleClick, {
+      once: true
+    });
+    removePendingDoubleClickListener = () => {
+      removePendingDoubleClickListener = NOOP;
+      document.removeEventListener("dblclick", onDoubleClick);
+    };
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
@@ -8814,6 +8880,57 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     writable: false,
     value: object[propertyName]
   });
+};
+const NOOP = () => {};
+let removePendingDoubleClickListener = NOOP;
+
+// What a double click selects when the browser is allowed to do it itself: the
+// word around the caret the click lands on.
+const selectWordAtPoint = (x, y) => {
+  const caretRange = createCaretRange(x, y);
+  if (!caretRange) {
+    return;
+  }
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(caretRange);
+  // "word" is not a position a Range can be built from — it is a movement the
+  // selection knows how to make, and the caret walking to both of its edges is
+  // what draws the word.
+  if (selection.modify) {
+    selection.modify("move", "backward", "word");
+    selection.modify("extend", "forward", "word");
+  }
+};
+const createCaretRange = (x, y) => {
+  if (document.caretPositionFromPoint) {
+    const caretPosition = document.caretPositionFromPoint(x, y);
+    if (!caretPosition) {
+      return null;
+    }
+    const range = document.createRange();
+    range.setStart(caretPosition.offsetNode, caretPosition.offset);
+    range.collapse(true);
+    return range;
+  }
+  if (document.caretRangeFromPoint) {
+    return document.caretRangeFromPoint(x, y);
+  }
+  return null;
+};
+const isSelectable = element => {
+  if (!element || element.nodeType !== 1) {
+    return true;
+  }
+  const computedStyle = window.getComputedStyle(element);
+  const userSelect = computedStyle.userSelect || computedStyle.webkitUserSelect;
+  return userSelect !== "none";
+};
+const collapseSelection = () => {
+  const selection = window.getSelection();
+  if (selection && !selection.isCollapsed) {
+    selection.removeAllRanges();
+  }
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -10921,33 +11038,6 @@ const findTableCellCol = (cellElement) => {
   return correspondingCol;
 };
 
-// Temporarily attach to the element so inherited CSS vars resolve correctly,
-// then snapshot all drop-hint custom properties onto the scroll container
-// so they survive once the element moves to the scroll container.
-const moveCSSVars = (vars, fromEl, toEl) => {
-  const fromComputedStyle = getComputedStyle(fromEl);
-  const savedVars = {};
-  for (const varName of vars) {
-    const value = fromComputedStyle.getPropertyValue(varName).trim();
-    if (value) {
-      savedVars[varName] = toEl.style.getPropertyValue(varName);
-      toEl.style.setProperty(varName, value);
-    }
-  }
-
-  return () => {
-    for (const varName of vars) {
-      if (varName in savedVars) {
-        if (savedVars[varName]) {
-          toEl.style.setProperty(varName, savedVars[varName]);
-        } else {
-          toEl.style.removeProperty(varName);
-        }
-      }
-    }
-  };
-};
-
 const applyStickyFrontiersToAutoScrollArea = (
   autoScrollArea,
   { direction, scrollContainer, dragName },
@@ -11081,6 +11171,12 @@ installImportMetaCssBuild(import.meta);/**
  *   stable row of items to look between.
  * - **toss**: it is gotten rid of. The same copy, for the opposite reason: the
  *   original stays until the answer says it is really gone.
+ * - **land**: it comes down ON something. Also a copy, and the closest to
+ *   `reorder` — the difference is what a target IS: a row of a list is a place
+ *   BETWEEN two others, whereas a square of a board is a place of its own, which
+ *   may already be taken. So nothing is inserted and nothing is a no-op: the
+ *   answer is "this one came down on that one", and what that means (take the
+ *   place, swap the two, refuse) is the caller's.
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
  * those need runs: no copy for a move, no drop hint for something that can only be
@@ -11102,13 +11198,14 @@ const TOSS_DURATION_MS = 320;
 // Far enough to be off any screen, in the direction the hand was going.
 const TOSS_DISTANCE = 900;
 const css$1 = /* css */`
-  /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
-     for the last one is the very bottom of the scroll area — drawn inside it,
-     the line would push the scrollable area a few pixels further and make a
+  /* IT COSTS THE LIST NOTHING: the hint lands on the edge of a row, which for
+     the last one is the very bottom of the scroll area — a line taking up room
+     there would push the scrollable area a few pixels further and make a
      scrollbar appear (or hide the hint under it) exactly when one is trying to
-     drop at the end. Placed in the body and positioned in viewport
-     coordinates, it can sit anywhere, overhang the list, and cost nothing to
-     the layout. Fixed, like the clone it accompanies. */
+     drop at the end. Being fixed is what avoids it: a fixed box has the
+     viewport as containing block, so it is left out of the scrollable overflow
+     of every ancestor and can overhang the list freely. Same for the clone it
+     accompanies. */
   .navi_drop_hint {
     /* A popover, so it lands in the top layer: no z-index to bid against the
        page, and nothing it can be hidden behind. Shown BEFORE the clone, which
@@ -11150,8 +11247,8 @@ const css$1 = /* css */`
   /* A chevron at each end, pointing in: the line alone is easy to lose against
      a list of borders and separators, two arrows read as "here" at a glance
      (same idea as the table's column drop preview). They overhang the line,
-     which costs nothing now that the hint is out of the scrollable area — and
-     the more they stick out, the easier they are to spot. */
+     which costs nothing to a box left out of the scrollable area — and the more
+     they stick out, the easier they are to spot. */
   .navi_drop_hint_cap {
     position: absolute;
     top: 50%;
@@ -11172,14 +11269,45 @@ const css$1 = /* css */`
     rotate: 90deg;
   }
 
+  /* WHERE IT LANDS, when landing is ON a thing rather than between two: the
+     place itself is lit up, because there is no gap to draw a line in. Fixed
+     and in the top layer for the same reasons as the line above. */
+  .navi_drop_surface {
+    position: fixed;
+    inset: auto;
+    top: var(--drop-target-top);
+    left: var(--drop-target-left);
+    display: none;
+    box-sizing: border-box;
+    width: var(--drop-target-width);
+    height: var(--drop-target-height);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: var(--drop-surface-background-color, rgba(68, 118, 255, 0.16));
+    border: var(--drop-surface-border-width, 2px) solid
+      var(--drop-surface-border-color, #4476ff);
+    border-radius: var(--drop-surface-border-radius, 6px);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .navi_drop_surface[data-drop-over]:popover-open {
+    display: block;
+  }
+
   /* WHO CAN START A DRAG, said in the cursor.
-     A handle drags on the spot, so it shows the hand. A source only drags once
-     the intent shows (a few pixels of travel, or a long press) — a plain click
-     stays a click — but the text inside it cannot be selected (the gesture takes
-     the pointer), so an I-beam over it would promise something that does not
-     happen: it reads as a plain surface instead. An opted-out area keeps both
-     its cursor and its selection, and never starts a drag (see the check in
-     startDragTo).
+     A handle exists only to drag, so it shows the hand. A source does not, and
+     the gesture must not claim its cursor: it drags only once the intent shows
+     (a few pixels of travel, or a long press), a plain click on it stays a
+     click, and it is usually something else FIRST — a link, a card one opens.
+     The cursor says what the element is, and a hand insisting on the one thing
+     it can also be would talk over that. So it is left alone — default, and not
+     an I-beam, because dragging across the text does not select it (the gesture
+     takes the pointer; see the selectstart refused in drag_gesture.js) — and
+     whoever puts the drag there asks for the hand when a grab really is the
+     first thing the element offers.
+     An opted-out area keeps both its cursor and its selection, and never starts
+     a drag (see the check in startDragTo).
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself.
      Only the resting cursor is set here: what it becomes once a drag is under
@@ -11190,11 +11318,9 @@ const css$1 = /* css */`
   }
   [data-drag-source] {
     cursor: default;
-    user-select: none;
   }
   [data-drag-ignore] {
     cursor: auto;
-    user-select: auto;
   }
 
   [navi-drag-clone-source] {
@@ -11218,13 +11344,10 @@ const css$1 = /* css */`
     color: inherit;
     background: transparent;
     border: none;
-    /* A var, and read from the dragged element (see dragCSSVars): what being
-       carried LOOKS like belongs to whoever owns the thing — a row lifted off a
-       list wants this shadow, a sheet of paper leaving a board wants none, and its
-       shade is a theme's business either way. */
-    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
+    /* Carries the chain down to the copy, for an item whose own radius is an
+       "inherit" from the list around it. */
+    border-radius: inherit;
     opacity: 0.95;
-    transition: box-shadow 0.15s ease;
     pointer-events: none;
     /* Nothing in a copy being carried by a pointer is text to select: the
        selection belongs to the original, which is still in the page. This is the
@@ -11247,17 +11370,23 @@ const css$1 = /* css */`
   }
 
   [navi-drag-clone] {
+    /* Cast by the copy itself rather than by the box around it, so it takes the
+       shape of the thing — a rounded row throws a rounded shadow. Its value is a
+       var read on the copy, which IS the dragged element: what being carried
+       looks like belongs to whoever owns the thing — a row lifted off a list
+       wants this shadow, a sheet of paper leaving a board wants none, and its
+       shade is a theme's business either way. */
+    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
     transform: scale(var(--drag-clone-scale, 1.03));
     transform-origin: var(--drag-origin);
-    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.15s ease;
   }
 
   @starting-style {
-    [navi-drag-clone-wrapper] {
-      box-shadow: none;
-    }
-
     [navi-drag-clone] {
+      box-shadow: none;
       transform: scale(1);
     }
   }
@@ -11265,7 +11394,6 @@ const css$1 = /* css */`
 // At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
 import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
-const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop-hint-border-radius", "--drop-hint-margin-x", "--drop-hint-margin-y", "--drop-hint-arrow-size", "--drag-clone-scale", "--drag-clone-shadow"];
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -11276,9 +11404,9 @@ const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop
  *   reorders anything by accident.
  * - Clones the grabbed element and moves the clone while the original stays hidden in place
  *   (keeps the layout intact so other items don't shift during the drag).
- * - CSS vars (`--drop-hint-size`, `--drop-hint-background-color`, etc.) are read from the
- *   dragged element and moved to `document.documentElement` for the duration of the drag so
- *   the drop-hint and clone — both in `document.body` — can inherit them.
+ * - The clone and the drop-hint live in the dragged element's own parent, so the CSS vars
+ *   that dress them (`--drag-clone-shadow`, `--drop-hint-size`, …) reach them by plain
+ *   inheritance, and so do the rules the list writes for its items.
  * - Shows a drop-hint line indicating where the item will land.
  * - Drop-target detection is intersection-based: the clone's bounding rect is compared
  *   against every item that matches `itemSelector` in the scroll container.
@@ -11715,10 +11843,11 @@ const createDragToMoveGestureController = ({
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("move"|"reorder"|"toss")[]} effects
- *   What letting go of this element can mean. `reorder` and `toss` carry a copy;
- *   `move` carries the element itself. Asking for `move` and `reorder` together is
- *   asking one release to mean two things.
+ * @param {("move"|"reorder"|"toss"|"land")[]} effects
+ *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
+ *   copy; `move` carries the element itself. Asking for `move` and `reorder`
+ *   together is asking one release to mean two things, and so is asking for
+ *   `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
@@ -11734,6 +11863,12 @@ const createDragToMoveGestureController = ({
  *   It was thrown away. The copy leaves the screen while this runs and comes back
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
+ * @param {function} [options.onLand]
+ *   `onLand(fromId, toId, syncCloneWithDropTarget)` — it came down on `toId`, which
+ *   is an element and never null: nothing under the copy is a cancelled release.
+ *   The copy is held until what comes back settles, exactly like `onReorder`.
+ *   `syncCloneWithDropTarget` takes an element when the place is not the shape of
+ *   what stands on it: the copy then takes THAT box instead of the target's.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
@@ -11768,11 +11903,13 @@ const startDragTo = (event, effects, {
   }
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
-  if (canReorder || canToss) {
+  const canLand = effects.includes("land");
+  if (canReorder || canToss || canLand) {
     return startDragToCarryCopy(event, {
       draggedElement,
       canReorder,
       canToss,
+      canLand,
       ...options
     });
   }
@@ -11857,6 +11994,7 @@ const resolveDropMeaning = ({
   hasDropTarget,
   canReorder,
   canToss,
+  canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT
 }) => {
@@ -11870,8 +12008,13 @@ const resolveDropMeaning = ({
       return "toss";
     }
   }
-  if (canReorder && hasDropTarget) {
-    return "reorder";
+  if (hasDropTarget) {
+    if (canLand) {
+      return "land";
+    }
+    if (canReorder) {
+      return "reorder";
+    }
   }
   return "cancel";
 };
@@ -11880,13 +12023,15 @@ const resolveDropMeaning = ({
  * A COPY of the element is carried, and the original keeps its place in the
  * layout — which is what makes a reorder possible at all: nothing else moves
  * while the hand looks for a place, so there is a stable row of items to look
- * between. A throw uses the same copy for the opposite reason: the original stays
- * until the answer says it is really gone.
+ * between. A landing on a place of a board is the same, and a throw uses that copy
+ * for the opposite reason: the original stays until the answer says it is really
+ * gone.
  */
 const startDragToCarryCopy = (event, {
   draggedElement,
   canReorder,
   canToss,
+  canLand,
   // Something that can be thrown away has to be able to LEAVE. The default of
   // the layer below keeps what is dragged inside its scroll area, which is right
   // for a reorder (a row belongs to its list) and makes a throw impossible — the
@@ -11901,10 +12046,16 @@ const startDragToCarryCopy = (event, {
   itemSelector,
   getItemId,
   onReorder,
+  onLand,
   onToss,
   tossDistance,
   tossSpeed,
-  direction = {
+  // A list runs one way and reordering walks it; a board has places all around,
+  // so something landing on one of them goes wherever the hand takes it.
+  direction = canLand ? {
+    x: true,
+    y: true
+  } : {
     x: false,
     y: true
   },
@@ -11930,9 +12081,6 @@ const startDragToCarryCopy = (event, {
   return dragAfterIntent(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
     draggedElement.setAttribute("navi-drag-clone-source", "");
-    // Move drag related CSS vars from the element to the document
-    // so they're accessible to .navi_drop_hint and the clone (which are both in document.body)
-    const restoreCSSVars = moveCSSVars(dragCSSVars, draggedElement, document.documentElement);
     const gestureController = createDragToMoveGestureController({
       direction,
       releasePositionEffect: "manual",
@@ -11948,10 +12096,14 @@ const startDragToCarryCopy = (event, {
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
     // No place to land, no hint: an element that can only be thrown away has
-    // nowhere to be put.
-    const dropHintEl = canReorder ? createDropHint() : null;
+    // nowhere to be put. What the hint LOOKS like follows what a place is here —
+    // a line in the gap between two items, or the place itself lit up.
+    const dropHintEl = canLand ? createDropSurface() : canReorder ? createDropHint() : null;
     if (dropHintEl) {
-      document.body.appendChild(dropHintEl);
+      // In the container it draws into, which is where its own vars are set: the
+      // shape of a drop hint is a property of the list or board it belongs to,
+      // and reading it from there is inheritance rather than a hand-off.
+      draggedElement.parentElement.appendChild(dropHintEl);
     }
     // The hint first, the clone second: that order is what stacks them in the
     // top layer.
@@ -11967,10 +12119,12 @@ const startDragToCarryCopy = (event, {
         return;
       }
       dropHintEl.removeAttribute("data-drop-edge");
+      dropHintEl.removeAttribute("data-drop-over");
       dropHintEl.style.removeProperty("--drop-target-top");
       dropHintEl.style.removeProperty("--drop-target-bottom");
       dropHintEl.style.removeProperty("--drop-target-left");
       dropHintEl.style.removeProperty("--drop-target-width");
+      dropHintEl.style.removeProperty("--drop-target-height");
     };
     const clearDropHint = () => {
       currentBeforeElement = undefined;
@@ -11990,11 +12144,30 @@ const startDragToCarryCopy = (event, {
         }
       }
       const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
-        fallbackToEdge: true
+        // The edges of a LIST: above the first row means the top of it, below
+        // the last one means the end of it. A board has no such reading — away
+        // from every place is away from every place.
+        fallbackToEdge: !canLand
       });
       gestureInfo.dropTargetInfo = dropTargetInfo || null;
       if (!dropTargetInfo) {
         clearDropHint();
+        return;
+      }
+      if (canLand) {
+        // The whole element is the target, so which of its edges the copy came
+        // in by says nothing: there is no gap to be on one side of.
+        const dropElement = dropTargetInfo.element;
+        if (dropElement === currentReleaseElement) {
+          return;
+        }
+        currentReleaseElement = dropElement;
+        const dropRect = dropElement.getBoundingClientRect();
+        dropHintEl.setAttribute("data-drop-over", "");
+        dropHintEl.style.setProperty("--drop-target-top", `${dropRect.top}px`);
+        dropHintEl.style.setProperty("--drop-target-left", `${dropRect.left}px`);
+        dropHintEl.style.setProperty("--drop-target-width", `${dropRect.width}px`);
+        dropHintEl.style.setProperty("--drop-target-height", `${dropRect.height}px`);
         return;
       }
       // Convert {element, edge} to a beforeElement using the items array
@@ -12037,21 +12210,44 @@ const startDragToCarryCopy = (event, {
     dragGesture.addReleaseCallback(async gestureInfo => {
       clearDropHintDOM();
       dropHintEl?.remove();
-      restoreCSSVars();
 
       // What THIS release means, from what the element said it can answer. A
       // throw is asked about first: it is the more insistent of the two, and a
       // hand that sent the thing across the screen has not asked for it to swap
       // places with whatever it happened to fly over.
-      const hasDropTarget = currentBeforeElement !== undefined;
+      const hasDropTarget = canLand ? currentReleaseElement !== undefined : currentBeforeElement !== undefined;
       const dropMeans = resolveDropMeaning({
         gestureInfo,
         hasDropTarget,
         canReorder,
         canToss,
+        canLand,
         tossDistance,
         tossSpeed
       });
+
+      // The copy stops where the hand left it, and the answer is given a way to
+      // take it the rest of the way — synchronously, inside a view transition, so
+      // it is captured where it lands rather than where it was let go of.
+      const landCopyOn = async (targetElement, answer) => {
+        const clone = cloneWrapper.firstElementChild;
+        // Bake the current visual position (transform included) into the CSS vars
+        // so the copy stays where the user released it when the transform goes.
+        setCloneViewportRect(cloneWrapper, cloneWrapper);
+        gestureInfo.cancelPosition();
+        // Where the copy comes down is not always the thing it came down ON: a
+        // place of a board can be larger than what stands on it, and the copy
+        // has to keep its own size and land where the item will be. Said with
+        // an element, because the caller has one — the piece already standing
+        // there, the empty slot waiting.
+        const syncCloneWithDropTarget = (landingElement = targetElement) => {
+          setCloneViewportRect(cloneWrapper, landingElement);
+          // Removing this attr drops the CSS scale, so the browser captures the
+          // copy at scale 1 as the "new" state.
+          clone.removeAttribute("navi-drag-clone");
+        };
+        await answer(syncCloneWithDropTarget);
+      };
       if (dropMeans === "toss") {
         // Bake the position the hand left it at, so the flight starts from
         // there rather than from where the clone was declared.
@@ -12064,25 +12260,10 @@ const startDragToCarryCopy = (event, {
           // place.
           await settleCloneBack(cloneWrapper, draggedElement);
         }
-      } else if (dropMeans === "reorder" && hasDropTarget) {
-        const clone = cloneWrapper.firstElementChild;
-        // Bake the current visual position (transform included) into the CSS vars
-        // so the clone stays where the user released it when we clear the transform.
-        setCloneViewportRect(cloneWrapper, cloneWrapper);
-        gestureInfo.cancelPosition();
-        const fromId = getItemId(draggedElement);
-        const toId = currentBeforeElement ? getItemId(currentBeforeElement) : null;
-        // provide onReorder a way to synchronously move the clone to the drop target
-        // (meant to be used inside a startViewTransition callback)
-        const syncCloneWithDropTarget = () => {
-          // Snap the CSS-var position to the drop target rect so the browser
-          // captures the "new" state at the landing position.
-          setCloneViewportRect(cloneWrapper, currentReleaseElement);
-          // Removing this attr drops the CSS scale(1.15), so the browser
-          // captures the clone at scale 1 as the "new" state.
-          clone.removeAttribute("navi-drag-clone");
-        };
-        await onReorder(fromId, toId, syncCloneWithDropTarget);
+      } else if (dropMeans === "land") {
+        await landCopyOn(currentReleaseElement, syncCloneWithDropTarget => onLand(getItemId(draggedElement), getItemId(currentReleaseElement), syncCloneWithDropTarget));
+      } else if (dropMeans === "reorder") {
+        await landCopyOn(currentReleaseElement, syncCloneWithDropTarget => onReorder(getItemId(draggedElement), currentBeforeElement ? getItemId(currentBeforeElement) : null, syncCloneWithDropTarget));
       }
       draggedElement.removeAttribute("navi-drag-clone-source");
       cloneWrapper.remove();
@@ -12153,6 +12334,14 @@ const createDropHint = () => {
   div.innerHTML = dropHintTemplate.trim();
   return div.firstElementChild;
 };
+const createDropSurface = () => {
+  const div = document.createElement("div");
+  div.className = "navi_drop_surface";
+  // Manual, like the copy it accompanies: it is opened and closed with the drag
+  // and must survive an Escape or a click elsewhere.
+  div.setAttribute("popover", "manual");
+  return div;
+};
 
 /**
  * The copy leaves the screen the way it was thrown, and the caller says what that
@@ -12211,13 +12400,6 @@ const createDragClone = (element, pointerEvent) => {
   // scale(1.15) expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.
   wrapper.style.setProperty("--drag-origin", `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`);
-  // The clone is appended to document.body, so it loses inherited styles
-  // from the original parent. Copy the computed inherited properties that
-  // are most likely to affect visual appearance.
-  const computedStyle = getComputedStyle(element.parentElement);
-  for (const property of INHERITED_PROPERTIES_TO_COPY_SET) {
-    wrapper.style.setProperty(property, computedStyle.getPropertyValue(property));
-  }
   const elementClone = element.cloneNode(true);
   // A deep copy copies the ids too, and two elements answering to one id is a
   // document that lies: getElementById picks whichever comes first, an anchor
@@ -12235,12 +12417,15 @@ const createDragClone = (element, pointerEvent) => {
   elementClone.setAttribute("data-grabbed", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
   wrapper.appendChild(elementClone);
-  document.body.appendChild(wrapper);
+  // Beside the thing it copies, so it stands where that thing stands: every
+  // inherited value and every custom property the original reads, the copy reads
+  // too, and a rule written for an item in this list finds the copy as well. The
+  // top layer is what lets it stay there — a popover is painted above the page
+  // whatever its depth in the tree, and being fixed keeps it out of the
+  // scrollable overflow of the list it sits in.
+  element.parentElement.appendChild(wrapper);
   return wrapper;
 };
-const INHERITED_PROPERTIES_TO_COPY_SET = new Set(["color", "font-family", "font-size", "font-weight", "font-style", "line-height", "letter-spacing",
-// in case the item has border-radius: inherit. The clone can inherit too
-"border-radius"]);
 
 const startDragToResizeGesture = (
   pointerdownEvent,
@@ -12392,15 +12577,6 @@ import.meta.css = [/* css */`
   [data-drag-travel*="y"] * {
     overscroll-behavior-y: contain !important;
   }
-  :root[${WALKING_ATTRIBUTE}] {
-    /* A drag over text selects it on the way, and the blue trail says the
-       gesture was understood as something else. Not from the press: a press on
-       text IS how one selects it, and only a press that has become a travel has
-       said it was about something else — which is also why this cannot be the
-       whole answer, and why the selection made meanwhile is dropped by hand
-       (see dropSelection). */
-    user-select: none;
-  }
 `, "@jsenv/dom/src/interaction/drag/drag_to_travel.js"];
 
 // How far a pointer goes before it is a travel rather than a click: below this
@@ -12474,29 +12650,6 @@ const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
     element = element.parentElement;
   }
   return left;
-};
-
-/**
- * What the browser painted blue while it was still allowed to think this press
- * was about text.
- *
- * A mouse dragged across a page selects what it crosses, and it starts doing so
- * from the first pixel — while this is still spending ten of them deciding
- * whether the press is a travel at all. By the time it is one, a trail is
- * already there. `user-select: none` (see the CSS) stops it GROWING, it does not
- * take back what was made, and a selection already under way goes on being
- * extended by some browsers whatever the property says.
- *
- * So it is dropped, and dropped again as it comes back. The cause is outside —
- * one gesture, two things answering it, and the browser answers first — and
- * cannot be removed from here; what can be removed is its trace, on every frame
- * of a travel that is walking.
- */
-const dropSelection = () => {
-  const selection = window.getSelection();
-  if (selection && !selection.isCollapsed) {
-    selection.removeAllRanges();
-  }
 };
 
 /**
@@ -12817,9 +12970,6 @@ const startDragToTravel = (pointerDownEvent, {
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       }
-      // Whatever the press was taken for until now, it was taken for something
-      // else (see dropSelection).
-      dropSelection();
       const {
         axis
       } = travel;
@@ -12881,10 +13031,6 @@ const startDragToTravel = (pointerDownEvent, {
         return;
       }
       finish();
-      // Last chance: the pointer moves once more as it goes up, and by then the
-      // attribute above is off — so a trail made on that last move would be the
-      // one that stays (see dropSelection).
-      dropSelection();
       const {
         axis,
         size,
