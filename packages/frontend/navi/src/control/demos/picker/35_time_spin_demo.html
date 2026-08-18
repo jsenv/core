@@ -92,6 +92,7 @@
           <StatesDemo />
           <RangeDemo />
           <ValidationDemo />
+          <LoopDemo />
           <MinuteStepDemo />
           <CustomizationDemo />
           <GroupDemo />
@@ -250,6 +251,25 @@
             defaultValue={{ start: "07:00", end: "07:15" }}
             minDuration={30}
           />
+        </div>
+      );
+
+      // ── loop ──────────────────────────────────────────────────────────────
+
+      const LoopDemo = () => (
+        <div class="demo-section">
+          <Heading id="loop">loop</Heading>
+          <p class="desc">
+            Les deux à 23h59 : une flèche vers le haut de plus sur chacun.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut : après 23h59 vient 0h00">
+              <TimeSpin defaultValue="23:59" />
+            </Variant>
+            <Variant caption="loop={false} : 23h59 est le bout">
+              <TimeSpin defaultValue="23:59" loop={false} />
+            </Variant>
+          </Box>
         </div>
       );
 

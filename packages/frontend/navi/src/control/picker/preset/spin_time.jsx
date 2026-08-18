@@ -29,6 +29,7 @@ const MINUTE_MAX = 59;
  *   signal?: import("@preact/signals").Signal<string>,
  *   minuteStep?: number,
  *   pad?: number,
+ *   loop?: boolean,
  *   separator?: import("preact").ComponentChildren,
  *   hourLabel?: string,
  *   minuteLabel?: string,
@@ -37,6 +38,9 @@ const MINUTE_MAX = 59;
  * @param {string} [value] The time shown, as "HH:MM".
  * @param {number} [minuteStep=1] How many minutes a press on a minute chevron
  *   covers — 15 for quarters of an hour.
+ * @param {boolean} [loop=true] The hours and the minutes go round: 23h then 0h,
+ *   59 minutes then 0. What a clock does — and there is no first or last hour
+ *   of a day to stop at. Say `loop={false}` for two ends one cannot step past.
  * @param {number} [pad=2] How many digits an hour and a minute are written on:
  *   a clock says "07:00", never "7:0". Say `pad={0}` for the bare numbers.
  * @param {import("preact").ComponentChildren} [separator] What is written
@@ -46,6 +50,7 @@ const MINUTE_MAX = 59;
 export const TimeSpin = ({
   minuteStep = 1,
   pad = 2,
+  loop = true,
   separator = naviI18n("time.hour_separator"),
   hourLabel = naviI18n("time.hour_label"),
   minuteLabel = naviI18n("time.minute_label"),
@@ -61,6 +66,7 @@ export const TimeSpin = ({
       min={0}
       max={HOUR_MAX}
       pad={pad}
+      loop={loop}
       controlProps={{ "aria-label": hourLabel }}
     />
     <SpinGroup.Separator>{separator}</SpinGroup.Separator>
@@ -70,6 +76,7 @@ export const TimeSpin = ({
       max={MINUTE_MAX}
       step={minuteStep}
       pad={pad}
+      loop={loop}
       controlProps={{ "aria-label": minuteLabel }}
     />
   </SpinGroup>
@@ -127,6 +134,7 @@ const padTwo = (value) => String(value).padStart(2, "0");
  *   minuteStep?: number,
  *   minDuration?: number,
  *   pad?: number,
+ *   loop?: boolean,
  *   size?: string,
  *   startLabel?: import("preact").ComponentChildren,
  *   endLabel?: import("preact").ComponentChildren,
@@ -148,6 +156,7 @@ export const TimeRangeSpin = ({
   minuteStep = 1,
   minDuration = 0,
   pad = 2,
+  loop = true,
   size,
   startLabel = naviI18n("time_range.from"),
   endLabel = naviI18n("time_range.to"),
@@ -166,6 +175,7 @@ export const TimeRangeSpin = ({
         name="start"
         minuteStep={minuteStep}
         pad={pad}
+        loop={loop}
         size={size}
         {...startTimeProps}
       />
@@ -174,6 +184,7 @@ export const TimeRangeSpin = ({
         name="end"
         minuteStep={minuteStep}
         pad={pad}
+        loop={loop}
         size={size}
         // Which time it comes after, and how much room there must be between
         // the two: said on the LATER of the two, so the answer is given where

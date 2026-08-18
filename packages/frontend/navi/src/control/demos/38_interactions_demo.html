@@ -318,18 +318,21 @@
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
       }
 
-      /* A padel court, symbolic rather than measured: upright, a net across the
-         middle, and four places big enough to read a name in. */
+      /* A padel court, said with what makes it one and nothing else: upright, a
+         net across the middle, and four places big enough to read a name in. */
       .padel {
         position: relative;
-        width: 300px;
+        width: 320px;
         height: 400px;
         background: #2f6f52;
         border: 3px solid #cfd8e3;
         border-radius: 6px;
         /* Between a card and the edge of its quarter, so two cards are two of it
            apart: the four have to read as four places, not as a grid of tiles. */
-        --padel-gap: 14px;
+        --padel-gap: 18px;
+        /* Wider than tall, and standing at the back of its own half: the four are
+           two pairs facing each other over the net, which is what a court is. */
+        --padel-card-height: 94px;
         /* Read by the drop hint, which is drawn inside the court. */
         --drop-surface-border-color: #ffd54a;
         --drop-surface-background-color: rgba(255, 213, 74, 0.28);
@@ -346,17 +349,6 @@
         position: absolute;
         background: rgba(255, 255, 255, 0.55);
         pointer-events: none;
-      }
-      .padel_line_service {
-        left: 0;
-        width: 100%;
-        height: 2px;
-      }
-      .padel_line_center {
-        top: 25%;
-        left: calc(50% - 1px);
-        width: 2px;
-        height: 50%;
       }
       /* The net crosses the court and the two side walls with it. */
       .padel_line_net {
@@ -391,6 +383,17 @@
       }
       .padel_card {
         border-radius: 10px;
+      }
+      /* The box a card occupies on the court, in a class rather than in the style
+         attribute: the copy being carried is that same element and dresses itself
+         from the same classes, so a geometry written inline would follow it into
+         the box it is carried in — where "half the width" means half of the copy
+         and not half of the court. Only WHICH place it is stays inline. */
+      .padel_card_box {
+        top: var(--padel-card-y);
+        left: var(--padel-card-x);
+        width: calc(50% - 2 * var(--padel-gap));
+        height: var(--padel-card-height);
       }
       .padel_token {
         width: 46px;
@@ -437,7 +440,6 @@
         background: rgba(255, 255, 255, 0.12);
       }
       .padel_free_zone {
-        inset: var(--padel-gap);
         border-radius: 10px;
       }
       .padel_free_token {
@@ -1796,14 +1798,7 @@
       const PADEL_OVER = "padel_swap_over";
       const PADEL_UNDER = "padel_swap_under";
 
-      const PadelCourtLines = () => (
-        <>
-          <span class="padel_line padel_line_service" style="top: 25%" />
-          <span class="padel_line padel_line_service" style="top: 75%" />
-          <span class="padel_line padel_line_center" />
-          <span class="padel_line padel_line_net" />
-        </>
-      );
+      const PadelCourtLines = () => <span class="padel_line padel_line_net" />;
 
       // The ids the elements carry are the ones the gesture hands back, and an id
       // is unique per document — so a player of one court is not the same id as the
@@ -1951,13 +1946,14 @@
         playerId,
         variant,
         viewTransitionName,
+        className = "",
         ...rest
       }) => {
         const player = padelPlayerOf(playerId);
         return (
           <Box
             id={playerId}
-            className={`padel_piece padel_${variant} padel_piece_${player.team}`}
+            className={`padel_piece padel_${variant} padel_piece_${player.team} ${className}`}
             {...rest}
             // The name a document transition moves it under: it is the player who
             // travels, the places stay where they are.
@@ -1974,11 +1970,22 @@
       // ── The court cut in four ───────────────────────────
 
       const PADEL_ZONES = [
-        { id: "far_left", x: 0, y: 0 },
-        { id: "far_right", x: 50, y: 0 },
-        { id: "near_left", x: 0, y: 50 },
-        { id: "near_right", x: 50, y: 50 },
+        { id: "far_left", x: 0, y: 0, side: "far" },
+        { id: "far_right", x: 50, y: 0, side: "far" },
+        { id: "near_left", x: 0, y: 50, side: "near" },
+        { id: "near_right", x: 50, y: 50, side: "near" },
       ];
+
+      // Where the card of a quarter stands: at the back of its own half, so the
+      // two pairs face each other over the net instead of crowding it. The whole
+      // quarter is still what one lands on — the card is only what is seen of it.
+      const padelCardStyle = (zone) => ({
+        "--padel-card-x": `calc(${zone.x}% + var(--padel-gap))`,
+        "--padel-card-y":
+          zone.side === "far"
+            ? "var(--padel-gap)"
+            : "calc(100% - var(--padel-gap) - var(--padel-card-height))",
+      });
       const PADEL_ZONED_LINEUP = {
         zoned__far_left: "zoned__lea",
         zoned__far_right: "zoned__marc",
@@ -2018,51 +2025,45 @@
               two change places at the release. A free place asks for someone by
               being clicked.
             </p>
-            <Box flex="x" spacing="l" alignY="start">
+            <Box flex="y" spacing="m" alignX="start">
               <div class="padel padel_zoned">
                 <PadelCourtLines />
                 {/* The places, said by the board: a quarter receives without ever
                     being carried, so it declares no interaction — `data-droppable`
                     is all it needs to be somewhere the hand can go. */}
+                {PADEL_ZONES.map((zone) => (
+                  <div
+                    key={zone.id}
+                    id={`zoned__${zone.id}`}
+                    class="padel_zone"
+                    style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
+                    data-droppable
+                  />
+                ))}
                 {PADEL_ZONES.map((zone) => {
                   const placeId = `zoned__${zone.id}`;
-                  return (
-                    <div
-                      key={zone.id}
-                      id={placeId}
-                      class="padel_zone"
-                      style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
-                      data-droppable
-                    >
-                      {court.playerIdAt(placeId) ? null : (
-                        <button
-                          type="button"
-                          class="padel_free padel_free_zone"
-                          onClick={() => court.takePlace(placeId)}
-                        >
-                          +
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-                {PADEL_ZONES.map((zone) => {
-                  const playerId = court.playerIdAt(`zoned__${zone.id}`);
+                  const playerId = court.playerIdAt(placeId);
                   if (!playerId) {
-                    return null;
+                    return (
+                      <button
+                        key={zone.id}
+                        type="button"
+                        class="padel_free padel_free_zone padel_card_box"
+                        style={padelCardStyle(zone)}
+                        onClick={() => court.takePlace(placeId)}
+                      >
+                        +
+                      </button>
+                    );
                   }
                   return (
                     <PadelPlayer
                       key={playerId}
                       playerId={playerId}
                       variant="card"
+                      className="padel_card_box"
                       viewTransitionName={court.viewTransitionNameOf(playerId)}
-                      style={{
-                        left: `calc(${zone.x}% + var(--padel-gap))`,
-                        top: `calc(${zone.y}% + var(--padel-gap))`,
-                        width: "calc(50% - 2 * var(--padel-gap))",
-                        height: "calc(50% - 2 * var(--padel-gap))",
-                      }}
+                      style={padelCardStyle(zone)}
                       interactions={{
                         land: court.land,
                         grab: () => window.navigator.vibrate?.(10),
@@ -2071,7 +2072,7 @@
                   );
                 })}
               </div>
-              <Box flex="y" spacing="m" alignX="start">
+              <Box flex="x" spacing="l" alignY="end">
                 <Box flex="y" spacing="xs" alignX="start">
                   <Text size="s" color="#666">
                     How they change places
@@ -2110,10 +2111,10 @@
       // ── The players themselves as the places ────────────
 
       const PADEL_SPOTS = [
-        { id: "far_left", x: 25, y: 25 },
-        { id: "far_right", x: 75, y: 25 },
-        { id: "near_left", x: 25, y: 75 },
-        { id: "near_right", x: 75, y: 75 },
+        { id: "far_left", x: 25, y: 18 },
+        { id: "far_right", x: 75, y: 18 },
+        { id: "near_left", x: 25, y: 82 },
+        { id: "near_right", x: 75, y: 82 },
       ];
       const PADEL_TOKENS_LINEUP = {
         tokens__far_left: "tokens__lea",

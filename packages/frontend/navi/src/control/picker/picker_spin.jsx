@@ -1113,11 +1113,14 @@ SpinGroup.Separator = SpinGroupSeparator;
  *   max?: number,
  *   step?: number,
  *   pad?: number,
+ *   loop?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {number} [min=0] The lowest number one can reach; `max` is the
  *   highest. They also bound what typing can produce, and how wide the field
  *   is asked to be (see `maxLength`).
+ * @param {boolean} [loop] The numbers go round: the step after `max` is `min`,
+ *   and the one before `min` is `max`. Both ends have to be known for that.
  * @param {number} [pad] How many digits the number is written on, zeroes in
  *   front of it: `pad={2}` writes 0 as "00". What an hour, a minute or a second
  *   is read as — a clock says "07:00", never "7:0". Only the way it is written:
@@ -1128,6 +1131,7 @@ export const NumberSpin = ({
   max,
   step = 1,
   pad,
+  loop,
   vertical = true,
   growsUpward = true,
   controlProps,
@@ -1142,7 +1146,9 @@ export const NumberSpin = ({
     step={step}
     vertical={vertical}
     fallbackValue={min}
-    valueAtStep={(value, count) => numberAtStep(value, count, min)}
+    valueAtStep={(value, count) =>
+      numberAtStep(value, count, { min, max, loop })
+    }
     compareValues={(a, b) => Number(a) - Number(b)}
     controlProps={{
       // The numeric keypad on a phone, and — through
@@ -1176,12 +1182,23 @@ const numberMaxLength = (max, pad) => {
 // simply is not allowed, and Spin is the one that reads it as "nothing that
 // way" — clamping here would answer the chevron before it had a chance to say
 // so. A field mid-edit holding nothing (or nothing numeric) starts from `min`.
-const numberAtStep = (value, count, min) => {
+//
+// Unless the numbers go round: the step after the last one is the first, so
+// the value handed back is always one Spin can reach and no chevron ever says
+// there is nothing that way. Going round needs both ends to be known — a
+// stretch open at one end has no other end to come back from.
+const numberAtStep = (value, count, { min, max, loop }) => {
   const number = Number(value);
   if (value === "" || value === undefined || Number.isNaN(number)) {
     return min;
   }
-  return number + count;
+  const numberNext = number + count;
+  if (!loop || max === undefined) {
+    return numberNext;
+  }
+  const valueCount = max - min + 1;
+  const offset = numberNext - min;
+  return min + (((offset % valueCount) + valueCount) % valueCount);
 };
 
 /**
