@@ -158,6 +158,42 @@ Facts worth knowing before reaching for one:
   user IS looking at (the rule above). Start one only when what changes is
   what the user is watching.
 
+### Several elements in one movement: name them by role
+
+A stylesheet reaches a captured element by its NAME and by nothing else. There is
+no selector for "the one that was dragged", and no attribute of the original
+element is readable from the pseudo. So when a movement has parts to distribute —
+this one passes in front, that one dips behind, each steps to its own side — the
+role has to BE the name: the participants take a role name for the length of the
+transition and give their own back afterwards, everything else keeping its own.
+
+- The name is written **before** the transition starts, because that is when the
+  old state is captured. A name arriving with the new state pairs nothing: the old
+  picture disappears and a new one appears, instead of one moving.
+- It is written **through the render as well**, not only on the DOM — the render
+  that happens inside the callback would put the plain name straight back.
+
+### Add to the movement the browser already makes
+
+The group's morph from the old box to the new one is the UA's own animation, and
+it is the part worth keeping: setting `animation-name` on
+`::view-transition-group` replaces it, and the element stops travelling. What a
+style adds rides on `::view-transition-image-pair` INSIDE that group, where a
+`translate` or a `scale` composes with the morph rather than replacing it.
+`z-index` on the group is what decides which of two crossing elements passes in
+front.
+
+A value that differs per occurrence — how far to step aside, which way, measured
+between the two boxes at that moment — cannot be written in the rule. Set it as a
+custom property on the **document element**: the `::view-transition` tree hangs
+off the root and inherits from there, and from nowhere else.
+
+Which leaves the choice itself in one word — an attribute on the root, one rule
+per way of moving — so trying another is changing that word, not rewriting the
+movement. Two elements exchanging places is the case that asks for all of this:
+morphed straight, they cross THROUGH each other, and the whole question is what
+they do about it.
+
 ### The main thread lies about a running transition
 
 The pseudo-elements' animations run on the **compositor**, and everything JS

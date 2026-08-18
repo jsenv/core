@@ -217,11 +217,12 @@ const css = /* css */ `
   /* The same room around a value one TYPES as around one one picks (the
      [data-slide] rule below writes it there): without it the column is as
      narrow as the two digits in it, and a number pressed against both sides
-     reads as a field too small for what it holds. On the middle rather than on
-     the field, which draws its own background from edge to edge. */
-  .navi_picker_spin_middle:has(> .navi_input) {
-    padding-right: var(--x-picker-spin-padding-right);
-    padding-left: var(--x-picker-spin-padding-left);
+     reads as a field too small for what it holds. Handed to the field as its
+     own padding rather than kept by the middle: the field then IS the column —
+     it fills it, and a click anywhere in it lands on the caret. */
+  .navi_picker_spin_middle > .navi_input {
+    --padding-right: var(--x-picker-spin-padding-right);
+    --padding-left: var(--x-picker-spin-padding-left);
   }
   /* Where the padding lands: all four sides on the value, the two vertical
      ones on the chevrons below — the same number above and below is what makes

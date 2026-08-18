@@ -62,7 +62,7 @@ condition: `{ swipe_right: canArchive && archive }`.
 | `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                       |
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
 | `longpress`                                            | a press held still                             |
-| `move` `reorder` `toss`                                | the element carried, and what letting go means |
+| `move` `reorder` `land` `toss`                         | the element carried, and what letting go means |
 | `grab`                                                 | the instant a drag takes hold of it            |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
@@ -142,17 +142,18 @@ comes back once it settles — a failure leaves the row in place so it can be tr
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
 
-## Carrying something: `move`, `reorder`, `toss`
+## Carrying something: `move`, `reorder`, `land`, `toss`
 
-All three are the same gesture — the element is picked up and carried — and what
+All four are the same gesture — the element is picked up and carried — and what
 differs is the release. One detector reads them all, because it is one press.
 
-`reorder` and `toss` **combine**: dropped on another item the element changes
-places, thrown far and fast it is gotten rid of. `move` does **not** combine with
-`reorder` — an element either goes where it is put or takes a place in a list,
-and one release cannot mean both (a dev warning says so).
+`toss` **combines** with either of the two others: dropped on another item the
+element changes places, thrown far and fast it is gotten rid of. `move`,
+`reorder` and `land` do **not** combine with each other — an element either goes
+where it is put, takes a place in a list, or comes down on a place, and one
+release cannot mean two of those (a dev warning says so).
 
-`move` carries the element ITSELF and leaves it where it was put; the other two
+`move` carries the element ITSELF and leaves it where it was put; the others
 carry a copy and put the original back. That is the same difference said in layout
 terms: something moved has a new place of its own, something reordered had its
 place taken by the list.
@@ -229,6 +230,76 @@ name what moves.
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 
+### Landing on a place: `land`
+
+`reorder` and `land` both come down on an item, and what separates them is **what
+a place is**. A row of a list is a place BETWEEN two others — free by
+construction, so the answer is an insertion and putting a row back where it
+already was is a no-op. A place of a board is a place of its own, which may
+already be taken — so nothing is inserted, nothing is a no-op, and the answer is
+simply "this one came down on that one". What that means is yours: take the
+place, swap the two, refuse.
+
+```jsx
+<Box
+  id={playerId}
+  interactions={{
+    land: (event) => {
+      const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+      return document.startViewTransition(() => {
+        syncCloneWithDropTarget();
+        setLineup((previous) => swapPlaces(previous, fromId, toId));
+      }).finished;
+    },
+  }}
+/>
+```
+
+`toId` is an element and **never null**: a copy over nothing is a release that
+meant nothing, and the interaction does not happen at all.
+
+**Which elements are places: those marked `data-droppable`, and only those.**
+Declaring `land` says an element can be CARRIED, which on a board is a different
+thing from being somewhere one can be put — a zone receives without ever being
+carried, a piece is carried without ever receiving, and both at once is a third
+case (dropped on a piece, the two swap, so it says `data-droppable` as well). A
+list has no such distinction, every row being both, which is why `reorder` needs
+no marker in the markup.
+
+Places are looked for among the carried element's **siblings**, so a piece must
+not be nested inside its place: nested, it would see that one place and have
+nowhere else to go. Draw the pieces beside the places, positioned over them.
+
+**When the place is bigger than what stands on it** — a zone holding a smaller
+card, a square holding a piece — the copy must not take the place's box, or it
+resizes on landing and resizes back when the real element appears.
+`syncCloneWithDropTarget` takes an element for that: the copy comes down on THAT
+box instead of the target's. Pass whatever occupies the destination — the piece
+already standing there, the empty slot waiting.
+
+```jsx
+land: (event) => {
+  const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+  const landingElement = pieceAt(toId) || slotOf(toId);
+  return document.startViewTransition(() => {
+    syncCloneWithDropTarget(landingElement);
+    …
+  }).finished;
+};
+```
+
+The hint follows what a place is: a line drawn in the gap for `reorder`, the
+place itself lit up for `land`. Both are drawn inside the carried element's
+parent, so the variables dressing them are read from the list or the board and
+reach them by plain inheritance.
+
+| Variable                                                                                   | Dresses                 |
+| ------------------------------------------------------------------------------------------ | ----------------------- |
+| `--drop-hint-size` `--drop-hint-background-color` `--drop-hint-border-radius`              | the line of a reorder   |
+| `--drop-hint-margin-x` `--drop-hint-margin-y` `--drop-hint-arrow-size`                     | where it sits, its caps |
+| `--drop-surface-border-width` `--drop-surface-border-color` `--drop-surface-border-radius` | the lit place of a land |
+| `--drop-surface-background-color`                                                          | and its fill            |
+
 ### Saying the grab is acquired: `grab`
 
 The three above answer the **release**. Between the press and the release there is
@@ -284,7 +355,27 @@ it:
 ```
 
 Reusing the item's own class is the point: the copy is that item, so it is styled
-as that item plus whatever being carried changes. The copy is a real element in the
+as that item plus whatever being carried changes.
+
+**Which is also the trap, for anything positioned on a board.** The copy is the
+same element re-parented into a carrier box, so a geometry written in the style
+attribute follows it there — `width: calc(50% - 2 * var(--gap))` then means half
+of the copy instead of half of the board, and the piece is carried at the wrong
+size. Put what a piece LOOKS like in a class and leave only which place it is
+inline (two custom properties will do), then let it fill its carrier:
+
+```css
+[navi-drag-clone-wrapper] .piece {
+  position: static;
+  width: 100%;
+  height: 100%;
+  translate: none;
+}
+```
+
+Said of what is inside the wrapper rather than of `[navi-drag-clone]` itself,
+because the copy loses that mark as it lands — that is how it drops its lift for
+the transition — and it has to keep its size all the way down. The copy is a real element in the
 page, in the top layer, and everything about its look is reachable from CSS —
 including these, read off the dragged element so a whole list or a single item can
 answer:
@@ -292,7 +383,7 @@ answer:
 | Variable              | What it changes                                               |
 | --------------------- | ------------------------------------------------------------- |
 | `--drag-clone-shadow` | what being lifted casts; `none` for something that flies flat |
-| `--drag-clone-scale`  | how much bigger it gets once picked up                        |
+| `--drag-clone-scale`  | how much bigger it gets once picked up; `1` to keep its size  |
 
 **What stays behind is the source, not a hole.** The original is never taken out of
 the page — it keeps its place in the layout and wears `navi-drag-clone-source`,
@@ -318,9 +409,32 @@ back to it.
 
 `data-drag-axis` says which axes the drag walks, and its default is not the same
 for every outcome: `reorder` alone walks the list (`y`, or `x` for a list that runs
-sideways), while a `move` goes wherever it is put and a `toss` wherever it was
-thrown (`xy`). `data-drag-delay`, `data-drag-slop`, `data-drag-threshold` tune when
-the press becomes a grab.
+sideways), while a `move` goes wherever it is put, a `land` wherever the board has
+places and a `toss` wherever it was thrown (`xy`). `data-drag-delay`,
+`data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
+
+### A control inside something draggable
+
+`data-drag-ignore` says the press there is none of the gesture's business: the
+element under it never starts a drag, and keeps both its cursor and its text
+selection. That is what a button living inside a carried piece needs — a cross
+that removes it, a menu — otherwise the piece is picked up from the button like
+from anywhere else. A click of its own usually has to stop there too, or the
+piece reads it as its own click.
+
+### What says a thing can be picked up
+
+Almost nothing, on purpose. A **handle** (`data-drag-handle`) exists only to drag,
+so it shows the hand; a **source** does not — it drags only once the intent shows,
+a plain click on it stays a click, and it is usually something else FIRST (a link,
+a card one opens). The cursor says what an element IS, and the gesture is not the
+one who knows, so it leaves it alone (`default`, not an I-beam: the text inside
+cannot be selected either).
+
+So on a board where a piece is also clickable, the cursor is already spoken for and
+the affordance has to be said in the piece itself — a grip mark in a corner, a
+shadow appearing under the pointer, a handle. It is worth deciding, not defaulting:
+a board one may drag on is worth nothing if nobody tries.
 
 ## Tuning
 
@@ -434,9 +548,10 @@ container above it does not take the gesture:
   the registry.
 - `src/control/interaction/interaction_press.js` — swipes and holds, and what a
   swipe writes on the element.
-- `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `toss` and
-  the `grab` moment.
+- `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
+  `toss` and the `grab` moment.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
-  mailbox and a custom `swipe_out` gesture registered from the page.
+  mailbox, a board whose places are zones and the same board whose places are the
+  pieces, and a custom gesture registered from the page.

@@ -825,6 +825,7 @@ export const resolveTypoSize = (size, element, property = "fontSize") => {
 };
 
 const COLOR_KEYWORD_MAP = {
+  primary: "var(--navi-color-primary)",
   secondary: "var(--navi-color-secondary)",
   emphasis: "var(--navi-color-emphasis)",
   discrete: "var(--navi-color-discrete)",

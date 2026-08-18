@@ -123,7 +123,7 @@ layout component ends up knowing the internals of every control. When you meet
 that symptom, fix the control, not the group.
 
 The controls shipped by navi all follow this: `Button`, `Input`, `Select`,
-`Picker`, `Picker.Spin`, checkbox, range.
+`Picker`, `Spin`, checkbox, range.
 
 ## When it is not a Group
 
@@ -133,3 +133,6 @@ The controls shipped by navi all follow this: `Button`, `Input`, `Select`,
 - Radio buttons or checkboxes sharing a name and a validation — that is
   `RadioGroup` / `CheckboxGroup`, which is about the value, not the frame. They
   can be put inside a `Group` if you also want them to share a frame.
+- Controls that are ONE value between them, with a word written inside the frame
+  (the hours and the minutes of "07h30") — that is `SpinGroup`, which drops the
+  members' frames rather than joining them.

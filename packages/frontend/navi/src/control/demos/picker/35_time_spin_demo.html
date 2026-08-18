@@ -309,12 +309,14 @@
             <Variant caption='separator=":"'>
               <TimeSpin defaultValue="07:00" separator=":" />
             </Variant>
-            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
-              <TimeSpin
-                defaultValue="07:00"
-                borderColor="#1a73e8"
-                borderRadius="10px"
-              />
+            <Variant caption='borderColor="#1a73e8"'>
+              <TimeSpin defaultValue="07:00" borderColor="#1a73e8" />
+            </Variant>
+            <Variant caption='borderRadius="10px"'>
+              <TimeSpin defaultValue="07:00" borderRadius="10px" />
+            </Variant>
+            <Variant caption='borderWidth="0"'>
+              <TimeSpin defaultValue="07:00" borderWidth="0" />
             </Variant>
             <Variant caption='size="xxs"'>
               <TimeSpin defaultValue="07:00" size="xxs" />
@@ -396,63 +398,60 @@
               Sur écran tactile, le popup vient se coller en bas de l'écran.
             </p>
             <Box flex="y" spacing="l" alignX="start">
-              <Box>
-                <Picker
-                  type="form"
-                  name="when"
-                  width="440px"
-                  clearable
-                  mode="dialog"
-                  dockedOnTouch
-                  paddingX="m"
-                  paddingY="m"
-                  borderRadius="10px"
-                  ui={
-                    <Box flex="y" alignX="start">
-                      <Text weight="bold" size="s">
-                        Quand
-                      </Text>
-                      <Text color="#6b7280">
-                        {rangeLabel(opening) ?? "N'importe quelle heure"}
-                      </Text>
-                    </Box>
-                  }
-                  uiAction={(value) => {
-                    setOpening(value);
-                    push("uiAction", value);
-                  }}
-                >
-                  <Box flex="y" overflow="auto" expandY>
-                    <Box header flex alignY="center" spacing="xs" padding="m">
-                      <Text expandX bold>
-                        À quelle heure ?
-                      </Text>
-                      <Button
-                        command="--navi-close"
-                        icon
-                        variant="discrete"
-                        padding="xs"
-                        size="xl"
-                        marginRight="-xs"
-                        aria-label="Fermer"
-                      >
-                        <Icon color="#6b7280">
-                          <CloseSvg />
-                        </Icon>
-                      </Button>
-                    </Box>
-                    <Box body flex="y" spacing="m" padding="m" alignX="center">
-                      <TimeRangeSpin
-                        defaultValue={opening ?? OPENING_DEFAULT}
-                        minuteStep={15}
-                        minDuration={30}
-                        size="xl"
-                        timeProps={{ borderRadius: "10px" }}
-                      />
-                    </Box>
+              <Picker
+                type="form"
+                name="when"
+                clearable
+                dockedOnTouch
+                paddingX="m"
+                paddingY="m"
+                borderRadius="m"
+                expandX
+                ui={
+                  <Box flex="y" alignX="start">
+                    <Text weight="bold" size="s" color="primary">
+                      Quand
+                    </Text>
+                    <Text color="discrete">
+                      {rangeLabel(opening) ?? "N'importe quelle heure"}
+                    </Text>
                   </Box>
-                </Picker>
-              </Box>
+                }
+                uiAction={(value) => {
+                  setOpening(value);
+                  push("uiAction", value);
+                }}
+              >
+                <Box flex="y" overflow="auto" expandY>
+                  <Box header flex alignY="center" spacing="xs" padding="m">
+                    <Text expandX bold>
+                      À quelle heure ?
+                    </Text>
+                    <Button
+                      command="--navi-close"
+                      icon
+                      variant="discrete"
+                      padding="xs"
+                      size="xl"
+                      marginRight="-xs"
+                      aria-label="Fermer"
+                    >
+                      <Icon color="#6b7280">
+                        <CloseSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                  <Box body flex="y" spacing="m" padding="m" alignX="center">
+                    <TimeRangeSpin
+                      defaultValue={opening ?? OPENING_DEFAULT}
+                      minuteStep={15}
+                      minDuration={30}
+                      size="xl"
+                      timeProps={{ borderRadius: "10px" }}
+                    />
+                  </Box>
+                </Box>
+              </Picker>
               <CallLog entries={entries} onClear={clear} />
             </Box>
           </div>

@@ -43,6 +43,8 @@ UI field components (`Input`, `Select`, `Checkbox`, `Radio`, etc.) accept an `ac
 
 Validation goes beyond native browser constraints: custom rules, better error positioning, real-time feedback, and a UX that doesn't punish users before they've finished typing.
 
+Some values are moved rather than typed: `Spin` puts the way back and the way on around a value one step at a time, and `SpinGroup` makes several of them read as one — `TimeSpin` ("07h30") and `TimeRangeSpin` ("de 7h à 21h", end after start) are built that way.
+
 ## Table
 
 A capable `Table` component that handles what you'd expect from a spreadsheet-like interface: column management, sorting, multi-selection with keyboard shortcuts, and more.

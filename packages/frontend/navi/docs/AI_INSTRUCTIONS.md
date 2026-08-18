@@ -11,6 +11,40 @@ file-level comments and anything attached to an import/re-export statement
 (the bundler only keeps a comment that sits directly above a declaration it
 retains as-is).
 
+## Where the answer to "how do I use X" is
+
+There is deliberately **no per-export reference page** here, and there never
+will be: a page per component drifts from the code the day after it is written,
+and the code is right there. Each source of knowledge has one job:
+
+- **These `docs/*.md` files** — decisions, concepts and invariants: what a
+  mechanism is for, what it costs, what not to hand-write beside it. They are
+  what you cannot deduce from a signature. Read the relevant one BEFORE writing
+  code in its area; they are listed below.
+- **JSDoc on an export** (`@type`, `@param`) — a hint at the call site: what a
+  prop means and what it accepts, for autocompletion and for you. It is not
+  exhaustive and does not pretend to be: props that flow through to `Box`, the
+  interplay between two props, everything a component composes are not repeated
+  there.
+- **The built code, `dist/jsenv_navi.js`** — the exhaustive truth about the API.
+  It is navi's real source, bundled, with the JSDoc kept (see above). When a
+  signature, a default, an accepted value or a prop nobody documented is what
+  you need, read it there rather than guessing. It ships in the npm package, so
+  it is always available under `node_modules/@jsenv/navi/`.
+- **Sources, demos and tests** — how an export is really used, and the closest
+  thing to an example gallery: `src/**/demos/*_demo.html` exercise one component
+  per page, prop by prop. They are NOT published to npm (the whole source tree
+  would dwarf the package), so they live only in the repo:
+  https://github.com/jsenv/core/tree/main/packages/frontend/navi. A project that
+  wants an AI to work with navi seriously is better off with a local clone of
+  that repo alongside it — the demos answer "how is this used" faster than any
+  page could.
+
+So the loop, when the JSDoc did not answer: read the built export, then find a
+demo using it. Write the answer down in one of these `docs/*.md` files only if
+what you learned is a decision or an invariant — never as a reference page for
+one component.
+
 ## Library, but also a framework
 
 Navi is a library in the sense that every export is independently usable —
@@ -69,9 +103,10 @@ consistency across the app, not from any single call site.
   legitimately not URLs. Read it before writing any routing code — the
   position of the user belongs in the URL by default, and that decision is
   not retrofittable.
-- Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src
-  — worth checking if the JSDoc on an export genuinely doesn't answer your
-  question.
+- Source code and demos on GitHub:
+  https://github.com/jsenv/core/tree/main/packages/frontend/navi — where to go
+  when the built export's JSDoc doesn't answer the question (see "Where the
+  answer to how do I use X is" above).
 
 ## Key concepts to know before guessing an API
 
@@ -122,6 +157,6 @@ consistency across the app, not from any single call site.
     (`currentIndicator`), which is why the bar follows a `RouteTravel` swipe
     with no wiring.
 
-If unsure which export solves a problem, check `README.md` first — the
-`src/` tree on GitHub is there too if a specific export's own JSDoc doesn't
-cover what you need.
+If unsure which export solves a problem, check `README.md` first: it names what
+navi provides, area by area. From a name, the built export tells you the API and
+a demo tells you the usage.
