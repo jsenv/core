@@ -327,6 +327,9 @@
         background: #2f6f52;
         border: 3px solid #cfd8e3;
         border-radius: 6px;
+        /* Between a card and the edge of its quarter, so two cards are two of it
+           apart: the four have to read as four places, not as a grid of tiles. */
+        --padel-gap: 14px;
         /* Read by the drop hint, which is drawn inside the court. */
         --drop-surface-border-color: #ffd54a;
         --drop-surface-background-color: rgba(255, 213, 74, 0.28);
@@ -382,6 +385,9 @@
         background: #2f5fa8;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         --drag-clone-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+        /* What is carried is the card, at the size it has on the court: it is
+           lifted by its shadow and by nothing else. */
+        --drag-clone-scale: 1;
       }
       .padel_card {
         border-radius: 10px;
@@ -431,7 +437,7 @@
         background: rgba(255, 255, 255, 0.12);
       }
       .padel_free_zone {
-        inset: 6px;
+        inset: var(--padel-gap);
         border-radius: 10px;
       }
       .padel_free_token {
@@ -2052,10 +2058,10 @@
                       variant="card"
                       viewTransitionName={court.viewTransitionNameOf(playerId)}
                       style={{
-                        left: `calc(${zone.x}% + 6px)`,
-                        top: `calc(${zone.y}% + 6px)`,
-                        width: "calc(50% - 12px)",
-                        height: "calc(50% - 12px)",
+                        left: `calc(${zone.x}% + var(--padel-gap))`,
+                        top: `calc(${zone.y}% + var(--padel-gap))`,
+                        width: "calc(50% - 2 * var(--padel-gap))",
+                        height: "calc(50% - 2 * var(--padel-gap))",
                       }}
                       interactions={{
                         land: court.land,
@@ -2104,10 +2110,10 @@
       // ── The players themselves as the places ────────────
 
       const PADEL_SPOTS = [
-        { id: "far_left", x: 28, y: 25 },
-        { id: "far_right", x: 72, y: 25 },
-        { id: "near_left", x: 28, y: 75 },
-        { id: "near_right", x: 72, y: 75 },
+        { id: "far_left", x: 25, y: 25 },
+        { id: "far_right", x: 75, y: 25 },
+        { id: "near_left", x: 25, y: 75 },
+        { id: "near_right", x: 75, y: 75 },
       ];
       const PADEL_TOKENS_LINEUP = {
         tokens__far_left: "tokens__lea",
@@ -2176,7 +2182,7 @@
       };
 
       const PadelCase = () => {
-        const [swapStyle, setSwapStyle] = useState("over_under");
+        const [swapStyle, setSwapStyle] = useState("slide");
         return (
           <>
             <PadelZonedCase

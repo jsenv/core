@@ -155,13 +155,21 @@
             <Variant caption="loading">
               <TimeSpin defaultValue="07:00" loading />
             </Variant>
-            {/* Held rather than obtenu au clavier : l'anneau est autour du
-                groupe, pas autour du champ qui a le focus. */}
-            <Variant caption="focus visible">
-              <TimeSpin
-                defaultValue="07:00"
-                pseudoState={{ ":focus-visible": true }}
-              />
+            {/* Tenu plutôt qu'obtenu au clavier : on remplit un champ à la
+                fois, donc l'anneau est sur celui qui a le clavier. */}
+            <Variant caption="focus visible (sur les heures)">
+              <SpinGroup>
+                <NumberSpin
+                  name="hour"
+                  min={0}
+                  max={23}
+                  pad={2}
+                  defaultValue={7}
+                  controlProps={{ pseudoState: { ":focus-visible": true } }}
+                />
+                <SpinGroup.Separator>h</SpinGroup.Separator>
+                <NumberSpin name="minute" min={0} max={59} pad={2} />
+              </SpinGroup>
             </Variant>
           </Box>
         </div>
