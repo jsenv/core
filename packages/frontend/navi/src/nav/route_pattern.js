@@ -2647,7 +2647,11 @@ const buildQueryString = (params) => {
       // Handle array values - join with commas
       if (Array.isArray(value)) {
         if (value.length === 0) {
-          // Empty array - omit entirely
+          // Empty array - written as "key=", the form extractSearchParams reads
+          // back as []. Omitting the param entirely would mean "absent" which
+          // resolves to the default value, making "nothing selected"
+          // inexpressible for a signal whose default is non-empty.
+          searchParamPairs.push(`${encodedKey}=`);
         } else {
           const encodedValue = value
             .map((item) => encodeURIComponent(String(item)))
@@ -2673,6 +2677,26 @@ const buildQueryString = (params) => {
   }
 
   return searchParamPairs.join("&");
+};
+
+/**
+ * Cast an array item read from the URL into the item type declared on the
+ * signal (`stateSignal([], { type: "array", itemType: "number" })`).
+ *
+ * Without it every item comes back as a string and the value no longer equals
+ * what was assigned, so the URL→signal sync overwrites the signal with strings.
+ * Declared explicitly rather than guessed, so a "42" string item stays a string
+ * unless the signal says otherwise.
+ */
+const castStringToItemType = (item, itemType) => {
+  if (itemType === "number" || itemType === "float") {
+    const numberValue = Number(item);
+    return isNaN(numberValue) ? item : numberValue;
+  }
+  if (itemType === "boolean") {
+    return item === "true" || item === "1" || item === "";
+  }
+  return item;
 };
 
 /**
@@ -2712,6 +2736,7 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
 
     const connection = queryConnectionMap.get(key);
     const signalType = connection ? connection.type : null;
+    const itemType = connection ? connection.itemType : null;
 
     // Cast value based on signal type
     if (signalType === "array") {
@@ -2726,7 +2751,8 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
         params[key] = rawValue
           .split(",")
           .map((item) => decodeURIComponent(item))
-          .filter((item) => item.trim() !== "");
+          .filter((item) => item.trim() !== "")
+          .map((item) => castStringToItemType(item, itemType));
       }
     } else if (signalType === "number" || signalType === "float") {
       const decodedValue = decodeURIComponent(rawValue);

@@ -2318,4 +2318,113 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(undefined);
     }
   });
+  test("array signal - itemType number survives the url round trip", () => {
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const levelsSignal = stateSignal([4], {
+      id: "levelsWithItemType",
+      type: "array",
+      itemType: "number",
+      ignoreArrayOrder: true,
+    });
+    const GAME_ROUTE = route("/games/create", {
+      searchParams: { level: levelsSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([GAME_ROUTE]);
+    try {
+      const captureState = () => {
+        const navCalls = [...navToCalls];
+        navToCalls.length = 0;
+        return {
+          // types matter here, not only values
+          signal_value: levelsSignal.value.map(
+            (item) => `${typeof item}:${item}`,
+          ),
+          nav_calls: navCalls,
+        };
+      };
+
+      const results = {};
+
+      updateRoutes(`${baseUrl}/games/create`);
+      results["1_initial"] = captureState();
+
+      // check level 3: numbers must stay numbers once the url syncs back
+      levelsSignal.value = [3, 4];
+      results["2_check_3"] = captureState();
+
+      // uncheck level 3
+      levelsSignal.value = [4];
+      results["3_uncheck_3"] = captureState();
+
+      // url → signal with numeric items
+      updateRoutes(`${baseUrl}/games/create?level=1,2`);
+      results["4_url_to_signal"] = captureState();
+
+      return results;
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  test("array signal - empty value against a non-empty default", () => {
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const levelsSignal = stateSignal([4], {
+      id: "levelsEmptyable",
+      type: "array",
+      itemType: "number",
+    });
+    const GAME_ROUTE = route("/games/create", {
+      searchParams: { level: levelsSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([GAME_ROUTE]);
+    try {
+      const captureState = () => {
+        const navCalls = [...navToCalls];
+        navToCalls.length = 0;
+        return {
+          signal_value: JSON.parse(JSON.stringify(levelsSignal.value)),
+          nav_calls: navCalls,
+        };
+      };
+
+      const results = {};
+
+      updateRoutes(`${baseUrl}/games/create`);
+      results["1_initial_is_default"] = captureState();
+
+      // nothing selected: must stay nothing, not fall back to the default
+      levelsSignal.value = [];
+      results["2_empty_selection"] = captureState();
+
+      // "?level=" on load means "nothing selected", not "param absent"
+      updateRoutes(`${baseUrl}/games/create?level=`);
+      results["3_url_empty_param"] = captureState();
+
+      // param absent means "take the default"
+      updateRoutes(`${baseUrl}/games/create`);
+      results["4_url_no_param"] = captureState();
+
+      return results;
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });

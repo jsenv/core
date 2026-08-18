@@ -58,6 +58,9 @@ if (import.meta.hot) {
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @param {"string" | "number" | "boolean"} [options.itemType] - For array type: type of the array items.
+ *   Used when reading the value back from a url search param, where everything is a string:
+ *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a

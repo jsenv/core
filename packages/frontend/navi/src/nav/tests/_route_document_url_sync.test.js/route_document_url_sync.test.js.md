@@ -40,6 +40,8 @@
 - [date signal in route param should not cause cycle error](36_date_signal_in_route_param_should_not_cause_cycle_error/36_date_signal_in_route_param_should_not_cause_cycle_error.md)
 - [datetime signal in route param should not cause cycle error](37_datetime_signal_in_route_param_should_not_cause_cycle_error/37_datetime_signal_in_route_param_should_not_cause_cycle_error.md)
 - [datetime-local signal in route param should not cause cycle error](38_datetime-local_signal_in_route_param_should_not_cause_cycle_error/38_datetime-local_signal_in_route_param_should_not_cause_cycle_error.md)
+- [array signal - itemType number survives the url round trip](39_array_signal_-_itemtype_number_survives_the_url_round_trip/39_array_signal_-_itemtype_number_survives_the_url_round_trip.md)
+- [array signal - empty value against a non-empty default](40_array_signal_-_empty_value_against_a_non-empty_default/40_array_signal_-_empty_value_against_a_non-empty_default.md)
 
 ---
 
