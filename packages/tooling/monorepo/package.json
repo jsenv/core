@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.3.19",
+  "version": "0.4.0",
   "type": "module",
   "description": "Helpers to manage packages in a monorepo",
   "repository": {

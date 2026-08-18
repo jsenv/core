@@ -4,6 +4,7 @@
 
 import { readFile } from "@jsenv/filesystem";
 import { publishPackages } from "@jsenv/monorepo";
+import { packagesRelations } from "./packages_relations.mjs";
 
 if (!process.env.CI) {
   const secrets = await readFile(
@@ -14,4 +15,5 @@ if (!process.env.CI) {
 }
 await publishPackages({
   directoryUrl: new URL("../../", import.meta.url),
+  packagesRelations,
 });

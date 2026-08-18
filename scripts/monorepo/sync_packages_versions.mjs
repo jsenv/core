@@ -3,15 +3,9 @@
  */
 
 import { syncPackagesVersions } from "@jsenv/monorepo";
+import { packagesRelations } from "./packages_relations.mjs";
 
 await syncPackagesVersions({
   directoryUrl: new URL("../../", import.meta.url),
-  packagesRelations: {
-    "@jsenv/cli": [
-      "jsenv-template-node-package",
-      "jsenv-template-web",
-      "jsenv-template-web-preact",
-      "jsenv-template-web-react",
-    ],
-  },
+  packagesRelations,
 });

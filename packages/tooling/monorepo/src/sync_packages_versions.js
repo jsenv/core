@@ -14,6 +14,7 @@ import { shouldUpdateVersion } from "./internal/should_update_version.js";
 
 export const syncPackagesVersions = async ({
   logs = true,
+  dryRun = false,
   directoryUrl,
   packagesRelations = {},
 }) => {
@@ -50,17 +51,24 @@ export const syncPackagesVersions = async ({
   const versionUpdates = [];
   const dependencyUpdates = [];
   if (outdatedPackageNames.length) {
-    outdatedPackageNames.forEach((outdatedPackageName) => {
-      const workspacePackage = workspacePackages[outdatedPackageName];
-      workspacePackage.packageObject.version =
-        registryLatestVersions[outdatedPackageName];
-      workspacePackage.updateFile(workspacePackage.packageObject);
-    });
-    console.warn(
-      `${UNICODE.WARNING} ${outdatedPackageNames.length} packages modified because they where outdated.
+    if (!dryRun) {
+      outdatedPackageNames.forEach((outdatedPackageName) => {
+        const workspacePackage = workspacePackages[outdatedPackageName];
+        workspacePackage.packageObject.version =
+          registryLatestVersions[outdatedPackageName];
+        workspacePackage.updateFile(workspacePackage.packageObject);
+      });
+    }
+    if (logs) {
+      console.warn(
+        `${UNICODE.WARNING} ${outdatedPackageNames.length} packages ${
+          dryRun ? "are outdated" : "modified because they where outdated"
+        }.
 Use a tool like "git diff" to see the new versions and ensure this is what you want`,
-    );
+      );
+    }
     return {
+      outdatedPackageNames,
       versionUpdates,
       dependencyUpdates,
     };
@@ -196,23 +204,27 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
       }
     });
   }
-  if (toPublishPackageNames.length === 0) {
-    console.log(`${UNICODE.OK} packages are published on registry`);
-  } else {
-    console.log(
-      `${UNICODE.INFO} ${
-        toPublishPackageNames.length
-      } packages could be published
+  if (logs) {
+    if (toPublishPackageNames.length === 0) {
+      console.log(`${UNICODE.OK} packages are published on registry`);
+    } else {
+      console.log(
+        `${UNICODE.INFO} ${
+          toPublishPackageNames.length
+        } packages could be published
   - ${toPublishPackageNames.map(
     (name) => `${name}@${workspacePackages[name].packageObject.version}`,
   ).join(`
   - `)}`,
-    );
+      );
+    }
   }
-  Object.keys(packageFilesToUpdate).forEach((packageName) => {
-    const workspacePackage = workspacePackages[packageName];
-    workspacePackage.updateFile(workspacePackage.packageObject);
-  });
+  if (!dryRun) {
+    Object.keys(packageFilesToUpdate).forEach((packageName) => {
+      const workspacePackage = workspacePackages[packageName];
+      workspacePackage.updateFile(workspacePackage.packageObject);
+    });
+  }
   const updateCount = versionUpdates.length + dependencyUpdates.length;
   if (logs) {
     if (updateCount === 0) {
@@ -228,6 +240,7 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
   }
 
   return {
+    outdatedPackageNames,
     versionUpdates,
     dependencyUpdates,
   };
