@@ -105,6 +105,7 @@
           />
           <TableOfContents />
           <BasicsDemo />
+          <InPickerDemo />
           <StatesDemo />
           <DimensionsDemo />
           <CustomizationDemo />
@@ -169,6 +170,52 @@
           </p>
           <DaySpin signal={daySignal} width="300px" />
         </div>
+      );
+
+      // ── Dans un picker ────────────────────────────────────────────────────
+
+      // Le spin dans le panneau d'un picker : le "date et heure" qui s'ouvre
+      // d'un coup. À l'ouverture le focus doit se poser sur le spin — ce que
+      // les flèches et les touches conduisent — et jamais sur le picker sans
+      // tête qui porte la valeur derrière les slides : celui-là est
+      // aria-hidden, hors de l'ordre de tabulation, et le viser affiche un
+      // anneau de focus sur le jour (et lève le clavier du téléphone).
+      const InPickerDemo = () => (
+        <div class="demo-section">
+          <Heading id="in-picker">Dans un picker</Heading>
+          <p class="desc">
+            À l'ouverture : aucun anneau de focus sur le jour. En mode dialog —
+            ce que le mobile utilise — c'est là que ça se voit.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="mode par défaut (popover)">
+              <DayAndTimePicker name="in_picker_popover" />
+            </Variant>
+            <Variant caption='mode="dialog" (ce que le mobile utilise)'>
+              <DayAndTimePicker name="in_picker_dialog" mode="dialog" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      const DayAndTimePicker = ({ name, ...rest }) => (
+        <Picker
+          type="form"
+          name={name}
+          placeholder="Date et heure…"
+          popupWidthFitContent
+          {...rest}
+        >
+          <Box flex="y" spacing="m" padding="m" alignX="stretch">
+            <DaySpin name={`${name}_day`} defaultValue={TODAY} width="300px" />
+            <Picker type="time" name={`${name}_time`} defaultValue="07:00" />
+            <Box flex alignX="end">
+              <Button command="--navi-define" variant="discrete">
+                Définir
+              </Button>
+            </Box>
+          </Box>
+        </Picker>
       );
 
       // ── Dimensions ────────────────────────────────────────────────────────

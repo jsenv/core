@@ -40,7 +40,9 @@ import {
    every preventDefault from then on is a "Unable to preventDefault inside
    passive event listener" intervention — on Android, a scroll that runs away
    with the object. Any explicit value other than `auto` is enough: `pan-y` still
-   lets the page scroll and still makes the refusal effective. */
+   lets the page scroll and still makes the refusal effective — provided the
+   listener that will refuse is already known too, which is markDragSource's
+   half of the same rule. */
 const css = /* css */ `
   [data-drag-handle],
   [data-drag-source] {
@@ -68,6 +70,49 @@ const css = /* css */ `
   }
 `;
 import.meta.css = css;
+
+/*
+ * A press that may become a drag has to be refusable before anyone knows it is
+ * one. WHETHER a touchmove can be refused at all is decided when the touch
+ * BEGINS, from the non-passive listeners the browser knows about at that
+ * moment — and on the long press path the gesture, which is what refuses it
+ * (see preventTouchScroll in drag_gesture.js), is only born once the wait is
+ * over. Put down from the pointerdown it is already too late: every touchmove
+ * handed over is `cancelable: false`, the refusal does nothing, and the page
+ * scrolls away with the object still under the finger — until the touch is
+ * taken for a scroll and the pointer stream is cancelled, which is the drag
+ * dying mid-gesture, released where it stood.
+ *
+ * So it goes down with the element, next to the attribute the stylesheet above
+ * reads: same rule, same moment. It refuses nothing itself — a press that is
+ * still only a press must leave the scroll alone, which is exactly what the wait
+ * is there to tell apart. Being there is the whole of it.
+ *
+ * On the element and not on the window, so the rest of the page keeps its
+ * touches on the compositor's fast path.
+ */
+const keepTouchRefusable = () => {
+  // Being registered IS the whole of it — see above.
+};
+
+/**
+ * Says an element is something a drag can start from.
+ *
+ * @param {Element} element
+ * @param {string} [axes]
+ *   Which way the SURROUNDINGS scroll, so the other axis is left to them until
+ *   the grab: `"x"` for a source inside something travelling sideways, anything
+ *   else for the usual vertical page.
+ * @returns {function} Takes the mark back off.
+ */
+export const markDragSource = (element, axes) => {
+  element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+  element.addEventListener("touchmove", keepTouchRefusable, { passive: false });
+  return () => {
+    element.removeAttribute("data-drag-source");
+    element.removeEventListener("touchmove", keepTouchRefusable);
+  };
+};
 
 /**
  * Waits for the user to mean it, then starts a drag gesture.
@@ -174,60 +219,26 @@ const dragAfterLongPress = (
   { longPressDelay, longPressSlop, onPressStart, onPressCancel, onPress },
 ) => {
   /*
-   * WHETHER a touchmove can be refused at all is decided when the touch BEGINS,
-   * from the non-passive listeners present at that moment — and on this path the
-   * gesture, which is what refuses it (see preventTouchScroll in
-   * drag_gesture.js), is only born once the wait is over. By then the browser has
-   * long made up its mind: every touchmove it hands over is already
-   * `cancelable: false`, the refusal does nothing, and the page scrolls away with
-   * the object still under the finger — until the touch is taken for a scroll and
-   * the pointer stream is cancelled, which is the drag dying mid-gesture.
-   *
-   * So the listener the decision looks for is put down with the FINGER, before
-   * anyone knows whether this press is a drag. It refuses nothing — a press that
-   * is still only a press must leave the scroll alone, which is exactly what the
-   * wait is there to tell apart. Its only job is to be there, so that the
-   * refusal made later is one the browser still listens to.
+   * Nothing is done here to keep the touch refusable: whether it can be refused
+   * at all was settled when the finger landed, from what the element already
+   * carried (see markDragSource). Scrolling is then taken away by the gesture
+   * itself, from the moment it starts (see preventTouchScroll in
+   * drag_gesture.js) — one place refuses the touchmove, for every way a drag can
+   * begin.
    */
-  const keepTouchRefusable = () => {
-    // Being registered IS the whole of it — see above.
-  };
-  const grabTarget = grabEvent.target;
-  window.addEventListener("touchmove", keepTouchRefusable, {
-    passive: false,
-    capture: true,
-  });
-  grabTarget.addEventListener("touchmove", keepTouchRefusable, {
-    passive: false,
-  });
-  const stopKeepingTouchRefusable = () => {
-    window.removeEventListener("touchmove", keepTouchRefusable, {
-      capture: true,
-    });
-    grabTarget.removeEventListener("touchmove", keepTouchRefusable);
-  };
-
   waitForPressHeld(grabEvent, {
     delay: longPressDelay,
     slop: longPressSlop,
     onPressStart,
-    onPressCancel: (pointerEvent) => {
-      stopKeepingTouchRefusable();
-      onPressCancel?.(pointerEvent);
-    },
+    onPressCancel,
     onPressHeld: (pressEvent, { endPress }) => {
       onPress?.(pressEvent);
-      // Scrolling is taken away by the gesture itself, from the moment it starts
-      // (see markAsStarted in drag_gesture.js) — one place refuses the touchmove,
-      // for every way a drag can begin.
       const dragGesture = startDragGesture(dragGestureInitializer);
       if (!dragGesture) {
-        stopKeepingTouchRefusable();
         endPress();
         return;
       }
       dragGesture.addReleaseCallback(() => {
-        stopKeepingTouchRefusable();
         endPress();
       });
     },

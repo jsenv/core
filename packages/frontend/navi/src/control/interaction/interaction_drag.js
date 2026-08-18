@@ -124,7 +124,7 @@
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import { startDragTo } from "@jsenv/dom";
+import { markDragSource, startDragTo } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
@@ -203,10 +203,11 @@ defineInteractionDetector({
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
     }
-    // What @jsenv/dom puts on a drag source: no iOS callout, and the touch left to
-    // the scroll until the press becomes a grab. Its value is the axis the
-    // SURROUNDINGS scroll on, which for a list is the axis the list runs on.
-    element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+    // What @jsenv/dom puts on a drag source: no iOS callout, the touch left to
+    // the scroll until the press becomes a grab, and the listener that lets the
+    // grab take it back. Its argument is the axis the SURROUNDINGS scroll on,
+    // which for a list is the axis the list runs on.
+    const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab" is a
     // moment, not an outcome, and the gesture must not read it as one.
@@ -283,7 +284,7 @@ defineInteractionDetector({
 
     return () => {
       element.removeAttribute(REORDERABLE_ATTRIBUTE);
-      element.removeAttribute("data-drag-source");
+      unmarkDragSource();
       element.removeEventListener("pointerdown", onPointerDown);
     };
   },

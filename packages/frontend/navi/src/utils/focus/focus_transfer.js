@@ -136,7 +136,19 @@ export const findFocusTarget = (containerEl) => {
   // Neither is dropped, both are simply tried later — step 3 below for the
   // first, and for the second the restore transferFocus does before ever
   // calling here.
-  const skip = (element) => isRestorableAutofocus(element);
+  //
+  // Skipped for good, unlike the two above: an element hidden from assistive
+  // technology is not a place the focus can land at all. Something aria-hidden
+  // and out of the tab order is a value holder standing behind what one
+  // actually uses — a spin's headless picker behind its slides, say — and
+  // landing there puts a ring on it, raises a phone's keyboard over the panel
+  // that just opened, and has the browser complain about a focused aria-hidden
+  // element. What one came to use is further down the same container.
+  const isHiddenFromAssistiveTech = (element) =>
+    Boolean(element.closest?.(`[aria-hidden="true"]`));
+
+  const skip = (element) =>
+    isRestorableAutofocus(element) || isHiddenFromAssistiveTech(element);
 
   // Every mark, not just the first: a mark is only worth stopping at if it
   // leads somewhere focusable. One inside a screen waiting its turn (an inert
