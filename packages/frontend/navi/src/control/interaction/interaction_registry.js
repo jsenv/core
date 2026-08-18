@@ -102,6 +102,11 @@ const detectors = [];
  *   The third argument carries `{ types, readConfig }`: the claimed names actually
  *   declared, and a number read off the element or any ancestor carrying that
  *   attribute (so a whole list is tuned in one place).
+ * @param {boolean} [definition.disputesPress] Whether this detector's interactions
+ *   are still deciding what a press IS while the finger/button is down — the press
+ *   belongs to the gesture until it resolves. Said here so that anything acting on
+ *   the press itself can step back and wait for the click instead (see
+ *   interactionsDisputeThePress).
  */
 export const defineInteractionDetector = (definition) => {
   detectors.push(definition);
@@ -159,6 +164,40 @@ export const resolveInteractions = (interactions) => {
     }
   }
   return resolved;
+};
+
+/**
+ * Whether the declared interactions are still deciding what the press is.
+ *
+ * A control that acts on `mousedown` — a picker opening its popup, a button
+ * whose action is asked for on the press — answers before anyone knows what the
+ * press will become. That is right when nothing else disputes it: the press has
+ * only one meaning, so reading it early is only reading it sooner. It is wrong
+ * the moment a gesture is declared on the same element: the finger going down is
+ * then the beginning of something that may be a drag, a swipe or a hold, and
+ * whoever answers on the spot both takes an answer the user never gave and
+ * prevents the gesture from ever forming.
+ *
+ * So this says "the press is disputed, do not read it yet" — and what such a
+ * control does then is wait for the `click`, which the browser only delivers if
+ * the press stayed a press (the gestures swallow the one they leave behind).
+ */
+export const interactionsDisputeThePress = (interactions) => {
+  if (!interactions) {
+    return false;
+  }
+  for (const type of Object.keys(interactions)) {
+    if (!interactions[type]) {
+      // Same as resolveInteractions: a falsy effect means "not this one".
+      continue;
+    }
+    for (const detector of detectors) {
+      if (detector.disputesPress && detector.claims(type)) {
+        return true;
+      }
+    }
+  }
+  return false;
 };
 
 /**

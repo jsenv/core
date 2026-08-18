@@ -171,6 +171,9 @@ import.meta.css = /* css */ `
 defineInteractionDetector({
   name: "press",
   claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
+  // A swipe and a hold are both "what this press turns out to be": until it
+  // turns out, the press is theirs.
+  disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     let axes = "";
     for (const type of types) {

@@ -11579,6 +11579,11 @@ const detectors = [];
  *   The third argument carries `{ types, readConfig }`: the claimed names actually
  *   declared, and a number read off the element or any ancestor carrying that
  *   attribute (so a whole list is tuned in one place).
+ * @param {boolean} [definition.disputesPress] Whether this detector's interactions
+ *   are still deciding what a press IS while the finger/button is down — the press
+ *   belongs to the gesture until it resolves. Said here so that anything acting on
+ *   the press itself can step back and wait for the click instead (see
+ *   interactionsDisputeThePress).
  */
 const defineInteractionDetector = (definition) => {
   detectors.push(definition);
@@ -11626,6 +11631,40 @@ const resolveInteractions = (interactions) => {
     return null;
   }
   return resolved;
+};
+
+/**
+ * Whether the declared interactions are still deciding what the press is.
+ *
+ * A control that acts on `mousedown` — a picker opening its popup, a button
+ * whose action is asked for on the press — answers before anyone knows what the
+ * press will become. That is right when nothing else disputes it: the press has
+ * only one meaning, so reading it early is only reading it sooner. It is wrong
+ * the moment a gesture is declared on the same element: the finger going down is
+ * then the beginning of something that may be a drag, a swipe or a hold, and
+ * whoever answers on the spot both takes an answer the user never gave and
+ * prevents the gesture from ever forming.
+ *
+ * So this says "the press is disputed, do not read it yet" — and what such a
+ * control does then is wait for the `click`, which the browser only delivers if
+ * the press stayed a press (the gestures swallow the one they leave behind).
+ */
+const interactionsDisputeThePress = (interactions) => {
+  if (!interactions) {
+    return false;
+  }
+  for (const type of Object.keys(interactions)) {
+    if (!interactions[type]) {
+      // Same as resolveInteractions: a falsy effect means "not this one".
+      continue;
+    }
+    for (const detector of detectors) {
+      if (detector.disputesPress && detector.claims(type)) {
+        return true;
+      }
+    }
+  }
+  return false;
 };
 
 /**
@@ -12054,6 +12093,9 @@ import.meta.css = [/* css */`
 defineInteractionDetector({
   name: "press",
   claims: type => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
+  // A swipe and a hold are both "what this press turns out to be": until it
+  // turns out, the press is theirs.
+  disputesPress: true,
   setup: (element, trigger, {
     types,
     readConfig
@@ -12483,6 +12525,9 @@ defineInteractionDetector({
     type === LAND ||
     type === TOSS ||
     type === GRAB,
+  // The press is the beginning of the gesture, not an answer: nothing may read
+  // it until it is known whether the hand is dragging or just pressing.
+  disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
@@ -24580,6 +24625,11 @@ const useControlProps = (props, {
       actionAfterChange = actionEvent === "change",
       actionDebounce
     } = props;
+    // Asking for the action on the press is only right while the press means
+    // one thing. A gesture declared on the same control (interactions={{ grab,
+    // land }}, a swipe, a hold) is still deciding what that press IS, so the
+    // control waits for the click instead — see interactionsDisputeThePress.
+    const actsOnMouseDown = actionOnMouseDown && !interactionsDisputeThePress(props.interactions);
     const transferFocusToTarget = pointerEvent => {
       const naviProxyTarget = findFocusDelegateTarget(pointerEvent.currentTarget) || findControlProxyTarget(pointerEvent.currentTarget);
       if (!naviProxyTarget) {
@@ -24703,7 +24753,7 @@ const useControlProps = (props, {
         return {
           keyDown: keyDownDefault,
           mouseDown: e => {
-            if (actionOnMouseDown) {
+            if (actsOnMouseDown) {
               return {
                 name: "mousedown",
                 allowed: () => onButtonInteractionAllowed(e)
@@ -24712,7 +24762,7 @@ const useControlProps = (props, {
             return null;
           },
           click: e => {
-            if (actionOnMouseDown) {
+            if (actsOnMouseDown) {
               return null;
             }
             return {
@@ -51750,6 +51800,16 @@ const PickerCustom = props => {
           };
         }
       });
+
+      // Opening on the press mimics the native select, and it is only right
+      // while nothing else disputes that press. A gesture declared on the same
+      // picker (interactions={{ land, grab }}) makes the finger going down the
+      // beginning of something that is not yet a choice — opening there would
+      // both answer for the user and take the press from the gesture, which
+      // could then never form. So the picker steps back and opens on the click,
+      // which the browser only delivers if the press stayed a press (a gesture
+      // swallows the click it leaves behind).
+      const pressIsDisputed = interactionsDisputeThePress(props.interactions);
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: e => {
@@ -51757,12 +51817,18 @@ const PickerCustom = props => {
               return null;
             }
             if (openController.opened) {
+              // Closing stays on the press even then: a gesture starting on an
+              // open picker wants the popup out of the way, and there is no
+              // choice being taken from anyone.
               return {
                 name: "mousedown to close picker",
                 allowed: () => requestClose(e, {
                   isCancel: true
                 })
               };
+            }
+            if (pressIsDisputed) {
+              return null;
             }
             return {
               name: "mousedown to open picker",
@@ -51779,6 +51845,8 @@ const PickerCustom = props => {
             }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            // And when a gesture disputes the press (see pressIsDisputed
+            // above), this is where the picker opens for real.
             return {
               name: e.detail === 0 ? "click (keyboard or progammatic) to open picker" : "click to open picker",
               prevented: () => {

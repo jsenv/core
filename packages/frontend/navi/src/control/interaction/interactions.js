@@ -19,6 +19,7 @@ import "./interaction_keyboard.js";
 
 export {
   defineInteractionDetector,
+  interactionsDisputeThePress,
   resolveInteractions,
   useInteractionsEffect,
 } from "./interaction_registry.js";

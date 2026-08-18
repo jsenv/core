@@ -14,6 +14,7 @@ import {
 } from "@jsenv/navi/src/layout/popup_mode.jsx";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { interactionsDisputeThePress } from "../interaction/interactions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
@@ -532,6 +533,16 @@ const PickerCustom = (props) => {
         },
       });
 
+      // Opening on the press mimics the native select, and it is only right
+      // while nothing else disputes that press. A gesture declared on the same
+      // picker (interactions={{ land, grab }}) makes the finger going down the
+      // beginning of something that is not yet a choice — opening there would
+      // both answer for the user and take the press from the gesture, which
+      // could then never form. So the picker steps back and opens on the click,
+      // which the browser only delivers if the press stayed a press (a gesture
+      // swallows the click it leaves behind).
+      const pressIsDisputed = interactionsDisputeThePress(props.interactions);
+
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {
@@ -539,10 +550,16 @@ const PickerCustom = (props) => {
               return null;
             }
             if (openController.opened) {
+              // Closing stays on the press even then: a gesture starting on an
+              // open picker wants the popup out of the way, and there is no
+              // choice being taken from anyone.
               return {
                 name: "mousedown to close picker",
                 allowed: () => requestClose(e, { isCancel: true }),
               };
+            }
+            if (pressIsDisputed) {
+              return null;
             }
             return {
               name: "mousedown to open picker",
@@ -562,6 +579,8 @@ const PickerCustom = (props) => {
             }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
+            // And when a gesture disputes the press (see pressIsDisputed
+            // above), this is where the picker opens for real.
             return {
               name:
                 e.detail === 0

@@ -64,6 +64,7 @@ import {
   RequiredContext,
 } from "./control_context.js";
 import { findControlHost } from "./control_dom.js";
+import { interactionsDisputeThePress } from "./interaction/interactions.js";
 import {
   publishControlStateToLabels,
   unpublishControlStateToLabels,
@@ -253,6 +254,12 @@ export const useControlProps = (
       actionAfterChange = actionEvent === "change",
       actionDebounce,
     } = props;
+    // Asking for the action on the press is only right while the press means
+    // one thing. A gesture declared on the same control (interactions={{ grab,
+    // land }}, a swipe, a hold) is still deciding what that press IS, so the
+    // control waits for the click instead — see interactionsDisputeThePress.
+    const actsOnMouseDown =
+      actionOnMouseDown && !interactionsDisputeThePress(props.interactions);
 
     const transferFocusToTarget = (pointerEvent) => {
       const naviProxyTarget =
@@ -381,7 +388,7 @@ export const useControlProps = (
         return {
           keyDown: keyDownDefault,
           mouseDown: (e) => {
-            if (actionOnMouseDown) {
+            if (actsOnMouseDown) {
               return {
                 name: "mousedown",
                 allowed: () => onButtonInteractionAllowed(e),
@@ -390,7 +397,7 @@ export const useControlProps = (
             return null;
           },
           click: (e) => {
-            if (actionOnMouseDown) {
+            if (actsOnMouseDown) {
               return null;
             }
             return {

@@ -161,6 +161,9 @@ defineInteractionDetector({
     type === LAND ||
     type === TOSS ||
     type === GRAB,
+  // The press is the beginning of the gesture, not an answer: nothing may read
+  // it until it is known whether the hand is dragging or just pressing.
+  disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
