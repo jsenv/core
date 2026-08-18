@@ -323,7 +323,7 @@
       .padel {
         position: relative;
         width: 320px;
-        height: 400px;
+        height: 320px;
         background: #2f6f52;
         border: 3px solid #cfd8e3;
         border-radius: 6px;
@@ -350,13 +350,15 @@
         background: rgba(255, 255, 255, 0.55);
         pointer-events: none;
       }
-      /* The net crosses the court and the two side walls with it. */
+      /* Short of both side walls: a border that stops before the edge separates
+         the two halves without cutting them apart. */
       .padel_line_net {
         top: calc(50% - 3px);
-        left: -3px;
-        width: calc(100% + 6px);
+        left: 12%;
+        width: 76%;
         height: 6px;
         background: #f0f3f7;
+        border-radius: 3px;
       }
       .padel_zone {
         position: absolute;
@@ -415,8 +417,10 @@
         border-radius: 50%;
       }
       /* The copy is carried in a box of its own, where a place on the court means
-         nothing: it fills that box instead. */
-      [navi-drag-clone].padel_piece {
+         nothing: it fills that box instead. Said of what is INSIDE the carrier
+         rather than of the copy itself, because the copy loses its own mark as it
+         lands — and it has to keep its size all the way down. */
+      [navi-drag-clone-wrapper] .padel_piece {
         position: static;
         width: 100%;
         height: 100%;
