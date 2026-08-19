@@ -54,9 +54,11 @@ const debug = (args) => {
  * - GET_MANY / POST_MANY / … → an array of item objects
  * - GET_RANGE                 → `{ items, start, count }`, one slice of the collection
  *
- * `GET_RANGE` is a reader rather than an action: it keeps no value and takes no place in
- * the rerun graph, so a `<List.Items>` can feed on it slice by slice
- * (`itemsAction={USER.GET_RANGE.bindParams({ team })}`).
+ * `GET_RANGE` is a reader rather than an action: it keeps no value and has nothing to
+ * rerun, so a `<List.Items>` can feed on it slice by slice
+ * (`itemsAction={USER.GET_RANGE.bindParams({ team })}`). A mutation listed in
+ * `rerunOn.GET_RANGE` (`["POST", "DELETE"]` by default) tells it the collection moved,
+ * and whoever holds slices reads them again.
  *
  * A sub-resource of the backend (`/games/:id/candidates`) must be modelled with a
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
@@ -1242,12 +1244,17 @@ ${originalActionName} source location: ${locationInfo}`,
       continue;
     }
     if (restCallbackKey === "GET_RANGE") {
-      // A range is read, never kept: no action, no place in the rerun graph
+      // A range is read, never kept: no action, nothing to rerun — only a
+      // signal saying the slices anyone holds are out of date
       // (see resource_range_reader.js).
       stateFacade.GET_RANGE = createRangeReader(
         `${name}.GET_RANGE`,
         restCallback,
         { store, params },
+      );
+      resourceLifecycleManager.registerRangeReader(
+        stateFacade,
+        stateFacade.GET_RANGE,
       );
       continue;
     }

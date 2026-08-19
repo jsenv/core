@@ -69,8 +69,10 @@ consistency across the app, not from any single call site.
   `docs/resource_with_params.md`, `docs/resource_dependencies.md`.
 - `docs/list_refresh.md` — what a write sends back to the network and what stays
   on screen meanwhile: stale data returned by `useAsyncData({ loading: true })`,
-  what updates from a response without any request, `rerunOn` and its defaults.
-  Read it before adding verbs to `rerunOn` or hiding a list on `loading`.
+  what updates from a response without any request, `rerunOn` and its defaults,
+  and how a paginated `<List.Items>` re-reads its slices without disappearing.
+  Read it before adding verbs to `rerunOn`, hiding a list on `loading`, or
+  remounting a list with a `key` to refresh it.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).

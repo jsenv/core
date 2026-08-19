@@ -16,14 +16,22 @@
  *
  * The reader is a function, so a list feeds on it the way it feeds on any other
  * source: `itemsAction={GAME.GET_RANGE.bindParams({ radar })}`.
+ *
+ * Keeping nothing does not mean hearing nothing: a mutation that decides who
+ * belongs to the collection (a POST, a DELETE, whatever `rerunOn.GET_RANGE`
+ * says) bumps `invalidationSignal`, and whoever reads slices through it goes
+ * and asks again — the counterpart, for a reader, of what a rerun is for an
+ * action. Every reader made by `bindParams` shares the signal of the one it
+ * comes from: the params say which slices are read, not which collection.
  */
 
+import { signal } from "@preact/signals";
 import { isSignal } from "../../utils/is_signal.js";
 
 export const createRangeReader = (
   actionName,
   callback,
-  { store, params: boundParams },
+  { store, params: boundParams, invalidationSignal = signal(0) },
 ) => {
   const readRange = async (range = {}) => {
     const { signal, ...rangeParams } = range;
@@ -52,10 +60,17 @@ export const createRangeReader = (
   };
   Object.defineProperty(readRange, "name", { value: actionName });
   readRange.isRangeReader = true;
+  // Bumped when the collection this reads has moved: the slices anyone holds
+  // stand for a composition that is gone.
+  readRange.invalidationSignal = invalidationSignal;
+  readRange.invalidate = () => {
+    invalidationSignal.value = invalidationSignal.peek() + 1;
+  };
   readRange.bindParams = (paramsToBind) => {
     return createRangeReader(actionName, callback, {
       store,
       params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
+      invalidationSignal,
     });
   };
   return readRange;

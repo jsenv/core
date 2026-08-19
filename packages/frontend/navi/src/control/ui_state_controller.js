@@ -970,9 +970,9 @@ export const useUIGroupStateController = (
   const delegatedChildrenRef = useRef(new Map());
 
   const groupIsRenderingRef = useRef(false);
-  const pendingChangeRef = useRef(false);
+  const pendingChangeRef = useRef(null);
   groupIsRenderingRef.current = true;
-  pendingChangeRef.current = false;
+  pendingChangeRef.current = null;
 
   const isMonitoringChild = (childUIStateController) => {
     if (childUIStateController.isProxy) return false;
@@ -1004,7 +1004,18 @@ export const useUIGroupStateController = (
       // signals/pubsub without needing external refs.
       const onChange = (e, { notifyExternal }) => {
         if (groupIsRenderingRef.current) {
-          pendingChangeRef.current = true;
+          // Held until the layout effect below, WITH what it asked for: a child
+          // whose bound signal was written from the outside changes during the
+          // render that follows, and replaying that as a mount sync is what
+          // makes a group silently drift — its own state comes up to date while
+          // the form around it is never told anything moved. A real change
+          // deferred alongside a mount sync stays a real change.
+          const pendingChange = pendingChangeRef.current;
+          pendingChangeRef.current = {
+            e,
+            notifyExternal:
+              pendingChange?.notifyExternal === true ? true : notifyExternal,
+          };
           return;
         }
         const aggChildState = resolvedAggregateChildStates(
@@ -1468,12 +1479,16 @@ export const useUIGroupStateController = (
 
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
-    if (pendingChangeRef.current) {
-      pendingChangeRef.current = false;
-      scope._onChange(
-        new CustomEvent(`${controlType}_batched_ui_state_update`),
-        { notifyExternal: "silent" },
+    const pendingChange = pendingChangeRef.current;
+    if (pendingChange) {
+      pendingChangeRef.current = null;
+      const batchedEvent = new CustomEvent(
+        `${controlType}_batched_ui_state_update`,
       );
+      chainEvent(batchedEvent, pendingChange.e);
+      scope._onChange(batchedEvent, {
+        notifyExternal: pendingChange.notifyExternal,
+      });
     }
   });
 

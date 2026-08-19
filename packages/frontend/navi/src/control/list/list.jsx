@@ -995,6 +995,7 @@ const ListUI = (props) => {
       expand={expand}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       navi-loading={loading ? "" : undefined}
+      navi-refreshing={virtual.refreshingSignal.value ? "" : undefined}
       navi-error={error ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
@@ -3432,6 +3433,10 @@ const createListVirtual = () => {
   // registers, nothing is drawn), and yet they are what it may have been
   // waiting for — the row it was told to open on, for one.
   const pagesSignal = signal(0);
+  // How many runs are re-reading rows they already show. The list wears it as
+  // an attribute: what is drawn is from before, and the app may want to say so
+  // without taking anything away.
+  const refreshingSignal = signal(0);
   const placeByOwner = new Map();
   const locatorByOwner = new Map();
   let passId = 0;
@@ -3440,6 +3445,7 @@ const createListVirtual = () => {
   const virtual = {
     totalSignal,
     pagesSignal,
+    refreshingSignal,
     // What a run needs to know about the list it lives in: how many rows the
     // list is willing to draw at once, which end it opens on, and how much
     // room one row is given — a row whose content has not arrived must take
@@ -3538,7 +3544,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * inside `<List.Group>`s; each takes its place in declaration order.
  *
  * @type {import("preact").FunctionComponent<{
- *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
+ *   renderItem: (item: any, index: number, state: {refreshing: boolean}) => import("preact").ComponentChildren,
  *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
@@ -3548,6 +3554,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("preact").ComponentChildren,
  * }>}
+ * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
+ *   What one row is, given the item and where it sits. `state.refreshing` says
+ *   the rows drawn are the ones from before while the run reads the collection
+ *   again — the list carries `navi-refreshing` for the same reason.
  * @param {(item: any, index: number) => any} [props.groupBy]
  *   What tells rows that belong together apart from the others — the day of a
  *   message, the month of a game. Consecutive rows sharing it are wrapped in a
@@ -3777,6 +3787,7 @@ export const ListItems = ({
       />,
     );
   }
+  const renderItemState = { refreshing: store.refreshing };
   let rowIndex = windowFrom;
   while (rowIndex < windowTo) {
     if (rowIndex >= failureFrom && rowIndex <= failureTo) {
@@ -3812,7 +3823,7 @@ export const ListItems = ({
         : idOf(item, rowIndex);
     let rowVnode;
     if (item !== undefined) {
-      rowVnode = renderItem(item, rowIndex);
+      rowVnode = renderItem(item, rowIndex, renderItemState);
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -3910,6 +3921,23 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
+  // The rows held are out of date and the run has not asked for the new ones
+  // yet. They stay on screen until the answer comes: what is drawn is from
+  // before, which is not the same thing as nothing to draw.
+  const staleRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+  // A source that says when what it reads has moved (a resource range reader
+  // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
+  // to the collection is exactly what a run cannot deduce from the rows it
+  // holds. A source that says nothing is read once and stays as it is.
+  const invalidationSignal =
+    typeof itemsAction === "function" ? itemsAction.invalidationSignal : null;
+  const invalidation = invalidationSignal ? invalidationSignal.value : 0;
+  const invalidationRef = useRef(invalidation);
+  if (invalidationRef.current !== invalidation) {
+    invalidationRef.current = invalidation;
+    staleRef.current = true;
+  }
   // The one request in flight, with the means to call it off: a page asked for
   // a window the list has left is work the server and the browser are doing for
   // nothing.
@@ -3920,6 +3948,7 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
     held: -1,
     controller: null,
     generation: 0,
+    revalidating: false,
   });
   // The rows asked for that never came. Kept as a range so the list can say
   // where the hole is, and cleared by a retry — which is what makes the same
@@ -3931,10 +3960,25 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
   // It stands for a windowful of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
   const rowCount = pages.count ?? count ?? virtual.renderBudget;
+  // A run that never received anything has nothing to keep on screen: asking
+  // again is its first ask, not a refresh.
+  if (staleRef.current && pages.count === undefined) {
+    staleRef.current = false;
+  }
+  useLayoutEffect(() => {
+    if (!refreshing) {
+      return null;
+    }
+    virtual.refreshingSignal.value = virtual.refreshingSignal.peek() + 1;
+    return () => {
+      virtual.refreshingSignal.value = virtual.refreshingSignal.peek() - 1;
+    };
+  }, [refreshing]);
 
   const store = {
     rowCount,
     failure,
+    refreshing,
     // JS memory is cheap next to the DOM, but a long enough scroll accumulates
     // everything it ever went through. Rows far from what is on screen are
     // dropped and simply asked for again if the user goes back — the same
@@ -3982,7 +4026,25 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
       let start = missingStart;
       let end = missingEnd;
       let around;
-      if (pages.count === undefined) {
+      // Rows that are all there but out of date: the ask is the window itself,
+      // anchored on the row at its top — a source paginating by cursor gets a
+      // row to count from, and the reading position is what must survive.
+      const revalidating = staleRef.current;
+      if (revalidating) {
+        start = windowFrom;
+        end = windowTo - 1;
+        if (end < start) {
+          // Nothing of this run is on screen (the window frames another one, or
+          // the list is scrolled past it): its own first rows are what it will
+          // draw next.
+          start = 0;
+          end = budget - 1;
+        }
+        const firstHeld = pages.byIndex.get(windowFrom);
+        if (firstHeld && firstHeld.id !== undefined) {
+          around = firstHeld.id;
+        }
+      } else if (pages.count === undefined) {
         const scrolled = virtual.scrolled;
         if (scrolled === "end") {
           // Counting back from the end, the way an HTTP range does: a list
@@ -4019,6 +4081,14 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           return;
         }
         const request = requestRef.current;
+        if (revalidating && request.busy) {
+          if (request.revalidating) {
+            return;
+          }
+          // A page for a window that is about to be replaced wholesale.
+          request.controller?.abort();
+          request.busy = false;
+        }
         if (request.busy) {
           // Still worth waiting for as long as what it went to fetch is still
           // what the list would draw. Once it is not, it is called off — and
@@ -4039,8 +4109,10 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
         }
         const held = pages.byIndex.size;
         // Asking again for a range that was already asked for, having received
-        // nothing since, can only produce the same answer.
+        // nothing since, can only produce the same answer. A revalidation is
+        // exactly the case where it produces another one.
         if (
+          !revalidating &&
           request.start === start &&
           request.end === end &&
           request.held === held
@@ -4059,17 +4131,33 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           end,
           around,
           limit: end - start + 1,
-          before: cursor.before,
-          after: cursor.after,
+          // A cursor names a row of the collection as it was; a revalidation
+          // is asked precisely because that is what changed.
+          before: revalidating ? undefined : cursor.before,
+          after: revalidating ? undefined : cursor.after,
           count: pages.count,
           signal: controller.signal,
         };
         request.busy = true;
+        request.revalidating = revalidating;
+        if (revalidating) {
+          setRefreshing(true);
+        }
         const done = (page) => {
           const current = generation === request.generation;
           if (current) {
             request.busy = false;
+            request.revalidating = false;
             setFailure(null);
+            if (revalidating) {
+              staleRef.current = false;
+              setRefreshing(false);
+            }
+          }
+          if (revalidating && !current) {
+            // Rows of a composition already superseded by a newer ask: keeping
+            // them would mix two states of the collection.
+            return;
           }
           if (!page) {
             return;
@@ -4082,6 +4170,12 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           // Before the rows land: what is on screen has to stay where it is,
           // and the DOM still shows the state to hold onto.
           virtual.captureAnchor();
+          if (revalidating) {
+            // The rows held stood for a composition that has moved on; the
+            // ones outside the window are forgotten and asked for again if the
+            // user goes back to them.
+            pages.byIndex = new Map();
+          }
           let i = 0;
           while (i < pageItems.length) {
             pages.byIndex.set(pageStart + i, pageItems[i]);
@@ -4097,6 +4191,14 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
             return;
           }
           request.busy = false;
+          request.revalidating = false;
+          if (revalidating) {
+            // The rows from before stay: a revalidation that failed has
+            // nothing better to put in their place.
+            staleRef.current = false;
+            setRefreshing(false);
+            return;
+          }
           setFailure({ start, end, error });
         };
         let result;

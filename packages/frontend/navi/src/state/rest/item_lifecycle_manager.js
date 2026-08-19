@@ -21,6 +21,12 @@ const defaultRerunOn = {
   GET: false,
   GET_MANY: ["POST"],
 };
+// What makes a range reader stale (rerunOn.GET_RANGE overrides it). DELETE is
+// in there, unlike for GET_MANY: an action holds ids and the store drops the
+// deleted one out of every list holding it, while a list reading by slices
+// holds places — the row that left takes the ones after it one rank up, and
+// only the collection knows who fills the last one.
+const defaultInvalidateRangeOn = ["POST", "DELETE"];
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 export const createResourceLifecycleManager = () => {
@@ -41,6 +47,7 @@ export const createResourceLifecycleManager = () => {
       paramScope,
       uniqueKeys,
       restActionSet: new Set(),
+      rangeReaderSet: new Set(),
     });
 
     // Register dependencies
@@ -51,6 +58,14 @@ export const createResourceLifecycleManager = () => {
         }
         resourceDependencies.get(dependency).add(resourceScope);
       }
+    }
+  };
+  // Only the reader the resource exposes is registered; the ones `bindParams`
+  // makes share its signal (see resource_range_reader.js).
+  const registerRangeReader = (resourceScope, rangeReader) => {
+    const config = registeredResources.get(resourceScope);
+    if (config) {
+      config.rangeReaderSet.add(rangeReader);
     }
   };
   const registerAction = (resourceScope, restAction) => {
@@ -283,7 +298,39 @@ export const createResourceLifecycleManager = () => {
     };
   };
 
+  // Which readers hold slices of a collection the mutation just changed: the
+  // one of the resource itself, and the ones of the resources that said they
+  // depend on it.
+  const invalidateRangeReaders = (
+    triggeringAction,
+    triggeringActionContext,
+  ) => {
+    const triggerVerb = triggeringAction.meta.verb;
+    const triggerResourceScope = triggeringActionContext.resourceScope;
+    for (const [resourceScope, config] of registeredResources) {
+      if (config.rangeReaderSet.size === 0) {
+        continue;
+      }
+      const isSameResource = resourceScope === triggerResourceScope;
+      const isDependent = Boolean(
+        triggerResourceScope &&
+        resourceDependencies.get(triggerResourceScope)?.has(resourceScope),
+      );
+      if (!isSameResource && !isDependent) {
+        continue;
+      }
+      const invalidateOn = config.rerunOn.GET_RANGE ?? defaultInvalidateRangeOn;
+      if (!shouldRerunAfter(invalidateOn, triggerVerb)) {
+        continue;
+      }
+      for (const rangeReader of config.rangeReaderSet) {
+        rangeReader.invalidate();
+      }
+    }
+  };
+
   const onActionComplete = (restActionWhoJustCompleted, restActionContext) => {
+    invalidateRangeReaders(restActionWhoJustCompleted, restActionContext);
     const { actionsToRerun, actionsToReset, reasons } = findEffectOnActions(
       restActionWhoJustCompleted,
       restActionContext,
@@ -302,6 +349,7 @@ export const createResourceLifecycleManager = () => {
   return {
     registerResource,
     registerAction,
+    registerRangeReader,
     onActionComplete,
     // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
     // Used by scopedMany to make the parent GET rerun when a child mutation completes.

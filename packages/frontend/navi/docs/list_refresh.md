@@ -67,9 +67,56 @@ way back is a re-read.
 `DELETE` is symmetric: returning the id drops the item from the store, and every
 list containing it drops it too.
 
+## A paginated list stays on screen too
+
+A `<List.Items>` reading through `GET_RANGE` holds the slices it received —
+places in a collection, not a list of ids — so nothing the store does can fix
+them: a row that changed tab, or one that was deleted, moves every row after it
+one rank up, and only the collection knows who fills the last place.
+
+It is told, and it re-reads by itself:
+
+```jsx
+<List.Items
+  count={count}
+  itemsAction={NOTIFICATION.GET_RANGE.bindParams({ scope })}
+  renderItem={(item, index, { refreshing }) => …}
+/>
+```
+
+The reader keeps no value, so there is nothing to rerun; what it has is a
+signal, bumped by the verbs `rerunOn.GET_RANGE` lists (`["POST", "DELETE"]` by
+default — `DELETE` is in there precisely because the store cannot fix places).
+A run hearing it asks again **for the window it is drawing**, and keeps drawing
+it meanwhile:
+
+| Moment                          | what the run draws   | state        |
+| ------------------------------- | -------------------- | ------------ |
+| nothing received yet            | skeletons            | loading      |
+| re-reading after a first answer | the rows from before | `refreshing` |
+| answer received                 | the new rows         | —            |
+
+The rows, the scroll position and the row being read all stay; the slices
+outside the window are forgotten only once the answer is in, and asked for
+again if the user goes back to them. A re-read that fails leaves the rows from
+before on screen. While it is in flight, the list carries `navi-refreshing` and
+`renderItem` gets `{ refreshing }` — read it as "what you see is from before",
+never as "there is nothing to see".
+
+An app that knows a row is on its way out (it is the one deleting it) says so
+itself: it is the one rendering the row, so it draws it loading, muted, or not
+at all. The run is not told about rows, only about the collection.
+
+```jsx
+// ✗ remounting the run to refresh it: every row on screen becomes a skeleton
+//   again, and the list reopens where it opens, not where it was being read
+<List.Items key={`${scope}:${moved}`} … />
+```
+
 ## `rerunOn`, verb by verb
 
-`rerunOn` says which verbs invalidate this resource's `GET` / `GET_MANY`:
+`rerunOn` says which verbs invalidate this resource's `GET` / `GET_MANY` /
+`GET_RANGE`:
 
 ```js
 const GAME_RADAR = resource("game_radar", {
@@ -78,12 +125,13 @@ const GAME_RADAR = resource("game_radar", {
 });
 ```
 
-Defaults are `{ GET: false, GET_MANY: ["POST"] }`:
+Defaults are `{ GET: false, GET_MANY: ["POST"], GET_RANGE: ["POST", "DELETE"] }`:
 
-| Default              | Why                                                                                                                                                                                                                                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET: false`         | `PUT`/`PATCH` already update the UI through the store; `DELETE` resets the `GET` rather than re-running it, so a deleted item shows nothing instead of a spinner then a 404. Give the deleted case its own UI (an "item not found" panel, a redirect) instead of `GET: ["DELETE"]`. |
-| `GET_MANY: ["POST"]` | Whether a new item belongs in this list depends on filters, pagination, sort — the backend knows, the client does not. `DELETE` is excluded because the store already removes the item from every list.                                                                             |
+| Default                         | Why                                                                                                                                                                                                                                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET: false`                    | `PUT`/`PATCH` already update the UI through the store; `DELETE` resets the `GET` rather than re-running it, so a deleted item shows nothing instead of a spinner then a 404. Give the deleted case its own UI (an "item not found" panel, a redirect) instead of `GET: ["DELETE"]`. |
+| `GET_MANY: ["POST"]`            | Whether a new item belongs in this list depends on filters, pagination, sort — the backend knows, the client does not. `DELETE` is excluded because the store already removes the item from every list.                                                                             |
+| `GET_RANGE: ["POST", "DELETE"]` | A slice is a range of places: a row leaving the collection shifts every place after it, which the store cannot do. Add the verb that moves an item in or out of the collection — a `PATCH` that archives, one that changes an item's tab.                                           |
 
 Adding `PUT`/`PATCH` to `GET_MANY` is the usual over-correction: it costs a
 request and a `loading` pass to obtain something the response already contained.
@@ -92,12 +140,13 @@ updated item — not client-side refreshing.
 
 ## Decision table
 
-| What changed              | Re-read the list?                                    |
-| ------------------------- | ---------------------------------------------------- |
-| a field of one item       | no — the write's response is enough                  |
-| membership of the list    | yes (`POST`) — the backend decides who belongs       |
-| the ORDER of the list     | yes — the store stores, it does not sort (see below) |
-| nothing came back (`204`) | yes — there is nothing to put in the store           |
+| What changed                | Re-read the list?                                    |
+| --------------------------- | ---------------------------------------------------- |
+| a field of one item         | no — the write's response is enough                  |
+| membership of the list      | yes (`POST`) — the backend decides who belongs       |
+| the ORDER of the list       | yes — the store stores, it does not sort (see below) |
+| nothing came back (`204`)   | yes — there is nothing to put in the store           |
+| a place in a paginated list | yes — a `GET_RANGE` reads places, and places shift   |
 
 ## The store stores, it does not sort
 
