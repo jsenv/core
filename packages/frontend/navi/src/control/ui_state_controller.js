@@ -1484,6 +1484,7 @@ export const useUIGroupStateController = (
       pendingChangeRef.current = null;
       const batchedEvent = new CustomEvent(
         `${controlType}_batched_ui_state_update`,
+        { detail: {} },
       );
       chainEvent(batchedEvent, pendingChange.e);
       scope._onChange(batchedEvent, {
