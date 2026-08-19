@@ -120,6 +120,41 @@ Note that scoping to an ancestor is not enough: `.my-sidebar { --link-color-pres
 
 When a component default deserves to be themed globally, promote it: declare a `--navi-<component>-<thing>` in [navi_css_vars.js](../src/navi_css_vars.js) and make the component default read `var(--navi-…)`.
 
+#### An app narrower than the screen
+
+An app that never spans the whole window — a phone-shaped column centered in a
+wide one, bands on the sides — has one problem with popups: a dialog lives in
+the browser's top layer, so it is calibrated on the _viewport_, and would paint
+1500px of modal over a 600px app. The top bar and the bottom nav have the same
+problem and solve it by repeating the app width by hand; popups must not need
+that, because the app would then have to know which components exist.
+
+So the app states its own screen once, and never names a component:
+
+```css
+:root {
+  --navi-app-max-width: 600px;
+  /* --navi-app-max-height too, for an app that also caps its height */
+}
+```
+
+Every popup follows: `Dialog`, `Popover`, and everything built on them
+(`Picker`, `Select`, `SidePanel`…). It is a ceiling and nothing more — on a
+screen narrower than the app it never binds, and each popup still subtracts its
+own `marginWithContainer` from it, so the gap with the edges is kept either way.
+
+Do **not** try to get this by setting `--dialog-max-width` on `.navi_dialog`
+from the app. Two reasons:
+
+- it is a `--component-*` token, declared on the element (see the table above),
+  so components that write it themselves outrank an app rule of lower
+  specificity — `.navi_picker[aria-haspopup="dialog"] .navi_dialog` does exactly
+  that, and the app's cap silently disappears for every picker;
+- it is the knob a single popup uses to ask for a specific size, not a ceiling.
+  `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
+  that knob, so a popup that genuinely needs its own `maxWidth` can still say so
+  without any of them escaping the app's screen.
+
 ### 3. Direct rule override (avoid unless necessary)
 
 Overriding the actual CSS rules (not the variables) is intentionally hard — that is by design. If you find yourself needing to do this, it usually means a CSS variable should be exposed for that property. Open an issue or add the variable yourself and contribute it back.
@@ -133,4 +168,5 @@ Overriding the actual CSS rules (not the variables) is intentionally hard — th
 | One component instance       | Component prop or `style` attribute                                        |
 | All instances of a component | `--component-*` in unlayered app CSS, on a selector matching the component |
 | A global design token        | `--navi-*` on `:root`                                                      |
+| How wide popups may ever get | `--navi-app-max-width` on `:root`                                          |
 | A structural layout rule     | Expose a new CSS variable (contribute)                                     |

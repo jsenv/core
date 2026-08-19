@@ -1162,6 +1162,27 @@
         </div>
       );
 
+      // Content that wants more width than a narrow viewport can give, so the
+      // dialog has to be the one saying no.
+      const WidePickerContent = () => (
+        <div style={{ padding: "16px" }}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <p
+              key={i}
+              style={{
+                margin: "0 0 10px",
+                fontSize: "14px",
+                color: "#444",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Row {i + 1} — a single line long enough that it will not wrap on a
+              phone-sized viewport.
+            </p>
+          ))}
+        </div>
+      );
+
       const PopoverSizingDemo = () => (
         <Subsection id="popup-sizing-popover" title="Popover">
           <p>
@@ -1194,8 +1215,44 @@
         </Subsection>
       );
 
+      // An app narrower than the screen (a phone-shaped column in a wide
+      // window) tells navi so with --navi-app-max-width — a ceiling on every
+      // popup, set once on :root, naming no component. Toggled live here so
+      // the dialogs below can be seen answering to it.
+      const APP_MAX_WIDTH = "600px";
+      const AppMaxWidthToggle = () => {
+        const [capped, setCapped] = useState(false);
+        useEffect(() => {
+          const { style } = document.documentElement;
+          if (capped) {
+            style.setProperty("--navi-app-max-width", APP_MAX_WIDTH);
+          } else {
+            style.removeProperty("--navi-app-max-width");
+          }
+          return () => style.removeProperty("--navi-app-max-width");
+        }, [capped]);
+        return (
+          <Box flex="x" spacing="s" alignY="center">
+            <Button action={() => setCapped(!capped)}>
+              {capped ? "Remove" : "Set"} <code>--navi-app-max-width</code>
+            </Button>
+            <code style={{ fontSize: "12px", color: "#666" }}>
+              {capped ? APP_MAX_WIDTH : "unset (the viewport)"}
+            </code>
+          </Box>
+        );
+      };
+
       const DialogSizingDemo = () => (
         <Subsection id="popup-sizing-dialog" title="Dialog">
+          <p>
+            An expanded dialog grows up to <code>dialogMaxWidth</code>/
+            <code>dialogMaxHeight</code>, themselves capped by the container
+            minus <code>marginWithContainer</code> — so a bit of the viewport
+            stays visible around it. Open the last three in a touch emulation
+            (narrow viewport) to check that gap is still kept.
+          </p>
+          <AppMaxWidthToggle />
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>Default — sizes to content</Label>
@@ -1209,6 +1266,40 @@
               </Label>
               <Picker placeholder="Open me…" mode="dialog" dialogExpandY>
                 <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>dialogExpand</code> — fills both axes
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog" dialogExpand>
+                <TallPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>dialogExpand</code> + wide content
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog" dialogExpand>
+                <WidePickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>dialogExpand</code> +{" "}
+                <code>
+                  dialogMaxWidth={"{"}400{"}"}
+                </code>{" "}
+                <code>marginWithContainer="l"</code>
+              </Label>
+              <Picker
+                placeholder="Open me…"
+                mode="dialog"
+                dialogExpand
+                dialogMaxWidth={400}
+                marginWithContainer="l"
+              >
+                <WidePickerContent />
               </Picker>
             </Field>
           </Box>

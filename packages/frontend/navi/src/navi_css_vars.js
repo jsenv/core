@@ -24,6 +24,35 @@ const css = /* css */ `
       --navi-vvw: 100dvw;
       --navi-vvh: 100dvh;
 
+      /* What navi treats as "the screen" when it sizes something that escapes
+         normal flow (a dialog in the top layer, a popover, anything built on
+         them). The visual viewport by default — but an app that never spans
+         the whole window says so here, ONCE, without ever naming a component:
+
+           :root {
+             --navi-app-max-width: 600px;
+           }
+
+         Typically an app simulating a handheld screen: a column centered in a
+         wide window with bands on the sides. A dialog is in the top layer, so
+         it answers to the viewport, not to that column — left alone it would
+         paint 1500px of modal over a 600px app. Declaring the ceiling here is
+         what makes the app's own width apply everywhere, including on top.
+
+         It stays a ceiling and nothing else: on a screen narrower than the app
+         it never binds, so popups keep shrinking with the phone, and the gap
+         each popup keeps with the edges (marginWithContainer) is subtracted
+         from it as before. A single popup that genuinely needs more can still
+         raise its own maxWidth/maxHeight prop. */
+      --navi-app-width: min(
+        var(--navi-vvw),
+        var(--navi-app-max-width, var(--navi-vvw))
+      );
+      --navi-app-height: min(
+        var(--navi-vvh),
+        var(--navi-app-max-height, var(--navi-vvh))
+      );
+
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);

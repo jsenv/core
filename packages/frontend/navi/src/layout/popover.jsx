@@ -97,8 +97,10 @@ const css = /* css */ `
          rather than a value so an outer component can bridge its own prop into
          --popover-max-height without having to restate 300px (see picker). */
       --popover-max-height-default: 300px;
-      --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
-      --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+      /* --navi-app-*, not --navi-vvw/vvh: the app's own screen, which is the
+         viewport unless the app declared a narrower one (navi_css_vars.js). */
+      --popover-maxmax-height: calc(0.95 * var(--navi-app-height));
+      --popover-maxmax-width: calc(0.95 * var(--navi-app-width));
 
       --popover-box-shadow: var(--navi-popup-box-shadow);
       --popover-border-radius: var(--navi-popup-border-radius);

@@ -112,15 +112,20 @@ const css = /* css */ `
 
          Capping the *size* here rather than only offsetting the position is
          what makes a centered dialog follow the mobile virtual keyboard for
-         free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
-         reflows the dialog itself as the keyboard opens. */
+         free: --navi-app-width/--navi-app-height track the visual viewport, so
+         the browser reflows the dialog itself as the keyboard opens. */
       --x-dialog-container-spacing: 3vvw;
 
+      /* --navi-app-width, not --navi-vvw: a top-layer dialog is calibrated on
+         the app's own screen, which is the viewport unless the app declared a
+         narrower one (see navi_css_vars.js). An app-width cap alone never
+         costs the gap below — it is subtracted from whichever of the two ends
+         up smaller. */
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--x-dialog-container-spacing)
+        var(--navi-app-width) - 2 * var(--x-dialog-container-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--x-dialog-container-spacing)
+        var(--navi-app-height) - 2 * var(--x-dialog-container-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
