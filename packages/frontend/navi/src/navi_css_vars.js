@@ -72,6 +72,11 @@ const css = /* css */ `
          together. Still its own token, so popups alone can be re-papered. */
       --navi-popup-background-color: var(--navi-surface-color);
       --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
+      /* backdropAppearance="discrete": the popup still catches every outside
+         click, it just stops announcing that it did. For an affordance one
+         reaches past rather than through — the dim is there to mark the layer,
+         not to push the page behind it away. */
+      --navi-backdrop-discrete-background: rgba(0, 0, 0, 0.02);
       /* "capture" means the rest of the page is fully non-interactive —
          blurred, not just dimmed, so it reads as clearly secondary and
          pulls visual focus onto the popover's own content. */

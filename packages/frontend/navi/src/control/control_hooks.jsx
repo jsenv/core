@@ -164,10 +164,22 @@ export const ControlgroupChildrenWrapper = ({
  */
 export const useControlProps = (
   props,
-  { controlType, allowNameless, persists, uiActionInternal },
+  {
+    controlType,
+    allowNameless: allowNamelessByDefault,
+    persists,
+    uiActionInternal,
+  },
 ) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
+
+  // A control that is not a field: it opens something, it goes somewhere, and
+  // the group around it must expect no value from it — no name, and no warning
+  // about the missing name. Buttons and links say so from inside navi; the prop
+  // is how a control used as a door says the same thing from the outside.
+  const allowNameless = props.allowNameless ?? allowNamelessByDefault;
+  delete props.allowNameless;
 
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -1068,6 +1080,18 @@ const createControlInfo = (props, { controlType }) => {
       INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
 
+  // The suggestion the control starts on, as opposed to what it holds — what a
+  // reset goes back to, and what tells a field left on its default from one
+  // carrying an answer (see isUIStateHeld in held_ui_state.js).
+  let defaultValue;
+  if (!hasStateProp) {
+    if (signalHoldsChecked) {
+      defaultValue = props.defaultChecked ? value : undefined;
+    } else if (Object.hasOwn(props, "defaultValue")) {
+      defaultValue = props.defaultValue;
+    }
+  }
+
   return {
     controlType,
     statePropName,
@@ -1076,6 +1100,7 @@ const createControlInfo = (props, { controlType }) => {
     stateInitial,
     state: stateInitial,
     value,
+    defaultValue,
     signal,
     signalHoldsChecked,
     stateFromSignal,

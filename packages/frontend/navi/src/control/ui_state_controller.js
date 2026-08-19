@@ -195,6 +195,9 @@ export const useUIStateController = (
         // resolveCommandValue in commands.js.
         ownUIStateSignal,
         value: controlInfo.value,
+        // The suggestion this control started on — what tells a field showing
+        // its default from one carrying an answer (see isUIStateHeld).
+        defaultValue: controlInfo.defaultValue,
 
         facadeChild: null,
         getManagedControls: () => {
@@ -614,9 +617,16 @@ export const useUIStateController = (
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
       controller.parentUIStateController = parentUIStateController;
-      const { value, hasStateProp, state, stateInitial, stateFromSignal } =
-        controlInfo;
+      const {
+        value,
+        defaultValue,
+        hasStateProp,
+        state,
+        stateInitial,
+        stateFromSignal,
+      } = controlInfo;
       controller.value = value;
+      controller.defaultValue = defaultValue;
       if (hasStateProp) {
         controller.hasStateProp = true;
         const currentState = controller.state;
@@ -1554,8 +1564,10 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           const childType = child.controlType;
           if (firstChildControllerRef.current) {
             console.warn(
-              `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
-                `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+              `[navi] a second control ("${childType}"${child.name ? ` name="${child.name}"` : ""}) registered in the ${describePicker(props)} popup. ` +
+                `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
+                `so this one is neither filled nor collected. ` +
+                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="form".`,
               child,
             );
           } else {
@@ -1569,6 +1581,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             // without firing uiAction (equivalent to defaultValue on the child itself).
             const initialState = s.realUIStateController.uiState;
             if (initialState !== undefined) {
+              warnIfChildCannotHold(props, child, initialState);
               updatingRef.current = true;
               const initialEvent = new CustomEvent("initial_state_push", {
                 detail: {},
@@ -1675,12 +1688,43 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         { detail: {} },
       );
       chainEvent(propagateDownEvent, e);
+      warnIfChildCannotHold(props, child, newUIState);
       child.setUIState(newUIState, propagateDownEvent);
       updatingRef.current = false;
     });
   }, [realUIStateController]);
 
   return scope.controller;
+};
+
+const describePicker = (props) =>
+  `<Picker${props.name ? ` name="${props.name}"` : ""}${props.type ? ` type="${props.type}"` : ""}>`;
+
+// A picker holding an object hands that object to the control in its popup, and
+// a control that is not itself a group has nowhere to put it: it takes the
+// object as its own value and writes it wherever it is bound — a signal, the
+// url, which is where "[object Object]" comes from. Said out loud because
+// nothing else will: the push succeeds, the control just shows nonsense.
+const cannotHoldWarnedSet = new WeakSet();
+const warnIfChildCannotHold = (props, child, newUIState) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  if (newUIState === null || typeof newUIState !== "object") {
+    return;
+  }
+  if (typeof child.registerChild === "function") {
+    return;
+  }
+  if (cannotHoldWarnedSet.has(child)) {
+    return;
+  }
+  cannotHoldWarnedSet.add(child);
+  console.warn(
+    `[navi] ${describePicker(props)} holds an object, but the "${child.controlType}"${child.name ? ` name="${child.name}"` : ""} in its popup holds a single value — it receives the object whole. ` +
+      `The control inside a picker whose value is an object must be the group that shapes it: a <ControlGroup> (or a <Form>) with one named control per key, and type="form" on the picker.`,
+    child,
+  );
 };
 
 /**

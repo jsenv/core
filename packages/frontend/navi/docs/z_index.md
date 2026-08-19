@@ -97,6 +97,47 @@ What to read from it:
   `isolation: isolate` on the parent instead, and the number stops meaning
   anything outside it.
 
+### A sticky part is only in the band while it is stuck
+
+`--navi-z-index-sticky` says "kept stuck while something scrolls under it", and
+the second half of that sentence is a condition, not decoration. A `List` group
+label at rest is a block in the flow: nothing passes under it, and painting it
+at 10 there is what slices a focus ring, a badge or a stamp that a neighbouring
+row lets out of its box — including a `Group` member raising itself to 1 or 2.
+
+CSS cannot express the condition. There is no `:stuck`, and
+`@container scroll-state(stuck: top)` styles a container's **descendants**, so
+an element can never read its own stuck state — which is the one that matters
+here. So `List` measures it and marks its three sticky parts
+(`.navi_list_item_header`, `.navi_list_item_footer`,
+`.navi_list_item_group_label`) with `navi-stuck`, against its own scroller and
+not the window, updated on scroll, on resize, and on every commit (a virtualized
+list changes which labels exist without anything scrolling).
+
+navi's own rule is the first reader: the band applies under `[navi-stuck]`,
+`auto` applies at rest. That is what puts the decision back within reach of an
+app — a card whose badge overflows into the label below it gets past it with a
+literal in the card, against its own neighbour, exactly as §1–3 above ask:
+
+```jsx
+// Reaches past a label at rest (auto), loses to one that is stuck (10).
+<Stamp style={{ position: "absolute", bottom: "-12px", zIndex: 1 }} />
+```
+
+There was no such value before: a label sat at 10 whether or not it was stuck,
+so nothing a card could write got past it.
+
+For what a literal cannot reach, each part has a pair of variables —
+`--list-header-z-index`, `--list-footer-z-index`, `--list-group-label-z-index`,
+each with a `-stuck` counterpart defaulting to the band — settable on `<List>`
+with no selector and no navi class name. Reach for them last, and remember a
+negative value is compared against the page like any other: without a stacking
+context between the label and the nearest opaque background, `-1` does not put
+the label behind the rows, it puts it behind that background and out of sight.
+
+See the "Sticky parts" chapter of
+[12_list_demo.html](../src/control/demos/12_list_demo.html).
+
 ### Why a `Group` member is not isolated
 
 `Group` overlaps its members by one border width, so the one the user is on has

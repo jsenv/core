@@ -35,7 +35,15 @@ const css = /* css */ `
       /* Kept stuck while something scrolls under it: a list header, the head
          and foot of a side panel, a table's sticky cells. Above raised
          controls — a control scrolling past must go under the header that
-         pins the column it belongs to, never over it. */
+         pins the column it belongs to, never over it.
+
+         "While stuck" is the whole condition, and a sticky element cannot read
+         its own stuck state in CSS: List marks its parts with a navi-stuck
+         attribute and applies this band only there (see --list-*-z-index in
+         list.jsx). A
+         sticky part at rest is a block in the flow with nothing passing under
+         it; giving it this band anyway is what slices whatever a neighbouring
+         row lets out of its box. */
       --navi-z-index-sticky: 10;
 
       /* Pinned to the viewport, over the whole page: FixedBar. A decade of its

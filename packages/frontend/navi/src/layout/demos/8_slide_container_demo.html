@@ -773,6 +773,24 @@
         </SlideContainer>
       );
 
+      // Slides of very different heights, under a cap that comes from above
+      // (the popup's own room, a height on the container in the document):
+      // every slide is given that height, and only the one whose own content
+      // is taller than it has anything to scroll.
+      const UnevenSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="short_a" title="A" direction="next">
+            <Filler count={2} />
+          </DemoSlide>
+          <DemoSlide id="short_b" title="B">
+            <Filler count={3} />
+          </DemoSlide>
+          <DemoSlide id="long_c" title="C" direction="previous">
+            <Filler count={40} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
       const TwoSlidesVertical = () => (
         <SlideContainer duration={useSlideDuration()} layout="column">
           <DemoSlide id="first" title="first" direction="next" vertical>
@@ -2221,6 +2239,17 @@
             <ThreeWays
               id="tall_vertical"
               Content={TallSlidesVertical}
+              documentClassName="in-document-capped"
+            />
+            <h3 id="uneven">One slide much taller than the others</h3>
+            <p>
+              A and B have no scrollbar of C's, and no scrollbar of their own:
+              they take the height the popup (or the box, in the document)
+              leaves them, and only C is too tall for it.
+            </p>
+            <ThreeWays
+              id="uneven"
+              Content={UnevenSlides}
               documentClassName="in-document-capped"
             />
             <h3 id="wider">Content wider than the box</h3>

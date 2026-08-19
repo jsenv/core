@@ -661,6 +661,9 @@ const PickerContentInsidePopup = (props) => {
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
     // clicking outside revert instead, or "capture" to keep it open.
     pointerInteractionOutsideEffect = "close",
+    // Named/forwarded rather than left in ...rest: rest goes to the picker
+    // element itself, not the popup, and this belongs to the popup.
+    backdropAppearance,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -725,6 +728,7 @@ const PickerContentInsidePopup = (props) => {
         pointerInteractionOutsideEffect={
           pointerLock ? "capture" : pointerInteractionOutsideEffect
         }
+        backdropAppearance={backdropAppearance}
         focusCapture={isPopover ? focusCapture : undefined}
         expand={isPopover ? undefined : dialogExpand}
         expandX={isPopover ? undefined : dialogExpandX}

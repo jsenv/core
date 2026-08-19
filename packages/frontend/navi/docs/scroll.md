@@ -226,16 +226,66 @@ All slides live in **the same grid cell**, so the box measures itself on the
 between slides — and it also means a short slide shows empty room below it. It
 is a trade, not a leak.
 
-`SlideContainer` is `flex: 0 1 auto`: it shrinks (the slides then scroll their
-own body) but never grows on its own. Growing is the caller's decision —
-`expandY`.
+**The slide IS the body.** This is the one thing to get right, and the shape
+everyone writes first gets it wrong: a `Dialog` with a `<Box body>` around the
+slides puts a scroller ABOVE them, and that scroller's content is the grid —
+measured on the tallest slide. Stand on a short slide and it carries the
+scrollbar of a neighbour, scrolling through emptiness.
+
+```jsx
+// WRONG — the dialog's body scrolls the tallest slide, on every slide
+<Dialog maxHeight="min(80vh, 640px)">
+  <Box header>tabs</Box>
+  <Box body>
+    <SlideContainer>
+      <Slide padding="l">…</Slide>
+    </SlideContainer>
+  </Box>
+</Dialog>
+
+// RIGHT — the cap stays a constraint, each slide scrolls its own content
+<Dialog maxHeight="min(80vh, 640px)" flex="y">
+  <Box header flexShrink="0">tabs</Box>
+  <SlideContainer>
+    <Slide overflow="auto">
+      <Box header padding="m">…</Box>  {/* the slide scrolls: padding on the parts */}
+      <Box body padding="l">…</Box>
+    </Slide>
+  </SlideContainer>
+</Dialog>
+```
+
+Why it then behaves: the cap on the height comes from above and must reach the
+slides as a **constraint**, never as a scroller. `SlideContainer` is
+`flex: 0 1 auto` — it shrinks into what is left (growing is the caller's
+decision, `expandY`) — the grid hands that height to **every** slide, and a
+slide with an `overflow` of its own scrolls only when ITS content is taller than
+that. The tall slide scrolls; the short ones are tall boxes with a short content
+in them, which is what one wants: they take the height the context imposes and
+ignore the height of their neighbour.
+
+So: nothing scrollable between the cap and the slides. A `<Box body>` around
+them is a scroller (see the table at the top of this file) — and so is a bare
+`overflow="auto"` on a wrapper. The dialog keeps a shared `header` if the tabs
+are shared, with an explicit `flexShrink="0"` since the rule that gives it for
+free lives inside `[data-scrollable]`.
+
+**Padding goes on the slide** — or on its parts, since the slide is now the
+scroller (see the top of this file) — but never on the container nor on
+anything above it.
+Overflow clips at the _padding_ edge, so a padding on the container is a band
+the clipping does not cover: the arriving slide is seen there before it has
+reached the frame. And a padding above the slides does not travel — the two
+contents cross each other flush, instead of each arriving already inset. On the
+slide, the inset travels with what it insets.
 
 Pass `travelByKeyboard={false}` when the arrow keys belong to the content (a list
 one walks through, a picker whose slides are steps): otherwise the right arrow
 changes screen mid-reading.
 
 Reference: `src/layout/dialog.jsx`, `src/layout/popover.jsx`,
-`src/layout/slide_container.jsx`.
+`src/layout/slide_container.jsx`, and the "One slide much taller than the
+others" case in `src/layout/demos/8_slide_container_demo.html`.
 
 ## Hover while scrolling
 

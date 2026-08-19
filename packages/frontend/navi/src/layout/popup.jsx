@@ -91,6 +91,11 @@ const css = /* css */ `
  *   is unavoidably *more* intrusive once it switches to dialog mode than
  *   the exact same usage would be as a popover — worth keeping in mind for
  *   anything that relies on `Popup` and can end up on a small screen.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance] - Forwarded
+ *   as-is to whichever component renders (both understand it identically):
+ *   how visible the backdrop is, independently of what an outside click
+ *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
+ *   default here — `"auto"` already means the same thing on both sides.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.

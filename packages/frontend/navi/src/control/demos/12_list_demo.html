@@ -192,6 +192,10 @@
               <GroupedSearchDemo />
               <SplitMatchDemo />
             </Chapter>
+            <Chapter id="sticky" title="Sticky parts">
+              <StuckGroupLabelDemo />
+              <StuckHeaderFooterDemo />
+            </Chapter>
             <Chapter id="editing" title="Editing the list">
               <ReorderDemo />
               <AddItemDemo />
@@ -307,6 +311,19 @@
                     <Link href="#search-split-cases">
                       Split — some match / none match
                     </Link>
+                  </li>
+                </ol>
+              </li>
+              <li>
+                <Link href="#sticky">Sticky parts</Link>
+                <ol>
+                  <li>
+                    <Link href="#sticky-group-label">
+                      Group label — at rest vs stuck
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#sticky-header">Header and footer</Link>
                   </li>
                 </ol>
               </li>
@@ -2151,6 +2168,249 @@
               })}
             </List>
           </Box>
+        );
+      };
+
+      // ── 8. Sticky parts: navi-stuck ───────────────────────────────────────────
+
+      // Four days, the last booking of each one cancelled. The stamp hangs 12px
+      // BELOW its row — which is 12px inside the box of the group label that
+      // follows it. That overlap is the whole subject: at rest the label is a
+      // block in the flow with a row bleeding into it, once stuck it is a lid
+      // with rows passing under it, and the two want opposite stacking.
+      const AGENDA = [
+        {
+          day: "Mon 12",
+          bookings: ["09:00 Standup", "11:00 Review", "14:00 1:1"],
+        },
+        {
+          day: "Tue 13",
+          bookings: ["09:30 Design", "13:00 Retro", "16:00 Demo"],
+        },
+        {
+          day: "Wed 14",
+          bookings: ["10:00 Interview", "12:00 Lunch", "15:00 Planning"],
+        },
+        {
+          day: "Thu 15",
+          bookings: ["08:30 Travel", "11:30 Workshop", "17:00 Wrap-up"],
+        },
+      ];
+
+      const AgendaList = ({ style }) => (
+        <List
+          borderWidth="1"
+          borderRadius="6"
+          maxHeight="240"
+          expandX
+          style={style}
+        >
+          {AGENDA.map(({ day, bookings }) => (
+            <ListItemGroup key={day} label={day}>
+              {bookings.map((booking, index) => {
+                const cancelled = index === bookings.length - 1;
+                return (
+                  <ListItem
+                    key={booking}
+                    id={`${day}-${booking}`}
+                    paddingX="m"
+                    paddingY="s"
+                    style={{ position: "relative" }}
+                  >
+                    <Text>{booking}</Text>
+                    {cancelled && (
+                      <Box
+                        style={{
+                          // The card says "in front of my neighbours" the
+                          // cheapest way there is — a 1, in its own row, with
+                          // no stacking context to set up and no navi variable
+                          // to know about. It only has to reach past a label at
+                          // rest; a label that is stuck is at 10 and wins.
+                          zIndex: 1,
+                          position: "absolute",
+                          right: "10px",
+                          bottom: "-12px",
+                          padding: "2px 8px",
+                          color: "#b91c1c",
+                          fontWeight: "600",
+                          fontSize: "0.7rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          background: "#fee2e2",
+                          border: "1px solid #fca5a5",
+                          borderRadius: "10px",
+                        }}
+                      >
+                        Cancelled
+                      </Box>
+                    )}
+                  </ListItem>
+                );
+              })}
+            </ListItemGroup>
+          ))}
+        </List>
+      );
+
+      // Reading navi's own class and attribute is what a demo is for; an app
+      // has no reason to do it — it styles what it owns, and here that is the
+      // stamp, not the label.
+      const useStuckLabels = (containerRef) => {
+        const [stuck, setStuck] = useState([]);
+        useEffect(() => {
+          const containerEl = containerRef.current;
+          if (!containerEl) {
+            return undefined;
+          }
+          const read = () => {
+            setStuck(
+              Array.from(
+                containerEl.querySelectorAll(
+                  ".navi_list_item_group_label[navi-stuck]",
+                ),
+              ).map((labelEl) => labelEl.textContent),
+            );
+          };
+          read();
+          const observer = new MutationObserver(read);
+          observer.observe(containerEl, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["navi-stuck"],
+          });
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
+        return stuck;
+      };
+
+      // One grid, two columns, three rows: the declaration, the list, the
+      // readout. A column laid out on its own would start its list wherever its
+      // own title happened to end, and a title wrapping to two lines would then
+      // put that column half a line below the other.
+      const AgendaCase = ({ column, declaration, outcome, style }) => {
+        const containerRef = useRef(null);
+        const stuck = useStuckLabels(containerRef);
+        return (
+          <Fragment>
+            <div style={{ gridColumn: column, gridRow: 1 }}>
+              <Text
+                bold
+                style={{ fontFamily: "monospace", fontSize: "0.8rem" }}
+              >
+                {declaration}
+              </Text>
+              <br />
+              <Text style={{ color: "#555", fontSize: "0.8rem" }}>
+                {outcome}
+              </Text>
+            </div>
+            <div ref={containerRef} style={{ gridColumn: column, gridRow: 2 }}>
+              <AgendaList style={style} />
+            </div>
+            <div
+              className="value-display"
+              style={{ gridColumn: column, gridRow: 3 }}
+            >
+              [navi-stuck] {stuck.length === 0 ? "" : stuck.join(", ")}
+            </div>
+          </Fragment>
+        );
+      };
+
+      const StuckGroupLabelDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="sticky-group-label">
+            Group label — at rest vs stuck
+          </Heading>
+          <p>
+            The last booking of each day hangs a stamp past its row, into the
+            box of the next day's label. Both lists hold the same card, whose
+            stamp says <code>z-index: 1</code>; they differ only on the label's
+            z-index while it is at rest. Scroll one to bring a label to the top.
+          </p>
+          <Box
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 260px))",
+              gridTemplateRows: "auto auto auto",
+              gap: "8px 16px",
+              alignItems: "start",
+            }}
+          >
+            <AgendaCase
+              column={1}
+              declaration="(default)"
+              outcome="At rest the card's 1 is enough; stuck, the label is at 10 and covers it."
+            />
+            <AgendaCase
+              column={2}
+              declaration="--list-group-label-z-index: var(--navi-z-index-sticky)"
+              outcome="What the label used to do at rest: no value a card can write reaches past 10."
+              style={{
+                "--list-group-label-z-index": "var(--navi-z-index-sticky)",
+              }}
+            />
+          </Box>
+        </div>
+      );
+
+      const StuckHeaderFooterDemo = () => {
+        const containerRef = useRef(null);
+        const [stuck, setStuck] = useState([]);
+        useEffect(() => {
+          const containerEl = containerRef.current;
+          const read = () => {
+            setStuck(
+              [
+                containerEl.querySelector(".navi_list_item_header[navi-stuck]")
+                  ? "header"
+                  : null,
+                containerEl.querySelector(".navi_list_item_footer[navi-stuck]")
+                  ? "footer"
+                  : null,
+              ].filter(Boolean),
+            );
+          };
+          read();
+          const observer = new MutationObserver(read);
+          observer.observe(containerEl, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["navi-stuck"],
+          });
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
+
+        return (
+          <div className="demo-subsection">
+            <Heading level={3} id="sticky-header">
+              Header and footer
+            </Heading>
+            <Box flex="y" spacing="xs" width="260px">
+              <div ref={containerRef}>
+                <List borderWidth="1" borderRadius="6" maxHeight="200" expandX>
+                  <ListItem header paddingX="m" paddingY="s">
+                    <Text bold>Fruits</Text>
+                  </ListItem>
+                  {FRUITS.map((fruit) => (
+                    <ListItem key={fruit} id={fruit} paddingX="m" paddingY="xs">
+                      {fruit}
+                    </ListItem>
+                  ))}
+                  <ListItem footer paddingX="m" paddingY="s">
+                    <Text>{FRUITS.length} fruits</Text>
+                  </ListItem>
+                </List>
+              </div>
+              <div className="value-display">
+                [navi-stuck] {stuck.join(", ")}
+              </div>
+            </Box>
+          </div>
         );
       };
 

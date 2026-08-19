@@ -349,6 +349,20 @@ const css = /* css */ `
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* backdropAppearance overrides whatever the effect above picked — same
+       specificity (class + one attribute), so these have to stay *after*
+       them to win. Only the paint changes: the element is still rendered
+       and still pointer-events: auto, so an outside click keeps doing
+       exactly what pointerInteractionOutsideEffect says. */
+    &[data-backdrop-appearance="discrete"] {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"] {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     /* navi-animation mirrors the content popover's own resolved value (set
        imperatively in openEffect) — the backdrop only ever fades, regardless
        of which kind it is (translate/scale wouldn't mean anything on it).
@@ -412,6 +426,15 @@ const css = /* css */ `
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ *   visible the backdrop is, independently of what it does. `"auto"`: the
+ *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   barely-there dim. `"none"`: fully transparent. The backdrop is still
+ *   rendered and still catches outside clicks in every case — this only
+ *   changes how much the popover insists on being the thing you deal with.
+ *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
+ *   backdrop at all then, and outside clicks pass through).
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
@@ -655,6 +678,11 @@ const usePopoverProps = (props) => {
     // "capture"→ absorb the press, stay open
     // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
+    // How loudly the backdrop says it is there — independent of what it
+    // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
+    // the paint the effect implies; "discrete"/"none" tone it down or
+    // remove it entirely without giving up the outside click.
+    backdropAppearance = "auto",
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -1381,6 +1409,7 @@ const usePopoverProps = (props) => {
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-backdrop-appearance": backdropAppearance,
     "onMouseDown": (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
         return;

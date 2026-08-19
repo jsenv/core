@@ -1092,6 +1092,34 @@
                 animationDuration={animationDuration}
               />
             </div>
+            <Heading id="backdrop-appearance">backdropAppearance</Heading>
+            <p>
+              Same <code>pointerInteractionOutsideEffect="close"</code> in all
+              three — clicking outside closes every one of them. Only how much
+              the backdrop insists changes.
+            </p>
+            <div class="demo-row">
+              <PointerInteractionOutsideDemo
+                label="auto (default)"
+                pointerInteractionOutsideEffect="close"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label="discrete"
+                pointerInteractionOutsideEffect="close"
+                backdropAppearance="discrete"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label="none"
+                pointerInteractionOutsideEffect="close"
+                backdropAppearance="none"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
             <AnimateControls {...controlsProps} />
           </section>
         );
@@ -1288,6 +1316,7 @@
       const PointerInteractionOutsideDemo = ({
         label,
         pointerInteractionOutsideEffect,
+        backdropAppearance,
         animation,
         animationDuration,
       }) => {
@@ -1302,6 +1331,7 @@
               id={popoverId}
               borderRadius="8px"
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              backdropAppearance={backdropAppearance}
               animation={animation}
               animationDuration={animationDuration}
               className="demo_popover_box"

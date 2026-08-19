@@ -101,6 +101,28 @@ const css = /* css */ `
       --list-border-width-default: 1px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
+
+      /* A sticky part paints over the rows only while it IS stuck — which is
+         what --navi-z-index-sticky says it is for ("kept stuck while something
+         scrolls under it"). At rest it is a block in the flow with nothing
+         passing under it, and a 10 there is what slices whatever a neighbouring
+         row lets out of its box: a focus ring, a badge, a stamp. See
+         useStuckStickyParts for the navi-stuck attribute these read.
+
+         With "auto" at rest, a card whose badge overflows into the label
+         below it gets past it by saying z-index: 1 on that badge — a literal,
+         in the card, against its own neighbour, which is what docs/z_index.md
+         asks for. These variables are the escape hatch for what that cannot
+         reach, not the usual answer. Mind that a negative value here is
+         compared against the page: it needs a stacking context between the
+         label and the nearest opaque background, or the label goes behind that
+         background and disappears. */
+      --list-header-z-index: auto;
+      --list-header-z-index-stuck: var(--navi-z-index-sticky);
+      --list-footer-z-index: auto;
+      --list-footer-z-index-stuck: var(--navi-z-index-sticky);
+      --list-group-label-z-index: auto;
+      --list-group-label-z-index-stuck: var(--navi-z-index-sticky);
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
@@ -482,8 +504,12 @@ const css = /* css */ `
     position: sticky;
     top: 0;
     left: 0;
-    z-index: var(--navi-z-index-sticky);
+    z-index: var(--list-header-z-index);
     order: -2;
+
+    &[navi-stuck] {
+      z-index: var(--list-header-z-index-stuck);
+    }
   }
   .navi_list_fallback,
   .navi_list_search_fallback {
@@ -589,8 +615,12 @@ const css = /* css */ `
     position: sticky;
     right: 0;
     bottom: 0;
-    z-index: var(--navi-z-index-sticky);
+    z-index: var(--list-footer-z-index);
     order: 2;
+
+    &[navi-stuck] {
+      z-index: var(--list-footer-z-index-stuck);
+    }
   }
 
   ::highlight(navi-search-match) {
@@ -605,10 +635,14 @@ const css = /* css */ `
     .navi_list_item_group_label {
       position: sticky;
       top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: var(--navi-z-index-sticky);
+      z-index: var(--list-group-label-z-index);
       display: block;
       background-color: var(--list-group-label-background-color);
       user-select: none;
+
+      &[navi-stuck] {
+        z-index: var(--list-group-label-z-index-stuck);
+      }
 
       &[navi-default] {
         padding: 4px 12px 2px;
@@ -1293,6 +1327,7 @@ const useListScrollSync = ({
   };
   useLayoutEffect(resolveScroller);
   useStickyScrollportWarning(ref, scroller);
+  useStuckStickyParts(ref, getScroller, scrollerElResolved, horizontal);
 
   // The row the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -2134,6 +2169,153 @@ const useStickyScrollportWarning = (ref, scroller) => {
     );
   });
 };
+
+/**
+ * "Am I stuck?" — the question a `position: sticky` element cannot ask about
+ * itself. There is no selector for it, and `scroll-state(stuck: top)` does not
+ * answer it either: that query styles a container's DESCENDANTS, so a part
+ * cannot read its own stuck state, which is exactly the one a background, a
+ * shadow or a stacking order has to depend on.
+ *
+ * So the list says it, on the three parts it makes sticky: `navi-stuck` while a
+ * part sits at the edge it sticks to, gone while it rides along in the flow.
+ * The list is the right place for it because it is the only one that knows
+ * WHICH box its parts stick to — an app writing this outside would listen to
+ * the window and be right only for `scroller="document"` (see getScrollerEl,
+ * and useStickyScrollportWarning for the case where even the list is wrong
+ * about it: a scroll container between the two, which dev mode reports).
+ *
+ * What reads it is navi's own z-index rule first (see --list-*-z-index above:
+ * the sticky band is for a part with something scrolling under it, not for a
+ * block at rest in the flow), and an app second, for anything it wants to say
+ * about a part being stuck.
+ */
+// Fractional layout is the rule, not the exception — zoom, screen density, a
+// scroller at a half-pixel offset. A part at its sticky offset can render a
+// fraction short of it, and without this slack it reads as being at rest: a
+// bug that shows up on one machine and not the next.
+const STUCK_SLACK = 1;
+// Which edge a part sticks to. The header and the footer stick along whichever
+// axis the list scrolls — their rules declare both insets (top/left, and
+// bottom/right) so the same markup works either way; a group label always caps
+// its group from the top.
+const getStickyEdge = (partEl, horizontal) => {
+  if (partEl.classList.contains("navi_list_item_footer")) {
+    return horizontal ? "right" : "bottom";
+  }
+  if (partEl.classList.contains("navi_list_item_header")) {
+    return horizontal ? "left" : "top";
+  }
+  return "top";
+};
+// A sticky inset is measured from the scrollport — the padding box of the
+// scroller, or the viewport when the page scrolls. getScrollerViewportRect
+// gives the border box; the borders come off here, since a scroller with one
+// would otherwise read as a pixel of scrolling already done.
+const getScrollportRect = (scrollerEl) => {
+  const rect = getScrollerViewportRect(scrollerEl);
+  if (scrollerEl === document.scrollingElement) {
+    return rect;
+  }
+  const top = rect.top + scrollerEl.clientTop;
+  const left = rect.left + scrollerEl.clientLeft;
+  return {
+    top,
+    left,
+    bottom: top + scrollerEl.clientHeight,
+    right: left + scrollerEl.clientWidth,
+  };
+};
+const isPartStuck = (partEl, edge, scrollportRect) => {
+  // The inset is read computed, not from the rule: --list-group-label-top and
+  // the FixedBar space behind it are what put the label where it sticks.
+  const declared = parseFloat(getComputedStyle(partEl)[edge]);
+  const inset = Number.isFinite(declared) ? declared : 0;
+  const rect = partEl.getBoundingClientRect();
+  if (edge === "top") {
+    return rect.top - scrollportRect.top <= inset + STUCK_SLACK;
+  }
+  if (edge === "left") {
+    return rect.left - scrollportRect.left <= inset + STUCK_SLACK;
+  }
+  if (edge === "bottom") {
+    return scrollportRect.bottom - rect.bottom <= inset + STUCK_SLACK;
+  }
+  return scrollportRect.right - rect.right <= inset + STUCK_SLACK;
+};
+const useStuckStickyParts = (
+  ref,
+  getScroller,
+  scrollerElResolved,
+  horizontal,
+) => {
+  // Rewritten on every render so the listeners below, registered once per
+  // scroller, always run against the current geometry.
+  const updateRef = useRef(null);
+  updateRef.current = () => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const partEls = listContainerEl.querySelectorAll(STICKY_LIST_PART_SELECTOR);
+    if (partEls.length === 0) {
+      return;
+    }
+    const scrollerEl = getScroller();
+    if (!scrollerEl) {
+      return;
+    }
+    // One rect per RENDERED part: virtualization already bounds how many of
+    // them exist, which is what keeps this affordable on every scroll event.
+    const scrollportRect = getScrollportRect(scrollerEl);
+    for (const partEl of partEls) {
+      const edge = getStickyEdge(partEl, horizontal);
+      partEl.toggleAttribute(
+        "navi-stuck",
+        isPartStuck(partEl, edge, scrollportRect),
+      );
+    }
+  };
+
+  // Every commit, because a virtualized list changes which parts exist without
+  // anything scrolling: group labels enter and leave the DOM as the window
+  // moves, and one that arrives already at the edge has never been measured.
+  useLayoutEffect(() => {
+    updateRef.current();
+  });
+
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const update = () => {
+      // Synchronously, not on a rAF: scroll events are dispatched while the
+      // frame is being put together, so the attribute lands in the same paint
+      // as the scroll that caused it. A frame late is a frame of flicker.
+      updateRef.current();
+    };
+    // A page-level scroller does not emit "scroll" on the element itself
+    // (document.scrollingElement); the document does.
+    const scrollerEl = getScroller();
+    const scrollEventTarget =
+      !scrollerEl || scrollerEl === document.scrollingElement
+        ? document
+        : scrollerEl;
+    scrollEventTarget.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    // The list growing under a scroller that has not moved — rows loaded by
+    // scroll, a group unfolding — changes which parts sit at an edge.
+    const observer = new ResizeObserver(update);
+    observer.observe(listContainerEl);
+    return () => {
+      scrollEventTarget.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      observer.disconnect();
+    };
+  }, [scrollerElResolved]);
+};
+
 // Anything but visible and clip makes a scroll container, hidden included.
 const isScrollportOverflow = (overflow) =>
   overflow !== "visible" && overflow !== "clip";

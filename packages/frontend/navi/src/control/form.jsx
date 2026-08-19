@@ -13,7 +13,13 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
@@ -22,6 +28,7 @@ import {
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
+import { isUIStateHeld } from "./held_ui_state.js";
 import { dispatchRequestAction } from "./rules/control_action.js";
 import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
@@ -45,6 +52,17 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   a single button that fires off a notification, an action whose duplicates
  *   are fine. See also `readOnlyWhileFormUnchanged` on `Button`, for a submit that
  *   should say it is waiting rather than accept a press that sends nothing.
+ * @param {any} [props.pristineKey] - What the form is measured against, taken
+ *   again every time this changes. A form knows what it holds as soon as its
+ *   fields have registered, which is the right moment for a form whose values
+ *   are there on the first render — and never the right one for a screen that
+ *   modifies something: the resource arrives a request later and fills the
+ *   fields, and a form comparing against what it held BEFORE that opens already
+ *   changed. Pass whatever says the filling is done (a boolean, the resource
+ *   itself, a count of what has loaded) and what the fields carry at that
+ *   moment becomes the reference. Change it once, when the screen is ready:
+ *   taken again after someone started typing, it would call what they wrote the
+ *   reference.
  * @param {string} [props.command] - What follows a submission that went
  *   through: the form has answered its question, and this says what the screen
  *   does about it. Nothing runs when the submission is refused — the form then
@@ -95,6 +113,7 @@ const useFormGroup = (props) => {
   const propsForGroup = { ...props };
   delete propsForGroup.standalone;
   delete propsForGroup.canSendWhileUnchanged;
+  delete propsForGroup.pristineKey;
   // Not the generic control `command`, which a control triggers on its own ui
   // actions — here it is what follows a SUCCESSFUL submission. So it is kept
   // out of the control machinery and left in the DOM for the send to read
@@ -138,7 +157,7 @@ const useFormGroup = (props) => {
       withoutEmptyFields(value),
       uiStateController.sentUIState,
     );
-  useFirstUIStateAsSent(uiStateController);
+  useHeldUIStateAsSent(uiStateController, props.pristineKey);
   useUnregisteredControlWarning(props.ref);
 
   const { basePseudoState, children } = formProps;
@@ -233,13 +252,10 @@ const FormNested = (props) => {
   );
 };
 
-// What the form HOLDS, as opposed to what it is showing. A `value` is held: the
-// form was given it, and sending it back says nothing new. A `defaultValue` is
-// only a suggestion — an age that is usually 18, a duration that is usually
-// 1h30 — so the form holds nothing for that field, and sending the suggestion
-// back IS an answer ("yes, 18"). A field bound to a signal falls on whichever
-// side the signal put it: one carrying a default seeds `defaultValue`, one
-// without controls the field outright.
+// What the form HOLDS, as opposed to what it is showing — field by field, the
+// question isUIStateHeld answers: a field it was given an answer for is held,
+// a field merely showing a suggestion is not, and confirming that suggestion IS
+// an answer ("yes, 18").
 const readHeldUIState = (uiStateController) => {
   const uiState = uiStateController.uiState;
   // A form given a value holds all of it, whatever its fields say.
@@ -248,7 +264,7 @@ const readHeldUIState = (uiStateController) => {
   }
   const held = { ...uiState };
   for (const child of uiStateController.getChildControllers?.() || []) {
-    if (child.name && !child.hasStateProp) {
+    if (child.name && !isUIStateHeld(child)) {
       delete held[child.name];
     }
   }
@@ -278,10 +294,22 @@ const withoutEmptyFields = (uiState) => {
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
-const useFirstUIStateAsSent = (uiStateController) => {
+const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
+  // The render that brought a new pristineKey read `changed` against the
+  // previous baseline, and nothing else is going to move: the button would stay
+  // lit on a form that holds exactly what it was just given. So ask for the one
+  // render that reads the new baseline — the first one has nobody to tell,
+  // every field it is waiting for re-renders the form as it registers.
+  const [, rereadBaseline] = useState(0);
+  const isFirstRef = useRef(true);
   useLayoutEffect(() => {
     uiStateController.sentUIState = readHeldUIState(uiStateController);
-  }, [uiStateController]);
+    if (isFirstRef.current) {
+      isFirstRef.current = false;
+      return;
+    }
+    rereadBaseline((count) => count + 1);
+  }, [uiStateController, pristineKey]);
 };
 
 // A named form element the form does not know about is worse than a field with

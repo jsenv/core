@@ -412,6 +412,7 @@ const css = /* css */ `
 
 const PickerButton = (props) => {
   import.meta.css = css;
+  warnOnUnknownPickerType(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -847,6 +848,7 @@ const PickerFirstResolver = (props) => {
  *   marginWithContainer?: number | string,
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
+ *   backdropAppearance?: "auto" | "discrete" | "none",
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
@@ -893,11 +895,19 @@ const PickerFirstResolver = (props) => {
  *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
  *   keep") for why Escape should go on meaning cancel, and for what the value
  *   at open is on the picker's very first open.
+ * @param {boolean} [allowNameless] - This picker is a door, not a field: it
+ *   opens something and holds no value of its own, so the form or group around
+ *   it expects nothing from it and says nothing about its missing name.
  * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
  *   What a click outside the popup does: close and keep ("close"), close and
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The
  *   default is what gives a popup with no confirm button its way out that
  *   keeps — see the same section.
+ * @param {"auto"|"discrete"|"none"} [backdropAppearance="auto"] How visible the
+ *   popup's backdrop is, independently of what a click outside does: `"auto"`
+ *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
+ *   barely-there dim, `"none"` fully transparent. For a picker that closes on
+ *   an outside click without wanting to dim the page for it.
  * @param {number|string} [marginWithContainer] Minimum gap kept between the
  *   popup and the edges of what contains it (the viewport, or the picker's own
  *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
@@ -905,6 +915,53 @@ const PickerFirstResolver = (props) => {
  *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
  *   Dialog's own 3vvw in dialog mode.
  */
+// Every picker type is resolved into one of these before it gets here (see
+// PickerTypeResolver and resolveInputProps): a native input type, or navi_js
+// for the ones whose value is a whole object. Anything else is a type nobody
+// implements — the picker then behaves as a plain text one, silently, and an
+// object value reaches the DOM as "[object Object]".
+const PICKER_RESOLVED_TYPE_SET = new Set([
+  "text",
+  "search",
+  "tel",
+  "url",
+  "email",
+  "password",
+  "number",
+  "range",
+  "date",
+  "month",
+  "week",
+  "time",
+  "datetime-local",
+  "color",
+  "file",
+  "checkbox",
+  "radio",
+  "hidden",
+  "navi_js",
+]);
+const pickerTypeWarnedSet = new Set();
+const warnOnUnknownPickerType = (props) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { type } = props;
+  if (type === undefined || PICKER_RESOLVED_TYPE_SET.has(type)) {
+    return;
+  }
+  if (pickerTypeWarnedSet.has(type)) {
+    return;
+  }
+  pickerTypeWarnedSet.add(type);
+  console.warn(
+    `[navi] <Picker type="${type}"> — "${type}" is not a picker type. ` +
+      `The picker holds a single text value instead, so an object given to it is written as "[object Object]". ` +
+      `Types are: date, month, week, time, datetime, duration, color, file, text, array, form — ` +
+      `"form" being the one for a popup holding several named controls.`,
+  );
+};
+
 export const Picker = createComponentResolver([
   PickerFirstResolver,
   PickerPresetResolver,

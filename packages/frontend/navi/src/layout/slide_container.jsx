@@ -42,6 +42,29 @@
  * container of ours could ever hold two of them side by side and translate the
  * pair. One popup holding slides of its own contents has no such problem — and
  * it is the same component in the document, in a dialog or in a popover.
+ *
+ * Padding belongs on the SLIDE, never on this box nor on anything above it.
+ * Overflow clips at the PADDING edge, so a padding given to the container is a
+ * band the clipping does not cover: a slide travelling through it is seen there
+ * before it has reached the frame. And a padding above the slides does not
+ * travel — the two contents crossing each other pass with nothing between them,
+ * each flush against the other, instead of arriving already inset. Put on the
+ * slide, the inset moves with what it insets, and a travel shows two paddings'
+ * worth of gutter between the two.
+ *
+ * What SCROLLS is the slide too, and for the same reason read the other way
+ * round: the box is as big as its largest slide, so a scroller placed above the
+ * slides is always scrolling the tallest of them — stand on a short one and it
+ * carries the scrollbar of a neighbour, scrolling through emptiness. The cap on
+ * the height comes from above (a max-height on the popup, a column it has to
+ * fit in) and must reach the slides as a CONSTRAINT rather than as a scroller:
+ * this box shrinks into it (flex: 0 1 auto below), the grid hands that height
+ * to every slide, and a slide with an overflow of its own scrolls only when ITS
+ * content is taller than that. The tall slide scrolls; the short ones are tall
+ * boxes with a short content in them, which is exactly what one wants — they
+ * take the height the context imposes and ignore the height of their neighbour.
+ * So: nothing scrollable between the cap and the slides (a shared [data-body]
+ * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
 
 import {

@@ -277,6 +277,20 @@ const css = /* css */ `
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* backdropAppearance, keyed off the originating element (a
+       pseudo-element carries no attributes of its own — same reasoning as
+       the capture rule just above). After the rules it overrides: same
+       specificity, so order is what decides. showModal() still makes the
+       page inert either way — only the paint goes away. */
+    &[data-backdrop-appearance="discrete"]::backdrop {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"]::backdrop {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     /* Nested under &[navi-animation] (not the other way around) so every
        attribute selector compiles *before* ::backdrop, not after — a
        pseudo-element can't be qualified by an attribute of its own
@@ -396,6 +410,18 @@ const css = /* css */ `
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* Same override as the via-attribute renderer's own ::backdrop rules
+       above, on the real element this renderer uses instead — see them for
+       the specificity/ordering reasoning. */
+    &[data-backdrop-appearance="discrete"] {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"] {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     &[navi-animation] {
       opacity: 1;
       transition-property: display, opacity;
@@ -466,6 +492,13 @@ const css = /* css */ `
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
  *   at least a click-absorbing backdrop regardless of this prop.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ *   visible the backdrop is, independently of what it does. `"auto"`: the
+ *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   barely-there dim. `"none"`: fully transparent. The dialog stays modal
+ *   either way — this only changes how much it insists visually, never what
+ *   an outside click does or whether the page behind stays reachable.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -712,6 +745,11 @@ const useDialogProps = (props) => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
+    // How loudly the backdrop says it is there — independent of what it
+    // *does* (that's pointerInteractionOutsideEffect above). A dialog is
+    // always modal, so "none" here never makes the page behind reachable:
+    // it only stops the dim from being drawn.
+    backdropAppearance = "auto",
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -1277,6 +1315,7 @@ const useDialogProps = (props) => {
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-backdrop-appearance": backdropAppearance,
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -1305,6 +1344,11 @@ const useDialogProps = (props) => {
     // real backdrop element already gets the same attribute via
     // backdropProps above, which is what its own CSS actually keys off).
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    // Only load-bearing for the via-attribute renderer's own native
+    // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
+    // as the prop just above (and harmless for the custom renderer, whose
+    // real backdrop element gets it via backdropProps).
+    "data-backdrop-appearance": backdropAppearance,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
