@@ -7,6 +7,7 @@ scrolling area (`Box header/body/footer`, `List`, a popup) are told about it.
 - [1. The document scrolls](#1-the-document-scrolls)
 - [2. A part of the document scrolls](#2-a-part-of-the-document-scrolls)
 - [3. A popup scrolls](#3-a-popup-scrolls)
+- [Hover while scrolling](#hover-while-scrolling)
 - [The list border](#the-list-border)
 
 ## What makes header/body/footer work: the overflow
@@ -235,6 +236,58 @@ changes screen mid-reading.
 
 Reference: `src/layout/dialog.jsx`, `src/layout/popover.jsx`,
 `src/layout/slide_container.jsx`.
+
+## Hover while scrolling
+
+A scroll moves the content under a pointer that does not move. The browser
+reports that as hover: it fires `mouseleave` + `mouseenter` for **every element
+crossing the cursor** — a dozen per wheel tick. None of it was asked for; the
+user asked to scroll.
+
+It is free as long as hover only paints a background. It stops being free the
+moment hover triggers real work — a highlight somewhere else in the tree, a
+prefetch, a map redrawing a layer — because that work then lands on the main
+thread exactly while a scroll animation is running, and the scroll stutters.
+
+### The fact is in the DOM: `navi-scrolling`
+
+While an element scrolls it carries `navi-scrolling`, written by one capturing
+listener on the document (`scroll` does not bubble, but it does propagate in
+the capture phase) and removed once it has been quiet for a moment — scroll
+events stop before the movement does. Nothing subscribes to anything: whoever
+is concerned says so in CSS.
+
+```css
+/* my rows answer the pointer only when nothing is moving them */
+[navi-scrolling] .my_row {
+  pointer-events: none;
+}
+```
+
+`pointer-events` is what does the work, and it does the whole of it: enter,
+move and leave at once, in the browser, at no cost per element. Hand-written in
+JS the same suppression takes three handlers — once `mouseenter` has been
+swallowed the pointer is already inside the element, so only `mousemove` can
+ever bring the hover back.
+
+The page scroll carries the attribute on `document.scrollingElement`, so an
+ancestor rule covers it too. In JS the same fact reads as `isScrolling()` /
+`isScrolling(element)`, or `scrollActivitySignal` to react to it.
+
+### In a `List`: nothing to do
+
+`List` rows leave hit-testing while anything scrolling them moves — its own
+scroll box, the panel around it, the page.
+
+```jsx
+<List hoverWhileScrolling>   {/* opt back in */}
+```
+
+The default costs one thing, and it is the honest half of the same trade: right
+after a scroll, the row under the pointer lights up only once the pointer moves
+by a pixel.
+
+Reference: `src/utils/scroll_activity.js`.
 
 ## The list border
 

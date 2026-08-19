@@ -75,8 +75,9 @@ consistency across the app, not from any single call site.
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).
 - `docs/scroll.md` — where scrolling happens: what turns `Box`
-  `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, and
-  scroll inside a `Dialog`/`Popover`. Read it before writing CSS to make
+  `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, scroll
+  inside a `Dialog`/`Popover`, and what a scroll does to hover
+  (`hoverWhileScrolling`, `isScrolling()`). Read it before writing CSS to make
   something scroll — navi almost certainly already has the prop.
 - `docs/control_value.md` — who holds a control's value: nobody, a bound
   `signal` (two-way, in both directions), or you (`value`/`checked`). What

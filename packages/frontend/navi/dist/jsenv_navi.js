@@ -52142,6 +52142,82 @@ const PickerNaviMinute = props => {
   });
 };
 
+/*
+ * Who is scrolling right now, told to the DOM: while an element scrolls it
+ * carries `navi-scrolling`, so anyone concerned reacts in CSS, without a
+ * listener and without a subscription.
+ *
+ * The one this exists for is hover. A scroll moves the content under a
+ * motionless pointer, so the browser dispatches mouseenter/mouseleave for every
+ * element crossing the cursor — a dozen per wheel tick. Those hovers are noise:
+ * the user asked to scroll, not to hover. Anything doing real work on hover (a
+ * map highlight, a preview, a prefetch) then pays for that noise on the main
+ * thread, exactly while a scroll animation is running. A rule matching
+ * `[navi-scrolling] *` takes the rows out of hit-testing and the browser
+ * suppresses it all, at no cost per element.
+ *
+ * One capturing listener on the document sees them all: "scroll" does not
+ * bubble, but it does propagate in the capture phase.
+ */
+
+
+// A scroller is still moving after its last "scroll" event (momentum, smooth
+// scrolling, the gap between two wheel ticks), so "still scrolling" is a
+// timeout: long enough to bridge that gap, short enough that hover comes back
+// as soon as the user stops.
+const SCROLL_IDLE_DELAY = 120;
+
+/**
+ * True while anything in the page is being scrolled.
+ */
+const scrollActivitySignal = signal(false);
+
+/**
+ * @param {Element} [element] The scroller to ask about; any scroller when omitted.
+ * @returns {boolean}
+ */
+const isScrolling = (element) => {
+  if (element === undefined) {
+    return scrollActivitySignal.peek();
+  }
+  return asScroller(element).hasAttribute("navi-scrolling");
+};
+
+// The page scroll is dispatched on the document; the element carrying the
+// attribute is the one CSS can reach, document.scrollingElement.
+const asScroller = (eventTargetOrElement) => {
+  if (eventTargetOrElement === document || eventTargetOrElement === window) {
+    return document.scrollingElement;
+  }
+  return eventTargetOrElement;
+};
+
+const idleTimeoutMap = new Map();
+document.addEventListener(
+  "scroll",
+  (e) => {
+    const scroller = asScroller(e.target);
+    const idleTimeout = idleTimeoutMap.get(scroller);
+    if (idleTimeout !== undefined) {
+      clearTimeout(idleTimeout);
+    } else {
+      scroller.setAttribute("navi-scrolling", "");
+      scrollActivitySignal.value = true;
+    }
+    idleTimeoutMap.set(
+      scroller,
+      setTimeout(() => {
+        idleTimeoutMap.delete(scroller);
+        scroller.removeAttribute("navi-scrolling");
+        if (idleTimeoutMap.size === 0) {
+          scrollActivitySignal.value = false;
+        }
+      }, SCROLL_IDLE_DELAY),
+    );
+  },
+  { capture: true, passive: true },
+);
+
 const LoadingDotsSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
@@ -53764,6 +53840,17 @@ const css$v = /* css */`
       }
     }
 
+    /* A scroll moves the rows under a motionless pointer: the browser then
+       fires mouseenter/mouseleave for every row crossing the cursor, and
+       whoever reacts to hover (a highlight elsewhere, a prefetch, a map) pays
+       for those while the scroll animation runs. Out of hit-testing, the
+       browser suppresses them all — see utils/scroll_activity.js for who
+       writes navi-scrolling. The scroller itself keeps its own hit-testing, so
+       the wheel and the scrollbar go on reaching it. */
+    &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
+      pointer-events: none;
+    }
+
     /* Scrolling with the page means sticking to the viewport, and a FixedBar
        is in front of that viewport: without the offset a sticky label lands
        behind the bar. The bar publishes the room it takes (see
@@ -54239,6 +54326,7 @@ const ListUI = props => {
     defaultScrolled = "start",
     onScrolledChange,
     scroller = "self",
+    hoverWhileScrolling = false,
     lockSize,
     columns,
     searchText,
@@ -54432,6 +54520,7 @@ const ListUI = props => {
     popover: popover,
     "data-horizontal": horizontal ? "" : undefined,
     "data-scroller": getScrollerAttribute(scroller),
+    "navi-hover-while-scrolling": hoverWhileScrolling ? "" : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
     "data-expand-y": expandY || expand ? "" : undefined,
     expandX: expandX,
@@ -54515,6 +54604,7 @@ const ListFirstResolver = props => {
  *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
+ *   hoverWhileScrolling?: boolean,
  *   fallback?: import("ignore:preact").ComponentChildren,
  *   searchFallback?: import("ignore:preact").ComponentChildren,
  *   searchText?: string,
@@ -54609,6 +54699,17 @@ const ListFirstResolver = props => {
  *   scroll once it fills up is picked up then. When that is still not the box
  *   you mean, say so: `"document"`, or the element itself (a ref works) —
  *   nothing is guessed then.
+ * @param {boolean} [props.hoverWhileScrolling=false]
+ *   Whether the rows still answer the pointer while the scroller they live in
+ *   is moving. They do not by default: a scroll slides the rows under a
+ *   motionless pointer, so the browser reports a hover on each of them, and
+ *   the user asked to scroll, not to hover. The cost of taking them at face
+ *   value is paid by whatever hover triggers — a highlight elsewhere in the
+ *   tree, a prefetch, a map — at the worst moment, mid-scroll.
+ *
+ *   Pass `true` for a list whose rows must stay live under the pointer while
+ *   it scrolls. The trade of the default is the mirror one: right after a
+ *   scroll, the row under the pointer lights up only once the pointer moves.
  * @param {number} [props.maxLength]
  *   How many items a `selectable multiple` list accepts — the same word, and
  *   the same behaviour, as `maxLength` on a text field: a rule the list is
@@ -70485,5 +70586,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

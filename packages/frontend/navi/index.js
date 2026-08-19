@@ -280,6 +280,12 @@ export { usePopupMode } from "./src/layout/popup_mode.jsx";
 export { SidePanel } from "./src/layout/side_panel.jsx";
 export { createSlot } from "./src/layout/slot.jsx";
 
+// Scroll
+export {
+  isScrolling,
+  scrollActivitySignal,
+} from "./src/utils/scroll_activity.js";
+
 // Responsivness
 export {
   windowWidthSignal,

@@ -15,6 +15,10 @@ import {
   useState,
 } from "preact/hooks";
 
+// Imported for its side effect: it is what writes navi-scrolling on whatever
+// scrolls, which the CSS below reads.
+import "../../utils/scroll_activity.js";
+
 import {
   createComponentResolver,
   useNextResolver,
@@ -224,6 +228,17 @@ const css = /* css */ `
         max-height: none;
         overflow: visible;
       }
+    }
+
+    /* A scroll moves the rows under a motionless pointer: the browser then
+       fires mouseenter/mouseleave for every row crossing the cursor, and
+       whoever reacts to hover (a highlight elsewhere, a prefetch, a map) pays
+       for those while the scroll animation runs. Out of hit-testing, the
+       browser suppresses them all — see utils/scroll_activity.js for who
+       writes navi-scrolling. The scroller itself keeps its own hit-testing, so
+       the wheel and the scrollbar go on reaching it. */
+    &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
+      pointer-events: none;
     }
 
     /* Scrolling with the page means sticking to the viewport, and a FixedBar
@@ -702,6 +717,7 @@ const ListUI = (props) => {
     defaultScrolled = "start",
     onScrolledChange,
     scroller = "self",
+    hoverWhileScrolling = false,
     lockSize,
     columns,
     searchText,
@@ -937,6 +953,7 @@ const ListUI = (props) => {
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
       data-scroller={getScrollerAttribute(scroller)}
+      navi-hover-while-scrolling={hoverWhileScrolling ? "" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       data-expand-y={expandY || expand ? "" : undefined}
       expandX={expandX}
@@ -1023,6 +1040,7 @@ const ListFirstResolver = (props) => {
  *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
+ *   hoverWhileScrolling?: boolean,
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
@@ -1117,6 +1135,17 @@ const ListFirstResolver = (props) => {
  *   scroll once it fills up is picked up then. When that is still not the box
  *   you mean, say so: `"document"`, or the element itself (a ref works) —
  *   nothing is guessed then.
+ * @param {boolean} [props.hoverWhileScrolling=false]
+ *   Whether the rows still answer the pointer while the scroller they live in
+ *   is moving. They do not by default: a scroll slides the rows under a
+ *   motionless pointer, so the browser reports a hover on each of them, and
+ *   the user asked to scroll, not to hover. The cost of taking them at face
+ *   value is paid by whatever hover triggers — a highlight elsewhere in the
+ *   tree, a prefetch, a map — at the worst moment, mid-scroll.
+ *
+ *   Pass `true` for a list whose rows must stay live under the pointer while
+ *   it scrolls. The trade of the default is the mirror one: right after a
+ *   scroll, the row under the pointer lights up only once the pointer moves.
  * @param {number} [props.maxLength]
  *   How many items a `selectable multiple` list accepts — the same word, and
  *   the same behaviour, as `maxLength` on a text field: a rule the list is
