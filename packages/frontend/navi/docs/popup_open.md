@@ -8,6 +8,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [Which element receives the command](#which-element-receives-the-command)
 - [The anchor](#the-anchor)
 - [Reacting to open and close](#reacting-to-open-and-close)
+- [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
 - [When `open` is the right answer, and what it costs](#when-open-is-the-right-answer-and-what-it-costs)
 - [What the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)
 
@@ -51,7 +52,9 @@ the opening?":
 
 The available commands: `--navi-open`, `--navi-close`, `--navi-toggle`,
 `--navi-cancel` (closes, telling the popup the close means "revert"),
-`--navi-confirm` (says yes, then closes).
+`--navi-confirm` (says yes, then closes). What "revert" does to what is inside
+is [its own section](#escape-cancels-the-other-gestures-keep) — it is also what
+Escape says.
 
 ## Something else opens it: `triggerNaviCommand`
 
@@ -138,6 +141,107 @@ useLayoutEffect(() => {
   return () => dialog.removeEventListener("navi_request_open", onOpen);
 }, []);
 ```
+
+### Closing when a button also runs an action
+
+Closing from inside the `action` does not close. While the action runs, the
+button that started it is busy, and a busy control is exactly what a popup
+refuses to close over (see the top of this page). The refusal is not silent —
+the busy control raises a callout saying so — but the popup stays open, and the
+first Escape afterwards dismisses that callout rather than the popup, which
+reads as a popup that no longer closes at all.
+
+There are two shapes, and they say different things:
+
+```jsx
+// Closes on the press. The popup does NOT wait for save(): it is already
+// closed when the action starts, and the action finishes behind it.
+<Button command="--navi-close" commandfor="note-dialog" action={save}>
+  Save
+</Button>
+```
+
+`command` next to `action` is the one to reach for when the answer is taken as
+soon as it is given — the popup gets out of the way, the save runs on its own.
+Know what it costs: **a save that fails does so behind a closed popup**, and the
+error callout it raises lands on a button nobody can see any more. Use it where
+the failure is reported somewhere else, or where losing it is acceptable.
+
+```jsx
+// Closes only once save() has resolved, and stays open if it throws.
+<Button
+  action={save}
+  onActionEnd={() => {
+    // NOT synchronously: the button still counts as busy while its own
+    // action-end handlers run, and the popup would refuse the close.
+    queueMicrotask(() => {
+      triggerNaviCommand(dialogRef.current, "--navi-close");
+    });
+  }}
+>
+  Save
+</Button>
+```
+
+`onActionEnd` only fires when the action succeeded, so the popup stays open on
+failure — the answer is then neither committed nor given up, and it is still
+there to be corrected, with the error shown on the button that raised it.
+
+## Escape cancels, the other gestures keep
+
+The gestures that close a popup do not all mean the same thing, and that is on
+purpose:
+
+| gesture                         | what it means | who decides                                         |
+| ------------------------------- | ------------- | --------------------------------------------------- |
+| Escape                          | cancel        | `escapeEffect="cancel"` (default)                   |
+| a click outside                 | close, keep   | `pointerInteractionOutsideEffect="close"` (default) |
+| a close button (`--navi-close`) | close, keep   | the button                                          |
+| `--navi-cancel` on a button     | cancel        | the button                                          |
+
+Escape says "forget it". It is the one gesture that has meant that everywhere,
+for as long as there have been dialogs, and navi keeps it that way. **A popup
+that must offer a way out that KEEPS what was chosen offers it with a close
+cross, or by letting the click outside close** — not by teaching Escape to say
+something else.
+
+### What "cancel" actually undoes
+
+Cancelling is not itself an undo: it marks the close, and whoever holds a value
+decides what to do with the mark.
+
+- `Dialog` and `Popover` hold nothing, so they undo nothing. The close event
+  carries `detail.isCancel` and `onClose` receives it — reverting is then the
+  caller's own business.
+- `Picker` holds a value, so it puts back **the value it held when it opened**.
+  That is what makes a picker a picker: opening one is trying something on, and
+  Escape is putting it back.
+
+```jsx
+// Escape here puts back the level the picker held at open, and the list's
+// uiAction fires with that restored value — the draft goes back with it.
+<Picker id="level" ui={…}>
+  <List selectable multiple value={draft.levels} uiAction={…}>…</List>
+</Picker>
+```
+
+The trap is the FIRST open. A picker holds what its popup told it, and before
+the popup has ever been open it has been told nothing — so "the value at open"
+is nothing, even when the control inside starts on a `defaultValue` or on a
+value the app passes it. Escape on that first pass goes back to empty, not to
+what was on screen when the popup opened. From the second open onwards it puts
+back what was really there.
+
+### `escapeEffect="close"`, and why it is a last resort
+
+`escapeEffect="close"` makes Escape say what a click outside says. It exists,
+and it is almost never what you want: it takes away the only key that undoes,
+and a popup with no way back is one people stop opening. Reach for a close
+cross first.
+
+A dialog picker's cancel also goes back in history, so anything written to the
+url while it was open (a route `stateSignal`, a search param) goes back with it
+— one more reason Escape and the click outside are not interchangeable.
 
 ## When `open` is the right answer, and what it costs
 

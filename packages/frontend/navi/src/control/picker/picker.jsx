@@ -889,10 +889,15 @@ const PickerFirstResolver = (props) => {
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
  *   picker also goes back in history — so anything written to the url while it
  *   was open (a route `stateSignal`, a search param) goes back with it. "close"
- *   makes Escape say what clicking outside says: keep what was chosen, close.
+ *   makes Escape say what clicking outside says: keep what was chosen, close —
+ *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
+ *   keep") for why Escape should go on meaning cancel, and for what the value
+ *   at open is on the picker's very first open.
  * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
  *   What a click outside the popup does: close and keep ("close"), close and
- *   put back the value at open ("cancel"), or nothing at all ("capture").
+ *   put back the value at open ("cancel"), or nothing at all ("capture"). The
+ *   default is what gives a popup with no confirm button its way out that
+ *   keeps — see the same section.
  * @param {number|string} [marginWithContainer] Minimum gap kept between the
  *   popup and the edges of what contains it (the viewport, or the picker's own
  *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as

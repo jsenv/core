@@ -124,7 +124,10 @@ export const resolveInputProps = (props) => {
       } else {
         // If no explicit defaultChecked, derive it from the signal's default
         // value so that resetUIState restores to the original default.
-        const defaultVal = signal.options.getDefaultValue(false);
+        // Only a stateSignal carries a default of its own; a plain signal has
+        // no `options` at all, and asking it for one used to throw on mount —
+        // the same optional read every other branch here already does.
+        const defaultVal = signalOptions?.getDefaultValue(false);
         if (defaultVal === undefined) {
           // no defaultChecked, and no default value from the signal: leave
         } else if (props.type === "radio") {

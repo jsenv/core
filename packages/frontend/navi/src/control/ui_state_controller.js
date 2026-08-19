@@ -17,6 +17,7 @@ import {
 } from "../navi_debug.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { triggerNaviCommand } from "./commands.js";
+import { warnSignalCollision } from "./control_value.js";
 import {
   findProxyControllers,
   getRadioSiblings,
@@ -920,13 +921,20 @@ export const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const hasValueProp = Object.hasOwn(props, "value");
-  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
   // with the signal's current value as what it starts on. Write-back is handled
   // by applyState's own boundSignal; the read half is below: children are
   // placed from it when they register, and again whenever it moves.
-  const boundSignal = hasValueProp ? undefined : props.signal;
+  const boundSignal = props.signal;
+  // The signal is the source of truth, here as on a leaf control: a `value`
+  // passed alongside is ignored, not merged. Both halves have to agree on that
+  // — a group that placed its children from `value` while writing the user's
+  // choice into the signal answered to two owners at once.
+  if (boundSignal) {
+    warnSignalCollision(props, controlType, "value");
+  }
+  const hasValueProp = !boundSignal && Object.hasOwn(props, "value");
+  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
   const { id, name, value, uiAction } = props;
   // A signal holding something wins over `defaultValue`: the default is a
@@ -1336,6 +1344,11 @@ export const useUIGroupStateController = (
         parentUIStateController,
         uiAction,
         uiActionInternal,
+        // `props` is what writeBoundSignal reads to find the bound `signal`.
+        // Missing here, a group whose component never re-renders between mount
+        // and the first choice wrote nothing back into its signal — and said
+        // nothing about it: the list showed the choice, the signal stayed empty.
+        props,
       };
     },
     // ── update: runs every render after the first ─────────────────────────

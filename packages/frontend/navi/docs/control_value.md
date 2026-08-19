@@ -1,0 +1,132 @@
+# Who holds a control's value
+
+Nobody, a signal, or you. Every control answers one of those three, and which
+one it is decides what happens when the value moves — from a gesture, or from
+somewhere else in the app.
+
+- [The three answers](#the-three-answers)
+- [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
+- [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
+- [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
+- [Which controls take a `signal`](#which-controls-take-a-signal)
+- [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
+- [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
+
+## The three answers
+
+| what you pass          | who holds the value | when the user acts                          |
+| ---------------------- | ------------------- | ------------------------------------------- |
+| nothing                | the control         | it keeps it; `uiAction` tells you           |
+| `defaultValue`         | the control         | same — the default is only where it starts  |
+| `signal`               | the signal          | the control writes it back, both ways       |
+| `value` (or `checked`) | you                 | nothing moves until you hand a new one down |
+
+A control given `value` and nothing to listen to it (`uiAction`, `action`, a
+`signal`, a surrounding form) is read-only, and says so in dev: it is showing
+something nobody can change.
+
+## A bound signal works in both directions
+
+This is the part that does not show in a call site: `signal` is not a seed. The
+control writes every change into it, **and follows it when something else
+writes it**.
+
+```jsx
+const minutesSignal = useSignal(0);
+
+<Wheel type="integer" signal={minutesSignal}>
+  {MINUTES.map((m) => (
+    <Wheel.Item key={m} value={m}>
+      {pad2(m)}
+    </Wheel.Item>
+  ))}
+</Wheel>;
+
+// elsewhere — the wheel rolls to 30, no re-render of your own needed
+minutesSignal.value = 30;
+```
+
+Both halves are worth knowing about, because each replaces a habit:
+
+- the write-back replaces `uiAction={(v) => (mySignal.value = v)}`;
+- the follow replaces the `key` or the `value`/`uiAction` pair used to push an
+  outside change into a control.
+
+## `signal` + `defaultValue`: the answer and where it starts
+
+They are not competing, they answer two different questions:
+
+- the **signal** is the answer, when it holds one;
+- `defaultValue` is where the control starts, and where a reset goes back to.
+
+```jsx
+// "how many players" is what my account usually answers, unless this game says
+// otherwise — no `??` to write, and no first render showing the wrong one
+<List selectable signal={gameLevelsSignal} defaultValue={me.levels}>
+```
+
+An emptied signal (`signal.value = undefined`) puts the control back on its
+default rather than leaving it blank — which is what makes "nothing decided
+here, use the usual answer" expressible at all. Without a `defaultValue`, an
+emptied signal empties the control.
+
+## What a signal holds, control by control
+
+The signal holds what the control is ABOUT, which is not always its `value`
+attribute:
+
+| control                                                       | what the signal holds             |
+| ------------------------------------------------------------- | --------------------------------- |
+| text/number/date `Input`, `Wheel`, `Spin`, `Picker`, `Select` | the value itself                  |
+| checkbox, radio                                               | a boolean — whether it is checked |
+| `List selectable`                                             | the selected value                |
+| `List selectable multiple`, checkbox group                    | the array of selected values      |
+
+A group (a selectable list, a checkbox group) writes its whole selection into
+the signal, not one item's value — its children put it together between them.
+
+## Which controls take a `signal`
+
+All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,
+`List selectable` (single and multiple), and control groups in general. Anything
+that is a navi control goes through the same state controller, and the same
+`signal` prop.
+
+Inside a `List selectable` you can bind the list, or give each `List.Item` its
+own `selected` — but not expect the two to arbitrate. An item that declares
+`selected` is answering for itself, and the list's signal does not reposition
+it.
+
+## `value` and `signal` exclude each other
+
+`value` (or `checked`) says "you hold it", `signal` says "the signal holds it".
+Passing both is a call site to fix: **the signal wins and the other prop is
+ignored** — on a leaf control as on a group (a selectable list, a checkbox
+group) — and navi says so in dev. One owner, whichever half of the binding you
+look at.
+
+Replacing `value` with `signal` also means dropping the `uiAction` that used to
+write the signal by hand — it is exactly what the binding now does. Keep
+`uiAction` only for what is not "remember the value": logging, a side effect,
+something else moving with it.
+
+## A `stateSignal` brings more than a value
+
+A plain signal (`useSignal`, `signal()`) is enough to bind a control. A
+`stateSignal` also carries its own `options`, and a control reads them so it
+does not have to be told twice: `type` (which decides the input type and the
+validation messages), `min`, `max`, `step`, and its **default**, which seeds
+`defaultValue`/`defaultChecked` — so a reset goes back to the signal's original
+default rather than to whatever it happened to hold at the last render.
+
+That is the only difference. A plain signal binds the same way in both
+directions; it just has nothing extra to say.
+
+## See also
+
+- [control_group.md](./control_group.md) — several controls reading as one
+  framed object
+- [actions.md](./actions.md) — `action` vs `uiAction`: what carries loading and
+  error
+- [popup_open.md](./popup_open.md#escape-cancels-the-other-gestures-keep) — what
+  a cancelled popup does to the value inside it

@@ -70,7 +70,7 @@ import {
   unpublishControlStateToLabels,
 } from "./control_label_state.js";
 import { findControlProxyTarget } from "./control_proxy.js";
-import { readControlValue } from "./control_value.js";
+import { readControlValue, warnSignalCollision } from "./control_value.js";
 import {
   onUIStateControllerCreated,
   toDomValue,
@@ -951,25 +951,28 @@ const createControlInfo = (props, { controlType }) => {
       defaultStatePropName = "defaultChecked";
       value = props.value || "on";
       signalHoldsChecked = true;
-      if (Object.hasOwn(props, "checked")) {
-        if (signal) {
-          warnSignalCollision(props, controlType, "checked");
+      if (signal) {
+        // The signal is the source of truth: a `checked` passed alongside is
+        // ignored, not merged (warnSignalCollision says so in dev).
+        warnSignalCollision(props, controlType, "checked");
+        if (props.defaultChecked) {
+          // resolveInputProps may seed defaultChecked from a bound signal's
+          // default: the control stays uncontrolled and follows the signal
+          // through stateFromSignal.
+          hasStateProp = false;
+          stateInitial = value;
+          stateFromSignal = signal.value ? value : undefined;
+        } else {
+          // A bound signal with no resolved default: its live value seeds state.
+          hasStateProp = true;
+          stateInitial = signal.value ? value : undefined;
         }
+      } else if (Object.hasOwn(props, "checked")) {
         hasStateProp = true;
         stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
-        // resolveInputProps may seed defaultChecked from a bound signal's
-        // default: the control stays uncontrolled and follows the signal
-        // through stateFromSignal.
         hasStateProp = false;
         stateInitial = value;
-        if (signal) {
-          stateFromSignal = signal.value ? value : undefined;
-        }
-      } else if (signal) {
-        // A bound signal with no resolved default: its live value seeds state.
-        hasStateProp = true;
-        stateInitial = signal.value ? value : undefined;
       } else {
         hasStateProp = false;
         stateInitial = undefined;
@@ -977,36 +980,37 @@ const createControlInfo = (props, { controlType }) => {
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      if (Object.hasOwn(props, "value")) {
-        if (signal) {
-          warnSignalCollision(props, controlType, "value");
+      if (signal) {
+        // The signal is the source of truth: a `value` passed alongside is
+        // ignored, not merged (warnSignalCollision says so in dev).
+        warnSignalCollision(props, controlType, "value");
+        if (Object.hasOwn(props, "defaultValue")) {
+          // resolveInputProps seeds defaultValue from a bound signal's default,
+          // so an input+signal is uncontrolled-with-default; the signal only
+          // receives write-backs (onUIAction).
+          hasStateProp = false;
+          // A signal holding something wins over the default: `defaultValue` is
+          // a suggestion of what to start from (and what a reset goes back to),
+          // not an answer — while the signal's value IS the answer, restored
+          // from the url or set by whoever owns it. Taking the default here
+          // would show a suggestion in place of the value on every reload.
+          stateInitial =
+            signal.value !== undefined ? signal.value : props.defaultValue;
+          stateFromSignal = stateInitial;
+        } else {
+          // A plain bound signal with no default (e.g. Wheel): its live value
+          // seeds and controls the state.
+          hasStateProp = true;
+          value = signal.value;
+          stateInitial = value;
         }
+      } else if (Object.hasOwn(props, "value")) {
         hasStateProp = true;
         value = props.value;
         stateInitial = value;
       } else if (Object.hasOwn(props, "defaultValue")) {
-        // resolveInputProps seeds defaultValue from a bound signal's default,
-        // so an input+signal is uncontrolled-with-default; the signal only
-        // receives write-backs (onUIAction).
         hasStateProp = false;
-        // A signal holding something wins over the default: `defaultValue` is a
-        // suggestion of what to start from (and what a reset goes back to), not
-        // an answer — while the signal's value IS the answer, restored from the
-        // url or set by whoever owns it. Taking the default here would show a
-        // suggestion in place of the value on every reload.
-        stateInitial =
-          signal && signal.value !== undefined
-            ? signal.value
-            : props.defaultValue;
-        if (signal) {
-          stateFromSignal = stateInitial;
-        }
-      } else if (signal) {
-        // A plain bound signal with no default (e.g. Wheel): its live value
-        // seeds and controls the state.
-        hasStateProp = true;
-        value = signal.value;
-        stateInitial = value;
+        stateInitial = props.defaultValue;
       } else {
         hasStateProp = false;
         stateInitial = undefined;
@@ -1029,26 +1033,27 @@ const createControlInfo = (props, { controlType }) => {
   } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    if (Object.hasOwn(props, "value")) {
-      if (signal) {
-        warnSignalCollision(props, controlType, "value");
+    if (signal) {
+      // Same rule as an input above: the signal is the source of truth, a
+      // `value` passed alongside is ignored.
+      warnSignalCollision(props, controlType, "value");
+      if (Object.hasOwn(props, "defaultValue")) {
+        hasStateProp = false;
+        // The signal's value is the answer, defaultValue only the suggestion to
+        // start from.
+        stateInitial =
+          signal.value !== undefined ? signal.value : props.defaultValue;
+        stateFromSignal = stateInitial;
+      } else {
+        hasStateProp = true;
+        stateInitial = signal.value;
       }
+    } else if (Object.hasOwn(props, "value")) {
       hasStateProp = true;
       stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
       hasStateProp = false;
-      // Same precedence as an input above: the signal's value is the answer,
-      // defaultValue only the suggestion to start from.
-      stateInitial =
-        signal && signal.value !== undefined
-          ? signal.value
-          : props.defaultValue;
-      if (signal) {
-        stateFromSignal = stateInitial;
-      }
-    } else if (signal) {
-      hasStateProp = true;
-      stateInitial = signal.value;
+      stateInitial = props.defaultValue;
     } else {
       hasStateProp = false;
       stateInitial = undefined;
@@ -1078,23 +1083,6 @@ const createControlInfo = (props, { controlType }) => {
     readOnlySupported,
     disabledSupported,
   };
-};
-// A control is bound to EITHER a signal (two-way) or a value/checked prop, never
-// both — the two would fight over the state. Warn (dev only) when both are given.
-// Only the controlled prop (value/checked) collides with signal — the default
-// prop (defaultValue/defaultChecked) is legitimately seeded from the signal by
-// resolveInputProps, so it must not warn here.
-const warnSignalCollision = (props, controlType, stateProp) => {
-  if (!import.meta.dev) {
-    return;
-  }
-  if (Object.hasOwn(props, stateProp)) {
-    console.warn(
-      `[navi] "${controlType}" got both "signal" and "${stateProp}". ` +
-        `"signal" is the source of truth; "${stateProp}" is ignored. ` +
-        `Pass only "signal".`,
-    );
-  }
 };
 // color, radio, image, file etc do not support readonly
 const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([

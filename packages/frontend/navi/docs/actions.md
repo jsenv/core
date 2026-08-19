@@ -115,3 +115,6 @@ changes do exactly that).
 - [resource_with_params.md](./resource_with_params.md) — `withParams()` and
   isolated rerun scopes
 - [list_refresh.md](./list_refresh.md) — what a write refreshes
+- [popup_open.md](./popup_open.md#closing-when-a-button-also-runs-an-action) —
+  closing a popup from a button that also runs an action (closing from inside
+  the action is refused)

@@ -207,3 +207,26 @@ const readValueFromNaviCustomEvent = (field, fallback) => {
   }
   return fallback;
 };
+
+/**
+ * A control is bound to EITHER a signal (two-way) or a value/checked prop,
+ * never both — the two would fight over the state. The signal is the one that
+ * wins; this says so in dev, wherever the question is decided (a leaf control
+ * in control_hooks, a group in ui_state_controller).
+ *
+ * Only the controlled prop (value/checked) collides with signal — the default
+ * prop (defaultValue/defaultChecked) is legitimately seeded from the signal by
+ * resolveInputProps, so it must not warn here.
+ */
+export const warnSignalCollision = (props, controlType, stateProp) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  if (Object.hasOwn(props, stateProp)) {
+    console.warn(
+      `[navi] "${controlType}" got both "signal" and "${stateProp}". ` +
+        `"signal" is the source of truth; "${stateProp}" is ignored. ` +
+        `Pass only "signal".`,
+    );
+  }
+};
