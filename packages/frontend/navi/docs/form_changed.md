@@ -7,6 +7,7 @@ as an answer the form already holds, and what to do on a screen whose fields are
 filled a request later.
 
 - [Sending nothing is the default](#sending-nothing-is-the-default)
+- [What follows a send](#what-follows-a-send)
 - [What the form is measured against](#what-the-form-is-measured-against)
 - [What counts as already held](#what-counts-as-already-held)
 - [A screen filled after it opened: `pristineKey`](#a-screen-filled-after-it-opened-pristinekey)
@@ -29,6 +30,50 @@ duplicates are fine.
 
 ```jsx
 <Form action={notify} canSendWhileUnchanged>
+```
+
+## What follows a send
+
+The form has answered its question; `command` says what the screen does about
+it — dismiss the popup (`--navi-close`), move on the slide map
+(`--navi-left`…), go to a page (`--navi-nav-to:/games/42`), stay put
+(`--navi-void`). Left out, the surface the form sits in decides: a popup closes,
+a slide goes on, a form on a page does nothing.
+
+It runs **whether or not there was anything to send** — that is the other half
+of the rule above: the person is done either way, and a submit that ran no
+action still closes the popup, still moves on, still navigates. Which is why
+this is a prop, decided before the send: the form has to know where it goes even
+when nothing happened.
+
+Nothing runs when the send fails, or when a constraint refuses it. The form then
+stays in front of the person, showing what it is waiting for.
+
+### When only the response knows where to go
+
+A creation lands on the page the server just made, and its id comes back with
+the response — too late for a prop. Do it in the action, which is where the
+answer is:
+
+```jsx
+<Form
+  action={async (value) => {
+    const game = await createGame(value);
+    navTo(`/games/${game.id}`);
+  }}
+>
+```
+
+Nothing to declare: a creation always has something to send, so there is no
+"the press did nothing" case for `command` to cover.
+
+If you would rather it go through the command machinery all the same (to reuse
+whatever a command does on that surface), the form carries what follows the send
+as `data-after-send`, read once the send has succeeded — so an action can write
+it while it runs:
+
+```js
+formRef.current.setAttribute("data-after-send", `--navi-nav-to:/games/${id}`);
 ```
 
 ## What the form is measured against
@@ -89,6 +134,11 @@ Its submit is live, and pressing it sends back the resource untouched.
 
 Change it **once**, when the screen is ready. Taken again after someone started
 typing, it would call what they wrote the reference.
+
+No need to delay it by a tick: the reference is taken when the fields have
+settled, and again at the end of that same tick — so a row that arrives in a
+render of its own (a value computed from signals, a memoized row) is part of it
+without the screen having to know which of its fields settle late.
 
 Do not use a `key` on the `<Form>` for this: it remounts every control and every
 popup inside it, and anything half-typed goes with them.

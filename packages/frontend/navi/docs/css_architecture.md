@@ -138,10 +138,19 @@ So the app states its own screen once, and never names a component:
 }
 ```
 
+In pixels: popup placement reads this value back from CSS to compute its own
+margins, and a custom property computes to a token stream rather than to a
+length, so `40rem` would arrive there as the string `"40rem"`. A non-px value
+still caps the popup's size (that part is pure CSS) but leaves the margins
+viewport-sized, and says so in the console.
+
 Every popup follows: `Dialog`, `Popover`, and everything built on them
-(`Picker`, `Select`, `SidePanel`…). It is a ceiling and nothing more — on a
-screen narrower than the app it never binds, and each popup still subtracts its
-own `marginWithContainer` from it, so the gap with the edges is kept either way.
+(`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
+than the app it never binds, and each popup still subtracts its own
+`marginWithContainer` from it, so the gap with the edges is kept either way.
+That gap is itself a share of the app's screen, not of the window (`"3appw"`,
+navi's own unit alongside `vvw`/`vvh`) — otherwise a 3% margin measured on a
+1500px window would eat 90px out of a 600px app.
 
 Do **not** try to get this by setting `--dialog-max-width` on `.navi_dialog`
 from the app. Two reasons:
@@ -154,6 +163,27 @@ from the app. Two reasons:
   `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
   that knob, so a popup that genuinely needs its own `maxWidth` can still say so
   without any of them escaping the app's screen.
+
+##### Current limitations
+
+`--navi-app-max-width` caps how big a popup may get; it does not move where one
+is placed. Placement is still computed against the real viewport
+(`pickPositionRelativeTo`, in `@jsenv/dom`). That is invisible for anything
+centered on its cross axis — `center`, `bottom`, `top`, which is what a dialog
+does nearly always — but shows for anything anchored to an edge: a
+`positionArea` like `bottom-start`, a `SidePanel`, a fixed bar. Those sit
+against the window's edge rather than the app column's, so they stay on the real
+viewport for now (`side_panel.jsx` restates `--dialog-maxmax-width` as the full
+viewport on purpose).
+
+Making them follow the app column too means narrowing the container rect
+placement is computed against, inside `pickPositionRelativeTo` — worth doing the
+day a side panel or a fixed bar has to live inside a simulated screen.
+
+Note that an app can already get all of it, placement included, by rendering
+itself in an iframe of the target width: the viewport then genuinely _is_ the
+app's screen and no token is needed at all. `--navi-app-max-width` is the answer
+for an app that does not want to pay that price.
 
 ### 3. Direct rule override (avoid unless necessary)
 

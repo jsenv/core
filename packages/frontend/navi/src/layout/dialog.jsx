@@ -113,8 +113,14 @@ const css = /* css */ `
          Capping the *size* here rather than only offsetting the position is
          what makes a centered dialog follow the mobile virtual keyboard for
          free: --navi-app-width/--navi-app-height track the visual viewport, so
-         the browser reflows the dialog itself as the keyboard opens. */
-      --x-dialog-container-spacing: 3vvw;
+         the browser reflows the dialog itself as the keyboard opens.
+
+         A share of the app's own screen, not of the window (hence
+         --navi-app-width rather than 3vvw): the gap must read as a small
+         margin around the dialog, and 3% of a 1500px window is a 45px gap
+         around a 600px app. Identical to 3vvw until the app declares
+         --navi-app-max-width. */
+      --x-dialog-container-spacing: calc(0.03 * var(--navi-app-width));
 
       /* --navi-app-width, not --navi-vvw: a top-layer dialog is calibrated on
          the app's own screen, which is the viewport unless the app declared a
@@ -484,13 +490,15 @@ const css = /* css */ `
  *   touch device.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`).
- * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
+ * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
- *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
- *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
+ *   number of pixels, or a viewport length — "appw"/"apph" being the app's own
+ *   screen (the visual viewport, or the narrower one the app declared with
+ *   --navi-app-max-width) and "vvw"/"vvh" the visual viewport itself, which
+ *   shrinks when the mobile keyboard opens. Pass 0 for a dialog
  *   meant to sit flush (a side panel).
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
@@ -794,12 +802,13 @@ const useDialogProps = (props) => {
     marginWithContainerProp ??
     (isDocked
       ? DOCKED.marginWithContainer
-      : // A share of whatever holds the dialog: the viewport for a top-layer
-        // one — where vvw is exactly "3% of the container", the container being
-        // the viewport — and the positioned ancestor for a local one, where
-        // reading 3% of the viewport gives an absurd gap inside a small box.
+      : // A share of whatever holds the dialog: the app's own screen for a
+        // top-layer one — where appw is exactly "3% of the container", the
+        // container being that screen (the viewport, unless the app declared a
+        // narrower one) — and the positioned ancestor for a local one, where
+        // reading 3% of the screen gives an absurd gap inside a small box.
         isModal
-        ? "3vvw"
+        ? "3appw"
         : "3cqw");
   // "expand || expandX", the shorthand semantics Popup used to apply before
   // handing them over — the docked default only applies when neither was said
@@ -1046,7 +1055,7 @@ const useDialogProps = (props) => {
         // a percentage…) — the placement below needs a real number, and letting
         // it through would put the dialog at NaN.
         console.warn(
-          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3vvw", "2vvh") or a container length ("3cqw", "2cqh").`,
+          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3appw", "3vvw", "2vvh") or a container length ("3cqw", "2cqh").`,
         );
         marginWithContainerInPixels = 0;
       }

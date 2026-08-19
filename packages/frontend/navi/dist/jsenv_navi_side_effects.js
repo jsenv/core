@@ -86,6 +86,55 @@ if (vv) {
   vv.addEventListener("scroll", update);
 }
 
+// The app's own screen — the visual viewport, unless the app declared a
+// narrower one with --navi-app-max-width/--navi-app-height (see
+// navi_css_vars.js, which derives --navi-app-width/--navi-app-height from
+// these in CSS). Anything escaping normal flow is sized against this rather
+// than the viewport: an app that simulates a handheld screen keeps that width
+// even for what paints on top of it.
+//
+// The declaration stays in CSS and is read back from there rather than handed
+// to navi a second time in JS — a JS copy would be the one that goes stale.
+// Read on the spot rather than cached in a signal: the only caller is a popup
+// resolving its own margin as it places itself, which already reads far more
+// of the DOM than this, and nothing then has to be invalidated when the value
+// changes.
+const unresolvableWarned = new Set();
+const readAppMax = (propertyName) => {
+  const declared = getComputedStyle(document.documentElement)
+    .getPropertyValue(propertyName)
+    .trim();
+  if (!declared) {
+    return Infinity;
+  }
+  // A custom property computes to a token stream, not to a length: "40rem"
+  // arrives here as the string "40rem", and parseFloat would read it as 40
+  // pixels. Only px is accepted — an app declaring the screen it simulates has
+  // a pixel number to give, and resolving arbitrary lengths would mean laying
+  // out a probe element on every read.
+  const inPixels = /^([0-9.]+)px$/.exec(declared);
+  if (!inPixels) {
+    if (!unresolvableWarned.has(propertyName)) {
+      unresolvableWarned.add(propertyName);
+      // Not silently wrong, just partially applied: CSS still caps the popup's
+      // size with the declared length, only the margin it keeps with the edges
+      // falls back to a share of the viewport (the pre-token behavior).
+      console.warn(
+        `${propertyName}="${declared}" must be a length in pixels ("600px"). Until then popups keep viewport-sized margins.`,
+      );
+    }
+    return Infinity;
+  }
+  return parseFloat(inPixels[1]);
+};
+const getAppWidth = () =>
+  Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
+const getAppHeight = () =>
+  Math.min(
+    visualViewportHeightSignal.value,
+    readAppMax("--navi-app-max-height"),
+  );
+
 // Whether the primary input is a finger rather than a mouse. A pointer type is
 // not a size: a narrow desktop window is still a mouse, and a large tablet is
 // still a finger — so anything sized for thumb reach or for the on-screen
@@ -119,6 +168,42 @@ const css = /* css */`
       (which don't track the virtual keyboard dimensions) are never used in practice on supported browsers. */
       --navi-vvw: 100dvw;
       --navi-vvh: 100dvh;
+
+      /* What navi treats as "the screen" when it sizes something that escapes
+         normal flow (a dialog in the top layer, a popover, anything built on
+         them). The visual viewport by default — but an app that never spans
+         the whole window says so here, ONCE, without ever naming a component:
+
+           :root {
+             --navi-app-max-width: 600px;
+           }
+
+         In pixels — see readAppMax in layout/responsive.js for why.
+
+         Typically an app simulating a handheld screen: a column centered in a
+         wide window with bands on the sides. A dialog is in the top layer, so
+         it answers to the viewport, not to that column — left alone it would
+         paint 1500px of modal over a 600px app. Declaring the ceiling here is
+         what makes the app's own width apply everywhere, including on top.
+
+         It stays a ceiling and nothing else: on a screen narrower than the app
+         it never binds, so popups keep shrinking with the phone, and the gap
+         each popup keeps with the edges (marginWithContainer) is subtracted
+         from it as before. A single popup that genuinely needs more can still
+         raise its own maxWidth/maxHeight prop.
+
+         Sizes only, not placement: what is anchored to an edge (a SidePanel, a
+         fixed bar, a "bottom-start" positionArea) still sits against the
+         window's edge, not the app column's. See "Current limitations" in
+         docs/css_architecture.md. */
+      --navi-app-width: min(
+        var(--navi-vvw),
+        var(--navi-app-max-width, var(--navi-vvw))
+      );
+      --navi-app-height: min(
+        var(--navi-vvh),
+        var(--navi-app-max-height, var(--navi-vvh))
+      );
 
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
@@ -292,5 +377,5 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export { coarsePointerSignal, installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

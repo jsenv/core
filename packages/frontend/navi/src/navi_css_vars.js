@@ -33,6 +33,8 @@ const css = /* css */ `
              --navi-app-max-width: 600px;
            }
 
+         In pixels — see readAppMax in layout/responsive.js for why.
+
          Typically an app simulating a handheld screen: a column centered in a
          wide window with bands on the sides. A dialog is in the top layer, so
          it answers to the viewport, not to that column — left alone it would
@@ -43,7 +45,12 @@ const css = /* css */ `
          it never binds, so popups keep shrinking with the phone, and the gap
          each popup keeps with the edges (marginWithContainer) is subtracted
          from it as before. A single popup that genuinely needs more can still
-         raise its own maxWidth/maxHeight prop. */
+         raise its own maxWidth/maxHeight prop.
+
+         Sizes only, not placement: what is anchored to an edge (a SidePanel, a
+         fixed bar, a "bottom-start" positionArea) still sits against the
+         window's edge, not the app column's. See "Current limitations" in
+         docs/css_architecture.md. */
       --navi-app-width: min(
         var(--navi-vvw),
         var(--navi-app-max-width, var(--navi-vvw))

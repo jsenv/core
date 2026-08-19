@@ -60,9 +60,10 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   fields, and a form comparing against what it held BEFORE that opens already
  *   changed. Pass whatever says the filling is done (a boolean, the resource
  *   itself, a count of what has loaded) and what the fields carry at that
- *   moment becomes the reference. Change it once, when the screen is ready:
- *   taken again after someone started typing, it would call what they wrote the
- *   reference.
+ *   moment becomes the reference — including the fields that settle in a render
+ *   of their own, so there is no tick to wait for on the caller's side. Change
+ *   it once, when the screen is ready: taken again after someone started
+ *   typing, it would call what they wrote the reference.
  * @param {string} [props.command] - What follows a submission that went
  *   through: the form has answered its question, and this says what the screen
  *   does about it. Nothing runs when the submission is refused — the form then
@@ -70,7 +71,8 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *
  *   `"--navi-close"` dismisses the popup the form is in,
  *   `"--navi-left"`/`"--navi-right"`/`"--navi-up"`/`"--navi-down"` move on the
- *   slide map it is in, `"--navi-void"` stays put.
+ *   slide map it is in, `"--navi-nav-to:/the/url"` takes the user to a page,
+ *   `"--navi-void"` stays put.
  *   Any navi command, really: it is triggered from the form, so it finds its
  *   target the way that command always does.
  *
@@ -294,21 +296,51 @@ const withoutEmptyFields = (uiState) => {
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
+//
+// Taken a second time at the end of the tick, because "the earliest moment" is
+// not always late enough: a field that re-renders on its own schedule rather
+// than with the form — a row whose value is computed from signals, sitting
+// behind a memo — brings its value in a render of its own, which lands after
+// these effects. A form measured before it would open already changed, and
+// would never take the reference again. Both takes are the same arrival, so the
+// second one costs a render only when it moves something.
 const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
   // The render that brought a new pristineKey read `changed` against the
   // previous baseline, and nothing else is going to move: the button would stay
   // lit on a form that holds exactly what it was just given. So ask for the one
-  // render that reads the new baseline — the first one has nobody to tell,
-  // every field it is waiting for re-renders the form as it registers.
+  // render that reads the new baseline — the first take on mount has nobody to
+  // tell, every field it is waiting for re-renders the form as it registers.
   const [, rereadBaseline] = useState(0);
   const isFirstRef = useRef(true);
   useLayoutEffect(() => {
-    uiStateController.sentUIState = readHeldUIState(uiStateController);
-    if (isFirstRef.current) {
-      isFirstRef.current = false;
-      return;
+    const takeBaseline = () => {
+      const baselineBefore = uiStateController.sentUIState;
+      const baseline = readHeldUIState(uiStateController);
+      uiStateController.sentUIState = baseline;
+      return !compareTwoJsValues(baselineBefore, baseline);
+    };
+    const moved = takeBaseline();
+    const isFirst = isFirstRef.current;
+    isFirstRef.current = false;
+    if (moved && !isFirst) {
+      rereadBaseline((count) => count + 1);
     }
-    rereadBaseline((count) => count + 1);
+    // A microtask, not a timeout: everything that belongs to this arrival —
+    // the renders preact still has queued, the state they push into the form —
+    // happens before the tick ends, and nothing a person does can land in
+    // between.
+    let abandoned = false;
+    queueMicrotask(() => {
+      if (abandoned) {
+        return;
+      }
+      if (takeBaseline()) {
+        rereadBaseline((count) => count + 1);
+      }
+    });
+    return () => {
+      abandoned = true;
+    };
   }, [uiStateController, pristineKey]);
 };
 

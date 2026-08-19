@@ -1,6 +1,8 @@
 import { getPositionedParent, mergeOneStyle, normalizeStyle } from "@jsenv/dom";
 
 import {
+  getAppHeight,
+  getAppWidth,
   visualViewportHeightSignal,
   visualViewportWidthSignal,
   windowHeightSignal,
@@ -763,15 +765,26 @@ export const isSizeSpacingKey = (key) => {
 // "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
 // shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
 // they are what a popup meant to stay clear of the keyboard should use.
-const VIEWPORT_UNIT_SIGNALS = {
-  vvw: visualViewportWidthSignal,
-  vvh: visualViewportHeightSignal,
-  vw: windowWidthSignal,
-  vh: windowHeightSignal,
-  dvw: windowWidthSignal,
-  dvh: windowHeightSignal,
+// "appw"/"apph" are the same thing narrowed to the app's own screen: identical
+// to vvw/vvh until the app declares --navi-app-max-width, and a share of that
+// width afterwards. A gap meant to read as "a small margin" must use these —
+// 3vvw on a 1500px window is a 45px gap around a 600px app.
+// Functions rather than the signals themselves: appw/apph are not a signal to
+// read but a value to compute (a signal, then a CSS var read back). Reading the
+// signal inside still registers the same dependency for a caller doing this
+// during a render.
+const VIEWPORT_UNIT_VALUES = {
+  appw: getAppWidth,
+  apph: getAppHeight,
+  vvw: () => visualViewportWidthSignal.value,
+  vvh: () => visualViewportHeightSignal.value,
+  vw: () => windowWidthSignal.value,
+  vh: () => windowHeightSignal.value,
+  dvw: () => windowWidthSignal.value,
+  dvh: () => windowHeightSignal.value,
 };
-const VIEWPORT_LENGTH_REGEX = /^(-?\d+(?:\.\d+)?)(vvw|vvh|dvw|dvh|vw|vh)$/;
+const VIEWPORT_LENGTH_REGEX =
+  /^(-?\d+(?:\.\d+)?)(appw|apph|vvw|vvh|dvw|dvh|vw|vh)$/;
 const resolveViewportLength = (size) => {
   if (typeof size !== "string") {
     return null;
@@ -781,7 +794,7 @@ const resolveViewportLength = (size) => {
     return null;
   }
   const [, amount, unit] = match;
-  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
+  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_VALUES[unit]();
 };
 
 // "3cqw"/"2cqh" — a share of the container the given element lives in, the way

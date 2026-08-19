@@ -1,5 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
+import { navTo } from "../nav/browser_integration/browser_integration.js";
 import {
   findClosestControlWithAction,
   findControlHost,
@@ -428,15 +429,21 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      // Read here rather than above: it depends on the requester, which is only
-      // known now — Enter in a field sends through the first submit button, and
-      // what follows the send is that button's answer.
-      const afterSend = resolveAfterSend(target, requester);
       // Nothing is committed when a constraint fails, so nothing is decided
       // and the popup must stay open — with the form still in front of the
       // user, showing what it is waiting for.
       let invalid = false;
+      // What follows the send is read at the moment it runs, never before it:
+      // it depends on the requester (Enter in a field sends through the first
+      // submit button, and what follows is that button's answer), and on
+      // anything the send itself decided — an action that learned where to go
+      // from the response writes it on the form while it runs
+      // (data-after-send), and this is what picks it up.
       const runAfterSend = () => {
+        const afterSend = resolveAfterSend(target, requester);
+        if (!afterSend) {
+          return;
+        }
         triggerNaviCommand(source, afterSend, event, { optional: true });
       };
       const {
@@ -471,7 +478,7 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester,
         }),
       );
-      if (sent === false || invalid || !afterSend) {
+      if (sent === false || invalid) {
         return sent;
       }
       if (isRunning) {
@@ -660,6 +667,30 @@ registerNaviCommand("--navi-back", (source, event) => {
     target,
     implementation: () =>
       dispatchCustomEvent(target, "navi_slide_back", { event }),
+  };
+});
+
+// Where a press takes the user. The destination is the command's argument
+// because it says WHAT the command does — "--navi-nav-to:/games/42" — which is how
+// it can also be what follows a form submission: the form has answered its
+// question, and the answer to "what now" is a page.
+//
+// A destination fixed at the call site, so it is for a page known before the
+// send — which is what a form needs, since it must also know where to go when
+// the press had nothing to send. A destination the response decides (a
+// creation, whose id comes back with it) is the action's own business: it
+// navigates itself.
+registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
+  if (!argument) {
+    console.warn(
+      `[navi] "--navi-nav-to" needs a destination: --navi-nav-to:/the/url (relative to the current page, or absolute).`,
+    );
+    return undefined;
+  }
+  const target = resolveExplicitTarget(source) || source;
+  return {
+    target,
+    implementation: () => navTo(argument),
   };
 });
 

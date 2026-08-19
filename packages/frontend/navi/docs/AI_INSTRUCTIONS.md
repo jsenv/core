@@ -86,8 +86,9 @@ consistency across the app, not from any single call site.
   `signal` + `defaultValue` says, what a signal holds for each kind of control,
   and why `value` and `signal` cannot both be passed. Read it before wiring a
   control's value by hand with `value` + `uiAction`.
-- `docs/form_changed.md` — what a `<Form>` sends: submitting a form nobody
-  touched runs no action, what "changed" is measured against, and the trap —
+- `docs/form_changed.md` — what a `<Form>` sends and what follows the send:
+  submitting a form nobody touched runs no action (and still navigates/closes),
+  what "changed" is measured against, and the trap —
   which fields count as already held (a `defaultValue` is a suggestion, a
   `signal` carrying something is an answer). Read it before a screen that
   modifies an existing resource (`pristineKey`), and before reaching for

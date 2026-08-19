@@ -2,7 +2,7 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, useSignal } from "@preact/signals";
@@ -17237,15 +17237,26 @@ const isSizeSpacingKey = (key) => {
 // "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
 // shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
 // they are what a popup meant to stay clear of the keyboard should use.
-const VIEWPORT_UNIT_SIGNALS = {
-  vvw: visualViewportWidthSignal,
-  vvh: visualViewportHeightSignal,
-  vw: windowWidthSignal,
-  vh: windowHeightSignal,
-  dvw: windowWidthSignal,
-  dvh: windowHeightSignal,
+// "appw"/"apph" are the same thing narrowed to the app's own screen: identical
+// to vvw/vvh until the app declares --navi-app-max-width, and a share of that
+// width afterwards. A gap meant to read as "a small margin" must use these —
+// 3vvw on a 1500px window is a 45px gap around a 600px app.
+// Functions rather than the signals themselves: appw/apph are not a signal to
+// read but a value to compute (a signal, then a CSS var read back). Reading the
+// signal inside still registers the same dependency for a caller doing this
+// during a render.
+const VIEWPORT_UNIT_VALUES = {
+  appw: getAppWidth,
+  apph: getAppHeight,
+  vvw: () => visualViewportWidthSignal.value,
+  vvh: () => visualViewportHeightSignal.value,
+  vw: () => windowWidthSignal.value,
+  vh: () => windowHeightSignal.value,
+  dvw: () => windowWidthSignal.value,
+  dvh: () => windowHeightSignal.value,
 };
-const VIEWPORT_LENGTH_REGEX = /^(-?\d+(?:\.\d+)?)(vvw|vvh|dvw|dvh|vw|vh)$/;
+const VIEWPORT_LENGTH_REGEX =
+  /^(-?\d+(?:\.\d+)?)(appw|apph|vvw|vvh|dvw|dvh|vw|vh)$/;
 const resolveViewportLength = (size) => {
   if (typeof size !== "string") {
     return null;
@@ -17255,7 +17266,7 @@ const resolveViewportLength = (size) => {
     return null;
   }
   const [, amount, unit] = match;
-  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
+  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_VALUES[unit]();
 };
 
 // "3cqw"/"2cqh" — a share of the container the given element lives in, the way
@@ -21546,6 +21557,564 @@ document.body.addEventListener(
   { capture: true },
 );
 
+const documentStateSignal = signal(null);
+const useDocumentState = () => {
+  return documentStateSignal.value;
+};
+const updateDocumentState = (value) => {
+  documentStateSignal.value = value;
+};
+
+/**
+ * A navigation is ABOUT to be applied — said before its very first write.
+ *
+ * Everything else a router says arrives once the change is made: a route
+ * announces that it matches, an action that it is running. That is too late for
+ * anyone who needs the page as it stands BEFORE, and the browser's view
+ * transitions are exactly that kind of reader — the picture they keep of the
+ * page being left is taken at the next frame, and a render answering a signal
+ * written a moment ago is already in the DOM by then (see route_travel.jsx).
+ *
+ * So this is the one moment where nothing has moved yet. It is published
+ * synchronously, from the top of the navigation, and whoever listens runs
+ * before the URL, the visited set, or any route has changed.
+ *
+ * The other end is published too, and for the same kind of reader: whoever
+ * held something across the change and has nobody to hand it to gets a moment
+ * to let go of it that does not depend on guessing how long the change takes.
+ */
+
+
+const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
+const [publishAfterRouting, observeAfterRouting] = createPubSub();
+
+const setupBrowserIntegrationViaHistory = ({
+  applyActions,
+  applyRouting,
+  isRouting,
+}) => {
+  const { history } = window;
+
+  let globalAbortController = new AbortController();
+  const triggerGlobalAbort = (reason) => {
+    globalAbortController.abort(reason);
+    globalAbortController = new AbortController();
+  };
+
+  const dispatchActions = (params) => {
+    const { requestedResult } = applyActions({
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: new AbortController().signal,
+      ...params,
+    });
+    return requestedResult;
+  };
+  setActionDispatcher(dispatchActions);
+
+  const getDocumentState = () => {
+    return window.history.state ? { ...window.history.state } : null;
+  };
+
+  const historyStartAtStart = getDocumentState();
+  const visitedUrlSet = historyStartAtStart
+    ? new Set(historyStartAtStart.jsenv_visited_urls || [])
+    : new Set();
+
+  // Create a signal that tracks visited URLs for reactive updates
+  // Using a counter instead of the Set directly for better performance
+  // Links will check isVisited() when this signal changes
+  const visitedUrlsSignal = signal(0);
+
+  const isVisited = (url) => {
+    url = new URL(url, window.location.href).href;
+    return visitedUrlSet.has(url);
+  };
+  const markUrlAsVisited = (url) => {
+    if (visitedUrlSet.has(url)) {
+      return;
+    }
+    visitedUrlSet.add(url);
+    visitedUrlsSignal.value++;
+  };
+
+  let abortController = null;
+  const handleRoutingTask = (url, options) => {
+    // Before anything is written: the visited set, the URL and every route are
+    // about to change, and this is the last moment the page still stands as it
+    // was. And after, whichever way the change went out — so that whoever took
+    // something at the first announcement has a definite place to give it back.
+    publishBeforeRouting({ url, ...options });
+    try {
+      return applyRoutingTask(url, options);
+    } finally {
+      publishAfterRouting({ url, ...options });
+    }
+  };
+
+  const applyRoutingTask = (url, options) => {
+    const isSameUrl = url === window.location.href;
+    const {
+      reason,
+      navigationType, // "load", "reload", "replace", "push", "traverse"
+      state,
+    } = options;
+
+    if (navigationType === "push" || navigationType === "replace") {
+      markUrlAsVisited(url);
+      // undefined → inherit current state (link click, neutral navigation)
+      // null     → explicit reset (no nav-state keys carried over)
+      // {...}    → explicit state from enter()/leave(), already built from currentState
+      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
+      let effectiveState;
+      const sharedState = {
+        jsenv_visited_urls: Array.from(visitedUrlSet),
+      };
+      if (state === undefined) {
+        effectiveState = {
+          ...(getDocumentState() || {}),
+          ...sharedState,
+        };
+      } else if (state === null) {
+        effectiveState = sharedState;
+      } else if (state) {
+        effectiveState = {
+          ...state,
+          ...sharedState,
+        };
+      }
+      if (navigationType === "push") {
+        window.history.pushState(effectiveState, null, url);
+      } else {
+        window.history.replaceState(effectiveState, null, url);
+      }
+      updateDocumentUrl(url);
+      updateDocumentState(effectiveState);
+    } else {
+      // traverse / reload: state comes from the history entry, no push/replace needed.
+      markUrlAsVisited(url);
+      updateDocumentUrl(url);
+      updateDocumentState(state);
+    }
+
+    // Skip route matching for state-only changes: push/replace to the same URL
+    // (e.g. useNavState updating document state without changing the route).
+    // Do NOT apply for "traverse" — window.location.href is already updated by
+    // the browser before the popstate handler runs, so isSameUrl is always true
+    // for back/forward navigation regardless of whether the URL actually changed.
+    if (
+      isSameUrl &&
+      (navigationType === "push" || navigationType === "replace")
+    ) {
+      return undefined;
+    }
+
+    if (abortController) {
+      abortController.abort(`navigating to ${url}`);
+    }
+    abortController = new AbortController();
+    const abortSignal = abortController.signal;
+    const { allResult, requestedResult } = applyRouting(url, {
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal,
+      reason,
+      navigationType,
+      isVisited,
+      state,
+    });
+    executeWithCleanup(
+      () => allResult,
+      () => {
+        abortController = undefined;
+      },
+    );
+    return requestedResult;
+  };
+
+  // Browser event handlers
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (e.button !== 0) {
+        // Ignore non-left clicks
+        return;
+      }
+      if (e.metaKey) {
+        // Ignore clicks with meta key (e.g. open in new tab)
+        return;
+      }
+      if (e.defaultPrevented) {
+        return;
+      }
+      const linkElement = e.target.closest("a");
+      if (!linkElement) {
+        return;
+      }
+      if (linkElement.hasAttribute("data-readonly")) {
+        return;
+      }
+      const href = linkElement.href;
+      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
+        getHrefTargetInfo(href);
+      if (isEmpty || !isSameOrigin) {
+        // Let link to other origins be handled by the browser
+        return;
+      }
+      if (isAnchor) {
+        // Fragment navigation belongs to the browser: it owns the indicated
+        // part of the document, and taking it over would cost `:target` and the
+        // focus handling that come with it.
+        if (isCurrent) {
+          // Except this one, which the browser answers with a scroll and
+          // nothing else: same pathname, same hash, so no event and no url
+          // change reaches whoever is waiting on the designated element.
+          rearmUrlTarget();
+        }
+        return;
+      }
+      // Nothing here declared a route, so there is nothing to route to: the
+      // page is a plain document and a link in it is a plain link. Taking it
+      // over anyway would push the url and then have nothing to show for it —
+      // the address bar moves and the page does not (see applyRouting's own
+      // "not called yet" branch, which is where that used to end up).
+      if (!isRouting()) {
+        return;
+      }
+      e.preventDefault();
+      handleRoutingTask(href, {
+        reason: `"click" on a[href="${href}"]`,
+        navigationType: "push",
+      });
+    },
+    { capture: true },
+  );
+
+  window.addEventListener(
+    "submit",
+    () => {
+      // Handle form submissions?
+      // Not needed yet
+    },
+    { capture: true },
+  );
+
+  window.addEventListener("popstate", (popstateEvent) => {
+    const url = window.location.href;
+    const state = popstateEvent.state;
+    handleRoutingTask(url, {
+      reason: `"popstate" event for ${url}`,
+      navigationType: "traverse",
+      state,
+    });
+  });
+
+  // A fragment navigation is left to the browser (see the click handler above):
+  // it owns the indicated part of the document, and taking it over would cost
+  // `:target` and the focus handling that come with it. The document url still
+  // has to follow it — nothing else here would notice that it moved.
+  window.addEventListener("hashchange", () => {
+    updateDocumentUrl(window.location.href);
+  });
+
+  const navTo = async (url, { replace, state } = {}) => {
+    handleRoutingTask(url, {
+      reason: `navTo called with "${url}"`,
+      navigationType: replace ? "replace" : "push",
+      state,
+    });
+  };
+
+  const stop = (reason = "stop called") => {
+    triggerGlobalAbort(reason);
+  };
+
+  const reload = () => {
+    const url = window.location.href;
+    const state = history.state;
+    handleRoutingTask(url, {
+      reason: "reload called",
+      navigationType: "reload",
+      state,
+    });
+  };
+
+  const navBack = () => {
+    window.history.back();
+  };
+
+  const navForward = () => {
+    window.history.forward();
+  };
+
+  const init = () => {
+    const url = window.location.href;
+    const state = history.state;
+    handleRoutingTask(url, {
+      reason: "routing initialization",
+      navigationType: "load",
+      state,
+    });
+  };
+
+  return {
+    integration: "browser_history_api",
+    init,
+    navTo,
+    stop,
+    reload,
+    navBack,
+    navForward,
+    getDocumentState,
+    isVisited,
+    visitedUrlsSignal,
+  };
+};
+
+let updateRoutes;
+
+const applyActions = (params) => {
+  const updateActionsResult = updateActions(params);
+  const { allResult, runningActionSet } = updateActionsResult;
+  const pendingTaskNameArray = [];
+  for (const runningAction of runningActionSet) {
+    pendingTaskNameArray.push(runningAction.name);
+  }
+  workingWhile(() => allResult, pendingTaskNameArray);
+  return updateActionsResult;
+};
+const applyRouting = (
+  url,
+  {
+    globalAbortSignal,
+    abortSignal,
+    // state
+    navigationType,
+    isVisited,
+    reason,
+  },
+) => {
+  if (!updateRoutes) {
+    // .init() not called yet
+    // likely because code does not uses routing at all
+    return {};
+  }
+  const {
+    loadSet,
+    reloadSet,
+    abortSignalMap,
+    routeLoadRequestedMap,
+    activeRouteSet,
+  } = updateRoutes(url, {
+    navigationType,
+    isVisited,
+    // state,
+  });
+  if (
+    (!loadSet || loadSet.size === 0) &&
+    (!reloadSet || reloadSet.size === 0)
+  ) {
+    return {
+      allResult: undefined,
+      requestedResult: undefined,
+      activeRouteSet: new Set(),
+    };
+  }
+  const updateActionsResult = updateActions({
+    globalAbortSignal,
+    abortSignal,
+    runSet: loadSet,
+    rerunSet: reloadSet,
+    abortSignalMap,
+    reason,
+    isReplace: navigationType === "replace",
+  });
+  const { allResult, runningActionSet } = updateActionsResult;
+  const pendingTaskNameArray = [];
+  for (const [route, routeAction] of routeLoadRequestedMap) {
+    if (runningActionSet.has(routeAction)) {
+      pendingTaskNameArray.push(`${route.relativeUrl} -> ${routeAction.name}`);
+    }
+  }
+  routingWhile(() => allResult, pendingTaskNameArray);
+  return { ...updateActionsResult, activeRouteSet };
+};
+
+const browserIntegration = setupBrowserIntegrationViaHistory({
+  applyActions,
+  applyRouting,
+  // Routes are declared by the consumer and registered through
+  // setOnAllRouteReady below, so "does this document route at all?" is only
+  // answerable once that has run — hence a function, read at click time rather
+  // than a value read at setup time.
+  isRouting: () => Boolean(updateRoutes),
+});
+
+setOnAllRouteReady((v) => {
+  updateRoutes = v;
+  browserIntegration.init();
+});
+setRouteIntegration(browserIntegration);
+
+const navIntegratedVia = browserIntegration.integration;
+const navTo = (target, options) => {
+  const url = new URL(target, window.location.href).href;
+  const currentUrl = documentUrlSignal.peek();
+  if (url === currentUrl) {
+    if (options?.state === undefined) {
+      return null;
+    }
+    // State-only update on same URL: skip if state is identical to current.
+    const currentState = browserIntegration.getDocumentState();
+    if (compareTwoJsValues(options.state, currentState)) {
+      return null;
+    }
+  }
+  return browserIntegration.navTo(url, options);
+};
+const stopLoad = (reason = "stopLoad() called") => {
+  const windowIsLoading = windowIsLoadingSignal.value;
+  if (windowIsLoading) {
+    window.stop();
+  }
+  const documentIsBusy = documentIsBusySignal.value;
+  if (documentIsBusy) {
+    browserIntegration.stop(reason);
+  }
+};
+const reload = browserIntegration.reload;
+const navBack = browserIntegration.navBack;
+const navForward = browserIntegration.navForward;
+const isVisited = browserIntegration.isVisited;
+const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
+browserIntegration.handleActionTask;
+
+// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
+// the mask is derived from render order within the nearest root/async
+// boundary — stable across re-renders of the *same* mount, but not across a
+// reload (render order can differ) or even across two mounts on the same
+// page (two components hitting useId() in the same relative order get the
+// same string). Storing one of these under type: "push" bakes it into a
+// history entry: reload the page and the entry's key may now belong to a
+// completely different component (or none), silently auto-opening whatever
+// happens to render at that same position instead.
+const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
+const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
+
+const NO_OP = () => {};
+const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
+const useNavStateBasic = (
+  id,
+  { debug, type = "replace", onLeave, defaultValue } = {},
+) => {
+  // Hooks must be called unconditionally — before the !id early return.
+  const state = documentStateSignal.value;
+  // Key presence is the flag — the value may be anything, including undefined.
+  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
+  const onLeaveRef = useRef(onLeave);
+  onLeaveRef.current = onLeave;
+  const prevKeyInStateRef = useRef(keyInState);
+  // enteredRef tracks whether enter() was called without a matching leave() yet.
+  // It lets the effect distinguish an external disappearance (back button → fire onLeave)
+  // from a programmatic one (leave() already set it to false before the state updates).
+  const enteredRef = useRef(false);
+  useEffect(() => {
+    const prevKeyInState = prevKeyInStateRef.current;
+    prevKeyInStateRef.current = keyInState;
+    if (prevKeyInState && !keyInState && enteredRef.current) {
+      enteredRef.current = false;
+      onLeaveRef.current?.();
+    }
+  }, [keyInState]);
+
+  if (!id) {
+    return NO_ID_GIVEN;
+  }
+
+  let effectiveType = type;
+  if (type === "push" && isLikelyPreactGeneratedId(id)) {
+    effectiveType = "replace";
+  }
+
+  const currentValue = keyInState ? state[id] : defaultValue;
+
+  if (debug) {
+    console.debug(`useNavState(${id}) current value is ${currentValue}`);
+  }
+
+  // enter(value): navigate TO this state (push or replace depending on type).
+  // Calling enter() without a value stores "on" — the mere presence of the key
+  // in the document state is enough to match; the value just allows associating
+  // extra data with the entry when needed.
+  const enter = (value = "on") => {
+    enteredRef.current = true;
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
+      return;
+    }
+    currentStateCopy[id] = value;
+    navTo(window.location.href, {
+      replace: effectiveType !== "push",
+      state: currentStateCopy,
+    });
+  };
+
+  // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
+  // isBack: when true (cancel close in push mode), call history.back() to restore the
+  //   pre-open state — discards any in-progress edits.
+  //   When false (confirmed close), replace the pushed entry instead: preserves the
+  //   current URL state (e.g. a new picker value) while removing the popup key.
+  const leave = ({ isBack } = {}) => {
+    enteredRef.current = false;
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    if (!Object.hasOwn(currentStateCopy, id)) {
+      return;
+    }
+    if (effectiveType === "push" && isBack) {
+      browserIntegration.navBack();
+    } else {
+      delete currentStateCopy[id];
+      navTo(window.location.href, {
+        replace: true,
+        state: currentStateCopy,
+      });
+    }
+  };
+
+  return [currentValue, enter, leave];
+};
+
+/**
+ * Stores a named value in the browser's document state and returns it reactively.
+ * The component re-renders whenever the value changes (navigation, back/forward button).
+ *
+ * @param {string} id
+ *   Unique key used to store the value in document state. Must be stable across renders.
+ *
+ * @param {object} [options]
+ * @param {"push"|"replace"} [options.type="replace"]
+ *   Controls how enter() adds the state to browser history.
+ *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
+ *   - "replace": updates the current history entry — no extra history entry is created.
+ *   Silently downgraded to "replace" (with a dev-only console.warn) when `id`
+ *   looks auto-generated (e.g. preact's own useId()) — an unstable id baked
+ *   into a pushed history entry won't survive a reload correctly, and could
+ *   even collide with a different component's own auto-generated id. Pass a
+ *   stable, explicit id to actually get "push" behavior.
+ * @param {() => void} [options.onLeave]
+ *   Called when the state key disappears **externally** — e.g. the user presses the browser
+ *   back button. Not called when leave() is invoked programmatically.
+ * @param {*} [options.defaultValue]
+ *   Value returned when `id` is absent from document state. Defaults to `undefined`.
+ *
+ * @returns {[value, enter, leave]}
+ *   - `value`: current value from document state, or `defaultValue` when the key is absent.
+ *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
+ *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
+ *     the value allows associating extra data when needed.
+ *   - `leave()`: navigate AWAY FROM this state (removes `id` from document state,
+ *     or goes back in history when `type` is "push").
+ */
+const useNavState = useNavStateBasic;
+
 /**
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.
@@ -21953,15 +22522,21 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      // Read here rather than above: it depends on the requester, which is only
-      // known now — Enter in a field sends through the first submit button, and
-      // what follows the send is that button's answer.
-      const afterSend = resolveAfterSend(target, requester);
       // Nothing is committed when a constraint fails, so nothing is decided
       // and the popup must stay open — with the form still in front of the
       // user, showing what it is waiting for.
       let invalid = false;
+      // What follows the send is read at the moment it runs, never before it:
+      // it depends on the requester (Enter in a field sends through the first
+      // submit button, and what follows is that button's answer), and on
+      // anything the send itself decided — an action that learned where to go
+      // from the response writes it on the form while it runs
+      // (data-after-send), and this is what picks it up.
       const runAfterSend = () => {
+        const afterSend = resolveAfterSend(target, requester);
+        if (!afterSend) {
+          return;
+        }
         triggerNaviCommand(source, afterSend, event, { optional: true });
       };
       const {
@@ -21996,7 +22571,7 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester,
         }),
       );
-      if (sent === false || invalid || !afterSend) {
+      if (sent === false || invalid) {
         return sent;
       }
       if (isRunning) {
@@ -22185,6 +22760,30 @@ registerNaviCommand("--navi-back", (source, event) => {
     target,
     implementation: () =>
       dispatchCustomEvent(target, "navi_slide_back", { event }),
+  };
+});
+
+// Where a press takes the user. The destination is the command's argument
+// because it says WHAT the command does — "--navi-nav-to:/games/42" — which is how
+// it can also be what follows a form submission: the form has answered its
+// question, and the answer to "what now" is a page.
+//
+// A destination fixed at the call site, so it is for a page known before the
+// send — which is what a form needs, since it must also know where to go when
+// the press had nothing to send. A destination the response decides (a
+// creation, whose id comes back with it) is the action's own business: it
+// navigates itself.
+registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
+  if (!argument) {
+    console.warn(
+      `[navi] "--navi-nav-to" needs a destination: --navi-nav-to:/the/url (relative to the current page, or absolute).`,
+    );
+    return undefined;
+  }
+  const target = resolveExplicitTarget(source) || source;
+  return {
+    target,
+    implementation: () => navTo(argument),
   };
 });
 
@@ -24272,6 +24871,7 @@ const useUIGroupStateController = (
       pendingChangeRef.current = null;
       const batchedEvent = new CustomEvent(
         `${controlType}_batched_ui_state_update`,
+        { detail: {} },
       );
       chainEvent(batchedEvent, pendingChange.e);
       scope._onChange(batchedEvent, {
@@ -28218,15 +28818,26 @@ const css$V = /* css */`
 
          Capping the *size* here rather than only offsetting the position is
          what makes a centered dialog follow the mobile virtual keyboard for
-         free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
-         reflows the dialog itself as the keyboard opens. */
-      --x-dialog-container-spacing: 3vvw;
+         free: --navi-app-width/--navi-app-height track the visual viewport, so
+         the browser reflows the dialog itself as the keyboard opens.
 
+         A share of the app's own screen, not of the window (hence
+         --navi-app-width rather than 3vvw): the gap must read as a small
+         margin around the dialog, and 3% of a 1500px window is a 45px gap
+         around a 600px app. Identical to 3vvw until the app declares
+         --navi-app-max-width. */
+      --x-dialog-container-spacing: calc(0.03 * var(--navi-app-width));
+
+      /* --navi-app-width, not --navi-vvw: a top-layer dialog is calibrated on
+         the app's own screen, which is the viewport unless the app declared a
+         narrower one (see navi_css_vars.js). An app-width cap alone never
+         costs the gap below — it is subtracted from whichever of the two ends
+         up smaller. */
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--x-dialog-container-spacing)
+        var(--navi-app-width) - 2 * var(--x-dialog-container-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--x-dialog-container-spacing)
+        var(--navi-app-height) - 2 * var(--x-dialog-container-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
@@ -28585,13 +29196,15 @@ const css$V = /* css */`
  *   touch device.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`).
- * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
+ * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
- *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
- *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
+ *   number of pixels, or a viewport length — "appw"/"apph" being the app's own
+ *   screen (the visual viewport, or the narrower one the app declared with
+ *   --navi-app-max-width) and "vvw"/"vvh" the visual viewport itself, which
+ *   shrinks when the mobile keyboard opens. Pass 0 for a dialog
  *   meant to sit flush (a side panel).
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
@@ -28892,11 +29505,12 @@ const useDialogProps = props => {
   const isDocked = dockedOnTouch && coarsePointerSignal.value;
   const positionArea = positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
   const marginWithContainer = marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer :
-  // A share of whatever holds the dialog: the viewport for a top-layer
-  // one — where vvw is exactly "3% of the container", the container being
-  // the viewport — and the positioned ancestor for a local one, where
-  // reading 3% of the viewport gives an absurd gap inside a small box.
-  isModal ? "3vvw" : "3cqw");
+  // A share of whatever holds the dialog: the app's own screen for a
+  // top-layer one — where appw is exactly "3% of the container", the
+  // container being that screen (the viewport, unless the app declared a
+  // narrower one) — and the positioned ancestor for a local one, where
+  // reading 3% of the screen gives an absurd gap inside a small box.
+  isModal ? "3appw" : "3cqw");
   // "expand || expandX", the shorthand semantics Popup used to apply before
   // handing them over — the docked default only applies when neither was said
   const expandXUnset = expand === undefined && expandXProp === undefined;
@@ -29133,7 +29747,7 @@ const useDialogProps = props => {
         // A value only CSS could evaluate (a spacing token resolving to a var(),
         // a percentage…) — the placement below needs a real number, and letting
         // it through would put the dialog at NaN.
-        console.warn(`Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3vvw", "2vvh") or a container length ("3cqw", "2cqh").`);
+        console.warn(`Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3appw", "3vvw", "2vvh") or a container length ("3cqw", "2cqh").`);
         marginWithContainerInPixels = 0;
       }
       // The size caps read the same gap in CSS as the placement below applies
@@ -29560,8 +30174,10 @@ const css$U = /* css */`
          rather than a value so an outer component can bridge its own prop into
          --popover-max-height without having to restate 300px (see picker). */
       --popover-max-height-default: 300px;
-      --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
-      --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+      /* --navi-app-*, not --navi-vvw/vvh: the app's own screen, which is the
+         viewport unless the app declared a narrower one (navi_css_vars.js). */
+      --popover-maxmax-height: calc(0.95 * var(--navi-app-height));
+      --popover-maxmax-width: calc(0.95 * var(--navi-app-width));
 
       --popover-box-shadow: var(--navi-popup-box-shadow);
       --popover-border-radius: var(--navi-popup-border-radius);
@@ -36177,564 +36793,6 @@ const useUITransitionContentId = value => {
     };
   }, []);
 };
-
-const documentStateSignal = signal(null);
-const useDocumentState = () => {
-  return documentStateSignal.value;
-};
-const updateDocumentState = (value) => {
-  documentStateSignal.value = value;
-};
-
-/**
- * A navigation is ABOUT to be applied — said before its very first write.
- *
- * Everything else a router says arrives once the change is made: a route
- * announces that it matches, an action that it is running. That is too late for
- * anyone who needs the page as it stands BEFORE, and the browser's view
- * transitions are exactly that kind of reader — the picture they keep of the
- * page being left is taken at the next frame, and a render answering a signal
- * written a moment ago is already in the DOM by then (see route_travel.jsx).
- *
- * So this is the one moment where nothing has moved yet. It is published
- * synchronously, from the top of the navigation, and whoever listens runs
- * before the URL, the visited set, or any route has changed.
- *
- * The other end is published too, and for the same kind of reader: whoever
- * held something across the change and has nobody to hand it to gets a moment
- * to let go of it that does not depend on guessing how long the change takes.
- */
-
-
-const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
-const [publishAfterRouting, observeAfterRouting] = createPubSub();
-
-const setupBrowserIntegrationViaHistory = ({
-  applyActions,
-  applyRouting,
-  isRouting,
-}) => {
-  const { history } = window;
-
-  let globalAbortController = new AbortController();
-  const triggerGlobalAbort = (reason) => {
-    globalAbortController.abort(reason);
-    globalAbortController = new AbortController();
-  };
-
-  const dispatchActions = (params) => {
-    const { requestedResult } = applyActions({
-      globalAbortSignal: globalAbortController.signal,
-      abortSignal: new AbortController().signal,
-      ...params,
-    });
-    return requestedResult;
-  };
-  setActionDispatcher(dispatchActions);
-
-  const getDocumentState = () => {
-    return window.history.state ? { ...window.history.state } : null;
-  };
-
-  const historyStartAtStart = getDocumentState();
-  const visitedUrlSet = historyStartAtStart
-    ? new Set(historyStartAtStart.jsenv_visited_urls || [])
-    : new Set();
-
-  // Create a signal that tracks visited URLs for reactive updates
-  // Using a counter instead of the Set directly for better performance
-  // Links will check isVisited() when this signal changes
-  const visitedUrlsSignal = signal(0);
-
-  const isVisited = (url) => {
-    url = new URL(url, window.location.href).href;
-    return visitedUrlSet.has(url);
-  };
-  const markUrlAsVisited = (url) => {
-    if (visitedUrlSet.has(url)) {
-      return;
-    }
-    visitedUrlSet.add(url);
-    visitedUrlsSignal.value++;
-  };
-
-  let abortController = null;
-  const handleRoutingTask = (url, options) => {
-    // Before anything is written: the visited set, the URL and every route are
-    // about to change, and this is the last moment the page still stands as it
-    // was. And after, whichever way the change went out — so that whoever took
-    // something at the first announcement has a definite place to give it back.
-    publishBeforeRouting({ url, ...options });
-    try {
-      return applyRoutingTask(url, options);
-    } finally {
-      publishAfterRouting({ url, ...options });
-    }
-  };
-
-  const applyRoutingTask = (url, options) => {
-    const isSameUrl = url === window.location.href;
-    const {
-      reason,
-      navigationType, // "load", "reload", "replace", "push", "traverse"
-      state,
-    } = options;
-
-    if (navigationType === "push" || navigationType === "replace") {
-      markUrlAsVisited(url);
-      // undefined → inherit current state (link click, neutral navigation)
-      // null     → explicit reset (no nav-state keys carried over)
-      // {...}    → explicit state from enter()/leave(), already built from currentState
-      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
-      let effectiveState;
-      const sharedState = {
-        jsenv_visited_urls: Array.from(visitedUrlSet),
-      };
-      if (state === undefined) {
-        effectiveState = {
-          ...(getDocumentState() || {}),
-          ...sharedState,
-        };
-      } else if (state === null) {
-        effectiveState = sharedState;
-      } else if (state) {
-        effectiveState = {
-          ...state,
-          ...sharedState,
-        };
-      }
-      if (navigationType === "push") {
-        window.history.pushState(effectiveState, null, url);
-      } else {
-        window.history.replaceState(effectiveState, null, url);
-      }
-      updateDocumentUrl(url);
-      updateDocumentState(effectiveState);
-    } else {
-      // traverse / reload: state comes from the history entry, no push/replace needed.
-      markUrlAsVisited(url);
-      updateDocumentUrl(url);
-      updateDocumentState(state);
-    }
-
-    // Skip route matching for state-only changes: push/replace to the same URL
-    // (e.g. useNavState updating document state without changing the route).
-    // Do NOT apply for "traverse" — window.location.href is already updated by
-    // the browser before the popstate handler runs, so isSameUrl is always true
-    // for back/forward navigation regardless of whether the URL actually changed.
-    if (
-      isSameUrl &&
-      (navigationType === "push" || navigationType === "replace")
-    ) {
-      return undefined;
-    }
-
-    if (abortController) {
-      abortController.abort(`navigating to ${url}`);
-    }
-    abortController = new AbortController();
-    const abortSignal = abortController.signal;
-    const { allResult, requestedResult } = applyRouting(url, {
-      globalAbortSignal: globalAbortController.signal,
-      abortSignal,
-      reason,
-      navigationType,
-      isVisited,
-      state,
-    });
-    executeWithCleanup(
-      () => allResult,
-      () => {
-        abortController = undefined;
-      },
-    );
-    return requestedResult;
-  };
-
-  // Browser event handlers
-  window.addEventListener(
-    "click",
-    (e) => {
-      if (e.button !== 0) {
-        // Ignore non-left clicks
-        return;
-      }
-      if (e.metaKey) {
-        // Ignore clicks with meta key (e.g. open in new tab)
-        return;
-      }
-      if (e.defaultPrevented) {
-        return;
-      }
-      const linkElement = e.target.closest("a");
-      if (!linkElement) {
-        return;
-      }
-      if (linkElement.hasAttribute("data-readonly")) {
-        return;
-      }
-      const href = linkElement.href;
-      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
-        getHrefTargetInfo(href);
-      if (isEmpty || !isSameOrigin) {
-        // Let link to other origins be handled by the browser
-        return;
-      }
-      if (isAnchor) {
-        // Fragment navigation belongs to the browser: it owns the indicated
-        // part of the document, and taking it over would cost `:target` and the
-        // focus handling that come with it.
-        if (isCurrent) {
-          // Except this one, which the browser answers with a scroll and
-          // nothing else: same pathname, same hash, so no event and no url
-          // change reaches whoever is waiting on the designated element.
-          rearmUrlTarget();
-        }
-        return;
-      }
-      // Nothing here declared a route, so there is nothing to route to: the
-      // page is a plain document and a link in it is a plain link. Taking it
-      // over anyway would push the url and then have nothing to show for it —
-      // the address bar moves and the page does not (see applyRouting's own
-      // "not called yet" branch, which is where that used to end up).
-      if (!isRouting()) {
-        return;
-      }
-      e.preventDefault();
-      handleRoutingTask(href, {
-        reason: `"click" on a[href="${href}"]`,
-        navigationType: "push",
-      });
-    },
-    { capture: true },
-  );
-
-  window.addEventListener(
-    "submit",
-    () => {
-      // Handle form submissions?
-      // Not needed yet
-    },
-    { capture: true },
-  );
-
-  window.addEventListener("popstate", (popstateEvent) => {
-    const url = window.location.href;
-    const state = popstateEvent.state;
-    handleRoutingTask(url, {
-      reason: `"popstate" event for ${url}`,
-      navigationType: "traverse",
-      state,
-    });
-  });
-
-  // A fragment navigation is left to the browser (see the click handler above):
-  // it owns the indicated part of the document, and taking it over would cost
-  // `:target` and the focus handling that come with it. The document url still
-  // has to follow it — nothing else here would notice that it moved.
-  window.addEventListener("hashchange", () => {
-    updateDocumentUrl(window.location.href);
-  });
-
-  const navTo = async (url, { replace, state } = {}) => {
-    handleRoutingTask(url, {
-      reason: `navTo called with "${url}"`,
-      navigationType: replace ? "replace" : "push",
-      state,
-    });
-  };
-
-  const stop = (reason = "stop called") => {
-    triggerGlobalAbort(reason);
-  };
-
-  const reload = () => {
-    const url = window.location.href;
-    const state = history.state;
-    handleRoutingTask(url, {
-      reason: "reload called",
-      navigationType: "reload",
-      state,
-    });
-  };
-
-  const navBack = () => {
-    window.history.back();
-  };
-
-  const navForward = () => {
-    window.history.forward();
-  };
-
-  const init = () => {
-    const url = window.location.href;
-    const state = history.state;
-    handleRoutingTask(url, {
-      reason: "routing initialization",
-      navigationType: "load",
-      state,
-    });
-  };
-
-  return {
-    integration: "browser_history_api",
-    init,
-    navTo,
-    stop,
-    reload,
-    navBack,
-    navForward,
-    getDocumentState,
-    isVisited,
-    visitedUrlsSignal,
-  };
-};
-
-let updateRoutes;
-
-const applyActions = (params) => {
-  const updateActionsResult = updateActions(params);
-  const { allResult, runningActionSet } = updateActionsResult;
-  const pendingTaskNameArray = [];
-  for (const runningAction of runningActionSet) {
-    pendingTaskNameArray.push(runningAction.name);
-  }
-  workingWhile(() => allResult, pendingTaskNameArray);
-  return updateActionsResult;
-};
-const applyRouting = (
-  url,
-  {
-    globalAbortSignal,
-    abortSignal,
-    // state
-    navigationType,
-    isVisited,
-    reason,
-  },
-) => {
-  if (!updateRoutes) {
-    // .init() not called yet
-    // likely because code does not uses routing at all
-    return {};
-  }
-  const {
-    loadSet,
-    reloadSet,
-    abortSignalMap,
-    routeLoadRequestedMap,
-    activeRouteSet,
-  } = updateRoutes(url, {
-    navigationType,
-    isVisited,
-    // state,
-  });
-  if (
-    (!loadSet || loadSet.size === 0) &&
-    (!reloadSet || reloadSet.size === 0)
-  ) {
-    return {
-      allResult: undefined,
-      requestedResult: undefined,
-      activeRouteSet: new Set(),
-    };
-  }
-  const updateActionsResult = updateActions({
-    globalAbortSignal,
-    abortSignal,
-    runSet: loadSet,
-    rerunSet: reloadSet,
-    abortSignalMap,
-    reason,
-    isReplace: navigationType === "replace",
-  });
-  const { allResult, runningActionSet } = updateActionsResult;
-  const pendingTaskNameArray = [];
-  for (const [route, routeAction] of routeLoadRequestedMap) {
-    if (runningActionSet.has(routeAction)) {
-      pendingTaskNameArray.push(`${route.relativeUrl} -> ${routeAction.name}`);
-    }
-  }
-  routingWhile(() => allResult, pendingTaskNameArray);
-  return { ...updateActionsResult, activeRouteSet };
-};
-
-const browserIntegration = setupBrowserIntegrationViaHistory({
-  applyActions,
-  applyRouting,
-  // Routes are declared by the consumer and registered through
-  // setOnAllRouteReady below, so "does this document route at all?" is only
-  // answerable once that has run — hence a function, read at click time rather
-  // than a value read at setup time.
-  isRouting: () => Boolean(updateRoutes),
-});
-
-setOnAllRouteReady((v) => {
-  updateRoutes = v;
-  browserIntegration.init();
-});
-setRouteIntegration(browserIntegration);
-
-const navIntegratedVia = browserIntegration.integration;
-const navTo = (target, options) => {
-  const url = new URL(target, window.location.href).href;
-  const currentUrl = documentUrlSignal.peek();
-  if (url === currentUrl) {
-    if (options?.state === undefined) {
-      return null;
-    }
-    // State-only update on same URL: skip if state is identical to current.
-    const currentState = browserIntegration.getDocumentState();
-    if (compareTwoJsValues(options.state, currentState)) {
-      return null;
-    }
-  }
-  return browserIntegration.navTo(url, options);
-};
-const stopLoad = (reason = "stopLoad() called") => {
-  const windowIsLoading = windowIsLoadingSignal.value;
-  if (windowIsLoading) {
-    window.stop();
-  }
-  const documentIsBusy = documentIsBusySignal.value;
-  if (documentIsBusy) {
-    browserIntegration.stop(reason);
-  }
-};
-const reload = browserIntegration.reload;
-const navBack = browserIntegration.navBack;
-const navForward = browserIntegration.navForward;
-const isVisited = browserIntegration.isVisited;
-const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
-browserIntegration.handleActionTask;
-
-// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
-// the mask is derived from render order within the nearest root/async
-// boundary — stable across re-renders of the *same* mount, but not across a
-// reload (render order can differ) or even across two mounts on the same
-// page (two components hitting useId() in the same relative order get the
-// same string). Storing one of these under type: "push" bakes it into a
-// history entry: reload the page and the entry's key may now belong to a
-// completely different component (or none), silently auto-opening whatever
-// happens to render at that same position instead.
-const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
-const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
-
-const NO_OP = () => {};
-const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useNavStateBasic = (
-  id,
-  { debug, type = "replace", onLeave, defaultValue } = {},
-) => {
-  // Hooks must be called unconditionally — before the !id early return.
-  const state = documentStateSignal.value;
-  // Key presence is the flag — the value may be anything, including undefined.
-  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
-  const onLeaveRef = useRef(onLeave);
-  onLeaveRef.current = onLeave;
-  const prevKeyInStateRef = useRef(keyInState);
-  // enteredRef tracks whether enter() was called without a matching leave() yet.
-  // It lets the effect distinguish an external disappearance (back button → fire onLeave)
-  // from a programmatic one (leave() already set it to false before the state updates).
-  const enteredRef = useRef(false);
-  useEffect(() => {
-    const prevKeyInState = prevKeyInStateRef.current;
-    prevKeyInStateRef.current = keyInState;
-    if (prevKeyInState && !keyInState && enteredRef.current) {
-      enteredRef.current = false;
-      onLeaveRef.current?.();
-    }
-  }, [keyInState]);
-
-  if (!id) {
-    return NO_ID_GIVEN;
-  }
-
-  let effectiveType = type;
-  if (type === "push" && isLikelyPreactGeneratedId(id)) {
-    effectiveType = "replace";
-  }
-
-  const currentValue = keyInState ? state[id] : defaultValue;
-
-  if (debug) {
-    console.debug(`useNavState(${id}) current value is ${currentValue}`);
-  }
-
-  // enter(value): navigate TO this state (push or replace depending on type).
-  // Calling enter() without a value stores "on" — the mere presence of the key
-  // in the document state is enough to match; the value just allows associating
-  // extra data with the entry when needed.
-  const enter = (value = "on") => {
-    enteredRef.current = true;
-    const currentStateCopy = browserIntegration.getDocumentState() || {};
-    if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
-      return;
-    }
-    currentStateCopy[id] = value;
-    navTo(window.location.href, {
-      replace: effectiveType !== "push",
-      state: currentStateCopy,
-    });
-  };
-
-  // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
-  // isBack: when true (cancel close in push mode), call history.back() to restore the
-  //   pre-open state — discards any in-progress edits.
-  //   When false (confirmed close), replace the pushed entry instead: preserves the
-  //   current URL state (e.g. a new picker value) while removing the popup key.
-  const leave = ({ isBack } = {}) => {
-    enteredRef.current = false;
-    const currentStateCopy = browserIntegration.getDocumentState() || {};
-    if (!Object.hasOwn(currentStateCopy, id)) {
-      return;
-    }
-    if (effectiveType === "push" && isBack) {
-      browserIntegration.navBack();
-    } else {
-      delete currentStateCopy[id];
-      navTo(window.location.href, {
-        replace: true,
-        state: currentStateCopy,
-      });
-    }
-  };
-
-  return [currentValue, enter, leave];
-};
-
-/**
- * Stores a named value in the browser's document state and returns it reactively.
- * The component re-renders whenever the value changes (navigation, back/forward button).
- *
- * @param {string} id
- *   Unique key used to store the value in document state. Must be stable across renders.
- *
- * @param {object} [options]
- * @param {"push"|"replace"} [options.type="replace"]
- *   Controls how enter() adds the state to browser history.
- *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
- *   - "replace": updates the current history entry — no extra history entry is created.
- *   Silently downgraded to "replace" (with a dev-only console.warn) when `id`
- *   looks auto-generated (e.g. preact's own useId()) — an unstable id baked
- *   into a pushed history entry won't survive a reload correctly, and could
- *   even collide with a different component's own auto-generated id. Pass a
- *   stable, explicit id to actually get "push" behavior.
- * @param {() => void} [options.onLeave]
- *   Called when the state key disappears **externally** — e.g. the user presses the browser
- *   back button. Not called when leave() is invoked programmatically.
- * @param {*} [options.defaultValue]
- *   Value returned when `id` is absent from document state. Defaults to `undefined`.
- *
- * @returns {[value, enter, leave]}
- *   - `value`: current value from document state, or `defaultValue` when the key is absent.
- *   - `enter(value = "on")`: navigate TO this state (stores `value` under `id`).
- *     Calling without an argument stores `"on"` — the presence of the key is enough to match;
- *     the value allows associating extra data when needed.
- *   - `leave()`: navigate AWAY FROM this state (removes `id` from document state,
- *     or goes back in history when `type` is "push").
- */
-const useNavState = useNavStateBasic;
 
 const NEVER_SET = {};
 const useUrlSearchParam = (paramName, defaultValue) => {
@@ -47865,21 +47923,51 @@ const withoutEmptyFields = uiState => {
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
+//
+// Taken a second time at the end of the tick, because "the earliest moment" is
+// not always late enough: a field that re-renders on its own schedule rather
+// than with the form — a row whose value is computed from signals, sitting
+// behind a memo — brings its value in a render of its own, which lands after
+// these effects. A form measured before it would open already changed, and
+// would never take the reference again. Both takes are the same arrival, so the
+// second one costs a render only when it moves something.
 const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
   // The render that brought a new pristineKey read `changed` against the
   // previous baseline, and nothing else is going to move: the button would stay
   // lit on a form that holds exactly what it was just given. So ask for the one
-  // render that reads the new baseline — the first one has nobody to tell,
-  // every field it is waiting for re-renders the form as it registers.
+  // render that reads the new baseline — the first take on mount has nobody to
+  // tell, every field it is waiting for re-renders the form as it registers.
   const [, rereadBaseline] = useState(0);
   const isFirstRef = useRef(true);
   useLayoutEffect(() => {
-    uiStateController.sentUIState = readHeldUIState(uiStateController);
-    if (isFirstRef.current) {
-      isFirstRef.current = false;
-      return;
+    const takeBaseline = () => {
+      const baselineBefore = uiStateController.sentUIState;
+      const baseline = readHeldUIState(uiStateController);
+      uiStateController.sentUIState = baseline;
+      return !compareTwoJsValues(baselineBefore, baseline);
+    };
+    const moved = takeBaseline();
+    const isFirst = isFirstRef.current;
+    isFirstRef.current = false;
+    if (moved && !isFirst) {
+      rereadBaseline(count => count + 1);
     }
-    rereadBaseline(count => count + 1);
+    // A microtask, not a timeout: everything that belongs to this arrival —
+    // the renders preact still has queued, the state they push into the form —
+    // happens before the tick ends, and nothing a person does can land in
+    // between.
+    let abandoned = false;
+    queueMicrotask(() => {
+      if (abandoned) {
+        return;
+      }
+      if (takeBaseline()) {
+        rereadBaseline(count => count + 1);
+      }
+    });
+    return () => {
+      abandoned = true;
+    };
   }, [uiStateController, pristineKey]);
 };
 const useUnregisteredControlWarning = ref => {
