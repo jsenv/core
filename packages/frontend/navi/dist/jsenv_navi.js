@@ -51,7 +51,15 @@ const css$10 = /* css */`
       /* Kept stuck while something scrolls under it: a list header, the head
          and foot of a side panel, a table's sticky cells. Above raised
          controls — a control scrolling past must go under the header that
-         pins the column it belongs to, never over it. */
+         pins the column it belongs to, never over it.
+
+         "While stuck" is the whole condition, and a sticky element cannot read
+         its own stuck state in CSS: List marks its parts with a navi-stuck
+         attribute and applies this band only there (see --list-*-z-index in
+         list.jsx). A
+         sticky part at rest is a block in the flow with nothing passing under
+         it; giving it this band anyway is what slices whatever a neighbouring
+         row lets out of its box. */
       --navi-z-index-sticky: 10;
 
       /* Pinned to the viewport, over the whole page: FixedBar. A decade of its
@@ -22983,6 +22991,9 @@ const useUIStateController = (
         // resolveCommandValue in commands.js.
         ownUIStateSignal,
         value: controlInfo.value,
+        // The suggestion this control started on — what tells a field showing
+        // its default from one carrying an answer (see isUIStateHeld).
+        defaultValue: controlInfo.defaultValue,
 
         facadeChild: null,
         getManagedControls: () => {
@@ -23401,9 +23412,16 @@ const useUIStateController = (
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
       controller.parentUIStateController = parentUIStateController;
-      const { value, hasStateProp, state, stateInitial, stateFromSignal } =
-        controlInfo;
+      const {
+        value,
+        defaultValue,
+        hasStateProp,
+        state,
+        stateInitial,
+        stateFromSignal,
+      } = controlInfo;
       controller.value = value;
+      controller.defaultValue = defaultValue;
       if (hasStateProp) {
         controller.hasStateProp = true;
         const currentState = controller.state;
@@ -24334,8 +24352,10 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           const childType = child.controlType;
           if (firstChildControllerRef.current) {
             console.warn(
-              `[useUIFacadeStateController] A second child ("${childType}"${child.name ? ` name="${child.name}"` : ""}) tried to register in the picker facade. ` +
-                `The facade only syncs with the first child — wrap multiple controls in a single ControlGroup.`,
+              `[navi] a second control ("${childType}"${child.name ? ` name="${child.name}"` : ""}) registered in the ${describePicker(props)} popup. ` +
+                `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
+                `so this one is neither filled nor collected. ` +
+                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="form".`,
               child,
             );
           } else {
@@ -24462,6 +24482,9 @@ const useUIFacadeStateController = (props, realUIStateController) => {
 
   return scope.controller;
 };
+
+const describePicker = (props) =>
+  `<Picker${props.name ? ` name="${props.name}"` : ""}${props.type ? ` type="${props.type}"` : ""}>`;
 
 /**
  * Returns true when `e` should trigger parent notification (child → parent bubbling).
@@ -24612,12 +24635,19 @@ const ControlgroupChildrenWrapper = ({
  */
 const useControlProps = (props, {
   controlType,
-  allowNameless,
+  allowNameless: allowNamelessByDefault,
   persists,
   uiActionInternal
 }) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
+
+  // A control that is not a field: it opens something, it goes somewhere, and
+  // the group around it must expect no value from it — no name, and no warning
+  // about the missing name. Buttons and links say so from inside navi; the prop
+  // is how a control used as a door says the same thing from the outside.
+  const allowNameless = props.allowNameless ?? allowNamelessByDefault;
+  delete props.allowNameless;
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
@@ -25426,6 +25456,18 @@ const createControlInfo = (props, {
     // getDefaultEventReactionDefinitions.
     readOnlySupported = controlType === "picker" && INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
   }
+
+  // The suggestion the control starts on, as opposed to what it holds — what a
+  // reset goes back to, and what tells a field left on its default from one
+  // carrying an answer (see isUIStateHeld in held_ui_state.js).
+  let defaultValue;
+  if (!hasStateProp) {
+    if (signalHoldsChecked) {
+      defaultValue = props.defaultChecked ? value : undefined;
+    } else if (Object.hasOwn(props, "defaultValue")) {
+      defaultValue = props.defaultValue;
+    }
+  }
   return {
     controlType,
     statePropName,
@@ -25434,6 +25476,7 @@ const createControlInfo = (props, {
     stateInitial,
     state: stateInitial,
     value,
+    defaultValue,
     signal,
     signalHoldsChecked,
     stateFromSignal,
@@ -28339,6 +28382,20 @@ const css$V = /* css */`
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* backdropAppearance, keyed off the originating element (a
+       pseudo-element carries no attributes of its own — same reasoning as
+       the capture rule just above). After the rules it overrides: same
+       specificity, so order is what decides. showModal() still makes the
+       page inert either way — only the paint goes away. */
+    &[data-backdrop-appearance="discrete"]::backdrop {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"]::backdrop {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     /* Nested under &[navi-animation] (not the other way around) so every
        attribute selector compiles *before* ::backdrop, not after — a
        pseudo-element can't be qualified by an attribute of its own
@@ -28458,6 +28515,18 @@ const css$V = /* css */`
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* Same override as the via-attribute renderer's own ::backdrop rules
+       above, on the real element this renderer uses instead — see them for
+       the specificity/ordering reasoning. */
+    &[data-backdrop-appearance="discrete"] {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"] {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     &[navi-animation] {
       opacity: 1;
       transition-property: display, opacity;
@@ -28528,6 +28597,13 @@ const css$V = /* css */`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
  *   at least a click-absorbing backdrop regardless of this prop.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ *   visible the backdrop is, independently of what it does. `"auto"`: the
+ *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   barely-there dim. `"none"`: fully transparent. The dialog stays modal
+ *   either way — this only changes how much it insists visually, never what
+ *   an outside click does or whether the page behind stays reachable.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -28775,6 +28851,11 @@ const useDialogProps = props => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
+    // How loudly the backdrop says it is there — independent of what it
+    // *does* (that's pointerInteractionOutsideEffect above). A dialog is
+    // always modal, so "none" here never makes the page behind reachable:
+    // it only stops the dim from being drawn.
+    backdropAppearance = "auto",
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -29293,7 +29374,8 @@ const useDialogProps = props => {
     "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
-    "data-pointer-interaction-outside": pointerInteractionOutsideEffect
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-backdrop-appearance": backdropAppearance
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -29322,6 +29404,11 @@ const useDialogProps = props => {
     // real backdrop element already gets the same attribute via
     // backdropProps above, which is what its own CSS actually keys off).
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    // Only load-bearing for the via-attribute renderer's own native
+    // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
+    // as the prop just above (and harmless for the custom renderer, whose
+    // real backdrop element gets it via backdropProps).
+    "data-backdrop-appearance": backdropAppearance,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -29724,6 +29811,20 @@ const css$U = /* css */`
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
+    /* backdropAppearance overrides whatever the effect above picked — same
+       specificity (class + one attribute), so these have to stay *after*
+       them to win. Only the paint changes: the element is still rendered
+       and still pointer-events: auto, so an outside click keeps doing
+       exactly what pointerInteractionOutsideEffect says. */
+    &[data-backdrop-appearance="discrete"] {
+      background: var(--navi-backdrop-discrete-background);
+      backdrop-filter: none;
+    }
+    &[data-backdrop-appearance="none"] {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     /* navi-animation mirrors the content popover's own resolved value (set
        imperatively in openEffect) — the backdrop only ever fades, regardless
        of which kind it is (translate/scale wouldn't mean anything on it).
@@ -29787,6 +29888,15 @@ const css$U = /* css */`
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ *   visible the backdrop is, independently of what it does. `"auto"`: the
+ *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   barely-there dim. `"none"`: fully transparent. The backdrop is still
+ *   rendered and still catches outside clicks in every case — this only
+ *   changes how much the popover insists on being the thing you deal with.
+ *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
+ *   backdrop at all then, and outside clicks pass through).
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
@@ -30031,6 +30141,11 @@ const usePopoverProps = props => {
     // "capture"→ absorb the press, stay open
     // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
+    // How loudly the backdrop says it is there — independent of what it
+    // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
+    // the paint the effect implies; "discrete"/"none" tone it down or
+    // remove it entirely without giving up the outside click.
+    backdropAppearance = "auto",
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -30704,6 +30819,7 @@ const usePopoverProps = props => {
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-backdrop-appearance": backdropAppearance,
     "onMouseDown": mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -47375,6 +47491,86 @@ const Editable = props => {
 };
 
 /**
+ * What a control HOLDS, as opposed to what it is showing.
+ *
+ * A `value` is held: the control was given it, so handing it back says nothing
+ * new. A `defaultValue` is only a suggestion — an age that is usually 18, a
+ * duration that is usually 1h30 — so the control holds nothing, and confirming
+ * the suggestion IS an answer ("yes, 18"). A control bound to a signal falls on
+ * whichever side the signal put it: a signal with something in it is an answer
+ * (restored from the url, set by whoever owns it), an empty one leaves the
+ * control on its suggestion.
+ *
+ * The same distinction Form makes across its fields (see readHeldUIState in
+ * form.jsx), asked of a single control — which is what lets a Picker tell "the
+ * user re-confirmed what was already chosen" (nothing new) from "the user
+ * accepted the proposal" (an answer).
+ */
+
+const isUIStateHeld = (controller) => {
+  if (!controller) {
+    return false;
+  }
+  // Given a value outright: held, whatever it is showing.
+  if (controller.hasStateProp || controller.hasValueProp) {
+    return true;
+  }
+  // A facade (a picker) shows what the control inside its popup holds, so that
+  // is the one to ask — the facade itself was given nothing.
+  const facadeChild = controller.facadeChild;
+  if (facadeChild) {
+    return isUIStateHeld(facadeChild);
+  }
+  const boundSignal = controller.props?.signal;
+  if (boundSignal) {
+    return boundSignal.value !== undefined;
+  }
+  // Uncontrolled with a suggestion: what it shows is that suggestion until it
+  // differs from it.
+  if (controller.defaultValue !== undefined) {
+    return !compareTwoJsValues(controller.uiState, controller.defaultValue);
+  }
+  // A group holding nothing of its own is worth what its children are: two
+  // wheels each on their own suggestion make a group still waiting for an
+  // answer, one of them moved makes a group holding one.
+  const childControllers = controller.getChildControllers?.() || [];
+  if (childControllers.length > 0) {
+    return childControllers.some((child) => isUIStateHeld(child));
+  }
+  return controller.uiState !== undefined;
+};
+
+/**
+ * Tell a control — and everything inside it — that what it is showing is now
+ * the answer, without its state having to move.
+ *
+ * The state is already right; what has not happened is anyone saying so. A
+ * control reports an answer through `onUIAction` (that is where a bound signal
+ * is written, where `uiAction` fires), and a suggestion nobody touched never
+ * got there. Confirming a picker is exactly that moment.
+ *
+ * Down the whole subtree because that is where the answer actually lives: a
+ * picker holding a group of two wheels has one signal per wheel, and it is each
+ * wheel that has to record what it is showing. Commands are skipped — a
+ * `command` on a control is its reaction to being used, and this is a
+ * confirmation happening elsewhere, whose own command (the picker's) is already
+ * running.
+ */
+const commitUIStateAsAnswer = (controller, e) => {
+  if (!controller) {
+    return;
+  }
+  const answering = controller.facadeChild || controller;
+  commitSubtree(answering, e);
+};
+const commitSubtree = (controller, e) => {
+  controller.onUIAction?.(e, { skipCommand: true });
+  for (const child of controller.getChildControllers?.() || []) {
+    commitSubtree(child, e);
+  }
+};
+
+/**
  *
  * Here we want the same behaviour as web standards:
  *
@@ -47424,6 +47620,7 @@ const useFormGroup = props => {
   };
   delete propsForGroup.standalone;
   delete propsForGroup.canSendWhileUnchanged;
+  delete propsForGroup.pristineKey;
   // Not the generic control `command`, which a control triggers on its own ui
   // actions — here it is what follows a SUCCESSFUL submission. So it is kept
   // out of the control machinery and left in the DOM for the send to read
@@ -47456,7 +47653,7 @@ const useFormGroup = props => {
   // microtask away, so typing and pressing Enter right after must not be read
   // against the state of the previous frame.
   uiStateController.shouldRequestAction = value => Boolean(props.canSendWhileUnchanged) || !compareTwoJsValues(withoutEmptyFields(value), uiStateController.sentUIState);
-  useFirstUIStateAsSent(uiStateController);
+  useHeldUIStateAsSent(uiStateController, props.pristineKey);
   useUnregisteredControlWarning(props.ref);
   const {
     basePseudoState,
@@ -47554,13 +47751,10 @@ const FormNested = props => {
   });
 };
 
-// What the form HOLDS, as opposed to what it is showing. A `value` is held: the
-// form was given it, and sending it back says nothing new. A `defaultValue` is
-// only a suggestion — an age that is usually 18, a duration that is usually
-// 1h30 — so the form holds nothing for that field, and sending the suggestion
-// back IS an answer ("yes, 18"). A field bound to a signal falls on whichever
-// side the signal put it: one carrying a default seeds `defaultValue`, one
-// without controls the field outright.
+// What the form HOLDS, as opposed to what it is showing — field by field, the
+// question isUIStateHeld answers: a field it was given an answer for is held,
+// a field merely showing a suggestion is not, and confirming that suggestion IS
+// an answer ("yes, 18").
 const readHeldUIState = uiStateController => {
   const uiState = uiStateController.uiState;
   // A form given a value holds all of it, whatever its fields say.
@@ -47571,7 +47765,7 @@ const readHeldUIState = uiStateController => {
     ...uiState
   };
   for (const child of uiStateController.getChildControllers?.() || []) {
-    if (child.name && !child.hasStateProp) {
+    if (child.name && !isUIStateHeld(child)) {
       delete held[child.name];
     }
   }
@@ -47601,10 +47795,22 @@ const withoutEmptyFields = uiState => {
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
-const useFirstUIStateAsSent = uiStateController => {
+const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
+  // The render that brought a new pristineKey read `changed` against the
+  // previous baseline, and nothing else is going to move: the button would stay
+  // lit on a form that holds exactly what it was just given. So ask for the one
+  // render that reads the new baseline — the first one has nobody to tell,
+  // every field it is waiting for re-renders the form as it registers.
+  const [, rereadBaseline] = useState(0);
+  const isFirstRef = useRef(true);
   useLayoutEffect(() => {
     uiStateController.sentUIState = readHeldUIState(uiStateController);
-  }, [uiStateController]);
+    if (isFirstRef.current) {
+      isFirstRef.current = false;
+      return;
+    }
+    rereadBaseline(count => count + 1);
+  }, [uiStateController, pristineKey]);
 };
 const useUnregisteredControlWarning = ref => {
   // No dependency array: fields appear and disappear as the form re-renders,
@@ -47914,6 +48120,29 @@ installImportMetaCssBuild(import.meta);/**
  * container of ours could ever hold two of them side by side and translate the
  * pair. One popup holding slides of its own contents has no such problem — and
  * it is the same component in the document, in a dialog or in a popover.
+ *
+ * Padding belongs on the SLIDE, never on this box nor on anything above it.
+ * Overflow clips at the PADDING edge, so a padding given to the container is a
+ * band the clipping does not cover: a slide travelling through it is seen there
+ * before it has reached the frame. And a padding above the slides does not
+ * travel — the two contents crossing each other pass with nothing between them,
+ * each flush against the other, instead of arriving already inset. Put on the
+ * slide, the inset moves with what it insets, and a travel shows two paddings'
+ * worth of gutter between the two.
+ *
+ * What SCROLLS is the slide too, and for the same reason read the other way
+ * round: the box is as big as its largest slide, so a scroller placed above the
+ * slides is always scrolling the tallest of them — stand on a short one and it
+ * carries the scrollbar of a neighbour, scrolling through emptiness. The cap on
+ * the height comes from above (a max-height on the popup, a column it has to
+ * fit in) and must reach the slides as a CONSTRAINT rather than as a scroller:
+ * this box shrinks into it (flex: 0 1 auto below), the grid hands that height
+ * to every slide, and a slide with an overflow of its own scrolls only when ITS
+ * content is taller than that. The tall slide scrolls; the short ones are tall
+ * boxes with a short content in them, which is exactly what one wants — they
+ * take the height the context imposes and ignore the height of their neighbour.
+ * So: nothing scrollable between the cap and the slides (a shared [data-body]
+ * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
 const css$A = /* css */`
   /* Where the picture stands relative to the slide that is current, in boxes
@@ -51238,6 +51467,11 @@ const css$z = /* css */`
  *   is unavoidably *more* intrusive once it switches to dialog mode than
  *   the exact same usage would be as a popover — worth keeping in mind for
  *   anything that relies on `Popup` and can end up on a small screen.
+ * @param {"auto"|"discrete"|"none"} [props.backdropAppearance] - Forwarded
+ *   as-is to whichever component renders (both understand it identically):
+ *   how visible the backdrop is, independently of what an outside click
+ *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
+ *   default here — `"auto"` already means the same thing on both sides.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
@@ -51342,86 +51576,6 @@ const Popup = props => {
     className: withPropsClassName("navi_popup", className),
     children: childrenWithMode
   });
-};
-
-/**
- * What a control HOLDS, as opposed to what it is showing.
- *
- * A `value` is held: the control was given it, so handing it back says nothing
- * new. A `defaultValue` is only a suggestion — an age that is usually 18, a
- * duration that is usually 1h30 — so the control holds nothing, and confirming
- * the suggestion IS an answer ("yes, 18"). A control bound to a signal falls on
- * whichever side the signal put it: a signal with something in it is an answer
- * (restored from the url, set by whoever owns it), an empty one leaves the
- * control on its suggestion.
- *
- * The same distinction Form makes across its fields (see readHeldUIState in
- * form.jsx), asked of a single control — which is what lets a Picker tell "the
- * user re-confirmed what was already chosen" (nothing new) from "the user
- * accepted the proposal" (an answer).
- */
-
-const isUIStateHeld = (controller) => {
-  if (!controller) {
-    return false;
-  }
-  // Given a value outright: held, whatever it is showing.
-  if (controller.hasStateProp || controller.hasValueProp) {
-    return true;
-  }
-  // A facade (a picker) shows what the control inside its popup holds, so that
-  // is the one to ask — the facade itself was given nothing.
-  const facadeChild = controller.facadeChild;
-  if (facadeChild) {
-    return isUIStateHeld(facadeChild);
-  }
-  const boundSignal = controller.props?.signal;
-  if (boundSignal) {
-    return boundSignal.value !== undefined;
-  }
-  // Uncontrolled with a suggestion: what it shows is that suggestion until it
-  // differs from it.
-  if (controller.defaultValue !== undefined) {
-    return !compareTwoJsValues(controller.uiState, controller.defaultValue);
-  }
-  // A group holding nothing of its own is worth what its children are: two
-  // wheels each on their own suggestion make a group still waiting for an
-  // answer, one of them moved makes a group holding one.
-  const childControllers = controller.getChildControllers?.() || [];
-  if (childControllers.length > 0) {
-    return childControllers.some((child) => isUIStateHeld(child));
-  }
-  return controller.uiState !== undefined;
-};
-
-/**
- * Tell a control — and everything inside it — that what it is showing is now
- * the answer, without its state having to move.
- *
- * The state is already right; what has not happened is anyone saying so. A
- * control reports an answer through `onUIAction` (that is where a bound signal
- * is written, where `uiAction` fires), and a suggestion nobody touched never
- * got there. Confirming a picker is exactly that moment.
- *
- * Down the whole subtree because that is where the answer actually lives: a
- * picker holding a group of two wheels has one signal per wheel, and it is each
- * wheel that has to record what it is showing. Commands are skipped — a
- * `command` on a control is its reaction to being used, and this is a
- * confirmation happening elsewhere, whose own command (the picker's) is already
- * running.
- */
-const commitUIStateAsAnswer = (controller, e) => {
-  if (!controller) {
-    return;
-  }
-  const answering = controller.facadeChild || controller;
-  commitSubtree(answering, e);
-};
-const commitSubtree = (controller, e) => {
-  controller.onUIAction?.(e, { skipCommand: true });
-  for (const child of controller.getChildControllers?.() || []) {
-    commitSubtree(child, e);
-  }
 };
 
 installImportMetaCssBuild(import.meta);const css$y = /* css */`
@@ -52039,6 +52193,9 @@ const PickerContentInsidePopup = props => {
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
     // clicking outside revert instead, or "capture" to keep it open.
     pointerInteractionOutsideEffect = "close",
+    // Named/forwarded rather than left in ...rest: rest goes to the picker
+    // element itself, not the popup, and this belongs to the popup.
+    backdropAppearance,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -52089,6 +52246,7 @@ const PickerContentInsidePopup = props => {
       marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer,
       scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
+      backdropAppearance: backdropAppearance,
       focusCapture: isPopover ? focusCapture : undefined,
       expand: isPopover ? undefined : dialogExpand,
       expandX: isPopover ? undefined : dialogExpandX,
@@ -53711,6 +53869,28 @@ const css$v = /* css */`
       --list-border-width-default: 1px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
+
+      /* A sticky part paints over the rows only while it IS stuck — which is
+         what --navi-z-index-sticky says it is for ("kept stuck while something
+         scrolls under it"). At rest it is a block in the flow with nothing
+         passing under it, and a 10 there is what slices whatever a neighbouring
+         row lets out of its box: a focus ring, a badge, a stamp. See
+         useStuckStickyParts for the navi-stuck attribute these read.
+
+         With "auto" at rest, a card whose badge overflows into the label
+         below it gets past it by saying z-index: 1 on that badge — a literal,
+         in the card, against its own neighbour, which is what docs/z_index.md
+         asks for. These variables are the escape hatch for what that cannot
+         reach, not the usual answer. Mind that a negative value here is
+         compared against the page: it needs a stacking context between the
+         label and the nearest opaque background, or the label goes behind that
+         background and disappears. */
+      --list-header-z-index: auto;
+      --list-header-z-index-stuck: var(--navi-z-index-sticky);
+      --list-footer-z-index: auto;
+      --list-footer-z-index-stuck: var(--navi-z-index-sticky);
+      --list-group-label-z-index: auto;
+      --list-group-label-z-index-stuck: var(--navi-z-index-sticky);
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
@@ -54092,8 +54272,12 @@ const css$v = /* css */`
     position: sticky;
     top: 0;
     left: 0;
-    z-index: var(--navi-z-index-sticky);
+    z-index: var(--list-header-z-index);
     order: -2;
+
+    &[navi-stuck] {
+      z-index: var(--list-header-z-index-stuck);
+    }
   }
   .navi_list_fallback,
   .navi_list_search_fallback {
@@ -54199,8 +54383,12 @@ const css$v = /* css */`
     position: sticky;
     right: 0;
     bottom: 0;
-    z-index: var(--navi-z-index-sticky);
+    z-index: var(--list-footer-z-index);
     order: 2;
+
+    &[navi-stuck] {
+      z-index: var(--list-footer-z-index-stuck);
+    }
   }
 
   ::highlight(navi-search-match) {
@@ -54215,10 +54403,14 @@ const css$v = /* css */`
     .navi_list_item_group_label {
       position: sticky;
       top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: var(--navi-z-index-sticky);
+      z-index: var(--list-group-label-z-index);
       display: block;
       background-color: var(--list-group-label-background-color);
       user-select: none;
+
+      &[navi-stuck] {
+        z-index: var(--list-group-label-z-index-stuck);
+      }
 
       &[navi-default] {
         padding: 4px 12px 2px;
@@ -54837,6 +55029,7 @@ const useListScrollSync = ({
   };
   useLayoutEffect(resolveScroller);
   useStickyScrollportWarning();
+  useStuckStickyParts(ref, getScroller, scrollerElResolved, horizontal);
 
   // The row the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -55614,6 +55807,14 @@ const getScrollerViewportRect = scrollerEl => {
   }
   return scrollerEl.getBoundingClientRect();
 };
+// What a sticky part of the list sticks to is the nearest scroll container in
+// the DOM; `scroller` has no say in it. A list told the page scrolls it can
+// therefore have its group labels and its header stuck to a wrapper that never
+// scrolls — and pushed down by that wrapper's scroll-padding on top of it. The
+// usual culprit is an app wrapper carrying `overflow-x: auto` to keep the
+// document from overflowing horizontally on mobile; `overflow-x: clip` keeps
+// that guarantee without making a scroll container.
+const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group_label`;
 const useStickyScrollportWarning = (ref, scroller) => {
   useRef(false);
   useLayoutEffect(() => {
@@ -55621,6 +55822,142 @@ const useStickyScrollportWarning = (ref, scroller) => {
       return;
     }
   });
+};
+
+/**
+ * "Am I stuck?" — the question a `position: sticky` element cannot ask about
+ * itself. There is no selector for it, and `scroll-state(stuck: top)` does not
+ * answer it either: that query styles a container's DESCENDANTS, so a part
+ * cannot read its own stuck state, which is exactly the one a background, a
+ * shadow or a stacking order has to depend on.
+ *
+ * So the list says it, on the three parts it makes sticky: `navi-stuck` while a
+ * part sits at the edge it sticks to, gone while it rides along in the flow.
+ * The list is the right place for it because it is the only one that knows
+ * WHICH box its parts stick to — an app writing this outside would listen to
+ * the window and be right only for `scroller="document"` (see getScrollerEl,
+ * and useStickyScrollportWarning for the case where even the list is wrong
+ * about it: a scroll container between the two, which dev mode reports).
+ *
+ * What reads it is navi's own z-index rule first (see --list-*-z-index above:
+ * the sticky band is for a part with something scrolling under it, not for a
+ * block at rest in the flow), and an app second, for anything it wants to say
+ * about a part being stuck.
+ */
+// Fractional layout is the rule, not the exception — zoom, screen density, a
+// scroller at a half-pixel offset. A part at its sticky offset can render a
+// fraction short of it, and without this slack it reads as being at rest: a
+// bug that shows up on one machine and not the next.
+const STUCK_SLACK = 1;
+// Which edge a part sticks to. The header and the footer stick along whichever
+// axis the list scrolls — their rules declare both insets (top/left, and
+// bottom/right) so the same markup works either way; a group label always caps
+// its group from the top.
+const getStickyEdge = (partEl, horizontal) => {
+  if (partEl.classList.contains("navi_list_item_footer")) {
+    return horizontal ? "right" : "bottom";
+  }
+  if (partEl.classList.contains("navi_list_item_header")) {
+    return horizontal ? "left" : "top";
+  }
+  return "top";
+};
+// A sticky inset is measured from the scrollport — the padding box of the
+// scroller, or the viewport when the page scrolls. getScrollerViewportRect
+// gives the border box; the borders come off here, since a scroller with one
+// would otherwise read as a pixel of scrolling already done.
+const getScrollportRect = scrollerEl => {
+  const rect = getScrollerViewportRect(scrollerEl);
+  if (scrollerEl === document.scrollingElement) {
+    return rect;
+  }
+  const top = rect.top + scrollerEl.clientTop;
+  const left = rect.left + scrollerEl.clientLeft;
+  return {
+    top,
+    left,
+    bottom: top + scrollerEl.clientHeight,
+    right: left + scrollerEl.clientWidth
+  };
+};
+const isPartStuck = (partEl, edge, scrollportRect) => {
+  // The inset is read computed, not from the rule: --list-group-label-top and
+  // the FixedBar space behind it are what put the label where it sticks.
+  const declared = parseFloat(getComputedStyle(partEl)[edge]);
+  const inset = Number.isFinite(declared) ? declared : 0;
+  const rect = partEl.getBoundingClientRect();
+  if (edge === "top") {
+    return rect.top - scrollportRect.top <= inset + STUCK_SLACK;
+  }
+  if (edge === "left") {
+    return rect.left - scrollportRect.left <= inset + STUCK_SLACK;
+  }
+  if (edge === "bottom") {
+    return scrollportRect.bottom - rect.bottom <= inset + STUCK_SLACK;
+  }
+  return scrollportRect.right - rect.right <= inset + STUCK_SLACK;
+};
+const useStuckStickyParts = (ref, getScroller, scrollerElResolved, horizontal) => {
+  // Rewritten on every render so the listeners below, registered once per
+  // scroller, always run against the current geometry.
+  const updateRef = useRef(null);
+  updateRef.current = () => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const partEls = listContainerEl.querySelectorAll(STICKY_LIST_PART_SELECTOR);
+    if (partEls.length === 0) {
+      return;
+    }
+    const scrollerEl = getScroller();
+    if (!scrollerEl) {
+      return;
+    }
+    // One rect per RENDERED part: virtualization already bounds how many of
+    // them exist, which is what keeps this affordable on every scroll event.
+    const scrollportRect = getScrollportRect(scrollerEl);
+    for (const partEl of partEls) {
+      const edge = getStickyEdge(partEl, horizontal);
+      partEl.toggleAttribute("navi-stuck", isPartStuck(partEl, edge, scrollportRect));
+    }
+  };
+
+  // Every commit, because a virtualized list changes which parts exist without
+  // anything scrolling: group labels enter and leave the DOM as the window
+  // moves, and one that arrives already at the edge has never been measured.
+  useLayoutEffect(() => {
+    updateRef.current();
+  });
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const update = () => {
+      // Synchronously, not on a rAF: scroll events are dispatched while the
+      // frame is being put together, so the attribute lands in the same paint
+      // as the scroll that caused it. A frame late is a frame of flicker.
+      updateRef.current();
+    };
+    // A page-level scroller does not emit "scroll" on the element itself
+    // (document.scrollingElement); the document does.
+    const scrollerEl = getScroller();
+    const scrollEventTarget = !scrollerEl || scrollerEl === document.scrollingElement ? document : scrollerEl;
+    scrollEventTarget.addEventListener("scroll", update, {
+      passive: true
+    });
+    window.addEventListener("resize", update);
+    // The list growing under a scroller that has not moved — rows loaded by
+    // scroll, a group unfolding — changes which parts sit at an edge.
+    const observer = new ResizeObserver(update);
+    observer.observe(listContainerEl);
+    return () => {
+      scrollEventTarget.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      observer.disconnect();
+    };
+  }, [scrollerElResolved]);
 };
 
 // The CSS needs to tell "the page scrolls me" from "some box around me
@@ -58958,110 +59295,6 @@ const PickerFirstResolver = props => {
     ...props
   });
 };
-
-/**
- * Button-like trigger that opens a picker (native or custom popup) when clicked.
- *
- * Without `children`, opens the browser-native picker for the given `type`.
- * With `children`, opens a popover (desktop) or dialog (mobile) containing the children.
- * Pass `mode="popover"` or `mode="dialog"` to override the automatic choice.
- *
- * @type {import("ignore:preact").FunctionComponent<{
- *   type?: "date" | "month" | "week" | "time" | "datetime" | "color" | "hour" | "navi_time" | "navi_number" | "navi_percentage",
- *   value?: any,
- *   defaultValue?: any,
- *   name?: string,
- *   placeholder?: import("ignore:preact").ComponentChildren,
- *   required?: boolean,
- *   min?: Date | string | number,
- *   max?: Date | string | number,
- *   step?: string | number,
- *   disabled?: boolean,
- *   readOnly?: boolean,
- *   error?: boolean | string,
- *   uiAction?: (value: any, event: Event) => void,
- *   action?: (value: any, event: Event) => void,
- *   children?: import("ignore:preact").ComponentChildren,
- *   mode?: "popover" | "dialog",
- *   popoverMode?: "nearby" | "overlay",
- *   positionArea?: string,
- *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless" | "discrete",
- *   rightSlotIcon?: import("ignore:preact").ComponentChildren,
- *   rightSlotIconSize?: number | string,
- *   maxLines?: number,
- *   slotSpacing?: number | string,
- *   popoverMaxHeight?: number | string,
- *   dialogMaxWidth?: number | string,
- *   dialogMaxHeight?: number | string,
- *   popupBackgroundColor?: string,
- *   popupBorderRadius?: number | string,
- *   clearable?: boolean,
- *   popupLayer?: "top" | "local",
- *   dialogExpand?: boolean,
- *   dialogExpandX?: boolean,
- *   dialogExpandY?: boolean,
- *   marginWithContainer?: number | string,
- *   escapeEffect?: "cancel" | "close",
- *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
- *   ref?: import("ignore:preact").RefObject<HTMLElement>,
- *   [key: string]: any,
- * }>}
- * @param {boolean|string} [error] Something went wrong around this picker (its
- *   content failed to load, its value could not be resolved…). Shown as a
- *   callout on the trigger, open or closed — the caller has nothing to place.
- *   Dismissing it discards that error; a new `error` value raises another one.
- * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
- *   over the trigger, "nearby" leaves a small gap below it.
- * @param {string} [positionArea] Where the popup goes — relative to the trigger
- *   in popover mode, relative to the viewport in dialog mode. Same grammar as
- *   Popover/Dialog's own `positionArea` ("top", "right-end", "inset(top-left)",
- *   …). Defaults to "bottom-start" in popover mode ("inset(top-left)" when
- *   popoverMode is "overlay"), and to Dialog's own "center" in dialog mode. A
- *   popover still flips to the opposite side on its own when there isn't
- *   enough room.
- * @param {boolean} [popupWidthFitContent] By default the popup is at least as
- *   wide as the trigger. Set this to let the content size it instead, so a
- *   popup narrower than the trigger stays narrow.
- * @param {import("ignore:preact").ComponentChildren} [rightSlotIcon] What the right
- *   slot draws in place of the chevron. It is the whole slot, not an addition
- *   to it: the picker then no longer says on its own that it opens, so pass
- *   something that does.
- * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
- *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
- *   cross. "inherit" takes the picker's own font size.
- * @param {number|string} [slotSpacing] Gap kept between what sits in the right
- *   slot (the chevron, or the clear button) and the picker's own edge — same
- *   prop name Input uses for its own slots. Accepts a spacing token ("s",
- *   "m"…) like any other spacing prop, or a length. Defaults to half the
- *   horizontal padding.
- * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
- *   (default 300px). The popover shrinks below it when space is tight.
- * @param {number|string} [dialogMaxWidth] Ceiling on the dialog's width, the
- *   one `dialogExpand`/`dialogExpandX` grows up to — what makes an expanded
- *   dialog a large sheet rather than a full screen. Capped in turn by the
- *   container minus `marginWithContainer`.
- * @param {number|string} [dialogMaxHeight] Same, on the height.
- * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
- *   picker. "cancel" puts back the value the picker had at open, and a dialog
- *   picker also goes back in history — so anything written to the url while it
- *   was open (a route `stateSignal`, a search param) goes back with it. "close"
- *   makes Escape say what clicking outside says: keep what was chosen, close —
- *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
- *   keep") for why Escape should go on meaning cancel, and for what the value
- *   at open is on the picker's very first open.
- * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
- *   What a click outside the popup does: close and keep ("close"), close and
- *   put back the value at open ("cancel"), or nothing at all ("capture"). The
- *   default is what gives a popup with no confirm button its way out that
- *   keeps — see the same section.
- * @param {number|string} [marginWithContainer] Minimum gap kept between the
- *   popup and the edges of what contains it (the viewport, or the picker's own
- *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
- *   well as its placement, so what an expanded dialog leaves visible around
- *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
- *   Dialog's own 3vvw in dialog mode.
- */
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
