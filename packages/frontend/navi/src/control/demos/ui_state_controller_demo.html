@@ -476,7 +476,7 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
-                une valeur objet sur un <code>Picker type="form"</code>. Les
+                une valeur objet sur un <code>Picker type="object"</code>. Les
                 champs internes doivent se mettre à jour et le{" "}
                 <code>uiAction</code> doit être appelé.
               </p>
@@ -485,7 +485,7 @@
                 <Picker
                   id={pickerId}
                   name="address"
-                  type="form"
+                  type="object"
                   placeholder="Saisir une adresse"
                   uiAction={(v) => {
                     pushEntry("uiAction", v);
@@ -561,7 +561,7 @@
             <h2>ControlGroup interne — inside a form</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-                Le <code>Picker type="form"</code> est dans un <code>Form</code>
+                Le <code>Picker type="object"</code> est dans un <code>Form</code>
                 . On vérifie que le formulaire récupère bien la valeur objet du
                 picker sous son <code>name</code> lors du submit.
               </p>
@@ -577,7 +577,7 @@
                   <legend>address</legend>
                   <Picker
                     name="address"
-                    type="form"
+                    type="object"
                     placeholder="Saisir une adresse"
                     uiAction={(v) => {
                       pushEntry("uiAction", v);
@@ -643,7 +643,7 @@
                 <legend>contact</legend>
                 <Picker
                   name="contact"
-                  type="form"
+                  type="object"
                   placeholder="Renseigner le contact"
                   uiAction={(v) => {
                     pushEntry("uiAction", v);
@@ -1873,7 +1873,7 @@
                   defaultValue=
                   {'{{ street: "12 rue de la Paix", city: "Paris" }}'}
                 </code>{" "}
-                sur le <code>Picker type="form"</code> — les inputs internes
+                sur le <code>Picker type="object"</code> — les inputs internes
                 n'ont pas de <code>defaultValue</code>. Les champs doivent être
                 préremplis à l'ouverture.
               </p>
@@ -1881,7 +1881,7 @@
                 <legend>address</legend>
                 <Picker
                   name="address"
-                  type="form"
+                  type="object"
                   placeholder="Saisir une adresse"
                   defaultValue={{ street: "12 rue de la Paix", city: "Paris" }}
                   uiAction={(v) => {
@@ -1939,7 +1939,7 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 <code>value={"{address}"}</code> sur le{" "}
-                <code>Picker type="form"</code> — les inputs internes n'ont pas
+                <code>Picker type="object"</code> — les inputs internes n'ont pas
                 de <code>value</code>. Confirmer met à jour l'état React et les
                 champs se synchronisent.
               </p>
@@ -1947,7 +1947,7 @@
                 <legend>address</legend>
                 <Picker
                   name="address"
-                  type="form"
+                  type="object"
                   placeholder="Saisir une adresse"
                   value={address}
                   uiAction={(v) => {
@@ -2084,7 +2084,7 @@
                   </List.Item>
                   <List.Item selectable index={2} value="custom" padding="s">
                     Personnalisé
-                    <Picker name="custom" type="form" placeholder="hh:mm">
+                    <Picker name="custom" type="object" placeholder="hh:mm">
                       <Form>
                         <Box flex="x" spacing="s" padding="s">
                           <fieldset>

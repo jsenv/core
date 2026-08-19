@@ -92,6 +92,11 @@ consistency across the app, not from any single call site.
   `signal` carrying something is an answer). Read it before a screen that
   modifies an existing resource (`pristineKey`), and before reaching for
   `canSendWhileUnchanged` because a submit "does nothing".
+- `docs/control_object.md` — a value made of several controls: `<ControlGroup>`
+  (the shape) vs `<Form>` (the shape plus a send), what a group's `name` does
+  and what a nameless one merges, and what a `<Picker type="object">` needs in
+  its popup (one group, not two controls). Read it before making one value out
+  of several controls, and before putting anything in a picker popup.
 - `docs/control_group.md` — `<Group>`: several controls reading as one framed
   object (one border per seam, radius on the outer corners only). Read it
   before placing bordered controls against each other, and before writing

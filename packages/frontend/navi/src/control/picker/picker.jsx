@@ -33,7 +33,7 @@ import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
   PickerArrayUI,
   PickerColorUI,
-  PickerFormUI,
+  PickerObjectUI,
   PickerDatetimeUI,
   PickerDateUI,
   PickerDurationUI,
@@ -811,7 +811,7 @@ const PickerFirstResolver = (props) => {
  * Pass `mode="popover"` or `mode="dialog"` to override the automatic choice.
  *
  * @type {import("preact").FunctionComponent<{
- *   type?: "date" | "month" | "week" | "time" | "datetime" | "color" | "hour" | "navi_time" | "navi_number" | "navi_percentage",
+ *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "navi_time" | "navi_number" | "navi_percentage",
  *   value?: any,
  *   defaultValue?: any,
  *   name?: string,
@@ -957,8 +957,8 @@ const warnOnUnknownPickerType = (props) => {
   console.warn(
     `[navi] <Picker type="${type}"> — "${type}" is not a picker type. ` +
       `The picker holds a single text value instead, so an object given to it is written as "[object Object]". ` +
-      `Types are: date, month, week, time, datetime, duration, color, file, text, array, form — ` +
-      `"form" being the one for a popup holding several named controls.`,
+      `Types are: date, month, week, time, datetime, duration, color, file, text, array, object — ` +
+      `"object" being the one for a popup holding several named controls.`,
   );
 };
 
@@ -979,7 +979,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
-Picker.UI.Form = PickerFormUI;
+Picker.UI.Object = PickerObjectUI;
 Picker.UI.Multiple = PickerArrayUI;
 
 Picker.UI.PencilSvg = PencilSvg;

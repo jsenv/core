@@ -124,4 +124,6 @@ It is then neither collected nor complained about.
 
 - [control_value.md](./control_value.md) — who holds a control's value:
   nothing, a bound `signal`, or you
+- [control_object.md](./control_object.md) — one value made of several
+  controls: `ControlGroup`, `Form`, and a picker whose value is an object
 - [actions.md](./actions.md) — what an action does around the send itself

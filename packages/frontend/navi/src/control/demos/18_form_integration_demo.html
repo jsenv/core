@@ -516,7 +516,7 @@
       // ── A form in a picker ────────────────────────────────────────────────
 
       // The other way round from the section above: here the popup belongs to
-      // the picker and the form is what is inside it. `type="form"`
+      // the picker and the form is what is inside it. `type="object"`
       // says the picker's value is whatever the group in its popup aggregates —
       // a Form or a ControlGroup, both of which are that group.
       const FormInPickerSection = () => {
@@ -537,7 +537,7 @@
               <Label>Address</Label>
               <Picker
                 name="address"
-                type="form"
+                type="object"
                 placeholder="Enter an address…"
                 value={address}
                 minWidth="260"

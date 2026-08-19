@@ -130,6 +130,11 @@ The controls shipped by navi all follow this: `Button`, `Input`, `Select`,
 - Controls separated by space, each with its own frame — that is a `Box` with
   `spacing`, they were never one object.
 - A label and its control — that is `Field`.
+- Several controls making ONE value between them (an address out of three
+  fields, a day and two wheels out of one moment) — that is `ControlGroup`,
+  which is about the value and draws nothing. Same word, other subject: see
+  [control_object.md](./control_object.md). Both at once is fine — a `Group`
+  around the members of a `ControlGroup`.
 - Radio buttons or checkboxes sharing a name and a validation — that is
   `RadioGroup` / `CheckboxGroup`, which is about the value, not the frame. They
   can be put inside a `Group` if you also want them to share a frame.

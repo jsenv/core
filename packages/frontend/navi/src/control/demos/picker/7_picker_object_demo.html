@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Picker ControlGroup Demo</title>
+    <title>Picker Object Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -39,7 +39,7 @@
   </head>
   <body>
     <div id="container">
-      <h1>Picker ControlGroup Demo</h1>
+      <h1>Picker Object Demo</h1>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -88,7 +88,7 @@
                 <Label>Adresse</Label>
                 <Picker
                   name="address"
-                  type="form"
+                  type="object"
                   placeholder="Saisir une adresse"
                   uiAction={(v) => {
                     push("uiAction", v);
@@ -128,7 +128,7 @@
           <div class="demo-section" id="inside-form">
             <h2>2. Inside a form</h2>
             <p class="desc">
-              Le picker controlgroup s'utilise aussi à l'intérieur d'un Form. Sa
+              Le picker object s'utilise aussi à l'intérieur d'un Form. Sa
               valeur est incluse sous sa clé name dans l'objet soumis.
             </p>
             <Form
@@ -149,7 +149,7 @@
                   <Label>Adresse</Label>
                   <Picker
                     name="address"
-                    type="form"
+                    type="object"
                     placeholder="Saisir une adresse"
                     uiAction={(v) => {
                       push("Picker uiAction", v);
@@ -249,7 +249,7 @@
                 <Label>Durée</Label>
                 <Picker
                   name="duration"
-                  type="form"
+                  type="object"
                   placeholder="Saisir une durée"
                   ui={<DurationPickerUI />}
                   uiAction={(v) => {
@@ -288,7 +288,7 @@
                   <Label>Durée</Label>
                   <Picker
                     name="duration"
-                    type="form"
+                    type="object"
                     placeholder="Saisir une durée"
                     ui={<DurationPickerUI />}
                     uiAction={(v) => {

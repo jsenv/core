@@ -52,6 +52,23 @@ Both halves are worth knowing about, because each replaces a habit:
 - the follow replaces the `key` or the `value`/`uiAction` pair used to push an
   outside change into a control.
 
+The follow goes all the way up: a bound control that lives inside a group — two
+wheels in a `WheelGroup`, a field in a `ControlGroup` — makes that group
+re-aggregate when its signal is written, and the form above sees the new value.
+A shortcut that pushes the controls from the outside is an answer like any
+other: the wheels roll, and the submit lights up.
+
+```jsx
+<Button
+  onClick={() => {
+    hoursSignal.value = 2;
+    minutesSignal.value = 0;
+  }}
+>
+  2h
+</Button>
+```
+
 ## `signal` + `defaultValue`: the answer and where it starts
 
 They are not competing, they answer two different questions:
@@ -126,6 +143,8 @@ directions; it just has nothing extra to say.
 
 - [form_changed.md](./form_changed.md) — what a form makes of each of these:
   which fields it counts as already answered, and when it sends nothing
+- [control_object.md](./control_object.md) — several controls reading as one
+  object: which group aggregates them, and how the value travels down by name
 - [control_group.md](./control_group.md) — several controls reading as one
   framed object
 - [actions.md](./actions.md#action-or-uiaction) — `action` or `uiAction`: which

@@ -48,8 +48,8 @@ export const PickerTypeResolver = (props) => {
   if (props.type === "array") {
     return <PickerArray {...props} />;
   }
-  if (props.type === "form") {
-    return <PickerForm {...props} />;
+  if (props.type === "object") {
+    return <PickerObject {...props} />;
   }
   return <Next {...props} />;
 };
@@ -60,16 +60,16 @@ const PickerText = (props) => {
   return <Next rightSlotIcon={<PencilSvg />} {...props} />;
 };
 
-// The popup holds a group of named controls — a `<Form>`, or a `<ControlGroup>`
-// when the group is only a shape and has no submit — and this picker's value is
-// whatever that group aggregates. The popup itself holds nothing: it is a
-// surface (see dialog.jsx), so there is nothing to tell it about the shape.
-const PickerForm = (props) => {
+// The popup holds a group of named controls — a `<ControlGroup>`, or a `<Form>`
+// when that group is a question with a send of its own — and this picker's
+// value is the object that group aggregates. The popup itself holds nothing: it
+// is a surface (see dialog.jsx), so there is nothing to tell it about the shape.
+const PickerObject = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<PickerFormUI />} {...props} type="navi_js" />;
+  return <Next ui={<PickerObjectUI />} {...props} type="navi_js" />;
 };
-export const PickerFormUI = () => {
+export const PickerObjectUI = () => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value || Object.keys(value).length === 0) {

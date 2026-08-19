@@ -1549,20 +1549,6 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           // not be treated as the picker's synced child.
           return false;
         }
-        if (props.type === "form" && childController.controlType !== "form") {
-          // Only a form: what a type="form" picker syncs with is the form in
-          // its popup, not any control that happens to be in there (an input
-          // sitting outside the form, a ControlGroup — which is a way of
-          // grouping controls INSIDE a form, not a thing a picker talks to).
-          return false;
-        }
-        if (
-          props.type === "array" &&
-          childController.controlType !== "checkbox_group"
-        ) {
-          // only selectable list expose array, ignore others
-          return false;
-        }
         return true;
       };
 
@@ -1582,7 +1568,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
               `[navi] a second control ("${childType}"${child.name ? ` name="${child.name}"` : ""}) registered in the ${describePicker(props)} popup. ` +
                 `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
                 `so this one is neither filled nor collected. ` +
-                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="form".`,
+                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object".`,
               child,
             );
           } else {
@@ -1737,7 +1723,7 @@ const warnIfChildCannotHold = (props, child, newUIState) => {
   cannotHoldWarnedSet.add(child);
   console.warn(
     `[navi] ${describePicker(props)} holds an object, but the "${child.controlType}"${child.name ? ` name="${child.name}"` : ""} in its popup holds a single value — it receives the object whole. ` +
-      `The control inside a picker whose value is an object must be the group that shapes it: a <ControlGroup> (or a <Form>) with one named control per key, and type="form" on the picker.`,
+      `The control inside a picker whose value is an object must be the group that shapes it: a <ControlGroup> (or a <Form>) with one named control per key, and type="object" on the picker.`,
     child,
   );
 };
