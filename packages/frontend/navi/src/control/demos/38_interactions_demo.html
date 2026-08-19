@@ -1455,6 +1455,45 @@
                 </Box>
               </Box>
             </Box>
+
+            <Heading level={4} id="move-on-contact">
+              data-drag-on-contact
+            </Heading>
+            <p class="legend">
+              On a touch screen, the first token asks for a hold before it can be
+              carried — a finger travelling on it might have meant to scroll the
+              page. The second board says nothing scrolls there, so a finger
+              takes it the way a mouse does: a few pixels of travel, no wait. A
+              mouse sees no difference between the two.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  held first
+                </Text>
+                <Box className="board board_small">
+                  <Token
+                    id="token_after_hold"
+                    label="hold"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("taken after a hold") }}
+                  />
+                </Box>
+              </Box>
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  data-drag-on-contact
+                </Text>
+                <Box className="board board_small" data-drag-on-contact>
+                  <Token
+                    id="token_on_contact"
+                    label="contact"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("taken on contact") }}
+                  />
+                </Box>
+              </Box>
+            </Box>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );

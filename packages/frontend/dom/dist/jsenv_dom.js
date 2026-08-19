@@ -8951,6 +8951,26 @@ installImportMetaCssBuild(import.meta);/**
  *
  * Whichever trigger fired, it has established the intent: the gesture then
  * starts at the first pixel, without a second threshold to cross.
+ *
+ * WHEN A FINGER MAY TRAVEL TOO: [data-drag-on-contact].
+ *
+ * The wait a finger is asked for is not a rule about fingers, it is the answer to
+ * an ambiguity — travel means scroll as much as it means drag, so the two have to
+ * be told apart. Where nothing scrolls the ambiguity does not exist, and the wait
+ * is asking the hand to prove something nothing else could have meant: inside a
+ * dialog that holds the page still, a finger travelling on a piece can only be
+ * carrying it.
+ *
+ * So the attribute says that place, not that element — put on the dialog, every
+ * source inside it reads by distance like a mouse does, at the same few pixels.
+ * A tap is left alone by that: a press that goes nowhere is still a press, which
+ * is what a piece that is also a link or a card needs.
+ *
+ * It is opt-in and cannot be anything else. Nothing here can see whether the
+ * surroundings scroll — a page scrolls by default, an overflow is one CSS
+ * property away, and getting it wrong the wrong way means the list runs away
+ * under the finger that meant to reorder it. Only the application knows it has
+ * taken the scroll away.
  */
 
 /* At module scope, and on the markers rather than on the pressed element: both
@@ -8992,6 +9012,13 @@ const css$4 = /* css */`
     /* The axis is the one thing the caller has to say, being the only one who
        knows which way what surrounds the source scrolls. */
     touch-action: pan-x pinch-zoom;
+  }
+  [data-drag-on-contact] [data-drag-source],
+  [data-drag-source][data-drag-on-contact] {
+    /* Nothing scrolls here, so there is no pan to leave to anyone — the finger
+       may travel from the first pixel. Zoom is kept: it belongs to the reader,
+       not to the gesture, and two fingers are never a drag. */
+    touch-action: pinch-zoom;
   }
   [data-drag-ignore] {
     -webkit-touch-callout: default;
@@ -9060,6 +9087,8 @@ const markDragSource = (element, axes) => {
  *   distance-based.
  * @param {boolean|"if-touch"} [options.longPress="if-touch"]
  *   Which pointers start a drag by holding still instead of by travelling.
+ *   `"if-touch"` excepts what stands inside a `[data-drag-on-contact]`, where
+ *   nothing scrolls and a finger resolves by distance like a mouse.
  * @param {number} [options.longPressDelay=400]
  *   How long (ms) the pointer must stay down. Kept under the system context-menu
  *   delay so the object is picked up before the menu would have opened.
@@ -9091,7 +9120,10 @@ const dragAfterIntent = (grabEvent, dragGestureInitializer, {
     startDragGesture(dragGestureInitializer);
     return;
   }
-  const startsOnLongPress = longPress === true || longPress === "if-touch" && grabEvent.pointerType === "touch";
+  const startsOnLongPress = longPress === true || longPress === "if-touch" && grabEvent.pointerType === "touch" &&
+  // The wait tells a scroll from a drag, and here there is no scroll to tell
+  // it from — see [data-drag-on-contact] at the top of this file.
+  !(target.closest && target.closest("[data-drag-on-contact]"));
   if (startsOnLongPress) {
     dragAfterLongPress(grabEvent, dragGestureInitializer, {
       longPressDelay,

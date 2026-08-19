@@ -228,7 +228,34 @@ name what moves.
 | -------------------------------------------------------- | -------------------------------------- |
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
+| `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
+
+### A finger that does not have to wait: `data-drag-on-contact`
+
+A finger is asked to hold still because travel is exactly what a scroll looks
+like, and the two have to be told apart. Where nothing scrolls there is nothing
+to tell apart, and the wait asks the hand to prove something nothing else could
+have meant — a dialog holding the page still, a board that fills the screen.
+
+```jsx
+<Dialog data-drag-on-contact>
+  {pieces.map((piece) => (
+    <Piece id={piece.id} interactions={{ land: swapPlaces }} />
+  ))}
+</Dialog>
+```
+
+It says a **place**, not an element: put on what holds the page still, every
+source inside it reads by distance — the same few pixels a mouse travels, so the
+gesture is the desktop one. A tap is untouched by that, so a piece that is also a
+link or a card stays one; only `pinch-zoom` is left of the browser's own touch,
+because zoom belongs to the reader and two fingers are never a drag.
+
+Opt-in and nothing else: navi cannot see whether the surroundings scroll — a page
+scrolls by default and an `overflow` is one property away — and guessing it wrong
+this way means the list runs away under the finger that meant to reorder it. You
+know you took the scroll away; say so.
 
 ### Landing on a place: `land`
 
