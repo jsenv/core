@@ -23708,13 +23708,13 @@ const useUIGroupStateController = (
     );
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const hasValueProp = Object.hasOwn(props, "value");
-  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
   // with the signal's current value as what it starts on. Write-back is handled
   // by applyState's own boundSignal; the read half is below: children are
   // placed from it when they register, and again whenever it moves.
-  const boundSignal = hasValueProp ? undefined : props.signal;
+  const boundSignal = props.signal;
+  const hasValueProp = !boundSignal && Object.hasOwn(props, "value");
+  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
   const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
   const { id, name, value, uiAction } = props;
   // A signal holding something wins over `defaultValue`: the default is a
@@ -24124,6 +24124,11 @@ const useUIGroupStateController = (
         parentUIStateController,
         uiAction,
         uiActionInternal,
+        // `props` is what writeBoundSignal reads to find the bound `signal`.
+        // Missing here, a group whose component never re-renders between mount
+        // and the first choice wrote nothing back into its signal — and said
+        // nothing about it: the list showed the choice, the signal stayed empty.
+        props,
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -25322,22 +25327,25 @@ const createControlInfo = (props, {
       defaultStatePropName = "defaultChecked";
       value = props.value || "on";
       signalHoldsChecked = true;
-      if (Object.hasOwn(props, "checked")) {
+      if (signal) {
+        if (props.defaultChecked) {
+          // resolveInputProps may seed defaultChecked from a bound signal's
+          // default: the control stays uncontrolled and follows the signal
+          // through stateFromSignal.
+          hasStateProp = false;
+          stateInitial = value;
+          stateFromSignal = signal.value ? value : undefined;
+        } else {
+          // A bound signal with no resolved default: its live value seeds state.
+          hasStateProp = true;
+          stateInitial = signal.value ? value : undefined;
+        }
+      } else if (Object.hasOwn(props, "checked")) {
         hasStateProp = true;
         stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
-        // resolveInputProps may seed defaultChecked from a bound signal's
-        // default: the control stays uncontrolled and follows the signal
-        // through stateFromSignal.
         hasStateProp = false;
         stateInitial = value;
-        if (signal) {
-          stateFromSignal = signal.value ? value : undefined;
-        }
-      } else if (signal) {
-        // A bound signal with no resolved default: its live value seeds state.
-        hasStateProp = true;
-        stateInitial = signal.value ? value : undefined;
       } else {
         hasStateProp = false;
         stateInitial = undefined;
@@ -25345,30 +25353,33 @@ const createControlInfo = (props, {
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      if (Object.hasOwn(props, "value")) {
+      if (signal) {
+        if (Object.hasOwn(props, "defaultValue")) {
+          // resolveInputProps seeds defaultValue from a bound signal's default,
+          // so an input+signal is uncontrolled-with-default; the signal only
+          // receives write-backs (onUIAction).
+          hasStateProp = false;
+          // A signal holding something wins over the default: `defaultValue` is
+          // a suggestion of what to start from (and what a reset goes back to),
+          // not an answer — while the signal's value IS the answer, restored
+          // from the url or set by whoever owns it. Taking the default here
+          // would show a suggestion in place of the value on every reload.
+          stateInitial = signal.value !== undefined ? signal.value : props.defaultValue;
+          stateFromSignal = stateInitial;
+        } else {
+          // A plain bound signal with no default (e.g. Wheel): its live value
+          // seeds and controls the state.
+          hasStateProp = true;
+          value = signal.value;
+          stateInitial = value;
+        }
+      } else if (Object.hasOwn(props, "value")) {
         hasStateProp = true;
         value = props.value;
         stateInitial = value;
       } else if (Object.hasOwn(props, "defaultValue")) {
-        // resolveInputProps seeds defaultValue from a bound signal's default,
-        // so an input+signal is uncontrolled-with-default; the signal only
-        // receives write-backs (onUIAction).
         hasStateProp = false;
-        // A signal holding something wins over the default: `defaultValue` is a
-        // suggestion of what to start from (and what a reset goes back to), not
-        // an answer — while the signal's value IS the answer, restored from the
-        // url or set by whoever owns it. Taking the default here would show a
-        // suggestion in place of the value on every reload.
-        stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
-        if (signal) {
-          stateFromSignal = stateInitial;
-        }
-      } else if (signal) {
-        // A plain bound signal with no default (e.g. Wheel): its live value
-        // seeds and controls the state.
-        hasStateProp = true;
-        value = signal.value;
-        stateInitial = value;
+        stateInitial = props.defaultValue;
       } else {
         hasStateProp = false;
         stateInitial = undefined;
@@ -25388,20 +25399,23 @@ const createControlInfo = (props, {
   } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    if (Object.hasOwn(props, "value")) {
+    if (signal) {
+      if (Object.hasOwn(props, "defaultValue")) {
+        hasStateProp = false;
+        // The signal's value is the answer, defaultValue only the suggestion to
+        // start from.
+        stateInitial = signal.value !== undefined ? signal.value : props.defaultValue;
+        stateFromSignal = stateInitial;
+      } else {
+        hasStateProp = true;
+        stateInitial = signal.value;
+      }
+    } else if (Object.hasOwn(props, "value")) {
       hasStateProp = true;
       stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
       hasStateProp = false;
-      // Same precedence as an input above: the signal's value is the answer,
-      // defaultValue only the suggestion to start from.
-      stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
-      if (signal) {
-        stateFromSignal = stateInitial;
-      }
-    } else if (signal) {
-      hasStateProp = true;
-      stateInitial = signal.value;
+      stateInitial = props.defaultValue;
     } else {
       hasStateProp = false;
       stateInitial = undefined;
@@ -46878,7 +46892,10 @@ const resolveInputProps = (props) => {
       if (Object.hasOwn(props, "defaultChecked")) ; else {
         // If no explicit defaultChecked, derive it from the signal's default
         // value so that resetUIState restores to the original default.
-        const defaultVal = signal.options.getDefaultValue(false);
+        // Only a stateSignal carries a default of its own; a plain signal has
+        // no `options` at all, and asking it for one used to throw on mount —
+        // the same optional read every other branch here already does.
+        const defaultVal = signalOptions?.getDefaultValue(false);
         if (defaultVal === undefined) ; else if (props.type === "radio") {
           if (defaultVal === true) {
             props.defaultChecked = true;
@@ -58928,10 +58945,15 @@ const PickerFirstResolver = props => {
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
  *   picker also goes back in history — so anything written to the url while it
  *   was open (a route `stateSignal`, a search param) goes back with it. "close"
- *   makes Escape say what clicking outside says: keep what was chosen, close.
+ *   makes Escape say what clicking outside says: keep what was chosen, close —
+ *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
+ *   keep") for why Escape should go on meaning cancel, and for what the value
+ *   at open is on the picker's very first open.
  * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
  *   What a click outside the popup does: close and keep ("close"), close and
- *   put back the value at open ("cancel"), or nothing at all ("capture").
+ *   put back the value at open ("cancel"), or nothing at all ("capture"). The
+ *   default is what gives a popup with no confirm button its way out that
+ *   keeps — see the same section.
  * @param {number|string} [marginWithContainer] Minimum gap kept between the
  *   popup and the edges of what contains it (the viewport, or the picker's own
  *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
