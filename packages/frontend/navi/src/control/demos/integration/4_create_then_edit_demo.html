@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Créer puis modifier</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      .phone {
+        display: flex;
+        width: 420px;
+        height: 520px;
+        flex-direction: column;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        height: 100%;
+        padding: 20px;
+        flex-direction: column;
+        gap: 16px;
+        background: white;
+        overflow: auto;
+      }
+      .page_title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      .game_card {
+        padding: 12px 14px;
+        color: #37474f;
+        font-size: 14px;
+        line-height: 1.6;
+        background: #eceff1;
+        border-radius: 8px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useEffect, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        Loading,
+        Route,
+        RouteTravel,
+        Select,
+        createAction,
+        route,
+        routeAction,
+        setupRoutes,
+        stateSignal,
+        useAsyncData,
+        useRouteStatus,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+
+      // ── Le backend ────────────────────────────────────────────────────────
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const gameMap = new Map([
+        [
+          "1",
+          { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
+        ],
+      ]);
+      let nextId = 2;
+      const backend = {
+        read: async (gameId) => {
+          await sleep(700);
+          const game = gameMap.get(gameId);
+          if (!game) {
+            throw new Error(`Aucune partie "${gameId}"`);
+          }
+          return game;
+        },
+        create: async (values) => {
+          await sleep(700);
+          const id = String(nextId++);
+          const game = { id, ...values };
+          gameMap.set(id, game);
+          return game;
+        },
+        update: async (gameId, values) => {
+          await sleep(700);
+          const game = { ...gameMap.get(gameId), ...values };
+          gameMap.set(gameId, game);
+          return game;
+        },
+      };
+
+      // ── Un signal par champ, partagé par les deux modes ────────────────────
+      const nameSignal = stateSignal("", { id: "name" });
+      const levelSignal = stateSignal("debutant", {
+        id: "level",
+        oneOf: ["debutant", "confirme"],
+      });
+      const playersSignal = stateSignal(4, {
+        id: "players",
+        type: "number",
+        min: 2,
+        max: 8,
+      });
+
+      // ── Les routes ────────────────────────────────────────────────────────
+      const HOME_ROUTE = route("/");
+      // Les champs de la création sont dans l'url: un brouillon se recharge et
+      // se partage. Ceux de la modification n'y sont pas — ils appartiennent à
+      // la partie, pas à la position.
+      const NEW_GAME_ROUTE = route("/games/new", {
+        searchParams: {
+          name: nameSignal,
+          level: levelSignal,
+          players: playersSignal,
+        },
+      });
+      const GAME_ROUTE = route("/games/:gameId");
+      const EDIT_GAME_ROUTE = route("/games/:gameId/edit");
+      setupRoutes([HOME_ROUTE, NEW_GAME_ROUTE, GAME_ROUTE, EDIT_GAME_ROUTE]);
+      window.__routes = { HOME_ROUTE, NEW_GAME_ROUTE, GAME_ROUTE, EDIT_GAME_ROUTE };
+
+      // ── La partie que l'url désigne, chargée pour les deux pages ──────────
+      const GET_GAME = createAction(({ gameId }) => backend.read(gameId));
+      const GAME_OF_ROUTE = routeAction(
+        [GAME_ROUTE, EDIT_GAME_ROUTE],
+        GET_GAME,
+        () => {
+          const gameId =
+            GAME_ROUTE.paramsSignal.value.gameId ||
+            EDIT_GAME_ROUTE.paramsSignal.value.gameId;
+          return gameId ? { gameId } : null;
+        },
+      );
+
+      // ── Le formulaire, un seul pour les deux modes ────────────────────────
+      const GameFormFields = () => (
+        <Box flex="y" spacing="m">
+          <Field vertical>
+            <Label>Nom</Label>
+            <Input name="name" signal={nameSignal} required />
+          </Field>
+          <Field vertical>
+            <Label>Niveau</Label>
+            <Select name="level" signal={levelSignal}>
+              <option value="debutant">Débutant</option>
+              <option value="confirme">Confirmé</option>
+            </Select>
+          </Field>
+          <Field vertical>
+            <Label>Joueurs</Label>
+            <Input name="players" type="number" signal={playersSignal} />
+          </Field>
+        </Box>
+      );
+
+      const NewGamePage = () => (
+        <div className="page">
+          <h2 className="page_title">Créer une partie</h2>
+          <Form
+            action={async (values) => {
+              const game = await backend.create(values);
+              // La destination n'existait pas avant la réponse: c'est l'action
+              // qui l'a apprise, c'est elle qui y va.
+              GAME_ROUTE.navTo({ gameId: game.id });
+            }}
+          >
+            <Box flex="y" spacing="m">
+              <GameFormFields />
+              <Button type="submit" cta>
+                Créer
+              </Button>
+            </Box>
+          </Form>
+          <Link route={HOME_ROUTE}>Annuler</Link>
+        </div>
+      );
+
+      const GamePage = () => {
+        const [game, loading] = useAsyncData(GAME_OF_ROUTE, { loading: true });
+
+        if (loading && !game) {
+          return (
+            <div className="page">
+              <h2 className="page_title">Partie</h2>
+              <p className="game_card">Chargement…</p>
+            </div>
+          );
+        }
+        return (
+          <div className="page">
+            <h2 className="page_title">{game.name}</h2>
+            <p className="game_card">
+              Niveau: {game.level}
+              <br />
+              Joueurs: {game.players}
+            </p>
+            <Link route={EDIT_GAME_ROUTE} routeParams={{ gameId: game.id }}>
+              Modifier
+            </Link>
+            <Link route={HOME_ROUTE}>Toutes les parties</Link>
+          </div>
+        );
+      };
+
+      const EditGamePage = () => {
+        const [game, loading] = useAsyncData(GAME_OF_ROUTE, { loading: true });
+        // Le formulaire est rempli par ce qui arrive, une requête après
+        // l'ouverture de l'écran. `filled` dit quand: avant, il n'y a rien à
+        // comparer; après, ce que les champs portent est la référence.
+        const [filled, setFilled] = useState(false);
+        useEffect(() => {
+          if (!game) {
+            return;
+          }
+          nameSignal.value = game.name;
+          levelSignal.value = game.level;
+          playersSignal.value = game.players;
+          setFilled(true);
+        }, [game]);
+
+        if (loading && !game) {
+          return (
+            <div className="page">
+              <h2 className="page_title">Modifier</h2>
+              <p className="game_card">Chargement…</p>
+            </div>
+          );
+        }
+        return (
+          <div className="page">
+            <h2 className="page_title">Modifier {game.name}</h2>
+            <Form
+              pristineKey={filled ? game.id : undefined}
+              command={`--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`}
+              action={(values) => backend.update(game.id, values)}
+            >
+              <Box flex="y" spacing="m">
+                <GameFormFields />
+                <Button type="submit" cta readOnlyWhileFormUnchanged>
+                  Enregistrer
+                </Button>
+              </Box>
+            </Form>
+            <Link route={GAME_ROUTE} routeParams={{ gameId: game.id }}>
+              Annuler
+            </Link>
+          </div>
+        );
+      };
+
+      const HomePage = () => (
+        <div className="page">
+          <h2 className="page_title">Parties</h2>
+          {[...gameMap.values()].map((game) => (
+            <Link
+              key={game.id}
+              route={GAME_ROUTE}
+              routeParams={{ gameId: game.id }}
+            >
+              {game.name}
+            </Link>
+          ))}
+          <Link route={NEW_GAME_ROUTE}>Créer une partie</Link>
+        </div>
+      );
+
+      // L'ordre des enfants est l'ordre du voyage: créer et modifier sont à
+      // gauche de la partie, donc y aller va vers la droite ("voilà ce que je
+      // viens de faire") et revenir modifier va vers la gauche.
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="Créer puis modifier" />
+          <div className="demo-section">
+            <p className="caption">
+              Créer une partie, arriver sur la partie créée, la modifier.
+            </p>
+            <Loading>
+              <div className="phone">
+                <RouteTravel className="travel_box">
+                  <Route>
+                    <Route route={HOME_ROUTE} element={HomePage} />
+                    <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
+                    <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+                    <Route route={GAME_ROUTE} element={GamePage} />
+                    <Route fallback element={HomePage} />
+                  </Route>
+                </RouteTravel>
+              </div>
+            </Loading>
+          </div>
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
