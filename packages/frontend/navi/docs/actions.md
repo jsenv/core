@@ -97,6 +97,43 @@ callback:
 </Button>
 ```
 
+## `action` or `uiAction`
+
+Both fire when a control's value changes, and they are not two ways of writing
+the same thing:
+
+|                   | `uiAction(value, event)`                   | `action`                                                                   |
+| ----------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| what it is        | a plain callback                           | an action bound to the control's value                                     |
+| while it runs     | nothing                                    | the control is busy (`aria-busy`, its loading state)                       |
+| if it fails       | an unhandled rejection — nothing on screen | an error callout on the control, and the control goes back to what it held |
+| a popup around it | closes                                     | refuses to close until it is done                                          |
+
+`uiAction` is a notification: the value has changed, here it is. Use it for what
+cannot fail — logging, moving something else on screen, keeping a local
+variable.
+
+Anything that can fail or take time is an `action`, and it does not have to be
+an action instance: a plain function is wrapped into one, bound to the control's
+value, so the callback receives what the control now holds.
+
+```jsx
+// ✓ the box shows it is saving, says so if the save fails, and goes back to
+//   where it was — nothing to write for any of it
+<Input type="checkbox" action={(visibility) => saveMe({ visibility })} />
+
+// ✗ same save, and the user learns nothing: no pending state, and a failure
+//   leaves the box showing something the server never accepted
+<Input type="checkbox" uiAction={(visibility) => saveMe({ visibility })} />
+```
+
+The give-away is an `async` `uiAction`, or one that calls something that writes:
+`uiAction` never waits for what it starts, so nobody is left holding the result.
+
+To merely REMEMBER the value rather than send it, neither is the answer: bind a
+signal and drop the callback entirely — see
+[control_value.md](./control_value.md).
+
 ## Reruns
 
 Actions do not stay stale on their own: a resource's `POST` reruns the

@@ -126,7 +126,7 @@ directions; it just has nothing extra to say.
 
 - [control_group.md](./control_group.md) — several controls reading as one
   framed object
-- [actions.md](./actions.md) — `action` vs `uiAction`: what carries loading and
-  error
+- [actions.md](./actions.md#action-or-uiaction) — `action` or `uiAction`: which
+  one carries loading and error, and which one carries nothing
 - [popup_open.md](./popup_open.md#escape-cancels-the-other-gestures-keep) — what
   a cancelled popup does to the value inside it
