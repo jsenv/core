@@ -183,7 +183,7 @@ everyone else does, by asking for the overflow — and it already asks, on itsel
 So the parts are direct children of the `Dialog`:
 
 ```jsx
-<Dialog id="…" dockedOnTouch scrollCapture>
+<Dialog id="…" dockedOnSmallTouchScreen scrollCapture>
   <Box header>title + close</Box>
   <Box body>
     <List scroller="parent" /> {/* NOT "self" */}

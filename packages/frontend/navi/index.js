@@ -290,6 +290,7 @@ export {
 export {
   windowWidthSignal,
   coarsePointerSignal,
+  smallTouchScreenSignal,
 } from "./src/layout/responsive.js";
 
 // Focus helpers

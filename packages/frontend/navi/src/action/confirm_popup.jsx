@@ -76,8 +76,8 @@ const css = /* css */ `
  * @property {"close"|"cancel"|"capture"|"none"} [pointerInteractionOutsideEffect]
  *   - What a click outside does. `"capture"`/`"none"` force an explicit answer
  *   by refusing to treat a click elsewhere as one.
- * @property {boolean} [dockedOnTouch] - `"dialog"` mode only: turn the popup
- *   into a bottom sheet under a finger.
+ * @property {boolean} [dockedOnSmallTouchScreen] - `"dialog"` mode only: turn
+ *   the popup into a bottom sheet on a small touch screen.
  * @property {(params: { message: import("preact").ComponentChildren }) => import("preact").ComponentChildren} [renderContent]
  *   - Replaces the popup body — the question and the two buttons — for every
  *   confirmation at once. The per-button `confirmPopupContent` prop is the same
@@ -95,7 +95,7 @@ const confirmPopupOptions = {
   animationDuration: undefined,
   positionArea: undefined,
   pointerInteractionOutsideEffect: "close",
-  dockedOnTouch: false,
+  dockedOnSmallTouchScreen: false,
   renderContent: undefined,
 };
 
@@ -172,7 +172,7 @@ const ConfirmPopup = ({ message, content, anchor, onAnswer, onClosed }) => {
     animationDuration,
     positionArea,
     pointerInteractionOutsideEffect,
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
     renderContent,
   } = confirmPopupOptions;
 
@@ -211,7 +211,7 @@ const ConfirmPopup = ({ message, content, anchor, onAnswer, onClosed }) => {
     return (
       <Dialog
         className="navi_confirm_popup"
-        dockedOnTouch={dockedOnTouch}
+        dockedOnSmallTouchScreen={dockedOnSmallTouchScreen}
         {...popupProps}
       >
         {body}

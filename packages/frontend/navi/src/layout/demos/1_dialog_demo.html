@@ -1042,32 +1042,36 @@
 
       const AdaptiveSection = () => (
         <section class="demo-section">
-          <Heading id="adaptive">dockedOnTouch</Heading>
+          <Heading id="adaptive">dockedOnSmallTouchScreen</Heading>
           <p>
-            <code>dockedOnTouch</code> turns the dialog into a bottom sheet
-            (docked flush to the bottom edge, full width) when the pointer is
-            coarse, and leaves it alone otherwise — under a finger the keyboard
-            owns the bottom of the screen and a centered box ends up both
-            cramped and out of thumb reach, while under a mouse the centered box
-            is already the right shape. Keyed off <code>(pointer: coarse)</code>
-            , the input device rather than a width breakpoint (a narrow desktop
-            window is still a mouse), and re-resolved live: toggle device
-            emulation in the devtools with the dialog open to watch it switch.
-            It only supplies defaults for <code>positionArea</code>,{" "}
-            <code>marginWithContainer</code> and <code>expandX</code>, so any of
-            the three can still be pinned — the second button keeps the full
-            width but forces the centered placement.
+            <code>dockedOnSmallTouchScreen</code> turns the dialog into a bottom
+            sheet (docked flush to the bottom edge, full width) on a small touch
+            screen, and leaves it alone otherwise — on a phone the keyboard owns
+            the bottom of the screen and a centered box ends up both cramped and
+            out of thumb reach, while under a mouse the centered box is already
+            the right shape. Both halves of the name matter:{" "}
+            <code>(pointer: coarse)</code> plus a window small enough to reach
+            the bottom edge of. Touch alone would dock a tablet or a kiosk panel
+            a whole screen away from where the finger just tapped; size alone
+            would dock a narrow desktop window, which is still a mouse.
+            Re-resolved live: toggle device emulation in the devtools with the
+            dialog open to watch it switch. It only supplies defaults for{" "}
+            <code>positionArea</code>, <code>marginWithContainer</code> and{" "}
+            <code>expandX</code>, so any of the three can still be pinned — the
+            second button keeps the full width but forces the centered
+            placement.
           </p>
           <div class="demo-row">
             <div>
               <Button command="--navi-open" commandFor="adaptive_dialog">
-                dockedOnTouch
+                dockedOnSmallTouchScreen
               </Button>
-              <Dialog id="adaptive_dialog" dockedOnTouch animation>
+              <Dialog id="adaptive_dialog" dockedOnSmallTouchScreen animation>
                 <Box padding="m" flex="y" spacing="s">
                   <strong>Adaptive</strong>
                   <span>
-                    Centered with a mouse, bottom sheet with a finger.
+                    Centered with a mouse or on a big touch screen, bottom sheet
+                    on a phone.
                   </span>
                   <Button command="--navi-close">Close</Button>
                 </Box>
@@ -1078,17 +1082,19 @@
                 command="--navi-open"
                 commandFor="adaptive_override_dialog"
               >
-                dockedOnTouch + positionArea="center"
+                dockedOnSmallTouchScreen + positionArea="center"
               </Button>
               <Dialog
                 id="adaptive_override_dialog"
-                dockedOnTouch
+                dockedOnSmallTouchScreen
                 positionArea="center"
                 animation
               >
                 <Box padding="m" flex="y" spacing="s">
                   <strong>Explicit wins</strong>
-                  <span>Stays centered, still full width on touch.</span>
+                  <span>
+                    Stays centered, still full width on a small touch screen.
+                  </span>
                   <Button command="--navi-close">Close</Button>
                 </Box>
               </Dialog>
