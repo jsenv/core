@@ -89,7 +89,9 @@ consistency across the app, not from any single call site.
 - `docs/create_and_edit.md` — the loop almost every app has: a screen that
   creates a resource, the page of what was created, a screen that edits it. The
   routes and why several match at once, one form for two modes, filling the edit
-  screen a request after it opened, and where each screen goes next. Read it
+  screen a request after it opened, a field picking from a list too big to load
+  (a url designates an item the list's page may not contain), and where each
+  screen goes next. Read it
   before writing a create or edit screen — it is the assembly of `route`,
   `resource`, `Form` and `RouteTravel`, and every piece of it is easy to get
   subtly wrong alone.

@@ -91,10 +91,13 @@
         Input,
         Label,
         Link,
+        List,
         Loading,
+        Picker,
         Route,
         RouteTravel,
         Select,
+        Text,
         resource,
         route,
         routeAction,
@@ -114,9 +117,31 @@
       // lui réponde (ou que le mode réponde pour nous), pour que l'écran en
       // chargement et l'écran en erreur restent à l'écran aussi longtemps qu'on
       // veut.
+      // Les lieux: bien plus que ce qu'une liste rend d'un coup. Le backend en
+      // renvoie les trois premiers — et, si on le lui demande, celui qu'on tient
+      // déjà, où qu'il soit dans la liste.
+      const PLACE_PAGE_SIZE = 3;
+      const ALL_PLACES = [
+        { id: "gymnase-central", name: "Gymnase central" },
+        { id: "halle-nord", name: "Halle nord" },
+        { id: "cosec-du-parc", name: "COSEC du parc" },
+        { id: "gymnase-des-lilas", name: "Gymnase des Lilas" },
+        { id: "salle-des-vignes", name: "Salle des vignes" },
+        { id: "city-stade", name: "City stade" },
+        { id: "gymnase-du-port", name: "Gymnase du port" },
+        { id: "halle-des-sports", name: "Halle des sports" },
+      ];
+      const findPlace = (id) => ALL_PLACES.find((place) => place.id === id);
+
       const backend = createFakeBackend({
         value: [
-          { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
+          {
+            id: "1",
+            name: "Padel du mardi",
+            level: "confirme",
+            players: 4,
+            placeId: "halle-des-sports",
+          },
         ],
         persist: "navi_demo_create_then_edit",
       });
@@ -146,8 +171,25 @@
             if (!game) {
               throw new Error(`Aucune partie "${id}"`);
             }
-            return game;
+            // Le nom du lieu voyage avec la partie: la page de la partie n'a pas
+            // à aller le chercher dans une liste qu'elle n'a pas.
+            return { ...game, placeName: findPlace(game.placeId)?.name };
           }),
+        readPlaces: ({ include }) =>
+          backend.call(
+            `GET /places${include ? `?include=${include}` : ""}`,
+            () => {
+              const page = ALL_PLACES.slice(0, PLACE_PAGE_SIZE);
+              if (!include || page.some((place) => place.id === include)) {
+                return page;
+              }
+              const held = findPlace(include);
+              // Un `include` qui ne désigne rien n'est pas une erreur: la
+              // réponse est la page, et l'écran retombe sur son cas
+              // "introuvable" — qui devient une vraie information.
+              return held ? [...page, held] : page;
+            },
+          ),
         readMany: () => backend.call("GET /games", () => games()),
         create: (values) =>
           backend.call("POST /games", () =>
@@ -175,6 +217,9 @@
         min: 2,
         max: 8,
       });
+      // Un identifiant, et rien d'autre: l'url ne peut pas porter le nom du
+      // lieu. C'est ce qui rend la suite délicate — voir PLACES_OF_SCREEN.
+      const draftPlaceSignal = stateSignal(undefined, { id: "place" });
 
       // ── Les routes ────────────────────────────────────────────────────────
       const HOME_ROUTE = route("/");
@@ -186,6 +231,7 @@
           name: draftNameSignal,
           level: draftLevelSignal,
           players: draftPlayersSignal,
+          place: draftPlaceSignal,
         },
       });
       const GAME_ROUTE = route("/games/:gameId");
@@ -225,13 +271,89 @@
         },
       );
 
+      const PLACE = resource("place", {
+        GET_MANY: ({ include }) => api.readPlaces({ include }),
+      });
+
+      // La liste des lieux, demandée EN DISANT ce que l'écran tient déjà.
+      // Pas `() => true`: la réponse n'est qu'une page, et le lieu que l'url
+      // désigne peut ne pas y être — l'écran afficherait alors son identifiant
+      // à la place de son nom. `include` est un ajout, pas un filtre: la page
+      // reste la page, et ce lieu-là s'y trouve en plus.
+      const PLACES_OF_SCREEN = routeAction(
+        [NEW_GAME_ROUTE, EDIT_GAME_ROUTE],
+        PLACE.GET_MANY,
+        () => {
+          // En création, l'url tient la sélection et on la connaît tout de
+          // suite.
+          if (NEW_GAME_ROUTE.matchingSignal.value) {
+            return { include: draftPlaceSignal.value };
+          }
+          // En modification elle arrive avec la partie: demander la liste avant
+          // de savoir ce qu'elle doit contenir, c'est la demander deux fois.
+          const game = GAME_OF_ROUTE.dataSignal.value;
+          return game ? { include: game.placeId } : null;
+        },
+      );
+
       // ── Les champs, et rien d'autre ───────────────────────────────────────
       // Ce composant ne sait pas s'il crée ou s'il modifie: on lui donne les
       // signaux qui tiennent les valeurs, et l'état de ce qu'il attend encore.
+      // Le lieu: un picker sur une liste que le backend ne rend qu'en partie.
+      // Ce qui est affiché sur la ligne se cherche dans cette liste — d'où le
+      // `include` de PLACES_OF_SCREEN: sans lui, un lieu hors page s'afficherait
+      // sous son identifiant, ce que la ligne montre telle quelle.
+      const PlaceField = ({ placeSignal, loading }) => {
+        const [places, placesLoading] = useAsyncData(PLACES_OF_SCREEN, {
+          loading: true,
+        });
+        const placeId = placeSignal.value;
+        const selected = places?.find((place) => place.id === placeId);
+
+        return (
+          <Field vertical>
+            <Label>Lieu</Label>
+            <Picker
+              name="placeId"
+              signal={placeSignal}
+              loading={loading || (placesLoading && !places)}
+              minWidth="200"
+              ui={
+                selected ? (
+                  selected.name
+                ) : placeId ? (
+                  placeId
+                ) : (
+                  <Text color="#999">Choisir un lieu</Text>
+                )
+              }
+            >
+              <List selectable command="--navi-send" maxHeight="200" separator>
+                {(places ?? []).map((place, index) => (
+                  <List.Item
+                    selectable
+                    key={place.id}
+                    id={place.id}
+                    index={index}
+                    value={place.id}
+                    selected={place.id === placeId}
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    {place.name}
+                  </List.Item>
+                ))}
+              </List>
+            </Picker>
+          </Field>
+        );
+      };
+
       const GameFormFields = ({
         nameSignal,
         levelSignal,
         playersSignal,
+        placeSignal,
         loading,
       }) => (
         <Box flex="y" spacing="m">
@@ -255,6 +377,7 @@
               loading={loading}
             />
           </Field>
+          <PlaceField placeSignal={placeSignal} loading={loading} />
         </Box>
       );
 
@@ -278,6 +401,7 @@
               draftNameSignal.value = undefined;
               draftLevelSignal.value = undefined;
               draftPlayersSignal.value = undefined;
+              draftPlaceSignal.value = undefined;
               // La destination n'existait pas avant la réponse: c'est l'action
               // qui l'a apprise, c'est elle qui y va.
               GAME_ROUTE.navTo({ gameId: game.id });
@@ -288,6 +412,7 @@
                 nameSignal={draftNameSignal}
                 levelSignal={draftLevelSignal}
                 playersSignal={draftPlayersSignal}
+                placeSignal={draftPlaceSignal}
               />
               <Button type="submit" cta>
                 Créer
@@ -324,6 +449,8 @@
               Niveau: {game.level}
               <br />
               Joueurs: {game.players}
+              <br />
+              Lieu: {game.placeName ?? "—"}
             </p>
             <Link route={EDIT_GAME_ROUTE} routeParams={{ gameId: game.id }}>
               Modifier
@@ -341,6 +468,7 @@
         const nameSignal = useSignal(undefined);
         const levelSignal = useSignal(undefined);
         const playersSignal = useSignal(undefined);
+        const placeSignal = useSignal(undefined);
         const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
           loading: true,
           error: true,
@@ -352,6 +480,7 @@
             nameSignal.value = game.name;
             levelSignal.value = game.level;
             playersSignal.value = game.players;
+            placeSignal.value = game.placeId;
           },
         });
 
@@ -386,6 +515,7 @@
                   nameSignal={nameSignal}
                   levelSignal={levelSignal}
                   playersSignal={playersSignal}
+                  placeSignal={placeSignal}
                   loading={waiting}
                 />
                 <Button type="submit" cta loading={waiting}>

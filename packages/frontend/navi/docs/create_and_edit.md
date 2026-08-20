@@ -16,6 +16,7 @@ and the failures can be looked at.
 - [The resource](#the-resource)
 - [Two screens, two states](#two-screens-two-states)
 - [The edit screen opens before its values](#the-edit-screen-opens-before-its-values)
+- [A field that picks from a list too big to load](#a-field-that-picks-from-a-list-too-big-to-load)
 - [Where each screen goes next](#where-each-screen-goes-next)
 - [Movement between them](#movement-between-them)
 
@@ -253,6 +254,87 @@ screen has to be one that can be blanked without the person losing their place.
 
 Either way, cancelling is a link away: the screen is thrown away with what was
 typed in it, and coming back re-reads the resource. There is nothing to restore.
+
+## A field that picks from a list too big to load
+
+A place, a player, a category: the field is a picker, and its popup holds a list
+the backend answers with. The list is **one page** — the nearest, the most
+recent, whatever a `LIMIT` returned. And the screen is pre-filled from the url:
+
+```
+/games/new?place=halle-des-sports
+```
+
+That is what pre-filling is: a link from a place's page, a back button, a
+reload, a shared invitation. The signal is the selection, and the url is its
+memory. But the url carries an **identifier and nothing else** — no name — so
+the screen looks for it in the list it has:
+
+```js
+const selected = places.find((place) => place.id === placeId);
+```
+
+Nothing guarantees that `find`. The place may be far down the ranking, created
+by someone else a minute ago, or named in a link built elsewhere. Nothing is
+broken — the screen falls back on the identifier — but it then shows
+`halle-des-sports` where it promised "Halle des sports", which is the opposite
+of what pre-filling was for. Rare, never seen in development, and always at
+someone else's.
+
+Two ways out, and only one of them keeps the feature:
+
+- **Clear the signals when the screen opens.** No selection, no selection to
+  display. This throws away pre-filling, which is the reason those params exist:
+  removing a feature is not fixing its edge case.
+- **Ask for the list SAYING what you already hold.** What the screen holds
+  travels with the request, and the backend guarantees that item is in the
+  answer — on top of its page, whatever its rank.
+
+```js
+const PLACES_OF_SCREEN = routeAction(
+  [NEW_GAME_ROUTE, EDIT_GAME_ROUTE],
+  PLACE.GET_MANY,
+  // pas `() => true`: ce que l'écran tient déjà doit voyager avec la demande
+  () => {
+    // en création: l'url, connue tout de suite
+    if (NEW_GAME_ROUTE.matchingSignal.value) {
+      return { include: draftPlaceSignal.value };
+    }
+    // en modification: elle arrive avec la ressource
+    const game = GAME_OF_ROUTE.dataSignal.value;
+    return game ? { include: game.placeId } : null;
+  },
+);
+```
+
+Reading the selection in the params is also what makes the list **reload when
+the selection changes** — the action reruns on its own. Which is why the edit
+screen returns `null` until the resource is there: asking for the list before
+knowing what it must contain is asking for it twice, and the first answer is the
+one that cannot show the name.
+
+What `include` is, on the backend side, is the whole subject:
+
+- **an addition, not a filter.** The page stays the page; the asked-for item is
+  in it as well if it was not already, and once if it was;
+- **it takes what a url can hold** — a slug as much as an id;
+- **an `include` that designates nothing is not an error.** The answer is simply
+  the page, and the screen falls back on its "not found" case — which then says
+  something true (that place is gone) instead of being an artefact of
+  pagination;
+- it takes **several** values when several fields are pre-filled:
+  `GET /users?include=42,57`.
+
+> If a url signal designates an item of a paginated list, the identifier it
+> carries must travel with the list request, and the backend must guarantee its
+> presence in the answer. A paginated list is not "the first N", it is "the first
+> N **plus what the caller already holds**".
+
+The other half of the same problem is answered by the resource rather than by
+the list: **what comes back with a resource carries its own label**. The game's
+own page shows "Lieu: Halle des sports" with no list at all, because the GET
+answers with the name next to the id. Only the url is reduced to an identifier,
+and that is exactly where `include` earns its place.
 
 ## Where each screen goes next
 
