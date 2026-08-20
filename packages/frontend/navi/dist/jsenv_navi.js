@@ -55587,10 +55587,13 @@ const ListFirstResolver = props => {
  *   thread read backwards — the last rows are the ones to show, and the ones
  *   asked for first. A number opens on that row of the collection. `{id,
  *   offset}` — what `onScrolledChange` hands out — opens on a NAMED row,
- *   `offset` pixels below the top of the view: the row is asked for by name
- *   (see the range's own `around`), then put back by MEASURING it, so it lands
- *   where it was even if rows were inserted before it, and whatever the screen
- *   it was saved on.
+ *   `offset` pixels below where the row would land on its own: the row is asked
+ *   for by name (see the range's own `around`), then put back by MEASURING it,
+ *   so it lands where it was even if rows were inserted before it, and whatever
+ *   the screen it was saved on. `offset: 0` is where a `scrollIntoView()` puts
+ *   it — in front of the fixed bar the scroller gives room for, below the
+ *   sticky header and the group label the row lives under — so nothing of that
+ *   room has to be restated as a number by whoever asks.
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.scrolled]
  *   The same, but held: the list goes back there every time this changes, even
  *   after the user has scrolled — the caller owns where the list is (see
@@ -55604,7 +55607,8 @@ const ListFirstResolver = props => {
  *   user reaches for the list.
  * @param {(scrolled: {id: string, index: number, offset: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the row at the top of the view and
- *   how far below the top of the view it starts. Keep it to come back to it
+ *   how far below the place a row lands on its own (see `defaultScrolled`) it
+ *   starts. Keep it to come back to it
  *   later through `scrolled`/`defaultScrolled` — an index would not do, since
  *   rows get inserted while a list is being read.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
@@ -56215,7 +56219,7 @@ const useListScrollSync = ({
       }
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const rowRect = rowEl.getBoundingClientRect();
-      const offsetWanted = resolveOpenOffset(openAt.offset || 0, horizontal ? viewportRect.width : viewportRect.height, horizontal ? rowRect.width : rowRect.height);
+      const offsetWanted = resolveOpenOffset(getRowScrollInset(scrollerEl, rowEl, horizontal) + (openAt.offset || 0), horizontal ? viewportRect.width : viewportRect.height, horizontal ? rowRect.width : rowRect.height);
       const offsetNow = horizontal ? rowRect.left - viewportRect.left : rowRect.top - viewportRect.top;
       const delta = offsetNow - offsetWanted;
       if (delta > -0.5 && delta < 0.5) {
@@ -56292,10 +56296,14 @@ const useListScrollSync = ({
       return;
     }
     positionRef.current = position;
-    onScrolledChangeRef.current?.({
+    if (!onScrolledChangeRef.current) {
+      return;
+    }
+    const rowEl = findRowElement(getListEl(), position.id);
+    onScrolledChangeRef.current({
       id: position.id,
       index: position.index,
-      offset: position.offset
+      offset: position.offset - getRowScrollInset(getScroller(), rowEl, horizontal)
     });
   };
 
@@ -56758,6 +56766,38 @@ const resolveOpenOffset = (offset, viewportSize, rowSize) => {
     return highest < 0 ? 0 : highest;
   }
   return offset;
+};
+
+// The room a row must be given at the top (or left) of the view: the
+// scroller's own scroll-padding — where a fixed bar publishes the space it
+// takes — plus the row's scroll-margin, where the list puts its sticky header
+// and the height of the group label it lives under. `scrollIntoView()` on a row
+// lands past both; a position given as `{id, offset}` means the same place, so
+// `offset` is the caller's own few pixels and not a number restating what the
+// CSS already measures.
+const getRowScrollInset = (scrollerEl, rowEl, horizontal) => {
+  if (!rowEl) {
+    return 0;
+  }
+  const viewportRect = getScrollerViewportRect(scrollerEl);
+  const viewportSize = horizontal ? viewportRect.width : viewportRect.height;
+  const scrollerStyle = window.getComputedStyle(scrollerEl);
+  const rowStyle = window.getComputedStyle(rowEl);
+  const scrollPadding = resolveScrollInset(horizontal ? scrollerStyle.scrollPaddingLeft : scrollerStyle.scrollPaddingTop, viewportSize);
+  const scrollMargin = resolveScrollInset(horizontal ? rowStyle.scrollMarginLeft : rowStyle.scrollMarginTop, viewportSize);
+  return scrollPadding + scrollMargin;
+};
+// scroll-padding is a length, a percentage of the scrollport, or "auto" (the
+// browser decides, which for placing a row means nothing).
+const resolveScrollInset = (value, viewportSize) => {
+  const number = parseFloat(value);
+  if (!number) {
+    return 0;
+  }
+  if (value.endsWith("%")) {
+    return number * viewportSize / 100;
+  }
+  return number;
 };
 
 // The row with that id, IN THIS LIST. Not document.getElementById: an id is
@@ -57893,6 +57933,7 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("ignore:preact").ComponentChildren,
+ *   groupLabelProps?: (item: any, index: number) => object,
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("ignore:preact").ComponentChildren),
@@ -57910,6 +57951,12 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   the only way a list that discovers its rows page by page can have any.
  * @param {(item: any, index: number) => any} [props.renderGroupLabel]
  *   The label of the group a row opens, given that row.
+ * @param {(item: any, index: number) => object} [props.groupLabelProps]
+ *   The props the label of the group a row opens carries — `class`,
+ *   `data-*`, anything a `<span>` takes. For a label that says something about
+ *   its group (a day behind us, today, one ahead) rather than just naming it:
+ *   the state then sits on the element the CSS styles, instead of being read
+ *   back from a child.
  * @param {number} [props.pageSize]
  *   How many rows to ask for at a time. A turn of the wheel opens a hole three
  *   rows wide; asking for exactly that would ask again at the next turn.
@@ -57937,6 +57984,7 @@ const ListItems = ({
   memoryBudget,
   groupBy,
   renderGroupLabel,
+  groupLabelProps,
   renderSkeleton,
   renderError
 }) => {
@@ -58076,6 +58124,7 @@ const ListItems = ({
     }
     rows.push(jsx(ListItemGroup, {
       label: group.label,
+      labelProps: group.labelProps,
       children: group.children
     }, `${ownerId}_group_${group.key}`));
     group = null;
@@ -58092,6 +58141,7 @@ const ListItems = ({
       group = {
         key: groupKey,
         label: renderGroupLabel ? renderGroupLabel(item, rowIndex) : groupKey,
+        labelProps: groupLabelProps ? groupLabelProps(item, rowIndex) : undefined,
         children: []
       };
     }
@@ -58532,6 +58582,7 @@ const useItemStore = ({
  */
 const ListItemGroup = ({
   label,
+  labelProps,
   hiddenWhileEmpty,
   children,
   ...rest
@@ -58557,6 +58608,11 @@ const ListItemGroup = ({
     groupEl.style.setProperty("--list-group-label-height", `${rect.height}px`);
     groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
   }, []);
+  const {
+    className: labelClassName,
+    class: labelClass,
+    ...labelRest
+  } = labelProps || {};
   return jsxs(ListItem, {
     ...rest,
     ref: groupRef,
@@ -58564,9 +58620,10 @@ const ListItemGroup = ({
     role: "presentation",
     "data-hidden-while-empty": hiddenWhileEmpty ? "" : undefined,
     children: [jsx("span", {
+      ...labelRest,
       ref: labelRef,
       id: groupId,
-      className: "navi_list_item_group_label",
+      className: withPropsClassName("navi_list_item_group_label", labelClassName || labelClass),
       role: "presentation",
       "aria-hidden": labelHidden ? "true" : undefined,
       inert: labelHidden ? true : undefined

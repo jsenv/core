@@ -12894,6 +12894,16 @@ const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable
 const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
 const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
 
+// A surface the browser paints in the top layer: it is still a DOM descendant
+// of whatever it was written in, and it is nowhere near it on screen — it
+// covers everything. So a gesture that happened on it is not the gesture of any
+// box it merely sits on top of, and every walk up the tree from the pointer
+// ends here: the boxes above are behind, and behind is not under the finger.
+const TOP_LAYER_SELECTOR = [":popover-open", "dialog:modal", ":fullscreen"].join(",");
+const isTopLayer = element => {
+  return element.matches(TOP_LAYER_SELECTOR);
+};
+
 /**
  * What is left for this box of the axes it travels, once the boxes it CONTAINS
  * have taken theirs: a row of slides inside a page that walks between pages, a
@@ -12908,6 +12918,10 @@ const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
  * the browser for the pointer LAST, which is the outermost box — the wrong one,
  * and past that point the inner one stops being told anything. So the box that
  * does not own the gesture must never ask for it.
+ *
+ * A box lifted into the top layer on the way up takes everything: a popover or a
+ * modal dialog is written inside a slide and painted over the whole screen, so
+ * the slides are nowhere near the finger and none of the axes are left.
  */
 const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
   if (!stopElement.contains(fromElement)) {
@@ -12919,6 +12933,11 @@ const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
   let left = axes;
   let element = fromElement;
   while (element && element !== stopElement && element.nodeType === 1) {
+    if (isTopLayer(element)) {
+      // The gesture happened on a surface painted over this box, not in it:
+      // there is nothing left of it here, whatever axes are still unclaimed.
+      return "";
+    }
     const taken = element.getAttribute(attribute);
     if (taken) {
       let rest = "";
@@ -12946,6 +12965,11 @@ const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
 const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
   let element = fromElement;
   while (element && element !== stopElement && element.nodeType === 1) {
+    if (isTopLayer(element)) {
+      // A scroller above a top-layer surface is painted behind it: whatever
+      // room it has left is not room the finger is asking for.
+      return false;
+    }
     const size = axis === "x" ? element.clientWidth : element.clientHeight;
     const scrollSize = axis === "x" ? element.scrollWidth : element.scrollHeight;
     if (scrollSize > size + 1) {

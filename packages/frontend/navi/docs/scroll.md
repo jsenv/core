@@ -158,6 +158,11 @@ picked up then. When it is still not the box you mean, say so explicitly with
   it asks for the row BY NAME, then puts it back by MEASURING it, so it lands
   where it was even if rows were inserted before it, and whatever the screen it
   was saved on. That is "reopen a thread where I left it", already provided.
+  `offset` is counted from where the row lands on its own — past the scroller's
+  `scroll-padding` (the room a fixed bar publishes) and the row's own
+  `scroll-margin` (the sticky header, the group label above it) — so `offset: 0`
+  is exactly where `scrollIntoView()` would put it and none of that room has to
+  be restated as a number.
 - **`scrolled`** is the controlled form of the same thing — same pair as
   `open`/`defaultOpen` elsewhere in navi. The list goes back there every time it
   changes, even after the user scrolled.
