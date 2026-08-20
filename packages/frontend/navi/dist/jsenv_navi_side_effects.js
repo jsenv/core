@@ -153,26 +153,46 @@ if (coarsePointerQuery) {
 }
 
 // Whether the screen is one a bottom sheet actually suits: a finger *and* a
-// screen small enough that its bottom edge stays where the thumb already is.
-// Touch alone is not enough — a tall touch screen (a tablet, a kiosk panel)
-// docks a sheet a whole screen away from where the finger just tapped, which
-// is worse than the centered box it replaced. Both dimensions are bounded: a
-// phone is at most ~440 CSS px wide (iPhone Pro Max: 430) and ~930 tall, while
-// the smallest tablet already starts around 800 wide — so the width alone
-// separates them today, and the height guard is what covers a narrow-but-huge
-// screen (a folded panel, a device simulated inside a very tall window).
+// screen whose bottom edge stays where the thumb already is. Touch alone is not
+// enough — a tall touch screen (a tablet, a kiosk panel) docks a sheet a whole
+// screen away from where the finger just tapped, which is worse than the
+// centered box it replaced.
+//
+// A phone is recognized by its SHAPE, not by a box of maximum dimensions: what
+// makes the bottom edge reachable is holding a narrow slab, and phones keep
+// growing along their long side (20:9, 21:9) while staying just as narrow. So
+// each orientation is answered on the short side plus the elongation:
+// - upright: narrow enough to be held in one hand, and taller than it is wide.
+//   Its height is deliberately unbounded — a very tall narrow screen is the
+//   case a bottom sheet is most for, not the case to exclude.
+// - on its side: short enough that the bottom edge is a thumb away whatever the
+//   width, and wider than it is tall.
+// A tablet fails both: it is too wide upright, and too tall on its side — the
+// smallest one already starts around 740 CSS px on its short side, and the
+// bound below leaves that gap deliberately wide rather than cutting close to
+// the largest phone.
 //
 // Read off window, not visualViewport: the virtual keyboard shrinks the visual
 // viewport while the user types, and a dialog must not undock mid-interaction
 // because a keyboard opened under it.
-const SMALL_TOUCH_SCREEN_MAX_WIDTH = 600;
-const SMALL_TOUCH_SCREEN_MAX_HEIGHT = 1000;
-const smallTouchScreenSignal = computed(
-  () =>
-    coarsePointerSignal.value &&
-    windowWidthSignal.value <= SMALL_TOUCH_SCREEN_MAX_WIDTH &&
-    windowHeightSignal.value <= SMALL_TOUCH_SCREEN_MAX_HEIGHT,
-);
+const HANDHELD_MAX_SHORT_SIDE = 600;
+// Enough elongation to tell a slab from a square-ish panel; a phone is well
+// past it (1.7 and up) in either orientation.
+const HANDHELD_MIN_RATIO = 1.2;
+const smallTouchScreenSignal = computed(() => {
+  if (!coarsePointerSignal.value) {
+    return false;
+  }
+  const width = windowWidthSignal.value;
+  const height = windowHeightSignal.value;
+  if (width <= HANDHELD_MAX_SHORT_SIDE) {
+    return height >= width * HANDHELD_MIN_RATIO;
+  }
+  if (height <= HANDHELD_MAX_SHORT_SIDE) {
+    return width >= height * HANDHELD_MIN_RATIO;
+  }
+  return false;
+});
 
 installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.

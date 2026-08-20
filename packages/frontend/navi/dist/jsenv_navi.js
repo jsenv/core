@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -19034,6 +19034,43 @@ import.meta.css = [/* css */`
     --loading-outline-min-inset: 0px;
   }
 
+  /* A scroller inside a box that TRAVELS keeps its leftovers to itself: what a
+     list has left of a gesture once it has reached its end must not reach the
+     page, or the page moves behind a travel that is already answering the same
+     finger. The rule belongs to @jsenv/dom's drag_to_travel — this is the part
+     of it only navi can write.
+
+     What a browser is asked, and where, is not the same everywhere: Blink asks
+     every scroll container between the pointer and the page, so containing the
+     travelling box answers for everything inside it; Gecko and WebKit ask only
+     the ones that actually scroll, so the box — which travels, it does not
+     scroll — is walked past and the SCROLLER itself has to be told. drag_to_
+     travel says it to everything inside the box for those two, and to the box
+     alone on Blink, where saying it to everything turns anything that clips
+     (an ellipsis, a rounded card, the invisible checkbox covering a selectable
+     row) into a dead zone under the wheel — a scroll container with nothing to
+     scroll, and Blink stops at it.
+
+     Which leaves, on Blink, a travelling box that does NOT clip: nothing is
+     asked, and the leftovers reach the page. RouteTravel is that box, and
+     cannot be made to clip — a scroll container there would become the nearest
+     one for every "position: sticky" inside the pages it holds.
+
+     So navi contains what it KNOWS scrolls. [data-scrollable] is worn by a Box
+     that ASKED for overflow auto/scroll (see below), never by one that merely
+     clips: containing it costs nothing on the engines where the rule above
+     already covers it, and on Blink it is what keeps a list inside a travelling
+     page from taking the page with it. What is left over is a scroller nobody
+     declared — a bare div with an overflow of its own, a textarea, a widget
+     from elsewhere: those still hand their leftovers up, on Blink, under a box
+     that does not clip. */
+  [data-drag-travel*="x"] [data-scrollable] {
+    overscroll-behavior-x: contain !important;
+  }
+  [data-drag-travel*="y"] [data-scrollable] {
+    overscroll-behavior-y: contain !important;
+  }
+
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
     --box-header-z-index: var(--navi-z-index-sticky);
@@ -28818,6 +28855,164 @@ const unfreezeSize = (el) => {
   el.style.height = "";
 };
 
+/**
+ * Pushing a popup docked to an edge (a side panel, a bottom sheet) back the way
+ * it came in closes it: it follows the finger while it travels, and letting go
+ * either finishes the departure or brings it back to rest — whichever the
+ * travel was already heading to.
+ *
+ * Reading the pointer is not done here: when a press becomes a gesture, which
+ * axis it leans on, how fast it was going when it was let go, who else has a
+ * claim on it (a field, a scroller with room left, a box inside the panel that
+ * travels the same way) is one gesture system for the whole codebase
+ * (@jsenv/dom's startDragToTravel). A panel closing is a travel of exactly one
+ * box, towards the edge it is docked to and nowhere else — which is all this
+ * file has to say.
+ *
+ * The release travel is driven here (Web Animations) rather than handed to the
+ * exit transition the `animation` prop may install: its pace is what is left to
+ * cover, which a CSS transition written for a full-size travel cannot know, and
+ * two movements on the same property would contradict each other. So CSS
+ * transitions are suppressed on the panel for the whole gesture, release
+ * included, and restored once the panel has either left or come back.
+ */
+
+
+// What a full-size release travel takes; a shorter one takes proportionally
+// less, so the panel keeps the same speed whenever the finger let go.
+const TRAVEL_DURATION = 220;
+
+// Which way a popup docked to each side travels — read by the panel itself to
+// say so in the DOM, which is how a box travelling INSIDE it (a row of slides,
+// a route travel) knows that axis is already walked.
+const SWIPE_AXIS_BY_SIDE = {
+  left: "x",
+  right: "x",
+  top: "y",
+  bottom: "y",
+};
+// Which way the finger pushes to send the panel back where it came from, in
+// screen coordinates: positive is right/down, the same sign the gesture reports.
+const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
+
+/**
+ * Builds the `pointerdown` handler a popup docked to `side` answers with.
+ *
+ * `grip` narrows where the gesture may start to one part of the popup, given as
+ * a selector matched inside it: a popup whose whole surface is a place to push
+ * from has nothing else to do with the press, while one made of content the
+ * finger operates (a bottom sheet full of controls) only offers the strip that
+ * is there to be held. A popup that has no such part is pushed from anywhere,
+ * so naming a grip never leaves it undismissable.
+ */
+const createSwipeToClose = (side, { grip } = {}) => {
+  const axis = SWIPE_AXIS_BY_SIDE[side];
+  const closeDirection = CLOSE_DIRECTION_BY_SIDE[side];
+
+  return (pointerDownEvent) => {
+    const panelEl = pointerDownEvent.currentTarget;
+    if (panelEl.getAttribute("aria-expanded") !== "true") {
+      return;
+    }
+    if (grip) {
+      const gripEl = panelEl.querySelector(grip);
+      if (gripEl && !gripEl.contains(pointerDownEvent.target)) {
+        return;
+      }
+    }
+
+    // Where the panel stands, written on it directly: the gesture reports a
+    // distance in screen coordinates, which is exactly what a translate takes.
+    const paint = (distance) => {
+      panelEl.style.translate =
+        axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+    };
+    const restore = () => {
+      panelEl.style.translate = "";
+      panelEl.style.transitionProperty = "";
+      panelEl.style.userSelect = "";
+    };
+    // The resting value is written first and the animation only covers the way
+    // to it: both end on the same number, so nothing is seen changing when the
+    // animation hands the panel back to its own style.
+    const travelTo = (from, to, onArrival) => {
+      const covered = from > to ? from - to : to - from;
+      paint(to);
+      const animation = panelEl.animate(
+        [
+          { translate: translateOf(axis, from) },
+          { translate: translateOf(axis, to) },
+        ],
+        {
+          duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
+          easing: "ease-out",
+        },
+      );
+      animation.finished.then(onArrival, () => {});
+    };
+    const close = (event) => {
+      triggerNaviCommand(panelEl, "--navi-close", event);
+      if (panelEl.getAttribute("aria-expanded") === "true") {
+        // Refused: the panel is staying, so it goes back where it was.
+        travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
+        return;
+      }
+      restore();
+    };
+
+    startDragToTravel(pointerDownEvent, {
+      element: panelEl,
+      axes: axis,
+      onStart: ({ sign, target }) => {
+        if (sign !== closeDirection) {
+          // Pushing the panel further in is not a travel: there is nowhere that
+          // way, and reading it as one would make the panel lean at every
+          // gesture that starts by going the wrong way.
+          return false;
+        }
+        const size = sizeOf(panelEl, axis);
+        if (!size) {
+          return false;
+        }
+        // Something else with a better claim on the gesture: a scroller between
+        // the finger and the panel, with room left that way.
+        if (scrollRoomTowards(target, panelEl, axis, sign)) {
+          return false;
+        }
+        panelEl.style.transitionProperty = "none";
+        panelEl.style.userSelect = "none";
+        // What the first pixels of the gesture may have started selecting is
+        // not a selection, it is the beginning of this travel.
+        window.getSelection().removeAllRanges();
+        // The way out is the only way there is anything: pulling the other way
+        // leans against a wall and comes back.
+        return {
+          size,
+          travelBack: closeDirection > 0,
+          travelOn: closeDirection < 0,
+        };
+      },
+      onPull: ({ pulled }) => {
+        paint(pulled);
+      },
+      onEnd: ({ pulled, size, travels, event }) => {
+        if (travels) {
+          travelTo(pulled, size * closeDirection, () => close(event));
+          return;
+        }
+        travelTo(pulled, 0, restore);
+      },
+    });
+  };
+};
+
+const sizeOf = (element, axis) => {
+  const rect = element.getBoundingClientRect();
+  return axis === "x" ? rect.width : rect.height;
+};
+const translateOf = (axis, distance) =>
+  axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+
 installImportMetaCssBuild(import.meta);/**
  * A dialog is a surface, not a control: it holds no value, has no action and
  * aggregates nothing. Fields and a submit go in a `<Form>` inside it, exactly
@@ -29109,6 +29304,16 @@ const css$V = /* css */`
     &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
     }
+    /* The header of a sheet that closes by being pushed back down is a handle,
+       not a piece of the scroll: a finger on it moves the sheet, and letting
+       the browser scroll the sheet under the same gesture would show two
+       movements answering one drag. Direct children only — the sheet's own
+       header, not one belonging to something it contains (the same part
+       swipe_to_close.js takes hold of). */
+    &[data-swipe-to-close] > [data-header] {
+      touch-action: none;
+    }
+
     /* …and the delegate stands down. */
     > [data-focus-outline-delegate] {
       --navi-focus-outline-style: none;
@@ -29250,7 +29455,9 @@ const css$V = /* css */`
  *   desktop window, which is still a mouse. It supplies defaults for
  *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
  *   any of them can still be pinned explicitly. Re-resolves live as the pointer
- *   type or the window size changes.
+ *   type or the window size changes. A sheet resting on the bottom edge is also
+ *   pushed back down to close it, held by its header (a direct child `Box` with
+ *   the `header` prop) — or from anywhere when it has none. See `swipe_to_close.js`.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -29504,6 +29711,13 @@ const DOCKED = {
   scrollCapture: true
 };
 
+// Where a bottom sheet is held to push it back down: the strip a direct-child
+// Box declares with `header` — the rest of the sheet is content the finger
+// operates, and a drag started there would fight whatever it landed on. A sheet
+// with no header of its own is pushed from anywhere (see createSwipeToClose's
+// own `grip`).
+const DOCKED_SWIPE_GRIP = ":scope > [data-header]";
+
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
 // controls rather than reading an attribute off the dialog: a dialog carries no
 // state of its own (see this file's top comment), and `aria-busy` on the
@@ -29654,6 +29868,14 @@ const useDialogProps = props => {
     y: "center",
     x: "center"
   };
+  // Pushing the sheet back down closes it — a bottom sheet is reached with a
+  // thumb, and the thumb is already on the edge it would push. Only a sheet
+  // actually resting on the bottom edge: anywhere else the gesture would send
+  // the dialog somewhere it never came from.
+  const swipeToCloseDown = isDocked && parsedPositionArea.y === "bottom";
+  const onSwipePointerDown = swipeToCloseDown ? createSwipeToClose("bottom", {
+    grip: DOCKED_SWIPE_GRIP
+  }) : null;
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,
   // reading as a rendering glitch rather than as a rounded box. A corner is on
@@ -30151,6 +30373,16 @@ const useDialogProps = props => {
     "data-flush-right": flushEdges.right ? "" : undefined,
     "data-flush-bottom": flushEdges.bottom ? "" : undefined,
     "data-flush-left": flushEdges.left ? "" : undefined,
+    "data-swipe-to-close": swipeToCloseDown ? "" : undefined,
+    // The axis the sheet travels on when it is pushed back, said to the shared
+    // gesture layer: it is what a box travelling inside the sheet reads to know
+    // this axis is already walked (see @jsenv/dom's drag_to_travel).
+    "data-drag-travel": swipeToCloseDown ? SWIPE_AXIS_BY_SIDE.bottom : undefined,
+    "data-travel-by-drag": swipeToCloseDown ? SWIPE_AXIS_BY_SIDE.bottom : undefined,
+    "onPointerDown": e => {
+      rest.onPointerDown?.(e);
+      onSwipePointerDown?.(e);
+    },
     "onKeyDown": e => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
@@ -70768,150 +71000,6 @@ const ViewportLayout = props => {
     styleCSSVars: ViewportLayoutStyleCSSVars
   });
 };
-
-/**
- * Pushing a side panel back the way it came in closes it: the panel follows
- * the finger while it travels, and letting go either finishes the departure or
- * brings it back to rest — whichever the travel was already heading to.
- *
- * Reading the pointer is not done here: when a press becomes a gesture, which
- * axis it leans on, how fast it was going when it was let go, who else has a
- * claim on it (a field, a scroller with room left, a box inside the panel that
- * travels the same way) is one gesture system for the whole codebase
- * (@jsenv/dom's startDragToTravel). A panel closing is a travel of exactly one
- * box, towards the edge it is docked to and nowhere else — which is all this
- * file has to say.
- *
- * The release travel is driven here (Web Animations) rather than handed to the
- * exit transition the `animation` prop may install: its pace is what is left to
- * cover, which a CSS transition written for a full-size travel cannot know, and
- * two movements on the same property would contradict each other. So CSS
- * transitions are suppressed on the panel for the whole gesture, release
- * included, and restored once the panel has either left or come back.
- */
-
-
-// What a full-size release travel takes; a shorter one takes proportionally
-// less, so the panel keeps the same speed whenever the finger let go.
-const TRAVEL_DURATION = 220;
-
-// Which way a panel docked to each side travels — read by the panel itself to
-// say so in the DOM, which is how a box travelling INSIDE it (a row of slides,
-// a route travel) knows that axis is already walked.
-const SWIPE_AXIS_BY_SIDE = {
-  left: "x",
-  right: "x",
-  top: "y",
-  bottom: "y",
-};
-// Which way the finger pushes to send the panel back where it came from, in
-// screen coordinates: positive is right/down, the same sign the gesture reports.
-const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
-
-/**
- * Builds the `pointerdown` handler a side panel docked to `side` answers with.
- */
-const createSwipeToClose = (side) => {
-  const axis = SWIPE_AXIS_BY_SIDE[side];
-  const closeDirection = CLOSE_DIRECTION_BY_SIDE[side];
-
-  return (pointerDownEvent) => {
-    const panelEl = pointerDownEvent.currentTarget;
-    if (panelEl.getAttribute("aria-expanded") !== "true") {
-      return;
-    }
-
-    // Where the panel stands, written on it directly: the gesture reports a
-    // distance in screen coordinates, which is exactly what a translate takes.
-    const paint = (distance) => {
-      panelEl.style.translate =
-        axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
-    };
-    const restore = () => {
-      panelEl.style.translate = "";
-      panelEl.style.transitionProperty = "";
-      panelEl.style.userSelect = "";
-    };
-    // The resting value is written first and the animation only covers the way
-    // to it: both end on the same number, so nothing is seen changing when the
-    // animation hands the panel back to its own style.
-    const travelTo = (from, to, onArrival) => {
-      const covered = from > to ? from - to : to - from;
-      paint(to);
-      const animation = panelEl.animate(
-        [
-          { translate: translateOf(axis, from) },
-          { translate: translateOf(axis, to) },
-        ],
-        {
-          duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
-          easing: "ease-out",
-        },
-      );
-      animation.finished.then(onArrival, () => {});
-    };
-    const close = (event) => {
-      triggerNaviCommand(panelEl, "--navi-close", event);
-      if (panelEl.getAttribute("aria-expanded") === "true") {
-        // Refused: the panel is staying, so it goes back where it was.
-        travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
-        return;
-      }
-      restore();
-    };
-
-    startDragToTravel(pointerDownEvent, {
-      element: panelEl,
-      axes: axis,
-      onStart: ({ sign, target }) => {
-        if (sign !== closeDirection) {
-          // Pushing the panel further in is not a travel: there is nowhere that
-          // way, and reading it as one would make the panel lean at every
-          // gesture that starts by going the wrong way.
-          return false;
-        }
-        const size = sizeOf(panelEl, axis);
-        if (!size) {
-          return false;
-        }
-        // Something else with a better claim on the gesture: a scroller between
-        // the finger and the panel, with room left that way.
-        if (scrollRoomTowards(target, panelEl, axis, sign)) {
-          return false;
-        }
-        panelEl.style.transitionProperty = "none";
-        panelEl.style.userSelect = "none";
-        // What the first pixels of the gesture may have started selecting is
-        // not a selection, it is the beginning of this travel.
-        window.getSelection().removeAllRanges();
-        // The way out is the only way there is anything: pulling the other way
-        // leans against a wall and comes back.
-        return {
-          size,
-          travelBack: closeDirection > 0,
-          travelOn: closeDirection < 0,
-        };
-      },
-      onPull: ({ pulled }) => {
-        paint(pulled);
-      },
-      onEnd: ({ pulled, size, travels, event }) => {
-        if (travels) {
-          travelTo(pulled, size * closeDirection, () => close(event));
-          return;
-        }
-        travelTo(pulled, 0, restore);
-      },
-    });
-  };
-};
-
-const sizeOf = (element, axis) => {
-  const rect = element.getBoundingClientRect();
-  return axis === "x" ? rect.width : rect.height;
-};
-const translateOf = (axis, distance) =>
-  axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
 
 installImportMetaCssBuild(import.meta);/**
  * A drawer docked flush to a viewport (or container) edge, built on top of
