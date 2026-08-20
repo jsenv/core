@@ -6,11 +6,13 @@ import {
   useContext,
   useEffect,
   useErrorBoundary,
+  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
 
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
+import { publishRouteRender } from "../../nav/route_render.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 /**
@@ -240,6 +242,14 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
       setTick((n) => n + 1);
     });
   }, [action]);
+  // A page that suspends never gets to say it is on screen — its own effects
+  // are held with it — so this says it for it: what the document shows of the
+  // page arriving is this. Anyone waiting for the page to be there before
+  // moving (a travel about to have its picture taken, see route_travel.jsx)
+  // would otherwise wait for a render that cannot happen until the data does.
+  useLayoutEffect(() => {
+    publishRouteRender();
+  });
   if (loadingRef.current.reason !== "loading") {
     return null;
   }

@@ -27,6 +27,16 @@ import { createAction } from "./actions.js";
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
  */
+// The run is not awaited here, and a rejection nobody waits for is an unhandled
+// one — in dev, an error overlay thrown over a page that is already saying what
+// went wrong. Nothing is lost by dropping it: the failure is held by the action
+// itself, and whoever reads it (useAsyncData, <Button action>) is what shows it.
+const runUnwatched = (result) => {
+  if (result && typeof result.catch === "function") {
+    result.catch(() => {});
+  }
+};
+
 export const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
@@ -76,7 +86,7 @@ export const actionRunEffect = (
           // falsy params, don't run
           return;
         }
-        actionTarget.run({ reason: "truthy params first run" });
+        runUnwatched(actionTarget.run({ reason: "truthy params first run" }));
         return;
       }
 
@@ -93,16 +103,20 @@ export const actionRunEffect = (
         }
         if (!actionTargetPrevious.params) {
           // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
-          actionTarget.run({ reason: "params restored from falsy state" });
+          runUnwatched(
+            actionTarget.run({ reason: "params restored from falsy state" }),
+          );
         } else {
-          actionTarget.rerun({ reason: "params modified" });
+          runUnwatched(actionTarget.rerun({ reason: "params modified" }));
         }
       }
     },
     ...options,
   });
   if (actionParamsSignal.peek()) {
-    actionRunnedByThisEffect.run({ reason: "initial truthy params" });
+    runUnwatched(
+      actionRunnedByThisEffect.run({ reason: "initial truthy params" }),
+    );
   }
   return actionRunnedByThisEffect;
 };

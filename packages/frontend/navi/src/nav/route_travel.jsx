@@ -440,14 +440,25 @@ export const RouteTravel = ({
     const releaseRendering = renderingHeldForRouting || holdRendering();
     renderingHeldForRouting = null;
     // The picture the browser is about to take must be of the page that was
-    // asked for, and a route matching is not yet a page rendered.
+    // asked for, and a route matching is not yet a page rendered. Watched from
+    // here rather than from inside the callback below: the browser calls that
+    // callback a frame later, and a navigation that has already been decided
+    // (what follows a send, a command) renders its page in between. A wait
+    // armed then waits for something that has already happened — until the
+    // browser gives up on the transition, leaving the page it was leaving on
+    // screen and an error nobody asked for.
+    const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
-      await whilePageRenders(page, async () => {
-        releaseRendering();
-        if (change) {
-          await change();
-        }
-      });
+      await whilePageRenders(
+        page,
+        async () => {
+          releaseRendering();
+          if (change) {
+            await change();
+          }
+        },
+        renderWait,
+      );
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
       holdTravelHeight(elementRef.current, heightBefore);
@@ -472,6 +483,7 @@ export const RouteTravel = ({
     viewTransition.finished.catch(() => {
       // A transition that fails before it ever calls back leaves the page held:
       // whoever asked for the hold gives it back, here as everywhere else.
+      renderWait.stop();
       releaseRendering();
       endTravel(travel);
     });
@@ -1358,20 +1370,28 @@ const scrubTravel = (travel, ratio) => {
 // inside the callback of a view transition: the browser has stopped rendering
 // and is waiting on this very promise to take its picture, so a wait that never
 // ends is a page frozen under a transition that never became ready.
-const whilePageRenders = async (page, change) => {
+// Listening starts before the change, or a render landing while the change is
+// being awaited is a render nobody heard. Armed apart from the wait itself
+// because the two do not always happen at the same moment: a view transition
+// calls its update callback a frame after it is started, and the render can
+// land in that gap — see beginTravel, which arms this the moment the travel is
+// decided and hands it over.
+const armRouteRenderWait = () => {
   let stopListening;
   const rendered = new Promise((resolve) => {
-    // Listened for before the change, or a render landing while the change is
-    // being awaited is a render nobody heard.
     stopListening = observeRouteRender(resolve);
   });
+  return { rendered, stop: () => stopListening() };
+};
+
+const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
   try {
     await change();
     if (pageIsCurrent(page)) {
-      await rendered;
+      await wait.rendered;
     }
   } finally {
-    stopListening();
+    wait.stop();
   }
 };
 
