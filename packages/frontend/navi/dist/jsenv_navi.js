@@ -52307,9 +52307,16 @@ const PickerCustom = props => {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
           const valueAtClose = getUIStateFromElement(inputEl);
-          if (heldAtOpen && compareTwoJsValues(valueAtClose, valueAtOpen)) {
-            // Value unchanged and already held — closing on it says nothing
-            // new. No action to run, but still allow the close.
+          if (compareTwoJsValues(valueAtClose, valueAtOpen) && (heldAtOpen || valueAtOpen === undefined)) {
+            // Nothing to say on the way out, for one of two reasons. Either the
+            // value was already held and has not moved — closing on it repeats
+            // what was already the answer. Or there was never anything to
+            // confirm: a picker holding nothing AND showing nothing (a menu of
+            // gestures — no value, no defaultValue, no signal) has no
+            // suggestion to accept, and confirming `undefined` cannot mean
+            // anything. A picker on a defaultValue is untouched by this: it
+            // shows something, so closing on it still confirms it.
+            // No action to run, but still allow the close.
             return;
           }
           dispatchRequestAction(inputEl, {
@@ -52340,8 +52347,17 @@ const PickerCustom = props => {
             // answer. Say it here — this is the moment the suggestion becomes
             // one. Harmless when the value did change on the way: the state is
             // already what it is, and this only re-runs the same reaction.
-            debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
-            commitUIStateAsAnswer(getPickerInput(ref.current)?.__uiStateController__, closeEvent);
+            const inputEl = getPickerInput(ref.current);
+            const valueAtClose = getUIStateFromElement(inputEl);
+            if (valueAtOpen === undefined && compareTwoJsValues(valueAtClose, valueAtOpen)) {
+              // Same third case onRequestClose steps around: nothing held,
+              // nothing shown, nothing picked. There is no suggestion here to
+              // turn into an answer.
+              debugPopup(closeEvent, `picker showed nothing -> nothing to commit`);
+            } else {
+              debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
+              commitUIStateAsAnswer(inputEl?.__uiStateController__, closeEvent);
+            }
           }
           leaveExpanded({
             isBack: closeEvent.detail.isCancel

@@ -302,6 +302,32 @@ value the app passes it. Escape on that first pass goes back to empty, not to
 what was on screen when the popup opened. From the second open onwards it puts
 back what was really there.
 
+### A picker that holds nothing and shows nothing
+
+The gestures that KEEP (a click outside, a close cross) let a picker send what
+it is showing: a picker sitting on a `defaultValue` holds nothing, so closing on
+it untouched IS the answer ("yes, 1h30"), and the action runs.
+
+A picker used as a **menu of gestures** — no `value`, no `defaultValue`, no
+signal, each row a command — shows nothing, so there is nothing to confirm.
+Closing it without choosing runs no action; only an explicit choice sends.
+
+```jsx
+// Clicking outside closes this and sends nothing.
+<Picker id="pause" mode="popover" variant="icon" action={pauseAction}>
+  <List selectable command="--navi-send">
+    <List.Item selectable id="24h" value="24h">
+      …
+    </List.Item>
+  </List>
+</Picker>
+```
+
+Note this is about a picker holding NOTHING. Passing `value={undefined}` is not
+that: a `value` prop is held whatever is in it, and navi puts it back after each
+click — the rows then appear to do nothing. Drop the prop instead of passing it
+empty.
+
 ### `escapeEffect="close"`, and why it is a last resort
 
 `escapeEffect="close"` makes Escape say what a click outside says. It exists,
