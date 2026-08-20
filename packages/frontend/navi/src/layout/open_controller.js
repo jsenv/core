@@ -39,7 +39,8 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  * - `onClose(e)`: actually closing, not preventable — final reactions live here.
  *
  * The controller exposes matching action methods:
- * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
+ * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
+ *   `mountContent`/`openEffect`, then `openHandler`.
  * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
  *   stopping after the first if denied. The popup may choose to stay open.
  * - `close()`: closes for real — calls only `onClose`, skipping
@@ -209,6 +210,13 @@ export const createOpenController = (
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
     mountContent: null,
+    // The caller's own `onOpen`, set by Dialog/Popover from their props on
+    // every render (like openEffect). Called BEFORE mountContent, so whatever
+    // it decides — which record this dialog is opening on — is already true by
+    // the time the content is built, positioned and shown. That order is the
+    // whole point: learning it afterwards means the content mounted on the
+    // previous subject first.
+    onOpen: null,
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
@@ -265,6 +273,10 @@ export const createOpenController = (
           }
         };
       };
+      // Before mountContent, which builds the content, and before openEffect,
+      // which shows it: what the popup opens ON has to be known before either
+      // (see `onOpen` above).
+      controller.onOpen?.(requestOpenEvent);
       // After prepareFocusTransfer, which has to record what held the focus
       // before anything inside the popup can claim it, and before openEffect,
       // which measures the popup to place it.

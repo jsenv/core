@@ -20,6 +20,7 @@ and the failures can be looked at.
 - [Where each screen goes next](#where-each-screen-goes-next)
 - [After a write: what goes back to the network](#after-a-write-what-goes-back-to-the-network)
 - [Movement between them](#movement-between-them)
+- [The same loop in a dialog](#the-same-loop-in-a-dialog)
 
 ## What the loop owes the person
 
@@ -460,9 +461,46 @@ two and has something to travel between.
 
 The gesture, the back button and a link pressed all move the same way.
 
+## The same loop in a dialog
+
+Everything above assumes each screen is a url, because that is what the loop
+deserves when the thing being created is what the person came for. Half the
+creations in an application are not that: a radar, a note, a member — a
+**secondary resource**, edited without leaving the page one is reading. It has no
+page of its own, and giving it one to change a name would take the person off the
+page they were on. That loop happens in a dialog, and the reasoning above still
+holds; only its mechanisms change.
+
+| the page says                                         | the dialog says                                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| two routes, `/new` and `/:id/edit`                    | one dialog, two modes — hence the value it is opened ON ([popup_open.md](./popup_open.md#opening-it-on-something)) |
+| the draft lives in the `searchParams`                 | it lives in the dialog, and dies with it                                                                           |
+| cancelling = leaving the screen, which is thrown away | `unmountWhenClosed` (+ a `key` on the form), same effect                                                           |
+| `RouteTravel` between the two screens                 | nothing: a dialog has no neighbour                                                                                 |
+| `onLoad` + `pristineKey`: the resource arrives after  | it is already in hand — the dialog is opened FROM the list                                                         |
+
+What does not change, and is the reason this section is four lines rather than a
+page of its own:
+
+- **Two states, not one.** "Do not let the two share one set of signals" applies
+  word for word. The reset is a `key` on the form rather than emptying url
+  signals, but the mistake avoided is the same: opening "new" and finding what
+  was just edited.
+- **Two modes driving a third component.** The fields are written once and do not
+  know which mode they are in; the caller hands them their state. That is the
+  transposable half of the whole page.
+- **`include` for a pre-filled picker.** A radar's place is exactly the case
+  described [above](#a-field-that-picks-from-a-list-too-big-to-load), and a popup
+  does not make it less true.
+- **The failure shows where it was asked for**, with what was typed still there —
+  which in a dialog also means the dialog must still be open, so the close waits
+  for the action (see
+  [popup_open.md](./popup_open.md#closing-when-a-button-also-runs-an-action)).
+
 ## See also
 
 - [form_changed.md](./form_changed.md) — what a form sends, what follows a send
 - [navigation.md](./navigation.md) — routes, links, travelling
 - [resource.md](./resource.md) — the store behind GET/POST/PUT
 - [control_value.md](./control_value.md) — binding fields to signals
+- [popup_open.md](./popup_open.md) — what opens a dialog, and what it opens on

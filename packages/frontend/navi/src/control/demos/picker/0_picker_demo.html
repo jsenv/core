@@ -127,6 +127,10 @@
             <Chapter id="icon" title="Picker icon">
               <PickerIconDemo />
             </Chapter>
+            <Chapter id="variant" title="Variants">
+              <VariantDemo />
+              <VariantIconAlignDemo />
+            </Chapter>
             <Chapter id="text-align" title="Text alignment">
               <TextAlignDemo />
             </Chapter>
@@ -219,6 +223,19 @@
             </li>
             <li>
               <Link href="#icon">Picker icon</Link>
+            </li>
+            <li>
+              <Link href="#variant">Variants</Link>
+              <ol>
+                <li>
+                  <Link href="#variant-gallery">The four drawings</Link>
+                </li>
+                <li>
+                  <Link href="#variant-icon-align">
+                    variant=&quot;icon&quot; — centering
+                  </Link>
+                </li>
+              </ol>
             </li>
             <li>
               <Link href="#text-align">Text alignment</Link>
@@ -855,6 +872,104 @@
           </Box>
         </>
       );
+
+      // A dashed frame around the picker so the BOX is visible next to what is
+      // drawn inside it — the whole point of the alignment demos below, where
+      // the box is deliberately bigger than the icon it holds.
+      const BoxOutline = ({ children }) => (
+        <div
+          style={{
+            display: "inline-flex",
+            outline: "1px dashed #f0709c",
+            outlineOffset: "1px",
+          }}
+        >
+          {children}
+        </div>
+      );
+
+      const VariantDemo = () => (
+        <Subsection id="variant-gallery" title="The four drawings">
+          <p>
+            A variant moves the defaults, never what the caller passed: a
+            <code> backgroundColor</code>/<code>padding</code> prop still wins
+            over it.
+          </p>
+          <Box flex="x" spacing="l" alignY="end" flexWrap>
+            {[
+              [undefined, "default"],
+              ["discrete", "discrete"],
+              ["icon", "icon"],
+              ["headless", "headless"],
+            ].map(([variant, label]) => (
+              <Field vertical key={label}>
+                <Label>
+                  <code style={{ fontWeight: "normal" }}>{label}</code>
+                </Label>
+                <BoxOutline>
+                  <Picker
+                    name={`variant_${label}`}
+                    value={SHORT_VALUE}
+                    action={() => {}}
+                    variant={variant}
+                  >
+                    <BasicPickerContent />
+                  </Picker>
+                </BoxOutline>
+              </Field>
+            ))}
+          </Box>
+        </Subsection>
+      );
+
+      // variant="icon" draws nothing but the icon, so a width/height given to it
+      // is a target area rather than a text column: the icon belongs in its
+      // middle by default, and alignX/alignY move it from there.
+      const VariantIconAlignDemo = () => {
+        const ALIGNMENTS = [
+          [{}, "default (centered)"],
+          [{ alignX: "start" }, 'alignX="start"'],
+          [{ alignX: "end" }, 'alignX="end"'],
+          [{ alignY: "start" }, 'alignY="start"'],
+          [{ alignY: "end" }, 'alignY="end"'],
+          [{ alignX: "start", alignY: "end" }, 'alignX="start" alignY="end"'],
+        ];
+
+        return (
+          <Subsection
+            id="variant-icon-align"
+            title='variant="icon" — centering'
+          >
+            <p>
+              The dashed frame is the picker box (80×80). With no alignment prop
+              the icon sits at its center.
+            </p>
+            <Box flex="x" spacing="l" alignY="end" flexWrap>
+              {ALIGNMENTS.map(([alignProps, label], index) => (
+                <Field vertical key={label}>
+                  <Label>
+                    <code style={{ fontWeight: "normal" }}>{label}</code>
+                  </Label>
+                  <BoxOutline>
+                    <Picker
+                      name={`variant_icon_align_${index}`}
+                      value=""
+                      action={() => {}}
+                      variant="icon"
+                      width="80px"
+                      height="80px"
+                      rightSlotIcon={<VioletSquareIcon />}
+                      {...alignProps}
+                    >
+                      <BasicPickerContent />
+                    </Picker>
+                  </BoxOutline>
+                </Field>
+              ))}
+            </Box>
+          </Subsection>
+        );
+      };
 
       const TextAlignDemo = () => (
         <>

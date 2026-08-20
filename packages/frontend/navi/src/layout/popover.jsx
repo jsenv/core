@@ -351,16 +351,16 @@ const css = /* css */ `
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
-    /* backdropAppearance overrides whatever the effect above picked — same
+    /* backdropVariant overrides whatever the effect above picked — same
        specificity (class + one attribute), so these have to stay *after*
        them to win. Only the paint changes: the element is still rendered
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
-    &[data-backdrop-appearance="discrete"] {
+    &[data-backdrop-variant="discrete"] {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"] {
+    &[data-backdrop-variant="invisible"] {
       background: transparent;
       backdrop-filter: none;
     }
@@ -428,11 +428,11 @@ const css = /* css */ `
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance.
- * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"none"`: fully transparent. The backdrop is still
+ *   barely-there dim. `"invisible"`: fully transparent. The backdrop is still
  *   rendered and still catches outside clicks in every case — this only
  *   changes how much the popover insists on being the thing you deal with.
  *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
@@ -495,6 +495,13 @@ const css = /* css */ `
  *   for the user to see it transition away from. `"interaction"` says the
  *   opposite — this popover is mounted *because* the user just asked for it, so
  *   the mount is the opening and the entrance plays like any other.
+ * @param {(openEvent: CustomEvent) => void} [props.onOpen] - Called when it
+ *   opens, BEFORE its content is built, positioned or shown. What it opens ON
+ *   is in `openEvent.detail.value` — the value of whatever asked
+ *   (`<Button value={radar.id} command="--navi-open" commandfor="…">`), or the
+ *   `value` given to `triggerNaviCommand`. That order is the point: a popover that
+ *   is "new" or "edit X" depending on the press must know which one it is
+ *   before what it holds is rendered.
  * @param {(event: Event) => void} [props.onClose] - Called when the popover
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
@@ -568,6 +575,10 @@ const UncontrolledPopover = (props) => {
       onnavi_request_open={(e) => {
         openController.open(e, {
           anchor: e.detail?.anchor ?? e.detail?.source,
+          // What the command was about — a `<Button value={id}>` that opened
+          // this popup ON that id. Handed to `onOpen` before anything is
+          // built (see open_controller.js).
+          value: e.detail?.value,
         });
       }}
       onnavi_request_close={(e) => {
@@ -684,7 +695,7 @@ const usePopoverProps = (props) => {
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
     // the paint the effect implies; "discrete"/"none" tone it down or
     // remove it entirely without giving up the outside click.
-    backdropAppearance = "auto",
+    backdropVariant = "auto",
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -704,11 +715,20 @@ const usePopoverProps = (props) => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
+    // Read here (rather than left in `rest`) for two reasons: it must never
+    // reach the DOM as an `onopen` attribute, and the controller — not this
+    // render — is what calls it, at the one moment that makes it useful (see
+    // openController.onOpen below).
+    onOpen,
     children: childrenProp,
     mountWhenClosed,
     unmountWhenClosed,
     ...rest
   } = props;
+  // Assigned on every render, like openEffect below, so it always closes over
+  // the latest prop. Called by openController.open() before the content is
+  // built: what this popup opens ON is known before anything reads it.
+  openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
     mountWhenClosed,
@@ -1411,7 +1431,7 @@ const usePopoverProps = (props) => {
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    "data-backdrop-appearance": backdropAppearance,
+    "data-backdrop-variant": backdropVariant,
     "onMouseDown": (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
         return;

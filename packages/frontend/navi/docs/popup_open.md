@@ -7,6 +7,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [Something else opens it: `triggerNaviCommand`](#something-else-opens-it-triggernavicommand)
 - [Which element receives the command](#which-element-receives-the-command)
 - [The anchor](#the-anchor)
+- [Opening it ON something](#opening-it-on-something)
 - [Reacting to open and close](#reacting-to-open-and-close)
 - [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
 - [When `open` is the right answer, and what it costs](#when-open-is-the-right-answer-and-what-it-costs)
@@ -124,23 +125,92 @@ The `anchor` prop always wins over whatever the command carried.
 event's anchor entirely, for a popover that must never be anchored to whatever
 opened it.
 
-## Reacting to open and close
+## Opening it ON something
 
-`onClose` is called on every real close. There is no `onOpen`: an uncontrolled
-popup rewrites its own open handler, so a passed one would never run. Listen on
-the ref instead — or, when the JS that opens is yours, do the work right where
-you trigger the command.
+A popup that edits is never only open or closed: it is open **on** something. A
+dialog that is "new radar" from the top of a list and "edit this radar" from a
+row is one dialog with two modes, and the press is the only thing that knows
+which one — so the press says it, with its own value:
+
+```jsx
+<Button command="--navi-open" commandfor="radar-dialog">Nouveau radar</Button>
+<Button value={radar.id} command="--navi-open" commandfor="radar-dialog" />
+
+<Dialog
+  id="radar-dialog"
+  unmountWhenClosed
+  onOpen={(e) => {
+    editedRadarIdSignal.value = e.detail.value; // undefined = création
+  }}
+>
+```
+
+That subject travels as the command's **value**, not as an argument after a
+colon (`--navi-open:radar-42`). The two places say different things and the
+distinction holds across every command: an argument says WHAT the command does —
+`--navi-go-to-slide:edit` needs one, "go" without a destination is not an
+instruction — and `value` says what it is about. "Open" is already a complete
+instruction; the radar is what it is about. A button therefore says it the way it
+says it everywhere else, with `value`, and nothing has to be parsed.
+
+A JS decision says the same thing through the same door:
 
 ```js
-useLayoutEffect(() => {
-  const dialog = dialogRef.current;
-  const onOpen = () => {
-    /* … */
-  };
-  dialog.addEventListener("navi_request_open", onOpen);
-  return () => dialog.removeEventListener("navi_request_open", onOpen);
-}, []);
+triggerNaviCommand(dialogRef.current, "--navi-open", event, {
+  value: radar.id,
+});
 ```
+
+`--navi-toggle` carries it too, on the half that opens.
+
+### `onOpen` runs before the popup has built anything
+
+The order is the whole point, and it is a guarantee, not a coincidence:
+
+```
+onOpen(openEvent)   ← the subject is decided here
+children mounted    ← unmountWhenClosed rebuilds them from scratch, on that subject
+positioned, shown
+```
+
+So a dialog whose content is seeded once — an uncontrolled field on a
+`defaultValue`, a form keyed on what it edits — reads the right thing on its very
+first render. Learning it afterwards would mean mounting on the previous subject
+and correcting it, which is a flicker at best and stale fields at worst.
+
+The two other places one could listen are not that moment, and it is worth
+knowing why:
+
+| where                         | when it runs                   | chained to the caller |
+| ----------------------------- | ------------------------------ | --------------------- |
+| `onOpen`                      | before the content is built    | yes — this prop       |
+| `onnavi_command` on the popup | after the command has been run | yes                   |
+| `navi_request_open` listener  | before the popup's own handler | on the element only   |
+
+`onnavi_command` receives the whole command string and its value, but it runs
+**after** the opening: whatever it writes lands on a popup that is already open.
+That works only as long as nothing has read the state yet — which
+`unmountWhenClosed` makes a real race rather than a theoretical one.
+
+A `navi_request_open` listener added on the element is the request itself, ahead
+of the popup acting on it — but it is ordered against the popup's own handler by
+registration, and it has to be attached in an effect on a ref. `onOpen` is that
+moment, said as a prop.
+
+## Reacting to open and close
+
+`onOpen` is called on every open, before the popup builds anything (see
+[above](#opening-it-on-something)); `onClose` is called on every real close, and
+carries `detail.isCancel` when the close meant "revert".
+
+```jsx
+<Dialog onOpen={(e) => {}} onClose={(e) => {}}>
+```
+
+Neither can veto: `onClose` is the close happening, not a request to close.
+Refusing a close is `onRequestClose`, which belongs to whoever owns an
+`openController` (see `open_controller.js`) — an uncontrolled popup already
+refuses the one close that matters, the one over a control mid-action.
 
 ### Closing when a button also runs an action
 

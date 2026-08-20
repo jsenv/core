@@ -663,7 +663,7 @@ const PickerContentInsidePopup = (props) => {
     pointerInteractionOutsideEffect = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
     // element itself, not the popup, and this belongs to the popup.
-    backdropAppearance,
+    backdropVariant,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -728,7 +728,7 @@ const PickerContentInsidePopup = (props) => {
         pointerInteractionOutsideEffect={
           pointerLock ? "capture" : pointerInteractionOutsideEffect
         }
-        backdropAppearance={backdropAppearance}
+        backdropVariant={backdropVariant}
         focusCapture={isPopover ? focusCapture : undefined}
         expand={isPopover ? undefined : dialogExpand}
         expandX={isPopover ? undefined : dialogExpandX}

@@ -16993,11 +16993,14 @@ const VISUAL_PROPS = {
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
+  /* The value the caller named is always written out, even when it matches
+     CSS's own initial value ("start" for justify-content, "stretch" for
+     align-items). Skipping it as a no-op only holds for a bare element: a
+     component whose stylesheet already centers its content (Picker in its icon
+     variant, for one) would keep centering, and alignX="start" would silently
+     do nothing — the one case where saying it explicitly matters most. */
   alignX: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
-      if (value === "stretch") {
-        return undefined; // this is the default
-      }
       return { alignItems: value };
     }
     if (
@@ -17011,18 +17014,12 @@ const CONTENT_PROPS = {
       boxFlow === "grid" ||
       boxFlow === "inline-grid"
     ) {
-      if (value === "start") {
-        return undefined; // this is the default
-      }
       return { justifyContent: value };
     }
     return { textAlign: value };
   },
   alignY: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
-      if (value === "start") {
-        return undefined;
-      }
       return { justifyContent: value };
     }
     if (
@@ -17035,9 +17032,6 @@ const CONTENT_PROPS = {
       boxFlow === "grid" ||
       boxFlow === "inline-grid"
     ) {
-      if (value === "stretch") {
-        return undefined;
-      }
       return { alignItems: value };
     }
     const verticalAlignMap = {
@@ -22147,7 +22141,10 @@ const useNavState = useNavStateBasic;
  * @param {Event} event What the user did.
  * @param {object} [options]
  * @param {boolean} [options.optional] No suitable target is not a warning.
- * @param {any} [options.value] Carried to whoever answers.
+ * @param {any} [options.value] What the command is about, carried to whoever
+ *   answers — and, for `--navi-open`/`--navi-toggle`, what the popup is opened
+ *   ON: it reaches its `onOpen` before the popup builds anything. Left out, a
+ *   source's own value (`<Button value={id}>`) is read instead.
  * @param {Element} [options.anchor] Where a popup this opens should be placed,
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
@@ -22176,6 +22173,10 @@ const triggerNaviCommand = (
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
     argument: command.includes(":") ? commandArgument(command) : undefined,
     anchor,
+    // What the command is about, said by the caller rather than read off the
+    // source: the attribute form has a `value` to read (`<Button value={id}>`),
+    // a JS decision has none, and both must be able to say the same thing.
+    value,
   });
   if (!execute) {
     if (optional) {
@@ -22812,28 +22813,42 @@ registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
   };
 });
 
-registerNaviCommand("--navi-toggle", (source, event, { anchor } = {}) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const isExpanded = target.getAttribute("aria-expanded") === "true";
-      const customEventName = isExpanded
-        ? "navi_request_close"
-        : "navi_request_open";
-      return dispatchCustomEvent(target, customEventName, {
-        event,
-        source: resolveCommandProxySource(source),
-        anchor,
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
+registerNaviCommand(
+  "--navi-toggle",
+  (source, event, { anchor, value } = {}) => {
+    const target =
+      resolveExplicitTarget(source) || resolveClosestExpandable(source);
+    if (!target) {
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () => {
+        const isExpanded = target.getAttribute("aria-expanded") === "true";
+        const customEventName = isExpanded
+          ? "navi_request_close"
+          : "navi_request_open";
+        return dispatchCustomEvent(target, customEventName, {
+          event,
+          source: resolveCommandProxySource(source),
+          anchor,
+          // Same as --navi-open below: the half of the toggle that opens says
+          // what it opens ON, and the half that closes carries it too so the
+          // popup never has to ask which half it just heard.
+          value:
+            value === undefined ? resolveCommandValue(source, event) : value,
+        });
+      },
+    };
+  },
+);
+// A popup that edits opens ON something, and the press is the only place that
+// knows which one. It says it with `value` — "what this is about", as
+// everywhere else — rather than with an argument, which says what the command
+// DOES: "open" is already a complete instruction, unlike --navi-go-to-slide.
+//   <Button value={radar.id} command="--navi-open" commandfor="radar-dialog">
+// The popup is told before it opens — see Dialog/Popover's `onOpen`.
+registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -22849,6 +22864,7 @@ registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
         event,
         source: resolveCommandProxySource(source),
         anchor,
+        value: value === undefined ? resolveCommandValue(source, event) : value,
       });
     },
   };
@@ -27799,7 +27815,8 @@ const getFocusedBeforeTransfer = (e) => {
  * - `onClose(e)`: actually closing, not preventable — final reactions live here.
  *
  * The controller exposes matching action methods:
- * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
+ * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
+ *   `mountContent`/`openEffect`, then `openHandler`.
  * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
  *   stopping after the first if denied. The popup may choose to stay open.
  * - `close()`: closes for real — calls only `onClose`, skipping
@@ -27969,6 +27986,13 @@ const createOpenController = (
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
     mountContent: null,
+    // The caller's own `onOpen`, set by Dialog/Popover from their props on
+    // every render (like openEffect). Called BEFORE mountContent, so whatever
+    // it decides — which record this dialog is opening on — is already true by
+    // the time the content is built, positioned and shown. That order is the
+    // whole point: learning it afterwards means the content mounted on the
+    // previous subject first.
+    onOpen: null,
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
@@ -28025,6 +28049,10 @@ const createOpenController = (
           }
         };
       };
+      // Before mountContent, which builds the content, and before openEffect,
+      // which shows it: what the popup opens ON has to be known before either
+      // (see `onOpen` above).
+      controller.onOpen?.(requestOpenEvent);
       // After prepareFocusTransfer, which has to record what held the focus
       // before anything inside the popup can claim it, and before openEffect,
       // which measures the popup to place it.
@@ -29035,16 +29063,16 @@ const css$V = /* css */`
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
-    /* backdropAppearance, keyed off the originating element (a
+    /* backdropVariant, keyed off the originating element (a
        pseudo-element carries no attributes of its own — same reasoning as
        the capture rule just above). After the rules it overrides: same
        specificity, so order is what decides. showModal() still makes the
        page inert either way — only the paint goes away. */
-    &[data-backdrop-appearance="discrete"]::backdrop {
+    &[data-backdrop-variant="discrete"]::backdrop {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"]::backdrop {
+    &[data-backdrop-variant="invisible"]::backdrop {
       background: transparent;
       backdrop-filter: none;
     }
@@ -29171,11 +29199,11 @@ const css$V = /* css */`
     /* Same override as the via-attribute renderer's own ::backdrop rules
        above, on the real element this renderer uses instead — see them for
        the specificity/ordering reasoning. */
-    &[data-backdrop-appearance="discrete"] {
+    &[data-backdrop-variant="discrete"] {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"] {
+    &[data-backdrop-variant="invisible"] {
       background: transparent;
       backdrop-filter: none;
     }
@@ -29254,11 +29282,11 @@ const css$V = /* css */`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
  *   at least a click-absorbing backdrop regardless of this prop.
- * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"none"`: fully transparent. The dialog stays modal
+ *   barely-there dim. `"invisible"`: fully transparent. The dialog stays modal
  *   either way — this only changes how much it insists visually, never what
  *   an outside click does or whether the page behind stays reachable.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
@@ -29314,6 +29342,13 @@ const css$V = /* css */`
  *   for the user to see it transition away from. `"interaction"` says the
  *   opposite — this dialog is mounted *because* the user just asked for it, so
  *   the mount is the opening and the entrance plays like any other.
+ * @param {(openEvent: CustomEvent) => void} [props.onOpen] - Called when it
+ *   opens, BEFORE its content is built, positioned or shown. What it opens ON
+ *   is in `openEvent.detail.value` — the value of whatever asked
+ *   (`<Button value={radar.id} command="--navi-open" commandfor="…">`), or the
+ *   `value` given to `triggerNaviCommand`. That order is the point: a dialog that
+ *   is "new" or "edit X" depending on the press must know which one it is
+ *   before what it holds is rendered.
  * @param {(event: Event) => void} [props.onClose] - Called when the dialog
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
@@ -29388,7 +29423,11 @@ const UncontrolledDialog = props => {
     openController: openController,
     onnavi_request_open: e => {
       openController.open(e, {
-        anchor: e.detail?.anchor ?? e.detail?.source
+        anchor: e.detail?.anchor ?? e.detail?.source,
+        // What the command was about — a `<Button value={id}>` that opened
+        // this popup ON that id. Handed to `onOpen` before anything is
+        // built (see open_controller.js).
+        value: e.detail?.value
       });
     },
     onnavi_request_close: e => {
@@ -29512,7 +29551,7 @@ const useDialogProps = props => {
     // *does* (that's pointerInteractionOutsideEffect above). A dialog is
     // always modal, so "none" here never makes the page behind reachable:
     // it only stops the dim from being drawn.
-    backdropAppearance = "auto",
+    backdropVariant = "auto",
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -29531,11 +29570,20 @@ const useDialogProps = props => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
+    // Read here (rather than left in `rest`) for two reasons: it must never
+    // reach the DOM as an `onopen` attribute, and the controller — not this
+    // render — is what calls it, at the one moment that makes it useful (see
+    // openController.onOpen below).
+    onOpen,
     children: childrenProp,
     mountWhenClosed,
     unmountWhenClosed,
     ...rest
   } = props;
+  // Assigned on every render, like openEffect below, so it always closes over
+  // the latest prop. Called by openController.open() before the content is
+  // built: what this popup opens ON is known before anything reads it.
+  openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
     mountWhenClosed,
@@ -30034,7 +30082,7 @@ const useDialogProps = props => {
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    "data-backdrop-appearance": backdropAppearance
+    "data-backdrop-variant": backdropVariant
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -30067,7 +30115,7 @@ const useDialogProps = props => {
     // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
     // as the prop just above (and harmless for the custom renderer, whose
     // real backdrop element gets it via backdropProps).
-    "data-backdrop-appearance": backdropAppearance,
+    "data-backdrop-variant": backdropVariant,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -30472,16 +30520,16 @@ const css$U = /* css */`
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
-    /* backdropAppearance overrides whatever the effect above picked — same
+    /* backdropVariant overrides whatever the effect above picked — same
        specificity (class + one attribute), so these have to stay *after*
        them to win. Only the paint changes: the element is still rendered
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
-    &[data-backdrop-appearance="discrete"] {
+    &[data-backdrop-variant="discrete"] {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"] {
+    &[data-backdrop-variant="invisible"] {
       background: transparent;
       backdrop-filter: none;
     }
@@ -30549,11 +30597,11 @@ const css$U = /* css */`
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance.
- * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"none"`: fully transparent. The backdrop is still
+ *   barely-there dim. `"invisible"`: fully transparent. The backdrop is still
  *   rendered and still catches outside clicks in every case — this only
  *   changes how much the popover insists on being the thing you deal with.
  *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
@@ -30616,6 +30664,13 @@ const css$U = /* css */`
  *   for the user to see it transition away from. `"interaction"` says the
  *   opposite — this popover is mounted *because* the user just asked for it, so
  *   the mount is the opening and the entrance plays like any other.
+ * @param {(openEvent: CustomEvent) => void} [props.onOpen] - Called when it
+ *   opens, BEFORE its content is built, positioned or shown. What it opens ON
+ *   is in `openEvent.detail.value` — the value of whatever asked
+ *   (`<Button value={radar.id} command="--navi-open" commandfor="…">`), or the
+ *   `value` given to `triggerNaviCommand`. That order is the point: a popover that
+ *   is "new" or "edit X" depending on the press must know which one it is
+ *   before what it holds is rendered.
  * @param {(event: Event) => void} [props.onClose] - Called when the popover
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
@@ -30688,7 +30743,11 @@ const UncontrolledPopover = props => {
     openController: openController,
     onnavi_request_open: e => {
       openController.open(e, {
-        anchor: e.detail?.anchor ?? e.detail?.source
+        anchor: e.detail?.anchor ?? e.detail?.source,
+        // What the command was about — a `<Button value={id}>` that opened
+        // this popup ON that id. Handed to `onOpen` before anything is
+        // built (see open_controller.js).
+        value: e.detail?.value
       });
     },
     onnavi_request_close: e => {
@@ -30806,7 +30865,7 @@ const usePopoverProps = props => {
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
     // the paint the effect implies; "discrete"/"none" tone it down or
     // remove it entirely without giving up the outside click.
-    backdropAppearance = "auto",
+    backdropVariant = "auto",
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -30826,11 +30885,20 @@ const usePopoverProps = props => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
+    // Read here (rather than left in `rest`) for two reasons: it must never
+    // reach the DOM as an `onopen` attribute, and the controller — not this
+    // render — is what calls it, at the one moment that makes it useful (see
+    // openController.onOpen below).
+    onOpen,
     children: childrenProp,
     mountWhenClosed,
     unmountWhenClosed,
     ...rest
   } = props;
+  // Assigned on every render, like openEffect below, so it always closes over
+  // the latest prop. Called by openController.open() before the content is
+  // built: what this popup opens ON is known before anything reads it.
+  openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
     mountWhenClosed,
@@ -31480,7 +31548,7 @@ const usePopoverProps = props => {
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    "data-backdrop-appearance": backdropAppearance,
+    "data-backdrop-variant": backdropVariant,
     "onMouseDown": mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -51833,7 +51901,7 @@ const css$z = /* css */`
  *   is unavoidably *more* intrusive once it switches to dialog mode than
  *   the exact same usage would be as a popover — worth keeping in mind for
  *   anything that relies on `Popup` and can end up on a small screen.
- * @param {"auto"|"discrete"|"none"} [props.backdropAppearance] - Forwarded
+ * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
  *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
@@ -52561,7 +52629,7 @@ const PickerContentInsidePopup = props => {
     pointerInteractionOutsideEffect = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
     // element itself, not the popup, and this belongs to the popup.
-    backdropAppearance,
+    backdropVariant,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -52612,7 +52680,7 @@ const PickerContentInsidePopup = props => {
       marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer,
       scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
-      backdropAppearance: backdropAppearance,
+      backdropVariant: backdropVariant,
       focusCapture: isPopover ? focusCapture : undefined,
       expand: isPopover ? undefined : dialogExpand,
       expandX: isPopover ? undefined : dialogExpandX,
@@ -59111,6 +59179,12 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
         transparent
       );
       --picker-icon-color-disabled: var(--picker-icon-color-readonly);
+      /* Where the slots sit INSIDE the box, visible only once the box is bigger
+         than what it holds (a width/height the caller gave it). Distinct from
+         textAlign, which places the text inside the value slot; this places the
+         slots themselves. */
+      --picker-align-x-default: flex-start;
+      --picker-align-y-default: center;
     }
   }
 
@@ -59147,6 +59221,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     );
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
+    --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
+    --x-picker-align-y: var(--picker-align-y, var(--picker-align-y-default));
 
     /* Deliberately NOT positioned: the popup children live in here, and a
        layer="local" Popover/Dialog takes its nearest positioned ancestor as
@@ -59186,7 +59262,8 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       padding-left: 0;
       flex: 1 1 auto;
       flex-direction: row;
-      align-items: center;
+      align-items: var(--x-picker-align-y);
+      justify-content: var(--x-picker-align-x);
       background-color: var(--x-picker-background-color);
       border-width: var(--picker-border-width);
       border-style: solid;
@@ -59288,7 +59365,7 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     }
     &[navi-single-line] {
       .navi_picker_right_slot {
-        align-self: center;
+        align-self: var(--x-picker-align-y);
       }
     }
     .navi_picker_input {
@@ -59372,6 +59449,10 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
     &[data-variant="icon"] {
       --picker-padding-x-default: 0;
       --picker-padding-y-default: 0;
+      /* Nothing but the icon is drawn here, so a width/height the caller gave
+         it is a target area, not a text column: the icon belongs in its middle.
+         A default, like everything else a variant moves, so alignX still wins. */
+      --picker-align-x-default: center;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --picker-border-color: transparent;
       --picker-border-color-hover: var(--picker-border-color);
@@ -59473,7 +59554,15 @@ const PickerButton = props => {
   usePickerErrorCallout(uiStateController, error);
   return jsxs(Box, {
     as: "div",
-    ref: ref,
+    ref: ref
+    // The flow this element really has (.navi_picker is display:inline-flex).
+    // Left unsaid, Box reads a <div> as block and resolves alignX into a
+    // text-align — which is a different intention entirely (that one is the
+    // textAlign prop, placing the text INSIDE the value slot).
+    ,
+
+    inline: true,
+    flex: "x",
     baseClassName: "navi_picker",
     pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
     "data-variant": variant,
@@ -59731,6 +59820,11 @@ const PickerStyleCSSVars = {
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
   "slotSpacing": "--picker-slot-spacing",
+  // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
+  // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
+  // passed directly land in the same variables.
+  "justifyContent": "--picker-align-x",
+  "alignItems": "--picker-align-y",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",

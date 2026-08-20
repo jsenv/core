@@ -288,16 +288,16 @@ const css = /* css */ `
       backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
-    /* backdropAppearance, keyed off the originating element (a
+    /* backdropVariant, keyed off the originating element (a
        pseudo-element carries no attributes of its own — same reasoning as
        the capture rule just above). After the rules it overrides: same
        specificity, so order is what decides. showModal() still makes the
        page inert either way — only the paint goes away. */
-    &[data-backdrop-appearance="discrete"]::backdrop {
+    &[data-backdrop-variant="discrete"]::backdrop {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"]::backdrop {
+    &[data-backdrop-variant="invisible"]::backdrop {
       background: transparent;
       backdrop-filter: none;
     }
@@ -424,11 +424,11 @@ const css = /* css */ `
     /* Same override as the via-attribute renderer's own ::backdrop rules
        above, on the real element this renderer uses instead — see them for
        the specificity/ordering reasoning. */
-    &[data-backdrop-appearance="discrete"] {
+    &[data-backdrop-variant="discrete"] {
       background: var(--navi-backdrop-discrete-background);
       backdrop-filter: none;
     }
-    &[data-backdrop-appearance="none"] {
+    &[data-backdrop-variant="invisible"] {
       background: transparent;
       backdrop-filter: none;
     }
@@ -507,11 +507,11 @@ const css = /* css */ `
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
  *   at least a click-absorbing backdrop regardless of this prop.
- * @param {"auto"|"discrete"|"none"} [props.backdropAppearance="auto"] - How
+ * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"none"`: fully transparent. The dialog stays modal
+ *   barely-there dim. `"invisible"`: fully transparent. The dialog stays modal
  *   either way — this only changes how much it insists visually, never what
  *   an outside click does or whether the page behind stays reachable.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
@@ -567,6 +567,13 @@ const css = /* css */ `
  *   for the user to see it transition away from. `"interaction"` says the
  *   opposite — this dialog is mounted *because* the user just asked for it, so
  *   the mount is the opening and the entrance plays like any other.
+ * @param {(openEvent: CustomEvent) => void} [props.onOpen] - Called when it
+ *   opens, BEFORE its content is built, positioned or shown. What it opens ON
+ *   is in `openEvent.detail.value` — the value of whatever asked
+ *   (`<Button value={radar.id} command="--navi-open" commandfor="…">`), or the
+ *   `value` given to `triggerNaviCommand`. That order is the point: a dialog that
+ *   is "new" or "edit X" depending on the press must know which one it is
+ *   before what it holds is rendered.
  * @param {(event: Event) => void} [props.onClose] - Called when the dialog
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
@@ -642,6 +649,10 @@ const UncontrolledDialog = (props) => {
       onnavi_request_open={(e) => {
         openController.open(e, {
           anchor: e.detail?.anchor ?? e.detail?.source,
+          // What the command was about — a `<Button value={id}>` that opened
+          // this popup ON that id. Handed to `onOpen` before anything is
+          // built (see open_controller.js).
+          value: e.detail?.value,
         });
       }}
       onnavi_request_close={(e) => {
@@ -764,7 +775,7 @@ const useDialogProps = (props) => {
     // *does* (that's pointerInteractionOutsideEffect above). A dialog is
     // always modal, so "none" here never makes the page behind reachable:
     // it only stops the dim from being drawn.
-    backdropAppearance = "auto",
+    backdropVariant = "auto",
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -783,11 +794,20 @@ const useDialogProps = (props) => {
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "last-resort",
     onKeyDown,
+    // Read here (rather than left in `rest`) for two reasons: it must never
+    // reach the DOM as an `onopen` attribute, and the controller — not this
+    // render — is what calls it, at the one moment that makes it useful (see
+    // openController.onOpen below).
+    onOpen,
     children: childrenProp,
     mountWhenClosed,
     unmountWhenClosed,
     ...rest
   } = props;
+  // Assigned on every render, like openEffect below, so it always closes over
+  // the latest prop. Called by openController.open() before the content is
+  // built: what this popup opens ON is known before anything reads it.
+  openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
     mountWhenClosed,
@@ -1332,7 +1352,7 @@ const useDialogProps = (props) => {
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    "data-backdrop-appearance": backdropAppearance,
+    "data-backdrop-variant": backdropVariant,
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -1365,7 +1385,7 @@ const useDialogProps = (props) => {
     // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
     // as the prop just above (and harmless for the custom renderer, whose
     // real backdrop element gets it via backdropProps).
-    "data-backdrop-appearance": backdropAppearance,
+    "data-backdrop-variant": backdropVariant,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,

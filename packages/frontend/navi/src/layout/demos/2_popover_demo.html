@@ -1092,7 +1092,7 @@
                 animationDuration={animationDuration}
               />
             </div>
-            <Heading id="backdrop-appearance">backdropAppearance</Heading>
+            <Heading id="backdrop-variant">backdropVariant</Heading>
             <p>
               Same <code>pointerInteractionOutsideEffect="close"</code> in all
               three — clicking outside closes every one of them. Only how much
@@ -1108,14 +1108,14 @@
               <PointerInteractionOutsideDemo
                 label="discrete"
                 pointerInteractionOutsideEffect="close"
-                backdropAppearance="discrete"
+                backdropVariant="discrete"
                 animation={animation}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
-                label="none"
+                label="invisible"
                 pointerInteractionOutsideEffect="close"
-                backdropAppearance="none"
+                backdropVariant="invisible"
                 animation={animation}
                 animationDuration={animationDuration}
               />
@@ -1316,7 +1316,7 @@
       const PointerInteractionOutsideDemo = ({
         label,
         pointerInteractionOutsideEffect,
-        backdropAppearance,
+        backdropVariant,
         animation,
         animationDuration,
       }) => {
@@ -1331,7 +1331,7 @@
               id={popoverId}
               borderRadius="8px"
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-              backdropAppearance={backdropAppearance}
+              backdropVariant={backdropVariant}
               animation={animation}
               animationDuration={animationDuration}
               className="demo_popover_box"

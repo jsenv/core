@@ -27,7 +27,10 @@ import {
  * @param {Event} event What the user did.
  * @param {object} [options]
  * @param {boolean} [options.optional] No suitable target is not a warning.
- * @param {any} [options.value] Carried to whoever answers.
+ * @param {any} [options.value] What the command is about, carried to whoever
+ *   answers — and, for `--navi-open`/`--navi-toggle`, what the popup is opened
+ *   ON: it reaches its `onOpen` before the popup builds anything. Left out, a
+ *   source's own value (`<Button value={id}>`) is read instead.
  * @param {Element} [options.anchor] Where a popup this opens should be placed,
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
@@ -56,6 +59,10 @@ export const triggerNaviCommand = (
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
     argument: command.includes(":") ? commandArgument(command) : undefined,
     anchor,
+    // What the command is about, said by the caller rather than read off the
+    // source: the attribute form has a `value` to read (`<Button value={id}>`),
+    // a JS decision has none, and both must be able to say the same thing.
+    value,
   });
   if (!execute) {
     if (optional) {
@@ -694,28 +701,42 @@ registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
   };
 });
 
-registerNaviCommand("--navi-toggle", (source, event, { anchor } = {}) => {
-  const target =
-    resolveExplicitTarget(source) || resolveClosestExpandable(source);
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const isExpanded = target.getAttribute("aria-expanded") === "true";
-      const customEventName = isExpanded
-        ? "navi_request_close"
-        : "navi_request_open";
-      return dispatchCustomEvent(target, customEventName, {
-        event,
-        source: resolveCommandProxySource(source),
-        anchor,
-      });
-    },
-  };
-});
-registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
+registerNaviCommand(
+  "--navi-toggle",
+  (source, event, { anchor, value } = {}) => {
+    const target =
+      resolveExplicitTarget(source) || resolveClosestExpandable(source);
+    if (!target) {
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () => {
+        const isExpanded = target.getAttribute("aria-expanded") === "true";
+        const customEventName = isExpanded
+          ? "navi_request_close"
+          : "navi_request_open";
+        return dispatchCustomEvent(target, customEventName, {
+          event,
+          source: resolveCommandProxySource(source),
+          anchor,
+          // Same as --navi-open below: the half of the toggle that opens says
+          // what it opens ON, and the half that closes carries it too so the
+          // popup never has to ask which half it just heard.
+          value:
+            value === undefined ? resolveCommandValue(source, event) : value,
+        });
+      },
+    };
+  },
+);
+// A popup that edits opens ON something, and the press is the only place that
+// knows which one. It says it with `value` — "what this is about", as
+// everywhere else — rather than with an argument, which says what the command
+// DOES: "open" is already a complete instruction, unlike --navi-go-to-slide.
+//   <Button value={radar.id} command="--navi-open" commandfor="radar-dialog">
+// The popup is told before it opens — see Dialog/Popover's `onOpen`.
+registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -731,6 +752,7 @@ registerNaviCommand("--navi-open", (source, event, { anchor } = {}) => {
         event,
         source: resolveCommandProxySource(source),
         anchor,
+        value: value === undefined ? resolveCommandValue(source, event) : value,
       });
     },
   };

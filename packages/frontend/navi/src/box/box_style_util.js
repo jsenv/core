@@ -509,11 +509,14 @@ const VISUAL_PROPS = {
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
+  /* The value the caller named is always written out, even when it matches
+     CSS's own initial value ("start" for justify-content, "stretch" for
+     align-items). Skipping it as a no-op only holds for a bare element: a
+     component whose stylesheet already centers its content (Picker in its icon
+     variant, for one) would keep centering, and alignX="start" would silently
+     do nothing — the one case where saying it explicitly matters most. */
   alignX: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
-      if (value === "stretch") {
-        return undefined; // this is the default
-      }
       return { alignItems: value };
     }
     if (
@@ -527,18 +530,12 @@ const CONTENT_PROPS = {
       boxFlow === "grid" ||
       boxFlow === "inline-grid"
     ) {
-      if (value === "start") {
-        return undefined; // this is the default
-      }
       return { justifyContent: value };
     }
     return { textAlign: value };
   },
   alignY: (value, { boxFlow }) => {
     if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
-      if (value === "start") {
-        return undefined;
-      }
       return { justifyContent: value };
     }
     if (
@@ -551,9 +548,6 @@ const CONTENT_PROPS = {
       boxFlow === "grid" ||
       boxFlow === "inline-grid"
     ) {
-      if (value === "stretch") {
-        return undefined;
-      }
       return { alignItems: value };
     }
     const verticalAlignMap = {

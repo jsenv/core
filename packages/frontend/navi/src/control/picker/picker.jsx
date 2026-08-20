@@ -108,6 +108,12 @@ const css = /* css */ `
         transparent
       );
       --picker-icon-color-disabled: var(--picker-icon-color-readonly);
+      /* Where the slots sit INSIDE the box, visible only once the box is bigger
+         than what it holds (a width/height the caller gave it). Distinct from
+         textAlign, which places the text inside the value slot; this places the
+         slots themselves. */
+      --picker-align-x-default: flex-start;
+      --picker-align-y-default: center;
     }
   }
 
@@ -144,6 +150,8 @@ const css = /* css */ `
     );
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
+    --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
+    --x-picker-align-y: var(--picker-align-y, var(--picker-align-y-default));
 
     /* Deliberately NOT positioned: the popup children live in here, and a
        layer="local" Popover/Dialog takes its nearest positioned ancestor as
@@ -183,7 +191,8 @@ const css = /* css */ `
       padding-left: 0;
       flex: 1 1 auto;
       flex-direction: row;
-      align-items: center;
+      align-items: var(--x-picker-align-y);
+      justify-content: var(--x-picker-align-x);
       background-color: var(--x-picker-background-color);
       border-width: var(--picker-border-width);
       border-style: solid;
@@ -285,7 +294,7 @@ const css = /* css */ `
     }
     &[navi-single-line] {
       .navi_picker_right_slot {
-        align-self: center;
+        align-self: var(--x-picker-align-y);
       }
     }
     .navi_picker_input {
@@ -369,6 +378,10 @@ const css = /* css */ `
     &[data-variant="icon"] {
       --picker-padding-x-default: 0;
       --picker-padding-y-default: 0;
+      /* Nothing but the icon is drawn here, so a width/height the caller gave
+         it is a target area, not a text column: the icon belongs in its middle.
+         A default, like everything else a variant moves, so alignX still wins. */
+      --picker-align-x-default: center;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --picker-border-color: transparent;
       --picker-border-color-hover: var(--picker-border-color);
@@ -476,6 +489,12 @@ const PickerButton = (props) => {
     <Box
       as="div"
       ref={ref}
+      // The flow this element really has (.navi_picker is display:inline-flex).
+      // Left unsaid, Box reads a <div> as block and resolves alignX into a
+      // text-align — which is a different intention entirely (that one is the
+      // textAlign prop, placing the text INSIDE the value slot).
+      inline
+      flex="x"
       baseClassName="navi_picker"
       pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
       data-variant={variant}
@@ -771,6 +790,11 @@ const PickerStyleCSSVars = {
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
   "slotSpacing": "--picker-slot-spacing",
+  // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
+  // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
+  // passed directly land in the same variables.
+  "justifyContent": "--picker-align-x",
+  "alignItems": "--picker-align-y",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
@@ -846,6 +870,8 @@ const PickerFirstResolver = (props) => {
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   variant?: "icon" | "headless" | "discrete",
+ *   alignX?: "start" | "center" | "end",
+ *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
  *   rightSlotIconSize?: number | string,
  *   maxLines?: number,
@@ -863,7 +889,7 @@ const PickerFirstResolver = (props) => {
  *   marginWithContainer?: number | string,
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
- *   backdropAppearance?: "auto" | "discrete" | "none",
+ *   backdropVariant?: "auto" | "discrete" | "invisible",
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
@@ -918,10 +944,10 @@ const PickerFirstResolver = (props) => {
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The
  *   default is what gives a popup with no confirm button its way out that
  *   keeps — see the same section.
- * @param {"auto"|"discrete"|"none"} [backdropAppearance="auto"] How visible the
+ * @param {"auto"|"discrete"|"invisible"} [backdropVariant="auto"] How visible the
  *   popup's backdrop is, independently of what a click outside does: `"auto"`
  *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
- *   barely-there dim, `"none"` fully transparent. For a picker that closes on
+ *   barely-there dim, `"invisible"` fully transparent. For a picker that closes on
  *   an outside click without wanting to dim the page for it.
  * @param {number|string} [marginWithContainer] Minimum gap kept between the
  *   popup and the edges of what contains it (the viewport, or the picker's own

@@ -276,7 +276,7 @@ const css = /* css */`
          together. Still its own token, so popups alone can be re-papered. */
       --navi-popup-background-color: var(--navi-surface-color);
       --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
-      /* backdropAppearance="discrete": the popup still catches every outside
+      /* backdropVariant="discrete": the popup still catches every outside
          click, it just stops announcing that it did. For an affordance one
          reaches past rather than through — the dim is there to mark the layer,
          not to push the page behind it away. */
