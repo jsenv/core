@@ -46,9 +46,17 @@ Two consequences worth knowing before fighting them:
 - the body is `flex: 0 1 auto` — **it shrinks, it never grows**. A short body
   leaves the footer right under it rather than pushed to the bottom of a box it
   does not fill. Adding `expandY` to "fix" that is undoing a deliberate default.
-- the separating line is a `box-shadow`, not a `border`: it draws without taking
-  part in layout, so nothing shifts by a pixel when it appears. Don't add a
-  border of your own — you get two lines.
+- the separating line is a `border-bottom` on the header (`border-top` on the
+  footer). Don't add a border of your own — you get two lines. It used to be a
+  `box-shadow`, which is drawn outside the box and so lost to whatever was
+  painted after it: the body covered the very line meant to separate them.
+- header and footer sit in the sticky band
+  (`var(--navi-z-index-sticky)`), so everything the box contains passes under
+  them — positioned or not. Write `style={{ "--box-header-z-index": "auto" }}`
+  (`--box-footer-z-index` likewise) at the call site that needs the opposite: a
+  badge or a stamp overflowing a row is otherwise sliced by a header it never
+  scrolls under. `isolation: isolate` on the box keeps either value local to it.
+  See `docs/z_index.md` and `src/box/demos/9_scrollable_z_index_demo.html`.
 
 Padding belongs on the parts, not on the scrolling box: padding on a scroller
 sits inside the scrollbars, and a control flush against the edge of a scrolling
@@ -56,7 +64,8 @@ area raises a scrollbar of its own (a focus outline is drawn outside the control
 it belongs to).
 
 Reference: `src/box/box.jsx` (the `[data-scrollable]` CSS),
-`src/box/demos/8_scrollable_demo.html`.
+`src/box/demos/8_scrollable_demo.html`,
+`src/box/demos/9_scrollable_z_index_demo.html` (sticky parts and stacking).
 
 ## 1. The document scrolls
 

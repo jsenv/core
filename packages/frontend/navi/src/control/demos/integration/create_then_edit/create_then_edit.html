@@ -395,16 +395,19 @@
           <Form
             action={async (values) => {
               const game = await GAME.POST.bindParams(values).rerun();
+              // La destination n'existait pas avant la réponse: c'est l'action
+              // qui l'a apprise, c'est elle qui y va.
+              GAME_ROUTE.navTo({ gameId: game.id });
               // Le brouillon a servi: il ne doit pas être là au prochain "créer
               // une partie". undefined plutôt qu'une valeur vide — c'est ce qui
-              // rend les signaux à leur défaut et vide l'url.
+              // rend les signaux à leur défaut et vide l'url. Après la
+              // navigation, pas avant: l'effacer pendant que l'écran de
+              // création est encore là relance la liste des lieux pour un
+              // écran qu'on quitte.
               draftNameSignal.value = undefined;
               draftLevelSignal.value = undefined;
               draftPlayersSignal.value = undefined;
               draftPlaceSignal.value = undefined;
-              // La destination n'existait pas avant la réponse: c'est l'action
-              // qui l'a apprise, c'est elle qui y va.
-              GAME_ROUTE.navTo({ gameId: game.id });
             }}
           >
             <Box flex="y" spacing="m">

@@ -18,6 +18,7 @@ and the failures can be looked at.
 - [The edit screen opens before its values](#the-edit-screen-opens-before-its-values)
 - [A field that picks from a list too big to load](#a-field-that-picks-from-a-list-too-big-to-load)
 - [Where each screen goes next](#where-each-screen-goes-next)
+- [After a write: what goes back to the network](#after-a-write-what-goes-back-to-the-network)
 - [Movement between them](#movement-between-them)
 
 ## What the loop owes the person
@@ -41,7 +42,9 @@ about what the person is owed, not about navi.
   leave (that is what the shape below does, for free — the screen is thrown
   away), and worth a confirmation when they are half an hour of work.
 - **What was written shows up everywhere at once.** A name changed on one screen
-  and stale on the list two seconds later reads as data loss.
+  and stale on the list two seconds later reads as data loss. Some of that is
+  free (the store), some of it is a request the backend has to answer (a list
+  after a creation) — see [after a write](#after-a-write-what-goes-back-to-the-network).
 - **A failure is shown where the thing was asked for**, with what was typed
   still there: an error on a form that emptied itself is worse than the failure.
 - **Every screen is a url.** Reload, back, a link sent to someone — the screens
@@ -190,14 +193,20 @@ The draft's other half is the end of its life:
 ```jsx
 action={async (values) => {
   const game = await GAME.POST.bindParams(values).rerun();
+  GAME_ROUTE.navTo({ gameId: game.id });
   draftNameSignal.value = undefined; // il a servi
   draftLevelSignal.value = undefined;
-  GAME_ROUTE.navTo({ gameId: game.id });
 }}
 ```
 
 `undefined`, not `""`: a state signal put back to undefined returns to its
 default and leaves the url — see [control_value.md](./control_value.md).
+
+**Clear after navigating, not before.** Those signals are read by things on the
+screen being left — the list of places is asked for with the place the draft
+holds — so emptying them while that screen is still up asks for the list again,
+for a screen nobody is looking at any more. Navigate first and the clearing is
+what it should be: tidying up behind oneself.
 
 > One signal for the whole form works too: `<Form signal={gameSignal}>` fills
 > its named children from the object, follows it when something else writes it,
@@ -368,6 +377,38 @@ two different places:
   Do not hold that submit back with `readOnlyWhileFormUnchanged`: the press
   still does something — it leaves. Holding it back is for a form that goes
   nowhere, where the press would visibly do nothing at all.
+
+## After a write: what goes back to the network
+
+Creating one game, measured on the demo:
+
+```
+POST /games     la création
+GET  /games     la liste se relit
+GET  /games/2   la page de ce qui vient d'être créé
+```
+
+Each of the two GETs is a decision, and neither is an accident:
+
+- **The list re-reads itself** because whether a new item belongs to a list
+  depends on filters, pagination and sort — the backend knows, the client does
+  not (`rerunOn.GET_MANY: ["POST"]`, and the whole table of defaults is in
+  [list_refresh.md](./list_refresh.md)). A `PUT` does **not** re-read it: the
+  store carries the new values into every list already holding that item, which
+  is why the name changed on the game's page shows up on the list without a
+  request.
+- **The detail GET is not saved by the store.** The action for that id had never
+  run, and the store holding the item is not the same thing as an action having
+  its data. It is also often not redundant: a detail representation is richer
+  than what a write answers — here the GET adds the place's name, the POST does
+  not, and a screen trusting the POST would show "Lieu: —". Skipping it could
+  only ever be a per-resource decision ("my POST answers the same shape as my
+  GET").
+
+Coming back to that page later in the same session costs **nothing**: an action
+that has completed is not run again for the same params. That, and not any
+cache, is what makes a screen already visited open instantly — and what a
+`rerun()` is for when something must genuinely be read again.
 
 ## Movement between them
 

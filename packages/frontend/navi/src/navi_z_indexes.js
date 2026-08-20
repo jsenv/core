@@ -33,17 +33,28 @@ const css = /* css */ `
       --navi-z-index-control-focused: 2;
 
       /* Kept stuck while something scrolls under it: a list header, the head
-         and foot of a side panel, a table's sticky cells. Above raised
-         controls — a control scrolling past must go under the header that
-         pins the column it belongs to, never over it.
+         and foot of a side panel, a table's sticky cells, the header and
+         footer of any scrolling Box. Above raised controls — a control
+         scrolling past must go under the header that pins the column it
+         belongs to, never over it.
 
-         "While stuck" is the whole condition, and a sticky element cannot read
-         its own stuck state in CSS: List marks its parts with a navi-stuck
-         attribute and applies this band only there (see --list-*-z-index in
-         list.jsx). A
-         sticky part at rest is a block in the flow with nothing passing under
-         it; giving it this band anyway is what slices whatever a neighbouring
-         row lets out of its box. */
+         A sticky element is a positioned one, so it already wins against
+         everything in the flow — the band is what it takes to also win against
+         what the page positioned itself, which loses to DOM order otherwise
+         (a sticky part is written before what scrolls under it). Box applies
+         it by default, isolated, and lets a call site write auto back:
+         --box-header-z-index / --box-footer-z-index.
+
+         "While stuck" is the condition the name states, and it costs something
+         to ignore: a sticky part at rest is a block in the flow with nothing
+         passing under it, and the band there is what slices whatever a
+         neighbouring row lets out of its box. CSS cannot express the
+         condition — an element cannot read its own stuck state — so it takes
+         measuring, which List does (it marks its parts with a navi-stuck
+         attribute against its own scroller and applies the band only there,
+         see --list-*-z-index in list.jsx) and Box does not: a generic
+         scrolling area does not know what it was given to scroll, and dropping
+         to auto there loses to a single position: relative. */
       --navi-z-index-sticky: 10;
 
       /* Pinned to the viewport, over the whole page: FixedBar. A decade of its
