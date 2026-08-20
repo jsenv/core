@@ -216,39 +216,35 @@ collapse to a spinner. What it costs is one thing to say — **when the filling 
 done**:
 
 ```jsx
-// Une fois par partie modifiée, pas une fois par arrivée de données.
-useLayoutEffect(() => {
-  if (!game) {
-    return;
-  }
-  nameSignal.value = game.name;
-  levelSignal.value = game.level;
-}, [game?.id]);
+const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
+  loading: true,
+  error: true,
+  onLoad: (game) => {
+    nameSignal.value = game.name;
+    levelSignal.value = game.level;
+  },
+});
 
 <Form pristineKey={game?.id}>;
 ```
 
-Four lines, and each word of them is the answer to a way this breaks:
+`onLoad` is what the screen does with the data **once, when it becomes known**,
+and the two hard parts are already answered by it:
 
-- **Keyed on `game?.id`, not on `game`.** The object comes back on every
-  arrival: a successful PUT, a list reloading, a poll. Copying it again then
-  would overwrite what the person is in the middle of writing. What has to
-  happen once is "this is another game", and that is its id.
-- **`useLayoutEffect`, not `useEffect`.** The form takes its reference among
-  this render's effects; a passive effect waits for the paint, which is after
-  it. Written passive, the reference is taken while the fields are still empty:
-  the screen opens **already changed**, and Save sends the resource back to the
-  server untouched.
-- **An effect, and not something cleverer.** Writing the copy during render
-  would redo it on every render; a callback on the data arriving would fire on
-  every arrival, which is the granularity the first point just rejected. "The
-  resource landed, the screen takes its own copy" is a transition, and an effect
-  is how a transition is said.
+- **How often.** Not every time the data arrives — a successful PUT, a list
+  reloading, a poll all hand the same game back, and copying it again would
+  overwrite what the person is in the middle of writing. It fires once per set
+  of params, which is the action's own answer to "is this another thing, or the
+  same one again". Written by hand this is a `useEffect` keyed on `game?.id`,
+  and `[game]` is the natural, wrong, thing to write.
+- **When.** From a layout effect, so what it writes belongs to the same tick as
+  the render that got the data. That is what lets `pristineKey` be the id
+  itself: the form takes its reference again at the end of that tick, and by
+  then the fields are filled. A copy written in a passive effect (after the
+  paint) would be too late — the screen would open **already changed**, and Save
+  would send the resource back to the server untouched.
 
-`pristineKey` can then be the id itself: the reference is taken again at the end
-of the tick that changed it, so a copy written anywhere in that tick is part of
-it — see [form_changed.md](./form_changed.md), which is also where the rest of
-`pristineKey` lives.
+The rest of `pristineKey` is in [form_changed.md](./form_changed.md).
 
 **Or the screen waits, showing nothing of the form**: render a skeleton until
 the resource is there, then the form with its values already in the fields.
