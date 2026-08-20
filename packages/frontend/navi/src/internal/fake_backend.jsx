@@ -70,6 +70,13 @@ const css = /* css */ `
     font: inherit;
     font-size: 11px;
   }
+  .navi_fake_backend_reset {
+    padding: 1px 6px;
+    color: #546e7a;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
   .navi_fake_backend_label {
     color: #78909c;
     font-weight: 600;
@@ -274,10 +281,38 @@ const useFakeBackendMode = (calls, { answer, fail }) => {
  * made), and throwing from it is how a backend says no on its own — a game that
  * is not there.
  */
-export const createFakeBackend = ({ value: valueInitial } = {}) => {
-  const valueSignal = signal(valueInitial);
+export const createFakeBackend = ({ value: valueInitial, persist } = {}) => {
+  // Kept across reloads when asked for: a demo one comes back to with the
+  // things one created last time is a demo one can keep working in, rather than
+  // one where the first minute is spent putting the data back. What was
+  // declared here stays the way back — see reset below.
+  const readStoredValue = () => {
+    if (!persist) {
+      return undefined;
+    }
+    const stored = localStorage.getItem(persist);
+    if (!stored) {
+      return undefined;
+    }
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return undefined;
+    }
+  };
+  const storedValue = readStoredValue();
+  const valueSignal = signal(
+    storedValue === undefined ? valueInitial : storedValue,
+  );
   const callsSignal = signal([]);
   let callId = 0;
+
+  const writeValue = (value) => {
+    valueSignal.value = value;
+    if (persist) {
+      localStorage.setItem(persist, JSON.stringify(value));
+    }
+  };
 
   const leave = (call) => {
     callsSignal.value = callsSignal.value.filter(
@@ -309,13 +344,19 @@ export const createFakeBackend = ({ value: valueInitial } = {}) => {
       call(
         undefined,
         () => {
-          valueSignal.value = received;
+          writeValue(received);
           return received;
         },
         { ...options, received },
       ),
-    setValue: (value) => {
-      valueSignal.value = value;
+    setValue: writeValue,
+    // Back to what the page declared, and nothing kept from the visits before.
+    persists: Boolean(persist),
+    reset: () => {
+      if (persist) {
+        localStorage.removeItem(persist);
+      }
+      valueSignal.value = valueInitial;
     },
     answer: (call) => {
       leave(call);
@@ -347,6 +388,9 @@ export const createFakeBackend = ({ value: valueInitial } = {}) => {
  * @param {any} [props.value] - what the backend holds to begin with, when this
  *   component makes it itself. Nothing, when nothing is given: a backend that
  *   has never been told anything.
+ * @param {string} [props.persist] - a localStorage key: what the backend holds
+ *   is kept across reloads, and a "repartir de zéro" button appears next to the
+ *   mode.
  * @param {(rows: Array) => object} [props.newRow] - makes the backend editable
  *   from its own side: each row of the table gets a ✕ and the table a "+ row",
  *   and this builds the row that "+ row" adds. Use it to see the frontend take
@@ -356,13 +400,14 @@ export const createFakeBackend = ({ value: valueInitial } = {}) => {
 export const FakeBackend = ({
   backend: backendFromProps,
   value: valueInitial,
+  persist,
   newRow,
   children,
 }) => {
   import.meta.css = css;
   const ownBackendRef = useRef(null);
   if (!backendFromProps && !ownBackendRef.current) {
-    ownBackendRef.current = createFakeBackend({ value: valueInitial });
+    ownBackendRef.current = createFakeBackend({ value: valueInitial, persist });
   }
   const backend = backendFromProps || ownBackendRef.current;
   const value = backend.valueSignal.value;
@@ -389,6 +434,15 @@ export const FakeBackend = ({
           onAddRow={newRow ? addRow : undefined}
         />
         <FakeBackendModeSelect mode={mode} onChange={setMode} />
+        {backend.persists ? (
+          <button
+            type="button"
+            className="navi_fake_backend_reset"
+            onClick={backend.reset}
+          >
+            repartir de zéro
+          </button>
+        ) : null}
       </div>
       <div className="navi_fake_backend_frontier">
         {calls.map((call) => (

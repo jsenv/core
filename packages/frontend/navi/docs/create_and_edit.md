@@ -7,7 +7,7 @@ fills itself a request after it opened**, and that the two screens are the same
 form asked to behave differently.
 
 Working example:
-[../src/control/demos/integration/4_create_then_edit_demo.html](../src/control/demos/integration/4_create_then_edit_demo.html)
+[../src/control/demos/integration/create_then_edit/create_then_edit.html](../src/control/demos/integration/create_then_edit/create_then_edit.html)
 — the whole loop, with a backend on the page answering by hand so the loading
 and the failures can be looked at.
 
@@ -45,8 +45,9 @@ Two facts about matching decide the rest, and both surprise:
 - **Several routes match at once.** A route matches by prefix, so `/` is still
   matching on `/games/2/edit`, and `/games/new` is also a `/games/:gameId`.
   That is what keeps a section active while one is inside it.
-- **The first matching branch wins**, in the order the `<Route>` children are
-  written. So they go from the most precise to the widest:
+- **The first that matches wins**, in the order it is written — the `<Route>`
+  children, and the pages of a travel row alike. So they go from the most
+  precise to the widest:
 
 ```jsx
 <Route>
@@ -178,22 +179,53 @@ two different places:
 
 ## Movement between them
 
-The three screens are places, so the movement between them is
-`RouteTravel` — not `SlideContainer`, which is for positions with no url (see
+The screens are places, so the movement between them is `RouteTravel` — not
+`SlideContainer`, which is for positions with no url (see
 [navigation.md](./navigation.md#tabs-with-no-url)).
 
-Its children are ordered by matching precision (above), and the order of the
-**journey** is another thing entirely — so it is said apart:
+A row says two things at once, and they are said apart. Its `<Route>` children
+are ordered by matching precision (above); `routes` is the order of the
+**journey** — what "one step that way" means:
 
 ```jsx
-<RouteTravel
-  routes={[HOME_ROUTE, NEW_GAME_ROUTE, EDIT_GAME_ROUTE, GAME_ROUTE]}
->
+<RouteTravel routes={[NEW_GAME_ROUTE, GAME_ROUTE]}>
 ```
 
-Creating and editing sit to the left of the game, so arriving on the game goes
-right ("here is what I just did") and going back to edit goes left. The gesture,
-the back button and a link pressed all move the same way.
+Creating sits to the left of the game, so arriving on what was just created goes
+right ("here is what I just made"). **A page left out of `routes` does not
+travel at all**: the list is not a step along this row — one opens the create
+screen from it, one does not slide there — so it is absent, and that move has no
+animation. Leaving a page out is how a movement is refused; there is no "no
+transition" to ask for.
+
+A pair with a movement of its own gets a row of its own, on its own axis. The
+game and its edit screen are the same thing seen two ways, so they travel
+vertically inside the position the outer row holds for them:
+
+```jsx
+const GameArea = () => (
+  <RouteTravel axis="y" routes={[GAME_ROUTE, EDIT_GAME_ROUTE]}>
+    <Route>
+      <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+      <Route route={GAME_ROUTE} element={GamePage} />
+    </Route>
+  </RouteTravel>
+);
+```
+
+Editing is the next page on that column, so opening it rises and saving comes
+back down. The outer row does not move for it: both urls are the same position
+there, which is what makes the two rows independent —
+
+```jsx
+<Route route={EDIT_GAME_ROUTE} element={GameArea} />
+<Route route={GAME_ROUTE} element={GameArea} />
+```
+
+— the same element on both branches, so the inner row stays mounted across the
+two and has something to travel between.
+
+The gesture, the back button and a link pressed all move the same way.
 
 ## See also
 

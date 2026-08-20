@@ -103,11 +103,11 @@
         stateSignal,
         useAsyncData,
       } from "@jsenv/navi";
-      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DemoHeader } from "../../../../internal/demo_header.jsx";
       import {
         FakeBackend,
         createFakeBackend,
-      } from "../../../internal/fake_backend.jsx";
+      } from "../../../../internal/fake_backend.jsx";
 
       // ── Le backend ────────────────────────────────────────────────────────
       // Créé ici, hors de l'arbre: les appels partent des callbacks REST de la
@@ -119,10 +119,22 @@
         value: [
           { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
         ],
+        persist: "navi_demo_create_then_edit",
       });
       const games = () => backend.valueSignal.value;
       const findGame = (id) => games().find((game) => game.id === id);
-      let nextId = 2;
+      // Lu dans les données plutôt que compté ici: elles reviennent d'une visite
+      // précédente, où le compteur ne les a pas vues naître.
+      const nextGameId = () => {
+        let biggest = 0;
+        for (const game of games()) {
+          const id = Number(game.id);
+          if (id > biggest) {
+            biggest = id;
+          }
+        }
+        return String(biggest + 1);
+      };
       const writeGame = (game) => {
         const rest = games().filter((candidate) => candidate.id !== game.id);
         backend.setValue([...rest, game]);
@@ -140,7 +152,7 @@
         readMany: () => backend.call("GET /games", () => games()),
         create: (values) =>
           backend.call("POST /games", () =>
-            writeGame({ id: String(nextId++), ...values }),
+            writeGame({ id: nextGameId(), ...values }),
           ),
         update: (id, values) =>
           backend.call(`PUT /games/${id}`, () =>
@@ -391,12 +403,25 @@
         );
       };
 
+      // La partie et sa modification voyagent entre elles, sur leur propre axe:
+      // modifier monte, enregistrer redescend. C'est la même partie vue de deux
+      // façons, donc rien d'autre à l'écran ne se déplace.
+      const GameArea = () => (
+        <RouteTravel axis="y" routes={[GAME_ROUTE, EDIT_GAME_ROUTE]}>
+          <Route>
+            <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+            <Route route={GAME_ROUTE} element={GamePage} />
+          </Route>
+        </RouteTravel>
+      );
+
       // Deux ordres, et ils ne disent pas la même chose:
       // - les enfants sont écrits du plus précis au plus large, parce que la
       //   première branche qui matche l'emporte (et "/" matche partout);
-      // - `routes` donne l'ordre du voyage: créer et modifier sont à gauche de
-      //   la partie, donc y arriver va vers la droite ("voilà ce que je viens
-      //   de faire") et repartir la modifier va vers la gauche.
+      // - `routes` donne l'ordre du voyage: la création est à gauche de la
+      //   partie, donc arriver sur ce qu'on vient de créer va vers la droite.
+      //   L'accueil n'y est pas: ouvrir la création depuis la liste n'est pas un
+      //   déplacement le long d'une rangée, et ne s'anime donc pas.
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="Créer puis modifier" />
@@ -410,17 +435,15 @@
                   <div className="phone">
                     <RouteTravel
                       className="travel_box"
-                      routes={[
-                        HOME_ROUTE,
-                        NEW_GAME_ROUTE,
-                        EDIT_GAME_ROUTE,
-                        GAME_ROUTE,
-                      ]}
+                      routes={[NEW_GAME_ROUTE, GAME_ROUTE]}
                     >
                       <Route>
-                        <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
                         <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
-                        <Route route={GAME_ROUTE} element={GamePage} />
+                        {/* La même zone pour les deux: une partie et sa
+                            modification sont un seul endroit de cette rangée,
+                            et ce qui les sépare se joue dans la zone. */}
+                        <Route route={EDIT_GAME_ROUTE} element={GameArea} />
+                        <Route route={GAME_ROUTE} element={GameArea} />
                         <Route route={HOME_ROUTE} element={HomePage} />
                       </Route>
                     </RouteTravel>
