@@ -55,6 +55,19 @@ Shared furniture lives next to the source, not copy-pasted into each demo:
   presses "répondre" or "échouer", which is what makes the loading state, the error
   callout and "nothing to send" watchable rather than a flicker. Use it for
   anything asynchronous: an action, a form, an optimistic update.
+  - A page with **several endpoints** (a REST resource, an api module) makes its
+    backend outside the tree with `createFakeBackend()` and names each call —
+    `backend.call("GET /games/1", () => …)`, which throws to say no — then draws
+    it with `<FakeBackend backend={backend}>`. The frontier then holds one line
+    per call in flight.
+  - `persist="a_storage_key"` keeps what the backend holds across reloads, and
+    adds a "repartir de zéro" button next to the mode — for a demo one comes
+    back to, where putting the data back would be the first minute of every
+    visit.
+  - The **mode** picker (top right) answers for you — 50 ms, 500 ms, 2 s, or
+    always fail — and is remembered across reloads, for a page that exercises
+    something else and only needs the backend to behave. "manuel" stays the
+    default.
 - **`src/control/demos/utils/call_log.jsx`** — `useCallLog()` + `<CallLog>`: what
   was called with what, and from which event. Use it for `uiAction`/`action`
   rather than a paragraph describing when they fire.

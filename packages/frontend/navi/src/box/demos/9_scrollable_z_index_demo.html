@@ -1,0 +1,322 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo - Scrollable box: sticky parts and z-index</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8f9fa;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 4px;
+        font-size: 1.2rem;
+      }
+      .demo-section > p {
+        max-width: 70ch;
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .demo-section h3 {
+        margin: 20px 0 6px;
+        color: #444;
+        font-size: 0.95rem;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .verdict {
+        max-width: 26ch;
+        margin: 6px 0 0;
+        font-size: 0.8rem;
+        line-height: 1.4;
+      }
+      .verdict.ok {
+        color: #1b5e20;
+      }
+      .verdict.ko {
+        color: #b71c1c;
+      }
+      /* Same size everywhere, so what changes between two examples is only
+         what is being demonstrated */
+      .scroller {
+        width: 240px;
+        height: 180px;
+        border: 1px solid #90caf9;
+        border-radius: 6px;
+      }
+      .part {
+        color: white;
+        background: #1a237e;
+      }
+      .filler {
+        padding: 8px 0;
+        text-align: center;
+        background: #e3f2fd;
+        border-bottom: 1px solid #bbdefb;
+      }
+      /* The row that competes with the header. Opaque on purpose: if it wins,
+         it is unmistakable — it covers the header instead of blending with it */
+      .contender {
+        padding: 8px 0;
+        color: white;
+        text-align: center;
+        background: #c62828;
+        border-bottom: 1px solid #b71c1c;
+      }
+      .contender.relative {
+        position: relative;
+      }
+      .contender.absolute {
+        position: absolute;
+        left: 0;
+        width: 100%;
+      }
+      .contender.transformed {
+        transform: translateY(0);
+      }
+      /* A badge let out of its row, the thing a permanent z-index on a sticky
+         part would slice */
+      .badge-row {
+        position: relative;
+        padding: 8px 0;
+        text-align: center;
+        background: #e3f2fd;
+        border-bottom: 1px solid #bbdefb;
+      }
+      .badge {
+        position: absolute;
+        top: -10px;
+        right: 8px;
+        padding: 2px 6px;
+        color: white;
+        font-size: 0.7rem;
+        background: #6a1b9a;
+        border-radius: 8px;
+      }
+      code {
+        padding: 1px 4px;
+        font-size: 0.85em;
+        background: #eceff1;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box } from "@jsenv/navi";
+
+      const Filler = ({ count = 10, from = 1 }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="filler">
+            {from + i}
+          </div>
+        ));
+
+      // Every example is the same box: a sticky header, one row that tries to
+      // paint over it, and enough rows to scroll. Only `contender` changes.
+      const Case = ({ contender, headerZIndex, verdict, ok }) => (
+        <div>
+          <Box
+            className="scroller"
+            overflow="auto"
+            style={
+              headerZIndex
+                ? { "--box-header-z-index": headerZIndex }
+                : undefined
+            }
+          >
+            <Box header className="part" padding="s">
+              header
+            </Box>
+            <Filler count={2} />
+            {contender}
+            <Filler count={10} from={3} />
+          </Box>
+          <p class={`verdict ${ok ? "ok" : "ko"}`}>{verdict}</p>
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <h1>Scrollable box: sticky parts and z-index</h1>
+          <p style="max-width: 80ch; color: #444; line-height: 1.5">
+            Scroll each box until the red row reaches the header. The question
+            is always the same: does it pass <em>under</em> the header, or over
+            it? <code>[data-header]</code> is <code>position: sticky</code> and
+            carries the sticky band by default — the sections below show what
+            that band is for, what it would look like without it, and what it
+            costs.
+          </p>
+
+          <section class="demo-section">
+            <h2>The default: the sticky band</h2>
+            <p>
+              <code>[data-header]</code> and <code>[data-footer]</code> carry{" "}
+              <code>var(--navi-z-index-sticky)</code>. Everything the box
+              contains goes under them — whether it is in the flow or positioned
+              — which is the one behaviour a call site never has to think about.
+            </p>
+            <div class="demo-row">
+              <Case
+                contender={<div class="contender">in the flow</div>}
+                ok
+                verdict="Under the header."
+              />
+              <Case
+                contender={
+                  <div class="contender relative">position: relative</div>
+                }
+                ok
+                verdict="Under it too — this is what the band buys."
+              />
+              <Case
+                contender={<div class="contender transformed">transform</div>}
+                ok
+                verdict="Same, and a filter or an opacity below 1 behave like this one."
+              />
+            </div>
+          </section>
+
+          <section class="demo-section">
+            <h2>
+              What <code>auto</code> would look like
+            </h2>
+            <p>
+              The same boxes with <code>--box-header-z-index: auto</code>. A
+              sticky element is a <strong>positioned</strong> one, so it wins
+              against the flow for free — but between positioned elements at{" "}
+              <code>z-index: auto</code> it is DOM order that decides, and the
+              header is written first. Anything positioned after it therefore
+              covers it, and so does anything painted <em>as if</em> it were at{" "}
+              <code>z-index: 0</code>: a <code>transform</code>, an{" "}
+              <code>opacity</code> below 1, a <code>filter</code>, a{" "}
+              <code>will-change</code>.
+            </p>
+            <div class="demo-row">
+              <Case
+                contender={<div class="contender">in the flow</div>}
+                headerZIndex="auto"
+                ok
+                verdict="Still under: the flow never needed the band."
+              />
+              <Case
+                contender={
+                  <div class="contender relative">position: relative</div>
+                }
+                headerZIndex="auto"
+                verdict="Covers the header. Positioned, and after it in the DOM."
+              />
+              <Case
+                contender={
+                  <div class="contender" style="opacity: 0.99">
+                    opacity: 0.99
+                  </div>
+                }
+                headerZIndex="auto"
+                verdict="The surprising one: a fade is enough to bring a row over the header."
+              />
+            </div>
+          </section>
+
+          <section class="demo-section">
+            <h2>What the band costs, and how to get past it</h2>
+            <p>
+              A sticky part paints over its content at rest too, when nothing is
+              scrolling under it — so anything a row lets out of its box (a
+              badge, a stamp, a focus ring) is sliced by the header above it.
+              Two ways out, both on the box itself:{" "}
+              <code>--box-header-z-index: auto</code> when nothing inside is
+              positioned, or a value above the band on what must reach past —{" "}
+              <code>isolation: isolate</code> on the scrolling box keeps either
+              of them from meaning anything outside it.
+            </p>
+            <div class="demo-row">
+              <Case
+                contender={
+                  <div class="badge-row">
+                    row <span class="badge">badge</span>
+                  </div>
+                }
+                verdict="Default: the badge is cut by the header."
+              />
+              <Case
+                contender={
+                  <div class="badge-row">
+                    row <span class="badge">badge</span>
+                  </div>
+                }
+                headerZIndex="auto"
+                ok
+                verdict="--box-header-z-index: auto — the badge is whole again."
+              />
+              <Case
+                contender={
+                  <div class="badge-row">
+                    row{" "}
+                    <span class="badge" style="z-index: 11">
+                      badge
+                    </span>
+                  </div>
+                }
+                ok
+                verdict="Band kept, badge raised above it. Local to the box, thanks to the isolation."
+              />
+            </div>
+          </section>
+
+          <section class="demo-section">
+            <h2>
+              With a <code>body</code>, the question disappears
+            </h2>
+            <p>
+              Nothing scrolls under the header here — the body scrolls{" "}
+              <em>next to</em> it. The parts are plain blocks in the flow again
+              (<code>position: static</code>), so no contender can reach them
+              and no <code>z-index</code> is read at all.
+            </p>
+            <div class="demo-row">
+              <div>
+                <Box className="scroller" overflow="auto">
+                  <Box header className="part" padding="s">
+                    header
+                  </Box>
+                  <Box body>
+                    <Filler count={2} />
+                    <div class="contender relative">position: relative</div>
+                    <Filler count={10} from={3} />
+                  </Box>
+                  <Box footer className="part" padding="s">
+                    footer
+                  </Box>
+                </Box>
+                <p class="verdict ok">
+                  Clipped by the body, never over the header.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

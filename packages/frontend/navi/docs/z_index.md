@@ -74,14 +74,14 @@ file is the overview, this table is its summary. Bands are a decade apart so
 one can grow without reaching the next, and so a value seen in devtools says
 which band it came from.
 
-| Band                                                                                           | Token                                                              | Value                        |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
-| Top layer (`Dialog`/`Popover` with `layer="top"`)                                              | —                                                                  | above everything             |
-| `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                              | `--navi-z-index-popup`, `--navi-z-index-callout`                   | 1000 `+ stack order`         |
-| `FixedBar`                                                                                     | `--navi-z-index-bar`                                               | 100                          |
-| Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot | `--navi-z-index-sticky`                                            | 10                           |
-| A `Group` member under the pointer, then the one holding focus                                 | `--navi-z-index-control-hovered`, `--navi-z-index-control-focused` | 1, 2                         |
-| `Table` sticky cells, drag, resize                                                             | `src/control/table/z_indexes.js`                                   | 1–7, derived from each other |
+| Band                                                                                                                | Token                                                              | Value                        |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
+| Top layer (`Dialog`/`Popover` with `layer="top"`)                                                                   | —                                                                  | above everything             |
+| `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                                                   | `--navi-z-index-popup`, `--navi-z-index-callout`                   | 1000 `+ stack order`         |
+| `FixedBar`                                                                                                          | `--navi-z-index-bar`                                               | 100                          |
+| Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot, `Box` header/footer | `--navi-z-index-sticky`                                            | 10                           |
+| A `Group` member under the pointer, then the one holding focus                                                      | `--navi-z-index-control-hovered`, `--navi-z-index-control-focused` | 1, 2                         |
+| `Table` sticky cells, drag, resize                                                                                  | `src/control/table/z_indexes.js`                                   | 1–7, derived from each other |
 
 What to read from it:
 
@@ -137,6 +137,19 @@ the label behind the rows, it puts it behind that background and out of sight.
 
 See the "Sticky parts" chapter of
 [12_list_demo.html](../src/control/demos/12_list_demo.html).
+
+`Box`'s own `header`/`footer` take the opposite default, and for a reason worth
+knowing: they are in the band **always**, not only while stuck. `List` can tell
+— it measures its parts against its own scroller. A `Box` cannot: it is the
+generic scrolling area, its content is whatever the app puts in it, and a
+sticky part that drops to `auto` loses to anything that content positioned, a
+`transform` or an `opacity` below 1 included. So the band is the default,
+`isolation: isolate` on the scrolling box keeps it local, and
+`--box-header-z-index` / `--box-footer-z-index` write it back to `auto` at the
+one call site that knows nothing inside is positioned.
+[9_scrollable_z_index_demo.html](../src/box/demos/9_scrollable_z_index_demo.html)
+shows the band, what `auto` would look like, and what the band costs, side by
+side.
 
 ### Why a `Group` member is not isolated
 

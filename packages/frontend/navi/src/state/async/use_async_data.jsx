@@ -6,11 +6,14 @@ import {
   useContext,
   useEffect,
   useErrorBoundary,
+  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
 
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { publishRouteRender } from "../../nav/route_render.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 /**
@@ -39,7 +42,20 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * to throw, so `error` is always `undefined` when the component renders.
  *
  * @param {import("../../action/actions.js").Action} action
- * @param {{ loading?: true, error?: true }} [options]
+ * @param {{ loading?: true, error?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
+ * @param {(data: any, context: {params: any}) => void} [options.onLoad] - what
+ *   this screen does with the data ONCE, when it becomes known: seed the fields
+ *   someone is about to edit, remember where a list was, focus something.
+ *
+ *   Fired once per set of params — never again for a rerun that brings the same
+ *   thing back. That is the whole point of it: a save, a refresh, a poll all
+ *   hand the data over again, and copying it a second time would overwrite what
+ *   the person is in the middle of writing. The action knows what it ran with,
+ *   so nobody has to guess the dependency.
+ *
+ *   Called from a layout effect, so what it writes belongs to the same tick as
+ *   the render that got the data — a `<Form pristineKey>` taking its reference
+ *   then sees the filled fields rather than the empty ones.
  * @returns {[data: unknown, loading: boolean, error: Error | undefined, dismissError: (() => void) | undefined]}
  *
  * @example <caption>Default — delegate both states (least code)</caption>
@@ -58,7 +74,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  */
 export const useAsyncData = (
   promiseOrAction,
-  { loading = "delegate", error = "delegate" } = {},
+  { loading = "delegate", error = "delegate", onLoad } = {},
 ) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (loading === true) {
@@ -71,6 +87,7 @@ export const useAsyncData = (
     return useActionAsyncData(promiseOrAction, {
       loadingEffect: loading,
       errorEffect: error,
+      onLoad,
     });
   }
   return usePromiseAsyncData(promiseOrAction, {
@@ -86,11 +103,12 @@ const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
-const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
+const useActionAsyncData = (action, { loadingEffect, errorEffect, onLoad }) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
     throw new Error("Missing <Loading>");
   }
+  useOnLoad(action, onLoad);
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -211,6 +229,42 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   throw pendingPromise;
 };
 
+// What a screen does with the data once, when it becomes known (see onLoad in
+// the JSDoc above). Kept apart because the two questions it answers are not the
+// ones the hook around it answers: WHEN — a layout effect, so a form taking its
+// reference in the same tick sees what was written; and HOW OFTEN — once per set
+// of params, which is the action's own answer to "is this another thing or the
+// same one again".
+const NOTHING_SEEDED = Symbol("nothing_seeded");
+const useOnLoad = (action, onLoad) => {
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
+  const paramsSeededRef = useRef(NOTHING_SEEDED);
+  useLayoutEffect(() => {
+    const callback = onLoadRef.current;
+    if (!callback) {
+      return;
+    }
+    if (action.runningStateSignal.peek() !== COMPLETED) {
+      return;
+    }
+    const data = action.dataSignal.peek();
+    if (data === undefined) {
+      return;
+    }
+    const params = action.paramsSignal.peek();
+    const paramsSeeded = paramsSeededRef.current;
+    if (
+      paramsSeeded !== NOTHING_SEEDED &&
+      compareTwoJsValues(params, paramsSeeded)
+    ) {
+      return;
+    }
+    paramsSeededRef.current = params;
+    callback(data, { params });
+  });
+};
+
 // ─── Loading ──────────────────────────────────────────────────────────────────
 // Wraps Suspense. Provides LoadingContext so useAction can write the suspension
 // reason. LoadingFallback reads that reason and subscribes to the action so it
@@ -240,6 +294,14 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
       setTick((n) => n + 1);
     });
   }, [action]);
+  // A page that suspends never gets to say it is on screen — its own effects
+  // are held with it — so this says it for it: what the document shows of the
+  // page arriving is this. Anyone waiting for the page to be there before
+  // moving (a travel about to have its picture taken, see route_travel.jsx)
+  // would otherwise wait for a render that cannot happen until the data does.
+  useLayoutEffect(() => {
+    publishRouteRender();
+  });
   if (loadingRef.current.reason !== "loading") {
     return null;
   }

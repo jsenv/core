@@ -359,14 +359,25 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
 
+    /* A variant states what the caller did NOT: it moves the DEFAULTS
+       (--picker-*) and never the resolved values (--x-picker-*), so a
+       backgroundColor/borderColor/padding prop — which lands inline on this
+       same element — still wins. The per-state defaults are re-pointed at the
+       base one too, otherwise the @layer formulas (hover = 5% black over the
+       background, disabled = 5% grey) would repaint a box the variant just
+       took away. */
     &[data-variant="icon"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
     }
     /* discrete: no box at rest, a background on hover — the same word Button
@@ -374,31 +385,35 @@ const css = /* css */ `
        around it; the chevron in the right slot is what still says it opens. */
     &[data-variant="discrete"] {
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
-
-      &[data-hover] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: transparent;
-      }
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--picker-background-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
     }
     &[data-variant="headless"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
 
       .navi_picker_box {

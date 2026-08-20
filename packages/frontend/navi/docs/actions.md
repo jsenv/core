@@ -85,6 +85,28 @@ available while a rerun is in flight). `useActionStatus(action)` gives the whole
 state at once — `{ idle, loading, completed, aborted, error, data, params }` —
 for a component that needs to look at it rather than render it.
 
+`{ onLoad }` is what the screen does with the data **once, when it becomes
+known** — seed the fields someone is about to edit, focus something, remember
+where a list was:
+
+```jsx
+const [game] = useAsyncData(gameAction, {
+  loading: true,
+  onLoad: (game) => {
+    nameSignal.value = game.name;
+  },
+});
+```
+
+It fires once per set of params, never again for a rerun that brings the same
+thing back: a save, a refresh, a poll all hand the data over again, and copying
+it a second time would overwrite what the person is in the middle of writing.
+The action knows what it ran with, so nobody has to guess that dependency. It is
+called from a layout effect, so what it writes belongs to the same tick as the
+render that got the data — which is what lets a `<Form pristineKey>` take its
+reference on filled fields (see
+[create_and_edit.md](./create_and_edit.md#the-edit-screen-opens-before-its-values)).
+
 Controls take the action itself and wire the rest: `<Button action>` runs it on
 click, shows its loading state, and puts its error where the user can see it.
 That is the reason to pass an action instance rather than an arrow calling the

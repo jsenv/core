@@ -111,14 +111,24 @@ import.meta.css = /* css */ `
 
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
+    --box-header-z-index: var(--navi-z-index-sticky);
+    --box-footer-z-index: var(--navi-z-index-sticky);
+    /* The band stays inside this box: without a stacking context here, "in
+       front of my body" would be read as "in front of everything on the page"
+       and a header would reach past a bar or a popup — which is exactly what
+       the decades in navi_z_indexes.js are there to prevent. See
+       docs/z_index.md. */
+    isolation: isolate;
 
     &[data-scrollable-overflow="scroll"] {
       --x-scrollable-overflow: scroll;
     }
 
-    /* box-shadow rather than a border: it draws the separation without taking
-       part in the layout, so a header keeps the exact height its content asks
-       for and nothing shifts by a pixel when the line appears. */
+    /* A real border and not a box-shadow: a shadow is drawn outside the box, so
+       it lands on top of whatever comes next in the painting order and loses to
+       it — a body painting its own background over the line that was meant to
+       separate them. The border belongs to the part itself and is always
+       visible; the pixel it adds shifts nothing, these parts never shrink. */
     /* The corners are the container's, not the part's: a header sitting at the
        top of a rounded box has to follow that curve or it paints square over
        it (a dark header in a rounded popup is where this shows). inherit and
@@ -126,18 +136,18 @@ import.meta.css = /* css */ `
     > [data-header] {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: var(--box-header-z-index);
+      border-bottom: 1px solid var(--navi-separator-color-default);
       border-top-left-radius: inherit;
       border-top-right-radius: inherit;
-      box-shadow: 0 1px 0 var(--navi-separator-color-default);
     }
     > [data-footer] {
       position: sticky;
       bottom: 0;
-      z-index: 1;
+      z-index: var(--box-footer-z-index);
+      border-top: 1px solid var(--navi-separator-color-default);
       border-bottom-right-radius: inherit;
       border-bottom-left-radius: inherit;
-      box-shadow: 0 -1px 0 var(--navi-separator-color-default);
     }
 
     &:has(> [data-body]) {
@@ -151,8 +161,11 @@ import.meta.css = /* css */ `
 
       > [data-header],
       > [data-footer] {
+        /* Nothing scrolls under them here — the body does that, next to them —
+           so they are back to being blocks in the flow, and stacking is not
+           their business anymore. */
         position: static;
-        z-index: unset;
+        z-index: auto;
         flex-shrink: 0;
       }
 

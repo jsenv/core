@@ -176,4 +176,6 @@ It is then neither collected nor complained about.
   nothing, a bound `signal`, or you
 - [control_object.md](./control_object.md) — one value made of several
   controls: `ControlGroup`, `Form`, and a picker whose value is an object
+- [create_and_edit.md](./create_and_edit.md) — the create/edit loop this is
+  half of: routes, the resource, and where each screen goes next
 - [actions.md](./actions.md) — what an action does around the send itself

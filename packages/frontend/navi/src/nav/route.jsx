@@ -62,23 +62,13 @@
  * ```
  */
 
-import { createPubSub } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { h } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+import { observeRouteRender, publishRouteRender } from "./route_render.js";
 
-/**
- * A container has put its page on screen.
- *
- * A route matching is a signal changing, and the page it selects reaches the
- * DOM only once Preact has rendered — an unknown number of passes later, in an
- * unknown number of microtasks. Anyone who needs the page as it IS rather than
- * as it has been decided (a travel about to have its picture taken by the
- * browser, see route_travel.jsx) waits for this instead of counting.
- */
-const [publishRouteRender, observeRouteRender] = createPubSub();
 export { observeRouteRender };
 
 /**

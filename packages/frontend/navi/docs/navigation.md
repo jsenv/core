@@ -248,6 +248,13 @@ read from the children in the order they are written. Pass `routes` only to say
 another order, or when the pages are not children of the box. An entry is a route,
 or `{ route, params }` when the tabs are params of one route.
 
+The row is on the **first** of its pages that matches, the way a `<Route>` shows
+its first matching branch — several routes match at once when one is a case of
+another. A page left out of the row does not travel: reaching it is a change of
+place, not a step along the row, and it plays no movement. `axis="y"` lays the
+pages out as a column instead: forward is then the page rising and the next one
+coming up from below.
+
 A swipe **replaces** the current history entry (a gesture browses; a tab pressed
 aims at a place and pushes, which its `<Link>` already does). `onTravel` decides
 otherwise.
@@ -259,6 +266,14 @@ actually travelling is captured.
 Demo: [../src/nav/demos/route_travel/route_travel.html](../src/nav/demos/route_travel/route_travel.html)
 and [../src/nav/demos/tabs/tabs.html](../src/nav/demos/tabs/tabs.html). The full
 spec of the gesture is [drag_to_travel.md](./drag_to_travel.md).
+
+## Creating something, then editing it
+
+The create screen, the page of what was created, the edit screen — three routes,
+one form, and a movement between them. It is assembled in
+[create_and_edit.md](./create_and_edit.md), which is also where the two matching
+rules that decide the shape of the `<Route>` tree are spelled out (several routes
+match at once; the first matching branch wins).
 
 ## Tabs with no URL
 

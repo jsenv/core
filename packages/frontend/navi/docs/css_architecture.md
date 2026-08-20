@@ -65,6 +65,57 @@ Props are the primary way to customize appearance. They translate to inline `sty
 <Button style={{ "--button-height": "48px" }} />
 ```
 
+#### Variants set defaults, never resolved values
+
+A control resolves each styled property in two steps: the public variable
+holds what was asked for (`--picker-background-color`), and an internal
+`--x-` variable holds what is finally painted, per state:
+
+```css
+.navi_picker {
+  --x-picker-background-color: var(--picker-background-color);
+
+  &[data-hover] {
+    --x-picker-background-color: var(--picker-background-color-hover);
+  }
+}
+```
+
+A variant (`icon`, `discrete`, `bare`, `border`, `headless`…) describes what
+the caller did **not** say, so it writes the public variable — the default —
+and never the `--x-` one:
+
+```css
+&[data-variant="icon"] {
+  /* ✅ a default: a backgroundColor prop, being inline on this same element, wins */
+  --picker-background-color: transparent;
+  /* ❌ a verdict: the prop is read, translated, and then thrown away */
+  --x-picker-background-color: transparent;
+}
+```
+
+Writing `--x-` from a variant is the one failure mode that costs real time to
+diagnose: the prop is accepted, it reaches its variable with the right value,
+and nothing happens. A prop silently without effect is worse than a prop
+refused.
+
+Two things come with moving the default:
+
+- the **per-state** variables are derived from the base one by formula
+  (`hover` = 5% black over the background, `disabled` = 5% grey), so a variant
+  that clears the background must re-point them at the base
+  (`--picker-background-color-hover: var(--picker-background-color)`), or a box
+  reappears on hover under a control that is supposed to have none. When the
+  variant does have a resting movement, express it as a mix **into** the
+  background (`color-mix(in srgb, currentColor 8%, var(--picker-background-color))`)
+  rather than a replacement, so it still composes with a color the caller gave.
+- a variable fed by another prop keeps that chain in its fallback:
+  `--button-background-color: var(--button-background, transparent)` leaves both
+  `background` and `backgroundColor` working.
+
+The same holds for sizing: a variant lowers `--picker-padding-x-default`, not
+`--x-picker-padding-left`.
+
 ### 2. CSS variables (for global or theme-level changes)
 
 When the same change applies to many components (e.g. a design token update), set the variable at a higher scope:
@@ -200,3 +251,4 @@ Overriding the actual CSS rules (not the variables) is intentionally hard — th
 | A global design token        | `--navi-*` on `:root`                                                      |
 | How wide popups may ever get | `--navi-app-max-width` on `:root`                                          |
 | A structural layout rule     | Expose a new CSS variable (contribute)                                     |
+| What a variant decided       | A prop — a variant only ever moves defaults, so props keep winning         |

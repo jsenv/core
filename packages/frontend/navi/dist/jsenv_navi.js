@@ -2,7 +2,8 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
+export { coarsePointerSignal } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, useSignal } from "@preact/signals";
@@ -49,17 +50,28 @@ const css$10 = /* css */`
       --navi-z-index-control-focused: 2;
 
       /* Kept stuck while something scrolls under it: a list header, the head
-         and foot of a side panel, a table's sticky cells. Above raised
-         controls — a control scrolling past must go under the header that
-         pins the column it belongs to, never over it.
+         and foot of a side panel, a table's sticky cells, the header and
+         footer of any scrolling Box. Above raised controls — a control
+         scrolling past must go under the header that pins the column it
+         belongs to, never over it.
 
-         "While stuck" is the whole condition, and a sticky element cannot read
-         its own stuck state in CSS: List marks its parts with a navi-stuck
-         attribute and applies this band only there (see --list-*-z-index in
-         list.jsx). A
-         sticky part at rest is a block in the flow with nothing passing under
-         it; giving it this band anyway is what slices whatever a neighbouring
-         row lets out of its box. */
+         A sticky element is a positioned one, so it already wins against
+         everything in the flow — the band is what it takes to also win against
+         what the page positioned itself, which loses to DOM order otherwise
+         (a sticky part is written before what scrolls under it). Box applies
+         it by default, isolated, and lets a call site write auto back:
+         --box-header-z-index / --box-footer-z-index.
+
+         "While stuck" is the condition the name states, and it costs something
+         to ignore: a sticky part at rest is a block in the flow with nothing
+         passing under it, and the band there is what slices whatever a
+         neighbouring row lets out of its box. CSS cannot express the
+         condition — an element cannot read its own stuck state — so it takes
+         measuring, which List does (it marks its parts with a navi-stuck
+         attribute against its own scroller and applies the band only there,
+         see --list-*-z-index in list.jsx) and Box does not: a generic
+         scrolling area does not know what it was given to scroll, and dropping
+         to auto there loses to a single position: relative. */
       --navi-z-index-sticky: 10;
 
       /* Pinned to the viewport, over the whole page: FixedBar. A decade of its
@@ -19030,14 +19042,24 @@ import.meta.css = [/* css */`
 
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
+    --box-header-z-index: var(--navi-z-index-sticky);
+    --box-footer-z-index: var(--navi-z-index-sticky);
+    /* The band stays inside this box: without a stacking context here, "in
+       front of my body" would be read as "in front of everything on the page"
+       and a header would reach past a bar or a popup — which is exactly what
+       the decades in navi_z_indexes.js are there to prevent. See
+       docs/z_index.md. */
+    isolation: isolate;
 
     &[data-scrollable-overflow="scroll"] {
       --x-scrollable-overflow: scroll;
     }
 
-    /* box-shadow rather than a border: it draws the separation without taking
-       part in the layout, so a header keeps the exact height its content asks
-       for and nothing shifts by a pixel when the line appears. */
+    /* A real border and not a box-shadow: a shadow is drawn outside the box, so
+       it lands on top of whatever comes next in the painting order and loses to
+       it — a body painting its own background over the line that was meant to
+       separate them. The border belongs to the part itself and is always
+       visible; the pixel it adds shifts nothing, these parts never shrink. */
     /* The corners are the container's, not the part's: a header sitting at the
        top of a rounded box has to follow that curve or it paints square over
        it (a dark header in a rounded popup is where this shows). inherit and
@@ -19045,18 +19067,18 @@ import.meta.css = [/* css */`
     > [data-header] {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: var(--box-header-z-index);
+      border-bottom: 1px solid var(--navi-separator-color-default);
       border-top-left-radius: inherit;
       border-top-right-radius: inherit;
-      box-shadow: 0 1px 0 var(--navi-separator-color-default);
     }
     > [data-footer] {
       position: sticky;
       bottom: 0;
-      z-index: 1;
+      z-index: var(--box-footer-z-index);
+      border-top: 1px solid var(--navi-separator-color-default);
       border-bottom-right-radius: inherit;
       border-bottom-left-radius: inherit;
-      box-shadow: 0 -1px 0 var(--navi-separator-color-default);
     }
 
     &:has(> [data-body]) {
@@ -19070,8 +19092,11 @@ import.meta.css = [/* css */`
 
       > [data-header],
       > [data-footer] {
+        /* Nothing scrolls under them here — the body does that, next to them —
+           so they are back to being blocks in the flow, and stacking is not
+           their business anymore. */
         position: static;
-        z-index: unset;
+        z-index: auto;
         flex-shrink: 0;
       }
 
@@ -25441,6 +25466,13 @@ const useControlProps = (props, {
         const onButtonInteractionAllowed = e => {
           triggerUIAction(e);
           const control = ref.current;
+          if (!control) {
+            // What the button just did took the button away: a command that
+            // navigates, a popup closing over it. There is no control left to
+            // ask for an action, and nothing is lost by not asking — what the
+            // press was for has already happened.
+            return;
+          }
           tryActionAfterInteractionAllowed(control, {
             event: e,
             action: boundAction,
@@ -26989,36 +27021,44 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
       --x-button-border-color: var(--callout-color);
     }
 
+    /* A variant states what the caller did NOT: the frameless ones below move
+       the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
+       so a backgroundColor/background/borderColor prop — which lands inline on
+       this same element — still wins. Two things come with that: the
+       transparent default is written as a fallback of --button-background, so
+       the background prop feeds --button-background-color through it; and the
+       per-state defaults are re-pointed at the base one, otherwise the @layer
+       formulas (hover = 5% black over the background, readonly = the same)
+       would repaint a box the variant just took away. */
+
     /* discrete: background on hover, and nothing else — no box at rest, and no
        shrink when pressed. What is drawn IS the content (a chevron, a number,
        a word), and shrinking it under the finger reads as the content itself
        flinching rather than as a button being pressed. */
     &[data-variant="discrete"] {
       --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: var(--button-background, transparent);
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
 
       &[data-pressed] {
         .navi_button_content {
           transform: none;
         }
-      }
-
-      &[data-hover] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
       }
     }
     /* bare: discrete, minus the background on hover. For a control whose own
@@ -27028,13 +27068,16 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
        on focus, commandable. */
     &[data-variant="bare"] {
       --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
 
-      &[data-hover] {
-        --x-button-background-color: transparent;
-        --x-button-border-color: transparent;
-      }
       &[data-pressed] {
         .navi_button_content {
           transform: none;
@@ -27043,36 +27086,34 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     }
     /* discrete-border: border on hover */
     &[data-variant="discrete-border"] {
-      --x-button-background-color: transparent;
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+      /* The border is the whole point of this variant: it is absent at rest
+         and drawn on hover, so only the resting color goes transparent — the
+         hover one keeps the @layer formula, now mixed from whatever
+         borderColor the caller gave. */
       --x-button-border-color: transparent;
 
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
       }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-      }
+      &[data-readonly],
       &[data-disabled] {
         --x-button-border-color: transparent;
       }
     }
     /* border variant: no background, border only */
     &[data-variant="border"] {
-      --x-button-background-color: transparent;
-
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-background-color: transparent;
-      }
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
     }
     /* Last word on the shrink, over whatever the variant decided: the variant
        guesses from how the button is drawn, and that guess is wrong as soon as
@@ -29169,17 +29210,19 @@ const css$V = /* css */`
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
- * @param {boolean} [props.dockedOnTouch] - Turns the dialog into a bottom sheet
- *   (docked flush to the bottom edge, full width) when the pointer is coarse,
- *   and leaves it alone otherwise. For a dialog meant to be interacted with
- *   rather than merely read: under a finger the keyboard owns the bottom of
- *   the screen and a centered box ends up both cramped and out of thumb
- *   reach, while under a mouse the centered box is already the right shape —
- *   hence a prop that only ever does something on touch. It supplies defaults
- *   for `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`,
- *   so any of them can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
- *   input device, not a width breakpoint — a narrow desktop window is still a
- *   mouse) via `coarsePointerSignal`, so it re-resolves live.
+ * @param {boolean} [props.dockedOnSmallTouchScreen] - Turns the dialog into a
+ *   bottom sheet (docked flush to the bottom edge, full width) on a small touch
+ *   screen, and leaves it alone otherwise. For a dialog meant to be interacted
+ *   with rather than merely read: on a phone the keyboard owns the bottom of
+ *   the screen and a centered box ends up both cramped and out of thumb reach,
+ *   while under a mouse the centered box is already the right shape. Both
+ *   halves of the name matter (`smallTouchScreenSignal`): touch alone would
+ *   dock a big touch screen — a tablet, a kiosk panel — a whole screen away
+ *   from where the finger just tapped, and size alone would dock a narrow
+ *   desktop window, which is still a mouse. It supplies defaults for
+ *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
+ *   any of them can still be pinned explicitly. Re-resolves live as the pointer
+ *   type or the window size changes.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -29192,8 +29235,8 @@ const css$V = /* css */`
  *   `inset(top)`) for the overlapping variant.
  * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
  * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
- *   container allows (`--dialog-maxmax-width`). Set by `dockedOnTouch` on a
- *   touch device.
+ *   container allows (`--dialog-maxmax-width`). Set by
+ *   `dockedOnSmallTouchScreen` on a small touch screen.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`).
  * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
@@ -29223,7 +29266,7 @@ const css$V = /* css */`
  *   A `layer="local"` dialog always locks its own positioned ancestor's
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
- *   whole page. Defaults to `true` for a dialog docked by `dockedOnTouch`.
+ *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -29406,10 +29449,10 @@ const DialogLocal = props => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
-// What a dialog turns into under a finger. "bottom" is not a taste: it puts
-// the dialog in the zone a handheld device is actually operated from — where
-// the thumbs rest and where the virtual keyboard comes up — instead of the
-// middle of the screen, which is the farthest point from both.
+// What a dialog turns into on a small touch screen. "bottom" is not a taste:
+// it puts the dialog in the zone a phone is actually operated from — where the
+// thumbs rest and where the virtual keyboard comes up — instead of the middle
+// of the screen, which is the farthest point from both.
 // Only defaults: an explicitly passed prop still wins, so the docked shape can
 // be adjusted one axis at a time instead of being all-or-nothing.
 const DOCKED = {
@@ -29447,7 +29490,7 @@ const useDialogProps = props => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -29500,9 +29543,10 @@ const useDialogProps = props => {
   });
   const isModal = layer === "top";
   const ref = props.ref;
-  // Only touch changes anything: with a mouse a dialog already wants to be the
-  // centered box it is by default, so there is nothing to resolve there.
-  const isDocked = dockedOnTouch && coarsePointerSignal.value;
+  // Only a small touch screen changes anything: on a mouse — and on a touch
+  // screen too big to reach the bottom edge of — a dialog already wants to be
+  // the centered box it is by default, so there is nothing to resolve.
+  const isDocked = dockedOnSmallTouchScreen && smallTouchScreenSignal.value;
   const positionArea = positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
   const marginWithContainer = marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer :
   // A share of whatever holds the dialog: the app's own screen for a
@@ -31645,8 +31689,8 @@ const css$T = /* css */`
  * @property {"close"|"cancel"|"capture"|"none"} [pointerInteractionOutsideEffect]
  *   - What a click outside does. `"capture"`/`"none"` force an explicit answer
  *   by refusing to treat a click elsewhere as one.
- * @property {boolean} [dockedOnTouch] - `"dialog"` mode only: turn the popup
- *   into a bottom sheet under a finger.
+ * @property {boolean} [dockedOnSmallTouchScreen] - `"dialog"` mode only: turn
+ *   the popup into a bottom sheet on a small touch screen.
  * @property {(params: { message: import("ignore:preact").ComponentChildren }) => import("ignore:preact").ComponentChildren} [renderContent]
  *   - Replaces the popup body — the question and the two buttons — for every
  *   confirmation at once. The per-button `confirmPopupContent` prop is the same
@@ -31664,7 +31708,7 @@ const confirmPopupOptions = {
   animationDuration: undefined,
   positionArea: undefined,
   pointerInteractionOutsideEffect: "close",
-  dockedOnTouch: false,
+  dockedOnSmallTouchScreen: false,
   renderContent: undefined
 };
 
@@ -31746,7 +31790,7 @@ const ConfirmPopup = ({
     animationDuration,
     positionArea,
     pointerInteractionOutsideEffect,
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
     renderContent
   } = confirmPopupOptions;
 
@@ -31782,7 +31826,7 @@ const ConfirmPopup = ({
   if (mode === "dialog") {
     return jsx(Dialog, {
       className: "navi_confirm_popup",
-      dockedOnTouch: dockedOnTouch,
+      dockedOnSmallTouchScreen: dockedOnSmallTouchScreen,
       ...popupProps,
       children: body
     });
@@ -32037,6 +32081,16 @@ const debounceSignal = (
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
  */
+// The run is not awaited here, and a rejection nobody waits for is an unhandled
+// one — in dev, an error overlay thrown over a page that is already saying what
+// went wrong. Nothing is lost by dropping it: the failure is held by the action
+// itself, and whoever reads it (useAsyncData, <Button action>) is what shows it.
+const runUnwatched = (result) => {
+  if (result && typeof result.catch === "function") {
+    result.catch(() => {});
+  }
+};
+
 const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
@@ -32086,7 +32140,7 @@ const actionRunEffect = (
           // falsy params, don't run
           return;
         }
-        actionTarget.run({ reason: "truthy params first run" });
+        runUnwatched(actionTarget.run({ reason: "truthy params first run" }));
         return;
       }
 
@@ -32103,16 +32157,20 @@ const actionRunEffect = (
         }
         if (!actionTargetPrevious.params) {
           // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
-          actionTarget.run({ reason: "params restored from falsy state" });
+          runUnwatched(
+            actionTarget.run({ reason: "params restored from falsy state" }),
+          );
         } else {
-          actionTarget.rerun({ reason: "params modified" });
+          runUnwatched(actionTarget.rerun({ reason: "params modified" }));
         }
       }
     },
     ...options,
   });
   if (actionParamsSignal.peek()) {
-    actionRunnedByThisEffect.run({ reason: "initial truthy params" });
+    runUnwatched(
+      actionRunnedByThisEffect.run({ reason: "initial truthy params" }),
+    );
   }
   return actionRunnedByThisEffect;
 };
@@ -35236,6 +35294,24 @@ const TYPE_CONVERTERS = {
   },
 };
 
+/**
+ * A container has put its page on screen — or as much of it as it can.
+ *
+ * A route matching is a signal changing, and the page it selects reaches the
+ * DOM only once Preact has rendered — an unknown number of passes later, in an
+ * unknown number of microtasks. Anyone who needs the page as it IS rather than
+ * as it has been decided (a travel about to have its picture taken by the
+ * browser, see route_travel.jsx) waits for this instead of counting.
+ *
+ * A page waiting on data is announced too, by the boundary showing its loading
+ * state (see Loading in use_async_data.jsx): what the container could put on
+ * screen is what the browser is about to take a picture of, and a page that
+ * cannot render yet would otherwise be waited on until the transition dies of
+ * it. It lives in a module of its own for that: the async layer says it as much
+ * as the router does, and neither can import the other.
+ */
+const [publishRouteRender, observeRouteRender] = createPubSub();
+
 const promiseStateWeakMap = new WeakMap();
 const usePromiseAsyncData = (
   promise,
@@ -35290,7 +35366,8 @@ const useForceRender = () => {
 
 const useAsyncData = (promiseOrAction, {
   loading = "delegate",
-  error = "delegate"
+  error = "delegate",
+  onLoad
 } = {}) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (loading === true) {
@@ -35302,7 +35379,8 @@ const useAsyncData = (promiseOrAction, {
   if (isAction) {
     return useActionAsyncData(promiseOrAction, {
       loadingEffect: loading,
-      errorEffect: error
+      errorEffect: error,
+      onLoad
     });
   }
   return usePromiseAsyncData(promiseOrAction, {
@@ -35319,12 +35397,14 @@ const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
 const useActionAsyncData = (action, {
   loadingEffect,
-  errorEffect
+  errorEffect,
+  onLoad
 }) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
     throw new Error("Missing <Loading>");
   }
+  useOnLoad(action, onLoad);
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -35445,6 +35525,41 @@ const useActionAsyncData = (action, {
   throw pendingPromise;
 };
 
+// What a screen does with the data once, when it becomes known (see onLoad in
+// the JSDoc above). Kept apart because the two questions it answers are not the
+// ones the hook around it answers: WHEN — a layout effect, so a form taking its
+// reference in the same tick sees what was written; and HOW OFTEN — once per set
+// of params, which is the action's own answer to "is this another thing or the
+// same one again".
+const NOTHING_SEEDED = Symbol("nothing_seeded");
+const useOnLoad = (action, onLoad) => {
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
+  const paramsSeededRef = useRef(NOTHING_SEEDED);
+  useLayoutEffect(() => {
+    const callback = onLoadRef.current;
+    if (!callback) {
+      return;
+    }
+    if (action.runningStateSignal.peek() !== COMPLETED) {
+      return;
+    }
+    const data = action.dataSignal.peek();
+    if (data === undefined) {
+      return;
+    }
+    const params = action.paramsSignal.peek();
+    const paramsSeeded = paramsSeededRef.current;
+    if (paramsSeeded !== NOTHING_SEEDED && compareTwoJsValues(params, paramsSeeded)) {
+      return;
+    }
+    paramsSeededRef.current = params;
+    callback(data, {
+      params
+    });
+  });
+};
+
 // ─── Loading ──────────────────────────────────────────────────────────────────
 // Wraps Suspense. Provides LoadingContext so useAction can write the suspension
 // reason. LoadingFallback reads that reason and subscribes to the action so it
@@ -35484,6 +35599,14 @@ const LoadingFallback = ({
       setTick(n => n + 1);
     });
   }, [action]);
+  // A page that suspends never gets to say it is on screen — its own effects
+  // are held with it — so this says it for it: what the document shows of the
+  // page arriving is this. Anyone waiting for the page to be there before
+  // moving (a travel about to have its picture taken, see route_travel.jsx)
+  // would otherwise wait for a render that cannot happen until the data does.
+  useLayoutEffect(() => {
+    publishRouteRender();
+  });
   if (loadingRef.current.reason !== "loading") {
     return null;
   }
@@ -36916,7 +37039,6 @@ const Head = ({
  * ```
  */
 
-const [publishRouteRender, observeRouteRender] = createPubSub();
 
 /**
  * Keep every container showing the page it is showing, whatever the routes say.
@@ -37204,6 +37326,10 @@ installImportMetaCssBuild(import.meta);/**
 const CAN_KEEP_PICTURE = Boolean(document.startViewTransition && !document.startViewTransition.isPolyfill);
 const startViewTransition = ensureDocumentStartViewTransition();
 const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
+// Which way the pages move, said on the document: the pictures of a transition
+// hang off the root, not off the box that travels, so the box's own `axis` has
+// to be lent to the document for the length of the travel.
+const TRAVEL_AXIS_ATTRIBUTE = "data-navi-route-travel-axis";
 // While a finger holds the travel: the pictures stand still and go exactly
 // where it says (see the CSS, and scrubTravel).
 const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
@@ -37397,6 +37523,28 @@ const css$R = /* css */`
     }
   }
 
+  /* The same four movements, along the axis the pages are laid out on: the
+     start of a column is its top, so going forward there is the page rising and
+     the next one coming up from below. */
+  :root[${TRAVEL_AXIS_ATTRIBUTE}="y"] {
+    &[${TRAVEL_ATTRIBUTE}="forward"] {
+      &::view-transition-old(navi-route-travel) {
+        animation-name: navi-route-travel-leave-towards-top;
+      }
+      &::view-transition-new(navi-route-travel) {
+        animation-name: navi-route-travel-enter-from-bottom;
+      }
+    }
+    &[${TRAVEL_ATTRIBUTE}="back"] {
+      &::view-transition-old(navi-route-travel) {
+        animation-name: navi-route-travel-leave-towards-bottom;
+      }
+      &::view-transition-new(navi-route-travel) {
+        animation-name: navi-route-travel-enter-from-top;
+      }
+    }
+  }
+
   @keyframes navi-route-travel-leave-towards-start {
     from {
       translate: 0 0;
@@ -37424,6 +37572,38 @@ const css$R = /* css */`
   @keyframes navi-route-travel-enter-from-start {
     from {
       translate: -100% 0;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+  @keyframes navi-route-travel-leave-towards-top {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 -100%;
+    }
+  }
+  @keyframes navi-route-travel-enter-from-bottom {
+    from {
+      translate: 0 100%;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+  @keyframes navi-route-travel-leave-towards-bottom {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-travel-enter-from-top {
+    from {
+      translate: 0 -100%;
     }
     to {
       translate: 0 0;
@@ -37565,6 +37745,7 @@ const RouteTravel = ({
     // own for as long as it is the one travelling.
     nameForTravel(elementRef.current);
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
+    document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
     if (scrub) {
       holdPictures(travel);
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
@@ -37578,14 +37759,21 @@ const RouteTravel = ({
     const releaseRendering = renderingHeldForRouting || holdRendering();
     renderingHeldForRouting = null;
     // The picture the browser is about to take must be of the page that was
-    // asked for, and a route matching is not yet a page rendered.
+    // asked for, and a route matching is not yet a page rendered. Watched from
+    // here rather than from inside the callback below: the browser calls that
+    // callback a frame later, and a navigation that has already been decided
+    // (what follows a send, a command) renders its page in between. A wait
+    // armed then waits for something that has already happened — until the
+    // browser gives up on the transition, leaving the page it was leaving on
+    // screen and an error nobody asked for.
+    const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
       await whilePageRenders(page, async () => {
         releaseRendering();
         if (change) {
           await change();
         }
-      });
+      }, renderWait);
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
       holdTravelHeight(elementRef.current, heightBefore);
@@ -37610,6 +37798,7 @@ const RouteTravel = ({
     viewTransition.finished.catch(() => {
       // A transition that fails before it ever calls back leaves the page held:
       // whoever asked for the hold gives it back, here as everywhere else.
+      renderWait.stop();
       releaseRendering();
       endTravel(travel);
     });
@@ -37913,6 +38102,7 @@ const RouteTravel = ({
       // rather than pick.
       unnameAfterTravel(elementRef.current);
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
+      document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
       releaseTravelHeight();
@@ -38475,20 +38665,30 @@ const scrubTravel = (travel, ratio) => {
 // inside the callback of a view transition: the browser has stopped rendering
 // and is waiting on this very promise to take its picture, so a wait that never
 // ends is a page frozen under a transition that never became ready.
-const whilePageRenders = async (page, change) => {
+// Listening starts before the change, or a render landing while the change is
+// being awaited is a render nobody heard. Armed apart from the wait itself
+// because the two do not always happen at the same moment: a view transition
+// calls its update callback a frame after it is started, and the render can
+// land in that gap — see beginTravel, which arms this the moment the travel is
+// decided and hands it over.
+const armRouteRenderWait = () => {
   let stopListening;
   const rendered = new Promise(resolve => {
-    // Listened for before the change, or a render landing while the change is
-    // being awaited is a render nobody heard.
     stopListening = observeRouteRender(resolve);
   });
+  return {
+    rendered,
+    stop: () => stopListening()
+  };
+};
+const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
   try {
     await change();
     if (pageIsCurrent(page)) {
-      await rendered;
+      await wait.rendered;
     }
   } finally {
-    stopListening();
+    wait.stop();
   }
 };
 
@@ -38536,12 +38736,20 @@ const pageIsCurrent = ({
   }
   return params ? route.matchesParams(params) : true;
 };
-// Every page is read, never only up to the one that answers yes: a page that is
-// not the current one today is the one that must wake the reader tomorrow.
+// The FIRST page that answers, as with the branches of a <Route>: several
+// routes match at once — a literal one and the parameterized one it is a case of
+// ("/games/new" is also a "/games/:gameId"), a section and the page inside it —
+// and the row has to be on the page the router is showing, which is the first
+// one written that matches.
+//
+// Every page is read all the same, never only up to the one that answers yes: a
+// page that is not the current one today is the one that must wake the reader
+// tomorrow.
 const currentPageIndex = pages => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
-    if (pageIsCurrent(pages[i])) {
+    const isCurrent = pageIsCurrent(pages[i]);
+    if (isCurrent && currentIndex === -1) {
       currentIndex = i;
     }
   }
@@ -52361,7 +52569,7 @@ const PickerContentInsidePopup = props => {
     // above: those exist because "expand" already means something on the picker
     // itself, and this one does not. Popover ignores it, same as Dialog ignores
     // marginWithAnchor.
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
     animation,
     ...rest
   } = props;
@@ -52409,7 +52617,7 @@ const PickerContentInsidePopup = props => {
       expand: isPopover ? undefined : dialogExpand,
       expandX: isPopover ? undefined : dialogExpandX,
       expandY: isPopover ? undefined : dialogExpandY,
-      dockedOnTouch: isPopover ? undefined : dockedOnTouch,
+      dockedOnSmallTouchScreen: isPopover ? undefined : dockedOnSmallTouchScreen,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
@@ -54087,7 +54295,7 @@ const css$v = /* css */`
 
   /* Same reasoning, for the corners: a dialog squares off whatever corner
      lands on its container's own (see the data-flush-* rules in dialog.jsx —
-     a bottom sheet from dockedOnTouch squares its two bottom ones). A list
+     a bottom sheet from dockedOnSmallTouchScreen squares its two bottom ones). A list
      drawn right against that corner has to square the same one, otherwise its
      own radius carves a notch out of the popup's square corner. Direct child
      only: any deeper and the list is presumably inset from the popup's edge,
@@ -59154,14 +59362,25 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       --x-picker-border-color: var(--callout-color);
     }
 
+    /* A variant states what the caller did NOT: it moves the DEFAULTS
+       (--picker-*) and never the resolved values (--x-picker-*), so a
+       backgroundColor/borderColor/padding prop — which lands inline on this
+       same element — still wins. The per-state defaults are re-pointed at the
+       base one too, otherwise the @layer formulas (hover = 5% black over the
+       background, disabled = 5% grey) would repaint a box the variant just
+       took away. */
     &[data-variant="icon"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
     }
     /* discrete: no box at rest, a background on hover — the same word Button
@@ -59169,31 +59388,35 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
        around it; the chevron in the right slot is what still says it opens. */
     &[data-variant="discrete"] {
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
-
-      &[data-hover] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: transparent;
-      }
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--picker-background-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
     }
     &[data-variant="headless"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
 
       .navi_picker_box {
@@ -71079,5 +71302,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

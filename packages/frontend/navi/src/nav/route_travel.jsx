@@ -70,6 +70,10 @@ const CAN_KEEP_PICTURE = Boolean(
 const startViewTransition = ensureDocumentStartViewTransition();
 
 const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
+// Which way the pages move, said on the document: the pictures of a transition
+// hang off the root, not off the box that travels, so the box's own `axis` has
+// to be lent to the document for the length of the travel.
+const TRAVEL_AXIS_ATTRIBUTE = "data-navi-route-travel-axis";
 // While a finger holds the travel: the pictures stand still and go exactly
 // where it says (see the CSS, and scrubTravel).
 const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
@@ -264,6 +268,28 @@ const css = /* css */ `
     }
   }
 
+  /* The same four movements, along the axis the pages are laid out on: the
+     start of a column is its top, so going forward there is the page rising and
+     the next one coming up from below. */
+  :root[${TRAVEL_AXIS_ATTRIBUTE}="y"] {
+    &[${TRAVEL_ATTRIBUTE}="forward"] {
+      &::view-transition-old(navi-route-travel) {
+        animation-name: navi-route-travel-leave-towards-top;
+      }
+      &::view-transition-new(navi-route-travel) {
+        animation-name: navi-route-travel-enter-from-bottom;
+      }
+    }
+    &[${TRAVEL_ATTRIBUTE}="back"] {
+      &::view-transition-old(navi-route-travel) {
+        animation-name: navi-route-travel-leave-towards-bottom;
+      }
+      &::view-transition-new(navi-route-travel) {
+        animation-name: navi-route-travel-enter-from-top;
+      }
+    }
+  }
+
   @keyframes navi-route-travel-leave-towards-start {
     from {
       translate: 0 0;
@@ -291,6 +317,38 @@ const css = /* css */ `
   @keyframes navi-route-travel-enter-from-start {
     from {
       translate: -100% 0;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+  @keyframes navi-route-travel-leave-towards-top {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 -100%;
+    }
+  }
+  @keyframes navi-route-travel-enter-from-bottom {
+    from {
+      translate: 0 100%;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+  @keyframes navi-route-travel-leave-towards-bottom {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-travel-enter-from-top {
+    from {
+      translate: 0 -100%;
     }
     to {
       translate: 0 0;
@@ -427,6 +485,7 @@ export const RouteTravel = ({
     // own for as long as it is the one travelling.
     nameForTravel(elementRef.current);
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
+    document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
     if (scrub) {
       holdPictures(travel);
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
@@ -440,14 +499,25 @@ export const RouteTravel = ({
     const releaseRendering = renderingHeldForRouting || holdRendering();
     renderingHeldForRouting = null;
     // The picture the browser is about to take must be of the page that was
-    // asked for, and a route matching is not yet a page rendered.
+    // asked for, and a route matching is not yet a page rendered. Watched from
+    // here rather than from inside the callback below: the browser calls that
+    // callback a frame later, and a navigation that has already been decided
+    // (what follows a send, a command) renders its page in between. A wait
+    // armed then waits for something that has already happened — until the
+    // browser gives up on the transition, leaving the page it was leaving on
+    // screen and an error nobody asked for.
+    const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
-      await whilePageRenders(page, async () => {
-        releaseRendering();
-        if (change) {
-          await change();
-        }
-      });
+      await whilePageRenders(
+        page,
+        async () => {
+          releaseRendering();
+          if (change) {
+            await change();
+          }
+        },
+        renderWait,
+      );
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
       holdTravelHeight(elementRef.current, heightBefore);
@@ -472,6 +542,7 @@ export const RouteTravel = ({
     viewTransition.finished.catch(() => {
       // A transition that fails before it ever calls back leaves the page held:
       // whoever asked for the hold gives it back, here as everywhere else.
+      renderWait.stop();
       releaseRendering();
       endTravel(travel);
     });
@@ -784,6 +855,7 @@ export const RouteTravel = ({
       // rather than pick.
       unnameAfterTravel(elementRef.current);
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
+      document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
       releaseTravelHeight();
@@ -1358,20 +1430,28 @@ const scrubTravel = (travel, ratio) => {
 // inside the callback of a view transition: the browser has stopped rendering
 // and is waiting on this very promise to take its picture, so a wait that never
 // ends is a page frozen under a transition that never became ready.
-const whilePageRenders = async (page, change) => {
+// Listening starts before the change, or a render landing while the change is
+// being awaited is a render nobody heard. Armed apart from the wait itself
+// because the two do not always happen at the same moment: a view transition
+// calls its update callback a frame after it is started, and the render can
+// land in that gap — see beginTravel, which arms this the moment the travel is
+// decided and hands it over.
+const armRouteRenderWait = () => {
   let stopListening;
   const rendered = new Promise((resolve) => {
-    // Listened for before the change, or a render landing while the change is
-    // being awaited is a render nobody heard.
     stopListening = observeRouteRender(resolve);
   });
+  return { rendered, stop: () => stopListening() };
+};
+
+const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
   try {
     await change();
     if (pageIsCurrent(page)) {
-      await rendered;
+      await wait.rendered;
     }
   } finally {
-    stopListening();
+    wait.stop();
   }
 };
 
@@ -1415,12 +1495,20 @@ const pageIsCurrent = ({ route, params }) => {
   }
   return params ? route.matchesParams(params) : true;
 };
-// Every page is read, never only up to the one that answers yes: a page that is
-// not the current one today is the one that must wake the reader tomorrow.
+// The FIRST page that answers, as with the branches of a <Route>: several
+// routes match at once — a literal one and the parameterized one it is a case of
+// ("/games/new" is also a "/games/:gameId"), a section and the page inside it —
+// and the row has to be on the page the router is showing, which is the first
+// one written that matches.
+//
+// Every page is read all the same, never only up to the one that answers yes: a
+// page that is not the current one today is the one that must wake the reader
+// tomorrow.
 const currentPageIndex = (pages) => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
-    if (pageIsCurrent(pages[i])) {
+    const isCurrent = pageIsCurrent(pages[i]);
+    if (isCurrent && currentIndex === -1) {
       currentIndex = i;
     }
   }

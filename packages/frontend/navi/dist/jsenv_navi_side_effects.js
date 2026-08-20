@@ -137,8 +137,9 @@ const getAppHeight = () =>
 
 // Whether the primary input is a finger rather than a mouse. A pointer type is
 // not a size: a narrow desktop window is still a mouse, and a large tablet is
-// still a finger — so anything sized for thumb reach or for the on-screen
-// keyboard must key off this, never off windowWidthSignal.
+// still a finger — so anything sized for the on-screen keyboard must key off
+// this, never off windowWidthSignal. Thumb reach needs both, which is what
+// smallTouchScreenSignal below answers.
 const coarsePointerQuery = window.matchMedia
   ? window.matchMedia("(pointer: coarse)")
   : null;
@@ -150,6 +151,28 @@ if (coarsePointerQuery) {
     coarsePointerSignal.value = coarsePointerQuery.matches;
   });
 }
+
+// Whether the screen is one a bottom sheet actually suits: a finger *and* a
+// screen small enough that its bottom edge stays where the thumb already is.
+// Touch alone is not enough — a tall touch screen (a tablet, a kiosk panel)
+// docks a sheet a whole screen away from where the finger just tapped, which
+// is worse than the centered box it replaced. Both dimensions are bounded: a
+// phone is at most ~440 CSS px wide (iPhone Pro Max: 430) and ~930 tall, while
+// the smallest tablet already starts around 800 wide — so the width alone
+// separates them today, and the height guard is what covers a narrow-but-huge
+// screen (a folded panel, a device simulated inside a very tall window).
+//
+// Read off window, not visualViewport: the virtual keyboard shrinks the visual
+// viewport while the user types, and a dialog must not undock mid-interaction
+// because a keyboard opened under it.
+const SMALL_TOUCH_SCREEN_MAX_WIDTH = 600;
+const SMALL_TOUCH_SCREEN_MAX_HEIGHT = 1000;
+const smallTouchScreenSignal = computed(
+  () =>
+    coarsePointerSignal.value &&
+    windowWidthSignal.value <= SMALL_TOUCH_SCREEN_MAX_WIDTH &&
+    windowHeightSignal.value <= SMALL_TOUCH_SCREEN_MAX_HEIGHT,
+);
 
 installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
@@ -377,5 +400,5 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

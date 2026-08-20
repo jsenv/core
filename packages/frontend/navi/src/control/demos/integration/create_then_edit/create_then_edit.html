@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Créer puis modifier</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 820px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .phone {
+        display: flex;
+        width: 380px;
+        height: 520px;
+        flex: none;
+        flex-direction: column;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        height: 100%;
+        padding: 20px;
+        flex-direction: column;
+        gap: 16px;
+        background: white;
+        overflow: auto;
+      }
+      .page_title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      .game_list {
+        display: flex;
+        padding: 4px 0;
+        flex-direction: column;
+        gap: 2px;
+        border-top: 1px solid #eceff1;
+        border-bottom: 1px solid #eceff1;
+      }
+      .game_card {
+        margin: 0;
+        padding: 12px 14px;
+        color: #37474f;
+        font-size: 14px;
+        line-height: 1.6;
+        background: #eceff1;
+        border-radius: 8px;
+      }
+      /* Le backend, à côté de l'écran: ce qu'il tient, et les appels en vol. */
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        List,
+        Loading,
+        Picker,
+        Route,
+        RouteTravel,
+        Select,
+        Text,
+        resource,
+        route,
+        routeAction,
+        setupRoutes,
+        stateSignal,
+        useAsyncData,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../../internal/demo_header.jsx";
+      import {
+        FakeBackend,
+        createFakeBackend,
+      } from "../../../../internal/fake_backend.jsx";
+
+      // ── Le backend ────────────────────────────────────────────────────────
+      // Créé ici, hors de l'arbre: les appels partent des callbacks REST de la
+      // ressource, qui ne sont pas dans un composant. Chaque appel attend qu'on
+      // lui réponde (ou que le mode réponde pour nous), pour que l'écran en
+      // chargement et l'écran en erreur restent à l'écran aussi longtemps qu'on
+      // veut.
+      // Les lieux: bien plus que ce qu'une liste rend d'un coup. Le backend en
+      // renvoie les trois premiers — et, si on le lui demande, celui qu'on tient
+      // déjà, où qu'il soit dans la liste.
+      const PLACE_PAGE_SIZE = 3;
+      const ALL_PLACES = [
+        { id: "gymnase-central", name: "Gymnase central" },
+        { id: "halle-nord", name: "Halle nord" },
+        { id: "cosec-du-parc", name: "COSEC du parc" },
+        { id: "gymnase-des-lilas", name: "Gymnase des Lilas" },
+        { id: "salle-des-vignes", name: "Salle des vignes" },
+        { id: "city-stade", name: "City stade" },
+        { id: "gymnase-du-port", name: "Gymnase du port" },
+        { id: "halle-des-sports", name: "Halle des sports" },
+      ];
+      const findPlace = (id) => ALL_PLACES.find((place) => place.id === id);
+
+      const backend = createFakeBackend({
+        value: [
+          {
+            id: "1",
+            name: "Padel du mardi",
+            level: "confirme",
+            players: 4,
+            placeId: "halle-des-sports",
+          },
+        ],
+        persist: "navi_demo_create_then_edit",
+      });
+      const games = () => backend.valueSignal.value;
+      const findGame = (id) => games().find((game) => game.id === id);
+      // Lu dans les données plutôt que compté ici: elles reviennent d'une visite
+      // précédente, où le compteur ne les a pas vues naître.
+      const nextGameId = () => {
+        let biggest = 0;
+        for (const game of games()) {
+          const id = Number(game.id);
+          if (id > biggest) {
+            biggest = id;
+          }
+        }
+        return String(biggest + 1);
+      };
+      const writeGame = (game) => {
+        const rest = games().filter((candidate) => candidate.id !== game.id);
+        backend.setValue([...rest, game]);
+        return game;
+      };
+      const api = {
+        read: (id) =>
+          backend.call(`GET /games/${id}`, () => {
+            const game = findGame(id);
+            if (!game) {
+              throw new Error(`Aucune partie "${id}"`);
+            }
+            // Le nom du lieu voyage avec la partie: la page de la partie n'a pas
+            // à aller le chercher dans une liste qu'elle n'a pas.
+            return { ...game, placeName: findPlace(game.placeId)?.name };
+          }),
+        readPlaces: ({ include }) =>
+          backend.call(
+            `GET /places${include ? `?include=${include}` : ""}`,
+            () => {
+              const page = ALL_PLACES.slice(0, PLACE_PAGE_SIZE);
+              if (!include || page.some((place) => place.id === include)) {
+                return page;
+              }
+              const held = findPlace(include);
+              // Un `include` qui ne désigne rien n'est pas une erreur: la
+              // réponse est la page, et l'écran retombe sur son cas
+              // "introuvable" — qui devient une vraie information.
+              return held ? [...page, held] : page;
+            },
+          ),
+        readMany: () => backend.call("GET /games", () => games()),
+        create: (values) =>
+          backend.call("POST /games", () =>
+            writeGame({ id: nextGameId(), ...values }),
+          ),
+        update: (id, values) =>
+          backend.call(`PUT /games/${id}`, () =>
+            writeGame({ ...findGame(id), ...values }),
+          ),
+      };
+
+      // ── Le brouillon de création ──────────────────────────────────────────
+      // À l'écran, pas au backend: il vit dans l'url (voir la route ci-dessous),
+      // donc il survit à un rechargement et se partage. L'écran de modification
+      // a les siens — deux écrans qui partagent un état finissent par se le
+      // voler.
+      const draftNameSignal = stateSignal("", { id: "name" });
+      const draftLevelSignal = stateSignal("debutant", {
+        id: "level",
+        oneOf: ["debutant", "confirme"],
+      });
+      const draftPlayersSignal = stateSignal(4, {
+        id: "players",
+        type: "number",
+        min: 2,
+        max: 8,
+      });
+      // Un identifiant, et rien d'autre: l'url ne peut pas porter le nom du
+      // lieu. C'est ce qui rend la suite délicate — voir PLACES_OF_SCREEN.
+      const draftPlaceSignal = stateSignal(undefined, { id: "place" });
+
+      // ── Les routes ────────────────────────────────────────────────────────
+      const HOME_ROUTE = route("/");
+      // Les champs de la création sont dans l'url: un brouillon se recharge et
+      // se partage. Ceux de la modification n'y sont pas — ils appartiennent à
+      // la partie, pas à la position.
+      const NEW_GAME_ROUTE = route("/games/new", {
+        searchParams: {
+          name: draftNameSignal,
+          level: draftLevelSignal,
+          players: draftPlayersSignal,
+          place: draftPlaceSignal,
+        },
+      });
+      const GAME_ROUTE = route("/games/:gameId");
+      const EDIT_GAME_ROUTE = route("/games/:gameId/edit");
+      setupRoutes([HOME_ROUTE, NEW_GAME_ROUTE, GAME_ROUTE, EDIT_GAME_ROUTE]);
+
+      // ── La ressource ──────────────────────────────────────────────────────
+      // Chaque callback rend ce que le store doit garder. C'est ce qui fait
+      // qu'un PUT met à jour la page de la partie sans que personne ne
+      // recharge, et qu'un POST fait réapparaître la liste avec la nouvelle.
+      const GAME = resource("game", {
+        GET: ({ id }) => api.read(id),
+        GET_MANY: () => api.readMany(),
+        POST: (values) => api.create(values),
+        PUT: ({ id, ...values }) => api.update(id, values),
+      });
+
+      // Une action ne part pas toute seule quand on la lit: c'est la route qui
+      // la déclenche. La liste se charge en arrivant sur l'accueil — et se
+      // recharge d'elle-même après un POST, sans que personne le demande.
+      const GAMES_OF_HOME = routeAction(HOME_ROUTE, GAME.GET_MANY, () => true);
+
+      // ── La partie que l'url désigne, chargée pour les deux pages ──────────
+      const GAME_OF_ROUTE = routeAction(
+        [GAME_ROUTE, EDIT_GAME_ROUTE],
+        GAME.GET,
+        () => {
+          // "/games/new" est aussi une url de ":gameId": plusieurs routes
+          // matchent à la fois, et c'est à la plus précise de le dire.
+          if (NEW_GAME_ROUTE.matchingSignal.value) {
+            return null;
+          }
+          const gameId =
+            GAME_ROUTE.paramsSignal.value.gameId ||
+            EDIT_GAME_ROUTE.paramsSignal.value.gameId;
+          return gameId ? { id: gameId } : null;
+        },
+      );
+
+      const PLACE = resource("place", {
+        GET_MANY: ({ include }) => api.readPlaces({ include }),
+      });
+
+      // La liste des lieux, demandée EN DISANT ce que l'écran tient déjà.
+      // Pas `() => true`: la réponse n'est qu'une page, et le lieu que l'url
+      // désigne peut ne pas y être — l'écran afficherait alors son identifiant
+      // à la place de son nom. `include` est un ajout, pas un filtre: la page
+      // reste la page, et ce lieu-là s'y trouve en plus.
+      const PLACES_OF_SCREEN = routeAction(
+        [NEW_GAME_ROUTE, EDIT_GAME_ROUTE],
+        PLACE.GET_MANY,
+        () => {
+          // En création, l'url tient la sélection et on la connaît tout de
+          // suite.
+          if (NEW_GAME_ROUTE.matchingSignal.value) {
+            return { include: draftPlaceSignal.value };
+          }
+          // En modification elle arrive avec la partie: demander la liste avant
+          // de savoir ce qu'elle doit contenir, c'est la demander deux fois.
+          const game = GAME_OF_ROUTE.dataSignal.value;
+          return game ? { include: game.placeId } : null;
+        },
+      );
+
+      // ── Les champs, et rien d'autre ───────────────────────────────────────
+      // Ce composant ne sait pas s'il crée ou s'il modifie: on lui donne les
+      // signaux qui tiennent les valeurs, et l'état de ce qu'il attend encore.
+      // Le lieu: un picker sur une liste que le backend ne rend qu'en partie.
+      // Ce qui est affiché sur la ligne se cherche dans cette liste — d'où le
+      // `include` de PLACES_OF_SCREEN: sans lui, un lieu hors page s'afficherait
+      // sous son identifiant, ce que la ligne montre telle quelle.
+      const PlaceField = ({ placeSignal, loading }) => {
+        const [places, placesLoading] = useAsyncData(PLACES_OF_SCREEN, {
+          loading: true,
+        });
+        const placeId = placeSignal.value;
+        const selected = places?.find((place) => place.id === placeId);
+
+        return (
+          <Field vertical>
+            <Label>Lieu</Label>
+            <Picker
+              name="placeId"
+              signal={placeSignal}
+              loading={loading || (placesLoading && !places)}
+              minWidth="200"
+              ui={
+                selected ? (
+                  selected.name
+                ) : placeId ? (
+                  placeId
+                ) : (
+                  <Text color="#999">Choisir un lieu</Text>
+                )
+              }
+            >
+              <List selectable command="--navi-send" maxHeight="200" separator>
+                {(places ?? []).map((place, index) => (
+                  <List.Item
+                    selectable
+                    key={place.id}
+                    id={place.id}
+                    index={index}
+                    value={place.id}
+                    selected={place.id === placeId}
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    {place.name}
+                  </List.Item>
+                ))}
+              </List>
+            </Picker>
+          </Field>
+        );
+      };
+
+      const GameFormFields = ({
+        nameSignal,
+        levelSignal,
+        playersSignal,
+        placeSignal,
+        loading,
+      }) => (
+        <Box flex="y" spacing="m">
+          <Field vertical>
+            <Label>Nom</Label>
+            <Input name="name" signal={nameSignal} loading={loading} required />
+          </Field>
+          <Field vertical>
+            <Label>Niveau</Label>
+            <Select name="level" signal={levelSignal} loading={loading}>
+              <option value="debutant">Débutant</option>
+              <option value="confirme">Confirmé</option>
+            </Select>
+          </Field>
+          <Field vertical>
+            <Label>Joueurs</Label>
+            <Input
+              name="players"
+              type="number"
+              signal={playersSignal}
+              loading={loading}
+            />
+          </Field>
+          <PlaceField placeSignal={placeSignal} loading={loading} />
+        </Box>
+      );
+
+      const LoadFailed = ({ title, error, action }) => (
+        <div className="page">
+          <h2 className="page_title">{title}</h2>
+          <p className="game_card">{error.message}</p>
+          <Button action={() => action.rerun()}>Réessayer</Button>
+        </div>
+      );
+
+      const NewGamePage = () => (
+        <div className="page">
+          <h2 className="page_title">Créer une partie</h2>
+          <Form
+            action={async (values) => {
+              const game = await GAME.POST.bindParams(values).rerun();
+              // La destination n'existait pas avant la réponse: c'est l'action
+              // qui l'a apprise, c'est elle qui y va.
+              GAME_ROUTE.navTo({ gameId: game.id });
+              // Le brouillon a servi: il ne doit pas être là au prochain "créer
+              // une partie". undefined plutôt qu'une valeur vide — c'est ce qui
+              // rend les signaux à leur défaut et vide l'url. Après la
+              // navigation, pas avant: l'effacer pendant que l'écran de
+              // création est encore là relance la liste des lieux pour un
+              // écran qu'on quitte.
+              draftNameSignal.value = undefined;
+              draftLevelSignal.value = undefined;
+              draftPlayersSignal.value = undefined;
+              draftPlaceSignal.value = undefined;
+            }}
+          >
+            <Box flex="y" spacing="m">
+              <GameFormFields
+                nameSignal={draftNameSignal}
+                levelSignal={draftLevelSignal}
+                playersSignal={draftPlayersSignal}
+                placeSignal={draftPlaceSignal}
+              />
+              <Button type="submit" cta>
+                Créer
+              </Button>
+            </Box>
+          </Form>
+          <Link route={HOME_ROUTE}>Annuler</Link>
+        </div>
+      );
+
+      const GamePage = () => {
+        const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
+          loading: true,
+          error: true,
+        });
+
+        if (error) {
+          return (
+            <LoadFailed title="Partie" error={error} action={GAME_OF_ROUTE} />
+          );
+        }
+        if (loading && !game) {
+          return (
+            <div className="page">
+              <h2 className="page_title">Partie</h2>
+              <p className="game_card">Chargement…</p>
+            </div>
+          );
+        }
+        return (
+          <div className="page">
+            <h2 className="page_title">{game.name}</h2>
+            <p className="game_card">
+              Niveau: {game.level}
+              <br />
+              Joueurs: {game.players}
+              <br />
+              Lieu: {game.placeName ?? "—"}
+            </p>
+            <Link route={EDIT_GAME_ROUTE} routeParams={{ gameId: game.id }}>
+              Modifier
+            </Link>
+            <Link route={HOME_ROUTE}>Toutes les parties</Link>
+          </div>
+        );
+      };
+
+      const EditGamePage = () => {
+        // Les signaux de cet écran: ce qu'on est en train de modifier n'est pas
+        // le brouillon de création. L'écran est là avant ses valeurs — elles
+        // arrivent une requête plus tard — donc les champs partent vides et
+        // attendent, plutôt que de laisser un écran blanc.
+        const nameSignal = useSignal(undefined);
+        const levelSignal = useSignal(undefined);
+        const playersSignal = useSignal(undefined);
+        const placeSignal = useSignal(undefined);
+        const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
+          loading: true,
+          error: true,
+          // Une fois, quand la partie est connue. Pas à chaque fois qu'elle
+          // revient: un PUT réussi, un rechargement de la liste, un poll la
+          // redonnent, et recopier alors écraserait ce que la personne est en
+          // train d'écrire.
+          onLoad: (game) => {
+            nameSignal.value = game.name;
+            levelSignal.value = game.level;
+            playersSignal.value = game.players;
+            placeSignal.value = game.placeId;
+          },
+        });
+
+        if (error) {
+          return (
+            <LoadFailed title="Modifier" error={error} action={GAME_OF_ROUTE} />
+          );
+        }
+        const waiting = loading && !game;
+        return (
+          <div className="page">
+            <h2 className="page_title">
+              Modifier {game ? game.name : "une partie"}
+            </h2>
+            {/* `pristineKey`: la référence du formulaire est prise quand les
+                champs ont été remplis, pas quand l'écran s'est ouvert — sans ça
+                il s'ouvre déjà modifié et Enregistrer renvoie ce qui vient
+                d'arriver. */}
+            <Form
+              pristineKey={game?.id}
+              command={
+                game
+                  ? `--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`
+                  : undefined
+              }
+              action={(values) =>
+                GAME.PUT.bindParams({ id: game.id, ...values }).rerun()
+              }
+            >
+              <Box flex="y" spacing="m">
+                <GameFormFields
+                  nameSignal={nameSignal}
+                  levelSignal={levelSignal}
+                  playersSignal={playersSignal}
+                  placeSignal={placeSignal}
+                  loading={waiting}
+                />
+                <Button type="submit" cta loading={waiting}>
+                  Enregistrer
+                </Button>
+              </Box>
+            </Form>
+            {game ? (
+              <Link route={GAME_ROUTE} routeParams={{ gameId: game.id }}>
+                Annuler
+              </Link>
+            ) : null}
+          </div>
+        );
+      };
+
+      const HomePage = () => {
+        const [games, loading, error] = useAsyncData(GAMES_OF_HOME, {
+          loading: true,
+          error: true,
+        });
+        if (error) {
+          return (
+            <LoadFailed title="Parties" error={error} action={GAMES_OF_HOME} />
+          );
+        }
+        if (loading && !games) {
+          return (
+            <div className="page">
+              <h2 className="page_title">Parties</h2>
+              <p className="game_card">Chargement…</p>
+            </div>
+          );
+        }
+        return (
+          <div className="page">
+            <h2 className="page_title">Parties</h2>
+            <div className="game_list">
+              {games.map((game) => (
+                <Link
+                  key={game.id}
+                  route={GAME_ROUTE}
+                  routeParams={{ gameId: game.id }}
+                >
+                  {game.name}
+                </Link>
+              ))}
+            </div>
+            <Button cta command={`--navi-nav-to:${NEW_GAME_ROUTE.buildUrl()}`}>
+              Créer une partie
+            </Button>
+          </div>
+        );
+      };
+
+      // La partie et sa modification voyagent entre elles, sur leur propre axe:
+      // la modification est au-dessus, donc elle descend sur la partie et
+      // s'enregistrer la fait remonter. C'est la même partie vue de deux façons,
+      // donc rien d'autre à l'écran ne se déplace.
+      const GameArea = () => (
+        <RouteTravel axis="y" routes={[EDIT_GAME_ROUTE, GAME_ROUTE]}>
+          <Route>
+            <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+            <Route route={GAME_ROUTE} element={GamePage} />
+          </Route>
+        </RouteTravel>
+      );
+
+      // Deux ordres, et ils ne disent pas la même chose:
+      // - les enfants sont écrits du plus précis au plus large, parce que la
+      //   première branche qui matche l'emporte (et "/" matche partout);
+      // - `routes` donne l'ordre du voyage: la création est à gauche de la
+      //   partie, donc arriver sur ce qu'on vient de créer va vers la droite.
+      //   L'accueil n'y est pas: ouvrir la création depuis la liste n'est pas un
+      //   déplacement le long d'une rangée, et ne s'anime donc pas.
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="Créer puis modifier" />
+          <div className="demo-section">
+            <p className="caption">
+              Créer une partie, arriver sur la partie créée, la modifier.
+            </p>
+            <FakeBackend backend={backend}>
+              {() => (
+                <Loading>
+                  <div className="phone">
+                    <RouteTravel
+                      className="travel_box"
+                      routes={[NEW_GAME_ROUTE, GAME_ROUTE]}
+                    >
+                      <Route>
+                        <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
+                        {/* La même zone pour les deux: une partie et sa
+                            modification sont un seul endroit de cette rangée,
+                            et ce qui les sépare se joue dans la zone. */}
+                        <Route route={EDIT_GAME_ROUTE} element={GameArea} />
+                        <Route route={GAME_ROUTE} element={GameArea} />
+                        <Route route={HOME_ROUTE} element={HomePage} />
+                      </Route>
+                    </RouteTravel>
+                  </div>
+                </Loading>
+              )}
+            </FakeBackend>
+          </div>
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

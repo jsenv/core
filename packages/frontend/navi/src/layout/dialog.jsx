@@ -73,7 +73,7 @@ import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
-import { coarsePointerSignal } from "./responsive.js";
+import { smallTouchScreenSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
@@ -463,17 +463,19 @@ const css = /* css */ `
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
- * @param {boolean} [props.dockedOnTouch] - Turns the dialog into a bottom sheet
- *   (docked flush to the bottom edge, full width) when the pointer is coarse,
- *   and leaves it alone otherwise. For a dialog meant to be interacted with
- *   rather than merely read: under a finger the keyboard owns the bottom of
- *   the screen and a centered box ends up both cramped and out of thumb
- *   reach, while under a mouse the centered box is already the right shape —
- *   hence a prop that only ever does something on touch. It supplies defaults
- *   for `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`,
- *   so any of them can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
- *   input device, not a width breakpoint — a narrow desktop window is still a
- *   mouse) via `coarsePointerSignal`, so it re-resolves live.
+ * @param {boolean} [props.dockedOnSmallTouchScreen] - Turns the dialog into a
+ *   bottom sheet (docked flush to the bottom edge, full width) on a small touch
+ *   screen, and leaves it alone otherwise. For a dialog meant to be interacted
+ *   with rather than merely read: on a phone the keyboard owns the bottom of
+ *   the screen and a centered box ends up both cramped and out of thumb reach,
+ *   while under a mouse the centered box is already the right shape. Both
+ *   halves of the name matter (`smallTouchScreenSignal`): touch alone would
+ *   dock a big touch screen — a tablet, a kiosk panel — a whole screen away
+ *   from where the finger just tapped, and size alone would dock a narrow
+ *   desktop window, which is still a mouse. It supplies defaults for
+ *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
+ *   any of them can still be pinned explicitly. Re-resolves live as the pointer
+ *   type or the window size changes.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -486,8 +488,8 @@ const css = /* css */ `
  *   `inset(top)`) for the overlapping variant.
  * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
  * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
- *   container allows (`--dialog-maxmax-width`). Set by `dockedOnTouch` on a
- *   touch device.
+ *   container allows (`--dialog-maxmax-width`). Set by
+ *   `dockedOnSmallTouchScreen` on a small touch screen.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`).
  * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
@@ -517,7 +519,7 @@ const css = /* css */ `
  *   A `layer="local"` dialog always locks its own positioned ancestor's
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
- *   whole page. Defaults to `true` for a dialog docked by `dockedOnTouch`.
+ *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -697,10 +699,10 @@ const DialogLocal = (props) => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
-// What a dialog turns into under a finger. "bottom" is not a taste: it puts
-// the dialog in the zone a handheld device is actually operated from — where
-// the thumbs rest and where the virtual keyboard comes up — instead of the
-// middle of the screen, which is the farthest point from both.
+// What a dialog turns into on a small touch screen. "bottom" is not a taste:
+// it puts the dialog in the zone a phone is actually operated from — where the
+// thumbs rest and where the virtual keyboard comes up — instead of the middle
+// of the screen, which is the farthest point from both.
 // Only defaults: an explicitly passed prop still wins, so the docked shape can
 // be adjusted one axis at a time instead of being all-or-nothing.
 const DOCKED = {
@@ -739,7 +741,7 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
 
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
@@ -793,9 +795,10 @@ const useDialogProps = (props) => {
   });
   const isModal = layer === "top";
   const ref = props.ref;
-  // Only touch changes anything: with a mouse a dialog already wants to be the
-  // centered box it is by default, so there is nothing to resolve there.
-  const isDocked = dockedOnTouch && coarsePointerSignal.value;
+  // Only a small touch screen changes anything: on a mouse — and on a touch
+  // screen too big to reach the bottom edge of — a dialog already wants to be
+  // the centered box it is by default, so there is nothing to resolve.
+  const isDocked = dockedOnSmallTouchScreen && smallTouchScreenSignal.value;
   const positionArea =
     positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
   const marginWithContainer =

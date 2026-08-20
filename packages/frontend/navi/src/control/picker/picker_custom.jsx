@@ -671,7 +671,7 @@ const PickerContentInsidePopup = (props) => {
     // above: those exist because "expand" already means something on the picker
     // itself, and this one does not. Popover ignores it, same as Dialog ignores
     // marginWithAnchor.
-    dockedOnTouch,
+    dockedOnSmallTouchScreen,
     animation,
     ...rest
   } = props;
@@ -733,7 +733,7 @@ const PickerContentInsidePopup = (props) => {
         expand={isPopover ? undefined : dialogExpand}
         expandX={isPopover ? undefined : dialogExpandX}
         expandY={isPopover ? undefined : dialogExpandY}
-        dockedOnTouch={isPopover ? undefined : dockedOnTouch}
+        dockedOnSmallTouchScreen={isPopover ? undefined : dockedOnSmallTouchScreen}
       >
         {/* Let the popup content branch on the mode via usePopupMode(). */}
         <PopupModeContext.Provider value={mode}>

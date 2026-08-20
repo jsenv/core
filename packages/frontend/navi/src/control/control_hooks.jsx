@@ -390,6 +390,13 @@ export const useControlProps = (
         const onButtonInteractionAllowed = (e) => {
           triggerUIAction(e);
           const control = ref.current;
+          if (!control) {
+            // What the button just did took the button away: a command that
+            // navigates, a popup closing over it. There is no control left to
+            // ask for an action, and nothing is lost by not asking — what the
+            // press was for has already happened.
+            return;
+          }
           tryActionAfterInteractionAllowed(control, {
             event: e,
             action: boundAction,
