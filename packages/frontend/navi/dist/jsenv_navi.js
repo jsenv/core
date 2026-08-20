@@ -27021,36 +27021,44 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
       --x-button-border-color: var(--callout-color);
     }
 
+    /* A variant states what the caller did NOT: the frameless ones below move
+       the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
+       so a backgroundColor/background/borderColor prop — which lands inline on
+       this same element — still wins. Two things come with that: the
+       transparent default is written as a fallback of --button-background, so
+       the background prop feeds --button-background-color through it; and the
+       per-state defaults are re-pointed at the base one, otherwise the @layer
+       formulas (hover = 5% black over the background, readonly = the same)
+       would repaint a box the variant just took away. */
+
     /* discrete: background on hover, and nothing else — no box at rest, and no
        shrink when pressed. What is drawn IS the content (a chevron, a number,
        a word), and shrinking it under the finger reads as the content itself
        flinching rather than as a button being pressed. */
     &[data-variant="discrete"] {
       --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: var(--button-background, transparent);
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
 
       &[data-pressed] {
         .navi_button_content {
           transform: none;
         }
-      }
-
-      &[data-hover] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
       }
     }
     /* bare: discrete, minus the background on hover. For a control whose own
@@ -27060,13 +27068,16 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
        on focus, commandable. */
     &[data-variant="bare"] {
       --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
 
-      &[data-hover] {
-        --x-button-background-color: transparent;
-        --x-button-border-color: transparent;
-      }
       &[data-pressed] {
         .navi_button_content {
           transform: none;
@@ -27075,36 +27086,34 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     }
     /* discrete-border: border on hover */
     &[data-variant="discrete-border"] {
-      --x-button-background-color: transparent;
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+      /* The border is the whole point of this variant: it is absent at rest
+         and drawn on hover, so only the resting color goes transparent — the
+         hover one keeps the @layer formula, now mixed from whatever
+         borderColor the caller gave. */
       --x-button-border-color: transparent;
 
       &[data-hover] {
         --x-button-border-color: var(--button-border-color-hover);
       }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-      }
+      &[data-readonly],
       &[data-disabled] {
         --x-button-border-color: transparent;
       }
     }
     /* border variant: no background, border only */
     &[data-variant="border"] {
-      --x-button-background-color: transparent;
-
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-background-color: transparent;
-      }
+      --button-background-color: var(--button-background, transparent);
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
     }
     /* Last word on the shrink, over whatever the variant decided: the variant
        guesses from how the button is drawn, and that guess is wrong as soon as
@@ -59353,14 +59362,25 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       --x-picker-border-color: var(--callout-color);
     }
 
+    /* A variant states what the caller did NOT: it moves the DEFAULTS
+       (--picker-*) and never the resolved values (--x-picker-*), so a
+       backgroundColor/borderColor/padding prop — which lands inline on this
+       same element — still wins. The per-state defaults are re-pointed at the
+       base one too, otherwise the @layer formulas (hover = 5% black over the
+       background, disabled = 5% grey) would repaint a box the variant just
+       took away. */
     &[data-variant="icon"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
     }
     /* discrete: no box at rest, a background on hover — the same word Button
@@ -59368,31 +59388,35 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
        around it; the chevron in the right slot is what still says it opens. */
     &[data-variant="discrete"] {
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
-
-      &[data-hover] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        --x-picker-border-color: transparent;
-        --x-picker-background-color: transparent;
-      }
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--picker-background-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
     }
     &[data-variant="headless"] {
-      --x-picker-padding-top: 0;
-      --x-picker-padding-right: 0;
-      --x-picker-padding-bottom: 0;
-      --x-picker-padding-left: 0;
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --x-picker-border-color: transparent;
-      --x-picker-background-color: transparent;
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
 
       .navi_picker_box {
