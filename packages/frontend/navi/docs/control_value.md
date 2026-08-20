@@ -102,6 +102,12 @@ attribute:
 A group (a selectable list, a checkbox group) writes its whole selection into
 the signal, not one item's value — its children put it together between them.
 
+A `<Form>` (or a `<ControlGroup>`) takes one the same way, holding the whole
+object: its named children are filled from it, they move when something else
+writes it, and what they change is written back into it. One signal for a screen
+whose values arrive together — see
+[create_and_edit.md](./create_and_edit.md#two-screens-two-states).
+
 ## Which controls take a `signal`
 
 All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,

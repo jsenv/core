@@ -82,6 +82,8 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -158,13 +160,17 @@
           ),
       };
 
-      // ── Un signal par champ, partagé par les deux modes ────────────────────
-      const nameSignal = stateSignal("", { id: "name" });
-      const levelSignal = stateSignal("debutant", {
+      // ── Le brouillon de création ──────────────────────────────────────────
+      // À l'écran, pas au backend: il vit dans l'url (voir la route ci-dessous),
+      // donc il survit à un rechargement et se partage. L'écran de modification
+      // a les siens — deux écrans qui partagent un état finissent par se le
+      // voler.
+      const draftNameSignal = stateSignal("", { id: "name" });
+      const draftLevelSignal = stateSignal("debutant", {
         id: "level",
         oneOf: ["debutant", "confirme"],
       });
-      const playersSignal = stateSignal(4, {
+      const draftPlayersSignal = stateSignal(4, {
         id: "players",
         type: "number",
         min: 2,
@@ -178,9 +184,9 @@
       // la partie, pas à la position.
       const NEW_GAME_ROUTE = route("/games/new", {
         searchParams: {
-          name: nameSignal,
-          level: levelSignal,
-          players: playersSignal,
+          name: draftNameSignal,
+          level: draftLevelSignal,
+          players: draftPlayersSignal,
         },
       });
       const GAME_ROUTE = route("/games/:gameId");
@@ -220,28 +226,23 @@
         },
       );
 
-      // ── Les champs, deux sources ──────────────────────────────────────────
-      // Créer part d'un brouillon (les signaux ci-dessus, donc l'url); modifier
-      // part de la partie chargée. Ce ne sont pas le même état: le brouillon est
-      // à l'écran, la partie est au backend. Les faire tenir par les mêmes
-      // signaux est ce qui fait réapparaître la partie qu'on vient de modifier
-      // dans l'écran de création.
-      const fieldSource = (game, key, signal) =>
-        game ? { value: game[key] } : { signal };
-
-      const GameFormFields = ({ game }) => (
+      // ── Les champs, et rien d'autre ───────────────────────────────────────
+      // Ce composant ne sait pas s'il crée ou s'il modifie: on lui donne les
+      // signaux qui tiennent les valeurs, et l'état de ce qu'il attend encore.
+      const GameFormFields = ({
+        nameSignal,
+        levelSignal,
+        playersSignal,
+        loading,
+      }) => (
         <Box flex="y" spacing="m">
           <Field vertical>
             <Label>Nom</Label>
-            <Input
-              name="name"
-              {...fieldSource(game, "name", nameSignal)}
-              required
-            />
+            <Input name="name" signal={nameSignal} loading={loading} required />
           </Field>
           <Field vertical>
             <Label>Niveau</Label>
-            <Select name="level" {...fieldSource(game, "level", levelSignal)}>
+            <Select name="level" signal={levelSignal} loading={loading}>
               <option value="debutant">Débutant</option>
               <option value="confirme">Confirmé</option>
             </Select>
@@ -251,7 +252,8 @@
             <Input
               name="players"
               type="number"
-              {...fieldSource(game, "players", playersSignal)}
+              signal={playersSignal}
+              loading={loading}
             />
           </Field>
         </Box>
@@ -274,16 +276,20 @@
               // Le brouillon a servi: il ne doit pas être là au prochain "créer
               // une partie". undefined plutôt qu'une valeur vide — c'est ce qui
               // rend les signaux à leur défaut et vide l'url.
-              nameSignal.value = undefined;
-              levelSignal.value = undefined;
-              playersSignal.value = undefined;
+              draftNameSignal.value = undefined;
+              draftLevelSignal.value = undefined;
+              draftPlayersSignal.value = undefined;
               // La destination n'existait pas avant la réponse: c'est l'action
               // qui l'a apprise, c'est elle qui y va.
               GAME_ROUTE.navTo({ gameId: game.id });
             }}
           >
             <Box flex="y" spacing="m">
-              <GameFormFields />
+              <GameFormFields
+                nameSignal={draftNameSignal}
+                levelSignal={draftLevelSignal}
+                playersSignal={draftPlayersSignal}
+              />
               <Button type="submit" cta>
                 Créer
               </Button>
@@ -333,42 +339,73 @@
           loading: true,
           error: true,
         });
+        // Les signaux de cet écran: ce qu'on est en train de modifier n'est pas
+        // le brouillon de création. L'écran est là avant ses valeurs — elles
+        // arrivent une requête plus tard — donc les champs partent vides et
+        // attendent, plutôt que de laisser un écran blanc.
+        const nameSignal = useSignal(undefined);
+        const levelSignal = useSignal(undefined);
+        const playersSignal = useSignal(undefined);
+        // Une fois par partie modifiée, pas une fois par arrivée de données:
+        // un PUT réussi, un rechargement de la liste, une autre visite du même
+        // écran font revenir `game` — recopier à ce moment-là écraserait ce que
+        // la personne est en train d'écrire.
+        //
+        // De layout, pas passif: le formulaire prend sa référence dans les
+        // effets de ce rendu-ci, et un effet passif attendrait la peinture,
+        // c'est-à-dire trop tard pour que `pristineKey` désigne un écran rempli.
+        useLayoutEffect(() => {
+          if (!game) {
+            return;
+          }
+          nameSignal.value = game.name;
+          levelSignal.value = game.level;
+          playersSignal.value = game.players;
+        }, [game?.id]);
 
         if (error) {
           return (
             <LoadFailed title="Modifier" error={error} action={GAME_OF_ROUTE} />
           );
         }
-        if (loading && !game) {
-          return (
-            <div className="page">
-              <h2 className="page_title">Modifier</h2>
-              <p className="game_card">Chargement…</p>
-            </div>
-          );
-        }
+        const waiting = loading && !game;
         return (
           <div className="page">
-            <h2 className="page_title">Modifier {game.name}</h2>
-            {/* Le formulaire n'existe qu'une fois la partie là: il ouvre donc
-                déjà rempli, et ce qu'il porte à ce moment est ce contre quoi il
-                se mesure. Rien à annoncer, rien à reprendre. */}
+            <h2 className="page_title">
+              Modifier {game ? game.name : "une partie"}
+            </h2>
+            {/* `pristineKey`: la référence du formulaire est prise quand les
+                champs ont été remplis, pas quand l'écran s'est ouvert — sans ça
+                il s'ouvre déjà modifié et Enregistrer renvoie ce qui vient
+                d'arriver. */}
             <Form
-              command={`--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`}
+              pristineKey={game?.id}
+              command={
+                game
+                  ? `--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`
+                  : undefined
+              }
               action={(values) =>
                 GAME.PUT.bindParams({ id: game.id, ...values }).rerun()
               }
             >
               <Box flex="y" spacing="m">
-                <GameFormFields game={game} />
-                <Button type="submit" cta>
+                <GameFormFields
+                  nameSignal={nameSignal}
+                  levelSignal={levelSignal}
+                  playersSignal={playersSignal}
+                  loading={waiting}
+                />
+                <Button type="submit" cta loading={waiting}>
                   Enregistrer
                 </Button>
               </Box>
             </Form>
-            <Link route={GAME_ROUTE} routeParams={{ gameId: game.id }}>
-              Annuler
-            </Link>
+            {game ? (
+              <Link route={GAME_ROUTE} routeParams={{ gameId: game.id }}>
+                Annuler
+              </Link>
+            ) : null}
           </div>
         );
       };

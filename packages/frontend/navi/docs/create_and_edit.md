@@ -15,7 +15,7 @@ and the failures can be looked at.
 - [The routes](#the-routes)
 - [The resource](#the-resource)
 - [Two screens, two states](#two-screens-two-states)
-- [The edit screen opens filled](#the-edit-screen-opens-filled)
+- [The edit screen opens before its values](#the-edit-screen-opens-before-its-values)
 - [Where each screen goes next](#where-each-screen-goes-next)
 - [Movement between them](#movement-between-them)
 
@@ -143,38 +143,54 @@ The same three fields, and two different things behind them:
   worth keeping while it is being written. It belongs in the url
   (`searchParams`), which is what makes it survive a reload and travel in a
   link;
-- the **edit** screen holds a **resource** — the server's, loaded, and the
-  screen is a way of proposing changes to it.
+- the **edit** screen holds **what the server has**, loaded, and proposes
+  changes to it. It is the screen's own state, alive as long as the screen is.
 
-Write the fields once and give them their source:
+So the fields are written once, and know nothing about which screen they are in:
 
 ```jsx
-const fieldSource = (game, key, signal) =>
-  game ? { value: game[key] } : { signal };
-
-const GameFormFields = ({ game }) => (
+const GameFormFields = ({
+  nameSignal,
+  levelSignal,
+  playersSignal,
+  loading,
+}) => (
   <>
-    <Input name="name" {...fieldSource(game, "name", nameSignal)} required />
-    <Select name="level" {...fieldSource(game, "level", levelSignal)}>
+    <Input name="name" signal={nameSignal} loading={loading} required />
+    <Select name="level" signal={levelSignal} loading={loading}>
       …
     </Select>
   </>
 );
 ```
 
+Each screen hands it its own:
+
+```jsx
+// créer: le brouillon, qui vit dans l'url
+<GameFormFields
+  nameSignal={draftNameSignal}
+  levelSignal={draftLevelSignal}
+  playersSignal={draftPlayersSignal}
+/>;
+
+// modifier: ceux de cet écran-ci, remplis quand la partie arrive
+const nameSignal = useSignal(undefined);
+```
+
 **Do not let the two share one set of signals.** It is the mistake this shape
-exists to prevent, and it does not look like a mistake: bind both screens to the
-same `nameSignal`, edit a game, then press "create" — the game you just edited
-is sitting in the create form, in the url. The draft and the resource are not
-the same state; one is on the screen, the other is at the backend.
+exists to prevent, and it does not look like one: bind both screens to the same
+`nameSignal`, edit a game, then press "create" — the game you just edited is
+sitting in the create form, and in the url. A draft and a resource are not the
+same state; one is on the screen, the other is at the backend.
 
 The draft's other half is the end of its life:
 
 ```jsx
 action={async (values) => {
   const game = await GAME.POST.bindParams(values).rerun();
-  nameSignal.value = undefined; // le brouillon a servi
-  levelSignal.value = undefined;
+  draftNameSignal.value = undefined; // il a servi
+  draftLevelSignal.value = undefined;
   GAME_ROUTE.navTo({ gameId: game.id });
 }}
 ```
@@ -182,44 +198,65 @@ action={async (values) => {
 `undefined`, not `""`: a state signal put back to undefined returns to its
 default and leaves the url — see [control_value.md](./control_value.md).
 
-## The edit screen opens filled
+> One signal for the whole form works too: `<Form signal={gameSignal}>` fills
+> its named children from the object, follows it when something else writes it,
+> and writes back the whole object as the fields change. Reach for it when the
+> values arrive as one object and no field needs a url of its own — the fields
+> then take nothing but their `name`.
 
-Render the form only once the resource is there, and everything below follows
-from it:
+## The edit screen opens before its values
 
-```jsx
-if (loading && !game) {
-  return <Skeleton />;
-}
-return (
-  <Form action={…}>
-    <GameFormFields game={game} />
-  </Form>
-);
-```
+The resource arrives a request after the screen. Two shapes, and both are
+right — the question is what the person should be looking at meanwhile:
 
-- the fields are **given** their values, so the form holds them from its first
-  render: what it is measured against is right without anyone saying so, and
-  pressing Save without touching anything sends nothing (see
-  [form_changed.md](./form_changed.md));
-- cancelling is a link away — the screen is thrown away with what was typed in
-  it, and coming back re-reads the resource. There is nothing to "restore";
-- after a successful PUT the store holds the new values, the fields are given
-  them, and the screen is already showing what was saved.
-
-**When the form must be on screen before its values** — a long screen you do not
-want to blank, a form whose fields are filled by several requests landing at
-different times — it opens on defaults and is filled later, and then it needs to
-be told when the filling is done:
+**The screen waits, showing the form.** The fields are there, empty and busy
+(`loading` on a control marks it `aria-busy` and shows it), and they fill in
+when the resource lands. Nothing blinks in and out, and a long screen does not
+collapse to a spinner. What it costs is one thing to say — **when the filling is
+done**:
 
 ```jsx
-<Form pristineKey={filled ? game.id : undefined}>
+// Une fois par partie modifiée, pas une fois par arrivée de données.
+useLayoutEffect(() => {
+  if (!game) {
+    return;
+  }
+  nameSignal.value = game.name;
+  levelSignal.value = game.level;
+}, [game?.id]);
+
+<Form pristineKey={game?.id}>;
 ```
 
-Without it the screen opens **already changed** — its reference was taken while
-the fields were still empty — and Save sends back what was just loaded.
-`pristineKey` is the subject of [form_changed.md](./form_changed.md); mounting
-the form with its values is how not to need it.
+Four lines, and each word of them is the answer to a way this breaks:
+
+- **Keyed on `game?.id`, not on `game`.** The object comes back on every
+  arrival: a successful PUT, a list reloading, a poll. Copying it again then
+  would overwrite what the person is in the middle of writing. What has to
+  happen once is "this is another game", and that is its id.
+- **`useLayoutEffect`, not `useEffect`.** The form takes its reference among
+  this render's effects; a passive effect waits for the paint, which is after
+  it. Written passive, the reference is taken while the fields are still empty:
+  the screen opens **already changed**, and Save sends the resource back to the
+  server untouched.
+- **An effect, and not something cleverer.** Writing the copy during render
+  would redo it on every render; a callback on the data arriving would fire on
+  every arrival, which is the granularity the first point just rejected. "The
+  resource landed, the screen takes its own copy" is a transition, and an effect
+  is how a transition is said.
+
+`pristineKey` can then be the id itself: the reference is taken again at the end
+of the tick that changed it, so a copy written anywhere in that tick is part of
+it — see [form_changed.md](./form_changed.md), which is also where the rest of
+`pristineKey` lives.
+
+**Or the screen waits, showing nothing of the form**: render a skeleton until
+the resource is there, then the form with its values already in the fields.
+Nothing to announce then — the form holds them from its first render — but the
+screen has to be one that can be blanked without the person losing their place.
+
+Either way, cancelling is a link away: the screen is thrown away with what was
+typed in it, and coming back re-reads the resource. There is nothing to restore.
 
 ## Where each screen goes next
 
