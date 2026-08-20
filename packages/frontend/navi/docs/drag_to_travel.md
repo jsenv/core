@@ -123,14 +123,17 @@ page moved a little, and it looked wrong":
 
 - **the leftovers of a scroll**, handed up the chain until something moves: a
   list inside the box reaches its end and the page scrolls behind the travel.
-  `overscroll-behavior-<axis>: contain !important` on the travelling box and
-  everything inside it — and **written once and for all, never while the finger
-  is down**: a browser decides what a gesture may do when the gesture BEGINS (at
-  the touchstart, at the first wheel event), so a property written after that
-  decision arrives too late for the gesture it was meant for. That is what
-  "usually it does not move, sometimes it does" is made of. On the travelling
-  axis only — the other one is the content's own scrolling, and containing does
-  not stop scrolling anyway, it stops spilling;
+  `overscroll-behavior-<axis>: contain !important`, **written once and for all,
+  never while the finger is down**: a browser decides what a gesture may do when
+  the gesture BEGINS (at the touchstart, at the first wheel event), so a
+  property written after that decision arrives too late for the gesture it was
+  meant for. That is what "usually it does not move, sometimes it does" is made
+  of — and it is why none of this can be done in JS at the moment it is needed.
+  On the travelling axis only — the other one is the content's own scrolling,
+  and containing does not stop scrolling anyway, it stops spilling. WHERE that
+  property is written is a question of its own, and the engines do not answer it
+  the same way: see [What is contained, and what still
+  leaks](#what-is-contained-and-what-still-leaks);
 - **the elastic bounce** at the end of a page, and the swipe that goes back in
   history with it: `overscroll-behavior: none` on the document while a finger is
   down. Same lateness applies, so this is a last resort behind the rule above
@@ -143,6 +146,75 @@ Both are written by the gesture itself (`data-drag-travel-gesture` and
 `data-drag-travel-walking` on `:root`), so a page that bounces the rest of the
 time goes on bouncing. `preventDefault()` on each move says the same thing to
 the browser for what those two properties do not cover.
+
+### What is contained, and what still leaks
+
+Containing is only ever read on a **scroll container** — an element that clips,
+in the browser's sense, whether or not it has anything to scroll. Three places
+could carry it: the travelling box, everything inside it, or the scrollers
+themselves. Which of the three works is an engine question, and the answer
+splits in two:
+
+- **Blink** asks every scroll container between the pointer and the page whether
+  the gesture may go past it, _even one with nothing to scroll_. Containing the
+  travelling box is therefore the whole answer — and saying it to everything
+  inside is actively harmful: anything that happens to clip (a line with an
+  ellipsis, a rounded card, the invisible checkbox that covers a selectable row)
+  becomes a **dead zone under the wheel**, a container that stops the gesture
+  and has nothing to move with it. This is the bug that made a list refuse the
+  wheel inside a popup and only answer its scrollbar.
+- **Gecko and WebKit** ask only the containers that actually scroll. The
+  travelling box is walked past — it travels, it does not scroll — so the
+  scroller itself has to be told, and saying it to everything is harmless there.
+
+So `drag_to_travel.js` writes it on the box for everyone, and on everything
+inside only outside Blink (`@supports not (-webkit-app-region: none)`, one of
+the few properties that names an engine rather than a user agent string).
+
+It also names the scrollers a browser makes on its own — `textarea`,
+`select[multiple]`, `select[size]` — wherever they are inside the box. Nobody
+declared those, so nothing can find them by looking; being native is exactly
+what makes them nameable. `input` is deliberately not among them: it has
+nothing to scroll on the axis anything travels on, and containing it is how a
+row-wide invisible checkbox becomes a hole under the wheel. The cost of naming
+them is that an empty `textarea` is contained too — a browser cannot be asked
+"only if it scrolls" — so on Blink a wheel over one moves nothing rather than
+the list around it.
+
+On Blink this leaves the boxes that **do not clip**, since those are never
+asked. Of navi's own: `SlideContainer` clips (`overflow: hidden`) and a
+`SidePanel` is a `Dialog`, which scrolls (`overflow: auto`) — both are asked. A
+`RouteTravel` box does not clip and must not be made to: a scroll container
+there would become the nearest one for every `position: sticky` inside the pages
+it holds. A row marked swipeable by `interactions` does not clip either.
+
+Which is why navi contains what it KNOWS scrolls, in `box.jsx`:
+
+```css
+[data-drag-travel*="y"] [data-scrollable] {
+  overscroll-behavior-y: contain !important;
+}
+```
+
+`[data-scrollable]` is worn by a `Box` that ASKED for `overflow: auto|scroll`,
+never by one that merely clips — so this cannot make a dead zone the way `*`
+does, and it puts the containment exactly where every engine reads it. A list, a
+dialog body, a scrolling panel inside a travelling page are covered on Blink
+again.
+
+What still leaks, and only on Blink, and only under a box that does not clip: a
+scroller **nobody declared and no tag names** — a bare
+`<div style="overflow: auto">`, a widget from elsewhere. Its leftovers reach the
+page, which is the old symptom in a much smaller corner. Two ways out, per case:
+give the scroller a `Box` with an `overflow` (it is then declared), or contain it
+by hand. The general fix belongs to Blink.
+
+A note for whoever tests this: **Firefox cannot be measured with a synthetic
+wheel**. Playwright dispatches one outside APZ, where Gecko enforces
+`overscroll-behavior`, so containment never shows up there — inline, from a
+stylesheet, headless or headed alike. The non-Blink branch is therefore left
+exactly as it always was rather than tuned against a measurement that does not
+exist.
 
 ### A hand reaching for something still moving is reaching for THAT thing
 

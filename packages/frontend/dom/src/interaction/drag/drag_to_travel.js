@@ -82,14 +82,76 @@ import.meta.css = /* css */ `
 
      !important because this is not a preference: a box that travels cannot let
      the page travel with it, and the rule has to win over whatever an
-     application says about its own scrollers. */
-  [data-drag-travel*="x"],
-  [data-drag-travel*="x"] * {
+     application says about its own scrollers.
+
+     Said on the box, where it is a statement about the box and not about what
+     it happens to hold — and read only where a browser asks the box at all:
+     one that CLIPS is asked (it is a scroll container, which is what "asked"
+     means to a browser), one that does not is walked past. A box that travels
+     usually clips, because moving something in and out of a box is what
+     clipping is for. One that does not still travels — what an inner scroller
+     has left over reaches the page there, and the rule below says why that is
+     the lesser of the two prices. An application that knows which of ITS
+     elements scroll can contain those itself, on the element every engine
+     reads; nothing in here can know that from a stylesheet. */
+  [data-drag-travel*="x"] {
     overscroll-behavior-x: contain !important;
   }
-  [data-drag-travel*="y"],
-  [data-drag-travel*="y"] * {
+  [data-drag-travel*="y"] {
     overscroll-behavior-y: contain !important;
+  }
+  /* The scrollers a browser makes on its own, wherever they are inside the box:
+     a textarea and a list of options scroll their own content by nature, and
+     nobody had to say so for them — no stylesheet declared them, so nothing
+     else here can find them, and they would hand what is left of a gesture to
+     the page like any undeclared scroller does.
+
+     Named rather than found, because being native is exactly what makes them
+     nameable. An input is NOT in the list: it is the one form control that has
+     nothing to scroll on the axis anything travels on, and containing it is how
+     a row-wide invisible checkbox becomes a hole under the wheel.
+
+     A textarea with nothing in it, or a list of options short enough to fit, is
+     contained too — a browser cannot be asked "only if it scrolls". On Blink
+     that costs a wheel over an empty textarea, which then moves nothing rather
+     than the list around it; elsewhere the engine already only asks what
+     scrolls. Worth the page not moving behind a travel. */
+  [data-drag-travel*="x"] :is(textarea, select[multiple], select[size]) {
+    overscroll-behavior-x: contain !important;
+  }
+  [data-drag-travel*="y"] :is(textarea, select[multiple], select[size]) {
+    overscroll-behavior-y: contain !important;
+  }
+  /* The same thing said again to everything inside — and only where saying it
+     is what works.
+
+     Two readings of "contain" are out there, and the rule above lands in only
+     one of them. Blink walks EVERY scroll container between the pointer and the
+     page and asks each one whether the gesture may go past it, whether or not
+     it had anything to scroll: the box above is asked, and containing it is the
+     whole answer. Gecko and WebKit ask only the ones that actually scroll: the
+     box is skipped (it travels, it does not scroll), and what is left of a
+     list's gesture reaches the page unless the LIST itself was told — which is
+     what this does, to everything, because which descendant scrolls is not
+     something a stylesheet can know.
+
+     Not said to Blink, where it is not needed and does harm: an element that
+     clips is a scroll container to a browser (a line of text with an ellipsis,
+     a rounded card, an invisible checkbox covering a row), and Blink asking one
+     of those with nothing to scroll gets "no further" for an answer — the wheel
+     stops there and the list right above it never moves. A dead zone under the
+     pointer, wherever something inside the box happens to clip.
+
+     Blink is told apart by a property only it has, rather than by reading a user
+     agent: the split above is between engines, and -webkit-app-region is one of
+     the few things that names one. */
+  @supports not (-webkit-app-region: none) {
+    [data-drag-travel*="x"] * {
+      overscroll-behavior-x: contain !important;
+    }
+    [data-drag-travel*="y"] * {
+      overscroll-behavior-y: contain !important;
+    }
   }
 `;
 
