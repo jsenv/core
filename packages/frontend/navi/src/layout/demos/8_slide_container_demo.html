@@ -2012,6 +2012,79 @@
         );
       };
 
+      // Photos filling the screen, with everything else drawn around the box:
+      // only slides go inside it, so the two chevrons and the counter sit in
+      // the frame and reach it by id — commandFor to ask for a travel,
+      // data-slide-container-follows so the arrows keep walking wherever the
+      // keyboard is in the frame.
+      const FullScreenSection = () => {
+        const containerId = useId();
+        const [current, setCurrent] = useState("full_photo_0");
+        const index = PHOTOS.findIndex(
+          (photo, photoIndex) => `full_photo_${photoIndex}` === current,
+        );
+        return (
+          <section class="demo-section" id="full-screen">
+            <Heading id="full-screen">A full-screen viewer</Heading>
+            <p>
+              Open it, then Tab onto a chevron or the close button and press ←
+              →.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="full_screen_dialog">
+                Open the viewer
+              </Button>
+            </div>
+            {/* On the dialog itself, not on a box inside it: the dialog is
+                what holds the keyboard when nothing in it does, and a press
+                landing there has nothing to bubble through */}
+            <Dialog
+              id="full_screen_dialog"
+              expand
+              marginWithContainer={0}
+              flex="y"
+              data-slide-container-follows={containerId}
+            >
+              <Box flex="y" expandY spacing="s" padding="s">
+                <Box flex="x" alignY="center" spacing="s" expandY>
+                  <SlideContainer.Left
+                    commandFor={containerId}
+                    size="xl"
+                    padding="xs"
+                  />
+                  <SlideContainer
+                    id={containerId}
+                    current={current}
+                    onCurrentChange={setCurrent}
+                    duration={useSlideDuration()}
+                    expandX
+                    expandY
+                    borderRadius="8px"
+                  >
+                    {PHOTOS.map((photo, photoIndex) => (
+                      <Slide key={photo.name} id={`full_photo_${photoIndex}`}>
+                        <Photo index={photoIndex} />
+                      </Slide>
+                    ))}
+                  </SlideContainer>
+                  <SlideContainer.Right
+                    commandFor={containerId}
+                    size="xl"
+                    padding="xs"
+                  />
+                </Box>
+                <Box flex="x" alignX="center" alignY="center" spacing="m">
+                  <Text>
+                    {index + 1} / {PHOTOS.length}
+                  </Text>
+                  <Button command="--navi-close">Close</Button>
+                </Box>
+              </Box>
+            </Dialog>
+          </section>
+        );
+      };
+
       const App = () => {
         const [animated, setAnimated] = useStoredBoolean(
           "slide_container_demo_animated",
@@ -2325,6 +2398,8 @@
           </section>
 
           <ExpandDialogSection />
+
+          <FullScreenSection />
 
           <section class="demo-section" id="locking">
             <Heading id="locking">Locking the way out</Heading>

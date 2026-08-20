@@ -473,6 +473,21 @@ const readArea = (slideElement) =>
  * a component of your own wrapping one. Nothing here assumes the children ARE
  * the slides, so nothing breaks when they are not.
  *
+ * Only slides go in it, so everything drawn AROUND the travel is written around
+ * the box and reaches it by id: a chevron pinned to the edge of a full-screen
+ * viewer, a "3 / 8" counter under it, a tab bar. Two things are said to such an
+ * element, and both are needed for it to feel part of the same thing:
+ * `commandFor={id}` on a button, which is how it asks for a travel
+ * (--navi-left/--navi-right/--navi-first/…), and
+ * `data-slide-container-follows={id}` on whatever holds them, which makes it a
+ * follower: the travel's progress is painted onto it to draw with, and the
+ * arrows walk the slides wherever the focus is inside it — otherwise they stop
+ * working the moment one Tabs onto the chevron that walks them. Say it on the
+ * outermost element of the surface — the <Dialog> itself rather than a box
+ * inside it — since that is what holds the keyboard when nothing in it does.
+ * <Nav slideContainer={id}> is a tab bar built out of exactly that. See the
+ * full-screen section of the demo.
+ *
  * @param {object} props
  * @param {"row"|"column"|string[]} [props.layout="row"] - where the slides are.
  *   A word for a line — "row" to the right, "column" downwards, both in DOM
@@ -1985,6 +2000,38 @@ export const SlideContainer = ({
       enabled: Boolean(keyboardAxes),
       handler: (e) => travelled(goToEnd(true, e)),
     },
+  });
+  // …and they are the same shortcuts wherever they are pressed in what follows
+  // this box: a shortcut only ever reaches what has the focus, and a way out
+  // drawn BESIDE the container — a chevron in the column next to it, a counter
+  // one can Tab to — is not inside it. So the arrows that walk the slides stop
+  // walking the moment one Tabs onto the chevron that walks them. A follower
+  // already says which box it is about (data-slide-container-follows), which is
+  // the same thing said for the same reason.
+  // Read on every render: a follower appearing is not a render of this box, and
+  // the list is refreshed by the layout effect above, which runs first.
+  useLayoutEffect(() => {
+    const followerElements = followerElementsRef.current;
+    if (followerElements.length === 0) {
+      return undefined;
+    }
+    const onFollowerKeyDown = (keyDownEvent) => {
+      // Already answered: a follower AROUND this box — the frame of a
+      // full-screen surface, holding the slides and the ways out — hears the
+      // same press bubbling out of it.
+      if (containerRef.current?.contains(keyDownEvent.target)) {
+        return;
+      }
+      onKeyDownShortcuts(keyDownEvent);
+    };
+    for (const followerElement of followerElements) {
+      followerElement.addEventListener("keydown", onFollowerKeyDown);
+    }
+    return () => {
+      for (const followerElement of followerElements) {
+        followerElement.removeEventListener("keydown", onFollowerKeyDown);
+      }
+    };
   });
 
   return (
