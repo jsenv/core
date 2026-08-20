@@ -94,6 +94,8 @@ are read before the box moves:
    scrolls sideways inside a page still scrolls sideways.
 3. **Another travelling box in between.** The innermost one takes the axes it
    walks, and leaves the ones it does not to whoever is above it.
+4. **A surface in the top layer in between.** Nothing above it gets the gesture
+   at all — see [A surface in the top layer](#a-surface-in-the-top-layer).
 
 ### Boxes inside boxes
 
@@ -114,6 +116,21 @@ own the gesture never does. The consequence is that an inner box sitting on its
 last slide does not hand the gesture over mid-drag: it leans on its wall, the way
 it does when it is alone. Travelling the box around it means starting the gesture
 outside it.
+
+### A surface in the top layer
+
+A popover, a modal `<dialog>`, an element gone fullscreen: it is written inside
+whatever opened it — a slide, a page that travels — and the browser paints it
+over the whole screen. The DOM says "inside", the eye says "on top of", and the
+gesture belongs to what the eye sees: a drag across a full-screen dialog opened
+from a slide is not a drag on the slides, and nothing about it should reach
+them.
+
+So every walk up from the pointer stops there. The boxes above the surface get
+no axis, and a scroller above it gets nothing either — it is painted behind the
+surface, and behind is not under the finger. `showModal()` does not do this on
+its own: the rest of the document is made inert, but the press still bubbles out
+of the (not inert) dialog to a listener that sits above it.
 
 ### The browser also wants to answer the gesture
 
