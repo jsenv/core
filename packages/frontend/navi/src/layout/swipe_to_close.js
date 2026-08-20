@@ -1,7 +1,8 @@
 /**
- * Pushing a side panel back the way it came in closes it: the panel follows
- * the finger while it travels, and letting go either finishes the departure or
- * brings it back to rest — whichever the travel was already heading to.
+ * Pushing a popup docked to an edge (a side panel, a bottom sheet) back the way
+ * it came in closes it: it follows the finger while it travels, and letting go
+ * either finishes the departure or brings it back to rest — whichever the
+ * travel was already heading to.
  *
  * Reading the pointer is not done here: when a press becomes a gesture, which
  * axis it leans on, how fast it was going when it was let go, who else has a
@@ -27,7 +28,7 @@ import { triggerNaviCommand } from "../control/commands.js";
 // less, so the panel keeps the same speed whenever the finger let go.
 const TRAVEL_DURATION = 220;
 
-// Which way a panel docked to each side travels — read by the panel itself to
+// Which way a popup docked to each side travels — read by the panel itself to
 // say so in the DOM, which is how a box travelling INSIDE it (a row of slides,
 // a route travel) knows that axis is already walked.
 export const SWIPE_AXIS_BY_SIDE = {
@@ -41,9 +42,16 @@ export const SWIPE_AXIS_BY_SIDE = {
 const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
 
 /**
- * Builds the `pointerdown` handler a side panel docked to `side` answers with.
+ * Builds the `pointerdown` handler a popup docked to `side` answers with.
+ *
+ * `grip` narrows where the gesture may start to one part of the popup, given as
+ * a selector matched inside it: a popup whose whole surface is a place to push
+ * from has nothing else to do with the press, while one made of content the
+ * finger operates (a bottom sheet full of controls) only offers the strip that
+ * is there to be held. A popup that has no such part is pushed from anywhere,
+ * so naming a grip never leaves it undismissable.
  */
-export const createSwipeToClose = (side) => {
+export const createSwipeToClose = (side, { grip } = {}) => {
   const axis = SWIPE_AXIS_BY_SIDE[side];
   const closeDirection = CLOSE_DIRECTION_BY_SIDE[side];
 
@@ -51,6 +59,12 @@ export const createSwipeToClose = (side) => {
     const panelEl = pointerDownEvent.currentTarget;
     if (panelEl.getAttribute("aria-expanded") !== "true") {
       return;
+    }
+    if (grip) {
+      const gripEl = panelEl.querySelector(grip);
+      if (gripEl && !gripEl.contains(pointerDownEvent.target)) {
+        return;
+      }
     }
 
     // Where the panel stands, written on it directly: the gesture reports a

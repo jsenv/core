@@ -83,6 +83,7 @@ import {
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
+import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -334,6 +335,16 @@ const css = /* css */ `
     &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
     }
+    /* The header of a sheet that closes by being pushed back down is a handle,
+       not a piece of the scroll: a finger on it moves the sheet, and letting
+       the browser scroll the sheet under the same gesture would show two
+       movements answering one drag. Direct children only — the sheet's own
+       header, not one belonging to something it contains (the same part
+       swipe_to_close.js takes hold of). */
+    &[data-swipe-to-close] > [data-header] {
+      touch-action: none;
+    }
+
     /* …and the delegate stands down. */
     > [data-focus-outline-delegate] {
       --navi-focus-outline-style: none;
@@ -475,7 +486,9 @@ const css = /* css */ `
  *   desktop window, which is still a mouse. It supplies defaults for
  *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
  *   any of them can still be pinned explicitly. Re-resolves live as the pointer
- *   type or the window size changes.
+ *   type or the window size changes. A sheet resting on the bottom edge is also
+ *   pushed back down to close it, held by its header (a direct child `Box` with
+ *   the `header` prop) — or from anywhere when it has none. See `swipe_to_close.js`.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -726,6 +739,13 @@ const DOCKED = {
   scrollCapture: true,
 };
 
+// Where a bottom sheet is held to push it back down: the strip a direct-child
+// Box declares with `header` — the rest of the sheet is content the finger
+// operates, and a drag started there would fight whatever it landed on. A sheet
+// with no header of its own is pushed from anywhere (see createSwipeToClose's
+// own `grip`).
+const DOCKED_SWIPE_GRIP = ":scope > [data-header]";
+
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
 // controls rather than reading an attribute off the dialog: a dialog carries no
 // state of its own (see this file's top comment), and `aria-busy` on the
@@ -884,6 +904,14 @@ const useDialogProps = (props) => {
     y: "center",
     x: "center",
   };
+  // Pushing the sheet back down closes it — a bottom sheet is reached with a
+  // thumb, and the thumb is already on the edge it would push. Only a sheet
+  // actually resting on the bottom edge: anywhere else the gesture would send
+  // the dialog somewhere it never came from.
+  const swipeToCloseDown = isDocked && parsedPositionArea.y === "bottom";
+  const onSwipePointerDown = swipeToCloseDown
+    ? createSwipeToClose("bottom", { grip: DOCKED_SWIPE_GRIP })
+    : null;
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,
   // reading as a rendering glitch rather than as a rounded box. A corner is on
@@ -1421,6 +1449,20 @@ const useDialogProps = (props) => {
     "data-flush-right": flushEdges.right ? "" : undefined,
     "data-flush-bottom": flushEdges.bottom ? "" : undefined,
     "data-flush-left": flushEdges.left ? "" : undefined,
+    "data-swipe-to-close": swipeToCloseDown ? "" : undefined,
+    // The axis the sheet travels on when it is pushed back, said to the shared
+    // gesture layer: it is what a box travelling inside the sheet reads to know
+    // this axis is already walked (see @jsenv/dom's drag_to_travel).
+    "data-drag-travel": swipeToCloseDown
+      ? SWIPE_AXIS_BY_SIDE.bottom
+      : undefined,
+    "data-travel-by-drag": swipeToCloseDown
+      ? SWIPE_AXIS_BY_SIDE.bottom
+      : undefined,
+    "onPointerDown": (e) => {
+      rest.onPointerDown?.(e);
+      onSwipePointerDown?.(e);
+    },
     "onKeyDown": (e) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
