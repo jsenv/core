@@ -83,7 +83,6 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useEffect, useState } from "preact/hooks";
-      import { signal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -404,10 +403,11 @@
       };
 
       // La partie et sa modification voyagent entre elles, sur leur propre axe:
-      // modifier monte, enregistrer redescend. C'est la même partie vue de deux
-      // façons, donc rien d'autre à l'écran ne se déplace.
+      // la modification est au-dessus, donc elle descend sur la partie et
+      // s'enregistrer la fait remonter. C'est la même partie vue de deux façons,
+      // donc rien d'autre à l'écran ne se déplace.
       const GameArea = () => (
-        <RouteTravel axis="y" routes={[GAME_ROUTE, EDIT_GAME_ROUTE]}>
+        <RouteTravel axis="y" routes={[EDIT_GAME_ROUTE, GAME_ROUTE]}>
           <Route>
             <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
             <Route route={GAME_ROUTE} element={GamePage} />

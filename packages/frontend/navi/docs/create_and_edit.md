@@ -204,7 +204,7 @@ vertically inside the position the outer row holds for them:
 
 ```jsx
 const GameArea = () => (
-  <RouteTravel axis="y" routes={[GAME_ROUTE, EDIT_GAME_ROUTE]}>
+  <RouteTravel axis="y" routes={[EDIT_GAME_ROUTE, GAME_ROUTE]}>
     <Route>
       <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
       <Route route={GAME_ROUTE} element={GamePage} />
@@ -213,8 +213,8 @@ const GameArea = () => (
 );
 ```
 
-Editing is the next page on that column, so opening it rises and saving comes
-back down. The outer row does not move for it: both urls are the same position
+Editing sits above the game on that column, so it comes down over it and saving
+sends it back up. The outer row does not move for it: both urls are the same position
 there, which is what makes the two rows independent —
 
 ```jsx
