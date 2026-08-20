@@ -27,11 +27,6 @@
         color: #555;
         font-size: 13px;
       }
-      .stage {
-        display: flex;
-        align-items: flex-start;
-        gap: 20px;
-      }
       .phone {
         display: flex;
         width: 380px;
@@ -79,51 +74,6 @@
         border-radius: 8px;
       }
       /* Le backend, à côté de l'écran: ce qu'il tient, et les appels en vol. */
-      .backend {
-        width: 340px;
-        padding: 14px;
-        color: #37474f;
-        font-size: 13px;
-        background: #eceff1;
-        border: 1px dashed #b0bec5;
-        border-radius: 8px;
-      }
-      .backend_head {
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-      }
-      .backend_title {
-        margin: 0 0 10px;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-      .backend_call {
-        display: flex;
-        margin-top: 8px;
-        padding: 8px;
-        align-items: center;
-        gap: 8px;
-        background: white;
-        border-radius: 6px;
-      }
-      .backend_call_label {
-        flex: 1;
-        font-size: 12px;
-        font-family: ui-monospace, monospace;
-      }
-      .backend_idle {
-        margin: 8px 0 0;
-        color: #78909c;
-      }
-      .backend_rows {
-        margin: 10px 0 0;
-        padding: 0;
-        font-size: 12px;
-        font-family: ui-monospace, monospace;
-        list-style: none;
-      }
     </style>
   </head>
   <body>
@@ -155,136 +105,47 @@
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import {
-        FakeBackendModeSelect,
-        resolveFakeBackendMode,
+        FakeBackend,
+        createFakeBackend,
       } from "../../../internal/fake_backend.jsx";
 
-      // ── Le backend, tenu à la main ────────────────────────────────────────
-      // Chaque appel attend qu'on lui réponde, pour que l'écran en chargement
-      // et l'écran en erreur restent à l'écran aussi longtemps qu'on veut.
-      const pendingCallsSignal = signal([]);
-      const modeSignal = signal("manuel");
-      let callId = 0;
-      const backendCall = (label, produce) =>
-        new Promise((resolve, reject) => {
-          const id = ++callId;
-          const leave = () => {
-            pendingCallsSignal.value = pendingCallsSignal.value.filter(
-              (candidate) => candidate.id !== id,
-            );
-          };
-          const call = {
-            id,
-            label,
-            answer: () => {
-              leave();
-              resolve(produce());
-            },
-            fail: () => {
-              leave();
-              reject(new Error(`${label}: le serveur a refusé`));
-            },
-          };
-          pendingCallsSignal.value = [...pendingCallsSignal.value, call];
-          const automatic = resolveFakeBackendMode(modeSignal.peek());
-          if (automatic) {
-            setTimeout(
-              automatic.fails ? call.fail : call.answer,
-              automatic.delay,
-            );
-          }
-        });
-
-      const gameMapSignal = signal(
-        new Map([
-          [
-            "1",
-            { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
-          ],
-        ]),
-      );
+      // ── Le backend ────────────────────────────────────────────────────────
+      // Créé ici, hors de l'arbre: les appels partent des callbacks REST de la
+      // ressource, qui ne sont pas dans un composant. Chaque appel attend qu'on
+      // lui réponde (ou que le mode réponde pour nous), pour que l'écran en
+      // chargement et l'écran en erreur restent à l'écran aussi longtemps qu'on
+      // veut.
+      const backend = createFakeBackend({
+        value: [
+          { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
+        ],
+      });
+      const games = () => backend.valueSignal.value;
+      const findGame = (id) => games().find((game) => game.id === id);
       let nextId = 2;
       const writeGame = (game) => {
-        const gameMap = new Map(gameMapSignal.value);
-        gameMap.set(game.id, game);
-        gameMapSignal.value = gameMap;
+        const rest = games().filter((candidate) => candidate.id !== game.id);
+        backend.setValue([...rest, game]);
         return game;
       };
-      const backend = {
+      const api = {
         read: (id) =>
-          backendCall(`GET /games/${id}`, () => {
-            const game = gameMapSignal.value.get(id);
+          backend.call(`GET /games/${id}`, () => {
+            const game = findGame(id);
             if (!game) {
               throw new Error(`Aucune partie "${id}"`);
             }
             return game;
           }),
-        readMany: () =>
-          backendCall("GET /games", () => [...gameMapSignal.value.values()]),
+        readMany: () => backend.call("GET /games", () => games()),
         create: (values) =>
-          backendCall("POST /games", () =>
+          backend.call("POST /games", () =>
             writeGame({ id: String(nextId++), ...values }),
           ),
         update: (id, values) =>
-          backendCall(`PUT /games/${id}`, () =>
-            writeGame({ ...gameMapSignal.value.get(id), ...values }),
+          backend.call(`PUT /games/${id}`, () =>
+            writeGame({ ...findGame(id), ...values }),
           ),
-      };
-
-      const BackendPanel = () => {
-        const calls = pendingCallsSignal.value;
-        const mode = modeSignal.value;
-        const games = [...gameMapSignal.value.values()];
-        // Le mode s'applique aussi à ce qui attend déjà: quitter "manuel" doit
-        // libérer l'appel en cours, pas demander une dernière pression.
-        useEffect(() => {
-          const automatic = resolveFakeBackendMode(mode);
-          if (!automatic || calls.length === 0) {
-            return undefined;
-          }
-          const timeouts = calls.map((call) =>
-            setTimeout(
-              automatic.fails ? call.fail : call.answer,
-              automatic.delay,
-            ),
-          );
-          return () => {
-            for (const timeout of timeouts) {
-              clearTimeout(timeout);
-            }
-          };
-        }, [mode, calls]);
-        return (
-          <div className="backend">
-            <div className="backend_head">
-              <h3 className="backend_title">Backend</h3>
-              <FakeBackendModeSelect
-                mode={mode}
-                onChange={(value) => {
-                  modeSignal.value = value;
-                }}
-              />
-            </div>
-            <ul className="backend_rows">
-              {games.map((game) => (
-                <li key={game.id}>
-                  {game.id}: {game.name} · {game.level} · {game.players}
-                </li>
-              ))}
-            </ul>
-            {calls.length === 0 ? (
-              <p className="backend_idle">Aucun appel en vol.</p>
-            ) : (
-              calls.map((call) => (
-                <div key={call.id} className="backend_call">
-                  <span className="backend_call_label">{call.label}</span>
-                  <Button onClick={call.answer}>répondre</Button>
-                  <Button onClick={call.fail}>échouer</Button>
-                </div>
-              ))
-            )}
-          </div>
-        );
       };
 
       // ── Un signal par champ, partagé par les deux modes ────────────────────
@@ -321,10 +182,10 @@
       // qu'un PUT met à jour la page de la partie sans que personne ne
       // recharge, et qu'un POST fait réapparaître la liste avec la nouvelle.
       const GAME = resource("game", {
-        GET: ({ id }) => backend.read(id),
-        GET_MANY: () => backend.readMany(),
-        POST: (values) => backend.create(values),
-        PUT: ({ id, ...values }) => backend.update(id, values),
+        GET: ({ id }) => api.read(id),
+        GET_MANY: () => api.readMany(),
+        POST: (values) => api.create(values),
+        PUT: ({ id, ...values }) => api.update(id, values),
       });
 
       // Une action ne part pas toute seule quand on la lit: c'est la route qui
@@ -543,31 +404,30 @@
             <p className="caption">
               Créer une partie, arriver sur la partie créée, la modifier.
             </p>
-            <div className="stage">
-              <Loading>
-                <div className="phone">
-                  <RouteTravel
-                    className="travel_box"
-                    routes={[
-                      HOME_ROUTE,
-                      NEW_GAME_ROUTE,
-                      EDIT_GAME_ROUTE,
-                      GAME_ROUTE,
-                    ]}
-                  >
-                    <Route>
-                      <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
-                      <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
-                      <Route route={GAME_ROUTE} element={GamePage} />
-                      <Route route={HOME_ROUTE} element={HomePage} />
-                    </Route>
-                  </RouteTravel>
-                </div>
-              </Loading>
-              {/* Hors du <Loading>: c'est d'ici qu'on répond aux appels que
-                  l'écran attend. */}
-              <BackendPanel />
-            </div>
+            <FakeBackend backend={backend}>
+              {() => (
+                <Loading>
+                  <div className="phone">
+                    <RouteTravel
+                      className="travel_box"
+                      routes={[
+                        HOME_ROUTE,
+                        NEW_GAME_ROUTE,
+                        EDIT_GAME_ROUTE,
+                        GAME_ROUTE,
+                      ]}
+                    >
+                      <Route>
+                        <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+                        <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
+                        <Route route={GAME_ROUTE} element={GamePage} />
+                        <Route route={HOME_ROUTE} element={HomePage} />
+                      </Route>
+                    </RouteTravel>
+                  </div>
+                </Loading>
+              )}
+            </FakeBackend>
           </div>
         </Box>
       );
