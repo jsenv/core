@@ -2,21 +2,53 @@
 
 The loop almost every application has: a screen that creates something, the page
 of the thing just created, and a screen that edits it. It is worth a page of its
-own because the delicate part is not the form — it is that **the edit screen
-fills itself a request after it opened**, and that the two screens are the same
-form asked to behave differently.
+own because what makes it hard is not the form — it is that **the two screens
+look like the same form and are not the same thing at all**: one holds a draft
+the person is writing, the other holds a resource the server owns.
 
 Working example:
 [../src/control/demos/integration/create_then_edit/create_then_edit.html](../src/control/demos/integration/create_then_edit/create_then_edit.html)
 — the whole loop, with a backend on the page answering by hand so the loading
 and the failures can be looked at.
 
+- [What the loop owes the person](#what-the-loop-owes-the-person)
 - [The routes](#the-routes)
 - [The resource](#the-resource)
-- [One form, two modes](#one-form-two-modes)
-- [Filling the edit form, and what it is measured against](#filling-the-edit-form-and-what-it-is-measured-against)
+- [Two screens, two states](#two-screens-two-states)
+- [The edit screen opens filled](#the-edit-screen-opens-filled)
 - [Where each screen goes next](#where-each-screen-goes-next)
 - [Movement between them](#movement-between-them)
+
+## What the loop owes the person
+
+The rules below are what the rest of this page is for. Each one is a decision
+about what the person is owed, not about navi.
+
+- **Creating lands on what was created.** Going back to the list after a
+  creation asks the person to find their own thing to be sure it exists; the
+  thing itself is the proof, and it is also where they were heading.
+- **A draft is theirs until it is sent, and not a minute longer.** Half a form
+  filled must survive a reload (it is in the url), and must be gone the next
+  time "create" is opened — a create screen showing the last thing created is a
+  screen nobody trusts.
+- **Saving goes back to the thing, and so does a press that had nothing to
+  send.** The person is done either way; refusing to move because "nothing
+  changed" makes them press again to find out why.
+- **Cancelling puts back what the server says**, not what was typed and
+  abandoned. What leaving with unsaved changes does is a decision each screen
+  takes: dropping them is right when they are a few fields the person chose to
+  leave (that is what the shape below does, for free — the screen is thrown
+  away), and worth a confirmation when they are half an hour of work.
+- **What was written shows up everywhere at once.** A name changed on one screen
+  and stale on the list two seconds later reads as data loss.
+- **A failure is shown where the thing was asked for**, with what was typed
+  still there: an error on a form that emptied itself is worse than the failure.
+- **Every screen is a url.** Reload, back, a link sent to someone — the screens
+  of this loop are places, and the movement between them says how they are
+  related.
+
+Each of them has a mechanism below, and each mechanism is a line of code, not a
+framework.
 
 ## The routes
 
@@ -103,46 +135,91 @@ Two things to know or the screen stays empty:
   `[data, loading, error]`, which is what lets a page draw its own "the server
   refused" with a "try again" that calls `action.rerun()`.
 
-## One form, two modes
+## Two screens, two states
 
-The same fields, filled by nothing (create) or by a resource (edit). Two shapes,
-and the choice is about maintenance, not about navi:
+The same three fields, and two different things behind them:
 
-- **One component for both** — one place to change when a field is added. The
-  price: it must handle the mode where the values arrive late.
-- **One dumb form, two screens around it** — the create screen hands it empty
-  values, the edit screen hands it the loaded ones and shows the loading state
-  itself. The form then never knows about loading at all.
+- the **create** screen holds a **draft** — nobody else's, not saved anywhere,
+  worth keeping while it is being written. It belongs in the url
+  (`searchParams`), which is what makes it survive a reload and travel in a
+  link;
+- the **edit** screen holds a **resource** — the server's, loaded, and the
+  screen is a way of proposing changes to it.
 
-The second is cleaner and the first is what most screens end up being. Either
-way the fields are bound to signals ([control_value.md](./control_value.md)) and
-what follows applies.
-
-## Filling the edit form, and what it is measured against
-
-The edit screen opens, and the resource arrives after it. Whoever fills the
-fields must also say **when the filling is done**, because that is the moment
-the form's reference is taken — without it the screen opens already changed, and
-pressing Save sends back what was just loaded:
+Write the fields once and give them their source:
 
 ```jsx
-const [filled, setFilled] = useState(false);
-useEffect(() => {
-  if (!game) {
-    return;
-  }
-  nameSignal.value = game.name;
-  levelSignal.value = game.level;
-  playersSignal.value = game.players;
-  setFilled(true);
-}, [game]);
+const fieldSource = (game, key, signal) =>
+  game ? { value: game[key] } : { signal };
 
-<Form pristineKey={filled ? game.id : undefined} action={…}>
+const GameFormFields = ({ game }) => (
+  <>
+    <Input name="name" {...fieldSource(game, "name", nameSignal)} required />
+    <Select name="level" {...fieldSource(game, "level", levelSignal)}>
+      …
+    </Select>
+  </>
+);
 ```
 
-`pristineKey` is the whole subject of [form_changed.md](./form_changed.md) —
-including why a form with nothing new sends nothing, and why there is no tick to
-wait for before setting the flag.
+**Do not let the two share one set of signals.** It is the mistake this shape
+exists to prevent, and it does not look like a mistake: bind both screens to the
+same `nameSignal`, edit a game, then press "create" — the game you just edited
+is sitting in the create form, in the url. The draft and the resource are not
+the same state; one is on the screen, the other is at the backend.
+
+The draft's other half is the end of its life:
+
+```jsx
+action={async (values) => {
+  const game = await GAME.POST.bindParams(values).rerun();
+  nameSignal.value = undefined; // le brouillon a servi
+  levelSignal.value = undefined;
+  GAME_ROUTE.navTo({ gameId: game.id });
+}}
+```
+
+`undefined`, not `""`: a state signal put back to undefined returns to its
+default and leaves the url — see [control_value.md](./control_value.md).
+
+## The edit screen opens filled
+
+Render the form only once the resource is there, and everything below follows
+from it:
+
+```jsx
+if (loading && !game) {
+  return <Skeleton />;
+}
+return (
+  <Form action={…}>
+    <GameFormFields game={game} />
+  </Form>
+);
+```
+
+- the fields are **given** their values, so the form holds them from its first
+  render: what it is measured against is right without anyone saying so, and
+  pressing Save without touching anything sends nothing (see
+  [form_changed.md](./form_changed.md));
+- cancelling is a link away — the screen is thrown away with what was typed in
+  it, and coming back re-reads the resource. There is nothing to "restore";
+- after a successful PUT the store holds the new values, the fields are given
+  them, and the screen is already showing what was saved.
+
+**When the form must be on screen before its values** — a long screen you do not
+want to blank, a form whose fields are filled by several requests landing at
+different times — it opens on defaults and is filled later, and then it needs to
+be told when the filling is done:
+
+```jsx
+<Form pristineKey={filled ? game.id : undefined}>
+```
+
+Without it the screen opens **already changed** — its reference was taken while
+the fields were still empty — and Save sends back what was just loaded.
+`pristineKey` is the subject of [form_changed.md](./form_changed.md); mounting
+the form with its values is how not to need it.
 
 ## Where each screen goes next
 
@@ -168,14 +245,14 @@ two different places:
 
   ```jsx
   <Form
-    pristineKey={filled ? game.id : undefined}
     command={`--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`}
     action={(values) => GAME.PUT.bindParams({ id: game.id, ...values }).rerun()}
   >
   ```
 
   Do not hold that submit back with `readOnlyWhileFormUnchanged`: the press
-  still does something — it leaves.
+  still does something — it leaves. Holding it back is for a form that goes
+  nowhere, where the press would visibly do nothing at all.
 
 ## Movement between them
 
