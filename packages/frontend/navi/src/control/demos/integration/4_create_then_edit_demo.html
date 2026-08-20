@@ -12,13 +12,31 @@
         background: #f5f5f5;
       }
       #container {
-        max-width: 760px;
+        max-width: 820px;
         margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .stage {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
       }
       .phone {
         display: flex;
-        width: 420px;
+        width: 380px;
         height: 520px;
+        flex: none;
         flex-direction: column;
         background: white;
         border: 1px solid #ccc;
@@ -43,7 +61,16 @@
         margin: 0;
         font-size: 1.05rem;
       }
+      .game_list {
+        display: flex;
+        padding: 4px 0;
+        flex-direction: column;
+        gap: 2px;
+        border-top: 1px solid #eceff1;
+        border-bottom: 1px solid #eceff1;
+      }
       .game_card {
+        margin: 0;
         padding: 12px 14px;
         color: #37474f;
         font-size: 14px;
@@ -51,17 +78,51 @@
         background: #eceff1;
         border-radius: 8px;
       }
-      .demo-section {
-        margin-bottom: 24px;
-        padding: 24px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-      .caption {
-        margin: 0 0 16px;
-        color: #555;
+      /* Le backend, à côté de l'écran: ce qu'il tient, et les appels en vol. */
+      .backend {
+        width: 340px;
+        padding: 14px;
+        color: #37474f;
         font-size: 13px;
+        background: #eceff1;
+        border: 1px dashed #b0bec5;
+        border-radius: 8px;
+      }
+      .backend_head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .backend_title {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .backend_call {
+        display: flex;
+        margin-top: 8px;
+        padding: 8px;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        border-radius: 6px;
+      }
+      .backend_call_label {
+        flex: 1;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+      }
+      .backend_idle {
+        margin: 8px 0 0;
+        color: #78909c;
+      }
+      .backend_rows {
+        margin: 10px 0 0;
+        padding: 0;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        list-style: none;
       }
     </style>
   </head>
@@ -72,6 +133,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useEffect, useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -84,47 +146,145 @@
         Route,
         RouteTravel,
         Select,
-        createAction,
+        resource,
         route,
         routeAction,
         setupRoutes,
         stateSignal,
         useAsyncData,
-        useRouteStatus,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import {
+        FakeBackendModeSelect,
+        resolveFakeBackendMode,
+      } from "../../../internal/fake_backend.jsx";
 
-      // ── Le backend ────────────────────────────────────────────────────────
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      const gameMap = new Map([
-        [
-          "1",
-          { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
-        ],
-      ]);
-      let nextId = 2;
-      const backend = {
-        read: async (gameId) => {
-          await sleep(700);
-          const game = gameMap.get(gameId);
-          if (!game) {
-            throw new Error(`Aucune partie "${gameId}"`);
+      // ── Le backend, tenu à la main ────────────────────────────────────────
+      // Chaque appel attend qu'on lui réponde, pour que l'écran en chargement
+      // et l'écran en erreur restent à l'écran aussi longtemps qu'on veut.
+      const pendingCallsSignal = signal([]);
+      const modeSignal = signal("manuel");
+      let callId = 0;
+      const backendCall = (label, produce) =>
+        new Promise((resolve, reject) => {
+          const id = ++callId;
+          const leave = () => {
+            pendingCallsSignal.value = pendingCallsSignal.value.filter(
+              (candidate) => candidate.id !== id,
+            );
+          };
+          const call = {
+            id,
+            label,
+            answer: () => {
+              leave();
+              resolve(produce());
+            },
+            fail: () => {
+              leave();
+              reject(new Error(`${label}: le serveur a refusé`));
+            },
+          };
+          pendingCallsSignal.value = [...pendingCallsSignal.value, call];
+          const automatic = resolveFakeBackendMode(modeSignal.peek());
+          if (automatic) {
+            setTimeout(
+              automatic.fails ? call.fail : call.answer,
+              automatic.delay,
+            );
           }
-          return game;
-        },
-        create: async (values) => {
-          await sleep(700);
-          const id = String(nextId++);
-          const game = { id, ...values };
-          gameMap.set(id, game);
-          return game;
-        },
-        update: async (gameId, values) => {
-          await sleep(700);
-          const game = { ...gameMap.get(gameId), ...values };
-          gameMap.set(gameId, game);
-          return game;
-        },
+        });
+
+      const gameMapSignal = signal(
+        new Map([
+          [
+            "1",
+            { id: "1", name: "Padel du mardi", level: "confirme", players: 4 },
+          ],
+        ]),
+      );
+      let nextId = 2;
+      const writeGame = (game) => {
+        const gameMap = new Map(gameMapSignal.value);
+        gameMap.set(game.id, game);
+        gameMapSignal.value = gameMap;
+        return game;
+      };
+      const backend = {
+        read: (id) =>
+          backendCall(`GET /games/${id}`, () => {
+            const game = gameMapSignal.value.get(id);
+            if (!game) {
+              throw new Error(`Aucune partie "${id}"`);
+            }
+            return game;
+          }),
+        readMany: () =>
+          backendCall("GET /games", () => [...gameMapSignal.value.values()]),
+        create: (values) =>
+          backendCall("POST /games", () =>
+            writeGame({ id: String(nextId++), ...values }),
+          ),
+        update: (id, values) =>
+          backendCall(`PUT /games/${id}`, () =>
+            writeGame({ ...gameMapSignal.value.get(id), ...values }),
+          ),
+      };
+
+      const BackendPanel = () => {
+        const calls = pendingCallsSignal.value;
+        const mode = modeSignal.value;
+        const games = [...gameMapSignal.value.values()];
+        // Le mode s'applique aussi à ce qui attend déjà: quitter "manuel" doit
+        // libérer l'appel en cours, pas demander une dernière pression.
+        useEffect(() => {
+          const automatic = resolveFakeBackendMode(mode);
+          if (!automatic || calls.length === 0) {
+            return undefined;
+          }
+          const timeouts = calls.map((call) =>
+            setTimeout(
+              automatic.fails ? call.fail : call.answer,
+              automatic.delay,
+            ),
+          );
+          return () => {
+            for (const timeout of timeouts) {
+              clearTimeout(timeout);
+            }
+          };
+        }, [mode, calls]);
+        return (
+          <div className="backend">
+            <div className="backend_head">
+              <h3 className="backend_title">Backend</h3>
+              <FakeBackendModeSelect
+                mode={mode}
+                onChange={(value) => {
+                  modeSignal.value = value;
+                }}
+              />
+            </div>
+            <ul className="backend_rows">
+              {games.map((game) => (
+                <li key={game.id}>
+                  {game.id}: {game.name} · {game.level} · {game.players}
+                </li>
+              ))}
+            </ul>
+            {calls.length === 0 ? (
+              <p className="backend_idle">Aucun appel en vol.</p>
+            ) : (
+              calls.map((call) => (
+                <div key={call.id} className="backend_call">
+                  <span className="backend_call_label">{call.label}</span>
+                  <Button onClick={call.answer}>répondre</Button>
+                  <Button onClick={call.fail}>échouer</Button>
+                </div>
+              ))
+            )}
+          </div>
+        );
       };
 
       // ── Un signal par champ, partagé par les deux modes ────────────────────
@@ -155,18 +315,37 @@
       const GAME_ROUTE = route("/games/:gameId");
       const EDIT_GAME_ROUTE = route("/games/:gameId/edit");
       setupRoutes([HOME_ROUTE, NEW_GAME_ROUTE, GAME_ROUTE, EDIT_GAME_ROUTE]);
-      window.__routes = { HOME_ROUTE, NEW_GAME_ROUTE, GAME_ROUTE, EDIT_GAME_ROUTE };
+
+      // ── La ressource ──────────────────────────────────────────────────────
+      // Chaque callback rend ce que le store doit garder. C'est ce qui fait
+      // qu'un PUT met à jour la page de la partie sans que personne ne
+      // recharge, et qu'un POST fait réapparaître la liste avec la nouvelle.
+      const GAME = resource("game", {
+        GET: ({ id }) => backend.read(id),
+        GET_MANY: () => backend.readMany(),
+        POST: (values) => backend.create(values),
+        PUT: ({ id, ...values }) => backend.update(id, values),
+      });
+
+      // Une action ne part pas toute seule quand on la lit: c'est la route qui
+      // la déclenche. La liste se charge en arrivant sur l'accueil — et se
+      // recharge d'elle-même après un POST, sans que personne le demande.
+      const GAMES_OF_HOME = routeAction(HOME_ROUTE, GAME.GET_MANY, () => true);
 
       // ── La partie que l'url désigne, chargée pour les deux pages ──────────
-      const GET_GAME = createAction(({ gameId }) => backend.read(gameId));
       const GAME_OF_ROUTE = routeAction(
         [GAME_ROUTE, EDIT_GAME_ROUTE],
-        GET_GAME,
+        GAME.GET,
         () => {
+          // "/games/new" est aussi une url de ":gameId": plusieurs routes
+          // matchent à la fois, et c'est à la plus précise de le dire.
+          if (NEW_GAME_ROUTE.matchingSignal.value) {
+            return null;
+          }
           const gameId =
             GAME_ROUTE.paramsSignal.value.gameId ||
             EDIT_GAME_ROUTE.paramsSignal.value.gameId;
-          return gameId ? { gameId } : null;
+          return gameId ? { id: gameId } : null;
         },
       );
 
@@ -191,12 +370,20 @@
         </Box>
       );
 
+      const LoadFailed = ({ title, error, action }) => (
+        <div className="page">
+          <h2 className="page_title">{title}</h2>
+          <p className="game_card">{error.message}</p>
+          <Button action={() => action.rerun()}>Réessayer</Button>
+        </div>
+      );
+
       const NewGamePage = () => (
         <div className="page">
           <h2 className="page_title">Créer une partie</h2>
           <Form
             action={async (values) => {
-              const game = await backend.create(values);
+              const game = await GAME.POST.bindParams(values).rerun();
               // La destination n'existait pas avant la réponse: c'est l'action
               // qui l'a apprise, c'est elle qui y va.
               GAME_ROUTE.navTo({ gameId: game.id });
@@ -214,8 +401,16 @@
       );
 
       const GamePage = () => {
-        const [game, loading] = useAsyncData(GAME_OF_ROUTE, { loading: true });
+        const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
+          loading: true,
+          error: true,
+        });
 
+        if (error) {
+          return (
+            <LoadFailed title="Partie" error={error} action={GAME_OF_ROUTE} />
+          );
+        }
         if (loading && !game) {
           return (
             <div className="page">
@@ -241,8 +436,11 @@
       };
 
       const EditGamePage = () => {
-        const [game, loading] = useAsyncData(GAME_OF_ROUTE, { loading: true });
-        // Le formulaire est rempli par ce qui arrive, une requête après
+        const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
+          loading: true,
+          error: true,
+        });
+        // Les champs sont remplis par ce qui arrive, une requête après
         // l'ouverture de l'écran. `filled` dit quand: avant, il n'y a rien à
         // comparer; après, ce que les champs portent est la référence.
         const [filled, setFilled] = useState(false);
@@ -256,6 +454,11 @@
           setFilled(true);
         }, [game]);
 
+        if (error) {
+          return (
+            <LoadFailed title="Modifier" error={error} action={GAME_OF_ROUTE} />
+          );
+        }
         if (loading && !game) {
           return (
             <div className="page">
@@ -270,11 +473,13 @@
             <Form
               pristineKey={filled ? game.id : undefined}
               command={`--navi-nav-to:${GAME_ROUTE.buildUrl({ gameId: game.id })}`}
-              action={(values) => backend.update(game.id, values)}
+              action={(values) =>
+                GAME.PUT.bindParams({ id: game.id, ...values }).rerun()
+              }
             >
               <Box flex="y" spacing="m">
                 <GameFormFields />
-                <Button type="submit" cta readOnlyWhileFormUnchanged>
+                <Button type="submit" cta>
                   Enregistrer
                 </Button>
               </Box>
@@ -286,25 +491,51 @@
         );
       };
 
-      const HomePage = () => (
-        <div className="page">
-          <h2 className="page_title">Parties</h2>
-          {[...gameMap.values()].map((game) => (
-            <Link
-              key={game.id}
-              route={GAME_ROUTE}
-              routeParams={{ gameId: game.id }}
-            >
-              {game.name}
-            </Link>
-          ))}
-          <Link route={NEW_GAME_ROUTE}>Créer une partie</Link>
-        </div>
-      );
+      const HomePage = () => {
+        const [games, loading, error] = useAsyncData(GAMES_OF_HOME, {
+          loading: true,
+          error: true,
+        });
+        if (error) {
+          return (
+            <LoadFailed title="Parties" error={error} action={GAMES_OF_HOME} />
+          );
+        }
+        if (loading && !games) {
+          return (
+            <div className="page">
+              <h2 className="page_title">Parties</h2>
+              <p className="game_card">Chargement…</p>
+            </div>
+          );
+        }
+        return (
+          <div className="page">
+            <h2 className="page_title">Parties</h2>
+            <div className="game_list">
+              {games.map((game) => (
+                <Link
+                  key={game.id}
+                  route={GAME_ROUTE}
+                  routeParams={{ gameId: game.id }}
+                >
+                  {game.name}
+                </Link>
+              ))}
+            </div>
+            <Button cta command={`--navi-nav-to:${NEW_GAME_ROUTE.buildUrl()}`}>
+              Créer une partie
+            </Button>
+          </div>
+        );
+      };
 
-      // L'ordre des enfants est l'ordre du voyage: créer et modifier sont à
-      // gauche de la partie, donc y aller va vers la droite ("voilà ce que je
-      // viens de faire") et revenir modifier va vers la gauche.
+      // Deux ordres, et ils ne disent pas la même chose:
+      // - les enfants sont écrits du plus précis au plus large, parce que la
+      //   première branche qui matche l'emporte (et "/" matche partout);
+      // - `routes` donne l'ordre du voyage: créer et modifier sont à gauche de
+      //   la partie, donc y arriver va vers la droite ("voilà ce que je viens
+      //   de faire") et repartir la modifier va vers la gauche.
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="Créer puis modifier" />
@@ -312,19 +543,31 @@
             <p className="caption">
               Créer une partie, arriver sur la partie créée, la modifier.
             </p>
-            <Loading>
-              <div className="phone">
-                <RouteTravel className="travel_box">
-                  <Route>
-                    <Route route={HOME_ROUTE} element={HomePage} />
-                    <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
-                    <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
-                    <Route route={GAME_ROUTE} element={GamePage} />
-                    <Route fallback element={HomePage} />
-                  </Route>
-                </RouteTravel>
-              </div>
-            </Loading>
+            <div className="stage">
+              <Loading>
+                <div className="phone">
+                  <RouteTravel
+                    className="travel_box"
+                    routes={[
+                      HOME_ROUTE,
+                      NEW_GAME_ROUTE,
+                      EDIT_GAME_ROUTE,
+                      GAME_ROUTE,
+                    ]}
+                  >
+                    <Route>
+                      <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+                      <Route route={NEW_GAME_ROUTE} element={NewGamePage} />
+                      <Route route={GAME_ROUTE} element={GamePage} />
+                      <Route route={HOME_ROUTE} element={HomePage} />
+                    </Route>
+                  </RouteTravel>
+                </div>
+              </Loading>
+              {/* Hors du <Loading>: c'est d'ici qu'on répond aux appels que
+                  l'écran attend. */}
+              <BackendPanel />
+            </div>
           </div>
         </Box>
       );

@@ -35,7 +35,7 @@
  * application's.
  */
 
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
 const css = /* css */ `
   .navi_fake_backend {
@@ -55,6 +55,19 @@ const css = /* css */ `
     background: #eceff1;
     /* The line the frontier below sits astride. */
     border-bottom: 1px dashed #b0bec5;
+  }
+  .navi_fake_backend_mode {
+    display: flex;
+    margin-left: auto;
+    align-items: center;
+    gap: 5px;
+    color: #78909c;
+    font-size: 11px;
+  }
+  .navi_fake_backend_mode select {
+    color: #37474f;
+    font: inherit;
+    font-size: 11px;
   }
   .navi_fake_backend_label {
     color: #78909c;
@@ -165,6 +178,55 @@ const css = /* css */ `
  *   a change it did not ask for.
  * @param {(context: {value: any, action: Function}) => import("preact").ComponentChildren} props.children
  */
+// How the backend answers. "manuel" is the default and the reason this whole
+// thing exists — a call held is a loading state one can look at for as long as
+// one likes. The others are for a page that exercises something else and only
+// needs the backend to behave: an answer that is instant, slow, or never good.
+const FAKE_BACKEND_MODES = {
+  "manuel": null,
+  "tout de suite": { delay: 0 },
+  "500 ms": { delay: 500 },
+  "2 s": { delay: 2000 },
+  "échec en 500 ms": { delay: 500, fails: true },
+};
+export const resolveFakeBackendMode = (mode) => FAKE_BACKEND_MODES[mode];
+
+export const FakeBackendModeSelect = ({ mode, onChange }) => (
+  <label className="navi_fake_backend_mode">
+    répond
+    <select value={mode} onChange={(e) => onChange(e.target.value)}>
+      {Object.keys(FAKE_BACKEND_MODES).map((modeName) => (
+        <option key={modeName} value={modeName}>
+          {modeName}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+/**
+ * The mode, and what it does to the call in flight.
+ *
+ * Applied to the call rather than to the moment it arrives, so switching out of
+ * "manuel" releases the one already waiting — otherwise a page left holding a
+ * call would need one last press to get out of the mode it just left.
+ */
+const useFakeBackendMode = (call, { answer, fail }) => {
+  const [mode, setMode] = useState("manuel");
+  useEffect(() => {
+    const automatic = resolveFakeBackendMode(mode);
+    if (!call || !automatic) {
+      return undefined;
+    }
+    const timeout = setTimeout(
+      automatic.fails ? fail : answer,
+      automatic.delay,
+    );
+    return () => clearTimeout(timeout);
+  }, [call, mode]);
+  return [mode, setMode];
+};
+
 export const FakeBackend = ({ value: valueInitial, newRow, children }) => {
   import.meta.css = css;
   const [value, setValue] = useState(valueInitial);
@@ -195,6 +257,7 @@ export const FakeBackend = ({ value: valueInitial, newRow, children }) => {
     call.reject(new Error("Le serveur a refusé l'enregistrement."));
     setCall(null);
   };
+  const [mode, setMode] = useFakeBackendMode(call, { answer, fail });
 
   // The backend changing on its own — someone else's edit, a job, a push. No
   // call is in flight for these: the value simply becomes something else and
@@ -215,6 +278,7 @@ export const FakeBackend = ({ value: valueInitial, newRow, children }) => {
           onRemoveRow={newRow ? removeRow : undefined}
           onAddRow={newRow ? addRow : undefined}
         />
+        <FakeBackendModeSelect mode={mode} onChange={setMode} />
       </div>
       <div className="navi_fake_backend_frontier">
         {call ? (

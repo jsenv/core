@@ -260,6 +260,14 @@ Demo: [../src/nav/demos/route_travel/route_travel.html](../src/nav/demos/route_t
 and [../src/nav/demos/tabs/tabs.html](../src/nav/demos/tabs/tabs.html). The full
 spec of the gesture is [drag_to_travel.md](./drag_to_travel.md).
 
+## Creating something, then editing it
+
+The create screen, the page of what was created, the edit screen — three routes,
+one form, and a movement between them. It is assembled in
+[create_and_edit.md](./create_and_edit.md), which is also where the two matching
+rules that decide the shape of the `<Route>` tree are spelled out (several routes
+match at once; the first matching branch wins).
+
 ## Tabs with no URL
 
 `SlideContainer` holds slides that replace one another in one box, with the same
