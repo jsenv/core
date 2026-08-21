@@ -13083,6 +13083,69 @@ const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
 
+/**
+ * Where an action error goes when nothing displays it.
+ *
+ * An action that fails writes the error into its `errorSignal` and stops there.
+ * It cannot know whether a screen is going to show it: at the instant it fails,
+ * the screen that will is often not even mounted — a route action runs before
+ * its page renders, which is precisely the case a guess made at failure time
+ * gets wrong. So nothing is guessed. The error is let go, and whoever displays
+ * it SAYS so by marking it; what is still unmarked once the DOM has had its
+ * chance was displayed by nobody, and only that is reported as unhandled.
+ *
+ * The mark is `__handled_by__`, the same one the jsenv supervisor reads to stay
+ * out of the way of an error the app is already showing — one mark, one meaning:
+ * "this is on screen somewhere".
+ *
+ * The whole picture, control errors and validation included: docs/error_handling.md
+ */
+
+const markErrorAsDisplayedBy = (error, by) => {
+  if (error && typeof error === "object") {
+    error.__handled_by__ = by;
+  }
+};
+
+const errorIsDisplayed = (error) => {
+  return Boolean(error && error.__handled_by__);
+};
+
+/**
+ * Reported from a macrotask: every render that could display the error —
+ * Preact's own queue, a Suspense boundary settling on the failure, the error
+ * boundary above it — happens in microtasks, so by the time this runs the
+ * answer is final. A screen that would display the error much later than that
+ * (mounted by something slower than a render) is reported anyway; it is the
+ * one case where this says "nobody" a bit too early, and the report is then a
+ * duplicate of what the screen shows rather than a lie about it.
+ *
+ * Rethrown rather than logged: an error nobody shows is an unhandled error, and
+ * the runtime already knows what to do with those (window "error" event, jsenv
+ * overlay in dev). Same trick preact/debug uses for the same reason.
+ */
+const errorReportedSet = new WeakSet();
+const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
+  setTimeout(() => {
+    if (errorIsDisplayed(error)) {
+      return;
+    }
+    if (error && typeof error === "object") {
+      // The same error can reach here from more than one direction (the run
+      // that produced it, the routing promise carrying it): it is one error and
+      // it is reported once.
+      if (errorReportedSet.has(error)) {
+        return;
+      }
+      errorReportedSet.add(error);
+    }
+    if (action && error && typeof error === "object" && !error.action) {
+      error.action = action;
+    }
+    throw error;
+  });
+};
+
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
 let DEBUG$1 = false;
@@ -13916,7 +13979,6 @@ const createAction = (callback, rootOptions = {}) => {
       const ui = {
         renderLoaded: null,
         renderLoadedAsync,
-        hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
       let completeSideEffectCleanup;
@@ -14058,28 +14120,27 @@ const createAction = (callback, rootOptions = {}) => {
             return error;
           }
           if (DEBUG$1) {
-            console.log(
-              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
-            );
+            console.log(`"${action}": failed (error: ${error})`);
           }
+          error.action = action;
           batch(() => {
             errorSignal.value = error;
             runningStateSignal.value = FAILED;
             onError?.(error, { event, action, args });
           });
 
-          if (ui.hasRenderers || onError) {
-            // When inside suspense this console.error is redundant with the error thrown by preact debug at
-            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
-            console.error(error);
-            // For UI-bound actions: error is properly handled by logging + UI display
-            // Return error instead of throwing to signal it's handled and prevent:
-            // - jsenv error overlay from appearing
-            // - error being treated as unhandled by runtime
-            return error;
+          // The error is in errorSignal; from here it is the UI's, and running
+          // the action is not the place to decide whether the UI wants it —
+          // that answer does not exist yet at this instant (see
+          // action_error_report.js). So the run never throws: it settles with
+          // the error as its value, and being displayed or not is constated
+          // afterwards, in one place, by one rule.
+          if (onError) {
+            // Asking for the error IS taking it.
+            markErrorAsDisplayedBy(error, "onError");
           }
-          error.action = action;
-          throw error;
+          reportErrorIfNobodyDisplaysIt(error, { action });
+          return error;
         };
 
         try {
@@ -14440,15 +14501,8 @@ const createActionProxyFromSignal = (
       performReset: proxyPrivateMethod("performReset"),
       ui: currentActionPrivateProperties.ui,
     };
-    onActionTargetChange((actionTarget, previousTarget) => {
+    onActionTargetChange(() => {
       proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-      if (previousTarget && actionTarget) {
-        const previousPrivateProps = getActionPrivateProperties(previousTarget);
-        if (previousPrivateProps.ui.hasRenderers) {
-          const newPrivateProps = getActionPrivateProperties(actionTarget);
-          newPrivateProps.ui.hasRenderers = true;
-        }
-      }
       proxyPrivateProperties.childActionWeakSet =
         currentActionPrivateProperties.childActionWeakSet;
     });
@@ -21701,7 +21755,18 @@ const setupBrowserIntegrationViaHistory = ({
     // something at the first announcement has a definite place to give it back.
     publishBeforeRouting({ url, ...options });
     try {
-      return applyRoutingTask(url, options);
+      const routingResult = applyRoutingTask(url, options);
+      if (routingResult && typeof routingResult.then === "function") {
+        // Every caller below drops this value — a click handler has nothing to
+        // do with what the routing returns — so a rejection here would become
+        // an anonymous unhandled one, pointing at the navigation rather than at
+        // what failed. It goes to the single place that knows what to do with
+        // an error nobody displays (see action_error_report.js).
+        routingResult.catch((e) => {
+          reportErrorIfNobodyDisplaysIt(e);
+        });
+      }
+      return routingResult;
     } finally {
       publishAfterRouting({ url, ...options });
     }
@@ -21777,6 +21842,9 @@ const setupBrowserIntegrationViaHistory = ({
       isVisited,
       state,
     });
+    if (navigationType === "push") {
+      startAtTop(url);
+    }
     executeWithCleanup(
       () => allResult,
       () => {
@@ -21923,6 +21991,36 @@ const setupBrowserIntegrationViaHistory = ({
     isVisited,
     visitedUrlsSignal,
   };
+};
+
+// A page one arrives at for the first time starts at its top. Only a document
+// navigation does that on its own: a pushState creates its entry with whatever
+// scroll happened to be there, so without this the new page opens at the offset
+// of the one before it — and worse, that borrowed offset is what the browser
+// then remembers FOR that entry, and hands back on the way forward.
+//
+// Push only. A traverse is the browser's business and it is already right: it
+// keeps a position per entry and restores it. A replace is not an arrival —
+// it is the same place, said differently (a tab row travelling, see
+// route_travel.jsx), and resetting there would throw the reader out of a page
+// they never left.
+//
+// After the routes have been told, and that ordering is the whole subtlety:
+// the routes changing is what sets a travel off, and a travel measures the box
+// it is leaving as it stands. Reset before that and the picture of the page
+// being left is taken at the top of a page the reader was not at the top of —
+// it is then watched jumping back to its first line before it even begins to
+// leave (see holdTravelGeometry in route_travel.jsx). After pushState too, so
+// the entry being left keeps the offset it is at.
+//
+// The document, because the document is the scrollport in the common case. An
+// app that scrolls an element of its own scrolls it itself.
+const startAtTop = (url) => {
+  // A fragment names where to land, and the browser is the one that finds it.
+  if (new URL(url, window.location.href).hash) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 
 let updateRoutes;
@@ -32227,18 +32325,6 @@ const ActionRenderer = ({
   } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
-
-  // Mark this action as bound to UI components (has renderers)
-  // This tells the action system that errors should be caught and stored
-  // in the action's error state rather than bubbling up
-  useLayoutEffect(() => {
-    if (action) {
-      const {
-        ui
-      } = getActionPrivateProperties(action);
-      ui.hasRenderers = true;
-    }
-  }, [action]);
   useLayoutEffect(() => {
     resetErrorBoundary();
   }, [action, loading, idle, resetErrorBoundary]);
@@ -32266,6 +32352,8 @@ const ActionRenderer = ({
     return renderIdle(action);
   }
   if (errorBoundary) {
+    // Displaying it is what makes it handled (see action_error_report.js)
+    markErrorAsDisplayedBy(errorBoundary, "<ActionRenderer>");
     return renderError(errorBoundary, "ui_error", action);
   }
   if (aborted) {
@@ -32291,6 +32379,7 @@ const ActionRenderer = ({
     return renderLoading(action);
   }
   if (error) {
+    markErrorAsDisplayedBy(error, "<ActionRenderer>");
     return renderError(error, "action_error", action);
   }
   return renderCompletedSafe(data, action);
@@ -35773,13 +35862,17 @@ const useActionAsyncData = (action, {
     }
     const actionError = action.errorSignal.peek();
     if (errorEffect === "use") {
+      // Handed to the component, which is what displays it from here on
+      // (see action_error_report.js)
+      markErrorAsDisplayedBy(actionError, "useAsyncData({ error: true })");
       const dismissError = () => {
         dismissedActionWeakSet.add(action);
         setTick(n => n + 1);
       };
       return [undefined, false, actionError, dismissError];
     }
-    actionError.action = action;
+    // Not marked: nothing is displayed yet — the boundary that catches this is
+    // what says so, and only if it has something to show.
     throw actionError;
   }
 
@@ -35917,8 +36010,34 @@ const LoadingFallback = ({
 };
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
-// Catches errors thrown by useAction. Subscribes to error.action so it
-// auto-resets when the action runs again.
+/**
+ * Displays what its subtree throws — an action failure delegated by
+ * `useAsyncData`, or any render error under it.
+ *
+ * Two things it gets right that a hand-written boundary rarely does, both
+ * explained in docs/error_handling.md:
+ *
+ * - It marks the error as displayed ONLY when it actually displays it.
+ *   `preact/debug` rethrows every error a boundary caught in a `setTimeout`, on
+ *   purpose (React devtools compatibility), so a handled error still reaches
+ *   window and the jsenv overlay covers the app unless `__handled_by__` is set.
+ *   Setting it before knowing whether anything is rendered turns a boundary into
+ *   a bug swallower: a TypeError in a component becomes a blank page AND a
+ *   silent one. Without a `fallback` there is nothing to display, so the error is
+ *   left alone and continues up.
+ *
+ * - It resets on navigation, not only on rerun. Rerunning the failed action is
+ *   one way out; going somewhere else is the common one. Without a reset on the
+ *   document URL, the error stays in place of every page after it, including the
+ *   ones that would render fine.
+ *
+ * @param {object} props
+ * @param {Function|import("ignore:preact").VNode} [props.fallback] - what is displayed
+ *   instead of the children: an element, or a component receiving
+ *   `{ error, resetError }`. Without it the boundary is transparent.
+ * @param {() => void} [props.onReset] - called when the fallback dismisses the
+ *   error via its `resetError`.
+ */
 const ErrorBoundary = ({
   children,
   fallback,
@@ -35932,9 +36051,30 @@ const ErrorBoundary = ({
       cleanupRef.current?.();
     };
   }, []);
-  if (error) {
-    error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
 
+  // The error belongs to the page that failed: leaving it means leaving it
+  // behind.
+  useEffect(() => {
+    if (!error) {
+      return undefined;
+    }
+    const documentUrlWhenCaught = documentUrlSignal.peek();
+    return documentUrlSignal.subscribe(documentUrl => {
+      // subscribe() calls back synchronously with the current value
+      if (documentUrl === documentUrlWhenCaught) {
+        return;
+      }
+      setDismissed(false);
+      resetError();
+    });
+  }, [error]);
+  if (error) {
+    if (!fallback) {
+      // Nothing to display means nothing handled: rethrow untouched so the
+      // error reaches whoever can do something with it (an outer boundary, or
+      // the dev overlay).
+      throw error;
+    }
     const action = error.action;
     if (action) {
       cleanupRef.current?.();
@@ -35964,9 +36104,7 @@ const ErrorBoundary = ({
       setDismissed(true);
       resetError();
     };
-    if (!fallback) {
-      return null;
-    }
+    markErrorAsDisplayedBy(error, "<ErrorBoundary>"); // displayed here, so nothing else has to
     if (typeof fallback === "function") {
       return h(fallback, {
         error,
@@ -37368,10 +37506,24 @@ const debug$1 = (...args) => {
   }
 };
 
-// <Route> dispatches based on props:
-// - children → RouteContainer (traverses children statically, renders active branch)
-// - route    → RouteLeafRoute (rendered by parent container when URL matches)
-// - fallback → RouteActive (rendered by parent container when no sibling matches)
+/**
+ * Dispatches on its props:
+ * - children → RouteContainer (traverses children statically, renders active branch)
+ * - route    → RouteLeafRoute (rendered by parent container when URL matches)
+ * - fallback → RouteActive (rendered by parent container when no sibling matches)
+ *
+ * @param {object} props
+ * @param {object} [props.route] - the route this branch is for, from `route()`
+ * @param {object} [props.routeParams] - selects a branch on a param of that route
+ * @param {boolean} [props.fallback] - the branch taken when no sibling matches
+ * @param {Function|import("ignore:preact").VNode} [props.element] - what the branch renders
+ * @param {object} [props.elementProps] - props given to `element`
+ *
+ * A branch says what it renders, not what happens when it cannot: loading and
+ * error states are delegated to `<Loading>` and `<ErrorBoundary>` ancestors,
+ * which may be written between routes (a container reads through them, see
+ * collectBranches).
+ */
 const Route = props => {
   if (props.children) {
     return jsx(RouteContainer, {
@@ -37413,6 +37565,9 @@ const collectRoutePages = children => {
       return;
     }
     if (child.type !== Route) {
+      // Something written between routes — <Loading>, <ErrorBoundary>, a box of
+      // the app's own. The pages are inside it (see collectBranches).
+      visit(child.props && child.props.children);
       return;
     }
     const {
@@ -37475,8 +37630,8 @@ const RouteContainer = ({
   return content;
 };
 // Walk JSX children vnodes (without rendering) to build a branch list and
-// find the active one in the same pass.
-// All children must be <Route> — throws in dev otherwise.
+// find the active one in the same pass. Anything that is not a <Route> is read
+// through and kept around the branch it holds (see below).
 // Returns { matchingBranch, fallbackBranch, activeBranch }.
 const collectBranches = children => {
   let matchingBranch = null;
@@ -37492,7 +37647,31 @@ const collectBranches = children => {
       return;
     }
     if (child.type !== Route) {
-      throw new Error(`All <Route> children must be <Route> nodes, got: ${String(child.type?.name ?? child.type)}`);
+      // Anything else is a wrapper around branches, and the two that matter are
+      // navi's own: a page says what it renders and delegates what it cannot —
+      // loading to <Loading>, failing to <ErrorBoundary> — so those are written
+      // BETWEEN the container and its routes. Reading through them is what lets
+      // a subtree of pages share one, instead of the router demanding that its
+      // children be routes and pushing every boundary outside of it.
+      //
+      // The wrapper is kept around whatever it holds: the container renders the
+      // active branch alone, so the branch has to carry the wrapper with it, or
+      // being selected would mean losing what was written around it.
+      const wrapperChildren = child.props && child.props.children;
+      if (!wrapperChildren) {
+        throw new Error(`A <Route> child must be a <Route>, or hold some: ${String(child.type?.name ?? child.type)} holds nothing.`);
+      }
+      const {
+        matchingBranch: matchingInside,
+        fallbackBranch: fallbackInside
+      } = collectBranches(wrapperChildren);
+      if (matchingInside && !matchingBranch) {
+        matchingBranch = wrapBranch(matchingInside, child);
+      }
+      if (fallbackInside && !fallbackBranch) {
+        fallbackBranch = wrapBranch(fallbackInside, child);
+      }
+      return;
     }
     const {
       children: nodeChildren,
@@ -37547,6 +37726,12 @@ const collectBranches = children => {
     matchingBranch,
     fallbackBranch,
     activeBranch
+  };
+};
+const wrapBranch = (branch, wrapper) => {
+  return {
+    ...branch,
+    node: cloneElement(wrapper, null, branch.node)
   };
 };
 const RouteLeaf = props => {
@@ -37644,6 +37829,19 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
+// Where the two boxes of a travel stand in the window, published for the
+// length of it. Measurements only: what is DERIVED from them — where a picture
+// goes, what a bar covers — is derived in the CSS below, so the app's own
+// numbers (the room its fixed bars take) can take part in it. Only the
+// measuring needs JS, and only for the one moment both boxes exist (see
+// holdTravelGeometry).
+const TRAVEL_TOP_PROPERTY = "--navi-route-travel-top";
+const TRAVEL_LEFT_PROPERTY = "--navi-route-travel-left";
+const TRAVEL_WIDTH_PROPERTY = "--navi-route-travel-width";
+const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
+const TRAVEL_OLD_TOP_PROPERTY = "--navi-route-travel-old-top";
+const TRAVEL_OLD_LEFT_PROPERTY = "--navi-route-travel-old-left";
+const TRAVEL_GEOMETRY_PROPERTIES = [TRAVEL_TOP_PROPERTY, TRAVEL_LEFT_PROPERTY, TRAVEL_WIDTH_PROPERTY, TRAVEL_HEIGHT_PROPERTY, TRAVEL_OLD_TOP_PROPERTY, TRAVEL_OLD_LEFT_PROPERTY];
 const css$R = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
@@ -37716,6 +37914,23 @@ const css$R = /* css */`
          same page changing its mind. */
       mix-blend-mode: normal;
     }
+    &::view-transition-old(navi-route-travel) {
+      /* Where the page being left WAS on screen, which is not where the group
+         stands: the group is at the arriving box (its position animation is
+         dropped along with its height one, below), and the two boxes are at the
+         same place in the layout without being at the same place in the window
+         — one page is scrolled and the other is not, so the box being left
+         starts higher up. Left at the group's own corner the page being left
+         would be seen jumping back to its top before it even begins to leave.
+         Offset here rather than by \`translate\`, which the movement itself uses,
+         and at its own size rather than the group's so that nothing is cut off
+         the far side of the shift (see holdTravelGeometry). */
+      top: calc(var(${TRAVEL_OLD_TOP_PROPERTY}) - var(${TRAVEL_TOP_PROPERTY}));
+      left: calc(
+        var(${TRAVEL_OLD_LEFT_PROPERTY}) - var(${TRAVEL_LEFT_PROPERTY})
+      );
+      width: auto;
+    }
     /* The pages are cut at the edge of the box they travel in. Said HERE and
        nowhere else: these pictures are drawn in the top layer, so no overflow
        on any element of the document — not the box's own, not a frame around
@@ -37727,7 +37942,7 @@ const css$R = /* css */`
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see holdTravelHeight): the group
+         travel at the taller of the two boxes (see holdTravelGeometry): the group
          is what CLIPS, and the browser animates its height from the box being
          left to the box arriving — so the window shrinks under the pictures and
          cuts the page leaving from the bottom, progressively. The box does end
@@ -37738,7 +37953,44 @@ const css$R = /* css */`
          winning against it with !important — which also drops its position
          animation, fine while a travel box stands in the same place from one
          route to the next. */
-      height: var(--navi-route-travel-height);
+      height: var(${TRAVEL_HEIGHT_PROPERTY});
+
+      /* Cut at the safe area, on top of being cut at the box. The pictures are
+         drawn in the top layer, so they cover a fixed bar as easily as anything
+         else — and the box they travel in runs UNDER the bars by design: that
+         is what a fixed bar is for, and what the room it gives back is for. A
+         box scrolled by so much as a pixel therefore starts above the top bar
+         and ends below the bottom one, and the travel would be watched painting
+         over both for its whole length.
+
+         The band left free is the app's own safe area (see layout/safe_area.js)
+         — every kind of furniture at once, not the bars alone, and read rather
+         than asked for, so one that grows, shrinks or unmounts mid-travel is
+         followed without anything being told. What the group cannot know is
+         only where it itself stands, and that is the measured half. */
+      --navi-route-travel-clip-top: max(
+        0px,
+        var(--navi-safe-area-inset-top) - var(${TRAVEL_TOP_PROPERTY})
+      );
+      --navi-route-travel-clip-left: max(
+        0px,
+        var(--navi-safe-area-inset-left) - var(${TRAVEL_LEFT_PROPERTY})
+      );
+      --navi-route-travel-clip-bottom: max(
+        0px,
+        var(${TRAVEL_TOP_PROPERTY}) + var(${TRAVEL_HEIGHT_PROPERTY}) +
+          var(--navi-safe-area-inset-bottom) - 100dvh
+      );
+      --navi-route-travel-clip-right: max(
+        0px,
+        var(${TRAVEL_LEFT_PROPERTY}) + var(${TRAVEL_WIDTH_PROPERTY}) +
+          var(--navi-safe-area-inset-right) - 100dvw
+      );
+      clip-path: inset(
+        var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
+          var(--navi-route-travel-clip-bottom)
+          var(--navi-route-travel-clip-left)
+      );
       animation-duration: var(--navi-route-travel-duration, 300ms);
       animation-name: none;
     }
@@ -37947,9 +38199,10 @@ const css$R = /* css */`
  * sections inside the box the whole application travels in — and the class they
  * share plus their axis are not enough to tell them apart from the outside.
  *
- * The pages are cut at the edge of this box while they travel, which is written
- * on the transition's own pseudo-elements — no overflow of the document reaches
- * pictures drawn in the top layer. It needs nothing of the browser beyond view
+ * The pages are cut at the edge of this box while they travel, and at the app's
+ * safe area the box runs under, which is written on the transition's own
+ * pseudo-elements — no overflow of the document reaches pictures drawn in the
+ * top layer. It needs nothing of the browser beyond view
  * transitions themselves: a browser without them (Firefox) navigates without the
  * movement, and the gesture applies its change on release instead of dragging a
  * picture that does not exist.
@@ -38052,8 +38305,8 @@ const RouteTravel = ({
     }
     pageAskedForRef.current = page;
     // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see holdTravelHeight).
-    const heightBefore = elementRef.current.getBoundingClientRect().height;
+    // still the page being left (see holdTravelGeometry).
+    const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = renderingHeldForRouting || holdRendering();
@@ -38068,6 +38321,11 @@ const RouteTravel = ({
     // screen and an error nobody asked for.
     const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
+      // Whatever is awaited here must be able to resolve without the page being
+      // rendered: the document is frozen for the whole of this callback, and a
+      // frame never comes — waiting for one waits until the browser gives up on
+      // the transition. And it stays frozen exactly this long, so this is also
+      // the shortest thing there is to keep short.
       await whilePageRenders(page, async () => {
         releaseRendering();
         if (change) {
@@ -38076,7 +38334,7 @@ const RouteTravel = ({
       }, renderWait);
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
-      holdTravelHeight(elementRef.current, heightBefore);
+      holdTravelGeometry(elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {
@@ -38405,7 +38663,7 @@ const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTravelHeight();
+      releaseTravelGeometry();
     }
   };
 
@@ -38787,23 +39045,43 @@ const releaseHold = travel => {
   travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
 };
-const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
-// The height the group is held at for the whole travel: the taller of the two
-// boxes, so neither picture is ever cut. It cannot be said in CSS — neither box
-// is knowable there — and it cannot be measured from one side alone: a page
-// arriving shorter than the one it replaces would cut the one leaving, a page
-// arriving taller would be cut itself.
-const holdTravelHeight = (element, heightBefore) => {
-  const heightAfter = element.getBoundingClientRect().height;
-  const height = heightBefore > heightAfter ? heightBefore : heightAfter;
-  document.documentElement.style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
+
+// The two boxes of a travel, measured at the one moment both exist: the
+// arriving page is in the DOM and the transition has not started playing.
+//
+// The group stands at the ARRIVING box — its own animation is dropped, so it
+// takes the geometry the browser declared for it and holds it for the whole
+// travel. That is why both rectangles have to be published: a group that does
+// not move says nothing about where the page being left was, and its rectangle
+// in the window is the only thing CSS cannot work out on its own.
+const holdTravelGeometry = (element, rectBefore) => {
+  const rectAfter = element.getBoundingClientRect();
+  // The height it is held at is the taller of the two boxes, so neither picture
+  // is ever cut. It cannot be measured from one side alone: a page arriving
+  // shorter than the one it replaces would cut the one leaving, a page arriving
+  // taller would be cut itself.
+  const height = rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
+  const {
+    style
+  } = document.documentElement;
+  style.setProperty(TRAVEL_TOP_PROPERTY, `${rectAfter.top}px`);
+  style.setProperty(TRAVEL_LEFT_PROPERTY, `${rectAfter.left}px`);
+  style.setProperty(TRAVEL_WIDTH_PROPERTY, `${rectAfter.width}px`);
+  style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
+  style.setProperty(TRAVEL_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
+  style.setProperty(TRAVEL_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
 };
 // The live layout takes the box back. A discontinuity by construction — the
 // group stands at the held height, the box is at the new one — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
 // group still covers shows the page leaving only while it is still on screen.
-const releaseTravelHeight = () => {
-  document.documentElement.style.removeProperty(TRAVEL_HEIGHT_PROPERTY);
+const releaseTravelGeometry = () => {
+  const {
+    style
+  } = document.documentElement;
+  for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
+    style.removeProperty(property);
+  }
 };
 
 // The browser does not take the picture of the page being left when a
@@ -43278,59 +43556,14 @@ const withPixelUnit = value => {
 };
 
 /**
- * The room a fixed bar takes from the content, published so whatever scrolls
- * under it can give that room back.
+ * How much room the fixed bars take on each edge, published for the safe area
+ * to add up (see layout/safe_area.js — it declares the four variables written
+ * here, and what reads them reads the sum, never these).
  *
- * There are TWO rooms to give back, and forgetting the second one is the
- * classic bug:
- *
- * - **padding**, so the end of the content can be scrolled out from under the
- *   bar. Without it the last screenful stays covered, unreachable.
- * - **scroll-padding**, so anything the browser scrolls TO lands in front of
- *   the bar rather than under it. An anchor link, `scrollIntoView()`, a focused
- *   field brought into view, restoring a scroll position — all of them align
- *   the target with the edge of the scrollport, which is behind the bar. The
- *   padding above does not help here: it moves the content, not the place the
- *   browser scrolls the target to.
- *
- * Published on <html> as CSS variables rather than applied to some element:
- * which element scrolls is the app's business, and an app with more than one
- * would have to fight a component that picked for it. The app either marks its
- * scrolling area with `data-navi-fixed-bar-space` (the rules below) or reads
- * the variables itself. `:root` gets the scroll-padding unconditionally,
- * because the document is the scrollport in the common case and an anchor
- * landing under a bar is never what anyone wants.
- *
- * The variables hold the measured size of the bars on that edge — see the
- * comment where FixedBar sets them.
+ * Measured rather than declared: a bar's size comes from a prop, a theme
+ * variable, its own content or the device's notch, and only the used value
+ * knows all four.
  */
-
-const FIXED_BAR_SPACE_CSS = /* css */ `
-  :root {
-    --navi-fixed-bar-space-top: 0px;
-    --navi-fixed-bar-space-bottom: 0px;
-    --navi-fixed-bar-space-left: 0px;
-    --navi-fixed-bar-space-right: 0px;
-
-    scroll-padding-top: var(--navi-fixed-bar-space-top);
-    scroll-padding-right: var(--navi-fixed-bar-space-right);
-    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
-    scroll-padding-left: var(--navi-fixed-bar-space-left);
-  }
-
-  /* Put this on whatever scrolls under the bars. */
-  [data-navi-fixed-bar-space] {
-    padding-top: var(--navi-fixed-bar-space-top);
-    padding-right: var(--navi-fixed-bar-space-right);
-    padding-bottom: var(--navi-fixed-bar-space-bottom);
-    padding-left: var(--navi-fixed-bar-space-left);
-
-    scroll-padding-top: var(--navi-fixed-bar-space-top);
-    scroll-padding-right: var(--navi-fixed-bar-space-right);
-    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
-    scroll-padding-left: var(--navi-fixed-bar-space-left);
-  }
-`;
 
 // Several bars can share an edge — during a page transition the outgoing and
 // the incoming one are both mounted. They are all pinned to that same edge, so
@@ -43461,7 +43694,10 @@ installImportMetaCssBuild(import.meta);/**
  *    nearest scrolling ancestor, and an app shell almost always has one (an
  *    `overflow` somewhere) — the bar would then stick inside that box and
  *    never to the window. Fixed, centered and bounded by `maxWidth`, it also
- *    stays lined up with the content on a wide screen.
+ *    stays lined up with the content on a wide screen. It is pinned to the
+ *    app's rectangle rather than to the glass (`--navi-app-inset-*`, see
+ *    layout/safe_area.js): an app that declares itself narrower than the window
+ *    keeps its bars against its own edges.
  * 2. **It gives its space back.** Being fixed it covers the content: without a
  *    reserve the end of a long page stays under it, unreachable. It publishes
  *    what it takes on <html> — see fixed_bar_space.js.
@@ -43493,8 +43729,6 @@ const css$L = /* css */`
     }
   }
 
-  ${FIXED_BAR_SPACE_CSS}
-
   .navi_fixed_bar {
     position: fixed;
     z-index: var(--navi-z-index-bar);
@@ -43509,8 +43743,8 @@ const css$L = /* css */`
        whose padding ignored it would put its first item under it. */
     &[data-area="top"],
     &[data-area="bottom"] {
-      right: 0;
-      left: 0;
+      right: var(--navi-app-inset-right);
+      left: var(--navi-app-inset-left);
       /* No width of its own: pinned to both edges, the used width absorbs the
          padding instead of being inflated by it. max-width then narrows it and
          the auto margins re-center it. */
@@ -43524,8 +43758,8 @@ const css$L = /* css */`
     }
     &[data-area="left"],
     &[data-area="right"] {
-      top: 0;
-      bottom: 0;
+      top: var(--navi-app-inset-top);
+      bottom: var(--navi-app-inset-bottom);
       padding-top: calc(
         var(--navi-fixed-bar-padding) + env(safe-area-inset-top)
       );
@@ -43539,28 +43773,28 @@ const css$L = /* css */`
        added to the size: the background then runs under the notch while the
        content keeps the whole width/height asked for. */
     &[data-area="top"] {
-      top: 0;
+      top: var(--navi-app-inset-top);
       height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top));
       padding-top: env(safe-area-inset-top);
       box-shadow: 0 var(--navi-fixed-bar-border-width) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="bottom"] {
-      bottom: 0;
+      bottom: var(--navi-app-inset-bottom);
       height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom));
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="left"] {
-      left: 0;
+      left: var(--navi-app-inset-left);
       width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left));
       padding-left: env(safe-area-inset-left);
       box-shadow: var(--navi-fixed-bar-border-width) 0 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="right"] {
-      right: 0;
+      right: var(--navi-app-inset-right);
       width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right));
       padding-right: env(safe-area-inset-right);
       box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0
@@ -54760,12 +54994,13 @@ const css$v = /* css */`
       pointer-events: none;
     }
 
-    /* Scrolling with the page means sticking to the viewport, and a FixedBar
-       is in front of that viewport: without the offset a sticky label lands
-       behind the bar. The bar publishes the room it takes (see
-       fixed_bar_space.js) and it is 0px when there is no bar. */
+    /* Scrolling with the page means sticking to the viewport, and whatever the
+       app puts in front of that viewport — a FixedBar, a band of its own — is
+       in front of the label too: without the offset a sticky label lands behind
+       it. The safe area is what that adds up to (see layout/safe_area.js) and
+       it is 0px when nothing covers the top. */
     &[data-scroller="document"] {
-      --x-list-group-label-top: var(--navi-fixed-bar-space-top, 0px);
+      --x-list-group-label-top: var(--navi-safe-area-inset-top);
     }
 
     &[data-expand-x] {
