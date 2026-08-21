@@ -82,9 +82,17 @@ const css = /* css */ `
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   popoverMaxHeight?: number | string,
+ *   dialogMaxWidth?: number | string,
+ *   dialogMaxHeight?: number | string,
+ *   dialogExpand?: boolean,
+ *   dialogExpandX?: boolean,
+ *   dialogExpandY?: boolean,
+ *   dockedOnSmallTouchScreen?: boolean,
+ *   marginWithContainer?: number | string,
  *   backdropVariant?: "auto" | "discrete" | "invisible",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   escapeEffect?: "cancel" | "close",
+ *   popupLayer?: "top" | "local",
  *   [key: string]: any,
  * }>}
  * @param {Array<{value: any, label: import("preact").ComponentChildren}>} options
@@ -113,8 +121,23 @@ const css = /* css */ `
  *   through `menuLabel`.
  * @param {number|string} [menuIconSize] How big that icon is drawn. Defaults to
  *   the button's own font size.
- * @param {string} [positionArea="bottom-end"] Where the menu goes, relative to
- *   the whole split button. Same grammar as Picker/Popover.
+ * @param {"popover"|"dialog"} [mode="popover"] What the menu is drawn as. A
+ *   picker left to itself turns into a dialog on a small screen; a split
+ *   button's menu stays hung off the button there, so this says popover unless
+ *   the caller asks for the dialog back.
+ * @param {string} [positionArea="bottom-end"] Where the menu goes — relative to
+ *   the whole split button in popover mode, relative to the viewport in dialog
+ *   mode. Same grammar as Picker/Popover. The default only applies to a
+ *   popover; a dialog keeps Dialog's own "center".
+ *
+ * Every other prop the Picker's popup answers to is forwarded as-is —
+ * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMaxWidth`/`Height`,
+ * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
+ * `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
+ * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
+ * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
+ * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
+ * Anything else lands on the split button's own box.
  */
 export const SplitButton = (props) => {
   import.meta.css = css;
@@ -145,20 +168,26 @@ export const SplitButton = (props) => {
     // A split button is a frame the user's eye reads as one box; the left half
     // shrinking under the finger while the right half stays put breaks it.
     pressEffect = "none",
-    // The popup
-    mode,
-    popoverMode,
-    positionArea = "bottom-end",
-    popupWidthFitContent,
-    popoverMaxHeight,
-    dialogMaxWidth,
-    dialogMaxHeight,
-    backdropVariant,
-    pointerInteractionOutsideEffect,
-    escapeEffect,
     id,
     ...rest
   } = props;
+  // Everything the popup answers to travels to the Picker; everything else is
+  // the split button's own box (margins, width, data-*). Sorted by name rather
+  // than named one by one so a Picker popup prop is forwarded by adding it to
+  // that list, not by threading it through here.
+  const [popupProps, boxProps] = splitPopupProps(rest);
+  // A split button is a control on the page, not a place one goes: its menu
+  // hangs off it even on a phone, where a picker left to itself would decide a
+  // small screen means a dialog. Passing mode="dialog" asks for that back.
+  const mode = popupProps.mode === undefined ? "popover" : popupProps.mode;
+  popupProps.mode = mode;
+  // Read against the trigger in popover mode and against the VIEWPORT in
+  // dialog mode, so this default only holds for the former — under the chevron
+  // half, growing leftwards when the menu is wider than the button. A dialog
+  // keeps Dialog's own "center".
+  if (popupProps.positionArea === undefined && mode === "popover") {
+    popupProps.positionArea = "bottom-end";
+  }
 
   const idDefault = useId();
   const idResolved = id || idDefault;
@@ -218,7 +247,7 @@ export const SplitButton = (props) => {
       ref={rootRef}
       className="navi_split_button"
       borderRadius={borderRadius}
-      {...rest}
+      {...boxProps}
     >
       <LoadingOutline
         loading={loadingResolved}
@@ -259,16 +288,7 @@ export const SplitButton = (props) => {
             variant="headless"
             allowNameless
             anchor={rootRef}
-            mode={mode}
-            popoverMode={popoverMode}
-            positionArea={positionArea}
-            popupWidthFitContent={popupWidthFitContent}
-            popoverMaxHeight={popoverMaxHeight}
-            dialogMaxWidth={dialogMaxWidth}
-            dialogMaxHeight={dialogMaxHeight}
-            backdropVariant={backdropVariant}
-            pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-            escapeEffect={escapeEffect}
+            {...popupProps}
             readOnly={readOnly}
             disabled={disabled}
             loading={loadingResolved}
@@ -346,4 +366,45 @@ export const SplitButton = (props) => {
       </Group>
     </Box>
   );
+};
+
+// What the Picker's popup answers to — Picker's own popup props, named here so
+// a caller reaches all of them through the split button (see picker.jsx's JSDoc
+// for what each one says).
+const POPUP_PROP_SET = new Set([
+  "mode",
+  "popupLayer",
+  "positionArea",
+  "popoverMode",
+  "popoverSpacing",
+  "popupWidthFitContent",
+  "popoverMaxHeight",
+  "dialogMaxWidth",
+  "dialogMaxHeight",
+  "dialogExpand",
+  "dialogExpandX",
+  "dialogExpandY",
+  "dockedOnSmallTouchScreen",
+  "marginWithContainer",
+  "backdropVariant",
+  "pointerInteractionOutsideEffect",
+  "escapeEffect",
+  "closeOnFocusOut",
+  "scrollCapture",
+  "focusCapture",
+  "popupBackgroundColor",
+  "popupBorderRadius",
+  "animation",
+]);
+const splitPopupProps = (props) => {
+  const popupProps = {};
+  const boxProps = {};
+  for (const key of Object.keys(props)) {
+    if (POPUP_PROP_SET.has(key)) {
+      popupProps[key] = props[key];
+    } else {
+      boxProps[key] = props[key];
+    }
+  }
+  return [popupProps, boxProps];
 };

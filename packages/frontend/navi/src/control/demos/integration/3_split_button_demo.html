@@ -348,6 +348,9 @@
       const PopupDemo = () => (
         <div class="demo-section">
           <Heading id="popup">Le popup</Heading>
+          <Heading level={3} id="popup-popover">
+            popover
+          </Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="défaut (bottom-end, aussi large que le split button)">
               <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
@@ -376,10 +379,61 @@
                 action={() => {}}
               />
             </Variant>
+            <Variant caption='popoverMode="overlay"'>
+              <SplitButton
+                cta
+                popoverMode="overlay"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+          <Heading level={3} id="popup-dialog">
+            dialog
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
             <Variant caption='mode="dialog"'>
               <SplitButton
                 cta
                 mode="dialog"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='mode="dialog" positionArea="bottom"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                positionArea="bottom"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='mode="dialog" dockedOnSmallTouchScreen'>
+              <SplitButton
+                cta
+                mode="dialog"
+                dockedOnSmallTouchScreen
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='mode="dialog" dialogExpandX dialogMaxWidth="420"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                dialogExpandX
+                dialogMaxWidth="420"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='mode="dialog" marginWithContainer="60"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                dialogExpand
+                marginWithContainer="60"
                 options={SAVE_OPTIONS}
                 action={() => {}}
               />
