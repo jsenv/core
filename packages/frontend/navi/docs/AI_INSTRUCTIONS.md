@@ -70,7 +70,8 @@ consistency across the app, not from any single call site.
 - `docs/list_refresh.md` — what a write sends back to the network and what stays
   on screen meanwhile: stale data returned by `useAsyncData({ loading: true })`,
   what updates from a response without any request, `rerunOn` and its defaults,
-  and how a paginated `<List.Items>` re-reads its slices without disappearing.
+  and how a paginated `<List.Items>` re-reads its slices without disappearing,
+  including on its way back from a screen that unmounted it.
   Read it before adding verbs to `rerunOn`, hiding a list on `loading`, or
   remounting a list with a `key` to refresh it.
 - `docs/error_handling.md` — the two kinds of error and how navi keeps them

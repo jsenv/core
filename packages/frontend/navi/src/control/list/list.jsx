@@ -3981,16 +3981,30 @@ const ITEM_STORE_KEEP_AROUND = 250;
 // are in all is enough to place it, so the pages need not be contiguous nor
 // arrive in order.
 const useItemStore = ({ count, itemsAction, memoryBudget }) => {
+  // What the source kept of the collection when the screen it was on went away
+  // (a range reader keeps the composition: see resource_range_reader.js). The
+  // rows are drawn from it right away and the window is asked for again — the
+  // revalidation below, entered from a fresh mount rather than from a write.
   const pagesRef = useRef(null);
+  let restored = false;
   if (!pagesRef.current) {
-    pagesRef.current = { byIndex: new Map(), count: undefined };
+    const composition =
+      typeof itemsAction === "function" && itemsAction.readComposition
+        ? itemsAction.readComposition()
+        : null;
+    if (composition && composition.count !== undefined) {
+      pagesRef.current = composition;
+      restored = true;
+    } else {
+      pagesRef.current = { byIndex: new Map(), count: undefined };
+    }
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
   // The rows held are out of date and the run has not asked for the new ones
   // yet. They stay on screen until the answer comes: what is drawn is from
   // before, which is not the same thing as nothing to draw.
-  const staleRef = useRef(false);
+  const staleRef = useRef(restored);
   const [refreshing, setRefreshing] = useState(false);
   // A source that says when what it reads has moved (a resource range reader
   // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
@@ -4052,15 +4066,20 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
     forget: (windowFrom, windowTo) => {
       const budget =
         memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
-      if (!budget || pages.byIndex.size <= budget) {
+      if (!budget) {
         return;
       }
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
       const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
-      for (const index of pages.byIndex.keys()) {
-        if (index < keepFrom || index > keepTo) {
-          pages.byIndex.delete(index);
+      if (pages.byIndex.size > budget) {
+        for (const index of pages.byIndex.keys()) {
+          if (index < keepFrom || index > keepTo) {
+            pages.byIndex.delete(index);
+          }
         }
+      }
+      if (typeof itemsAction === "function" && itemsAction.trimComposition) {
+        itemsAction.trimComposition(keepFrom, keepTo, budget);
       }
     },
     retry: () => {
@@ -4248,6 +4267,15 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
             i++;
           }
           pages.count = pageCount;
+          // Which rank holds which id, kept by the source so a list drawing
+          // this collection again finds it drawn (see readComposition above).
+          if (itemsAction.writeComposition) {
+            itemsAction.writeComposition({
+              byIndex: pages.byIndex,
+              count: pageCount,
+              replace: revalidating,
+            });
+          }
           virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
           setPageVersion((version) => version + 1);
         };

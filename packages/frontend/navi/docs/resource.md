@@ -98,13 +98,19 @@ makes a change detectable), so the one the list is holding is the one it was
 given. Relations are not concerned: they are keyed by owner, and a row reading
 `game.candidates` reads the shared collection whatever object carries it.
 
-`GET_RANGE` is a **reader, not an action**. It keeps no value and takes no place
-in the rerun graph, which is what makes it usable per slice:
+`GET_RANGE` is a **reader, not an action**. It keeps no response and takes no
+place in the rerun graph, which is what makes it usable per slice:
 
 - the list already holds the slices it received and glues them back together —
   a second memory holding one of them would fight it;
 - a `POST` invalidating "the collection" would otherwise send every slice ever
   loaded back to the network at once.
+
+What it keeps instead is the collection's composition — which rank holds which
+id, and how many ranks there are, per resolved bound params — so a list drawing
+this collection again after its screen went away finds it drawn and revalidates
+it rather than starting over
+([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)).
 
 What it does not give is membership: an item that leaves the collection stays on
 screen until the rows are asked for again. Give the screen its own way to ask

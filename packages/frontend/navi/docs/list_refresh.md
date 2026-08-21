@@ -69,10 +69,10 @@ list containing it drops it too.
 
 ## A paginated list stays on screen too
 
-A `<List.Items>` reading through `GET_RANGE` holds the slices it received —
-places in a collection, not a list of ids — so nothing the store does can fix
-them: a row that changed tab, or one that was deleted, moves every row after it
-one rank up, and only the collection knows who fills the last place.
+A `<List.Items>` reading through `GET_RANGE` draws places in a collection, not
+a list of ids, so nothing the store does can fix them: a row that changed tab,
+or one that was deleted, moves every row after it one rank up, and only the
+collection knows who fills the last place.
 
 It is told, and it re-reads by itself:
 
@@ -84,7 +84,7 @@ It is told, and it re-reads by itself:
 />
 ```
 
-The reader keeps no value, so there is nothing to rerun; what it has is a
+The reader keeps no response, so there is nothing to rerun; what it has is a
 signal, bumped by the verbs `rerunOn.GET_RANGE` lists (`["POST", "DELETE"]` by
 default — `DELETE` is in there precisely because the store cannot fix places).
 A run hearing it asks again **for the window it is drawing**, and keeps drawing
@@ -108,10 +108,42 @@ itself: it is the one rendering the row, so it draws it loading, muted, or not
 at all. The run is not told about rows, only about the collection.
 
 ```jsx
-// ✗ remounting the run to refresh it: every row on screen becomes a skeleton
-//   again, and the list reopens where it opens, not where it was being read
+// ✗ remounting the run to refresh it: the list reopens where it opens, not
+//   where it was being read, and the reader is asked again for that window
 <List.Items key={`${scope}:${moved}`} … />
 ```
+
+## Leaving the screen and coming back
+
+A router renders one branch: opening a row unmounts the list that led to it.
+Coming back draws the rows from before, with no first load, because the reader
+keeps the collection's **composition** — which rank holds which id, and how many
+ranks there are — for each set of resolved bound params:
+
+```
+GAME.GET_RANGE { scope: "thread" }  →  { count: 412, byIndex: 0 → "W-ABC", 1 → … }
+GAME.GET_RANGE { radar: "R-42" }    →  { count: 18,  byIndex: … }
+```
+
+Ids, never rows: the rows are in the store already, shared and live, and a row
+dropped from the store simply stops resolving — a composition cannot hold a
+stale copy of anything.
+
+A run that finds a composition takes the `refreshing` line of the table above
+rather than the loading one: the rows are on screen while it asks again for the
+window it draws. So the two lists an app cannot tell apart from the outside —
+one reading `GET_MANY`, one reading `GET_RANGE` — behave the same on the way
+back.
+
+What a composition is about is the **values** its params hold, not the reader
+instance: `GET_RANGE.bindParams({ scope: "thread" })` called from two places
+reads and writes the same one (and gives back the same reader, memoized the way
+an action's `bindParams` is).
+
+The rest follows the rules already stated: a verb in `rerunOn.GET_RANGE`, or
+`reader.invalidate()`, drops the compositions — they stand for an order that is
+gone — and `memoryBudget` (1000 ranks by default) trims the ranks far from any
+window, which are asked for again if the user goes back to them.
 
 ## `rerunOn`, verb by verb
 

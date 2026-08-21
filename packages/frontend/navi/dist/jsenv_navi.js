@@ -6,7 +6,7 @@ import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visua
 export { coarsePointerSignal } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
-import { signal, computed, effect, batch, useSignal } from "@preact/signals";
+import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
 import { useContext, useLayoutEffect, useCallback, useRef, useState, useEffect, useMemo, useId, useErrorBoundary } from "preact/hooks";
 import { jsx, jsxs, Fragment as Fragment$1 } from "preact/jsx-runtime";
@@ -33903,31 +33903,61 @@ const getParamScope = (params) => {
  * replays it, and takes a place in the rerun graph — two things a slice must
  * not do: the list already holds the slices it received and glues them back
  * together, and a mutation would otherwise send every slice ever loaded back to
- * the network at once. So the reader keeps nothing. It runs the callback with
- * the range the list asks for, writes what comes back into the store, and hands
- * the rows back as store items — never a copy of the JSON, so the relations a
- * row reads are the shared ones and a request sent from a row is read back on
- * it. A row following its own fields through a write reads them from the store
- * (`RESOURCE.useById(id)`): an update replaces the item object, and the one the
- * list is holding is the one it was given.
+ * the network at once. So the reader keeps no response. It runs the callback
+ * with the range the list asks for, writes what comes back into the store, and
+ * hands the rows back as store items — never a copy of the JSON, so the
+ * relations a row reads are the shared ones and a request sent from a row is
+ * read back on it. A row following its own fields through a write reads them
+ * from the store (`RESOURCE.useById(id)`): an update replaces the item object,
+ * and the one the list is holding is the one it was given.
+ *
+ * What the reader does keep is the collection's composition: which rank holds
+ * which id, and how many ranks there are, per resolved bound params. The rows
+ * themselves are in the store already; the composition is the one thing about a
+ * paginated collection the store cannot model, and without it a list that left
+ * the screen comes back to skeletons and a request for rows it had a second
+ * before. Ids and a count, so nothing here can hold a stale copy of a row, and
+ * a row dropped from the store simply stops resolving. A list that comes back
+ * draws the composition it left and asks again for the window it draws — the
+ * revalidation an invalidation goes through, from a fresh mount.
  *
  * The reader is a function, so a list feeds on it the way it feeds on any other
  * source: `itemsAction={GAME.GET_RANGE.bindParams({ radar })}`.
  *
- * Keeping nothing does not mean hearing nothing: a mutation that decides who
- * belongs to the collection (a POST, a DELETE, whatever `rerunOn.GET_RANGE`
- * says) bumps `invalidationSignal`, and whoever reads slices through it goes
- * and asks again — the counterpart, for a reader, of what a rerun is for an
- * action. Every reader made by `bindParams` shares the signal of the one it
- * comes from: the params say which slices are read, not which collection.
+ * A mutation that decides who belongs to the collection (a POST, a DELETE,
+ * whatever `rerunOn.GET_RANGE` says) bumps `invalidationSignal` and drops the
+ * compositions: they stand for an order that is gone. Whoever reads slices
+ * through the reader then goes and asks again — the counterpart, for a reader,
+ * of what a rerun is for an action. Every reader made by `bindParams` shares
+ * the signal and the compositions of the one it comes from: the params say
+ * which slices are read, not which collection.
  */
 
 
 const createRangeReader = (
   actionName,
   callback,
-  { store, params: boundParams, invalidationSignal = signal(0) },
+  {
+    store,
+    params: boundParams,
+    invalidationSignal = signal(0),
+    compositionSet = new Set(),
+  },
 ) => {
+  // Which composition this reader is about: the values its params hold, not its
+  // own identity, so two `bindParams({ scope: "thread" })` made in two places
+  // read and write the same one. There are as many compositions as there are
+  // collections read through this reader — a handful, walked with the deep
+  // comparison the rest of the codebase memoizes on.
+  const currentParams = () => untracked(() => resolveParams(boundParams));
+  const findComposition = (params) => {
+    for (const composition of compositionSet) {
+      if (compareTwoJsValues(composition.params, params)) {
+        return composition;
+      }
+    }
+    return null;
+  };
   const readRange = async (range = {}) => {
     const { signal, ...rangeParams } = range;
     const paramsResolved = { ...resolveParams(boundParams), ...rangeParams };
@@ -33959,14 +33989,80 @@ const createRangeReader = (
   // stand for a composition that is gone.
   readRange.invalidationSignal = invalidationSignal;
   readRange.invalidate = () => {
+    compositionSet.clear();
     invalidationSignal.value = invalidationSignal.peek() + 1;
   };
+  // The rows of a composition, drawn from the store: a rank whose row is gone
+  // from the store resolves to nothing and is asked for again.
+  readRange.readComposition = () => {
+    const composition = findComposition(currentParams());
+    if (!composition) {
+      return null;
+    }
+    const byIndex = new Map();
+    untracked(() => {
+      for (const [index, id] of composition.idByIndex) {
+        const item = store.select(id);
+        if (item) {
+          byIndex.set(index, item);
+        }
+      }
+    });
+    return { byIndex, count: composition.count };
+  };
+  // `replace` is a revalidation: the ranks that are not in what just came back
+  // stood for a composition that has moved on. Otherwise the ranks are merged,
+  // so two lists reading the same collection through their own windows add up
+  // to one composition instead of taking turns erasing each other.
+  readRange.writeComposition = ({ byIndex, count, replace }) => {
+    const params = currentParams();
+    let composition = findComposition(params);
+    if (!composition) {
+      composition = { params, idByIndex: new Map(), count };
+      compositionSet.add(composition);
+    } else if (replace) {
+      composition.idByIndex = new Map();
+    }
+    composition.count = count;
+    for (const [index, item] of byIndex) {
+      const id = item ? item[store.idKey] : undefined;
+      if (id !== undefined) {
+        composition.idByIndex.set(index, id);
+      }
+    }
+  };
+  // The same trade a list makes with the rows it holds, applied to what is kept
+  // for the next mount. Two lists on one collection each trim by their own
+  // window; the rows a list is drawing stay on its screen regardless — a rank
+  // dropped here is one that gets asked for again after a remount.
+  readRange.trimComposition = (keepFrom, keepTo, budget) => {
+    const composition = findComposition(currentParams());
+    if (!composition || !budget || composition.idByIndex.size <= budget) {
+      return;
+    }
+    for (const index of composition.idByIndex.keys()) {
+      if (index < keepFrom || index > keepTo) {
+        composition.idByIndex.delete(index);
+      }
+    }
+  };
+  // Memoized for the reasons an action's bindParams is (see actions.js): params
+  // and the reader they make have synchronized lifetimes, and params equal in
+  // value give back the reader that already exists instead of a second one.
+  const readerByParams = createJsValueWeakMap();
   readRange.bindParams = (paramsToBind) => {
-    return createRangeReader(actionName, callback, {
+    const existing = readerByParams.get(paramsToBind);
+    if (existing) {
+      return existing;
+    }
+    const reader = createRangeReader(actionName, callback, {
       store,
       params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
       invalidationSignal,
+      compositionSet,
     });
+    readerByParams.set(paramsToBind, reader);
+    return reader;
   };
   return readRange;
 };
@@ -58697,19 +58793,30 @@ const useItemStore = ({
   itemsAction,
   memoryBudget
 }) => {
+  // What the source kept of the collection when the screen it was on went away
+  // (a range reader keeps the composition: see resource_range_reader.js). The
+  // rows are drawn from it right away and the window is asked for again — the
+  // revalidation below, entered from a fresh mount rather than from a write.
   const pagesRef = useRef(null);
+  let restored = false;
   if (!pagesRef.current) {
-    pagesRef.current = {
-      byIndex: new Map(),
-      count: undefined
-    };
+    const composition = typeof itemsAction === "function" && itemsAction.readComposition ? itemsAction.readComposition() : null;
+    if (composition && composition.count !== undefined) {
+      pagesRef.current = composition;
+      restored = true;
+    } else {
+      pagesRef.current = {
+        byIndex: new Map(),
+        count: undefined
+      };
+    }
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
   // The rows held are out of date and the run has not asked for the new ones
   // yet. They stay on screen until the answer comes: what is drawn is from
   // before, which is not the same thing as nothing to draw.
-  const staleRef = useRef(false);
+  const staleRef = useRef(restored);
   const [refreshing, setRefreshing] = useState(false);
   // A source that says when what it reads has moved (a resource range reader
   // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
@@ -58767,15 +58874,20 @@ const useItemStore = ({
     // trade the render window makes, one order of magnitude further out.
     forget: (windowFrom, windowTo) => {
       const budget = memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
-      if (!budget || pages.byIndex.size <= budget) {
+      if (!budget) {
         return;
       }
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
       const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
-      for (const index of pages.byIndex.keys()) {
-        if (index < keepFrom || index > keepTo) {
-          pages.byIndex.delete(index);
+      if (pages.byIndex.size > budget) {
+        for (const index of pages.byIndex.keys()) {
+          if (index < keepFrom || index > keepTo) {
+            pages.byIndex.delete(index);
+          }
         }
+      }
+      if (typeof itemsAction === "function" && itemsAction.trimComposition) {
+        itemsAction.trimComposition(keepFrom, keepTo, budget);
       }
     },
     retry: () => {
@@ -58942,6 +59054,15 @@ const useItemStore = ({
             i++;
           }
           pages.count = pageCount;
+          // Which rank holds which id, kept by the source so a list drawing
+          // this collection again finds it drawn (see readComposition above).
+          if (itemsAction.writeComposition) {
+            itemsAction.writeComposition({
+              byIndex: pages.byIndex,
+              count: pageCount,
+              replace: revalidating
+            });
+          }
           virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
           setPageVersion(version => version + 1);
         };
