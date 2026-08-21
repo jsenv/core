@@ -222,14 +222,16 @@ is placed. Placement is still computed against the real viewport
 (`pickPositionRelativeTo`, in `@jsenv/dom`). That is invisible for anything
 centered on its cross axis — `center`, `bottom`, `top`, which is what a dialog
 does nearly always — but shows for anything anchored to an edge: a
-`positionArea` like `bottom-start`, a `SidePanel`, a fixed bar. Those sit
-against the window's edge rather than the app column's, so they stay on the real
-viewport for now (`side_panel.jsx` restates `--dialog-maxmax-width` as the full
-viewport on purpose).
+`positionArea` like `bottom-start`, a `SidePanel`. Those sit against the
+window's edge rather than the app column's, so they stay on the real viewport
+for now (`side_panel.jsx` restates `--dialog-maxmax-width` as the full viewport
+on purpose).
 
-Making them follow the app column too means narrowing the container rect
-placement is computed against, inside `pickPositionRelativeTo` — worth doing the
-day a side panel or a fixed bar has to live inside a simulated screen.
+`FixedBar` is the exception, and shows the shape of the fix: it is pinned to
+`--navi-app-inset-*` (see `src/layout/safe_area.js`), which describes where the
+app's rectangle is in the window rather than how wide it may be. Making the rest
+follow means narrowing the container rect placement is computed against, inside
+`pickPositionRelativeTo`, to that same rectangle.
 
 Note that an app can already get all of it, placement included, by rendering
 itself in an iframe of the target width: the viewport then genuinely _is_ the

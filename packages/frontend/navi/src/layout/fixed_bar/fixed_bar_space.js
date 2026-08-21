@@ -1,57 +1,12 @@
 /**
- * The room a fixed bar takes from the content, published so whatever scrolls
- * under it can give that room back.
+ * How much room the fixed bars take on each edge, published for the safe area
+ * to add up (see layout/safe_area.js — it declares the four variables written
+ * here, and what reads them reads the sum, never these).
  *
- * There are TWO rooms to give back, and forgetting the second one is the
- * classic bug:
- *
- * - **padding**, so the end of the content can be scrolled out from under the
- *   bar. Without it the last screenful stays covered, unreachable.
- * - **scroll-padding**, so anything the browser scrolls TO lands in front of
- *   the bar rather than under it. An anchor link, `scrollIntoView()`, a focused
- *   field brought into view, restoring a scroll position — all of them align
- *   the target with the edge of the scrollport, which is behind the bar. The
- *   padding above does not help here: it moves the content, not the place the
- *   browser scrolls the target to.
- *
- * Published on <html> as CSS variables rather than applied to some element:
- * which element scrolls is the app's business, and an app with more than one
- * would have to fight a component that picked for it. The app either marks its
- * scrolling area with `data-navi-fixed-bar-space` (the rules below) or reads
- * the variables itself. `:root` gets the scroll-padding unconditionally,
- * because the document is the scrollport in the common case and an anchor
- * landing under a bar is never what anyone wants.
- *
- * The variables hold the measured size of the bars on that edge — see the
- * comment where FixedBar sets them.
+ * Measured rather than declared: a bar's size comes from a prop, a theme
+ * variable, its own content or the device's notch, and only the used value
+ * knows all four.
  */
-
-export const FIXED_BAR_SPACE_CSS = /* css */ `
-  :root {
-    --navi-fixed-bar-space-top: 0px;
-    --navi-fixed-bar-space-bottom: 0px;
-    --navi-fixed-bar-space-left: 0px;
-    --navi-fixed-bar-space-right: 0px;
-
-    scroll-padding-top: var(--navi-fixed-bar-space-top);
-    scroll-padding-right: var(--navi-fixed-bar-space-right);
-    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
-    scroll-padding-left: var(--navi-fixed-bar-space-left);
-  }
-
-  /* Put this on whatever scrolls under the bars. */
-  [data-navi-fixed-bar-space] {
-    padding-top: var(--navi-fixed-bar-space-top);
-    padding-right: var(--navi-fixed-bar-space-right);
-    padding-bottom: var(--navi-fixed-bar-space-bottom);
-    padding-left: var(--navi-fixed-bar-space-left);
-
-    scroll-padding-top: var(--navi-fixed-bar-space-top);
-    scroll-padding-right: var(--navi-fixed-bar-space-right);
-    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
-    scroll-padding-left: var(--navi-fixed-bar-space-left);
-  }
-`;
 
 // Several bars can share an edge — during a page transition the outgoing and
 // the incoming one are both mounted. They are all pinned to that same edge, so

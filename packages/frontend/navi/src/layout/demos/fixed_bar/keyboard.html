@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>
+      FixedBar — a field taking focus, and the keyboard that comes up
+    </title>
+    <link rel="stylesheet" href="./_shell.css" />
+    <style>
+      .measures {
+        position: fixed;
+        bottom: calc(var(--navi-safe-area-inset-bottom) + 8px);
+        left: 50%;
+        z-index: 2;
+        width: min(100vw - 16px, var(--navi-fixed-bar-max-width) - 16px);
+        padding: 8px;
+        color: #e5e7eb;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        background: rgba(17, 24, 39, 0.92);
+        border-radius: 8px;
+        translate: -50% 0;
+        pointer-events: none;
+      }
+      .measures dl {
+        display: grid;
+        margin: 0;
+        grid-template-columns: auto auto;
+        gap: 1px 10px;
+      }
+      .measures dt {
+        color: #9ca3af;
+      }
+      .measures dd {
+        margin: 0;
+        text-align: right;
+      }
+      /* The bar sits at the bottom of the LAYOUT viewport, which the keyboard
+         does not shrink: when these two part company the bar is behind it. */
+      .measures dd[data-covered] {
+        color: #fca5a5;
+      }
+      /* A box the size of a variable, so its used value can be read back — a
+         custom property holds its calc() unresolved until something lays it
+         out. */
+      .probe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-safe-area></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { Fragment, render } from "preact";
+      import { useEffect, useRef, useState } from "preact/hooks";
+      import { Box, Button, Field, FixedBar, Input, Text } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const Measures = () => {
+        const probeRef = useRef(null);
+        const [measures, setMeasures] = useState({});
+
+        useEffect(() => {
+          const probe = probeRef.current;
+          const usedValueOf = (property) => {
+            probe.style.height = `var(${property})`;
+            return Math.round(probe.getBoundingClientRect().height);
+          };
+          const update = () => {
+            const vv = window.visualViewport;
+            const bottomBar = document.querySelector(
+              '.navi_fixed_bar[data-area="bottom"]',
+            );
+            setMeasures({
+              "window.innerHeight": window.innerHeight,
+              "visualViewport.height": vv ? Math.round(vv.height) : "—",
+              "--navi-vvh": usedValueOf("--navi-vvh"),
+              "--navi-app-height": usedValueOf("--navi-app-height"),
+              "--navi-safe-area-inset-bottom": usedValueOf(
+                "--navi-safe-area-inset-bottom",
+              ),
+              "bottom bar bottom": Math.round(
+                bottomBar.getBoundingClientRect().bottom,
+              ),
+            });
+          };
+          update();
+          const vv = window.visualViewport;
+          vv?.addEventListener("resize", update);
+          vv?.addEventListener("scroll", update);
+          window.addEventListener("resize", update);
+          // A keyboard coming up does not always announce itself, and the bar
+          // it covers moves without any event of its own.
+          const interval = setInterval(update, 200);
+          return () => {
+            vv?.removeEventListener("resize", update);
+            vv?.removeEventListener("scroll", update);
+            window.removeEventListener("resize", update);
+            clearInterval(interval);
+          };
+        }, []);
+
+        const visualHeight = measures["visualViewport.height"];
+        return (
+          <div className="measures">
+            <div className="probe" ref={probeRef} />
+            <dl>
+              {Object.entries(measures).map(([name, value]) => (
+                <Fragment key={name}>
+                  <dt>{name}</dt>
+                  <dd
+                    data-covered={
+                      name === "bottom bar bottom" && value > visualHeight
+                        ? ""
+                        : undefined
+                    }
+                  >
+                    {value}
+                  </dd>
+                </Fragment>
+              ))}
+            </dl>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <>
+          <FixedBar area="top" height={48}>
+            <Box flex alignX="center" alignY="center" expandX>
+              <Text size="16">Nouvelle partie</Text>
+            </Box>
+          </FixedBar>
+          <div className="page">
+            <Box flex="y" spacing="m" paddingBottom="m">
+              <Field as="label" flex="y" spacingWithControl="xs">
+                Nom de la partie
+                <Input type="text" name="game_name" placeholder="Sans nom" />
+              </Field>
+            </Box>
+            {rows(14)}
+            <Box flex="y" spacing="m" paddingY="m">
+              <Field as="label" flex="y" spacingWithControl="xs">
+                Message aux joueurs
+                <Input
+                  type="text"
+                  name="message"
+                  placeholder="On se retrouve à 20h"
+                />
+              </Field>
+              <Field as="label" flex="y" spacingWithControl="xs">
+                Code d'accès
+                <Input type="text" name="code" placeholder="ABCD" />
+              </Field>
+            </Box>
+          </div>
+          <FixedBar area="bottom" height={54}>
+            <Box flex alignX="center" alignY="center" spacing="s" expandX>
+              <Button>Annuler</Button>
+              <Button>Créer la partie</Button>
+            </Box>
+          </FixedBar>
+          <Measures />
+        </>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -7,6 +7,7 @@ import {
   visualViewportHeightSignal,
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
+import { SAFE_AREA_CSS } from "./layout/safe_area.js";
 
 const button = document.createElement("button");
 button.style.display = "none";
@@ -26,8 +27,9 @@ const css = /* css */ `
 
       /* What navi treats as "the screen" when it sizes something that escapes
          normal flow (a dialog in the top layer, a popover, anything built on
-         them). The visual viewport by default — but an app that never spans
-         the whole window says so here, ONCE, without ever naming a component:
+         them): the app's own rectangle, which is the visual viewport minus the
+         bands an app asks for. An app that never spans the whole window says so
+         ONCE, without ever naming a component:
 
            :root {
              --navi-app-max-width: 600px;
@@ -47,17 +49,19 @@ const css = /* css */ `
          from it as before. A single popup that genuinely needs more can still
          raise its own maxWidth/maxHeight prop.
 
-         Sizes only, not placement: what is anchored to an edge (a SidePanel, a
-         fixed bar, a "bottom-start" positionArea) still sits against the
-         window's edge, not the app column's. See "Current limitations" in
-         docs/css_architecture.md. */
-      --navi-app-width: min(
-        var(--navi-vvw),
-        var(--navi-app-max-width, var(--navi-vvw))
+         Read from the insets rather than as a min() of its own so that the
+         width and the placement come from ONE description of where the app is
+         (see layout/safe_area.js). Placement does not follow yet everywhere —
+         see "Current limitations" in docs/css_architecture.md. */
+      --navi-app-width: calc(
+        var(--navi-vvw) - var(--navi-app-inset-left) - var(
+            --navi-app-inset-right
+          )
       );
-      --navi-app-height: min(
-        var(--navi-vvh),
-        var(--navi-app-max-height, var(--navi-vvh))
+      --navi-app-height: calc(
+        var(--navi-vvh) - var(--navi-app-inset-top) - var(
+            --navi-app-inset-bottom
+          )
       );
 
       --navi-focus-outline-width: 2px;
@@ -196,6 +200,8 @@ const css = /* css */ `
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
     }
   }
+
+  ${SAFE_AREA_CSS}
 
   /* Hidden appearance */
   input[navi-visually-hidden],

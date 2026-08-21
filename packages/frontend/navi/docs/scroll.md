@@ -71,13 +71,17 @@ Reference: `src/box/box.jsx` (the `[data-scrollable]` CSS),
 
 The default case: nothing to do, the document scrolls.
 
-The case that needs wiring is **fixed bars** — a top bar, a bottom nav, the
-normal shape of a mobile app. `FixedBar` measures its own height (safe area
-included) and publishes it on `<html>`:
+The case that needs wiring is whatever covers the viewport — **fixed bars** (a
+top bar, a bottom nav, the normal shape of a mobile app), the device's own
+notch, a band an app reserves for itself. Each publishes what it takes, navi
+adds them up on `<html>`, and the content reads the sum:
 
 ```
---navi-fixed-bar-space-top / -bottom / -left / -right
+--navi-safe-area-inset-top / -right / -bottom / -left
 ```
+
+See `src/layout/safe_area.js` for the two levels behind it — where the app is
+(`--navi-app-inset-*`), and what is left free inside it.
 
 Two distinct things must be given back to the content, and forgetting the
 second one is the classic bug:
@@ -94,7 +98,7 @@ scrolls — which element that is, is the app's business, so navi does not pick:
 
 ```html
 <!-- on the container that scrolls under the bars -->
-<div id="main" data-navi-fixed-bar-space>…</div>
+<div id="main" data-navi-safe-area>…</div>
 ```
 
 **Do not make that container scrollable by accident.** An `overflow-x: auto`

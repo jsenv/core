@@ -82,8 +82,8 @@ far from the wrapper:
 - **Worse than not sticking: the sticky element is offset downwards.** The rectangle a
   sticky element sticks within is the scroll container's box shrunk by its
   `scroll-padding` (CSS Position L3), and Chromium applies that for an element scroll
-  container. A wrapper carrying `data-navi-fixed-bar-space` has
-  `scroll-padding-top: var(--navi-fixed-bar-space-top)`, so labels come to rest at
+  container. A wrapper carrying `data-navi-safe-area` has
+  `scroll-padding-top: var(--navi-safe-area-inset-top)`, so labels come to rest at
   `scroll-padding-top + top` — a group label floating a hundred pixels below the bar,
   covering the content above it.
 

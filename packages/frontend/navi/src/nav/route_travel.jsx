@@ -88,6 +88,26 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
+// Where the two boxes of a travel stand in the window, published for the
+// length of it. Measurements only: what is DERIVED from them — where a picture
+// goes, what a bar covers — is derived in the CSS below, so the app's own
+// numbers (the room its fixed bars take) can take part in it. Only the
+// measuring needs JS, and only for the one moment both boxes exist (see
+// holdTravelGeometry).
+const TRAVEL_TOP_PROPERTY = "--navi-route-travel-top";
+const TRAVEL_LEFT_PROPERTY = "--navi-route-travel-left";
+const TRAVEL_WIDTH_PROPERTY = "--navi-route-travel-width";
+const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
+const TRAVEL_OLD_TOP_PROPERTY = "--navi-route-travel-old-top";
+const TRAVEL_OLD_LEFT_PROPERTY = "--navi-route-travel-old-left";
+const TRAVEL_GEOMETRY_PROPERTIES = [
+  TRAVEL_TOP_PROPERTY,
+  TRAVEL_LEFT_PROPERTY,
+  TRAVEL_WIDTH_PROPERTY,
+  TRAVEL_HEIGHT_PROPERTY,
+  TRAVEL_OLD_TOP_PROPERTY,
+  TRAVEL_OLD_LEFT_PROPERTY,
+];
 
 const css = /* css */ `
   /* The name that makes the page inside this box a picture of its own during a
@@ -161,6 +181,23 @@ const css = /* css */ `
          same page changing its mind. */
       mix-blend-mode: normal;
     }
+    &::view-transition-old(navi-route-travel) {
+      /* Where the page being left WAS on screen, which is not where the group
+         stands: the group is at the arriving box (its position animation is
+         dropped along with its height one, below), and the two boxes are at the
+         same place in the layout without being at the same place in the window
+         — one page is scrolled and the other is not, so the box being left
+         starts higher up. Left at the group's own corner the page being left
+         would be seen jumping back to its top before it even begins to leave.
+         Offset here rather than by \`translate\`, which the movement itself uses,
+         and at its own size rather than the group's so that nothing is cut off
+         the far side of the shift (see holdTravelGeometry). */
+      top: calc(var(${TRAVEL_OLD_TOP_PROPERTY}) - var(${TRAVEL_TOP_PROPERTY}));
+      left: calc(
+        var(${TRAVEL_OLD_LEFT_PROPERTY}) - var(${TRAVEL_LEFT_PROPERTY})
+      );
+      width: auto;
+    }
     /* The pages are cut at the edge of the box they travel in. Said HERE and
        nowhere else: these pictures are drawn in the top layer, so no overflow
        on any element of the document — not the box's own, not a frame around
@@ -172,7 +209,7 @@ const css = /* css */ `
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see holdTravelHeight): the group
+         travel at the taller of the two boxes (see holdTravelGeometry): the group
          is what CLIPS, and the browser animates its height from the box being
          left to the box arriving — so the window shrinks under the pictures and
          cuts the page leaving from the bottom, progressively. The box does end
@@ -183,7 +220,44 @@ const css = /* css */ `
          winning against it with !important — which also drops its position
          animation, fine while a travel box stands in the same place from one
          route to the next. */
-      height: var(--navi-route-travel-height);
+      height: var(${TRAVEL_HEIGHT_PROPERTY});
+
+      /* Cut at the safe area, on top of being cut at the box. The pictures are
+         drawn in the top layer, so they cover a fixed bar as easily as anything
+         else — and the box they travel in runs UNDER the bars by design: that
+         is what a fixed bar is for, and what the room it gives back is for. A
+         box scrolled by so much as a pixel therefore starts above the top bar
+         and ends below the bottom one, and the travel would be watched painting
+         over both for its whole length.
+
+         The band left free is the app's own safe area (see layout/safe_area.js)
+         — every kind of furniture at once, not the bars alone, and read rather
+         than asked for, so one that grows, shrinks or unmounts mid-travel is
+         followed without anything being told. What the group cannot know is
+         only where it itself stands, and that is the measured half. */
+      --navi-route-travel-clip-top: max(
+        0px,
+        var(--navi-safe-area-inset-top) - var(${TRAVEL_TOP_PROPERTY})
+      );
+      --navi-route-travel-clip-left: max(
+        0px,
+        var(--navi-safe-area-inset-left) - var(${TRAVEL_LEFT_PROPERTY})
+      );
+      --navi-route-travel-clip-bottom: max(
+        0px,
+        var(${TRAVEL_TOP_PROPERTY}) + var(${TRAVEL_HEIGHT_PROPERTY}) +
+          var(--navi-safe-area-inset-bottom) - 100dvh
+      );
+      --navi-route-travel-clip-right: max(
+        0px,
+        var(${TRAVEL_LEFT_PROPERTY}) + var(${TRAVEL_WIDTH_PROPERTY}) +
+          var(--navi-safe-area-inset-right) - 100dvw
+      );
+      clip-path: inset(
+        var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
+          var(--navi-route-travel-clip-bottom)
+          var(--navi-route-travel-clip-left)
+      );
       animation-duration: var(--navi-route-travel-duration, 300ms);
       animation-name: none;
     }
@@ -392,9 +466,10 @@ const css = /* css */ `
  * sections inside the box the whole application travels in — and the class they
  * share plus their axis are not enough to tell them apart from the outside.
  *
- * The pages are cut at the edge of this box while they travel, which is written
- * on the transition's own pseudo-elements — no overflow of the document reaches
- * pictures drawn in the top layer. It needs nothing of the browser beyond view
+ * The pages are cut at the edge of this box while they travel, and at the app's
+ * safe area the box runs under, which is written on the transition's own
+ * pseudo-elements — no overflow of the document reaches pictures drawn in the
+ * top layer. It needs nothing of the browser beyond view
  * transitions themselves: a browser without them (Firefox) navigates without the
  * movement, and the gesture applies its change on release instead of dragging a
  * picture that does not exist.
@@ -492,8 +567,8 @@ export const RouteTravel = ({
     }
     pageAskedForRef.current = page;
     // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see holdTravelHeight).
-    const heightBefore = elementRef.current.getBoundingClientRect().height;
+    // still the page being left (see holdTravelGeometry).
+    const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = renderingHeldForRouting || holdRendering();
@@ -520,7 +595,7 @@ export const RouteTravel = ({
       );
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
-      holdTravelHeight(elementRef.current, heightBefore);
+      holdTravelGeometry(elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {
@@ -858,7 +933,7 @@ export const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTravelHeight();
+      releaseTravelGeometry();
     }
   };
 
@@ -1244,26 +1319,39 @@ const releaseHold = (travel) => {
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
 };
 
-const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
-// The height the group is held at for the whole travel: the taller of the two
-// boxes, so neither picture is ever cut. It cannot be said in CSS — neither box
-// is knowable there — and it cannot be measured from one side alone: a page
-// arriving shorter than the one it replaces would cut the one leaving, a page
-// arriving taller would be cut itself.
-const holdTravelHeight = (element, heightBefore) => {
-  const heightAfter = element.getBoundingClientRect().height;
-  const height = heightBefore > heightAfter ? heightBefore : heightAfter;
-  document.documentElement.style.setProperty(
-    TRAVEL_HEIGHT_PROPERTY,
-    `${height}px`,
-  );
+// The two boxes of a travel, measured at the one moment both exist: the
+// arriving page is in the DOM and the transition has not started playing.
+//
+// The group stands at the ARRIVING box — its own animation is dropped, so it
+// takes the geometry the browser declared for it and holds it for the whole
+// travel. That is why both rectangles have to be published: a group that does
+// not move says nothing about where the page being left was, and its rectangle
+// in the window is the only thing CSS cannot work out on its own.
+const holdTravelGeometry = (element, rectBefore) => {
+  const rectAfter = element.getBoundingClientRect();
+  // The height it is held at is the taller of the two boxes, so neither picture
+  // is ever cut. It cannot be measured from one side alone: a page arriving
+  // shorter than the one it replaces would cut the one leaving, a page arriving
+  // taller would be cut itself.
+  const height =
+    rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
+  const { style } = document.documentElement;
+  style.setProperty(TRAVEL_TOP_PROPERTY, `${rectAfter.top}px`);
+  style.setProperty(TRAVEL_LEFT_PROPERTY, `${rectAfter.left}px`);
+  style.setProperty(TRAVEL_WIDTH_PROPERTY, `${rectAfter.width}px`);
+  style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
+  style.setProperty(TRAVEL_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
+  style.setProperty(TRAVEL_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
 };
 // The live layout takes the box back. A discontinuity by construction — the
 // group stands at the held height, the box is at the new one — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
 // group still covers shows the page leaving only while it is still on screen.
-const releaseTravelHeight = () => {
-  document.documentElement.style.removeProperty(TRAVEL_HEIGHT_PROPERTY);
+const releaseTravelGeometry = () => {
+  const { style } = document.documentElement;
+  for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
+    style.removeProperty(property);
+  }
 };
 
 // The browser does not take the picture of the page being left when a

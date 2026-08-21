@@ -264,12 +264,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    /* Scrolling with the page means sticking to the viewport, and a FixedBar
-       is in front of that viewport: without the offset a sticky label lands
-       behind the bar. The bar publishes the room it takes (see
-       fixed_bar_space.js) and it is 0px when there is no bar. */
+    /* Scrolling with the page means sticking to the viewport, and whatever the
+       app puts in front of that viewport — a FixedBar, a band of its own — is
+       in front of the label too: without the offset a sticky label lands behind
+       it. The safe area is what that adds up to (see layout/safe_area.js) and
+       it is 0px when nothing covers the top. */
     &[data-scroller="document"] {
-      --x-list-group-label-top: var(--navi-fixed-bar-space-top, 0px);
+      --x-list-group-label-top: var(--navi-safe-area-inset-top);
     }
 
     &[data-expand-x] {

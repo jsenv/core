@@ -9,7 +9,10 @@
  *    nearest scrolling ancestor, and an app shell almost always has one (an
  *    `overflow` somewhere) — the bar would then stick inside that box and
  *    never to the window. Fixed, centered and bounded by `maxWidth`, it also
- *    stays lined up with the content on a wide screen.
+ *    stays lined up with the content on a wide screen. It is pinned to the
+ *    app's rectangle rather than to the glass (`--navi-app-inset-*`, see
+ *    layout/safe_area.js): an app that declares itself narrower than the window
+ *    keeps its bars against its own edges.
  * 2. **It gives its space back.** Being fixed it covers the content: without a
  *    reserve the end of a long page stays under it, unreachable. It publishes
  *    what it takes on <html> — see fixed_bar_space.js.
@@ -28,11 +31,7 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import {
-  FIXED_BAR_SPACE_CSS,
-  requestFixedBarSpace,
-  setFixedBarSpace,
-} from "./fixed_bar_space.js";
+import { requestFixedBarSpace, setFixedBarSpace } from "./fixed_bar_space.js";
 
 const css = /* css */ `
   @layer navi {
@@ -51,8 +50,6 @@ const css = /* css */ `
     }
   }
 
-  ${FIXED_BAR_SPACE_CSS}
-
   .navi_fixed_bar {
     position: fixed;
     z-index: var(--navi-z-index-bar);
@@ -67,8 +64,8 @@ const css = /* css */ `
        whose padding ignored it would put its first item under it. */
     &[data-area="top"],
     &[data-area="bottom"] {
-      right: 0;
-      left: 0;
+      right: var(--navi-app-inset-right);
+      left: var(--navi-app-inset-left);
       /* No width of its own: pinned to both edges, the used width absorbs the
          padding instead of being inflated by it. max-width then narrows it and
          the auto margins re-center it. */
@@ -82,8 +79,8 @@ const css = /* css */ `
     }
     &[data-area="left"],
     &[data-area="right"] {
-      top: 0;
-      bottom: 0;
+      top: var(--navi-app-inset-top);
+      bottom: var(--navi-app-inset-bottom);
       padding-top: calc(
         var(--navi-fixed-bar-padding) + env(safe-area-inset-top)
       );
@@ -97,28 +94,28 @@ const css = /* css */ `
        added to the size: the background then runs under the notch while the
        content keeps the whole width/height asked for. */
     &[data-area="top"] {
-      top: 0;
+      top: var(--navi-app-inset-top);
       height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top));
       padding-top: env(safe-area-inset-top);
       box-shadow: 0 var(--navi-fixed-bar-border-width) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="bottom"] {
-      bottom: 0;
+      bottom: var(--navi-app-inset-bottom);
       height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom));
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="left"] {
-      left: 0;
+      left: var(--navi-app-inset-left);
       width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left));
       padding-left: env(safe-area-inset-left);
       box-shadow: var(--navi-fixed-bar-border-width) 0 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="right"] {
-      right: 0;
+      right: var(--navi-app-inset-right);
       width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right));
       padding-right: env(safe-area-inset-right);
       box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0

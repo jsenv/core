@@ -124,6 +124,18 @@
           </div>
 
           <div className="demo-section">
+            <Heading id="scrollbar">The document scrollbar</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/scrollbar.html"
+                caption="press the button: the page starts scrolling and the bar loses the scrollbar's width"
+                height={420}
+                scale={0.75}
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
             <Heading id="area">area</Heading>
             <div className="screens">
               <Screen
@@ -145,37 +157,13 @@
           </div>
 
           <div className="demo-section">
-            <Heading id="scrollbar">The document scrollbar</Heading>
-            <div className="screens">
-              <Screen
-                src="./fixed_bar/scrollbar.html"
-                caption="a page short enough to need no scrollbar"
-                height={420}
-                scale={0.75}
-              />
-              <Screen
-                src="./fixed_bar/scrollbar.html?long"
-                caption="the same page, scrolling — press the button on either one"
-                height={420}
-                scale={0.75}
-              />
-            </div>
-          </div>
-
-          <div className="demo-section">
             <Heading id="scrollbar-gutter">
               scrollbar-gutter: stable both-edges
             </Heading>
             <div className="screens">
               <Screen
                 src="./fixed_bar/scrollbar.html?gutter"
-                caption="short page, the room kept on both edges"
-                height={420}
-                scale={0.75}
-              />
-              <Screen
-                src="./fixed_bar/scrollbar.html?gutter&long"
-                caption="the same page, scrolling"
+                caption="press the button: the room is kept on both edges, so nothing moves"
                 height={420}
                 scale={0.75}
               />
@@ -188,6 +176,18 @@
               <Screen
                 src="./fixed_bar/top_and_bottom.html"
                 caption="the jumps live in the bars — every target lands in front of them"
+                height={420}
+                scale={0.75}
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
+            <Heading id="keyboard">A field taking focus</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/keyboard.html"
+                caption="on a phone, focus the last fields: the numbers say where the bottom bar ends up"
                 height={420}
                 scale={0.75}
               />
