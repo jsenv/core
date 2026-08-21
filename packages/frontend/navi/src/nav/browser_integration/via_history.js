@@ -141,6 +141,9 @@ export const setupBrowserIntegrationViaHistory = ({
       isVisited,
       state,
     });
+    if (navigationType === "push") {
+      startAtTop(url);
+    }
     executeWithCleanup(
       () => allResult,
       () => {
@@ -287,4 +290,34 @@ export const setupBrowserIntegrationViaHistory = ({
     isVisited,
     visitedUrlsSignal,
   };
+};
+
+// A page one arrives at for the first time starts at its top. Only a document
+// navigation does that on its own: a pushState creates its entry with whatever
+// scroll happened to be there, so without this the new page opens at the offset
+// of the one before it — and worse, that borrowed offset is what the browser
+// then remembers FOR that entry, and hands back on the way forward.
+//
+// Push only. A traverse is the browser's business and it is already right: it
+// keeps a position per entry and restores it. A replace is not an arrival —
+// it is the same place, said differently (a tab row travelling, see
+// route_travel.jsx), and resetting there would throw the reader out of a page
+// they never left.
+//
+// After the routes have been told, and that ordering is the whole subtlety:
+// the routes changing is what sets a travel off, and a travel measures the box
+// it is leaving as it stands. Reset before that and the picture of the page
+// being left is taken at the top of a page the reader was not at the top of —
+// it is then watched jumping back to its first line before it even begins to
+// leave (see holdTravelGeometry in route_travel.jsx). After pushState too, so
+// the entry being left keeps the offset it is at.
+//
+// The document, because the document is the scrollport in the common case. An
+// app that scrolls an element of its own scrolls it itself.
+const startAtTop = (url) => {
+  // A fragment names where to land, and the browser is the one that finds it.
+  if (new URL(url, window.location.href).hash) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
