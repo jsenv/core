@@ -193,6 +193,25 @@ consistency across the app, not from any single call site.
     does this for its current-tab indicator automatically
     (`currentIndicator`), which is why the bar follows a `RouteTravel` swipe
     with no wiring.
+  - the document's rendering is SUSPENDED for the whole update callback, from
+    the capture of the old state to the capture of the new one. Nothing paints,
+    and `requestAnimationFrame` does not tick in there — awaiting a frame
+    inside the callback awaits something that cannot happen, until the browser
+    gives up on the transition entirely (`Transition was aborted because of
+timeout in DOM update`). Await a microtask, a task or a render; never a
+    frame.
+  - that suspension lasts exactly as long as the callback, and **in a
+    sub-document it takes the scrollbar with it**: an iframe's scrollbar is
+    painted by the framed document, so it goes and comes back, shifting the
+    layout by its width. A top-level page is spared — its root scrollbar is the
+    compositor's. So a callback that waits on the network flickers every demo
+    shown in an iframe while the same app, opened on its own, shows nothing.
+    Keep the callback short, and suspect the frame before the code when a
+    scrollbar blinks.
+  - `viewTransition.finished` REJECTS when another transition replaces this one
+    — there is only ever one per document. `.finally()` does not handle a
+    rejection, so an unhandled one is what it leaves behind; `.then(done, done)`
+    is the shape that ends a transition whichever way it went.
 
 If unsure which export solves a problem, check `README.md` first: it names what
 navi provides, area by area. From a name, the built export tells you the API and

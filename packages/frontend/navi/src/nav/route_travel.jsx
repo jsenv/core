@@ -583,6 +583,11 @@ export const RouteTravel = ({
     // screen and an error nobody asked for.
     const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
+      // Whatever is awaited here must be able to resolve without the page being
+      // rendered: the document is frozen for the whole of this callback, and a
+      // frame never comes — waiting for one waits until the browser gives up on
+      // the transition. And it stays frozen exactly this long, so this is also
+      // the shortest thing there is to keep short.
       await whilePageRenders(
         page,
         async () => {
