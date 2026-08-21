@@ -228,8 +228,8 @@ for now (`side_panel.jsx` restates `--dialog-maxmax-width` as the full viewport
 on purpose).
 
 `FixedBar` is the exception, and shows the shape of the fix: it is pinned to
-`--navi-app-inset-*` (see `src/layout/safe_area.js`), which describes where the
-app's rectangle is in the window rather than how wide it may be. Making the rest
+`--navi-app-inset-*` (see `docs/safe_area.md`), which describes where the app's
+rectangle is in the window rather than how wide it may be. Making the rest
 follow means narrowing the container rect placement is computed against, inside
 `pickPositionRelativeTo`, to that same rectangle.
 

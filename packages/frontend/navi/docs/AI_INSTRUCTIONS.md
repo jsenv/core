@@ -76,6 +76,14 @@ consistency across the app, not from any single call site.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).
+- `docs/safe_area.md` — where the app is in the window and what covers it:
+  the two inset families (`--navi-app-inset-*` for what is pinned to an edge,
+  `--navi-safe-area-inset-*` for what flows inside), how an app declares itself
+  narrower than the window, `data-navi-safe-area`, how something new joins the
+  sum, and which viewport is which once a virtual keyboard is open. Read it
+  before hand-writing an offset to clear a `FixedBar`, before reaching for
+  `env(safe-area-inset-*)` directly, and before making an app simulate a phone
+  screen.
 - `docs/scroll.md` — where scrolling happens: what turns `Box`
   `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, scroll
   inside a `Dialog`/`Popover`, and what a scroll does to hover

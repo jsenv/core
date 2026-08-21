@@ -80,8 +80,9 @@ adds them up on `<html>`, and the content reads the sum:
 --navi-safe-area-inset-top / -right / -bottom / -left
 ```
 
-See `src/layout/safe_area.js` for the two levels behind it — where the app is
-(`--navi-app-inset-*`), and what is left free inside it.
+`docs/safe_area.md` holds the concept: the two levels, how an app declares
+itself narrower than the window, and how something other than a bar joins the
+sum.
 
 Two distinct things must be given back to the content, and forgetting the
 second one is the classic bug:

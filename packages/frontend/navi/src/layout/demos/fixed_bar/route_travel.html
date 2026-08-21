@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — a RouteTravel between two scrolled pages</title>
+    <link rel="stylesheet" href="./_shell.css" />
+    <style>
+      .controls {
+        display: flex;
+        padding: 8px 0;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      /* Numbered and colored per page, so a picture drawn from the wrong place
+         says which page it is and how far up it jumped. */
+      .travel_row {
+        margin-bottom: 6px;
+        padding: 10px;
+        font-variant-numeric: tabular-nums;
+        border-radius: 6px;
+      }
+      .travel_row[data-page="liste"] {
+        background: #e8f0fe;
+      }
+      .travel_row[data-page="modifier"] {
+        background: #fdf0e8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-safe-area></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        FixedBar,
+        Link,
+        Nav,
+        Route,
+        RouteTravel,
+        Text,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const LISTE = route("/liste");
+      const MODIFIER = route("/modifier");
+      setupRoutes([LISTE, MODIFIER]);
+
+      const SPEEDS = [
+        { label: "300ms", value: "300ms" },
+        { label: "1s", value: "1000ms" },
+        { label: "4s", value: "4000ms" },
+      ];
+
+      const Controls = () => {
+        const [speed, setSpeed] = useState(SPEEDS[2].value);
+        useLayoutEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-route-travel-duration",
+            speed,
+          );
+        }, [speed]);
+        return (
+          <div className="controls">
+            <label>
+              Durée{" "}
+              <select
+                value={speed}
+                onChange={(event) => setSpeed(event.target.value)}
+              >
+                {SPEEDS.map(({ label, value }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              onClick={() => {
+                window.scrollTo({ top: 150 });
+              }}
+            >
+              Descendre un peu
+            </Button>
+          </div>
+        );
+      };
+
+      const Page = ({ label }) => (
+        <div className="page">
+          <Controls />
+          {Array.from({ length: 30 }, (_, index) => (
+            <div key={index} className="travel_row" data-page={label}>
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      // The page has no tab of its own: it opens on the first one.
+      const TabIndex = () => {
+        useLayoutEffect(() => {
+          LISTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const App = () => {
+        const title = MODIFIER.matchingSignal.value ? "Modifier" : "Liste";
+        return (
+          <>
+            <FixedBar area="top" height={48}>
+              <Box flex alignX="center" alignY="center" expandX>
+                <Text size="16">{title}</Text>
+              </Box>
+            </FixedBar>
+            <RouteTravel axis="y" travelByDrag={false}>
+              <Route>
+                <Route
+                  route={LISTE}
+                  element={Page}
+                  elementProps={{ label: "liste" }}
+                />
+                <Route
+                  route={MODIFIER}
+                  element={Page}
+                  elementProps={{ label: "modifier" }}
+                />
+                <Route fallback element={TabIndex} />
+              </Route>
+            </RouteTravel>
+            <FixedBar as="nav" area="bottom" height={54}>
+              <Nav expand alignY="center" spacing="0">
+                <Link
+                  variant="tab"
+                  route={LISTE}
+                  expand
+                  padding="m"
+                  textAlign="center"
+                >
+                  Liste
+                </Link>
+                <Link
+                  variant="tab"
+                  route={MODIFIER}
+                  expand
+                  padding="m"
+                  textAlign="center"
+                >
+                  Modifier
+                </Link>
+              </Nav>
+            </FixedBar>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
