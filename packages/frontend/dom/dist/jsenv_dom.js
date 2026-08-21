@@ -8651,25 +8651,44 @@ const createDragGestureController = (options = {}) => {
       document.removeEventListener("selectstart", preventSelectStart);
     });
     /*
-     * Refusing every selection also refuses the one a press is entitled to
-     * make: a double click selects the word under it, and that selection is
-     * over before the pointer has gone anywhere. It is made here instead,
-     * spelled out (see selectWordAtPoint) rather than left to a browser
+     * Refusing every selection also refuses the ones a press is entitled to
+     * make: a double click selects the word under it, a triple click the
+     * paragraph around it, and both are over before the pointer has gone
+     * anywhere. They are made here instead, spelled out (see
+     * selectWordAtPoint, selectParagraphAtPoint) rather than left to a browser
      * heuristic that cannot tell a drag from a click.
      *
+     * Read from `click` rather than `dblclick`, because a triple click has no
+     * event of its own: what tells the clicks apart is `detail`, the count the
+     * browser keeps of how many presses landed in the same place in a row — 2
+     * for a word, 3 and beyond for a paragraph (a fourth click keeps the
+     * paragraph, the way the browser does).
+     *
      * On the document and outliving the gesture, because the gesture is
-     * already over when the second click completes: dblclick comes after
-     * mouseup, the gesture ends at pointerup. It is dropped when it fires, and
-     * otherwise when the next press installs its own — a listener waiting for
-     * a double click that never comes costs nothing until then.
+     * already over when the second click completes: click comes after mouseup,
+     * the gesture ends at pointerup. Kept installed after it fires, since the
+     * click that selects a word is also the one the next click turns into a
+     * paragraph; it goes when the next press installs its own — a listener
+     * waiting for a click that never comes costs nothing until then.
      */
-    removePendingDoubleClickListener();
-    const onDoubleClick = dblclickEvent => {
-      removePendingDoubleClickListener = NOOP;
+    removePendingMultiClickListener();
+    const onClick = clickEvent => {
+      const clickCount = clickEvent.detail;
+      if (clickCount < 2) {
+        return;
+      }
       // A drag that happened is a gesture, not a click: the second press of a
       // double click can be the one that drags, and what it drags must not end
       // up selected too.
       if (dragGesture.gestureInfo.started) {
+        return;
+      }
+      // Only the clicks that continue THIS press: the listener outlives the
+      // gesture and the page keeps being clicked elsewhere, where the browser
+      // is doing its own selecting — a second opinion there would only fight
+      // it.
+      const clickTarget = clickEvent.target;
+      if (clickTarget !== grabEvent.target && !clickTarget.contains(grabEvent.target)) {
         return;
       }
       // Text the page says is not selectable stays not selectable: a
@@ -8677,17 +8696,19 @@ const createDragGestureController = (options = {}) => {
       // engine — it is a rule about what the USER may start, and the browser
       // does not read it back when asked directly. Read here so that doing the
       // browser's work does not also undo what the page asked of it.
-      if (!isSelectable(dblclickEvent.target)) {
+      if (!isSelectable(clickEvent.target)) {
         return;
       }
-      selectWordAtPoint(dblclickEvent.clientX, dblclickEvent.clientY);
+      if (clickCount === 2) {
+        selectWordAtPoint(clickEvent.clientX, clickEvent.clientY);
+        return;
+      }
+      selectParagraphAtPoint(clickEvent.clientX, clickEvent.clientY);
     };
-    document.addEventListener("dblclick", onDoubleClick, {
-      once: true
-    });
-    removePendingDoubleClickListener = () => {
-      removePendingDoubleClickListener = NOOP;
-      document.removeEventListener("dblclick", onDoubleClick);
+    document.addEventListener("click", onClick);
+    removePendingMultiClickListener = () => {
+      removePendingMultiClickListener = NOOP;
+      document.removeEventListener("click", onClick);
     };
     const cleanup = initializer({
       onMove: dragViaPointer,
@@ -8882,7 +8903,7 @@ const definePropertyAsReadOnly = (object, propertyName) => {
   });
 };
 const NOOP = () => {};
-let removePendingDoubleClickListener = NOOP;
+let removePendingMultiClickListener = NOOP;
 
 // What a double click selects when the browser is allowed to do it itself: the
 // word around the caret the click lands on.
@@ -8901,6 +8922,46 @@ const selectWordAtPoint = (x, y) => {
     selection.modify("move", "backward", "word");
     selection.modify("extend", "forward", "word");
   }
+};
+
+// What a triple click selects when the browser is allowed to do it itself: the
+// paragraph around the caret the click lands on — in the DOM, the contents of
+// the closest block the caret sits in.
+//
+// Drawn from the box tree rather than from `selection.modify("extend",
+// "forward", "paragraph")`: "paragraph" is a granularity Gecko never
+// implemented (it stops at word and line), so the modify route would select a
+// line in Firefox and a paragraph in Chrome.
+const selectParagraphAtPoint = (x, y) => {
+  const caretRange = createCaretRange(x, y);
+  if (!caretRange) {
+    return;
+  }
+  const block = getClosestBlock(caretRange.startContainer);
+  if (!block) {
+    return;
+  }
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  const paragraphRange = document.createRange();
+  paragraphRange.selectNodeContents(block);
+  selection.addRange(paragraphRange);
+};
+const getClosestBlock = node => {
+  let element = node.nodeType === 1 ? node : node.parentElement;
+  while (element) {
+    const {
+      display
+    } = window.getComputedStyle(element);
+    // Everything that is not laid out as a line inside another line: the first
+    // ancestor that breaks the flow is the one whose text reads as a paragraph
+    // of its own.
+    if (!display.startsWith("inline") && display !== "contents") {
+      return element;
+    }
+    element = element.parentElement;
+  }
+  return null;
 };
 const createCaretRange = (x, y) => {
   if (document.caretPositionFromPoint) {

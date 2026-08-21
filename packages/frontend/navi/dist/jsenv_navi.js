@@ -29642,7 +29642,10 @@ const css$W = /* css */`
  *   from where the finger just tapped, and size alone would dock a narrow
  *   desktop window, which is still a mouse. It supplies defaults for
  *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
- *   any of them can still be pinned explicitly. Re-resolves live as the pointer
+ *   any of them can still be pinned explicitly. Ignored entirely when `expandY`
+ *   (or `expand`) is set: a dialog already filling the height is on the bottom
+ *   edge docking would bring it to, so docking could only take away the shape
+ *   the caller asked for. Re-resolves live as the pointer
  *   type or the window size changes. A sheet resting on the bottom edge is also
  *   pushed back down to close it, held by its header (a direct child `Box` with
  *   the `header` prop) — or from anywhere when it has none. See `swipe_to_close.js`.
@@ -29661,7 +29664,7 @@ const css$W = /* css */`
  *   container allows (`--dialog-maxmax-width`). Set by
  *   `dockedOnSmallTouchScreen` on a small touch screen.
  * @param {boolean} [props.expandY] - Same, vertically
- *   (`--dialog-maxmax-height`).
+ *   (`--dialog-maxmax-height`). Cancels `dockedOnSmallTouchScreen`.
  * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
@@ -29993,10 +29996,15 @@ const useDialogProps = props => {
   });
   const isModal = layer === "top";
   const ref = props.ref;
+  const expandY = Boolean(expand) || Boolean(expandYProp);
   // Only a small touch screen changes anything: on a mouse — and on a touch
   // screen too big to reach the bottom edge of — a dialog already wants to be
   // the centered box it is by default, so there is nothing to resolve.
-  const isDocked = dockedOnSmallTouchScreen && smallTouchScreenSignal.value;
+  // expandY cancels the docking outright: docking exists to bring the dialog
+  // down to the edge the thumb is on, and a dialog already filling the height
+  // is on that edge — all docking could still do is take away the shape the
+  // caller asked for (and arm a swipe-down on something that never rose).
+  const isDocked = dockedOnSmallTouchScreen && smallTouchScreenSignal.value && !expandY;
   const positionArea = positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
   const marginWithContainer = marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer :
   // A share of whatever holds the dialog: the app's own screen for a
@@ -30009,7 +30017,6 @@ const useDialogProps = props => {
   // handing them over — the docked default only applies when neither was said
   const expandXUnset = expand === undefined && expandXProp === undefined;
   const expandX = expandXUnset ? isDocked && DOCKED.expandX : Boolean(expand) || Boolean(expandXProp);
-  const expandY = Boolean(expand) || Boolean(expandYProp);
   const scrollCapture = scrollCaptureProp ?? (isDocked ? DOCKED.scrollCapture : false);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
