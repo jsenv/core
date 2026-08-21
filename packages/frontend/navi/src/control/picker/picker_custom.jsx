@@ -262,6 +262,9 @@ const PickerCustom = (props) => {
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
   delete pickerProps.escapeEffect;
+  // Read below for the popup alone; on the trigger it would land on the DOM as
+  // an unknown attribute holding a ref object.
+  delete pickerProps.anchor;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -457,7 +460,10 @@ const PickerCustom = (props) => {
       children,
     });
     Object.assign(popupProps, {
-      anchor: props.ref,
+      // The trigger, unless the caller names something else: a picker whose
+      // trigger is a piece of a bigger control (the chevron half of a split
+      // button) hangs its popup off the whole control instead.
+      anchor: props.anchor || props.ref,
       openController,
       // A picker whose value was never given to it reads it off the control in
       // its popup (see useUIFacadeStateController): the trigger shows what the

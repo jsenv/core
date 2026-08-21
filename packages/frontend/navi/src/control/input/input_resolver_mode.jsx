@@ -2,6 +2,7 @@ import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { useRef } from "preact/hooks";
 
 export const InputModeResolver = (props) => {
   const Next = useNextResolver();
@@ -14,27 +15,66 @@ export const InputModeResolver = (props) => {
 
 const InputModeNumericOrDecimal = (props) => {
   const Next = useNextResolver();
+  // Where a finger landed, to tell a tap that placed the caret from a drag that
+  // selected a part of the number (see onPointerUp below).
+  const pointerDownRef = useRef(null);
 
   return (
     <Next
       {...props}
+      // A field with no room for one more digit is a field one can only
+      // REPLACE: typing into it does nothing at all, so taking the caret
+      // selects what is there and the first digit typed starts a new number.
+      // The same handover navi_input_full does once a field fills up, asked at
+      // the other end — when the field is entered rather than when it is
+      // filled.
+      onFocus={(e) => {
+        props.onFocus?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        selectIfFull(e.currentTarget);
+      }}
+      onPointerDown={(e) => {
+        props.onPointerDown?.(e);
+        pointerDownRef.current = { x: e.clientX, y: e.clientY };
+      }}
+      // Once more on release, for a finger: a phone places the caret where it
+      // was tapped AFTER the focus above, which undoes the selection made
+      // there — and a field one cannot type into is then back to being a field
+      // one cannot type into. Not for a mouse, which is how one selects a
+      // single digit by dragging across it; and not for a finger that
+      // travelled, which was scrolling the page rather than aiming at the
+      // number.
+      onPointerUp={(e) => {
+        props.onPointerUp?.(e);
+        if (e.defaultPrevented) {
+          return;
+        }
+        if (e.pointerType !== "touch") {
+          return;
+        }
+        const pointerDown = pointerDownRef.current;
+        if (pointerDown) {
+          const dx = e.clientX - pointerDown.x;
+          const dy = e.clientY - pointerDown.y;
+          if (dx * dx + dy * dy > TAP_SLOP * TAP_SLOP) {
+            return;
+          }
+        }
+        selectIfFull(e.currentTarget);
+      }}
       onInput={(e) => {
         props.onInput?.(e);
         if (e.defaultPrevented) {
           return;
         }
         const input = e.currentTarget;
-        let maxLength = input.maxLength;
-        if (maxLength === -1) {
-          const naviMaxLengthAttr = input.getAttribute("navi-max-length");
-          maxLength =
-            naviMaxLengthAttr === null ? undefined : Number(naviMaxLengthAttr);
-        }
         const caretAtEnd = input.selectionStart === input.value.length;
         if (!caretAtEnd) {
           return;
         }
-        if (!isFull(input, maxLength)) {
+        if (!isFull(input, readMaxLength(input))) {
           return;
         }
         // Field is full and caret is at the end: notify listeners then
@@ -67,6 +107,37 @@ const InputModeNumericOrDecimal = (props) => {
       }}
     />
   );
+};
+
+// How far a finger may travel and still be aiming at what it landed on, in
+// pixels: past that it was scrolling the page.
+const TAP_SLOP = 10;
+
+// Everything already in the field, selected — but only when nothing more can be
+// typed after it, which is when replacing is the only edit left. A field one is
+// merely half-way through filling keeps its caret where it was put.
+const selectIfFull = (input) => {
+  if (input.readOnly || input.disabled) {
+    return;
+  }
+  if (!isFull(input, readMaxLength(input))) {
+    return;
+  }
+  if (input.selectionStart === 0 && input.selectionEnd === input.value.length) {
+    return;
+  }
+  input.select();
+};
+
+// What the field accepts at most: our own attribute first, since the native
+// maxLength is deliberately left unset (see RealInput in input_textual.jsx).
+const readMaxLength = (input) => {
+  const maxLength = input.maxLength;
+  if (maxLength !== -1) {
+    return maxLength;
+  }
+  const naviMaxLengthAttr = input.getAttribute("navi-max-length");
+  return naviMaxLengthAttr === null ? undefined : Number(naviMaxLengthAttr);
 };
 
 // A field is full when there is no room for another digit — and room is not

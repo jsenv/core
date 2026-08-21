@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Split button demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 16px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Link, SplitButton, Text } from "@jsenv/navi";
+      import { ChevronDownSvg as ChevronStrokeDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
+      import { SettingsSvg } from "@jsenv/navi/src/graphic/icons/settings_svg.jsx";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const SAVE_OPTIONS = [
+        { value: "save", label: "Enregistrer" },
+        { value: "save_close", label: "Enregistrer et fermer" },
+        { value: "save_new", label: "Enregistrer et nouveau" },
+        { value: "draft", label: "Mettre en brouillon" },
+      ];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Split button"
+            previous={{
+              href: "./2_padel_score_demo.html",
+              label: "Padel score",
+            }}
+            next={{
+              href: "./day_and_time_demo.html",
+              label: "Day and time",
+            }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <ChooseEffectDemo />
+          <LabelDemo />
+          <MenuIconDemo />
+          <StylesDemo />
+          <PopupDemo />
+          <BackdropDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const NominalDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <SplitButton
+              cta
+              options={SAVE_OPTIONS}
+              action={(value) => {
+                push("action", value);
+              }}
+              onValueChange={(value) => {
+                push("onValueChange", value);
+              }}
+            />
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="défaut">
+              <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption="readOnly">
+              <SplitButton
+                cta
+                readOnly
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption="disabled">
+              <SplitButton
+                cta
+                disabled
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption="loading">
+              <SplitButton
+                cta
+                loading
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption="action asynchrone (2s) : presser le bouton">
+              <SplitButton
+                cta
+                options={SAVE_OPTIONS}
+                action={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 2000));
+                }}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── chooseEffect ──────────────────────────────────────────────────────
+
+      const ChooseEffectDemo = () => {
+        const [selectEntries, pushSelect, clearSelect] = useCallLog();
+        const [runEntries, pushRun, clearRun] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="choose-effect">chooseEffect</Heading>
+            <Heading level={3} id="choose-effect-select">
+              select
+            </Heading>
+            <SplitButton
+              cta
+              chooseEffect="select"
+              options={SAVE_OPTIONS}
+              action={(value) => {
+                pushSelect("action", value);
+              }}
+            />
+            <CallLog entries={selectEntries} onClear={clearSelect} />
+            <Heading level={3} id="choose-effect-run">
+              run
+            </Heading>
+            <SplitButton
+              cta
+              chooseEffect="run"
+              options={SAVE_OPTIONS}
+              action={(value) => {
+                pushRun("action", value);
+              }}
+            />
+            <CallLog entries={runEntries} onClear={clearRun} />
+          </div>
+        );
+      };
+
+      // ── label ─────────────────────────────────────────────────────────────
+
+      const EXPORT_OPTIONS = [
+        { value: "pdf", label: "En PDF" },
+        { value: "csv", label: "En CSV" },
+        { value: "json", label: "En JSON" },
+      ];
+
+      const LabelDemo = () => {
+        const [format, setFormat] = useState("pdf");
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="label">label</Heading>
+            <Box flex="y" spacing="l" alignX="start">
+              <Variant caption="sans label : le bouton prend le nom de l'option choisie">
+                <SplitButton
+                  options={EXPORT_OPTIONS}
+                  value={format}
+                  onValueChange={setFormat}
+                  action={(value) => {
+                    push("action", value);
+                  }}
+                />
+              </Variant>
+              <Variant caption='label="Exporter"'>
+                <SplitButton
+                  label="Exporter"
+                  options={EXPORT_OPTIONS}
+                  value={format}
+                  onValueChange={setFormat}
+                  action={(value) => {
+                    push("action", value);
+                  }}
+                />
+              </Variant>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── menuIcon ──────────────────────────────────────────────────────────
+
+      const MenuIconDemo = () => (
+        <div class="demo-section">
+          <Heading id="menu-icon">menuIcon</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="défaut">
+              <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption="menuIcon={<ChevronDownSvg />} (trait plutôt que plein)">
+              <SplitButton
+                cta
+                menuIcon={<ChevronStrokeDownSvg />}
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='menuIcon="⋯"'>
+              <SplitButton
+                cta
+                menuIcon="⋯"
+                menuLabel="Autres façons d'enregistrer"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='menuIcon={<SettingsSvg />} menuIconSize="20"'>
+              <SplitButton
+                cta
+                menuIcon={<SettingsSvg />}
+                menuIconSize="20"
+                menuLabel="Autres façons d'enregistrer"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Styles ────────────────────────────────────────────────────────────
+
+      const StylesDemo = () => (
+        <div class="demo-section">
+          <Heading id="styles">Styles</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="défaut">
+              <SplitButton options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption="cta">
+              <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption='variant="border"'>
+              <SplitButton
+                variant="border"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='variant="discrete-border"'>
+              <SplitButton
+                variant="discrete-border"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='color="violet"'>
+              <SplitButton
+                color="violet"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='borderRadius="20px"'>
+              <SplitButton
+                cta
+                borderRadius="20px"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Le popup ──────────────────────────────────────────────────────────
+
+      const PopupDemo = () => (
+        <div class="demo-section">
+          <Heading id="popup">Le popup</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="défaut (bottom-end, aussi large que le split button)">
+              <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption='positionArea="bottom-start"'>
+              <SplitButton
+                cta
+                positionArea="bottom-start"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='positionArea="top-end"'>
+              <SplitButton
+                cta
+                positionArea="top-end"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption="popupWidthFitContent">
+              <SplitButton
+                cta
+                popupWidthFitContent
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='mode="dialog"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── backdropVariant ───────────────────────────────────────────────────
+
+      const BackdropDemo = () => (
+        <div class="demo-section">
+          <Heading id="backdrop">backdropVariant</Heading>
+          <Heading level={3} id="backdrop-popover">
+            popover
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="auto (défaut)">
+              <SplitButton cta options={SAVE_OPTIONS} action={() => {}} />
+            </Variant>
+            <Variant caption='backdropVariant="discrete"'>
+              <SplitButton
+                cta
+                backdropVariant="discrete"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='backdropVariant="invisible"'>
+              <SplitButton
+                cta
+                backdropVariant="invisible"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+          <Heading level={3} id="backdrop-dialog">
+            dialog
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="auto (défaut)">
+              <SplitButton
+                cta
+                mode="dialog"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='backdropVariant="discrete"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                backdropVariant="discrete"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+            <Variant caption='backdropVariant="invisible"'>
+              <SplitButton
+                cta
+                mode="dialog"
+                backdropVariant="invisible"
+                options={SAVE_OPTIONS}
+                action={() => {}}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

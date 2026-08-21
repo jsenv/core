@@ -172,6 +172,7 @@ export { InputDuration } from "./src/control/input/input_duration.jsx";
 export { useInputGroup } from "./src/control/input/use_input_group.js";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Select } from "./src/control/input/select.jsx";
+export { SplitButton } from "./src/control/input/split_button.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
 export {
   getNowHours,

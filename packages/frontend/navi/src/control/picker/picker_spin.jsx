@@ -277,6 +277,12 @@ const css = /* css */ `
        a radius there would show as a notch in the pressed background. */
     border-radius: 0;
     cursor: pointer;
+    /* Pressed with a finger as readily as with a mouse: no double-tap zoom to
+       wait for between two presses, and no word of the value getting selected
+       under the finger of someone holding one down. */
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   /* Said as data-hover rather than :hover: a touch browser synthesizes the
      enter and never the leave, so a CSS :hover would stay grey under the last
@@ -925,60 +931,107 @@ const WayOut = ({
   onPress,
   onPointerDown,
   children,
-}) => (
-  <Box
-    as="span"
-    baseClassName="navi_picker_spin_way_out"
-    // Which end of the box it sits in, said by the chevron rather than read
-    // from its place among its siblings: that is what the corners it is
-    // rounded by are keyed on (see the CSS above).
-    data-way-out={atStart ? "start" : "end"}
-    // Tracked rather than left to CSS :hover, which stays on after a tap on a
-    // touch device (see the CSS above).
-    pseudoClasses={WAY_OUT_PSEUDO_CLASSES}
-    // Announced as a button because that is what it is to whoever cannot see
-    // the chevron — and marked unavailable rather than removed when there is
-    // nothing that way, so it keeps its place.
-    role="button"
-    aria-label={label}
-    aria-disabled={unavailableMessage ? "true" : undefined}
-    data-unavailable={unavailableMessage ? "" : undefined}
-    // At the chevron, not beside it: a callout aims its arrow at where the
-    // anchor's text starts, and there is no text here — only a glyph in the
-    // middle of the box, which is what one pressed and what the answer is
-    // about.
-    data-callout-arrow-x="center"
-    // Read by triggerNaviCommand below the same way it reads a button's own.
-    commandfor={commandFor}
-    flex
-    align="center"
-    // A press, answered where it starts: mousedown rather than click, which is
-    // what makes holding one feel immediate — and the click after it is stopped
-    // below, so a <Label> wrapping the whole control does not forward it to the
-    // control and open the calendar on the way past.
-    onClick={(e) => {
-      e.preventDefault();
-    }}
-    onPointerDown={onPointerDown}
-    onMouseDown={(e) => {
-      // No focus, no text selection: the keyboard is put on the middle below.
-      e.preventDefault();
-      if (unavailableMessage) {
-        // Why it does nothing, said where one pressed: a control would have
-        // done this through its own interaction gate, and this one has none.
-        openCallout(unavailableMessage, {
-          anchorElement: e.currentTarget,
-          status: "info",
-          openingEvent: e,
-        });
-        return;
-      }
-      onPress(e);
-    }}
-  >
-    <Icon>{children}</Icon>
-  </Box>
-);
+}) => {
+  // Where the finger landed, to tell a press from the start of a scroll (see
+  // onPointerUp below).
+  const pointerDownRef = useRef(null);
+  const press = (e) => {
+    if (unavailableMessage) {
+      // Why it does nothing, said where one pressed: a control would have
+      // done this through its own interaction gate, and this one has none.
+      openCallout(unavailableMessage, {
+        anchorElement: e.currentTarget,
+        status: "info",
+        openingEvent: e,
+      });
+      return;
+    }
+    onPress(e);
+  };
+
+  return (
+    <Box
+      as="span"
+      baseClassName="navi_picker_spin_way_out"
+      // Which end of the box it sits in, said by the chevron rather than read
+      // from its place among its siblings: that is what the corners it is
+      // rounded by are keyed on (see the CSS above).
+      data-way-out={atStart ? "start" : "end"}
+      // Tracked rather than left to CSS :hover, which stays on after a tap on a
+      // touch device (see the CSS above).
+      pseudoClasses={WAY_OUT_PSEUDO_CLASSES}
+      // Announced as a button because that is what it is to whoever cannot see
+      // the chevron — and marked unavailable rather than removed when there is
+      // nothing that way, so it keeps its place.
+      role="button"
+      aria-label={label}
+      aria-disabled={unavailableMessage ? "true" : undefined}
+      data-unavailable={unavailableMessage ? "" : undefined}
+      // At the chevron, not beside it: a callout aims its arrow at where the
+      // anchor's text starts, and there is no text here — only a glyph in the
+      // middle of the box, which is what one pressed and what the answer is
+      // about.
+      data-callout-arrow-x="center"
+      // Read by triggerNaviCommand below the same way it reads a button's own.
+      commandfor={commandFor}
+      flex
+      align="center"
+      // The press is answered on the pointer events below, and the click that
+      // follows them is stopped here: a <Label> wrapping the whole control
+      // forwards a click to what it labels, which would open the calendar on
+      // the way past.
+      onClick={(e) => {
+        e.preventDefault();
+      }}
+      onPointerDown={(e) => {
+        onPointerDown(e);
+        pointerDownRef.current = { x: e.clientX, y: e.clientY };
+        if (e.pointerType === "touch") {
+          return;
+        }
+        // No focus, no text selection: the keyboard is put on the middle below.
+        // preventDefault on the pointer event rather than on the mouse one it is
+        // followed by, since the press is answered here.
+        e.preventDefault();
+        press(e);
+      }}
+      // A finger is answered when it lifts, not when it lands: what starts on a
+      // chevron may be a press or may be the beginning of a scroll, and only the
+      // release tells the two apart. A mouse has no such doubt and is answered
+      // above, as it goes down, which is what makes holding one feel immediate.
+      onPointerUp={(e) => {
+        if (e.pointerType !== "touch") {
+          return;
+        }
+        const pointerDown = pointerDownRef.current;
+        if (pointerDown) {
+          const dx = e.clientX - pointerDown.x;
+          const dy = e.clientY - pointerDown.y;
+          if (dx * dx + dy * dy > WAY_OUT_TAP_SLOP * WAY_OUT_TAP_SLOP) {
+            return;
+          }
+        }
+        press(e);
+      }}
+      // A chevron has nothing to copy, look up or share: the menu a long press
+      // opens on a phone would only get in the way of someone stepping through
+      // values, and the pressed state under it would stay on once it opened.
+      onContextMenu={(e) => {
+        if (e.pointerType !== "touch") {
+          // right click is allowed
+          return;
+        }
+        e.preventDefault();
+      }}
+    >
+      <Icon>{children}</Icon>
+    </Box>
+  );
+};
+
+// How far a finger may travel and still be pressing what it landed on, in
+// pixels: past that it was scrolling the page.
+const WAY_OUT_TAP_SLOP = 10;
 
 const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
 const WAY_OUT_PSEUDO_CLASSES = [":hover"];

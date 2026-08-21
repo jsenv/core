@@ -80,6 +80,10 @@ naviI18n.addAll({
     en: "Confirm",
     fr: "Confirmer",
   },
+  "button.more_actions": {
+    en: "More actions",
+    fr: "Autres actions",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()

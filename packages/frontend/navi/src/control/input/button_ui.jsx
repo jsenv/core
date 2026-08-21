@@ -465,6 +465,10 @@ export const ButtonUI = (props) => {
     icon,
     cta,
     spacing,
+    // Whether the button draws the loading outline itself. A button that is
+    // one half of a bigger control says no: what is busy is the control, and
+    // the outline belongs around the whole of it (see split_button.jsx).
+    loadingOutline = true,
   } = props;
   const [
     buttonControlRootProps,
@@ -525,6 +529,7 @@ export const ButtonUI = (props) => {
       spacing={undefined}
       cta={undefined}
       pressEffect={undefined}
+      loadingOutline={undefined}
       ref={ref}
       as={as}
       href={href}
@@ -565,7 +570,7 @@ export const ButtonUI = (props) => {
       hasChildUsingForwardedProps
     >
       <LoadingOutline
-        loading={loading}
+        loading={loadingOutline && loading}
         inset={-1}
         color="var(--button-loader-color)"
       />

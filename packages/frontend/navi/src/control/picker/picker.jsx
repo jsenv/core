@@ -887,6 +887,7 @@ const PickerFirstResolver = (props) => {
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
  *   marginWithContainer?: number | string,
+ *   anchor?: import("preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   backdropVariant?: "auto" | "discrete" | "invisible",
@@ -936,6 +937,11 @@ const PickerFirstResolver = (props) => {
  *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
  *   keep") for why Escape should go on meaning cancel, and for what the value
  *   at open is on the picker's very first open.
+ * @param {import("preact").RefObject<HTMLElement>|HTMLElement} [anchor] What
+ *   the popup hangs off, when that is not the picker itself: a picker whose
+ *   trigger is one piece of a bigger control (the chevron half of a split
+ *   button) points at the whole control, so the popup lines up with it and is
+ *   at least as wide as it.
  * @param {boolean} [allowNameless] - This picker is a door, not a field: it
  *   opens something and holds no value of its own, so the form or group around
  *   it expects nothing from it and says nothing about its missing name.
