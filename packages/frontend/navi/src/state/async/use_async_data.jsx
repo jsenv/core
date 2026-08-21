@@ -11,7 +11,10 @@ import {
   useState,
 } from "preact/hooks";
 
-import { markErrorAsDisplayedBy } from "../../action/action_error_report.js";
+import {
+  markErrorAsDisplayedBy,
+  markErrorAsTakenByRender,
+} from "../../action/action_error_report.js";
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
@@ -181,6 +184,10 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect, onLoad }) => {
       throw dismissedPromise;
     }
     const actionError = action.errorSignal.peek();
+    // A render has it now, whichever way it goes from here (see
+    // action_error_report.js): displayed below, or thrown to a boundary that
+    // displays it — and if none does, the throw reaches window on its own.
+    markErrorAsTakenByRender(actionError);
     if (errorEffect === "use") {
       // Handed to the component, which is what displays it from here on
       // (see action_error_report.js)

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 
+import { installReportDeadlineExtension } from "../../action/action_error_report.js";
 import { updateActions } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { setOnAllRouteReady, setRouteIntegration } from "../route.js";
@@ -90,6 +91,39 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
   // answerable once that has run — hence a function, read at click time rather
   // than a value read at setup time.
   isRouting: () => Boolean(updateRoutes),
+});
+
+/**
+ * How long an error that nothing displayed is given before it is called
+ * unhandled (see action_error_report.js, which knows the rule but not the DOM).
+ *
+ * A route action fails ON the url change, before its page exists: it is the
+ * routing itself that will bring what displays the error, so the answer is only
+ * final once the document has stopped moving AND the frame that paints what it
+ * brought has been through. Anything faster tells an app displaying "you are
+ * offline" that it displayed nothing.
+ */
+installReportDeadlineExtension((decide) => {
+  const whenPainted = () => {
+    // The frame that paints what routing brought, then the microtasks after it:
+    // a render claiming the error is on either side of that paint, never later.
+    requestAnimationFrame(() => {
+      setTimeout(decide);
+    });
+  };
+  if (!documentIsBusySignal.peek()) {
+    whenPainted();
+    return;
+  }
+  // Busy right now, so the synchronous first callback of subscribe() says
+  // "busy" and is skipped; what unsubscribes below is a later one.
+  const unsubscribe = documentIsBusySignal.subscribe((documentIsBusy) => {
+    if (documentIsBusy) {
+      return;
+    }
+    unsubscribe();
+    whenPainted();
+  });
 });
 
 setOnAllRouteReady((v) => {

@@ -64,6 +64,12 @@ export {
   Loading,
   useAsyncData,
 } from "./src/state/async/use_async_data.jsx";
+// What an error boundary of your own must do to an error it displays — see
+// docs/error_handling.md, "writing your own boundary".
+export {
+  errorIsDisplayed,
+  markErrorAsDisplayedBy,
+} from "./src/action/action_error_report.js";
 export { createRequestCanceller } from "./src/state/request_canceller.js";
 export { useCancelPrevious } from "./src/state/use_cancel_previous.js";
 export {

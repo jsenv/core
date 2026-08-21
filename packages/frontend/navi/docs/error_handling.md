@@ -137,19 +137,35 @@ branch, `useAsyncData({ error: true })`
 when it hands the error to the component, and a run given an `onError` — asking
 for the error is taking it.
 
-## Claimed by nobody: the report
+## Taken by nobody: the report
 
-Unclaimed errors are re-thrown from a macrotask, which makes them ordinary
-unhandled errors — window `error` event, jsenv overlay in dev — pointing at the
-code that produced them.
+An error that no render ever read is re-thrown, which makes it an ordinary
+unhandled error — window `error` event, jsenv overlay in dev — pointing at the
+code that produced it.
 
-The delay is the whole mechanism: every render that could display the error
-(Preact's queue, a `Suspense` boundary settling on the failure, the boundary
-above it) happens in microtasks, so one macrotask later the answer is final. A
-screen that mounts much later than that — mounted by something slower than a
-render — gets its error reported anyway; the report is then a duplicate of what
-it shows, never a lie about it. The same error reaching the reporter twice is
-reported once.
+**Being read is enough to call the report off**, displayed or not. Once a render
+has the error, everything that can happen next is already covered without this
+module: it is displayed (and marked), or it is thrown — and a thrown error either
+finds a boundary that displays it, or reaches window on its own, since
+`preact/debug` re-throws what a boundary caught and an unbounded throw aborts the
+render loudly. Reporting it here too would be a second voice, and the wrong one:
+this module cannot see which of those happened.
+
+So what reaches the report is an error **nothing looked at** — an action nobody
+reads, a prerun for a page never opened. And _when_ it is reported follows from
+that:
+
+- one macrotask, because every render that could read it happens in microtasks;
+- but a route action fails ON the url change, before its page exists — it is the
+  routing itself that brings what will display the error. So the deadline waits
+  for the document to stop moving and for the frame that paints what the routing
+  brought. Anything faster tells an app that is displaying "you are offline" that
+  it displayed nothing (measured: the screen arrived ~12ms after a plain
+  macrotask deadline).
+
+Waiting longer costs nothing, precisely because a read is enough to call it off:
+what is still unread by then was going to stay unread. The same error reaching
+the report twice is reported once.
 
 ## Writing your own boundary
 
@@ -171,4 +187,18 @@ The one reason to write your own: **filtering what you take.** navi's takes
 everything its subtree throws. An app that wants its own bugs to stay visible
 displays only what is data to it — an error carrying an HTTP status, its own
 `OfflineError` — and re-throws the rest **unmarked**, so the overlay still does
-its job.
+its job. `markErrorAsDisplayedBy` and `errorIsDisplayed` are exported for that:
+
+```jsx
+const PageErrorBoundary = ({ children, fallback }) => {
+  const [error, resetError] = useErrorBoundary();
+  if (!error) {
+    return children;
+  }
+  if (!isDisplayableError(error)) {
+    throw error; // our bug: unmarked, so it stays as loud as it is
+  }
+  markErrorAsDisplayedBy(error, "<PageErrorBoundary>");
+  return h(fallback, { error, resetError });
+};
+```
