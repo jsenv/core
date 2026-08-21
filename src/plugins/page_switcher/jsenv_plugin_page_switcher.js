@@ -34,6 +34,9 @@ export const jsenvPluginPageSwitcher = () => {
       html: (urlInfo) => {
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         injectJsenvScript(htmlAst, {
+          // A module: the tree it opens is the shared page picker
+          // (protocol_file/client/page_picker.js), which it imports.
+          type: "module",
           src: clientFileUrl,
           pluginName: "jsenv:page_switcher",
         });

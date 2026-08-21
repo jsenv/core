@@ -10,6 +10,14 @@
     <title>FixedBar — a RouteTravel between two scrolled pages</title>
     <link rel="stylesheet" href="./_shell.css" />
     <style>
+      /* No vertical scrollbar to appear and disappear: this page is about what
+         a travel paints, and the width a scrollbar takes back on the way in
+         would flicker across it. Which is what an app showing a handheld
+         experience on a desktop does anyway — see the scrollbar section of the
+         demo index for the other answer. */
+      /* :root {
+        scrollbar-width: none;
+      } */
       .controls {
         display: flex;
         padding: 8px 0;

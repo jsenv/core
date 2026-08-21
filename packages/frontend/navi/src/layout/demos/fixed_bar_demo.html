@@ -76,14 +76,17 @@
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
-      const Heading = ({ id, children }) => (
-        <h2 id={id}>
-          <Link anchor revealOnInteraction href={`#${id}`}>
-            #
-          </Link>
-          {children}
-        </h2>
-      );
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
 
       // A bar is fixed to the WINDOW, so two of them on one page would fight
       // over the same edges. Each layout is its own document, shown here at
@@ -133,6 +136,25 @@
                 scale={0.75}
               />
             </div>
+
+            <Heading level={3} id="scrollbar-gutter">
+              scrollbar-gutter: stable both-edges
+            </Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/scrollbar.html?gutter"
+                caption="the same button, the same page: nothing moves"
+                height={420}
+                scale={0.75}
+              />
+            </div>
+            <p>
+              L’autre réponse, non montrée ici :{" "}
+              <code>scrollbar-width: none</code> sur le document. Une appli qui
+              propose une expérience mobile jusque sur desktop n’a pas de
+              scrollbar verticale à montrer, et sans scrollbar il n’y a pas de
+              largeur à reprendre.
+            </p>
           </div>
 
           <div className="demo-section">
@@ -152,20 +174,6 @@
               <Screen
                 src="./fixed_bar/border.html"
                 caption="press the buttons: border on/off, height"
-              />
-            </div>
-          </div>
-
-          <div className="demo-section">
-            <Heading id="scrollbar-gutter">
-              scrollbar-gutter: stable both-edges
-            </Heading>
-            <div className="screens">
-              <Screen
-                src="./fixed_bar/scrollbar.html?gutter"
-                caption="press the button: the room is kept on both edges, so nothing moves"
-                height={420}
-                scale={0.75}
               />
             </div>
           </div>

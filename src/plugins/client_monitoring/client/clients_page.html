@@ -125,21 +125,6 @@
       .btn.primary:hover {
         background: #1d4ed8;
       }
-      .picker-filter {
-        box-sizing: border-box;
-        width: 100%;
-        margin-bottom: 10px;
-        padding: 8px 10px;
-        font: inherit;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-      }
-      .pagepick {
-        width: 100%;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        text-align: left;
-        word-break: break-all;
-      }
       .monitor {
         margin-left: 4px;
         padding: 2px 4px;
@@ -238,6 +223,8 @@
     </dialog>
 
     <script type="module">
+      import { openPagePicker } from "../../protocol_file/client/page_picker.js";
+
       const selfRows = document.getElementById("self-rows");
       const otherRows = document.getElementById("other-rows");
       // The monitoring script (injected into this page too) stores our own id.
@@ -514,68 +501,33 @@
           // dev server gone — ignore
         }
       };
-      // The .html pages available to navigate to (fetched once, lazily).
-      let navigablePages = null;
-      const loadPages = async () => {
-        if (navigablePages) {
-          return navigablePages;
-        }
-        try {
-          navigablePages = await (await fetch("/.internal/pages.json")).json();
-        } catch {
-          navigablePages = [];
-        }
-        return navigablePages;
-      };
       const shortLabel = (d) => {
         const parts = [d.os && d.os.name, d.runtime && d.runtime.name].filter(
           Boolean,
         );
         return parts.length ? parts.join(" ") : d.id.slice(0, 8);
       };
-      // A searchable list of pages; picking one navigates the client's active
-      // tab there (tabId from activeTab so only that tab moves).
-      const openNavigateDialog = async (client) => {
-        dlgTitle.textContent = `Navigate ${shortLabel(client)} to…`;
-        dlgCopy.style.display = "none";
-        dlgBody.innerHTML = `
-          <input class="picker-filter" id="page-filter" type="search" placeholder="Filter pages…" />
-          <ul class="list" id="page-list"></ul>`;
-        dlg.showModal();
-        const pages = await loadPages();
-        const listEl = document.getElementById("page-list");
-        const filterEl = document.getElementById("page-filter");
-        const renderPages = (query) => {
-          const needle = query.trim().toLowerCase();
-          const matches = needle
-            ? pages.filter((p) => p.toLowerCase().includes(needle))
-            : pages;
-          listEl.innerHTML = matches.length
-            ? matches
-                .slice(0, 300)
-                .map(
-                  (p) =>
-                    `<li><button class="btn pagepick" data-url="${escapeHtml(p)}">${escapeHtml(p)}</button></li>`,
-                )
-                .join("")
-            : '<li class="muted">No page matches.</li>';
-        };
-        renderPages("");
-        filterEl.oninput = () => renderPages(filterEl.value);
-        filterEl.focus();
-        listEl.onclick = (event) => {
-          const button = event.target.closest("button.pagepick");
-          if (!button) {
-            return;
-          }
-          sendCommand({
-            clientId: client.id,
-            tabId: client.activeTab ? client.activeTab.id : null,
-            type: "navigate",
-            url: button.getAttribute("data-url"),
-          });
-          dlg.close();
-        };
+      // Which page to send a client to is the same question cmd+K asks on any
+      // dev-served page, so it is the same tree that answers it (see
+      // protocol_file/client/page_picker.js) — filters, folding and all. Only
+      // the ending differs: the url goes to the client's active tab (tabId from
+      // activeTab, so no other tab moves) instead of to this window. No href on
+      // the rows for that very reason: a click here must not take THIS browser
+      // to a page meant for another one.
+      const openNavigateDialog = (client) => {
+        openPagePicker({
+          title: `Navigate ${shortLabel(client)} to…`,
+          placeholder: "Go to page…",
+          hereUrl: client.activeTab ? client.activeTab.url : null,
+          onPick: (page) => {
+            sendCommand({
+              clientId: client.id,
+              tabId: client.activeTab ? client.activeTab.id : null,
+              type: "navigate",
+              url: page.url,
+            });
+          },
+        });
       };
 
       document.addEventListener("click", async (event) => {
