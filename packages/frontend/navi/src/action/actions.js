@@ -18,6 +18,10 @@ import {
   IDLE,
   RUNNING,
 } from "./action_run_states.js";
+import {
+  markErrorAsDisplayedBy,
+  reportErrorIfNobodyDisplaysIt,
+} from "./action_error_report.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let DEBUG = false;
@@ -947,7 +951,6 @@ export const createAction = (callback, rootOptions = {}) => {
       const ui = {
         renderLoaded: null,
         renderLoadedAsync,
-        hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
       let completeSideEffectCleanup;
@@ -1089,28 +1092,27 @@ export const createAction = (callback, rootOptions = {}) => {
             return error;
           }
           if (DEBUG) {
-            console.log(
-              `"${action}": failed (error: ${error}, handled by ui: ${ui.hasRenderers})`,
-            );
+            console.log(`"${action}": failed (error: ${error})`);
           }
+          error.action = action;
           batch(() => {
             errorSignal.value = error;
             runningStateSignal.value = FAILED;
             onError?.(error, { event, action, args });
           });
 
-          if (ui.hasRenderers || onError) {
-            // When inside suspense this console.error is redundant with the error thrown by preact debug at
-            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
-            console.error(error);
-            // For UI-bound actions: error is properly handled by logging + UI display
-            // Return error instead of throwing to signal it's handled and prevent:
-            // - jsenv error overlay from appearing
-            // - error being treated as unhandled by runtime
-            return error;
+          // The error is in errorSignal; from here it is the UI's, and running
+          // the action is not the place to decide whether the UI wants it —
+          // that answer does not exist yet at this instant (see
+          // action_error_report.js). So the run never throws: it settles with
+          // the error as its value, and being displayed or not is constated
+          // afterwards, in one place, by one rule.
+          if (onError) {
+            // Asking for the error IS taking it.
+            markErrorAsDisplayedBy(error, "onError");
           }
-          error.action = action;
-          throw error;
+          reportErrorIfNobodyDisplaysIt(error, { action });
+          return error;
         };
 
         try {
@@ -1485,15 +1487,8 @@ const createActionProxyFromSignal = (
       performReset: proxyPrivateMethod("performReset"),
       ui: currentActionPrivateProperties.ui,
     };
-    onActionTargetChange((actionTarget, previousTarget) => {
+    onActionTargetChange(() => {
       proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-      if (previousTarget && actionTarget) {
-        const previousPrivateProps = getActionPrivateProperties(previousTarget);
-        if (previousPrivateProps.ui.hasRenderers) {
-          const newPrivateProps = getActionPrivateProperties(actionTarget);
-          newPrivateProps.ui.hasRenderers = true;
-        }
-      }
       proxyPrivateProperties.childActionWeakSet =
         currentActionPrivateProperties.childActionWeakSet;
     });

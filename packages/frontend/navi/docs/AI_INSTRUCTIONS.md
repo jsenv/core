@@ -73,6 +73,17 @@ consistency across the app, not from any single call site.
   and how a paginated `<List.Items>` re-reads its slices without disappearing.
   Read it before adding verbs to `rerunOn`, hiding a list on `loading`, or
   remounting a list with a `key` to refresh it.
+- `docs/error_handling.md` — the two kinds of error and how navi keeps them
+  apart: where an error is shown depending on where it came from (a control's
+  action shows it on what was clicked, a route action replaces the page, a
+  refused value is validation and not an error at all), why a run never rejects,
+  the `__handled_by__` mark that means "this error is on screen somewhere" (and
+  what `preact/debug` throws over your app without it), what becomes of an error
+  nobody displays, and the two rules any error boundary must follow — mark only
+  what you render, reset on the document URL and not only on the rerun. Read it
+  before displaying an error by hand, before writing an error boundary of your
+  own, and before concluding that a dev overlay over a page that already shows
+  its error is a crash.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).

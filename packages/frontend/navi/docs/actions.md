@@ -81,7 +81,9 @@ const [user] = useAsyncData(userAction);
 `useAsyncData` suspends until the data is there and throws on failure, leaving
 both to the nearest `<Loading>` and `<ErrorBoundary>`; pass `{ loading: true }`
 or `{ error: true }` to handle either inside the component (stale data stays
-available while a rerun is in flight). `useActionStatus(action)` gives the whole
+available while a rerun is in flight). Where a failure goes when no screen takes
+it — and why a run settles with its error rather than rejecting — is
+[error_handling.md](./error_handling.md). `useActionStatus(action)` gives the whole
 state at once — `{ idle, loading, completed, aborted, error, data, params }` —
 for a component that needs to look at it rather than render it.
 

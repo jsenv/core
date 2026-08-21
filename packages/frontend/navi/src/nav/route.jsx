@@ -63,7 +63,7 @@
  */
 
 import { signal } from "@preact/signals";
-import { h } from "preact";
+import { cloneElement, h } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
@@ -102,10 +102,24 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-// <Route> dispatches based on props:
-// - children → RouteContainer (traverses children statically, renders active branch)
-// - route    → RouteLeafRoute (rendered by parent container when URL matches)
-// - fallback → RouteActive (rendered by parent container when no sibling matches)
+/**
+ * Dispatches on its props:
+ * - children → RouteContainer (traverses children statically, renders active branch)
+ * - route    → RouteLeafRoute (rendered by parent container when URL matches)
+ * - fallback → RouteActive (rendered by parent container when no sibling matches)
+ *
+ * @param {object} props
+ * @param {object} [props.route] - the route this branch is for, from `route()`
+ * @param {object} [props.routeParams] - selects a branch on a param of that route
+ * @param {boolean} [props.fallback] - the branch taken when no sibling matches
+ * @param {Function|import("preact").VNode} [props.element] - what the branch renders
+ * @param {object} [props.elementProps] - props given to `element`
+ *
+ * A branch says what it renders, not what happens when it cannot: loading and
+ * error states are delegated to `<Loading>` and `<ErrorBoundary>` ancestors,
+ * which may be written between routes (a container reads through them, see
+ * collectBranches).
+ */
 export const Route = (props) => {
   if (props.children) {
     return <RouteContainer {...props} />;
@@ -143,6 +157,9 @@ export const collectRoutePages = (children) => {
       return;
     }
     if (child.type !== Route) {
+      // Something written between routes — <Loading>, <ErrorBoundary>, a box of
+      // the app's own. The pages are inside it (see collectBranches).
+      visit(child.props && child.props.children);
       return;
     }
     const { children: nodeChildren, route, routeParams } = child.props;
@@ -193,8 +210,8 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   return content;
 };
 // Walk JSX children vnodes (without rendering) to build a branch list and
-// find the active one in the same pass.
-// All children must be <Route> — throws in dev otherwise.
+// find the active one in the same pass. Anything that is not a <Route> is read
+// through and kept around the branch it holds (see below).
 // Returns { matchingBranch, fallbackBranch, activeBranch }.
 const collectBranches = (children) => {
   let matchingBranch = null;
@@ -211,9 +228,31 @@ const collectBranches = (children) => {
       return;
     }
     if (child.type !== Route) {
-      throw new Error(
-        `All <Route> children must be <Route> nodes, got: ${String(child.type?.name ?? child.type)}`,
-      );
+      // Anything else is a wrapper around branches, and the two that matter are
+      // navi's own: a page says what it renders and delegates what it cannot —
+      // loading to <Loading>, failing to <ErrorBoundary> — so those are written
+      // BETWEEN the container and its routes. Reading through them is what lets
+      // a subtree of pages share one, instead of the router demanding that its
+      // children be routes and pushing every boundary outside of it.
+      //
+      // The wrapper is kept around whatever it holds: the container renders the
+      // active branch alone, so the branch has to carry the wrapper with it, or
+      // being selected would mean losing what was written around it.
+      const wrapperChildren = child.props && child.props.children;
+      if (!wrapperChildren) {
+        throw new Error(
+          `A <Route> child must be a <Route>, or hold some: ${String(child.type?.name ?? child.type)} holds nothing.`,
+        );
+      }
+      const { matchingBranch: matchingInside, fallbackBranch: fallbackInside } =
+        collectBranches(wrapperChildren);
+      if (matchingInside && !matchingBranch) {
+        matchingBranch = wrapBranch(matchingInside, child);
+      }
+      if (fallbackInside && !fallbackBranch) {
+        fallbackBranch = wrapBranch(fallbackInside, child);
+      }
+      return;
     }
     const {
       children: nodeChildren,
@@ -257,6 +296,12 @@ const collectBranches = (children) => {
   visit(children);
   const activeBranch = matchingBranch || fallbackBranch || null;
   return { matchingBranch, fallbackBranch, activeBranch };
+};
+const wrapBranch = (branch, wrapper) => {
+  return {
+    ...branch,
+    node: cloneElement(wrapper, null, branch.node),
+  };
 };
 const RouteLeaf = (props) => {
   if (props.route) {

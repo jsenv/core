@@ -11,8 +11,10 @@ import {
   useState,
 } from "preact/hooks";
 
+import { markErrorAsDisplayedBy } from "../../action/action_error_report.js";
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
 import { publishRouteRender } from "../../nav/route_render.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
@@ -180,13 +182,17 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect, onLoad }) => {
     }
     const actionError = action.errorSignal.peek();
     if (errorEffect === "use") {
+      // Handed to the component, which is what displays it from here on
+      // (see action_error_report.js)
+      markErrorAsDisplayedBy(actionError, "useAsyncData({ error: true })");
       const dismissError = () => {
         dismissedActionWeakSet.add(action);
         setTick((n) => n + 1);
       };
       return [undefined, false, actionError, dismissError];
     }
-    actionError.action = action;
+    // Not marked: nothing is displayed yet — the boundary that catches this is
+    // what says so, and only if it has something to show.
     throw actionError;
   }
 
@@ -312,8 +318,34 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
 };
 
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
-// Catches errors thrown by useAction. Subscribes to error.action so it
-// auto-resets when the action runs again.
+/**
+ * Displays what its subtree throws — an action failure delegated by
+ * `useAsyncData`, or any render error under it.
+ *
+ * Two things it gets right that a hand-written boundary rarely does, both
+ * explained in docs/error_handling.md:
+ *
+ * - It marks the error as displayed ONLY when it actually displays it.
+ *   `preact/debug` rethrows every error a boundary caught in a `setTimeout`, on
+ *   purpose (React devtools compatibility), so a handled error still reaches
+ *   window and the jsenv overlay covers the app unless `__handled_by__` is set.
+ *   Setting it before knowing whether anything is rendered turns a boundary into
+ *   a bug swallower: a TypeError in a component becomes a blank page AND a
+ *   silent one. Without a `fallback` there is nothing to display, so the error is
+ *   left alone and continues up.
+ *
+ * - It resets on navigation, not only on rerun. Rerunning the failed action is
+ *   one way out; going somewhere else is the common one. Without a reset on the
+ *   document URL, the error stays in place of every page after it, including the
+ *   ones that would render fine.
+ *
+ * @param {object} props
+ * @param {Function|import("preact").VNode} [props.fallback] - what is displayed
+ *   instead of the children: an element, or a component receiving
+ *   `{ error, resetError }`. Without it the boundary is transparent.
+ * @param {() => void} [props.onReset] - called when the fallback dismisses the
+ *   error via its `resetError`.
+ */
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetError] = useErrorBoundary();
   const [dismissed, setDismissed] = useState(false);
@@ -325,8 +357,30 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     };
   }, []);
 
+  // The error belongs to the page that failed: leaving it means leaving it
+  // behind.
+  useEffect(() => {
+    if (!error) {
+      return undefined;
+    }
+    const documentUrlWhenCaught = documentUrlSignal.peek();
+    return documentUrlSignal.subscribe((documentUrl) => {
+      // subscribe() calls back synchronously with the current value
+      if (documentUrl === documentUrlWhenCaught) {
+        return;
+      }
+      setDismissed(false);
+      resetError();
+    });
+  }, [error]);
+
   if (error) {
-    error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
+    if (!fallback) {
+      // Nothing to display means nothing handled: rethrow untouched so the
+      // error reaches whoever can do something with it (an outer boundary, or
+      // the dev overlay).
+      throw error;
+    }
 
     const action = error.action;
     if (action) {
@@ -358,9 +412,7 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
       setDismissed(true);
       resetError();
     };
-    if (!fallback) {
-      return null;
-    }
+    markErrorAsDisplayedBy(error, "<ErrorBoundary>"); // displayed here, so nothing else has to
     if (typeof fallback === "function") {
       return h(fallback, { error, resetError: dismiss });
     }

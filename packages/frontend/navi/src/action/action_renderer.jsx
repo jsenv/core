@@ -1,6 +1,7 @@
 import { isValidElement } from "preact";
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 
+import { markErrorAsDisplayedBy } from "./action_error_report.js";
 import { getActionPrivateProperties } from "./action_private_properties.js";
 import { useActionStatus } from "./use_action_status.js";
 
@@ -54,16 +55,6 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
-  // Mark this action as bound to UI components (has renderers)
-  // This tells the action system that errors should be caught and stored
-  // in the action's error state rather than bubbling up
-  useLayoutEffect(() => {
-    if (action) {
-      const { ui } = getActionPrivateProperties(action);
-      ui.hasRenderers = true;
-    }
-  }, [action]);
-
   useLayoutEffect(() => {
     resetErrorBoundary();
   }, [action, loading, idle, resetErrorBoundary]);
@@ -86,6 +77,8 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     return renderIdle(action);
   }
   if (errorBoundary) {
+    // Displaying it is what makes it handled (see action_error_report.js)
+    markErrorAsDisplayedBy(errorBoundary, "<ActionRenderer>");
     return renderError(errorBoundary, "ui_error", action);
   }
   if (aborted) {
@@ -109,6 +102,7 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     return renderLoading(action);
   }
   if (error) {
+    markErrorAsDisplayedBy(error, "<ActionRenderer>");
     return renderError(error, "action_error", action);
   }
   return renderCompletedSafe(data, action);

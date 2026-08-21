@@ -138,7 +138,9 @@ Two things to know or the screen stays empty:
 - **Handle the error where it happens**, or hand it to an `<ErrorBoundary>`:
   `useAsyncData(action, { loading: true, error: true })` returns
   `[data, loading, error]`, which is what lets a page draw its own "the server
-  refused" with a "try again" that calls `action.rerun()`.
+  refused" with a "try again" that calls `action.rerun()`. Which of the two, and
+  what happens to an error no screen takes:
+  [error_handling.md](./error_handling.md).
 
 ## Two screens, two states
 

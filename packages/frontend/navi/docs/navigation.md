@@ -190,15 +190,36 @@ Two shapes for a section, and which one applies is decided by the URL:
 
 ### Loading data
 
-A branch loads with `action`, and shows its states with the usual boundaries:
+A page reads its data from a route action through `useAsyncData` and says only
+what it renders; what it cannot render is delegated to an ancestor — waiting to
+`<Loading>`, failing to `<ErrorBoundary>`. Both are written **between** the
+container and its branches, and the container reads through them, so a whole
+section of pages shares one:
 
 ```jsx
-<ErrorBoundary fallback={(error, { resetError }) => …}>
-  <Suspense fallback={<p>Loading…</p>}>
-    <Route route={GAME_ROUTE} action={loadGame} element={(game) => <GamePage game={game} />} />
-  </Suspense>
-</ErrorBoundary>
+<Route>
+  <ErrorBoundary
+    fallback={({ error, resetError }) => (
+      <ErrorScreen error={error} onRetry={resetError} />
+    )}
+  >
+    <Loading fallback={<GameSkeleton />}>
+      <Route route={GAME_ROUTE} element={GamePage} />
+      <Route route={GAMES_ROUTE} element={GamesPage} />
+    </Loading>
+  </ErrorBoundary>
+  <Route fallback element={NotFoundPage} />
+</Route>
 ```
+
+The order matters: the boundary goes **outside** the `<Loading>`. A page
+suspends first and fails second, and a boundary placed under the `Suspense` it
+suspended in is part of the tree being held.
+
+A branch selected inside a wrapper keeps it — the container renders the active
+branch alone, wrapper included, so `<Loading>`/`<ErrorBoundary>` can bracket a
+subset of the branches rather than the whole router. What happens to a failure
+no boundary takes: [error_handling.md](./error_handling.md).
 
 ## Links and tab rows
 
