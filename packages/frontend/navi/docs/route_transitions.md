@@ -182,6 +182,30 @@ animates. A `<RouteTravel>` rendered inside the `element` of each of the routes
 it travels between is destroyed mid-travel by the router. Give the row a single
 branch — its tabs as params of one route is the usual shape.
 
+## A transition says nothing about data
+
+A relation is about the map of the app, and about nothing else. Defining one
+does not change what the page arriving loads, reloads, or keeps:
+
+- an action that `COMPLETED` still holds its response, on the way back as on the
+  way in — a page wanting fresh data says `.rerun()`, with or without a
+  movement;
+- a `<List.Items>` reading through `GET_RANGE` still revalidates the window it
+  draws when it is mounted again.
+
+What a transition takes is the document's **rendering** for the one frame the
+browser needs to photograph the page being left (see `rendering_hold.js`), and
+it gives it back in the same callback. The hold is about a picture, not about
+data: nothing waits on it, nothing is skipped because of it.
+
+So "this list stopped refreshing since we animated the pair" is a claim worth
+checking twice before believing: it is held by
+`tests/route_transition_list_revisit/`, which mounts one app twice — the two
+mounts differing by a single `defineRouteTransition` line — and compares what
+each one sends to the network on the way back. See
+[list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)
+for which source refreshes on a revisit and which does not.
+
 ## The rest, briefly
 
 - Pace: `--navi-route-transition-duration` (CSS, default 300ms) for everyone;

@@ -72,8 +72,11 @@ consistency across the app, not from any single call site.
   what updates from a response without any request, `rerunOn` and its defaults,
   and how a paginated `<List.Items>` re-reads its slices without disappearing,
   including on its way back from a screen that unmounted it.
-  Read it before adding verbs to `rerunOn`, hiding a list on `loading`, or
-  remounting a list with a `key` to refresh it.
+  It also says who decides a re-read on the way back — the source the list
+  reads through, never the navigation and never a route transition.
+  Read it before adding verbs to `rerunOn`, hiding a list on `loading`,
+  remounting a list with a `key` to refresh it, or reporting that a page
+  stopped refreshing since a transition was defined on its pair.
 - `docs/error_handling.md` — the two kinds of error and how navi keeps them
   apart: where an error is shown depending on where it came from (a control's
   action shows it on what was clicked, a route action replaces the page, a

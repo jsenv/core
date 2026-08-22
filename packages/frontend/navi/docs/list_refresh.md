@@ -132,8 +132,9 @@ stale copy of anything.
 A run that finds a composition takes the `refreshing` line of the table above
 rather than the loading one: the rows are on screen while it asks again for the
 window it draws. So the two lists an app cannot tell apart from the outside —
-one reading `GET_MANY`, one reading `GET_RANGE` — behave the same on the way
-back.
+one reading `GET_MANY`, one reading `GET_RANGE` — look the same on the way back:
+neither blanks, neither shows a first load. What they do behind that is not the
+same, and the next section is about exactly that.
 
 What a composition is about is the **values** its params hold, not the reader
 instance: `GET_RANGE.bindParams({ scope: "thread" })` called from two places
@@ -144,6 +145,36 @@ The rest follows the rules already stated: a verb in `rerunOn.GET_RANGE`, or
 `reader.invalidate()`, drops the compositions — they stand for an order that is
 gone — and `memoryBudget` (1000 ranks by default) trims the ranks far from any
 window, which are asked for again if the user goes back to them.
+
+### Who decides the re-read — and who does not
+
+The navigation decides nothing. Neither the back button, nor the movement
+playing between the two pages: the **source** the list reads through is what
+answers, and it answers the same way whether the user arrived by a link, by
+`history.back()`, or under a route transition.
+
+| The list reads through          | Coming back to it                                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `routeAction` over `GET_MANY`   | **nothing goes out** — the action holds its response, and `.run()` on a `COMPLETED` action is a no-op |
+| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws           |
+
+Both are deliberate, and they are not in tension: an action that kept its answer
+has the answer, while a composition is a claim about an order that any write
+elsewhere may have made false. What a `GET_MANY` list wants on the way back it
+has to say itself — `.rerun()` when the route becomes current again, or a verb
+in `rerunOn` if a write is what makes it stale.
+
+Nothing above changes when `defineRouteTransition` is written for the pair the
+list is walked through. A transition states a relation between two pages (see
+[route_transitions.md](./route_transitions.md)); it takes the document's
+rendering hold for the one frame the browser needs to photograph it, and gives
+it back. It never decides what the page arriving is allowed to ask for. Held by
+`tests/route_transition_list_revisit/`, which mounts the same app twice — with
+and without a relation on the pair — and compares both counts.
+
+So a list that stopped refreshing after a transition was added has, in the
+overwhelming majority of cases, never refreshed on its own: it was reading
+through `GET_MANY`, and something else in the app was doing the re-read.
 
 ## `rerunOn`, verb by verb
 

@@ -26,7 +26,7 @@
  * page knows when it is whole.
  */
 
-import { observeRouteRender } from "../route.jsx";
+import { observeRouteRender } from "../route_render.js";
 
 const STORAGE_KEY = "navi_scroll_positions";
 
