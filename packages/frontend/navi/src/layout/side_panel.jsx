@@ -5,9 +5,10 @@
  * `navi-side`/`data-layer` attributes) rather than computed in JS — read
  * the CSS block below instead of expecting a JS equivalent of it here.
  *
- * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it,
- * Popover would dock next to whatever triggered the open instead of flush
- * against the edge, defeating the point of a side panel.
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic, and in both
+ * modes: without it Popover docks next to whatever triggered the open instead
+ * of flush against the edge, and Dialog takes that trigger's width as its own
+ * `min-width` floor (`--anchor-width`), overriding the `width` prop.
  */
 import { stringifyStyle } from "@jsenv/dom";
 
@@ -18,13 +19,6 @@ import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 
 const css = /* css */ `
   .navi_side_panel {
-    /* Dialog's own \`min-width: var(--anchor-width, 0px)\` exists so a
-       dialog naturally matches whatever triggered it (picker_custom.jsx's
-       dialog mode relies on this) — SidePanel's own "anchor" is just its
-       container, so this would otherwise force min-width to the full
-       container width, overriding \`width\`/\`height\` below entirely. Popover
-       ignores this var. */
-    --anchor-width: 0px;
     /* Side panel create a barriere with the content that is full size */
     /* So by default they don't have border-radius */
     --popup-border-radius: 0px;

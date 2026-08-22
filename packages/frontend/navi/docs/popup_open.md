@@ -121,9 +121,9 @@ positioned relative to its anchor, say what the anchor is:
 ```
 
 The `anchor` prop always wins over whatever the command carried.
-`anchorCustomEventDetail="ignore"` (Popover only) goes further and drops the
-event's anchor entirely, for a popover that must never be anchored to whatever
-opened it.
+`anchorCustomEventDetail="ignore"` goes further and drops the event's anchor
+entirely — for a popover that must never be anchored to whatever opened it, and
+for a dialog that must never be sized from it (`SidePanel` needs both).
 
 ## Opening it ON something
 

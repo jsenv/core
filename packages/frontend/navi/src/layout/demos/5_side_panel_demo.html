@@ -267,6 +267,65 @@
         );
       };
 
+      // "Remonter" throws the panel away and builds a new one, so the very
+      // first open of a freshly mounted panel — the one that also builds the
+      // content it shows — can be watched again without reloading the page.
+      const RemountablePanel = ({ label, ...panelProps }) => {
+        const [instance, setInstance] = useState(0);
+        const panelId = useId();
+        return (
+          <div key={instance}>
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor={panelId}>
+                {label}
+              </Button>
+              <Button
+                variant="discrete"
+                onClick={() => setInstance((i) => i + 1)}
+              >
+                Remonter
+              </Button>
+            </div>
+            <SidePanel
+              id={panelId}
+              animation
+              width={300}
+              closeOnClickOutside
+              {...panelProps}
+            >
+              <PanelContent />
+            </SidePanel>
+          </div>
+        );
+      };
+
+      // The trigger is what a popup receives as its anchor — a full-width one
+      // next to a small one, opening panels that ask for the same width.
+      const TriggerWidthDemo = ({ label, triggerWidth, mode }) => {
+        const panelId = useId();
+        return (
+          <div style={{ width: "460px" }}>
+            <p style={{ margin: "0 0 8px" }}>{label}</p>
+            <Button
+              command="--navi-toggle"
+              commandFor={panelId}
+              width={triggerWidth}
+            >
+              Toggle panel (width=300)
+            </Button>
+            <SidePanel
+              id={panelId}
+              mode={mode}
+              animation
+              width={300}
+              closeOnClickOutside
+            >
+              <PanelContent />
+            </SidePanel>
+          </div>
+        );
+      };
+
       // Mounted lazily (only once "Render" is clicked) so defaultOpen's
       // no-entrance-animation guarantee is actually observable — mounting
       // it unconditionally at page load would show it already-open before
@@ -291,9 +350,12 @@
         const [isOpenTop, setIsOpenTop] = useState(false);
         const [isOpenBottom, setIsOpenBottom] = useState(false);
         const [isOpenHeadFoot, setIsOpenHeadFoot] = useState(false);
+        // On by default: an entrance/exit that never plays is exactly the
+        // kind of regression this page exists to catch, and a toggle sitting
+        // at "off" hides it from everyone who does not think to flip it.
         const [animationEnabled, setAnimationEnabled] = useStoredBoolean(
           "side_panel_demo_animation",
-          false,
+          true,
         );
 
         return (
@@ -315,6 +377,14 @@
                 </li>
                 <li>
                   <a href="#click-outside">Close on click outside</a>
+                </li>
+                <li>
+                  <a href="#animation">Entrance and exit animation</a>
+                </li>
+                <li>
+                  <a href="#trigger-width">
+                    Width vs. the trigger that opened it
+                  </a>
                 </li>
                 <li>
                   <a href="#width">Explicit width</a>
@@ -389,6 +459,60 @@
               >
                 <PanelContent />
               </SidePanel>
+            </div>
+
+            <div id="animation" class="demo-section">
+              <h3>Entrance and exit animation</h3>
+              <p>
+                Every panel here is animated regardless of the checkbox above.
+              </p>
+              <div class="demo-row">
+                <div>
+                  <p style={{ margin: "0 0 8px" }}>
+                    First open of a freshly mounted panel
+                  </p>
+                  <RemountablePanel label="Toggle panel" />
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 8px" }}>
+                    Same, <code>mountWhenClosed</code>
+                  </p>
+                  <RemountablePanel label="Toggle panel" mountWhenClosed />
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 8px" }}>
+                    Same, <code>unmountWhenClosed</code>
+                  </p>
+                  <RemountablePanel label="Toggle panel" unmountWhenClosed />
+                </div>
+              </div>
+            </div>
+
+            <div id="trigger-width" class="demo-section">
+              <h3>Width vs. the trigger that opened it</h3>
+              <p>
+                All four panels below ask for <code>width=300</code>.
+              </p>
+              <div class="demo-row">
+                <TriggerWidthDemo
+                  label="Small trigger"
+                  triggerWidth={undefined}
+                />
+                <TriggerWidthDemo
+                  label="Full-width trigger"
+                  triggerWidth="100%"
+                />
+                <TriggerWidthDemo
+                  label='Small trigger, mode="dialog"'
+                  triggerWidth={undefined}
+                  mode="dialog"
+                />
+                <TriggerWidthDemo
+                  label='Full-width trigger, mode="dialog"'
+                  triggerWidth="100%"
+                  mode="dialog"
+                />
+              </div>
             </div>
 
             <div id="width" class="demo-section">

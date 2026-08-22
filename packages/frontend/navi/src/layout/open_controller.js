@@ -233,7 +233,6 @@ export const createOpenController = (
         cancelable: true,
       });
       chainEvent(requestOpenEvent, e);
-      controller.opened = true;
       // we prepare focus transfer before actually opening the popover/dialog
       // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
       const focusTransfer = prepareFocusTransfer(
@@ -281,6 +280,18 @@ export const createOpenController = (
       // before anything inside the popup can claim it, and before openEffect,
       // which measures the popup to place it.
       controller.mountContent?.();
+      // Only now — after the content has been built, before openEffect shows
+      // it. Dialog/Popover recompute aria-expanded and navi-hidden from this
+      // flag on every render, and mountContent above renders synchronously:
+      // flipping it any earlier commits an already-open DOM (aria-expanded
+      // "true", navi-hidden gone) before openEffect has run a single
+      // statement, so the "closed" frame it pins to transition from is in
+      // fact the open one and the entrance animation has nothing to play.
+      // It also gives the content it just built the opening it is documented
+      // to observe — mounted while the popup reads as closed, told it opened
+      // right after (see popup_content_mount.js and
+      // use_displayed_layout_effect.js).
+      controller.opened = true;
       const openEffectReturnValue =
         controller.openEffect(requestOpenEvent) || null;
       openEffectCleanup = (closeEvent) => {

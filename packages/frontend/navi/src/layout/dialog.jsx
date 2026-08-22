@@ -551,6 +551,11 @@ const css = /* css */ `
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
+ *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
+ *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
+ *   triggering event carried. Same prop as Popover's, applied to the only
+ *   thing an anchor does here: sizing (`--anchor-width`/`--anchor-height`).
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -811,6 +816,10 @@ const useDialogProps = (props) => {
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
     anchor,
+    // Same meaning as Popover's own prop, applied to the only thing an anchor
+    // does here: sizing. "ignore" is how a dialog that must not inherit its
+    // trigger's width says so (SidePanel does exactly that).
+    anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
     // nothing focusable of its own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -998,9 +1007,10 @@ const useDialogProps = (props) => {
         console.warn(`Dialog: anchor="${anchor}" did not match any element`);
       }
     } else if (anchor) {
-      // anchor prop is a ref or a DOM element
+      // anchor prop is a ref or a DOM element — always a real anchor,
+      // regardless of anchorCustomEventDetail.
       anchorElement = anchor.current ?? anchor;
-    } else if (e.detail.anchor) {
+    } else if (anchorCustomEventDetail === "override") {
       // e.g. the button that triggered a --navi-toggle/--navi-open command,
       // already resolved from detail.anchor/detail.source by the caller
       // (see UncontrolledDialog's onnavi_request_open).

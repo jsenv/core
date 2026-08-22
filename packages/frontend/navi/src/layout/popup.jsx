@@ -15,10 +15,10 @@
  * the hook's own `resetMode` return value, from its own onClose.
  *
  * `layer` (shared by both — picks the top-layer vs. local-container rendering
- * strategy either way) and `anchorCustomEventDetail` (Popover-only, Dialog
- * ignores it — Dialog never resolves an anchor for positioning purposes)
- * pass through untouched via `...rest` to whichever of Popover/Dialog
- * actually renders.
+ * strategy either way) and `anchorCustomEventDetail` (shared too: Popover
+ * resolves an anchor to position against, Dialog to size itself from) pass
+ * through untouched via `...rest` to whichever of Popover/Dialog actually
+ * renders.
  */
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -64,12 +64,14 @@ const css = /* css */ `
  * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
  *   sizing-only for `Dialog`, positioning for `Popover` (see each
  *   component's own doc for what it actually does there).
- * @param {"override"|"ignore"} [props.anchorCustomEventDetail] -
- *   **Popover-only** (`Dialog` never resolves an anchor for positioning) —
- *   never forwarded to `Dialog`, so it can't leak onto the real `<dialog>`
- *   element as a stray DOM attribute when `mode="dialog"` is picked.
- * @param {string} [props.marginWithAnchor] - **Popover-only**, same
- *   Dialog-leak guard as `anchorCustomEventDetail` above.
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail] - Forwarded
+ *   as-is to both — what it governs differs (positioning for `Popover`,
+ *   sizing for `Dialog`), but "ignore whatever anchor the triggering event
+ *   carried" has to mean the same thing in either mode, or the same
+ *   `<Popup>` usage silently picks up its trigger's width on small screens.
+ * @param {string} [props.marginWithAnchor] - **Popover-only**, destructured
+ *   out so it can't leak onto the real `<dialog>` element as a stray DOM
+ *   attribute when `mode="dialog"` is picked.
  * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
@@ -157,7 +159,6 @@ export const Popup = (props) => {
     // they're never part of ...rest, and therefore never forwarded to
     // Dialog below, where they'd otherwise leak onto the real <dialog>
     // element as stray, unrecognized DOM attributes.
-    anchorCustomEventDetail,
     marginWithAnchor,
     focusCapture,
     scrollCapture,
@@ -199,7 +200,6 @@ export const Popup = (props) => {
       {...rest}
       maxWidth={maxWidth}
       pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-      anchorCustomEventDetail={anchorCustomEventDetail}
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
       scrollCapture={scrollCapture === "popover" || scrollCapture}
