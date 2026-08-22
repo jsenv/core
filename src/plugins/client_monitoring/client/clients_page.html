@@ -212,6 +212,16 @@
       <tbody id="other-rows"></tbody>
     </table>
 
+    <h2>Headless browsers</h2>
+    <p class="intro">
+      Browsers driven by a program — a test run, a screenshot script — rather
+      than by someone looking at them.
+    </p>
+    <table>
+      <thead id="head3"></thead>
+      <tbody id="headless-rows"></tbody>
+    </table>
+
     <dialog id="dlg">
       <div class="dlg-head">
         <strong id="dlg-title"></strong>
@@ -227,6 +237,7 @@
 
       const selfRows = document.getElementById("self-rows");
       const otherRows = document.getElementById("other-rows");
+      const headlessRows = document.getElementById("headless-rows");
       // The monitoring script (injected into this page too) stores our own id.
       let selfId = null;
       try {
@@ -241,6 +252,7 @@
       </tr>`;
       document.getElementById("head").innerHTML = headHtml;
       document.getElementById("head2").innerHTML = headHtml;
+      document.getElementById("head3").innerHTML = headHtml;
       const COLSPAN = 8;
 
       const ago = (ts) => {
@@ -407,16 +419,26 @@
       const render = (clients) => {
         lastClients = clients;
         const self = selfId ? clients.find((d) => d.id === selfId) : null;
-        // Others ordered by when they first connected, so rows don't reshuffle.
+        // Ordered by when they first connected, so rows don't reshuffle.
+        const byFirstSeen = (a, b) => a.firstSeen - b.firstSeen;
+        // A headless browser is a program's, not a person's: it comes and goes
+        // with a test run, so it gets its own table instead of pushing the
+        // clients someone is actually browsing with out of sight.
         const others = clients
-          .filter((d) => d !== self)
-          .sort((a, b) => a.firstSeen - b.firstSeen);
+          .filter((d) => d !== self && !d.headless)
+          .sort(byFirstSeen);
+        const headless = clients
+          .filter((d) => d !== self && d.headless)
+          .sort(byFirstSeen);
         selfRows.innerHTML = self
           ? rowHtml(self)
           : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
         otherRows.innerHTML = others.length
           ? others.map(rowHtml).join("")
           : `<tr><td class="empty" colspan="${COLSPAN}">No other client has connected.</td></tr>`;
+        headlessRows.innerHTML = headless.length
+          ? headless.map(rowHtml).join("")
+          : `<tr><td class="empty" colspan="${COLSPAN}">No headless browser has connected.</td></tr>`;
       };
 
       // Dialogs (all tabs / recent activity / user agent).
