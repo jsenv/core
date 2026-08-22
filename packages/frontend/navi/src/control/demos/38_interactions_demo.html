@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
+      html,
+      body {
+        overflow-x: clip;
+      }
+
       body {
         margin: 40px;
         font-family: system-ui, sans-serif;
@@ -1460,9 +1465,9 @@
               data-drag-on-contact
             </Heading>
             <p class="legend">
-              On a touch screen, the first token asks for a hold before it can be
-              carried — a finger travelling on it might have meant to scroll the
-              page. The second board says nothing scrolls there, so a finger
+              On a touch screen, the first token asks for a hold before it can
+              be carried — a finger travelling on it might have meant to scroll
+              the page. The second board says nothing scrolls there, so a finger
               takes it the way a mouse does: a few pixels of travel, no wait. A
               mouse sees no difference between the two.
             </p>
@@ -2167,7 +2172,11 @@
               on the card itself.
             </p>
             <Box flex="y" spacing="m" alignX="start">
-              <div class="padel padel_zoned" data-padel-drag-hint={dragHint}>
+              <div
+                class="padel padel_zoned"
+                data-padel-drag-hint={dragHint}
+                data-drag-on-contact
+              >
                 <PadelCourtLines />
                 {/* The places, said by the board: a quarter receives without ever
                     being carried, so it declares no interaction — `data-droppable`
