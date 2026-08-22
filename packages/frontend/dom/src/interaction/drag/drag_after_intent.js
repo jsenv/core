@@ -76,12 +76,16 @@ const css = /* css */ `
     /* A source taken by long press must let the scroll through until the grab —
        which is exactly what the long press is there to tell apart. Zoom has
        nothing to do with the gesture and nobody should lose it by resting a
-       finger on a word. */
+       finger on a word.
+
+       Vertical, because that is the way the page and the lists in it go: a
+       source dragged along one axis is surrounded by something scrolling along
+       that same axis (a row of a list runs the way the list scrolls), and a
+       source dragged both ways sits on the usual vertical page. */
     touch-action: pan-y pinch-zoom;
   }
   [data-drag-source="x"] {
-    /* The axis is the one thing the caller has to say, being the only one who
-       knows which way what surrounds the source scrolls. */
+    /* …and the sideways one, for the same reason read the other way. */
     touch-action: pan-x pinch-zoom;
   }
   [data-drag-on-contact] [data-drag-source],
@@ -117,23 +121,36 @@ import.meta.css = css;
  *
  * On the element and not on the window, so the rest of the page keeps its
  * touches on the compositor's fast path.
+ *
+ * Exported because a drag does not always begin on a drag source: a copy caught
+ * on its way home is pressed through the pictures of a view transition, and the
+ * touch lands on the document root (see letCopyBeCaught in drag_to.js). Same
+ * rule, other element — and it has to be the same function, or the listener put
+ * down is not the one taken back off.
  */
-const keepTouchRefusable = () => {
+export const keepTouchRefusable = () => {
   // Being registered IS the whole of it — see above.
 };
 
 /**
- * Says an element is something a drag can start from.
+ * Says an element is something a drag can start from, and which way that drag
+ * goes.
+ *
+ * The axes are written in the DOM rather than kept here because they are what
+ * someone ELSE reads: a box above this one that travels under the same finger
+ * (a row of slides, a sheet pushed down to close it) has to know which axes are
+ * already spoken for before it answers the press — the same thing a travel says
+ * about itself with `data-travel-by-drag`. It is also what leaves the browser
+ * the pan it may still do until the grab (see the stylesheet above).
  *
  * @param {Element} element
- * @param {string} [axes]
- *   Which way the SURROUNDINGS scroll, so the other axis is left to them until
- *   the grab: `"x"` for a source inside something travelling sideways, anything
- *   else for the usual vertical page.
+ * @param {"x"|"y"|"xy"} [axes="xy"]
+ *   Which way the drag walks. A list reordered along its own line says `"y"`;
+ *   something carried across a board, or thrown, goes both ways.
  * @returns {function} Takes the mark back off.
  */
-export const markDragSource = (element, axes) => {
-  element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+export const markDragSource = (element, axes = "xy") => {
+  element.setAttribute("data-drag-source", axes);
   element.addEventListener("touchmove", keepTouchRefusable, { passive: false });
   return () => {
     element.removeAttribute("data-drag-source");

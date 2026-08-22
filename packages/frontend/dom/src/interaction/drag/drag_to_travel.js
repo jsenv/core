@@ -173,18 +173,18 @@ const DRAG_FLICK_DISTANCE = 8;
 // way. Let go and it comes back — a wall one can lean on, never walk through.
 const DRAG_RESISTANCE = 0.3;
 
-// What a drag must not start on: something that reads the pointer itself. A
-// button or a link is not in the list — dragging from one travels, and the
-// click it would have made is swallowed on the way out. A drag source is: it
-// answers the same press, and a travel starting there takes the pointer capture
-// away from a gesture already carrying something.
+// What a drag must not start on: something that reads the pointer itself, whole,
+// with no axis left to share. A button or a link is not in the list — dragging
+// from one travels, and the click it would have made is swallowed on the way
+// out. A drag SOURCE is not either: it says which way it goes and only takes
+// that (see DRAG_SOURCE_AXES_ATTRIBUTE) — but a dedicated handle is, being a
+// place whose only purpose is to be taken hold of, from the first pixel.
 const DRAG_EXCLUDED_SELECTOR = [
   "input",
   "textarea",
   "select",
   '[contenteditable=""]',
   '[contenteditable="true"]',
-  "[data-drag-source]",
   "[data-drag-handle]",
   "[data-no-drag-travel]",
 ].join(",");
@@ -195,6 +195,12 @@ const DRAG_EXCLUDED_SELECTOR = [
 // from the outside.
 const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
 const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
+// The same thing said by something that is PICKED UP rather than travelled: a
+// row taken out of a list, a card carried across a board (see markDragSource).
+// It holds the pointer from the press exactly as a nested travel does, so it is
+// read exactly as one — a list reordered along its own line takes the axis it
+// runs on and leaves the other to whoever is above.
+const DRAG_SOURCE_AXES_ATTRIBUTE = "data-drag-source";
 
 // A surface the browser paints in the top layer: it is still a DOM descendant
 // of whatever it was written in, and it is nowhere near it on screen — it
@@ -415,10 +421,19 @@ export const startDragToTravel = (
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
     return null;
   }
-  // A box between the finger and this one that travels the same way: the
-  // gesture is its, and this one is left with the axes it does not walk — none
-  // at all, most of the time, and then there is no gesture here to read.
-  const axesLeft = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
+  // A box between the finger and this one that travels the same way, and then
+  // anything between them that is picked up and carried the same way: the
+  // gesture is theirs, and this one is left with the axes none of them walks —
+  // none at all, most of the time, and then there is no gesture here to read.
+  const axesLeftByTravels = axesLeftBy(
+    axes,
+    target,
+    element,
+    DRAG_AXES_ATTRIBUTE,
+  );
+  const axesLeft =
+    axesLeftByTravels &&
+    axesLeftBy(axesLeftByTravels, target, element, DRAG_SOURCE_AXES_ATTRIBUTE);
   if (!axesLeft) {
     return null;
   }
