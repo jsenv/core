@@ -245,7 +245,16 @@ export const setupBrowserIntegrationViaNavigation = ({
     // Before the commit writes anything: the last moment the page still
     // stands as it was, which is what the rendering hold (and the picture of
     // a transition) needs.
-    publishBeforeRouting({ url, navigationType });
+    publishBeforeRouting({
+      url,
+      navigationType,
+      // The two things a navigation carries that the url does not: who started
+      // it, and what it asks of a route transition (see route_transition.jsx).
+      // Both are the same facts via_history.js announces; here the browser
+      // hands them over — sourceElement for a press, info for a navTo() call.
+      element: event.sourceElement,
+      transition: event.info ? event.info.transition : undefined,
+    });
     const isSameUrl = url === window.location.href;
     event.intercept({
       // The browser would scroll at commit time — before the picture of the
@@ -326,8 +335,12 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   installScrollRestoration();
 
-  const navTo = async (url, { replace, state } = {}) => {
+  const navTo = async (url, { replace, state, transition } = {}) => {
     navigation.navigate(url, {
+      // Not state: what is asked of a transition is about the navigation, not
+      // about the entry it leaves behind. `info` is exactly that — handed to
+      // the navigate event and forgotten afterwards.
+      info: transition === undefined ? undefined : { transition },
       // undefined stays "inherit" through the event: navigate() stores no
       // state, destination.getState() answers undefined, and runRouting reads
       // that as "keep what the document holds".

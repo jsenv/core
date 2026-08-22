@@ -288,6 +288,12 @@ export const setupBrowserIntegrationViaHistory = ({
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
         navigationType: "push",
+        // Who started it. Announced with the navigation because a press
+        // carries things the url does not: what a link asks of a route
+        // transition is the first of them (see route_transition.jsx). Read by
+        // whoever knows what to do with it, and it is the anchor itself —
+        // resolved here, where it already is.
+        element: linkElement,
       });
     },
     { capture: true },
@@ -325,11 +331,15 @@ export const setupBrowserIntegrationViaHistory = ({
     updateDocumentUrl(window.location.href);
   });
 
-  const navTo = async (url, { replace, state } = {}) => {
+  const navTo = async (url, { replace, state, transition } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // What this one navigation asks of a route transition, said by the call
+      // that starts it rather than by an element — the programmatic half of
+      // what a <Link transition> says (see route_transition.jsx).
+      transition,
     });
   };
 

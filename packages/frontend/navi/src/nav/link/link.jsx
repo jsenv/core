@@ -491,6 +491,14 @@ Object.assign(PSEUDO_CLASSES, {
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
+ * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.transition] -
+ *   What pressing THIS link asks of a route transition, for that one
+ *   navigation: a type name (`"slide-x"`, `"none"`, …), or an object to also
+ *   say the pace or which way it plays. It overrides field by field what
+ *   `defineRouteTransition` wrote for the pair — `{ direction: "back" }` keeps
+ *   the pair's movement and only turns it round, which is what the rare way
+ *   round a pair usually needs. Said nowhere else, the relations answer as
+ *   they always do.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
  *   click (navigation suppressed; `onClick` still runs).
  * @param {(event: MouseEvent) => void} [props.onClick]
@@ -548,6 +556,7 @@ const LinkPlain = (props) => {
     endIcon,
     revealOnInteraction = false,
     hrefFallback = !anchor,
+    transition,
 
     children,
   } = props;
@@ -661,6 +670,18 @@ const LinkPlain = (props) => {
     innerEndIcon = endIcon;
   }
 
+  // What this link asks of a route transition, worn as an attribute so that
+  // the navigation reads it off the element being pressed (see
+  // route_transition.jsx, which owns the name and does the reading). A type is
+  // a name; anything more travels as JSON, which is also how a plain <a>
+  // writes it by hand.
+  const transitionRequest =
+    transition === undefined || transition === null
+      ? undefined
+      : typeof transition === "string"
+        ? transition
+        : JSON.stringify(transition);
+
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
@@ -717,6 +738,8 @@ const LinkPlain = (props) => {
       startIcon={undefined}
       endIcon={undefined}
       hrefFallback={undefined}
+      transition={undefined}
+      data-navi-route-transition-request={transitionRequest}
       onClick={(e) => {
         onClick?.(e);
         if (slide) {

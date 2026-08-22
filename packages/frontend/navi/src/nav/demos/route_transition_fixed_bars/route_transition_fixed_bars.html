@@ -76,23 +76,29 @@
       defineRouteTransition(ME_ROUTE, ME_EDIT_ROUTE, "slide-x");
       defineRouteTransition(ME_ROUTE, PLACES_ROUTE, "cover-y");
 
-      // Le lien est répété tous les cinq rangs: on part — et on revient —
+      // Les liens sont répétés tous les cinq rangs: on part — et on revient —
       // depuis n'importe quelle position de défilement, ce qui est la seule
       // façon de voir ce que la page quittée fait de la sienne.
-      const LongPage = ({ title, color, rows, link }) => (
+      const LongPage = ({ title, color, rows, links }) => (
         <div className="pages" style={{ background: color }}>
           <h1 className="page_title">{title}</h1>
           {Array.from({ length: rows }, (_, index) => (
             <div key={index}>
-              {index % 5 === 0 && (
-                <Link
-                  className="card"
-                  route={link.route}
-                  data-testid={link.testId}
-                >
-                  {link.label} (ligne {index + 1})
-                </Link>
-              )}
+              {index % 5 === 0 &&
+                links.map((link) => (
+                  <Link
+                    key={link.testId}
+                    className="card"
+                    route={link.route}
+                    data-testid={link.testId}
+                    // Ce que CE lien demande, par-dessus ce que la paire dit
+                    // (et même quand la paire ne dit rien). Absent, les
+                    // relations répondent comme d'habitude.
+                    transition={link.transition}
+                  >
+                    {link.label} (ligne {index + 1})
+                  </Link>
+                ))}
               <div className="page_row">
                 {title} — ligne {index + 1}
               </div>
@@ -106,11 +112,22 @@
           title="Mon profil"
           color="#e8f0fe"
           rows={30}
-          link={{
-            route: ME_EDIT_ROUTE,
-            testId: "edit_link",
-            label: "Modifier mon profil →",
-          }}
+          links={[
+            {
+              route: ME_EDIT_ROUTE,
+              testId: "edit_link",
+              label: "Modifier mon profil →",
+            },
+            {
+              route: PLACES_ROUTE,
+              // Le sens rare de la paire: on RESSORT vers les lieux. Le
+              // mouvement de la paire est gardé, seul le sens est retourné —
+              // ce qu'aucune règle sur les routes ne saurait dire.
+              transition: { direction: "back" },
+              testId: "places_back_link",
+              label: "↩ Ressortir vers mes lieux",
+            },
+          ]}
         />
       );
 
@@ -119,11 +136,13 @@
           title="Modifier"
           color="#fdf0e8"
           rows={40}
-          link={{
-            route: ME_ROUTE,
-            testId: "back_link",
-            label: "← Retour au profil",
-          }}
+          links={[
+            {
+              route: ME_ROUTE,
+              testId: "back_link",
+              label: "← Retour au profil",
+            },
+          ]}
         />
       );
 
@@ -132,7 +151,18 @@
           title="Mes lieux"
           color="#eaf7ec"
           rows={25}
-          link={{ route: ME_ROUTE, testId: "me_link", label: "← Mon profil" }}
+          links={[
+            { route: ME_ROUTE, testId: "me_link", label: "← Mon profil" },
+            {
+              route: ME_EDIT_ROUTE,
+              testId: "shortcut_link",
+              // Aucune relation n'est écrite entre ces deux pages: sans ce
+              // lien elles ne joueraient rien l'une envers l'autre. Le temps
+              // de cette navigation-là, elles jouent un zoom.
+              transition: "zoom",
+              label: "Raccourci vers Modifier (zoom)",
+            },
+          ]}
         />
       );
 

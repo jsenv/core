@@ -1,8 +1,9 @@
 # Route transitions
 
 How pages of an app move against each other when the user navigates —
-`defineRouteTransition`, `defineRouteDefaultTransition`, and the thinking that
-decides which movement (if any) a navigation deserves. The API grammar itself
+`defineRouteTransition`, `defineRouteDefaultTransition`, what one link or one
+`navTo` may ask for on top of them, and the thinking that decides which
+movement (if any) a navigation deserves. The API grammar itself
 (accepted forms, shipped type names) lives in the JSDoc of
 `defineRouteTransition`; this file holds what a signature cannot say.
 
@@ -76,6 +77,77 @@ relation was written for. Two situations, two answers:
 A default has no direction (nothing says which of two arbitrary pages is
 "before" the other), so only directionless movements make sense there. Written
 relations, and `"none"`, always win over it.
+
+## When one navigation knows better
+
+A relation is written on a PAIR, so it holds for every way of reaching the
+page — and some ways are walked against the map. Two pairs that are travelled
+in both directions, with one direction common and one rare:
+
+- a game ↔ a player's profile: the name of a player, tapped from the game, is
+  the common way in; a badge on a profile that leads back to the game it was
+  won in is the rare one;
+- a profile ↔ the cards it describes: going down into the cards is the
+  structural descent; a card that leads up to the player it describes goes back
+  out.
+
+Written for the common direction, the rare one plays backwards. And `"none"`
+cannot fix it: navi does not tell a link from the back button, so silencing the
+bad direction silences the good one too.
+
+So the navigation itself may ask, and what it asks holds for **that navigation
+and no other**:
+
+```jsx
+// The rare way round: the pair's movement, turned round.
+<Link
+  route={GAME_ROUTE}
+  routeParams={{ id }}
+  transition={{ direction: "back" }}
+>
+  {badge.gameName}
+</Link>
+```
+
+```js
+// The same thing said by a call rather than by an element.
+navTo(GAME_ROUTE.buildUrl({ id }), { transition: { direction: "back" } });
+GAME_ROUTE.navTo({ id }, { transition: { direction: "back" } });
+```
+
+The request is `"slide-x"`-style shorthand or `{ type, duration, direction }`,
+the same forms `defineRouteTransition` takes, plus `direction`. It overrides
+**field by field**: what it does not name, the relation (or the default) still
+answers for. So:
+
+- `{ direction: "back" }` keeps the pair's movement and only turns it round;
+- `"zoom"` swaps the movement, keeping nothing else;
+- `"none"` cuts, where the pair — or the default — would have played;
+- `{ duration: 500 }` re-times what was already going to play.
+
+A pair no relation was ever written for answers the same way: silence is what
+the routes say, and a link that asks for a movement gets it, forward unless it
+says otherwise. That is the whole shape of the control:
+`defineRouteTransition` is what the app's map says and applies by default; a
+link, or a programmatic `navTo`, overrides it for the length of one navigation.
+Navigate again by any other means and the relation is back in charge — nothing
+is remembered.
+
+The link wears what it asks as an attribute, so a plain `<a>` says it too (a
+type name, or the object as JSON):
+
+```html
+<a href="/game/42" data-navi-route-transition-request='{"direction":"back"}'
+  >…</a
+>
+```
+
+**Not yet: a movement chosen by HOW one navigated.** Playing one movement for
+the back button and another for a link would be written on the same request —
+`{ back: "slide-x", forward: "slide-y" }` — but the History API does not say
+which way a traversal went, and navi runs on it today (see
+`browser_integration/via_history.js`). The Navigation API does; the notation is
+kept in mind for the day navi navigates through it.
 
 ## Pages between fixed bars: the transition area
 
@@ -212,11 +284,18 @@ browser needs to photograph the page being left (see `rendering_hold.js`), and
 it gives it back in the same callback. The hold is about a picture, not about
 data: nothing waits on it, nothing is skipped because of it.
 
-So "this list stopped refreshing since we animated the pair" is a claim worth
-checking twice before believing: it is held by
-`tests/route_transition_list_revisit/`, which mounts one app twice — the two
-mounts differing by a single `defineRouteTransition` line — and compares what
-each one sends to the network on the way back. See
+That is the design, and it is held by `tests/route_transition_list_revisit/`:
+one app mounted twice, the two mounts differing by a single
+`defineRouteTransition` line, walked back and forth **ten times each** with what
+goes to the network counted on every revisit. The loop is the point — a
+difference that came and went would pass a single comparison often enough to
+look like an invariant.
+
+What the test holds is that shape: pages between fixed bars, a marked area, a
+list virtualized against its scroller, held on a row the url names. It is
+evidence about the mechanism, not a proof about every application; a page that
+loses its revisit only under a movement is worth reporting with the loop above
+run against it. See
 [list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)
 for which source refreshes on a revisit and which does not.
 

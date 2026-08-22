@@ -170,11 +170,13 @@ list is walked through. A transition states a relation between two pages (see
 rendering hold for the one frame the browser needs to photograph it, and gives
 it back. It never decides what the page arriving is allowed to ask for. Held by
 `tests/route_transition_list_revisit/`, which mounts the same app twice — with
-and without a relation on the pair — and compares both counts.
+and without a relation on the pair — and walks the way back ten times on each,
+counting what goes out at every revisit.
 
-So a list that stopped refreshing after a transition was added has, in the
-overwhelming majority of cases, never refreshed on its own: it was reading
-through `GET_MANY`, and something else in the app was doing the re-read.
+So the first thing to check, when a list stops refreshing after a transition was
+added, is which row of the table above it is on: a `GET_MANY` list never
+refreshed on its own, and what changed is whatever else in the app was doing the
+re-read.
 
 ## `rerunOn`, verb by verb
 

@@ -144,7 +144,11 @@ export const route = (pattern, { searchParams } = {}) => {
       const routeUrl = resolveRouteUrl(routeRelativeUrl);
       return routeUrl;
     };
-    route.navTo = (params) => {
+    // Options travel as they do to navTo() itself — `transition` is the one
+    // that matters here: what this one navigation asks of a route transition
+    // (see route_transition.jsx), which is the programmatic half of what a
+    // <Link transition> says.
+    route.navTo = (params, options) => {
       if (!integration) {
         if (import.meta.dev) {
           console.warn(`navTo called on "${route}" but integration not set`);
@@ -152,7 +156,7 @@ export const route = (pattern, { searchParams } = {}) => {
         return Promise.resolve();
       }
       const routeUrl = route.buildUrl(params);
-      return integration.navTo(routeUrl);
+      return integration.navTo(routeUrl, options);
     };
     route.redirectTo = (params, { callReason } = {}) => {
       if (!integration) {

@@ -165,9 +165,11 @@ consistency across the app, not from any single call site.
 - `docs/route_transitions.md` — how pages move against each other on
   navigation (`defineRouteTransition`): a transition states a relation the
   user reads as a map, which movement fits which relation, when a global
-  default is right, marking the page area between fixed bars, and why a pair
-  of routes is animated by `RouteTravel` or by a route transition but never
-  both. Read it before animating any navigation.
+  default is right, how one link or one `navTo` overrides what the pair says
+  for the length of a single navigation (`<Link transition>`), marking the page
+  area between fixed bars, and why a pair of routes is animated by
+  `RouteTravel` or by a route transition but never both. Read it before
+  animating any navigation.
 - `docs/navigation.md` — how to build navigation: declaring routes
   (`route()` / `setupRoutes()`), when a section is a route of its own rather
   than a param, search params bound to signals, rendering with `<Route>`,

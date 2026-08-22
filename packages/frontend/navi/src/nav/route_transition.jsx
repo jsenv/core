@@ -28,6 +28,17 @@
  * own CSS (see the JSDoc below). Said without one, the relation plays the
  * browser's cross-fade.
  *
+ * A relation holds for every way of reaching a page, and one navigation may
+ * know better: the rare way round a pair — a badge that jumps back OUT to the
+ * game it belongs to, a card that leads to the player it describes — is walked
+ * against the map, and there is no telling it from the common way by the
+ * routes alone. So the navigation itself may ask for something: a `<Link
+ * transition>`, or navTo(url, { transition }). What it asks holds for THAT
+ * navigation and no other, and only for the fields it names — `{ direction:
+ * "back" }` keeps the pair's movement and turns it round (see
+ * readNavigationRequest). A pair no relation was ever written for animates the
+ * same way, for the one press that asks.
+ *
  * There is no box in the tree: by default what animates is the document itself
  * (its `root` view transition group), which is right for pages that ARE the
  * whole viewport. An application whose pages live between fixed bars marks the
@@ -83,6 +94,10 @@ const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
 // right for a page that IS the whole viewport.
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
+// What ONE navigation asks for, over whatever the relations say: worn by the
+// link being pressed (see <Link transition>), or handed to navTo(). It answers
+// for that navigation and for no other — the next one is back to the relations.
+const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
 const AREA_NAME = "navi-route-transition";
 // route_travel.jsx wears this on the root for the length of one of its
 // travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
@@ -532,6 +547,11 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *         animation-name: my-spin-in;
  *       }
  *     }
+ *
+ *   Whatever is written here is what EVERY crossing of the pair plays. One
+ *   crossing can ask for something else — `<Link transition>`, or
+ *   navTo(url, { transition }) — which overrides this field by field, for that
+ *   navigation alone.
  * @returns {() => void} remove this relation.
  */
 export const defineRouteTransition = (from, to, transition) => {
@@ -545,13 +565,11 @@ export const defineRouteTransition = (from, to, transition) => {
   };
   relations.push(relation);
   rebuildWatcher();
-  updateRoutingObservers();
   return () => {
     const index = relations.indexOf(relation);
     if (index > -1) {
       relations.splice(index, 1);
       rebuildWatcher();
-      updateRoutingObservers();
     }
   };
 };
@@ -573,11 +591,9 @@ export const defineRouteDefaultTransition = (transition) => {
   import.meta.css = css;
   const value = normalizeTransition(transition);
   defaultTransition = value;
-  updateRoutingObservers();
   return () => {
     if (defaultTransition === value) {
       defaultTransition = null;
-      updateRoutingObservers();
     }
   };
 };
@@ -589,6 +605,89 @@ const normalizeTransition = (transition) => {
   const { type, duration } =
     typeof transition === "string" ? { type: transition } : transition || {};
   return { type: type === "cross-fade" ? undefined : type, duration };
+};
+
+/**
+ * What THIS navigation asked for, whatever the relations say.
+ *
+ * A relation is about the map of the app and holds for every way of reaching a
+ * page; a request is about one crossing of it. The rare way round a pair — a
+ * badge that jumps back out to the game it belongs to, a card that leads to
+ * the player it describes — is a navigation that knows something the pair does
+ * not, and this is where it says it.
+ *
+ * Two mouths, one meaning: the element being pressed wears it (a `<Link
+ * transition>`, or the attribute by hand on any anchor), or navTo() is handed
+ * it. Both arrive here through the announcement the navigation makes before it
+ * writes anything (see before_routing.js).
+ *
+ * A request answers FIELD BY FIELD: what it does not say, the relation — or
+ * the default — still answers for. So `{ direction: "back" }` keeps the pair's
+ * movement and only turns it round, and `"none"` cuts where something would
+ * have played.
+ */
+const readNavigationRequest = ({ transition, element }) => {
+  if (transition !== undefined && transition !== null) {
+    return normalizeRequest(transition);
+  }
+  if (element && element.getAttribute) {
+    const asked = element.getAttribute(TRANSITION_REQUEST_ATTRIBUTE);
+    if (asked === null) {
+      return null;
+    }
+    const value = asked.trim();
+    if (value === "") {
+      return null;
+    }
+    // A type is a name, and a name is all most links have to say. Anything
+    // more — a way round, a pace — is the same object the API takes
+    // everywhere else, written as JSON so that it travels on an attribute
+    // (and so that a plain <a> can say it too).
+    if (value[0] === "{") {
+      let parsed;
+      try {
+        parsed = JSON.parse(value);
+      } catch {
+        console.warn(
+          `${TRANSITION_REQUEST_ATTRIBUTE} is neither a type name nor JSON: ${value}`,
+        );
+        return null;
+      }
+      return normalizeRequest(parsed);
+    }
+    return normalizeRequest(value);
+  }
+  return null;
+};
+
+const normalizeRequest = (transition) => {
+  const { type, duration, direction } =
+    typeof transition === "string" ? { type: transition } : transition;
+  return {
+    type: type === "cross-fade" ? undefined : type,
+    // Whether a type was SAID, which is not the same as having one: asking for
+    // "cross-fade" is asking for the browser's own animation, and a request
+    // that names no type at all keeps the relation's.
+    typeSaid: type !== undefined,
+    duration,
+    direction,
+  };
+};
+
+// The request first, field by field, then what was defined for this pair (or
+// for everything). Written as one function because both ends of the file
+// resolve the same way: the one that knows the pair, and the one that only
+// knows a navigation landed.
+const resolveTransition = (request, base) => {
+  const baseType = base ? base.type : undefined;
+  const baseDuration = base ? base.duration : undefined;
+  if (!request) {
+    return { type: baseType, duration: baseDuration };
+  }
+  return {
+    type: request.typeSaid ? request.type : baseType,
+    duration: request.duration === undefined ? baseDuration : request.duration,
+  };
 };
 
 // Every relation defined, and the single watcher standing over all of them.
@@ -631,24 +730,35 @@ const rebuildWatcher = () => {
       return;
     }
     const found = findRelation(pages[fromIndex], pages[index]);
-    if (!found) {
-      // No relation says anything about these two: they are side by side, and
-      // silence is the fact — not a missing case.
+    if (!found && !navigationRequest) {
+      // No relation says anything about these two and this navigation asked
+      // for nothing: they are side by side, and silence is the fact — not a
+      // missing case.
       return;
     }
-    const { direction, relation } = found;
-    if (relation.type === "none") {
+    const { type, duration } = resolveTransition(
+      navigationRequest,
+      found ? found.relation : null,
+    );
+    if (type === "none") {
       // Silence said out loud: this way of the pair was written to play
-      // nothing, where the reverse of the other way — or the default — would
-      // have played.
+      // nothing — or this one navigation asked for nothing — where the reverse
+      // of the other way, or the default, would have played.
       navigationAnimated = true;
       return;
     }
     beginTransition({
       page: pages[index],
-      direction,
-      type: relation.type,
-      duration: relation.duration,
+      // Which way it plays: what the navigation itself said first — the link
+      // being pressed is where the way the app is being walked is known — then
+      // the relation, and forward for a navigation that asked for a movement
+      // between two pages no relation orders.
+      direction:
+        (navigationRequest && navigationRequest.direction) ||
+        (found && found.direction) ||
+        "forward",
+      type,
+      duration,
     });
   };
   // `subscribe` rather than `effect`: it hands the value to a callback that is
@@ -658,56 +768,56 @@ const rebuildWatcher = () => {
   watcher = { stop: unsubscribe };
 };
 
-// What plays when no relation matched (see defineRouteDefaultTransition), and
-// whether the navigation now landing found an answer already — a relation's
-// transition, a "none", a RouteTravel travel. The flag is reset when a
-// navigation begins, so it is always about the latest one.
+// What plays when no relation matched (see defineRouteDefaultTransition), what
+// the navigation now landing asked for on its own (see readNavigationRequest),
+// and whether it found an answer already — a relation's transition, a "none",
+// a RouteTravel travel. The last two are read at the start of every
+// navigation, so they are always about the latest one.
 let defaultTransition = null;
+let navigationRequest = null;
 let navigationAnimated = false;
 
-// The two ends of a navigation, watched while there is anyone to animate it.
-// The picture of the page being left has to be honest, so rendering is held
-// from before the navigation's first write (see rendering_hold.js) — and given
-// back at the far end when the change turns out to be one nobody animates,
-// which is also the one moment the DEFAULT can decide: every relation has had
-// its say by then.
-let stopRoutingObservers = null;
-const updateRoutingObservers = () => {
-  const wanted = relations.length > 0 || defaultTransition !== null;
-  if (wanted && !stopRoutingObservers) {
-    const stopWatchingStart = observeBeforeRouting(() => {
-      navigationAnimated = false;
-      holdRenderingForRouting();
-    });
-    const stopWatchingEnd = observeAfterRouting(() => {
-      if (
-        defaultTransition &&
-        defaultTransition.type !== "none" &&
-        !navigationAnimated
-      ) {
-        beginTransition({
-          page: null,
-          // A default has no direction: nothing says which of two arbitrary
-          // pages is before the other. The attribute is worn empty — present
-          // for whoever keys on "one of ours is playing", silent on the way.
-          direction: "",
-          type: defaultTransition.type,
-          duration: defaultTransition.duration,
-        });
-      }
-      releaseRoutingRenderingHold();
-    });
-    stopRoutingObservers = () => {
-      stopWatchingStart();
-      stopWatchingEnd();
-    };
+// The two ends of every navigation, watched from here on. The picture of the
+// page being left has to be honest, so rendering is held from before the
+// navigation's first write (see rendering_hold.js) — but only when something
+// could be photographed: a document where nothing is defined and nothing is
+// asked for holds nothing. It is given back at the far end, which is also the
+// one moment the DEFAULT can decide: every relation has had its say by then.
+observeBeforeRouting((details) => {
+  navigationAnimated = false;
+  navigationRequest = readNavigationRequest(details);
+  if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
-  if (!wanted && stopRoutingObservers) {
-    stopRoutingObservers();
-    stopRoutingObservers = null;
+  holdRenderingForRouting();
+});
+observeAfterRouting(() => {
+  const request = navigationRequest;
+  // Read here and dropped here: a request answers for the navigation it was
+  // made on, and the next one is back to the relations.
+  navigationRequest = null;
+  if (!navigationAnimated && (request || defaultTransition)) {
+    const { type, duration } = resolveTransition(request, defaultTransition);
+    if (type !== "none") {
+      beginTransition({
+        page: null,
+        // A default has no direction: nothing says which of two arbitrary
+        // pages is before the other, and the attribute is then worn empty —
+        // present for whoever keys on "one of ours is playing", silent on the
+        // way. A request is the other case: a navigation IS a way round, so a
+        // press that names the movement means forward unless it says
+        // otherwise — and a movement of navi's is written on the direction,
+        // so left empty it would play nothing at all.
+        direction:
+          (request && request.direction) ||
+          (request && request.typeSaid ? "forward" : ""),
+        type,
+        duration,
+      });
+    }
   }
-};
+  releaseRoutingRenderingHold();
+});
 
 // The exact way travelled first, over the whole registry, and only then the
 // reverses: a relation written B → A owns that way, and being the reverse of
