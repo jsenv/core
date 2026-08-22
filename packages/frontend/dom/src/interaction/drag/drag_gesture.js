@@ -694,7 +694,9 @@ export const createDragGestureController = (options = {}) => {
           // that is the grab itself (the intent was settled before, by a handle
           // or a long press), and for a caller that is still deciding what the
           // press means, it is whenever it says so (see capturePointer).
+          let captured = false;
           dragGesture.capturePointer = () => {
+            captured = true;
             target.setPointerCapture(grabEvent.pointerId);
           };
           if (!options?.pointerCaptureDeferred) {
@@ -749,15 +751,27 @@ export const createDragGestureController = (options = {}) => {
           // on leaving the document — and what was being carried must go back
           // rather than land wherever the hand happened to be.
           const onCaptureLost = (pointerEvent) => {
-            if (pointerEvent.target !== target) {
+            if (!captured || pointerEvent.target !== target) {
               return;
             }
             onRelease(pointerEvent, { cancelled: true });
           };
           target.addEventListener("lostpointercapture", onCaptureLost);
           target.addEventListener("pointercancel", onRelease);
-          target.addEventListener("pointermove", onMove);
           target.addEventListener("pointerup", onRelease);
+          // Read from the window rather than from the element while the pointer
+          // is not this gesture's: without a capture a move is delivered to
+          // whatever is under the pointer, and a hand that has left the element
+          // is exactly the hand this gesture is trying to make sense of. The
+          // capture phase reaches the window before anything else, captured or
+          // not, so there is one place to read whichever way the gesture ends up.
+          const onPointerMove = (pointerEvent) => {
+            if (pointerEvent.pointerId !== grabEvent.pointerId) {
+              return;
+            }
+            onMove(pointerEvent);
+          };
+          window.addEventListener("pointermove", onPointerMove, true);
           // The end of the pointer is also listened for on the window, because
           // the end is the one event a gesture cannot afford to miss and the
           // element it is captured on is not always on its way: a pointer can
@@ -787,15 +801,17 @@ export const createDragGestureController = (options = {}) => {
             grabTarget.removeEventListener("touchmove", preventTouchScroll);
             target.removeEventListener("lostpointercapture", onCaptureLost);
             target.removeEventListener("pointercancel", onRelease);
-            target.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointermove", onPointerMove, true);
             target.removeEventListener("pointerup", onRelease);
             window.removeEventListener("pointerup", onPointerEnd, true);
             window.removeEventListener("pointercancel", onPointerEnd, true);
-            // Asked for only while there is something to give back: a pointer
-            // that is up no longer exists, the browser has already dropped the
+            // Only what this gesture took, and only while there is something to
+            // give back: a capture on that element may be someone else's (two
+            // gestures reading the same press hold the same node), and a pointer
+            // that is up no longer exists — the browser has already dropped the
             // capture with it, and asking again throws ("No active pointer with
-            // the given id is found") — on the most ordinary release there is.
-            if (target.hasPointerCapture(grabEvent.pointerId)) {
+            // the given id is found") on the most ordinary release there is.
+            if (captured && target.hasPointerCapture(grabEvent.pointerId)) {
               target.releasePointerCapture(grabEvent.pointerId);
             }
           };

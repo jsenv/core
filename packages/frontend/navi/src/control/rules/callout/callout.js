@@ -231,6 +231,9 @@ const css = /* css */ `
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {string} [options.reopen="toggle"] - What to do when the anchor already has an open callout:
+ *   "toggle" closes it (a second press on what opened it closes it), "update" replaces its message
+ *   in place, "replace" tears it down and opens a new one
  * @param {boolean} [options.debug=false] - Enable debug logging
  *
  * Positioning is also driven by attributes read on the anchor element itself
@@ -273,6 +276,7 @@ export const openCallout = (
     closeOnClickOutside = status === "info",
     closeOnFocusLeave = closeOnClickOutside,
     openingEvent,
+    reopen = "toggle",
     showErrorStack,
     skipFocus = false,
     debug = () => {},
@@ -281,6 +285,54 @@ export const openCallout = (
   import.meta.css = css;
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
+  }
+
+  const originalAnchorElement = anchorElement;
+  if (anchorElement) {
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
+    }
+    const controlRoot = findControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
+    }
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true,
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+      if (!anchorElement) {
+        // anchorElement is not in the DOM anymore, fallback to body
+        anchorElement = document.body;
+      }
+      console.warn(
+        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
+      );
+    }
+  }
+
+  if (anchorElement) {
+    const calloutAlreadyThere = anchorElement.callout;
+    if (calloutAlreadyThere && calloutAlreadyThere.opened) {
+      if (reopen === "toggle") {
+        debug(
+          openingEvent,
+          `callout already open on ${getElementSignature(anchorElement)} -> close it (reopen: "toggle")`,
+        );
+        calloutAlreadyThere.requestClose(openingEvent, "reopen_toggle");
+        return calloutAlreadyThere;
+      }
+      if (reopen === "update") {
+        debug(
+          openingEvent,
+          `callout already open on ${getElementSignature(anchorElement)} -> update it (reopen: "update")`,
+        );
+        calloutAlreadyThere.update(message, { status });
+        return calloutAlreadyThere;
+      }
+    }
+    warnOnReopenWithinSameEvent(anchorElement, openingEvent);
   }
 
   const callout = {
@@ -486,30 +538,6 @@ export const openCallout = (
     }
   };
 
-  const originalAnchorElement = anchorElement;
-  if (anchorElement) {
-    const proxyElement = findControlProxy(anchorElement);
-    if (proxyElement) {
-      anchorElement = proxyElement;
-    }
-    const controlRoot = findControlRoot(anchorElement);
-    if (controlRoot) {
-      anchorElement = controlRoot;
-    }
-    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true,
-    });
-    if (!anchorVisuallyVisibleInfo.visible) {
-      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-      if (!anchorElement) {
-        // anchorElement is not in the DOM anymore, fallback to body
-        anchorElement = document.body;
-      }
-      console.warn(
-        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
-      );
-    }
-  }
   // Resolve the visual anchor for positioning: when data-callout-anchor is set,
   // use the inner element it points to. anchorElement remains the container
   // that receives data-callout and CSS vars.
@@ -548,6 +576,14 @@ export const openCallout = (
   })();
 
   close_on_click_outside: {
+    // document.body as anchor means "no anchor" (the callout is docked in the
+    // viewport); everything would be inside it.
+    const isInsideAnchor = (target) => {
+      if (!anchorElement || anchorElement === document.body) {
+        return false;
+      }
+      return anchorElement === target || anchorElement.contains(target);
+    };
     const handleClickOutside = (event) => {
       if (event.button !== 0) {
         // right click
@@ -560,6 +596,16 @@ export const openCallout = (
       ) {
         return;
       }
+      if (isInsideAnchor(clickTarget)) {
+        // Pressing the anchor is not "outside": this listener is on document in
+        // the capture phase, so closing here would destroy the callout before
+        // the event reaches the handler that owns it — and that handler,
+        // opening a callout on the very anchor it was just removed from, would
+        // create a second one within the same click. Left open, openCallout's
+        // `reopen` decides (toggle by default).
+        debug(event, `click on anchor, let the anchor handler decide`);
+        return;
+      }
       requestClose(event, "click_outside");
     };
     const handleSpaceOutside = (event) => {
@@ -568,6 +614,12 @@ export const openCallout = (
       }
       const keyTarget = event.target;
       if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+        return;
+      }
+      if (isInsideAnchor(keyTarget)) {
+        // Space on the anchor produces a click afterwards — same reasoning as
+        // handleClickOutside above.
+        debug(event, `space on anchor, let the anchor handler decide`);
         return;
       }
       requestClose(event, "space_outside");
@@ -757,8 +809,14 @@ export const openCallout = (
     anchorElement.scrollIntoView({ behavior: "instant", block: "nearest" });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    addTeardown(() => {
+    addTeardown(({ event }) => {
       anchorElement.removeAttribute("data-callout");
+      if (import.meta.dev) {
+        closeEventByAnchor.set(
+          anchorElement,
+          findEvent(event, USER_GESTURE_EVENT_TYPES) || event,
+        );
+      }
     });
 
     const visualElement = (() => {
@@ -1566,4 +1624,34 @@ const generateSvgWithoutArrow = (width, height) => {
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
       />
     </svg>`;
+};
+
+const USER_GESTURE_EVENT_TYPES = [
+  "click",
+  "mousedown",
+  "pointerdown",
+  "keydown",
+  "keyup",
+];
+const closeEventByAnchor = new WeakMap();
+// A callout closed and another opened on the same anchor during a single event
+// dispatch: the bubble looks like it stayed open while it was in fact replaced,
+// so whatever the second one says about the first press is lost.
+const warnOnReopenWithinSameEvent = (anchorElement, openingEvent) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const closeEvent = closeEventByAnchor.get(anchorElement);
+  if (!closeEvent) {
+    return;
+  }
+  closeEventByAnchor.delete(anchorElement);
+  const stillDispatching =
+    closeEvent.eventPhase !== Event.NONE || closeEvent === openingEvent;
+  if (!stillDispatching) {
+    return;
+  }
+  console.warn(
+    `a callout was closed and re-opened on ${getElementSignature(anchorElement)} during the same "${closeEvent.type}" event`,
+  );
 };

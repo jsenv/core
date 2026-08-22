@@ -243,6 +243,12 @@ const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
   const significantDragGesture =
     significantDragGestureController.grabViaPointer(grabEvent, {
       element: grabEvent.target,
+      // This one owns nothing: it measures a distance to find out whether there
+      // is a gesture at all, and it is over the moment there is. Taking the
+      // pointer for that would take it from whoever is already holding this same
+      // element for a gesture of their own — and giving it back at the threshold
+      // would tell them theirs is over.
+      pointerCaptureDeferred: true,
     });
 };
 

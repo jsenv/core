@@ -44,12 +44,13 @@ const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
 /**
  * Builds the `pointerdown` handler a popup docked to `side` answers with.
  *
- * `grip` narrows where the gesture may start to one part of the popup, given as
- * a selector matched inside it: a popup whose whole surface is a place to push
- * from has nothing else to do with the press, while one made of content the
- * finger operates (a bottom sheet full of controls) only offers the strip that
- * is there to be held. A popup that has no such part is pushed from anywhere,
- * so naming a grip never leaves it undismissable.
+ * `grip` says where the gesture may start, as a selector the pressed element is
+ * matched against with `closest`. A popup that names one is held THERE and
+ * nowhere else: everything else it holds is content the finger came to operate,
+ * and a press on it is that content's — including gestures of its own, which
+ * this file has no way of knowing about. A popup that names no grip is pushed
+ * from its whole surface, which only suits one made of nothing else (a side
+ * panel showing a page).
  */
 export const createSwipeToClose = (side, { grip } = {}) => {
   const axis = SWIPE_AXIS_BY_SIDE[side];
@@ -61,8 +62,11 @@ export const createSwipeToClose = (side, { grip } = {}) => {
       return;
     }
     if (grip) {
-      const gripEl = panelEl.querySelector(grip);
-      if (gripEl && !gripEl.contains(pointerDownEvent.target)) {
+      // Read from the press outwards rather than by looking the grip up in the
+      // panel: a popup may hold several (a header and whatever else was marked
+      // as one), and where they sit in it is the application's business.
+      const gripEl = pointerDownEvent.target.closest(grip);
+      if (!gripEl || !panelEl.contains(gripEl)) {
         return;
       }
     }

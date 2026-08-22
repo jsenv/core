@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { coarsePointerSignal } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getElementSignature, findEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -7924,6 +7924,9 @@ const css$$ = /* css */`
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {string} [options.reopen="toggle"] - What to do when the anchor already has an open callout:
+ *   "toggle" closes it (a second press on what opened it closes it), "update" replaces its message
+ *   in place, "replace" tears it down and opens a new one
  * @param {boolean} [options.debug=false] - Enable debug logging
  *
  * Positioning is also driven by attributes read on the anchor element itself
@@ -7964,6 +7967,7 @@ const openCallout = (message, {
   closeOnClickOutside = status === "info",
   closeOnFocusLeave = closeOnClickOutside,
   openingEvent,
+  reopen = "toggle",
   showErrorStack,
   skipFocus = false,
   debug = () => {}
@@ -7971,6 +7975,45 @@ const openCallout = (message, {
   import.meta.css = [css$$, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
+  }
+  const originalAnchorElement = anchorElement;
+  if (anchorElement) {
+    const proxyElement = findControlProxy(anchorElement);
+    if (proxyElement) {
+      anchorElement = proxyElement;
+    }
+    const controlRoot = findControlRoot(anchorElement);
+    if (controlRoot) {
+      anchorElement = controlRoot;
+    }
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+      if (!anchorElement) {
+        // anchorElement is not in the DOM anymore, fallback to body
+        anchorElement = document.body;
+      }
+      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
+    }
+  }
+  if (anchorElement) {
+    const calloutAlreadyThere = anchorElement.callout;
+    if (calloutAlreadyThere && calloutAlreadyThere.opened) {
+      if (reopen === "toggle") {
+        debug(openingEvent, `callout already open on ${getElementSignature(anchorElement)} -> close it (reopen: "toggle")`);
+        calloutAlreadyThere.requestClose(openingEvent, "reopen_toggle");
+        return calloutAlreadyThere;
+      }
+      if (reopen === "update") {
+        debug(openingEvent, `callout already open on ${getElementSignature(anchorElement)} -> update it (reopen: "update")`);
+        calloutAlreadyThere.update(message, {
+          status
+        });
+        return calloutAlreadyThere;
+      }
+    }
   }
   const callout = {
     opened: true,
@@ -8155,28 +8198,7 @@ const openCallout = (message, {
       callout.updatePosition();
     }
   };
-  const originalAnchorElement = anchorElement;
-  if (anchorElement) {
-    const proxyElement = findControlProxy(anchorElement);
-    if (proxyElement) {
-      anchorElement = proxyElement;
-    }
-    const controlRoot = findControlRoot(anchorElement);
-    if (controlRoot) {
-      anchorElement = controlRoot;
-    }
-    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true
-    });
-    if (!anchorVisuallyVisibleInfo.visible) {
-      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-      if (!anchorElement) {
-        // anchorElement is not in the DOM anymore, fallback to body
-        anchorElement = document.body;
-      }
-      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
-    }
-  }
+
   // Resolve the visual anchor for positioning: when data-callout-anchor is set,
   // use the inner element it points to. anchorElement remains the container
   // that receives data-callout and CSS vars.
@@ -8212,6 +8234,14 @@ const openCallout = (message, {
     return anchorElement.parentNode || document.body;
   })();
   {
+    // document.body as anchor means "no anchor" (the callout is docked in the
+    // viewport); everything would be inside it.
+    const isInsideAnchor = target => {
+      if (!anchorElement || anchorElement === document.body) {
+        return false;
+      }
+      return anchorElement === target || anchorElement.contains(target);
+    };
     const handleClickOutside = event => {
       if (event.button !== 0) {
         // right click
@@ -8219,6 +8249,16 @@ const openCallout = (message, {
       }
       const clickTarget = event.target;
       if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
+        return;
+      }
+      if (isInsideAnchor(clickTarget)) {
+        // Pressing the anchor is not "outside": this listener is on document in
+        // the capture phase, so closing here would destroy the callout before
+        // the event reaches the handler that owns it — and that handler,
+        // opening a callout on the very anchor it was just removed from, would
+        // create a second one within the same click. Left open, openCallout's
+        // `reopen` decides (toggle by default).
+        debug(event, `click on anchor, let the anchor handler decide`);
         return;
       }
       requestClose(event, "click_outside");
@@ -8229,6 +8269,12 @@ const openCallout = (message, {
       }
       const keyTarget = event.target;
       if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+        return;
+      }
+      if (isInsideAnchor(keyTarget)) {
+        // Space on the anchor produces a click afterwards — same reasoning as
+        // handleClickOutside above.
+        debug(event, `space on anchor, let the anchor handler decide`);
         return;
       }
       requestClose(event, "space_outside");
@@ -8403,7 +8449,9 @@ const openCallout = (message, {
     });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    addTeardown(() => {
+    addTeardown(({
+      event
+    }) => {
       anchorElement.removeAttribute("data-callout");
     });
     const visualElement = (() => {
@@ -29086,12 +29134,13 @@ const CLOSE_DIRECTION_BY_SIDE = { left: -1, right: 1, top: -1, bottom: 1 };
 /**
  * Builds the `pointerdown` handler a popup docked to `side` answers with.
  *
- * `grip` narrows where the gesture may start to one part of the popup, given as
- * a selector matched inside it: a popup whose whole surface is a place to push
- * from has nothing else to do with the press, while one made of content the
- * finger operates (a bottom sheet full of controls) only offers the strip that
- * is there to be held. A popup that has no such part is pushed from anywhere,
- * so naming a grip never leaves it undismissable.
+ * `grip` says where the gesture may start, as a selector the pressed element is
+ * matched against with `closest`. A popup that names one is held THERE and
+ * nowhere else: everything else it holds is content the finger came to operate,
+ * and a press on it is that content's — including gestures of its own, which
+ * this file has no way of knowing about. A popup that names no grip is pushed
+ * from its whole surface, which only suits one made of nothing else (a side
+ * panel showing a page).
  */
 const createSwipeToClose = (side, { grip } = {}) => {
   const axis = SWIPE_AXIS_BY_SIDE[side];
@@ -29103,8 +29152,11 @@ const createSwipeToClose = (side, { grip } = {}) => {
       return;
     }
     if (grip) {
-      const gripEl = panelEl.querySelector(grip);
-      if (gripEl && !gripEl.contains(pointerDownEvent.target)) {
+      // Read from the press outwards rather than by looking the grip up in the
+      // panel: a popup may hold several (a header and whatever else was marked
+      // as one), and where they sit in it is the application's business.
+      const gripEl = pointerDownEvent.target.closest(grip);
+      if (!gripEl || !panelEl.contains(gripEl)) {
         return;
       }
     }
@@ -29492,13 +29544,14 @@ const css$W = /* css */`
     &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
     }
-    /* The header of a sheet that closes by being pushed back down is a handle,
-       not a piece of the scroll: a finger on it moves the sheet, and letting
-       the browser scroll the sheet under the same gesture would show two
-       movements answering one drag. Direct children only — the sheet's own
-       header, not one belonging to something it contains (the same part
-       swipe_to_close.js takes hold of). */
-    &[data-swipe-to-close] > [data-header] {
+    /* What a sheet that closes by being pushed back down is held by is a
+       handle, not a piece of the scroll: a finger on it moves the sheet, and
+       letting the browser scroll the sheet under the same gesture would show
+       two movements answering one drag. The same parts swipe_to_close.js takes
+       hold of, said again here because CSS is the only place it can be said
+       before the finger lands. */
+    &[data-swipe-to-close] [data-header],
+    &[data-swipe-to-close] [data-swipe-grip] {
       touch-action: none;
     }
 
@@ -29647,8 +29700,10 @@ const css$W = /* css */`
  *   edge docking would bring it to, so docking could only take away the shape
  *   the caller asked for. Re-resolves live as the pointer
  *   type or the window size changes. A sheet resting on the bottom edge is also
- *   pushed back down to close it, held by its header (a direct child `Box` with
- *   the `header` prop) — or from anywhere when it has none. See `swipe_to_close.js`.
+ *   pushed back down to close it, held by its header (a `Box` with the `header`
+ *   prop) and by anything else carrying `data-swipe-grip`. The rest of the sheet
+ *   is left to what it holds, so a board something is dragged across keeps its
+ *   own gestures. See `swipe_to_close.js`.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -29902,12 +29957,13 @@ const DOCKED = {
   scrollCapture: true
 };
 
-// Where a bottom sheet is held to push it back down: the strip a direct-child
-// Box declares with `header` — the rest of the sheet is content the finger
-// operates, and a drag started there would fight whatever it landed on. A sheet
-// with no header of its own is pushed from anywhere (see createSwipeToClose's
-// own `grip`).
-const DOCKED_SWIPE_GRIP = ":scope > [data-header]";
+// Where a bottom sheet is held to push it back down: the strip a Box declares
+// with `header`, plus anything the application marked as one more. Everything
+// else in the sheet is content the finger came to operate — a board a piece is
+// dragged across, a list, a map — and a press there belongs to it. A sheet with
+// no header and nothing marked is not pushed down at all; it is closed by its
+// own controls, by the backdrop and by Escape.
+const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
 
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
 // controls rather than reading an attribute off the dialog: a dialog carries no

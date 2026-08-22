@@ -335,13 +335,14 @@ const css = /* css */ `
     &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
     }
-    /* The header of a sheet that closes by being pushed back down is a handle,
-       not a piece of the scroll: a finger on it moves the sheet, and letting
-       the browser scroll the sheet under the same gesture would show two
-       movements answering one drag. Direct children only — the sheet's own
-       header, not one belonging to something it contains (the same part
-       swipe_to_close.js takes hold of). */
-    &[data-swipe-to-close] > [data-header] {
+    /* What a sheet that closes by being pushed back down is held by is a
+       handle, not a piece of the scroll: a finger on it moves the sheet, and
+       letting the browser scroll the sheet under the same gesture would show
+       two movements answering one drag. The same parts swipe_to_close.js takes
+       hold of, said again here because CSS is the only place it can be said
+       before the finger lands. */
+    &[data-swipe-to-close] [data-header],
+    &[data-swipe-to-close] [data-swipe-grip] {
       touch-action: none;
     }
 
@@ -490,8 +491,10 @@ const css = /* css */ `
  *   edge docking would bring it to, so docking could only take away the shape
  *   the caller asked for. Re-resolves live as the pointer
  *   type or the window size changes. A sheet resting on the bottom edge is also
- *   pushed back down to close it, held by its header (a direct child `Box` with
- *   the `header` prop) — or from anywhere when it has none. See `swipe_to_close.js`.
+ *   pushed back down to close it, held by its header (a `Box` with the `header`
+ *   prop) and by anything else carrying `data-swipe-grip`. The rest of the sheet
+ *   is left to what it holds, so a board something is dragged across keeps its
+ *   own gestures. See `swipe_to_close.js`.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -742,12 +745,13 @@ const DOCKED = {
   scrollCapture: true,
 };
 
-// Where a bottom sheet is held to push it back down: the strip a direct-child
-// Box declares with `header` — the rest of the sheet is content the finger
-// operates, and a drag started there would fight whatever it landed on. A sheet
-// with no header of its own is pushed from anywhere (see createSwipeToClose's
-// own `grip`).
-const DOCKED_SWIPE_GRIP = ":scope > [data-header]";
+// Where a bottom sheet is held to push it back down: the strip a Box declares
+// with `header`, plus anything the application marked as one more. Everything
+// else in the sheet is content the finger came to operate — a board a piece is
+// dragged across, a list, a map — and a press there belongs to it. A sheet with
+// no header and nothing marked is not pushed down at all; it is closed by its
+// own controls, by the backdrop and by Escape.
+const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
 
 // The first control inside `dialogEl` that is mid-action, if any. Walks the
 // controls rather than reading an attribute off the dialog: a dialog carries no
@@ -920,25 +924,6 @@ const useDialogProps = (props) => {
   const onSwipePointerDown = swipeToCloseDown
     ? createSwipeToClose("bottom", { grip: DOCKED_SWIPE_GRIP })
     : null;
-  // A grip nobody matches leaves the whole sheet swipeable, which is the right
-  // answer for a sheet that has no header and the wrong one for a sheet whose
-  // header is buried a level down (wrapped in a form, a layout): the gesture
-  // then starts on content the finger came to operate, and nothing says so from
-  // the outside.
-  useEffect(() => {
-    const dialogEl = ref.current;
-    if (!dialogEl || !swipeToCloseDown || !openController.opened) {
-      return;
-    }
-    if (dialogEl.querySelector(DOCKED_SWIPE_GRIP)) {
-      return;
-    }
-    if (dialogEl.querySelector("[data-header]")) {
-      console.warn(
-        "Dialog: the header is not a direct child, so it is not the grip and the whole sheet is swiped to close. Put the header directly inside the dialog to hold the sheet by it.",
-      );
-    }
-  }, [swipeToCloseDown, openController.opened]);
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,
   // reading as a rendering glitch rather than as a rounded box. A corner is on

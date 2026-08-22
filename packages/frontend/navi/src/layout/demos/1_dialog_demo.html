@@ -123,20 +123,34 @@
         border-radius: 6px;
       }
       .demo-sheet-token {
-        position: absolute;
-        top: 12px;
         display: flex;
-        width: 84px;
+        width: 96px;
         height: 46px;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 13px;
+        font-size: 12px;
+        text-align: center;
         background: #2f5fa8;
         border-radius: 6px;
       }
-      .demo-sheet-token-by-hand {
+      .demo-sheet-board .demo-sheet-token {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+      }
+      .demo-sheet-token[data-grabbed] {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        scale: 1.08;
+      }
+      .demo-sheet-token-undeclared {
         background: #b3261e;
+      }
+      .demo-sheet-grip {
+        padding: 10px;
+        color: white;
+        text-align: center;
+        background: #1a237e;
       }
       .demo-position-grid {
         /* Same visual idea as 2_popover_demo.html's own .demo-area-grid — the
@@ -1132,20 +1146,19 @@
 
       // ── Dragging inside a docked sheet ────────────────────────────────────
 
-      const SheetToken = ({ left, ...rest }) => (
+      const SheetToken = (props) => (
         <Box
           className="demo-sheet-token"
-          style={{ left }}
           interactions={{ move: () => {} }}
-          {...rest}
+          {...props}
         >
-          drag me
+          hold to drag
         </Box>
       );
 
-      // The same token moved by hand: a pointerdown that reads the pointer
-      // itself, and says nothing about it in the DOM.
-      const SheetTokenByHand = ({ left }) => {
+      // The same token, dragged by a pointerdown of its own: it reads the
+      // pointer and nothing in the DOM says it does.
+      const SheetTokenUndeclared = () => {
         const positionRef = useRef({ x: 0, y: 0 });
         const onPointerDown = (pointerDownEvent) => {
           const element = pointerDownEvent.currentTarget;
@@ -1158,8 +1171,8 @@
               x: x + pointerMoveEvent.clientX - grabX,
               y: y + pointerMoveEvent.clientY - grabY,
             };
-            const { x: left, y: top } = positionRef.current;
-            element.style.translate = `${left}px ${top}px`;
+            const { x: movedX, y: movedY } = positionRef.current;
+            element.style.translate = `${movedX}px ${movedY}px`;
           };
           const onPointerUp = () => {
             element.removeEventListener("pointermove", onPointerMove);
@@ -1170,11 +1183,10 @@
         };
         return (
           <div
-            class="demo-sheet-token demo-sheet-token-by-hand"
-            style={{ left }}
+            class="demo-sheet-token demo-sheet-token-undeclared"
             onPointerDown={onPointerDown}
           >
-            by hand
+            undeclared
           </div>
         );
       };
@@ -1195,7 +1207,10 @@
           <Heading level={3} id="docked-drag-header">
             Held by its header
           </Heading>
-          <p>Pushing the header down closes the sheet; the board does not.</p>
+          <p>
+            The header pushes the sheet down. Everywhere else is the board's,
+            wherever the token is taken across it.
+          </p>
           <div class="demo-row">
             <Button command="--navi-open" commandFor="sheet_grip_dialog">
               header
@@ -1206,7 +1221,7 @@
               </Box>
               <Box padding="m" flex="y" spacing="s">
                 <SheetBoard>
-                  <SheetToken id="sheet_grip_token" left="12px" />
+                  <SheetToken id="sheet_grip_token" />
                 </SheetBoard>
                 <Button command="--navi-close">Close</Button>
               </Box>
@@ -1214,11 +1229,12 @@
           </div>
 
           <Heading level={3} id="docked-drag-no-header">
-            No header
+            Nothing to hold it by
           </Heading>
           <p>
-            The sheet is pushed down from anywhere — from the token it is the
-            token that travels.
+            A sheet with no header is not pushed down at all — it closes by its
+            own button, by the backdrop and by Escape. Marking a strip{" "}
+            <code>data-swipe-grip</code> gives it one back.
           </p>
           <div class="demo-row">
             <Button command="--navi-open" commandFor="sheet_bare_dialog">
@@ -1227,7 +1243,22 @@
             <Dialog id="sheet_bare_dialog" dockedOnSmallTouchScreen animation>
               <Box padding="m" flex="y" spacing="s">
                 <SheetBoard>
-                  <SheetToken id="sheet_bare_token" left="12px" />
+                  <SheetToken id="sheet_bare_token" />
+                </SheetBoard>
+                <Button command="--navi-close">Close</Button>
+              </Box>
+            </Dialog>
+
+            <Button command="--navi-open" commandFor="sheet_marked_dialog">
+              data-swipe-grip
+            </Button>
+            <Dialog id="sheet_marked_dialog" dockedOnSmallTouchScreen animation>
+              <div class="demo-sheet-grip" data-swipe-grip>
+                push me down
+              </div>
+              <Box padding="m" flex="y" spacing="s">
+                <SheetBoard>
+                  <SheetToken id="sheet_marked_token" />
                 </SheetBoard>
                 <Button command="--navi-close">Close</Button>
               </Box>
@@ -1238,8 +1269,8 @@
             A header one level down
           </Heading>
           <p>
-            Same sheet, its header wrapped in a box: pushing the content down
-            closes it too, and the console says why.
+            The header wrapped in a box — a form, a layout — is still the
+            header, and still what the sheet is held by.
           </p>
           <div class="demo-row">
             <Button command="--navi-open" commandFor="sheet_nested_dialog">
@@ -1252,7 +1283,7 @@
                 </Box>
                 <Box padding="m" flex="y" spacing="s">
                   <SheetBoard>
-                    <SheetToken id="sheet_nested_token" left="12px" />
+                    <SheetToken id="sheet_nested_token" />
                   </SheetBoard>
                   <Button command="--navi-close">Close</Button>
                 </Box>
@@ -1260,27 +1291,29 @@
             </Dialog>
           </div>
 
-          <Heading level={3} id="docked-drag-by-hand">
-            Reading the pointer by hand
+          <Heading level={3} id="docked-drag-undeclared">
+            A gesture nothing declares
           </Heading>
-          <p>Two tokens in one sheet: pull each of them down, then sideways.</p>
+          <p>
+            Two tokens in the header, where the sheet reads the press: one
+            declared with <code>interactions</code>, one running a{" "}
+            <code>pointerdown</code> of its own. Pull each of them down, then
+            sideways.
+          </p>
           <div class="demo-row">
-            <Button command="--navi-open" commandFor="sheet_by_hand_dialog">
-              interactions vs by hand
+            <Button command="--navi-open" commandFor="sheet_undeclared_dialog">
+              declared vs undeclared
             </Button>
             <Dialog
-              id="sheet_by_hand_dialog"
+              id="sheet_undeclared_dialog"
               dockedOnSmallTouchScreen
               animation
             >
-              <Box header padding="s" className="demo-overflow-part">
-                header
+              <Box header padding="s" flex="x" spacing="s" alignY="center">
+                <SheetToken id="sheet_undeclared_declared_token" />
+                <SheetTokenUndeclared />
               </Box>
               <Box padding="m" flex="y" spacing="s">
-                <SheetBoard>
-                  <SheetToken id="sheet_by_hand_token" left="12px" />
-                  <SheetTokenByHand left="112px" />
-                </SheetBoard>
                 <Button command="--navi-close">Close</Button>
               </Box>
             </Dialog>
