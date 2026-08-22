@@ -111,8 +111,8 @@ and no other**:
 
 ```js
 // The same thing said by a call rather than by an element.
-navTo(GAME_ROUTE.buildUrl({ id }), { transition: { direction: "back" } });
-GAME_ROUTE.navTo({ id }, { transition: { direction: "back" } });
+navTo(GAME_ROUTE.buildUrl({ id }), { routeTransition: { direction: "back" } });
+GAME_ROUTE.navTo({ id }, { routeTransition: { direction: "back" } });
 ```
 
 The request is `"slide-x"`-style shorthand or `{ type, duration, direction }`,

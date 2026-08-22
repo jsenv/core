@@ -33,7 +33,8 @@
  * game it belongs to, a card that leads to the player it describes — is walked
  * against the map, and there is no telling it from the common way by the
  * routes alone. So the navigation itself may ask for something: a `<Link
- * transition>`, or navTo(url, { transition }). What it asks holds for THAT
+ * routeTransition>`, or navTo(url, { routeTransition }). What it asks holds
+ * for THAT
  * navigation and no other, and only for the fields it names — `{ direction:
  * "back" }` keeps the pair's movement and turns it round (see
  * readNavigationRequest). A pair no relation was ever written for animates the
@@ -95,7 +96,7 @@ const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // What ONE navigation asks for, over whatever the relations say: worn by the
-// link being pressed (see <Link transition>), or handed to navTo(). It answers
+// link being pressed (see <Link routeTransition>), or handed to navTo(). It answers
 // for that navigation and for no other — the next one is back to the relations.
 const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
 const AREA_NAME = "navi-route-transition";
@@ -549,8 +550,9 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *     }
  *
  *   Whatever is written here is what EVERY crossing of the pair plays. One
- *   crossing can ask for something else — `<Link transition>`, or
- *   navTo(url, { transition }) — which overrides this field by field, for that
+ *   crossing can ask for something else — `<Link routeTransition>`, or
+ *   navTo(url, { routeTransition }) — which overrides this field by field, for
+ *   that
  *   navigation alone.
  * @returns {() => void} remove this relation.
  */
@@ -617,7 +619,8 @@ const normalizeTransition = (transition) => {
  * not, and this is where it says it.
  *
  * Two mouths, one meaning: the element being pressed wears it (a `<Link
- * transition>`, or the attribute by hand on any anchor), or navTo() is handed
+ * routeTransition>`, or the attribute by hand on any anchor), or navTo() is
+ * handed
  * it. Both arrive here through the announcement the navigation makes before it
  * writes anything (see before_routing.js).
  *
@@ -626,9 +629,9 @@ const normalizeTransition = (transition) => {
  * movement and only turns it round, and `"none"` cuts where something would
  * have played.
  */
-const readNavigationRequest = ({ transition, element }) => {
-  if (transition !== undefined && transition !== null) {
-    return normalizeRequest(transition);
+const readNavigationRequest = ({ routeTransition, element }) => {
+  if (routeTransition !== undefined && routeTransition !== null) {
+    return normalizeRequest(routeTransition);
   }
   if (element && element.getAttribute) {
     const asked = element.getAttribute(TRANSITION_REQUEST_ATTRIBUTE);

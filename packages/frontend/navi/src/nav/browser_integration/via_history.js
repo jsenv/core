@@ -331,15 +331,15 @@ export const setupBrowserIntegrationViaHistory = ({
     updateDocumentUrl(window.location.href);
   });
 
-  const navTo = async (url, { replace, state, transition } = {}) => {
+  const navTo = async (url, { replace, state, routeTransition } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
       // What this one navigation asks of a route transition, said by the call
       // that starts it rather than by an element — the programmatic half of
-      // what a <Link transition> says (see route_transition.jsx).
-      transition,
+      // what a <Link routeTransition> says (see route_transition.jsx).
+      routeTransition,
     });
   };
 

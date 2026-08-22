@@ -144,10 +144,10 @@ export const route = (pattern, { searchParams } = {}) => {
       const routeUrl = resolveRouteUrl(routeRelativeUrl);
       return routeUrl;
     };
-    // Options travel as they do to navTo() itself — `transition` is the one
-    // that matters here: what this one navigation asks of a route transition
-    // (see route_transition.jsx), which is the programmatic half of what a
-    // <Link transition> says.
+    // Options travel as they do to navTo() itself — `routeTransition` is the
+    // one that matters here: what this one navigation asks of a route
+    // transition (see route_transition.jsx), which is the programmatic half of
+    // what a <Link routeTransition> says.
     route.navTo = (params, options) => {
       if (!integration) {
         if (import.meta.dev) {

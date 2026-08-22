@@ -94,7 +94,7 @@
                     // Ce que CE lien demande, par-dessus ce que la paire dit
                     // (et même quand la paire ne dit rien). Absent, les
                     // relations répondent comme d'habitude.
-                    transition={link.transition}
+                    routeTransition={link.routeTransition}
                   >
                     {link.label} (ligne {index + 1})
                   </Link>
@@ -123,7 +123,7 @@
               // Le sens rare de la paire: on RESSORT vers les lieux. Le
               // mouvement de la paire est gardé, seul le sens est retourné —
               // ce qu'aucune règle sur les routes ne saurait dire.
-              transition: { direction: "back" },
+              routeTransition: { direction: "back" },
               testId: "places_back_link",
               label: "↩ Ressortir vers mes lieux",
             },
@@ -159,7 +159,7 @@
               // Aucune relation n'est écrite entre ces deux pages: sans ce
               // lien elles ne joueraient rien l'une envers l'autre. Le temps
               // de cette navigation-là, elles jouent un zoom.
-              transition: "zoom",
+              routeTransition: "zoom",
               label: "Raccourci vers Modifier (zoom)",
             },
           ]}

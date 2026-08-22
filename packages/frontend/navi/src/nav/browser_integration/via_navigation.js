@@ -253,7 +253,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       // Both are the same facts via_history.js announces; here the browser
       // hands them over — sourceElement for a press, info for a navTo() call.
       element: event.sourceElement,
-      transition: event.info ? event.info.transition : undefined,
+      routeTransition: event.info ? event.info.routeTransition : undefined,
     });
     const isSameUrl = url === window.location.href;
     event.intercept({
@@ -335,12 +335,12 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   installScrollRestoration();
 
-  const navTo = async (url, { replace, state, transition } = {}) => {
+  const navTo = async (url, { replace, state, routeTransition } = {}) => {
     navigation.navigate(url, {
       // Not state: what is asked of a transition is about the navigation, not
       // about the entry it leaves behind. `info` is exactly that — handed to
       // the navigate event and forgotten afterwards.
-      info: transition === undefined ? undefined : { transition },
+      info: routeTransition === undefined ? undefined : { routeTransition },
       // undefined stays "inherit" through the event: navigate() stores no
       // state, destination.getState() answers undefined, and runRouting reads
       // that as "keep what the document holds".

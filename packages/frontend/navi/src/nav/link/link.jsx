@@ -491,7 +491,7 @@ Object.assign(PSEUDO_CLASSES, {
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
- * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.transition] -
+ * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.routeTransition] -
  *   What pressing THIS link asks of a route transition, for that one
  *   navigation: a type name (`"slide-x"`, `"none"`, …), or an object to also
  *   say the pace or which way it plays. It overrides field by field what
@@ -556,7 +556,7 @@ const LinkPlain = (props) => {
     endIcon,
     revealOnInteraction = false,
     hrefFallback = !anchor,
-    transition,
+    routeTransition,
 
     children,
   } = props;
@@ -675,12 +675,12 @@ const LinkPlain = (props) => {
   // route_transition.jsx, which owns the name and does the reading). A type is
   // a name; anything more travels as JSON, which is also how a plain <a>
   // writes it by hand.
-  const transitionRequest =
-    transition === undefined || transition === null
+  const routeTransitionRequest =
+    routeTransition === undefined || routeTransition === null
       ? undefined
-      : typeof transition === "string"
-        ? transition
-        : JSON.stringify(transition);
+      : typeof routeTransition === "string"
+        ? routeTransition
+        : JSON.stringify(routeTransition);
 
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
@@ -738,8 +738,8 @@ const LinkPlain = (props) => {
       startIcon={undefined}
       endIcon={undefined}
       hrefFallback={undefined}
-      transition={undefined}
-      data-navi-route-transition-request={transitionRequest}
+      routeTransition={undefined}
+      data-navi-route-transition-request={routeTransitionRequest}
       onClick={(e) => {
         onClick?.(e);
         if (slide) {
