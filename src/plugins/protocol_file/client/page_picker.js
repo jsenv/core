@@ -2,8 +2,9 @@
  * "Which page?", asked the same way everywhere.
  *
  * The .html files the dev server serves (GET /.internal/pages.json, see
- * html_pages.js), as a tree one walks: filter as you type, toggle what kind of
- * page one is after, Enter to take the row one is looking at. What happens to
+ * html_pages.js), as a tree one walks — or, the moment something is typed, as
+ * a flat list of what matches. Toggle what kind of page one is after, Enter to
+ * take the row one is looking at. What happens to
  * that row is the caller's business — cmd+K goes there in this tab, the clients
  * dashboard sends another browser there — and that is the only difference
  * between the two.
@@ -204,6 +205,20 @@ const STYLE_TEXT = /* css */ `
   }
   .strong {
     font-weight: 600;
+  }
+  /* The directory part of a flat search row. It shrinks before the name does,
+     and from the left: the end of the road is the part that tells rows apart. */
+  .path {
+    min-width: 0;
+    flex: 0 1 auto;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    overflow: hidden;
+  }
+  .path > bdo {
+    direction: ltr;
+    unicode-bidi: bidi-override;
   }
   .here {
     margin-left: auto;
@@ -493,9 +508,29 @@ export const openPagePicker = ({
 
   const buildRows = () => {
     const nextRows = [];
-    // While something is typed the tree opens itself: what one is looking at is
-    // the matches, not the folders that happen to hold them.
-    const searching = searchNeedle() !== "";
+    // While something is typed the tree steps aside: what one is looking at is
+    // the matches, not the folders that happen to hold them — so the matches
+    // are a flat list, each carrying its own road, and the folding (untouched)
+    // is waiting where it was when the field empties again.
+    if (searchNeedle() !== "") {
+      const matches = [];
+      const collect = (node) => {
+        for (const file of node.files) {
+          if (matchesFilters(file)) {
+            matches.push(file);
+          }
+        }
+        for (const child of node.directories.values()) {
+          collect(child);
+        }
+      };
+      collect(tree);
+      matches.sort((a, b) => a.url.localeCompare(b.url));
+      for (const file of matches) {
+        nextRows.push({ type: "file", file, depth: 0, showPath: true });
+      }
+      return nextRows;
+    }
     const walk = (node, depth) => {
       const directories = [...node.directories.values()].sort((a, b) =>
         nodeName(a).localeCompare(nodeName(b)),
@@ -506,9 +541,7 @@ export const openPagePicker = ({
           continue;
         }
         const collapsed =
-          !searching &&
-          state.collapsed.has(child.path) &&
-          !revealed.has(child.path);
+          state.collapsed.has(child.path) && !revealed.has(child.path);
         nextRows.push({
           type: "directory",
           node: child,
@@ -575,7 +608,22 @@ export const openPagePicker = ({
     const name = document.createElement("span");
     name.className = "strong";
     name.textContent = row.file.name;
-    rowContent.append(icon, name);
+    if (row.showPath) {
+      // A flat row is its own road: the directory part rides along, grey, and
+      // gives way (ellipsis on its left, where the repetition lives) before the
+      // name ever would.
+      const path = document.createElement("span");
+      path.className = "dim path";
+      // The rtl container puts the ellipsis on the left; the bdo keeps the
+      // characters themselves reading left to right inside it.
+      const pathText = document.createElement("bdo");
+      pathText.setAttribute("dir", "ltr");
+      pathText.textContent = row.file.url.slice(1, -row.file.name.length);
+      path.append(pathText);
+      rowContent.append(icon, path, name);
+    } else {
+      rowContent.append(icon, name);
+    }
     if (isHere(row.file)) {
       item.setAttribute("data-here", "");
       const hereLabel = document.createElement("span");
