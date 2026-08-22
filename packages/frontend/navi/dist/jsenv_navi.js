@@ -12622,10 +12622,10 @@ defineInteractionDetector({
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
     }
-    // What @jsenv/dom puts on a drag source: no iOS callout, the touch left to
-    // the scroll until the press becomes a grab, and the listener that lets the
-    // grab take it back. Its argument is the axis the SURROUNDINGS scroll on,
-    // which for a list is the axis the list runs on.
+    // What @jsenv/dom puts on a drag source: the axes written in the DOM for
+    // whoever else answers this press (a sheet pushed down to close it, a row of
+    // slides), no iOS callout, the touch left to the scroll until the press
+    // becomes a grab, and the listener that lets the grab take it back.
     const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab" is a
@@ -24189,20 +24189,26 @@ const useUIStateController = (
                     e,
                     "dispatching synthetic input event without data for checkbox/radio",
                   );
-                  el.dispatchEvent(new Event("input", { bubbles: true }));
+                  dispatchSyntheticInput(
+                    el,
+                    new Event("input", { bubbles: true }),
+                    e,
+                  );
                   syntheticInputFired = true;
                 } else {
                   debugUIState(
                     e,
                     `dispatching synthetic input event with data "${newUIState}" for input`,
                   );
-                  el.dispatchEvent(
+                  dispatchSyntheticInput(
+                    el,
                     new InputEvent("input", {
                       bubbles: true,
                       cancelable: true,
                       inputType: "insertText",
                       data: newUIState,
                     }),
+                    e,
                   );
                   syntheticInputFired = true;
                 }
@@ -24214,7 +24220,11 @@ const useUIStateController = (
                 // A plain Event, not an InputEvent: that is what the browser
                 // itself fires on a select, and input_effect reads the value off
                 // the element anyway.
-                el.dispatchEvent(new Event("input", { bubbles: true }));
+                dispatchSyntheticInput(
+                  el,
+                  new Event("input", { bubbles: true }),
+                  e,
+                );
                 syntheticInputFired = true;
               }
               // TODO: textarea
@@ -25317,14 +25327,16 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           }
           if (
             silent &&
-            child.uiState === undefined &&
-            s.realUIStateController.uiState !== undefined
+            uiStateHoldsNothing(child.uiState) &&
+            !uiStateHoldsNothing(s.realUIStateController.uiState)
           ) {
             // A silent sync means the child's own structure changed (children
             // mounted/unmounted), not that the user acted. A child that ends up
             // with no value there is one that currently *cannot* express one —
-            // a <List loading> holds no items yet — which must not read as the
-            // user clearing the picker, nor fire its uiAction.
+            // a <List loading> holds no items yet, a popup whose items are gone
+            // aggregates to the empty array its stateType falls back to — which
+            // must not read as the user clearing the picker, nor fire its
+            // uiAction.
             return;
           }
           updatingRef.current = true;
@@ -25443,6 +25455,33 @@ const INTERNAL_EVENT_SET = new Set([
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+
+/**
+ * The synthetic "input" event is how the new state reaches the outside world
+ * (`uiAction` is called from the input handler it triggers). It carries what
+ * caused the state change so a listener can tell a gesture apart from navi
+ * talking to itself: `findEvent(e, "navi_clear_ui_state")` answers "the user
+ * pressed the clear cross", the same way the facade hops are recognized.
+ */
+const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
+  chainEvent(inputEvent, causeEvent);
+  el.dispatchEvent(inputEvent);
+};
+
+// What a control says when it has nothing to say: no value at all, or the empty
+// array/object a group falls back to while it has no child to aggregate.
+const uiStateHoldsNothing = (uiState) => {
+  if (uiState === undefined) {
+    return true;
+  }
+  if (Array.isArray(uiState)) {
+    return uiState.length === 0;
+  }
+  if (uiState !== null && typeof uiState === "object") {
+    return Object.keys(uiState).length === 0;
+  }
+  return false;
 };
 
 /**

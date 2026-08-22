@@ -261,11 +261,22 @@ const chainEvent = (customEvent, parentEvent) => {
   if (!parentEvent) {
     return customEvent;
   }
-  if (!customEvent.detail) {
-    console.warn(
-      `Event "${customEvent.type}" has no detail object. Cannot chain to parent event "${parentEvent.type}".`,
-    );
-    return customEvent;
+  if (!customEvent.detail || typeof customEvent.detail !== "object") {
+    // A native event has nowhere to hang the chain: `Event` has no detail at
+    // all and `UIEvent` (so `InputEvent` too) exposes it as a readonly number.
+    // Give it an own detail object, shadowing the prototype getter, so a
+    // synthetic event dispatched on behalf of a gesture can still say what
+    // caused it.
+    if (nativeDetailHasMeaning(customEvent)) {
+      console.warn(
+        `Chaining "${customEvent.type}" to "${parentEvent.type}" replaces its native detail (${customEvent.detail}), which carries the click count on this event type. Chain a custom event instead, or read the click count before chaining.`,
+      );
+    }
+    Object.defineProperty(customEvent, "detail", {
+      value: {},
+      configurable: true,
+      enumerable: true,
+    });
   }
   // Always build eventChain from the first wrapping so callers can rely on it
   // being present whenever `parentEvent` is set.
@@ -307,6 +318,24 @@ const findEvent = (event, predicate) => {
     }
   }
   return undefined;
+};
+
+// `detail` is a click count on the pointer events that define one, and 0
+// everywhere else (`input`, `focus`, `wheel`…). Overwriting it there loses the
+// only way to tell a real click from a keyboard/programmatic one (detail === 0),
+// so those events must not be chained.
+const EVENT_TYPES_WITH_MEANINGFUL_DETAIL = new Set([
+  "click",
+  "auxclick",
+  "dblclick",
+  "mousedown",
+  "mouseup",
+]);
+const nativeDetailHasMeaning = (event) => {
+  if (EVENT_TYPES_WITH_MEANINGFUL_DETAIL.has(event.type)) {
+    return true;
+  }
+  return typeof event.detail === "number" && event.detail !== 0;
 };
 
 const resolveEventPredicate = (predicate) => {
@@ -9117,12 +9146,16 @@ const css$4 = /* css */`
     /* A source taken by long press must let the scroll through until the grab —
        which is exactly what the long press is there to tell apart. Zoom has
        nothing to do with the gesture and nobody should lose it by resting a
-       finger on a word. */
+       finger on a word.
+
+       Vertical, because that is the way the page and the lists in it go: a
+       source dragged along one axis is surrounded by something scrolling along
+       that same axis (a row of a list runs the way the list scrolls), and a
+       source dragged both ways sits on the usual vertical page. */
     touch-action: pan-y pinch-zoom;
   }
   [data-drag-source="x"] {
-    /* The axis is the one thing the caller has to say, being the only one who
-       knows which way what surrounds the source scrolls. */
+    /* …and the sideways one, for the same reason read the other way. */
     touch-action: pan-x pinch-zoom;
   }
   [data-drag-on-contact] [data-drag-source],
@@ -9158,23 +9191,36 @@ import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_after_intent.js"
  *
  * On the element and not on the window, so the rest of the page keeps its
  * touches on the compositor's fast path.
+ *
+ * Exported because a drag does not always begin on a drag source: a copy caught
+ * on its way home is pressed through the pictures of a view transition, and the
+ * touch lands on the document root (see letCopyBeCaught in drag_to.js). Same
+ * rule, other element — and it has to be the same function, or the listener put
+ * down is not the one taken back off.
  */
 const keepTouchRefusable = () => {
   // Being registered IS the whole of it — see above.
 };
 
 /**
- * Says an element is something a drag can start from.
+ * Says an element is something a drag can start from, and which way that drag
+ * goes.
+ *
+ * The axes are written in the DOM rather than kept here because they are what
+ * someone ELSE reads: a box above this one that travels under the same finger
+ * (a row of slides, a sheet pushed down to close it) has to know which axes are
+ * already spoken for before it answers the press — the same thing a travel says
+ * about itself with `data-travel-by-drag`. It is also what leaves the browser
+ * the pan it may still do until the grab (see the stylesheet above).
  *
  * @param {Element} element
- * @param {string} [axes]
- *   Which way the SURROUNDINGS scroll, so the other axis is left to them until
- *   the grab: `"x"` for a source inside something travelling sideways, anything
- *   else for the usual vertical page.
+ * @param {"x"|"y"|"xy"} [axes="xy"]
+ *   Which way the drag walks. A list reordered along its own line says `"y"`;
+ *   something carried across a board, or thrown, goes both ways.
  * @returns {function} Takes the mark back off.
  */
-const markDragSource = (element, axes) => {
-  element.setAttribute("data-drag-source", axes === "x" ? "x" : "");
+const markDragSource = (element, axes = "xy") => {
+  element.setAttribute("data-drag-source", axes);
   element.addEventListener("touchmove", keepTouchRefusable, {
     passive: false
   });
@@ -11569,6 +11615,18 @@ const css$1 = /* css */`
     pointer-events: auto;
   }
 
+  /* …and a FINGER reaching for it does not land on it: the pictures of the
+     transition cover the page, so as far as the browser is concerned the touch
+     began on the document root. What a touch may do is decided there and at that
+     moment, so the root says it for as long as the copy can be caught — the pan
+     is ours (nothing should scroll while something is landing), zoom stays the
+     reader's. Half of a pair: without the non-passive listener put down at the
+     same moment (see letCopyBeCaught) every touchmove arrives already
+     non-cancelable and refusing it does nothing. */
+  [data-drag-catchable] {
+    touch-action: pinch-zoom;
+  }
+
   /* Ce qui a été lancé: il continue dans la direction du geste jusqu'à sortir de
      l'écran, et revient par le même chemin si la réponse refuse. */
   [navi-drag-clone-wrapper][data-tossed] {
@@ -12514,7 +12572,15 @@ const startDragToCarryCopy = (event, {
       return dragGesture;
     }, {
       threshold,
-      longPress,
+      // A copy caught on its way home is not an ambiguous press: the hand
+      // reached for something moving, and the press was already matched
+      // against the copy's own box before it got here. The wait a finger is
+      // asked for elsewhere tells a scroll from a drag, and there is no scroll
+      // to tell it from — the copy covers that spot from the top layer. Asked
+      // for anyway it cannot even be answered: the wait is about as long as the
+      // journey, so the thing is home before the proof is done, while a mouse
+      // takes it in five pixels.
+      longPress: cloneWrapperCaught ? false : longPress,
       longPressDelay,
       longPressSlop,
       onPressStart,
@@ -12704,6 +12770,17 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
   // gesture holds what it grabbed rather than whatever was behind.
   cloneWrapper.setAttribute("data-catchable", "");
   document.addEventListener("pointerdown", onPointerDown, true);
+  // The touch half of the same reach, said on the root because that is where a
+  // finger pressing through the pictures lands (see the stylesheet). Both go
+  // down before the copy sets off, since what a touch may do is settled when it
+  // begins: put down later, the press is still read, the carry still starts, and
+  // the browser cancels the pointer one move afterwards — a copy that cannot be
+  // caught with a finger and can with a mouse.
+  const root = document.documentElement;
+  root.setAttribute("data-drag-catchable", "");
+  root.addEventListener("touchmove", keepTouchRefusable, {
+    passive: false
+  });
   return {
     settled: async () => {
       // A hand that lets go and presses again while the copy is still there is
@@ -12715,6 +12792,8 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
       }
       cloneWrapper.removeAttribute("data-catchable");
       document.removeEventListener("pointerdown", onPointerDown, true);
+      root.removeAttribute("data-drag-catchable");
+      root.removeEventListener("touchmove", keepTouchRefusable);
       return caught;
     }
   };
@@ -13006,12 +13085,13 @@ const DRAG_FLICK_DISTANCE = 8;
 // way. Let go and it comes back — a wall one can lean on, never walk through.
 const DRAG_RESISTANCE = 0.3;
 
-// What a drag must not start on: something that reads the pointer itself. A
-// button or a link is not in the list — dragging from one travels, and the
-// click it would have made is swallowed on the way out. A drag source is: it
-// answers the same press, and a travel starting there takes the pointer capture
-// away from a gesture already carrying something.
-const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-source]", "[data-drag-handle]", "[data-no-drag-travel]"].join(",");
+// What a drag must not start on: something that reads the pointer itself, whole,
+// with no axis left to share. A button or a link is not in the list — dragging
+// from one travels, and the click it would have made is swallowed on the way
+// out. A drag SOURCE is not either: it says which way it goes and only takes
+// that (see DRAG_SOURCE_AXES_ATTRIBUTE) — but a dedicated handle is, being a
+// place whose only purpose is to be taken hold of, from the first pixel.
+const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]"].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
 // whoever owns the box: it is what a box ABOVE another reads to know the
@@ -13019,6 +13099,12 @@ const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable
 // from the outside.
 const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
 const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
+// The same thing said by something that is PICKED UP rather than travelled: a
+// row taken out of a list, a card carried across a board (see markDragSource).
+// It holds the pointer from the press exactly as a nested travel does, so it is
+// read exactly as one — a list reordered along its own line takes the axis it
+// runs on and leaves the other to whoever is above.
+const DRAG_SOURCE_AXES_ATTRIBUTE = "data-drag-source";
 
 // A surface the browser paints in the top layer: it is still a DOM descendant
 // of whatever it was written in, and it is nowhere near it on screen — it
@@ -13234,10 +13320,12 @@ const startDragToTravel = (pointerDownEvent, {
   if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
     return null;
   }
-  // A box between the finger and this one that travels the same way: the
-  // gesture is its, and this one is left with the axes it does not walk — none
-  // at all, most of the time, and then there is no gesture here to read.
-  const axesLeft = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
+  // A box between the finger and this one that travels the same way, and then
+  // anything between them that is picked up and carried the same way: the
+  // gesture is theirs, and this one is left with the axes none of them walks —
+  // none at all, most of the time, and then there is no gesture here to read.
+  const axesLeftByTravels = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
+  const axesLeft = axesLeftByTravels && axesLeftBy(axesLeftByTravels, target, element, DRAG_SOURCE_AXES_ATTRIBUTE);
   if (!axesLeft) {
     return null;
   }
