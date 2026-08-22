@@ -623,6 +623,14 @@ container above it does not take the gesture:
 
 ## Things worth knowing before guessing
 
+- **A drag says its axes to whoever else answers the press.** `data-drag-axis`
+  is written into the DOM as `data-drag-source`, and a box above that travels
+  under the same finger reads it before answering: a list reordered vertically
+  inside a row of slides swiped sideways leaves the sideways gesture alone, and a
+  piece carried both ways inside a bottom sheet takes the press whole. Nothing to
+  wire — see `docs/drag_to_travel.md`. A `Dialog` docked to the bottom edge goes
+  further and reads the press only on its header (plus anything carrying
+  `data-swipe-grip`), so its body is free whatever is in it.
 - **A hold does not take the context menu.** Declaring `longpress` says what a
   held finger does; a right click comes from the other button and keeps opening
   the browser's menu. Declare `contextmenu` beside it to make the right click do

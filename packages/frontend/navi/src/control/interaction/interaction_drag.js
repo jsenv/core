@@ -203,10 +203,10 @@ defineInteractionDetector({
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
     }
-    // What @jsenv/dom puts on a drag source: no iOS callout, the touch left to
-    // the scroll until the press becomes a grab, and the listener that lets the
-    // grab take it back. Its argument is the axis the SURROUNDINGS scroll on,
-    // which for a list is the axis the list runs on.
+    // What @jsenv/dom puts on a drag source: the axes written in the DOM for
+    // whoever else answers this press (a sheet pushed down to close it, a row of
+    // slides), no iOS callout, the touch left to the scroll until the press
+    // becomes a grab, and the listener that lets the grab take it back.
     const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab" is a

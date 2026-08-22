@@ -143,6 +143,14 @@ consistency across the app, not from any single call site.
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi.
+- `docs/drag_to_travel.md` — a pointer pushing a whole screen aside
+  (`SlideContainer`, `RouteTravel`) and a popup pushed back towards its edge:
+  what the gesture is, and above all who owns a press several boxes want — a
+  scroller with room left, a nested travelling box, something being carried, a
+  surface in the top layer, and the grip a docked popup narrows itself to. Read
+  it before putting anything that reads the pointer inside a box that travels,
+  and before wondering why a page moved under a gesture meant for what was in
+  it.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - `docs/navigation.md` — how to build navigation: declaring routes

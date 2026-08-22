@@ -84,18 +84,26 @@ scrolling while a screen slides. Same word, other gesture.
 
 ## Who owns a gesture
 
-Three things can claim a pointer that landed on a travelling box, and all three
+Five things can claim a pointer that landed on a travelling box, and all five
 are read before the box moves:
 
-1. **What says so itself.** A field, a `contenteditable`, or anything carrying
-   `data-no-drag-travel`.
+1. **What says so itself.** A field, a `contenteditable`, a dedicated drag
+   handle (`data-drag-handle`), or anything carrying `data-no-drag-travel`.
 2. **A scroller in between with room left that way.** It keeps the gesture until
    it has no room left, and only then hands the travel over — so a row that
    scrolls sideways inside a page still scrolls sideways.
 3. **Another travelling box in between.** The innermost one takes the axes it
    walks, and leaves the ones it does not to whoever is above it.
-4. **A surface in the top layer in between.** Nothing above it gets the gesture
+4. **Something in between that is picked up and carried.** A row taken out of a
+   list, a card carried across a board: it takes the axes it is dragged on and
+   leaves the others — see [Something being carried inside a
+   box](#something-being-carried-inside-a-box).
+5. **A surface in the top layer in between.** Nothing above it gets the gesture
    at all — see [A surface in the top layer](#a-surface-in-the-top-layer).
+
+And one thing narrows it from the other end: a popup that names a **grip** reads
+the press only there — see [A popup pushed back the way it
+came](#a-popup-pushed-back-the-way-it-came).
 
 ### Boxes inside boxes
 
@@ -116,6 +124,39 @@ own the gesture never does. The consequence is that an inner box sitting on its
 last slide does not hand the gesture over mid-drag: it leans on its wall, the way
 it does when it is alone. Travelling the box around it means starting the gesture
 outside it.
+
+### Something being carried inside a box
+
+A drag reads the same press a travel does and holds the pointer from it, so the
+two share a finger exactly as two travelling boxes do: what is picked up says
+which axes it walks (`data-drag-source`, written from `data-drag-axis` by
+`interactions={{ move, reorder, land, toss }}` — see `docs/interactions.md`), and
+the box above keeps what is left. A list reordered along its own line inside a
+row of slides swiped sideways: both gestures live, and neither had to be told
+about the other.
+
+When the two want the same axes — a piece carried both ways inside a sheet
+pushed down to close it — nothing is left and the press is the piece's, whole.
+That is the right way round: the box above is a surface, and the thing in it is
+what the hand came for.
+
+The exception is a **dedicated handle** (`data-drag-handle`), which has no axis:
+it is a place whose only purpose is to be taken hold of, from the first pixel,
+so it takes the press outright.
+
+### A popup pushed back the way it came
+
+A `Dialog` docked to the bottom edge (`dockedOnSmallTouchScreen`) and a
+`SidePanel` close by being pushed back the way they came in — a third consumer
+of this same travel, `swipe_to_close.js`. A popup that names a **grip** reads the
+press only there: for a `Dialog` that is its header, plus anything carrying
+`data-swipe-grip`. Everything else it holds is content the finger came to operate
+— a board a piece is dragged across, a map, a list — and a press there never
+reaches the travel at all, whatever it is made of.
+
+So a sheet with no header and nothing marked is not pushed down; it closes by
+its own controls, the backdrop and Escape. A `SidePanel` names no grip and is
+pushed from its whole surface, which suits a panel made of nothing else.
 
 ### A surface in the top layer
 
@@ -298,6 +339,12 @@ Two things a travel in hand must never lose:
 - **the hold belongs to a travel, not to the page.** Only the travel that took
   it may give it back — and it must give it back even when it ends after
   something else has replaced it, or the hold survives its owner;
+- **a capture that goes while the pointer is still down was taken, not given.**
+  The ends a gesture has are the pointer going up and the pointer being
+  cancelled; a `lostpointercapture` before either means someone else asked for
+  the pointer (or the element it was held on left the document). What was being
+  carried goes back rather than landing wherever the hand happened to be, and a
+  travel comes home rather than committing;
 - **a gesture must hear its own end wherever it is delivered.** A pointer can be
   cancelled somewhere the box is not on the path (the document root, during a
   transition): missed, the gesture never ends, and whatever it was holding stays
@@ -370,10 +417,17 @@ hold:
   touch keeps being dispatched at the node it started on, and a travel may
   replace the DOM under the finger (a page that travels navigates), after which
   that node no longer passes through the box on its way up;
-- the pointer is captured **before** the caller is told the gesture started, and
-  on the BOX rather than on what the finger landed on, for the same reason: what
-  the caller does may take that target away, and a capture whose element leaves
-  the document is a capture the browser drops.
+- the pointer is captured on the BOX rather than on what the finger landed on,
+  for the same reason: what the caller does may take that target away, and a
+  capture whose element leaves the document is a capture the browser drops;
+- and it is captured only once the travel has been ACCEPTED — not when the press
+  crossed its threshold. There is one capture per pointer for the whole document,
+  so taking it is taking it from whoever had it, who is then told the very thing
+  it is told when its own gesture ends. A travel that gives itself up one event
+  later (an axis this box does not walk, an `onStart` that refuses) would have
+  killed a gesture already carrying something. Until the capture is claimed the
+  moves are read from the window, filtered by pointer id, so nothing is missed
+  for not owning the pointer.
 
 And the refusal has to be _listened for_ from the grab, even though it only
 refuses later: whether a touchmove can be refused at all is decided when the
@@ -398,7 +452,12 @@ finger. The component knows, so the component says it.
 _Currently marked: the wheel viewport, the table resize handles, the cells of a
 table whose columns can be dragged._
 
-## The two consumers
+## The two consumers that travel between screens
+
+A popup being pushed back towards its edge is a travel too, and it is the simple
+one: one box, one direction, no neighbour to bring in (see [A popup pushed back
+the way it came](#a-popup-pushed-back-the-way-it-came)). The two below carry
+screens, and everything the rest of this file weighs is about them.
 
 |                         | `SlideContainer`                   | `RouteTravel`                      |
 | ----------------------- | ---------------------------------- | ---------------------------------- |

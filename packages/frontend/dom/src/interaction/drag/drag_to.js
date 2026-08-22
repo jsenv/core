@@ -35,7 +35,11 @@
 import { getScrollBox, getScrollport } from "../../position/dom_coords.js";
 import { createStyleController } from "../../style/style_controller.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
-import { dragAfterIntent, markDragSource } from "./drag_after_intent.js";
+import {
+  dragAfterIntent,
+  keepTouchRefusable,
+  markDragSource,
+} from "./drag_after_intent.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import {
@@ -220,6 +224,18 @@ const css = /* css */ `
      gesture, or it would hide what it is being dropped on. */
   [navi-drag-clone-wrapper][data-catchable] {
     pointer-events: auto;
+  }
+
+  /* …and a FINGER reaching for it does not land on it: the pictures of the
+     transition cover the page, so as far as the browser is concerned the touch
+     began on the document root. What a touch may do is decided there and at that
+     moment, so the root says it for as long as the copy can be caught — the pan
+     is ours (nothing should scroll while something is landing), zoom stays the
+     reader's. Half of a pair: without the non-passive listener put down at the
+     same moment (see letCopyBeCaught) every touchmove arrives already
+     non-cancelable and refusing it does nothing. */
+  [data-drag-catchable] {
+    touch-action: pinch-zoom;
   }
 
   /* Ce qui a été lancé: il continue dans la direction du geste jusqu'à sortir de
@@ -1303,7 +1319,15 @@ const startDragToCarryCopy = (
       },
       {
         threshold,
-        longPress,
+        // A copy caught on its way home is not an ambiguous press: the hand
+        // reached for something moving, and the press was already matched
+        // against the copy's own box before it got here. The wait a finger is
+        // asked for elsewhere tells a scroll from a drag, and there is no scroll
+        // to tell it from — the copy covers that spot from the top layer. Asked
+        // for anyway it cannot even be answered: the wait is about as long as the
+        // journey, so the thing is home before the proof is done, while a mouse
+        // takes it in five pixels.
+        longPress: cloneWrapperCaught ? false : longPress,
         longPressDelay,
         longPressSlop,
         onPressStart,
@@ -1495,6 +1519,15 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
   // gesture holds what it grabbed rather than whatever was behind.
   cloneWrapper.setAttribute("data-catchable", "");
   document.addEventListener("pointerdown", onPointerDown, true);
+  // The touch half of the same reach, said on the root because that is where a
+  // finger pressing through the pictures lands (see the stylesheet). Both go
+  // down before the copy sets off, since what a touch may do is settled when it
+  // begins: put down later, the press is still read, the carry still starts, and
+  // the browser cancels the pointer one move afterwards — a copy that cannot be
+  // caught with a finger and can with a mouse.
+  const root = document.documentElement;
+  root.setAttribute("data-drag-catchable", "");
+  root.addEventListener("touchmove", keepTouchRefusable, { passive: false });
 
   return {
     settled: async () => {
@@ -1507,6 +1540,8 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
       }
       cloneWrapper.removeAttribute("data-catchable");
       document.removeEventListener("pointerdown", onPointerDown, true);
+      root.removeAttribute("data-drag-catchable");
+      root.removeEventListener("touchmove", keepTouchRefusable);
       return caught;
     },
   };

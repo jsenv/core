@@ -158,6 +158,38 @@ To merely REMEMBER the value rather than send it, neither is the answer: bind a
 signal and drop the callback entirely — see
 [control_value.md](./control_value.md).
 
+## `uiAction` mirrors the state, it does not report a gesture
+
+`uiAction` fires whenever the control's state changes, whoever changed it. The
+user typing is one cause among several: a `value` prop coming back down after a
+render, a popup control propagating its choice up to the picker holding it, a
+group cascading a value into its children — all of them reach `uiAction` too, so
+that a signal or a local variable listening to it never drifts out of sync.
+Reading it as "the user did something" is the natural mistake.
+
+The second argument says which one it was. Every event navi dispatches carries
+the event that caused it, and `findEvent(event, type)` walks that chain back:
+
+```jsx
+<Picker
+  clearable
+  uiAction={(value, event) => {
+    if (findEvent(event, "navi_clear_ui_state")) {
+      // the clear cross was pressed — for this row that means "back to the
+      // profile level", not "empty"
+      draft.level = profile.level;
+      return;
+    }
+    draft.level = value;
+  }}
+/>
+```
+
+Useful types to match on: `navi_clear_ui_state` (the clear cross, or a
+`--navi-clear` command), `navi_reset_ui_state`, and the browser events at the
+root of the chain (`click`, `keydown`, `input`) — a change no user gesture
+caused has none of them.
+
 ## Reruns
 
 Actions do not stay stale on their own: a resource's `POST` reruns the
