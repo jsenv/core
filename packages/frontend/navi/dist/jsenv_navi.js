@@ -56347,6 +56347,11 @@ const useListScrollSync = ({
     virtual.holdPending = scrolledWanted !== "start" && scrolledWanted !== undefined;
     const total = virtual.totalSignal.peek();
     if (total <= renderBudget) {
+      // The whole collection is what the list draws: wherever in it the list is
+      // held, the window is already its place. Nowhere to move to means nothing
+      // to wait for — a hold left standing here is a list that never asks for
+      // anything again.
+      virtual.holdPending = false;
       return;
     }
     const half = Math.floor(renderBudget / 2);
@@ -56367,6 +56372,9 @@ const useListScrollSync = ({
       }
     }
     if (wantedStart === null) {
+      // Held on a row nobody can place yet: the window frames the start, which
+      // is not where the list is going. The hold stands until the row comes
+      // back — the run asks for it by name (see useRequestMissing).
       return;
     }
     if (wantedStart < 0) {
@@ -58451,6 +58459,7 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("ignore:preact").ComponentChildren),
  *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("ignore:preact").ComponentChildren,
+ *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
  * }>}
  * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
  *   What one row is, given the item and where it sits. `state.refreshing` says
@@ -58488,6 +58497,14 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   a `retry` to call, and the `start`/`end` of the range that failed. Defaults
  *   to an inline message with a retry button, drawn on the row the user is
  *   looking at.
+ * @param {(state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void} [props.onRequestStateChange]
+ *   Called when the run starts or stops asking for rows — for the screen around
+ *   the list to say that it is looking (the rows themselves have skeletons and
+ *   `refreshing` already). `busy` covers every ask, first slice and holes
+ *   opened by scrolling included; `refreshing` is the subset where rows already
+ *   held are being read again; `range` is what is being asked for, `null` once
+ *   nothing is. A range called off and asked again right away stays one `busy`,
+ *   and a list unmounted while asking says `busy: false` on its way out.
  */
 const ListItems = ({
   renderItem,
@@ -58499,7 +58516,8 @@ const ListItems = ({
   renderGroupLabel,
   groupLabelProps,
   renderSkeleton,
-  renderError
+  renderError,
+  onRequestStateChange
 }) => {
   const ownerId = useId();
   const virtual = useContext(ListVirtualContext);
@@ -58508,7 +58526,8 @@ const ListItems = ({
   const store = useItemStore({
     count,
     itemsAction,
-    memoryBudget
+    memoryBudget,
+    onRequestStateChange
   });
   const renderRowSkeleton = renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
@@ -58782,6 +58801,12 @@ const ListItemsFailure = ({
 // hits the network again.
 const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
+const rangeIsSame = (a, b) => {
+  if (!a || !b) {
+    return a === b;
+  }
+  return a.start === b.start && a.end === b.end;
+};
 
 // The rows a run has, and how it gets more. Two shapes behind one reader: the
 // caller holds them (items/count/itemStart), or the run asked for them and
@@ -58791,12 +58816,17 @@ const ITEM_STORE_KEEP_AROUND = 250;
 const useItemStore = ({
   count,
   itemsAction,
-  memoryBudget
+  memoryBudget,
+  onRequestStateChange
 }) => {
   // What the source kept of the collection when the screen it was on went away
   // (a range reader keeps the composition: see resource_range_reader.js). The
   // rows are drawn from it right away and the window is asked for again — the
   // revalidation below, entered from a fresh mount rather than from a write.
+  // A reader is an interface, not just a function that answers a range: a list
+  // handed something else keeps drawing rows and quietly gives up everything
+  // the reader holds for it (see resource_range_reader.js).
+  useRef(false);
   const pagesRef = useRef(null);
   let restored = false;
   if (!pagesRef.current) {
@@ -58864,6 +58894,51 @@ const useItemStore = ({
       virtual.refreshingSignal.value = virtual.refreshingSignal.peek() - 1;
     };
   }, [refreshing]);
+
+  // What the run is doing, for the screen around the list to draw: the list has
+  // its own skeletons, what is around it has to be told. Read from the request
+  // itself rather than pushed from each place that touches it, so a range
+  // called off and asked again right away stays one uninterrupted ask.
+  const requestStateRef = useRef({
+    busy: false,
+    refreshing: false,
+    range: null
+  });
+  const onRequestStateChangeRef = useRef(onRequestStateChange);
+  onRequestStateChangeRef.current = onRequestStateChange;
+  const publishRequestState = () => {
+    const request = requestRef.current;
+    const busy = request.busy;
+    const state = {
+      busy,
+      refreshing: busy && request.revalidating,
+      range: busy ? {
+        start: request.start,
+        end: request.end
+      } : null
+    };
+    const previous = requestStateRef.current;
+    if (previous.busy === state.busy && previous.refreshing === state.refreshing && rangeIsSame(previous.range, state.range)) {
+      return;
+    }
+    requestStateRef.current = state;
+    if (onRequestStateChangeRef.current) {
+      onRequestStateChangeRef.current(state);
+    }
+  };
+  // A list taken off the screen while it was asking leaves nothing ringing
+  // behind it: whoever is drawing "looking for rows" has to stop.
+  useLayoutEffect(() => {
+    return () => {
+      if (requestStateRef.current.busy && onRequestStateChangeRef.current) {
+        onRequestStateChangeRef.current({
+          busy: false,
+          refreshing: false,
+          range: null
+        });
+      }
+    };
+  }, []);
   const store = {
     rowCount,
     failure,
@@ -58917,7 +58992,22 @@ const useItemStore = ({
       // anchored on the row at its top — a source paginating by cursor gets a
       // row to count from, and the reading position is what must survive.
       const revalidating = staleRef.current;
-      if (revalidating) {
+      // The list is held on a row nothing on screen leads to: the rows it holds
+      // do not contain it, so no window it could draw will ever bring it. Only
+      // asking for it by name does.
+      const wanted = virtual.scrolled;
+      const askingAroundWantedRow = revalidating &&
+      // Only while the hold stands: once the user has taken the list over,
+      // the reading position is where they are, not where it opened.
+      virtual.holdPending && wanted && typeof wanted === "object" && wanted.id !== undefined && virtual.locateRow(wanted.id) === null;
+      if (askingAroundWantedRow) {
+        around = wanted.id;
+        // Where it stood when it was written down is enough to frame the ask;
+        // the answer says where it really landed.
+        const from = typeof wanted.index === "number" ? wanted.index - Math.floor(budget / 2) : 0;
+        start = from < 0 ? 0 : from;
+        end = start + budget - 1;
+      } else if (revalidating) {
         start = windowFrom;
         end = windowTo - 1;
         if (end < start) {
@@ -58954,11 +59044,13 @@ const useItemStore = ({
           end = start + budget - 1;
         }
       }
-      useLayoutEffect(() => {
+      const ask = () => {
         if (start === -1) {
           return;
         }
-        if (virtual.holdPending && pages.count !== undefined) {
+        if (virtual.holdPending && pages.count !== undefined && !askingAroundWantedRow) {
+          // The one ask a hold lets through: the row the list is held on is
+          // what would lift the hold, and nothing else is going to bring it.
           return;
         }
         const request = requestRef.current;
@@ -59027,6 +59119,7 @@ const useItemStore = ({
               staleRef.current = false;
               setRefreshing(false);
             }
+            publishRequestState();
           }
           if (revalidating && !current) {
             // Rows of a composition already superseded by a newer ask: keeping
@@ -59073,6 +59166,7 @@ const useItemStore = ({
           }
           request.busy = false;
           request.revalidating = false;
+          publishRequestState();
           if (revalidating) {
             // The rows from before stay: a revalidation that failed has
             // nothing better to put in their place.
@@ -59101,6 +59195,10 @@ const useItemStore = ({
         } else {
           done(result);
         }
+      };
+      useLayoutEffect(() => {
+        ask();
+        publishRequestState();
       });
     }
   };
