@@ -4,11 +4,7 @@
 const HOME_ROUTE = route("/");
 const USER_ROUTE = route("/users/:id");
 const USER_POSTS_ROUTE = route("/users/:id/posts/:postId");
-const { clearRoutes } = setupRoutes([
-  HOME_ROUTE,
-  USER_ROUTE,
-  USER_POSTS_ROUTE,
-]);
+const { clearRoutes } = setupRoutes([HOME_ROUTE, USER_ROUTE, USER_POSTS_ROUTE]);
 try {
   return {
     home_route: HOME_ROUTE.buildUrl(),

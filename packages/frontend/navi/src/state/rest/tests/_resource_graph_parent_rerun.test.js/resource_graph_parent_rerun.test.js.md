@@ -1,6 +1,5 @@
 # [resource_graph_parent_rerun.test.js](../resource_graph_parent_rerun.test.js)
 
-
 - [scopedMany: parent GET reruns after child POST](0_scopedmany_parent_get_reruns_after_child_post/0_scopedmany_parent_get_reruns_after_child_post.md)
 - [scopedMany: parent GET does NOT rerun after child PUT](1_scopedmany_parent_get_does_not_rerun_after_child_put/1_scopedmany_parent_get_does_not_rerun_after_child_put.md)
 - [scopedMany: parent GET does NOT rerun after child PATCH](2_scopedmany_parent_get_does_not_rerun_after_child_patch/2_scopedmany_parent_get_does_not_rerun_after_child_patch.md)

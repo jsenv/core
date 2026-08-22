@@ -63,10 +63,8 @@ try {
     scenario4_url_overrides_manual_value: scenario4,
 
     // Key behaviors to verify:
-    signal_updates_from_url_initially:
-      scenario1.panel_signal === "isochrone",
-    signal_preserved_on_different_route:
-      scenario2.panel_signal === "isochrone",
+    signal_updates_from_url_initially: scenario1.panel_signal === "isochrone",
+    signal_preserved_on_different_route: scenario2.panel_signal === "isochrone",
     signal_updates_from_new_url: scenario3.panel_signal === "settings",
     url_overrides_manual_value: scenario4.panel_signal === "dashboard",
 

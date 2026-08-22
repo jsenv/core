@@ -9,7 +9,7 @@ return i18n("greeting", undefined, { lang: "fr" });
 ```
 
 ```js
-greeting
+greeting;
 ```
 
 ---

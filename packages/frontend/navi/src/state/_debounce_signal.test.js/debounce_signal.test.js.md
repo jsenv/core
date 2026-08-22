@@ -1,6 +1,5 @@
 # [debounce_signal.test.js](../debounce_signal.test.js)
 
-
 - [update is debounced](0_update_is_debounced/0_update_is_debounced.md)
 - [rapid updates only apply the last value](1_rapid_updates_only_apply_the_last_value/1_rapid_updates_only_apply_the_last_value.md)
 - [deep equal objects do not trigger debounced signal update](2_deep_equal_objects_do_not_trigger_debounced_signal_update/2_deep_equal_objects_do_not_trigger_debounced_signal_update.md)

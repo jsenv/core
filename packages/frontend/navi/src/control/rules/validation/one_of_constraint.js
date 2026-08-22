@@ -32,7 +32,8 @@ export const ONE_OF_CONSTRAINT = {
     );
     const isNoMatch = visibleOptions.length === 0;
     const message = field.controlHostProps["data-one-of-message"];
-    const noMatchMessage = field.controlHostProps["data-one-of-no-match-message"];
+    const noMatchMessage =
+      field.controlHostProps["data-one-of-no-match-message"];
     if (isNoMatch) {
       return noMatchMessage || naviI18n("constraint.one_of.no_match");
     }

@@ -1,9 +1,7 @@
 # [no replacements (null)](../../interpolate_text.test.js)
 
 ```js
-return table([
-  ["Hello [name]!", null, interpolateText("Hello [name]!", null)],
-]);
+return table([["Hello [name]!", null, interpolateText("Hello [name]!", null)]]);
 ```
 
 ```js

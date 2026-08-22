@@ -1,6 +1,5 @@
 # [apply_search.test.js](../apply_search.test.js)
 
-
 - [empty searchText](0_empty_searchtext/0_empty_searchtext.md)
 - [single-word matches](1_single-word_matches/1_single-word_matches.md)
 - [accent folding](2_accent_folding/2_accent_folding.md)

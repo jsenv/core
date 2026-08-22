@@ -11,9 +11,7 @@ isochroneTabSignal.value = "time";
 const isochroneTimeModeSignal = stateSignal("walk");
 const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
-const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone/:tab=${isochroneTabSignal}/`,
-);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/:tab=${isochroneTabSignal}/`);
 const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
   searchParams: { walk: walkSignal },
 });

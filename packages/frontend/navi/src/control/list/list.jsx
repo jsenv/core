@@ -4016,6 +4016,18 @@ const useItemStore = ({
   memoryBudget,
   onRequestStateChange,
 }) => {
+  // The run's asking, on the same channel as the window it asks for — they are
+  // one subject: what the list is about to draw is what it goes to fetch (see
+  // `useRequestMissing`, and `updateRenderWindow` which logs the other half).
+  //
+  // A run that decides NOT to ask is the case this exists for. It sends
+  // nothing and changes no state, so nothing outside can see it: the network
+  // is silent, and `onRequestStateChange` — which reports what a request is
+  // doing — has no request to report. A run that declined and a run that was
+  // never mounted look identical from the application's side, which makes
+  // "this list stopped refreshing" a question with no observable answer.
+  // Here it has one, and every pass says which.
+  const debugScroll = useDebugScroll();
   // What the source kept of the collection when the screen it was on went away
   // (a range reader keeps the composition: see resource_range_reader.js). The
   // rows are drawn from it right away and the window is asked for again — the
@@ -4279,7 +4291,23 @@ const useItemStore = ({
         }
       }
       const ask = () => {
+        // One line per pass, whatever the outcome — an absence in the trace
+        // then means the run did not render, which is a different fact from
+        // the run choosing not to ask. The state that decides is on the line
+        // rather than left to be inferred: `revalidating` says the run knows
+        // what it holds is from before, `holdPending` that the list is on its
+        // way somewhere the window does not frame yet, `count` that it knows
+        // how many rows it stands for.
+        const debugAsk = (outcome) => {
+          debugScroll(
+            `ask ${start}-${end}: ${outcome}`,
+            `(revalidating=${revalidating} holdPending=${virtual.holdPending} count=${pages.count})`,
+          );
+        };
         if (start === -1) {
+          // Nothing missing and nothing to revalidate: the run has what it
+          // draws.
+          debugAsk("nothing missing");
           return;
         }
         if (
@@ -4289,11 +4317,13 @@ const useItemStore = ({
         ) {
           // The one ask a hold lets through: the row the list is held on is
           // what would lift the hold, and nothing else is going to bring it.
+          debugAsk("held on a row not reached yet");
           return;
         }
         const request = requestRef.current;
         if (revalidating && request.busy) {
           if (request.revalidating) {
+            debugAsk("already revalidating");
             return;
           }
           // A page for a window that is about to be replaced wholesale.
@@ -4313,6 +4343,7 @@ const useItemStore = ({
             pages.count === undefined ||
             (request.start <= windowTo && request.end >= windowFrom);
           if (stillWanted) {
+            debugAsk("a request still covers this window");
             return;
           }
           request.controller?.abort();
@@ -4328,6 +4359,7 @@ const useItemStore = ({
           request.end === end &&
           request.held === held
         ) {
+          debugAsk("this range was asked for already");
           return;
         }
         request.start = start;
@@ -4351,6 +4383,7 @@ const useItemStore = ({
         };
         request.busy = true;
         request.revalidating = revalidating;
+        debugAsk("sent");
         if (revalidating) {
           setRefreshing(true);
         }

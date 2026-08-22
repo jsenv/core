@@ -38,9 +38,7 @@ try {
   results["signal_to_url_with_commas"] = captureState();
 
   // Test URL with comma → signal (the reverse direction)
-  updateRoutes(
-    `${baseUrl}/items?items=simple,item%2Cwith%2Ccommas,another`,
-  );
+  updateRoutes(`${baseUrl}/items?items=simple,item%2Cwith%2Ccommas,another`);
   results["url_to_signal_with_commas"] = captureState();
 
   // Test edge case: value that is just a comma

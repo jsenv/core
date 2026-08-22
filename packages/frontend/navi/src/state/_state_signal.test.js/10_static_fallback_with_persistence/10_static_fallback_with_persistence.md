@@ -20,8 +20,7 @@ const customValue = sig.value;
 const registryEntry = globalSignalRegistry.get("persist_test");
 const isInitialCustom = registryEntry.options.isCustomValue(initialValue);
 const isUserValueCustom = registryEntry.options.isCustomValue(customValue);
-const isFallbackCustom =
-  registryEntry.options.isCustomValue("fallback_value");
+const isFallbackCustom = registryEntry.options.isCustomValue("fallback_value");
 
 return {
   initialValue,

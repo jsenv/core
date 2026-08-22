@@ -7,10 +7,7 @@ const USER = resource("user", {
     { id: 1, username: "alice", name: "Alice" },
     { id: 2, username: "bob", name: "Bob" },
   ],
-  PUT: async ({ username, prop, value }) => [
-    { username },
-    { [prop]: value },
-  ],
+  PUT: async ({ username, prop, value }) => [{ username }, { [prop]: value }],
 });
 
 await USER.GET_MANY.run();

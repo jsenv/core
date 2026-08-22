@@ -71,8 +71,7 @@ try {
       // Zone signal should affect MAP_ROUTE and MAP_PANEL_ROUTE and MAP_ISOCHRONE_ROUTE
       zone_affected_map: beforeUrls.map !== afterZoneUrls.map,
       zone_affected_panel: beforeUrls.panel !== afterZoneUrls.panel,
-      zone_affected_isochrone:
-        beforeUrls.isochrone !== afterZoneUrls.isochrone,
+      zone_affected_isochrone: beforeUrls.isochrone !== afterZoneUrls.isochrone,
 
       // Panel signal should only affect MAP_PANEL_ROUTE
       panel_affected_map: afterZoneUrls.map !== afterPanelUrls.map,

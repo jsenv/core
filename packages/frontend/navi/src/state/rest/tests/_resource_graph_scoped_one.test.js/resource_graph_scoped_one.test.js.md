@@ -1,6 +1,5 @@
 # [resource_graph_scoped_one.test.js](../resource_graph_scoped_one.test.js)
 
-
 - [ownOne profile GET and PATCH](0_ownone_profile_get_and_patch/0_ownone_profile_get_and_patch.md)
 
 ---

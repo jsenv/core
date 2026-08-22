@@ -53,8 +53,7 @@ try {
   const settings_with_literal_settings_path =
     getMatchParams(ADMIN_SETTINGS_ROUTE);
   updateRoutes(`${baseUrl}/admin?wrongParam=value`);
-  const settings_with_wrong_search_param =
-    getMatchParams(ADMIN_SETTINGS_ROUTE);
+  const settings_with_wrong_search_param = getMatchParams(ADMIN_SETTINGS_ROUTE);
   updateRoutes(`${baseUrl}/admin/analytics`);
   const settings_should_not_match_analytics_url =
     getMatchParams(ADMIN_SETTINGS_ROUTE);
@@ -62,20 +61,15 @@ try {
   const settings_should_not_match_users_url =
     getMatchParams(ADMIN_SETTINGS_ROUTE);
   updateRoutes(`${baseUrl}/admin/different`);
-  const settings_with_different_section =
-    getMatchParams(ADMIN_SETTINGS_ROUTE);
+  const settings_with_different_section = getMatchParams(ADMIN_SETTINGS_ROUTE);
 
   // Analytics route tests - inheritance and search parameters
   updateRoutes(`${baseUrl}/admin/analytics`);
   const analytics_with_overview_tab = getMatchParams(ADMIN_ANALYTICS_ROUTE);
   updateRoutes(`${baseUrl}/admin/analytics?tab=performance`);
-  const analytics_with_performance_tab = getMatchParams(
-    ADMIN_ANALYTICS_ROUTE,
-  );
+  const analytics_with_performance_tab = getMatchParams(ADMIN_ANALYTICS_ROUTE);
   updateRoutes(`${baseUrl}/admin`);
-  const analytics_root_without_slash = getMatchParams(
-    ADMIN_ANALYTICS_ROUTE,
-  );
+  const analytics_root_without_slash = getMatchParams(ADMIN_ANALYTICS_ROUTE);
   updateRoutes(`${baseUrl}/admin/`);
   const analytics_root_with_slash = getMatchParams(ADMIN_ANALYTICS_ROUTE);
   updateRoutes(`${baseUrl}/admin/analytics`);

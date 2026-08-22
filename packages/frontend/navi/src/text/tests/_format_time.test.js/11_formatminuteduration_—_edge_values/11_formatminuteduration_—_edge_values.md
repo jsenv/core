@@ -23,10 +23,7 @@ for (const [label, minutes] of [
     ]);
   }
 }
-return table(
-  ["minutes", "locale", "long", "short", "narrow", "compact"],
-  rows,
-);
+return table(["minutes", "locale", "long", "short", "narrow", "compact"], rows);
 ```
 
 ```js

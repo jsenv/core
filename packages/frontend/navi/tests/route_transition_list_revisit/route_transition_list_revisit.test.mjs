@@ -39,7 +39,7 @@ const jsenvPluginRouteFallback = () => {
         return null;
       }
       const { pathname, search } = new URL(reference.url);
-      for (const name of ["plain", "animated"]) {
+      for (const name of ["plain", "animated", "plain_wm", "animated_wm"]) {
         if (pathname.includes(`/client/${name}/item/`)) {
           return `${clientDirectoryUrl}${name}/${name}.html${search}`;
         }
@@ -93,30 +93,58 @@ const readAsks = (page) =>
 // The transition runs 300ms; the ask that a revalidation sends is looked for
 // well past it, so "not yet" and "never" cannot be read as the same thing.
 const settle = (page) => page.waitForTimeout(1500);
+// Nothing is measured on the page opened on the way out — only the movement
+// has to have played out before the way back begins.
+const settleLeaving = (page) => page.waitForTimeout(400);
 
-const openAndComeBack = async (name) => {
+// One comparison decides nothing about a failure that comes and goes: a
+// difference that shows up three times out of four passes a single run a
+// quarter of the time. The way back is therefore walked REPEATEDLY, and what
+// the snapshot holds is the whole sequence — "1111111111" says the re-read
+// went out on every one of ten revisits, and any other string is a race caught
+// in the act rather than a coin toss that landed well.
+const CYCLES = 10;
+// Both decors name the row that opens the detail page the same way.
+const OPEN_ROW = "[data-testid=item_open]";
+
+const openAndComeBack = async (name, search = "") => {
   const page = await browser.newPage();
   await watchTransitions(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
     await page.goto(
-      `${devServer.origin}/tests/route_transition_list_revisit/client/${name}/${name}.html`,
+      `${devServer.origin}/tests/route_transition_list_revisit/client/${name}/${name}.html${search}`,
     );
-    await page.waitForSelector("#list_page");
+    await page.waitForSelector(OPEN_ROW);
     await settle(page);
     const onFirstLoad = await readAsks(page);
-    await page.locator("[data-testid=item_open]").first().click();
-    await page.waitForSelector("#item_page");
-    await settle(page);
-    await page.goBack();
-    await page.waitForSelector("#list_page");
-    await settle(page);
+    const revisits = [];
+    let cycle = 0;
+    while (cycle < CYCLES) {
+      const before = await readAsks(page);
+      await page.locator(OPEN_ROW).first().click();
+      await page.waitForSelector("#item_page");
+      await settleLeaving(page);
+      await page.goBack();
+      await page.waitForSelector(OPEN_ROW);
+      await settle(page);
+      const after = await readAsks(page);
+      revisits.push({
+        range: after.range_asks - before.range_asks,
+        many: after.many_asks - before.many_asks,
+        rows: await page.locator(OPEN_ROW).count(),
+      });
+      cycle++;
+    }
     return {
       on_first_load: onFirstLoad,
-      after_coming_back: await readAsks(page),
-      // The pages really moved (or really did not), and the document was
-      // handed back: a leftover attribute is a transition that never ended.
+      // One digit per revisit, in order.
+      range_asked_on_each_revisit: revisits.map((r) => r.range).join(""),
+      many_asked_on_each_revisit: revisits.map((r) => r.many).join(""),
+      // The rows are drawn every time, whatever the ask did: a page coming
+      // back empty and a page coming back stale are not the same failure.
+      rows_drawn_on_each_revisit: revisits.map((r) => r.rows).join(","),
       transitions_played: await page.evaluate(
         () => window.transitionsPlayed, // eslint-disable-line no-undef
       ),
@@ -124,9 +152,6 @@ const openAndComeBack = async (name) => {
         // eslint-disable-next-line no-undef
         document.documentElement.hasAttribute("data-navi-route-transition"),
       ),
-      rows_drawn: await page
-        .locator("#list_page [data-testid=item_open]")
-        .count(),
       errors,
     };
   } finally {
@@ -144,12 +169,31 @@ snapshotTests.prefConfigure({
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("a list revisited, with and without a movement on the pair", async () => {
+    test("a list revisited ten times, with and without a movement on the pair", async () => {
       return {
-        // No relation defined: the reference the report compared against.
         without_transition: await openAndComeBack("plain"),
-        // The same app, plus defineRouteTransition(LIST, ITEM, "slide-x").
         with_transition: await openAndComeBack("animated"),
+      };
+    });
+
+    // The same walk on a list held on a row the URL names: the window it comes
+    // back to is decided in the same frames as the re-read, which is where a
+    // hold and an ask can pass each other.
+    test("a list held on a row named by the url, revisited ten times", async () => {
+      return {
+        without_transition: await openAndComeBack("plain", "?at=item_400"),
+        with_transition: await openAndComeBack("animated", "?at=item_400"),
+      };
+    });
+
+    // The opposite decor, and the one a report came from: ONE row, the page as
+    // the scroller, the list opening on its last rows, and a count known from
+    // elsewhere before any row is drawn. Nothing is virtualized away here — no
+    // window ever has to move — which exercises the other half of the run.
+    test("a one-row list against the document scroller, revisited ten times", async () => {
+      return {
+        without_transition: await openAndComeBack("plain_wm"),
+        with_transition: await openAndComeBack("animated_wm"),
       };
     });
   });

@@ -1,6 +1,5 @@
 # [sync_resource_to_signals.test.js](../sync_resource_to_signals.test.js)
 
-
 - [updates signal when uniqueKey property changes](0_updates_signal_when_uniquekey_property_changes/0_updates_signal_when_uniquekey_property_changes.md)
 - [updates signal when idKey property changes](1_updates_signal_when_idkey_property_changes/1_updates_signal_when_idkey_property_changes.md)
 - [does not update signal when a different item changes](2_does_not_update_signal_when_a_different_item_changes/2_does_not_update_signal_when_a_different_item_changes.md)

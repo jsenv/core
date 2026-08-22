@@ -56,8 +56,8 @@ return sequence;
   "action data signal set to undefined",
   "sleep 50 after a change to null",
   'set "value_3"',
-  "action data signal set to value_3"
-]
+  "action data signal set to value_3",
+];
 ```
 
 ---

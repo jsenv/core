@@ -1,7 +1,9 @@
 # [route_transition_list_revisit.test.mjs](../route_transition_list_revisit.test.mjs)
 
 
-- [a list revisited, with and without a movement on the pair](0_a_list_revisited__with_and_without_a_movement_on_the_pair/0_a_list_revisited__with_and_without_a_movement_on_the_pair.md)
+- [a list revisited ten times, with and without a movement on the pair](0_a_list_revisited_ten_times__with_and_without_a_movement_on_the_pair/0_a_list_revisited_ten_times__with_and_without_a_movement_on_the_pair.md)
+- [a list held on a row named by the url, revisited ten times](1_a_list_held_on_a_row_named_by_the_url__revisited_ten_times/1_a_list_held_on_a_row_named_by_the_url__revisited_ten_times.md)
+- [a one-row list against the document scroller, revisited ten times](2_a_one-row_list_against_the_document_scroller__revisited_ten_times/2_a_one-row_list_against_the_document_scroller__revisited_ten_times.md)
 
 ---
 

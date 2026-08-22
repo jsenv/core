@@ -1,8 +1,7 @@
 # [resource_graph_one.test.js](../resource_graph_one.test.js)
 
-
-- [.one() links user to a session](0__one()_links_user_to_a_session/0__one()_links_user_to_a_session.md)
-- [.one() session populated from user GET response](1__one()_session_populated_from_user_get_response/1__one()_session_populated_from_user_get_response.md)
+- [.one() links user to a session](<0__one()_links_user_to_a_session/0__one()_links_user_to_a_session.md>)
+- [.one() session populated from user GET response](<1__one()_session_populated_from_user_get_response/1__one()_session_populated_from_user_get_response.md>)
 
 ---
 

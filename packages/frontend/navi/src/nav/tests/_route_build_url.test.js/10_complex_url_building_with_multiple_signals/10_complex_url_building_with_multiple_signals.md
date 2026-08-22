@@ -61,8 +61,7 @@ try {
   const isochroneTimeWalkRoute = MAP_ISOCHRONE_TOTO_ROUTE.buildUrl();
 
   isochromeWalkTimeSignal.value = 40;
-  const isochroneTimeWalkRouteAfterChange =
-    MAP_ISOCHRONE_TOTO_ROUTE.buildUrl();
+  const isochroneTimeWalkRouteAfterChange = MAP_ISOCHRONE_TOTO_ROUTE.buildUrl();
 
   return {
     map_url_defaults: urlWithDefaults,

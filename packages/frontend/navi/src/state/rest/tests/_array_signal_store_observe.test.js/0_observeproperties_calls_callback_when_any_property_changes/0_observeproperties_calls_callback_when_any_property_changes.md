@@ -11,7 +11,7 @@ store.observeProperties((mutationsArray) => {
 ```
 
 ```js
-undefined
+undefined;
 ```
 
 ---

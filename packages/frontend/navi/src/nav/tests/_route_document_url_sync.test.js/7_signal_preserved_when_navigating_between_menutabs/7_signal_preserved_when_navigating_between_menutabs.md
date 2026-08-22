@@ -6,9 +6,7 @@ const settingsTabSignal = stateSignal("general");
 const analyticsTabSignal = stateSignal("overview");
 const HOME_ROUTE = route("/");
 const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
-const ADMIN_SETTINGS_ROUTE = route(
-  `/admin/settings/:tab=${settingsTabSignal}`,
-);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${settingsTabSignal}`);
 const ADMIN_ANALYTICS_ROUTE = route("/admin/analytics", {
   searchParams: { tab: analyticsTabSignal },
 });

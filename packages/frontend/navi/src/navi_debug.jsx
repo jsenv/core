@@ -56,7 +56,11 @@ export const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
   return debug || debugNoop;
 };
-/** Logger for virtual scroll / wheel motion (drag, momentum, glide), or a no-op. */
+/**
+ * Logger for virtual scroll / wheel motion (drag, momentum, glide) and for what
+ * a virtualized list does about it — the render window moving, and the rows the
+ * run asks for or decides not to ask for. Or a no-op.
+ */
 export const useDebugScroll = () => {
   const debug = useContext(DebugScrollContext);
   return debug || debugNoop;
@@ -99,7 +103,9 @@ export const useDebugUIState = () => {
  * @param {boolean|Function} [props.debugCommand] - navi command dispatch (`--navi-*`).
  * @param {boolean|Function} [props.debugInteraction] - Gated interactions; also implies focus/scroll/popup.
  * @param {boolean|Function} [props.debugFocus] - Focus moves and focus-visible decisions.
- * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion.
+ * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion,
+ *   the render window of a virtualized list, and every pass of its run — what it
+ *   asked for, or why it asked for nothing (see docs/list_refresh.md).
  * @param {boolean|Function} [props.debugPopup] - Popover/dialog open/close/positioning.
  * @param {boolean|Function} [props.debugAction] - Action lifecycle.
  * @param {boolean|Function} [props.debugUIState] - UI-state transitions and validation.

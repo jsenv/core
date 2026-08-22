@@ -8,10 +8,7 @@ const pageSignal = stateSignal(categorySignal, {
 });
 const HOME_ROUTE = route("/");
 const CATEGORY_ROUTE = route(`/category/:page=${pageSignal}`);
-const { updateRoutes, clearRoutes } = setupRoutes([
-  HOME_ROUTE,
-  CATEGORY_ROUTE,
-]);
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, CATEGORY_ROUTE]);
 
 const getState = () => {
   return {

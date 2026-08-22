@@ -50,8 +50,7 @@ try {
     },
     consistency_checks: {
       // Multiple calls with same signal values should return identical URLs
-      initial_consistency:
-        firstCall === secondCall && secondCall === thirdCall,
+      initial_consistency: firstCall === secondCall && secondCall === thirdCall,
       post_change_consistency: fourthCall === fifthCall,
 
       // URLs should change when signals change

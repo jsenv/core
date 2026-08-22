@@ -37,11 +37,9 @@ results.objects_different_order = compareTwoJsValues(
 // Arrays with functions (should handle gracefully)
 const fn1 = () => 1;
 const fn2 = () => 2;
-results.with_functions = compareTwoJsValues(
-  [fn1, "a", fn2],
-  [fn2, fn1, "a"],
-  { ignoreArrayOrder: true },
-);
+results.with_functions = compareTwoJsValues([fn1, "a", fn2], [fn2, fn1, "a"], {
+  ignoreArrayOrder: true,
+});
 
 return results;
 ```

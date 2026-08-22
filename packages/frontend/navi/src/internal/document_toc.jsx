@@ -108,7 +108,7 @@ const isBeforeToc = (heading, tocElement) => {
   }
   return Boolean(
     heading.compareDocumentPosition(tocElement) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
+    Node.DOCUMENT_POSITION_FOLLOWING,
   );
 };
 

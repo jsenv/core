@@ -1,6 +1,5 @@
 # [array_signal_store_observe.test.js](../array_signal_store_observe.test.js)
 
-
 - [observeProperties calls callback when any property changes](0_observeproperties_calls_callback_when_any_property_changes/0_observeproperties_calls_callback_when_any_property_changes.md)
 - [observeProperties with properties filter only calls when watched property changes](1_observeproperties_with_properties_filter_only_calls_when_watched_property_changes/1_observeproperties_with_properties_filter_only_calls_when_watched_property_changes.md)
 - [observeProperties with properties filter not called when unrelated property changes](2_observeproperties_with_properties_filter_not_called_when_unrelated_property_changes/2_observeproperties_with_properties_filter_not_called_when_unrelated_property_changes.md)

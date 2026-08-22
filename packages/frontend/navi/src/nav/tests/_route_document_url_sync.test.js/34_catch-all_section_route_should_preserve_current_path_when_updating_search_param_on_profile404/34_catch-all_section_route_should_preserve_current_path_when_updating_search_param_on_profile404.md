@@ -21,8 +21,7 @@ try {
     nav_calls: navToCalls,
     stays_on_profile_404_path:
       navToCalls.length > 0 &&
-      new URL(navToCalls[navToCalls.length - 1]).pathname ===
-        "/profile/404",
+      new URL(navToCalls[navToCalls.length - 1]).pathname === "/profile/404",
   };
 } finally {
   clearRoutes();

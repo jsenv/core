@@ -1,6 +1,5 @@
 # [state_signal.test.js](../state_signal.test.js)
 
-
 - [basics](0_basics/0_basics.md)
 - [with_static_default_value](1_with_static_default_value/1_with_static_default_value.md)
 - [with_dynamic_default_value](2_with_dynamic_default_value/2_with_dynamic_default_value.md)

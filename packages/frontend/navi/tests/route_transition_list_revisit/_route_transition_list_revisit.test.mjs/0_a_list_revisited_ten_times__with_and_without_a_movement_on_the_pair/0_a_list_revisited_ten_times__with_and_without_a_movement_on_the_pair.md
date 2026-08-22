@@ -1,10 +1,8 @@
-# [a list revisited, with and without a movement on the pair](../../route_transition_list_revisit.test.mjs)
+# [a list revisited ten times, with and without a movement on the pair](../../route_transition_list_revisit.test.mjs)
 
 ```js
 return {
-  // No relation defined: the reference the report compared against.
   without_transition: await openAndComeBack("plain"),
-  // The same app, plus defineRouteTransition(LIST, ITEM, "slide-x").
   with_transition: await openAndComeBack("animated"),
 };
 ```
@@ -16,13 +14,11 @@ return {
       "range_asks": 1,
       "many_asks": 1
     },
-    "after_coming_back": {
-      "range_asks": 2,
-      "many_asks": 1
-    },
+    "range_asked_on_each_revisit": "1111111111",
+    "many_asked_on_each_revisit": "0000000000",
+    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
     "transitions_played": 0,
     "transition_left_on_root": false,
-    "rows_drawn": 30,
     "errors": []
   },
   "with_transition": {
@@ -30,13 +26,11 @@ return {
       "range_asks": 1,
       "many_asks": 1
     },
-    "after_coming_back": {
-      "range_asks": 2,
-      "many_asks": 1
-    },
-    "transitions_played": 4,
+    "range_asked_on_each_revisit": "1111111111",
+    "many_asked_on_each_revisit": "0000000000",
+    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
+    "transitions_played": 40,
     "transition_left_on_root": false,
-    "rows_drawn": 30,
     "errors": []
   }
 }

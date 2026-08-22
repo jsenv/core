@@ -10,12 +10,9 @@ const usernameSignal = store.signalForKey("username", {
 });
 
 const calls = [];
-const unsubscribe = store.observeItemProperties(
-  usernameSignal,
-  (mutations) => {
-    calls.push(mutations);
-  },
-);
+const unsubscribe = store.observeItemProperties(usernameSignal, (mutations) => {
+  calls.push(mutations);
+});
 
 store.upsert({ id: 1, role: "admin" });
 unsubscribe();
