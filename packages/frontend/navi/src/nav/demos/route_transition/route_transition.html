@@ -18,15 +18,11 @@
         height: 100dvh;
         flex-direction: column;
       }
-      /* Everything that must NOT slide carries a view-transition-name of its
-         own: named, it is a picture of its own and stands still while the rest
-         of the document travels under it. */
       .furniture {
         padding-bottom: 8px;
         flex: none;
         background: white;
         border-bottom: 1px solid #ddd;
-        view-transition-name: demo-furniture;
       }
       .furniture_row {
         display: flex;
@@ -43,7 +39,6 @@
         flex: none;
         background: white;
         border-top: 1px solid #ddd;
-        view-transition-name: demo-tab-bar;
       }
       .tab_row {
         width: 100%;
@@ -102,20 +97,21 @@
       }
 
       /* Le type "spin" est à la page, pas à navi : les deux attributs sont sur
-         la racine pendant la transition, et ce CSS définit le mouvement. */
+         la racine pendant la transition, et ce CSS définit le mouvement — sur
+         les images de la zone, puisque cette page en marque une. */
       :root[data-navi-route-transition-type="spin"] {
-        &::view-transition-old(root),
-        &::view-transition-new(root) {
+        &::view-transition-old(navi-route-transition),
+        &::view-transition-new(navi-route-transition) {
           animation-fill-mode: both;
         }
       }
       :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
-        &::view-transition-new(root) {
+        &::view-transition-new(navi-route-transition) {
           animation-name: demo-spin-in;
         }
       }
       :root[data-navi-route-transition-type="spin"][data-navi-route-transition="back"] {
-        &::view-transition-old(root) {
+        &::view-transition-old(navi-route-transition) {
           animation-name: demo-spin-out;
         }
       }
@@ -170,46 +166,18 @@
       // A game is a page one goes INTO, wherever one opens it from — and the
       // two tabs of the bottom bar are side by side: no relation says anything
       // about "parties" and "radars", so nothing plays between them.
-      defineRouteTransition({
-        from: PARTIES_ROUTE,
-        to: GAME_ROUTE,
-        type: "slide-x",
-      });
-      defineRouteTransition({
-        from: RADARS_ROUTE,
-        to: GAME_ROUTE,
-        type: "slide-x",
-      });
-      defineRouteTransition({
-        from: PARTIES_ROUTE,
-        to: REGLAGES_ROUTE,
-        type: "slide-y",
-      });
-      defineRouteTransition({
-        from: RADARS_ROUTE,
-        to: REGLAGES_ROUTE,
-        type: "slide-y",
-      });
-      defineRouteTransition({
-        from: PROFIL_ROUTE,
-        to: REGLAGES_ROUTE,
-        type: "slide-y",
-      });
+      defineRouteTransition(PARTIES_ROUTE, GAME_ROUTE, "slide-x");
+      defineRouteTransition(RADARS_ROUTE, GAME_ROUTE, "slide-x");
+      defineRouteTransition(PARTIES_ROUTE, REGLAGES_ROUTE, "slide-y");
+      defineRouteTransition(RADARS_ROUTE, REGLAGES_ROUTE, "slide-y");
+      defineRouteTransition(PROFIL_ROUTE, REGLAGES_ROUTE, "cover-y");
       // Pas de type : le cross-fade du navigateur.
-      defineRouteTransition({ from: PARTIES_ROUTE, to: PROFIL_ROUTE });
-      defineRouteTransition({ from: RADARS_ROUTE, to: PROFIL_ROUTE });
+      defineRouteTransition(PARTIES_ROUTE, PROFIL_ROUTE);
+      defineRouteTransition(RADARS_ROUTE, PROFIL_ROUTE);
       // "zoom" est fourni par navi.
-      defineRouteTransition({
-        from: PROFIL_ROUTE,
-        to: BADGES_ROUTE,
-        type: "zoom",
-      });
+      defineRouteTransition(PROFIL_ROUTE, BADGES_ROUTE, "zoom");
       // Un type à soi, défini dans le CSS de cette page.
-      defineRouteTransition({
-        from: PROFIL_ROUTE,
-        to: STATS_ROUTE,
-        type: "spin",
-      });
+      defineRouteTransition(PROFIL_ROUTE, STATS_ROUTE, "spin");
 
       const GoBackButton = () => (
         <button onClick={() => window.history.back()}>←</button>
@@ -387,17 +355,20 @@
             <div className="furniture_row">
               <pre className="steps_declaration">
                 {[
-                  `defineRouteTransition({ from: PARTIES, to: GAME, type: "slide-x" }); // idem RADARS`,
-                  `defineRouteTransition({ from: PARTIES, to: RÉGLAGES, type: "slide-y" }); // idem RADARS, PROFIL`,
-                  `defineRouteTransition({ from: PARTIES, to: PROFIL }); // cross-fade`,
-                  `defineRouteTransition({ from: PROFIL, to: BADGES, type: "zoom" });`,
-                  `defineRouteTransition({ from: PROFIL, to: STATS, type: "spin" }); // CSS de la page`,
+                  `defineRouteTransition(PARTIES, GAME, "slide-x"); // idem RADARS`,
+                  `defineRouteTransition(PARTIES, RÉGLAGES, "slide-y"); // idem RADARS`,
+                  `defineRouteTransition(PROFIL, RÉGLAGES, "cover-y");`,
+                  `defineRouteTransition(PARTIES, PROFIL); // cross-fade — idem RADARS`,
+                  `defineRouteTransition(PROFIL, BADGES, "zoom");`,
+                  `defineRouteTransition(PROFIL, STATS, "spin"); // CSS de la page`,
                 ].join("\n")}
               </pre>
               <SpeedPicker />
             </div>
           </div>
-          <div className="app">
+          {/* Les pages vivent entre deux barres : la zone est marquée, et les
+              mouvements jouent dedans plutôt que sur le document. */}
+          <div className="app" data-navi-route-transition-area>
             <Route>
               <Route route={PARTIES_ROUTE} element={PartiesPage} />
               <Route route={RADARS_ROUTE} element={RadarsPage} />

@@ -6,27 +6,35 @@
  * one opened it, and left back out the same way. That is a fact about a PAIR
  * of pages, and only about the pairs it is written for:
  *
- *   defineRouteTransition({ from: MY_GAMES_PAGE, to: GAME_PAGE, type: "slide-x" });
- *   defineRouteTransition({ from: RADAR_PAGE, to: GAME_PAGE, type: "slide-x" });
+ *   defineRouteTransition(MY_GAMES_PAGE, GAME_PAGE, "slide-x");
+ *   defineRouteTransition(RADAR_PAGE, GAME_PAGE, "slide-x");
  *
- * Going from `from` to `to` plays forward, the reverse plays back, and two
- * pages never written in the same relation play nothing between each other —
- * two tabs of a bottom bar are side by side, neither is before the other, and
- * being animated by the same mechanism does not order them. This is what tells
- * this apart from <RouteTravel>: a travel box is a ROW — a total order, plus a
- * drag gesture that walks it — while this declares individual relations and
- * nothing else.
+ * Going from the first page to the second plays forward, the reverse plays
+ * back, and two pages never written in the same relation play nothing between
+ * each other — two tabs of a bottom bar are side by side, neither is before
+ * the other, and being animated by the same mechanism does not order them.
+ * This is what tells this apart from <RouteTravel>: a travel box is a ROW — a
+ * total order, plus a drag gesture that walks it — while this declares
+ * individual relations and nothing else.
  *
- * The relation says WHEN something plays and which way; `type` says WHAT plays
- * — a movement navi ships, or a name the application defines in its own CSS
- * (see the JSDoc below). Said without a type, the relation plays the browser's
- * cross-fade.
+ * A relation is reciprocal by DEFAULT, not by decree: the way back is the same
+ * movement run the other way, because that is what lets a user build a map of
+ * the app — but a relation written for the exact way travelled wins over being
+ * the reverse of another, so B → A can be given a movement of its own, or
+ * silenced with "none", by writing it (see findRelation).
  *
- * There is no box: what animates is the document itself (its `root` view
- * transition group). Anything that must NOT move — a fixed bar, a header —
- * stays still by carrying a `view-transition-name` of its own: named, it is a
- * picture of its own, animated from where it was to where it is, which for a
- * bar that does not move is standing still.
+ * The relation says WHEN something plays and which way; the transition says
+ * WHAT plays — a movement navi ships, or a name the application defines in its
+ * own CSS (see the JSDoc below). Said without one, the relation plays the
+ * browser's cross-fade.
+ *
+ * There is no box in the tree: by default what animates is the document itself
+ * (its `root` view transition group), which is right for pages that ARE the
+ * whole viewport. An application whose pages live between fixed bars marks the
+ * region they live in with `data-navi-route-transition-area` — one attribute
+ * on an element it already has — and the movement then plays on that region's
+ * own pictures, clipped at its bounds, while the bars simply never move (see
+ * TRANSITION_AREA_ATTRIBUTE for why the root pictures cannot do this job).
  *
  * The URL leads and the picture follows, as everywhere in navi: the change is
  * a navigation somebody else started (a <Link>, the back button), this only
@@ -59,8 +67,154 @@ const startViewTransition = ensureDocumentStartViewTransition();
 
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
+const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
+// What the movement is played on. The root snapshot spans the viewport, and
+// the regions of elements captured on their own (a named bar) are BLANK in it
+// — a page sliding vertically then drags a blank band across the screen where
+// the top bar was. An application with fixed bars therefore marks the region
+// its pages live in with this attribute: the marked element is captured on its
+// own, the movement plays on ITS pictures, clipped at its bounds, and the bars
+// simply never move. Without the mark the document itself travels, which is
+// right for a page that IS the whole viewport.
+const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
+const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
+const AREA_NAME = "navi-route-transition";
+
+// The same movements, written once and played on either target: the document,
+// or the marked area. The guard keeps the two exclusive — with an area marked,
+// the root pictures must NOT move (they carry the whole viewport, blank bands
+// included).
+const movementsCSS = (name, guard) => /* css */ `
+  :root${guard} {
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
+      &::view-transition-old(${name}),
+      &::view-transition-new(${name}) {
+        /* The default cross-fade, dropped: two pages sliding past each other
+           are two solid things, and seeing through one to the other says they
+           are the same page changing its mind. */
+        mix-blend-mode: normal;
+        animation-timing-function: ease;
+        animation-fill-mode: both;
+      }
+    }
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-start;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-end;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-end;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-start;
+        }
+      }
+    }
+    /* The same four movements, along the other axis: the start of a column is
+       its top, so going forward there is the page rising and the next one
+       coming up from below. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-top;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-bottom;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-bottom;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-top;
+        }
+      }
+    }
+    /* One page over the other, the way a sheet covers a desk: the page
+       arriving slides in ON TOP of one that does not move, and going back it
+       slides off, uncovering it. The still page is animated all the same — to
+       a keyframe that goes nowhere — because left to the browser it would
+       fade. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-end;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          /* The page leaving is the cover: it must slide off ABOVE the one it
+             uncovers, against the browser's default of drawing the new page
+             on top. */
+          z-index: 1;
+          animation-name: navi-route-transition-leave-towards-end;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+      }
+    }
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-bottom;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          z-index: 1;
+          animation-name: navi-route-transition-leave-towards-bottom;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+      }
+    }
+    /* Going deeper is coming closer: the page arriving lands from slightly too
+       big, and going back it is the page leaving that grows away. The other
+       side keeps the browser's own fade under it. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
+      &::view-transition-old(${name}),
+      &::view-transition-new(${name}) {
+        animation-fill-mode: both;
+      }
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-zoom-in;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-zoom-out;
+        }
+      }
+    }
+  }
+`;
 
 const css = /* css */ `
+  /* The marked region is a picture of its own during every view transition of
+     the document — which is what keeps it out of the root snapshot, where its
+     place would be blank. */
+  [${TRANSITION_AREA_ATTRIBUTE}] {
+    view-transition-name: ${AREA_NAME};
+  }
+
   /* Only while a transition of OURS is playing: everything below changes how
      the document animates, and the document belongs to the application the
      rest of the time. The duration is written here, on the direction alone, so
@@ -68,86 +222,23 @@ const css = /* css */ `
      --navi-route-transition-duration like every other. */
   :root[${TRANSITION_ATTRIBUTE}] {
     &::view-transition-old(root),
-    &::view-transition-new(root) {
-      animation-duration: var(--navi-route-transition-duration, 300ms);
+    &::view-transition-new(root),
+    &::view-transition-old(${AREA_NAME}),
+    &::view-transition-new(${AREA_NAME}) {
+      animation-duration: var(${TRANSITION_DURATION_PROPERTY}, 300ms);
+    }
+
+    /* The pages are cut at the edge of the area they move in: its pictures are
+       drawn in the top layer, above the bars, and a page sliding in would
+       otherwise be seen crossing them. */
+    &::view-transition-group(${AREA_NAME}),
+    &::view-transition-image-pair(${AREA_NAME}) {
+      overflow: clip;
     }
   }
 
-  /* The movements navi ships. Anything else written as a type belongs to the
-     application: the attributes are on the root either way, and its CSS picks
-     them up exactly as these rules do. */
-  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
-  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
-    &::view-transition-old(root),
-    &::view-transition-new(root) {
-      /* The default cross-fade, dropped: two pages sliding past each other are
-         two solid things, and seeing through one to the other says they are
-         the same page changing its mind. */
-      mix-blend-mode: normal;
-      animation-timing-function: ease;
-      animation-fill-mode: both;
-    }
-  }
-  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
-    &[${TRANSITION_ATTRIBUTE}="forward"] {
-      &::view-transition-old(root) {
-        animation-name: navi-route-transition-leave-towards-start;
-      }
-      &::view-transition-new(root) {
-        animation-name: navi-route-transition-enter-from-end;
-      }
-    }
-    &[${TRANSITION_ATTRIBUTE}="back"] {
-      &::view-transition-old(root) {
-        animation-name: navi-route-transition-leave-towards-end;
-      }
-      &::view-transition-new(root) {
-        animation-name: navi-route-transition-enter-from-start;
-      }
-    }
-  }
-
-  /* The same four movements, along the other axis: the start of a column is
-     its top, so going forward there is the page rising and the next one coming
-     up from below. */
-  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
-    &[${TRANSITION_ATTRIBUTE}="forward"] {
-      &::view-transition-old(root) {
-        animation-name: navi-route-transition-leave-towards-top;
-      }
-      &::view-transition-new(root) {
-        animation-name: navi-route-transition-enter-from-bottom;
-      }
-    }
-    &[${TRANSITION_ATTRIBUTE}="back"] {
-      &::view-transition-old(root) {
-        animation-name: navi-route-transition-leave-towards-bottom;
-      }
-      &::view-transition-new(root) {
-        animation-name: navi-route-transition-enter-from-top;
-      }
-    }
-  }
-
-  /* Going deeper is coming closer: the page arriving lands from slightly too
-     big, and going back it is the page leaving that grows away. The other side
-     keeps the browser's own fade under it. */
-  :root[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
-    &::view-transition-old(root),
-    &::view-transition-new(root) {
-      animation-fill-mode: both;
-    }
-    &[${TRANSITION_ATTRIBUTE}="forward"] {
-      &::view-transition-new(root) {
-        animation-name: navi-route-transition-zoom-in;
-      }
-    }
-    &[${TRANSITION_ATTRIBUTE}="back"] {
-      &::view-transition-old(root) {
-        animation-name: navi-route-transition-zoom-out;
-      }
-    }
-  }
+  ${movementsCSS("root", `:not([${TRANSITION_TARGET_ATTRIBUTE}])`)}
+  ${movementsCSS(AREA_NAME, `[${TRANSITION_TARGET_ATTRIBUTE}="area"]`)}
 
   @keyframes navi-route-transition-leave-towards-start {
     to {
@@ -201,26 +292,44 @@ const css = /* css */ `
       scale: 1.1;
     }
   }
+  /* Standing still, said as an animation: naming it replaces the browser's own
+     fade on that side, which is the whole point. */
+  @keyframes navi-route-transition-still {
+    to {
+      translate: 0 0;
+    }
+  }
 `;
 
 /**
  * Declare how a pair of routes moves against each other.
  *
- * @param {Object} options
- * @param {object} options.from - a route, or `{ route, params }` when the page
- *   is a param of a route rather than a route of its own.
- * @param {object} options.to - same forms. Going from `from` to `to` plays
- *   forward, the reverse plays back, and a change between two pages no
- *   relation was defined for plays nothing.
- * @param {string} [options.type] - what plays. Omitted, the browser's own
- *   cross-fade. Shipped with navi: `"slide-x"` and `"slide-y"` (the pages
- *   slide past each other, forward towards the start of the axis) and
- *   `"zoom"` (the deeper page is the closer one). Any other name belongs to
- *   the application: for the length of the transition the root carries
+ * @param {object} from - a route, or `{ route, params }` when the page is a
+ *   param of a route rather than a route of its own.
+ * @param {object} to - same forms. Going from `from` to `to` plays forward,
+ *   the reverse plays back — unless the reverse is written as a relation of
+ *   its own, which then owns that way (a movement of its own, or `"none"` for
+ *   a plain cut). A change between two pages no relation was written for plays
+ *   nothing.
+ * @param {string|{type?: string, duration?: number|string}} [transition] -
+ *   what plays: a type name, or `{ type, duration }` to also say how long
+ *   (`--navi-route-transition-duration` says it for everyone otherwise).
+ *   Omitted, the browser's own cross-fade. Shipped with navi:
+ *   - `"slide-x"`, `"slide-y"`: the two pages slide past each other, forward
+ *     towards the start of the axis;
+ *   - `"cover-x"`, `"cover-y"`: the page arriving slides in OVER one that does
+ *     not move, and slides off it on the way back;
+ *   - `"zoom"`: the deeper page is the closer one — it lands from slightly too
+ *     big, and grows away when left;
+ *   - `"none"`: nothing, said out loud — written on one way of a pair, it cuts
+ *     where the reverse of the other way would have played.
+ *   Every type plays on the document, or on the element marked
+ *   `data-navi-route-transition-area` when the application has one (see the
+ *   top of this file). Any other name belongs to the application: for the
+ *   length of the transition the root carries
  *   `data-navi-route-transition-type="<type>"` next to
  *   `data-navi-route-transition="forward"|"back"`, and the application's CSS
- *   defines the movement against the document's view transition
- *   pseudo-elements:
+ *   defines the movement against the view transition pseudo-elements:
  *
  *     :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
  *       &::view-transition-new(root) {
@@ -229,12 +338,15 @@ const css = /* css */ `
  *     }
  * @returns {() => void} remove this relation.
  */
-export const defineRouteTransition = ({ from, to, type }) => {
+export const defineRouteTransition = (from, to, transition) => {
   import.meta.css = css;
+  const { type, duration } =
+    typeof transition === "string" ? { type: transition } : transition || {};
   const relation = {
     from: normalizePage(from),
     to: normalizePage(to),
     type,
+    duration,
   };
   relations.push(relation);
   rebuildWatcher();
@@ -292,10 +404,17 @@ const rebuildWatcher = () => {
       // silence is the fact — not a missing case.
       return;
     }
+    const { direction, relation } = found;
+    if (relation.type === "none") {
+      // Silence said out loud: this way of the pair was written to play
+      // nothing, where the reverse of the other way would have played.
+      return;
+    }
     beginTransition({
       page: pages[index],
-      direction: found.direction,
-      type: found.type,
+      direction,
+      type: relation.type,
+      duration: relation.duration,
     });
   };
   // `subscribe` rather than `effect`: it hands the value to a callback that is
@@ -317,14 +436,20 @@ const rebuildWatcher = () => {
   };
 };
 
-// The first relation that speaks about this pair answers for it.
+// The exact way travelled first, over the whole registry, and only then the
+// reverses: a relation written B → A owns that way, and being the reverse of
+// one written A → B never outranks it. This is what makes reciprocity a
+// default rather than a decree — write the way back to give it a movement of
+// its own, or "none" to silence it.
 const findRelation = (fromPage, toPage) => {
-  for (const { from, to, type } of relations) {
-    if (samePage(from, fromPage) && samePage(to, toPage)) {
-      return { direction: "forward", type };
+  for (const relation of relations) {
+    if (samePage(relation.from, fromPage) && samePage(relation.to, toPage)) {
+      return { direction: "forward", relation };
     }
-    if (samePage(from, toPage) && samePage(to, fromPage)) {
-      return { direction: "back", type };
+  }
+  for (const relation of relations) {
+    if (samePage(relation.from, toPage) && samePage(relation.to, fromPage)) {
+      return { direction: "back", relation };
     }
   }
   return null;
@@ -335,12 +460,42 @@ const findRelation = (fromPage, toPage) => {
 // attributes over, and only their owner may take them off.
 let currentTransition = null;
 
-const beginTransition = ({ page, direction, type }) => {
+const beginTransition = ({ page, direction, type, duration }) => {
   const transition = {};
   currentTransition = transition;
-  document.documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
+  const documentElement = document.documentElement;
+  documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
-    document.documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+    documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+  }
+  // Looked up per transition, not once: the area is the application's own
+  // element and follows its lifecycle — a page layout without bars has none,
+  // and the movement then plays on the document itself.
+  if (document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`)) {
+    documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
+  }
+  // A duration of this relation's own, worn for the length of the transition —
+  // and whatever the application had written inline put back afterwards, not
+  // erased.
+  let restoreDuration = null;
+  if (duration !== undefined) {
+    const durationBefore = documentElement.style.getPropertyValue(
+      TRANSITION_DURATION_PROPERTY,
+    );
+    documentElement.style.setProperty(
+      TRANSITION_DURATION_PROPERTY,
+      typeof duration === "number" ? `${duration}ms` : duration,
+    );
+    restoreDuration = () => {
+      if (durationBefore) {
+        documentElement.style.setProperty(
+          TRANSITION_DURATION_PROPERTY,
+          durationBefore,
+        );
+      } else {
+        documentElement.style.removeProperty(TRANSITION_DURATION_PROPERTY);
+      }
+    };
   }
   const releaseRendering = takeoverRoutingRenderingHold();
   // Armed from here rather than from inside the callback below: the browser
@@ -372,8 +527,12 @@ const beginTransition = ({ page, direction, type }) => {
     releaseRendering();
     if (currentTransition === transition) {
       currentTransition = null;
-      document.documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
-      document.documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+      documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+      documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+      documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+      if (restoreDuration) {
+        restoreDuration();
+      }
     }
   };
   viewTransition.finished.then(end, end);
