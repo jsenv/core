@@ -138,6 +138,12 @@ consistency across the app, not from any single call site.
   `<Interpolate>` for one sentence, `createI18n` for the app's registry,
   `naviI18n` for navi's own texts. Read it before writing a user-visible
   sentence, and before overriding a navi message.
+- `docs/testid.md` — how a test names an element: why role + accessible name
+  comes first, when `data-testid` takes over, and where navi puts it — on the
+  control's host (the real `<input>`/`<button>`), not on the box around it.
+  Read it before writing a selector in a Playwright/Cypress test against a navi
+  app, and before targeting a `.navi_*` class or a `navi-*`/`data-*` attribute
+  of navi's own.
 - `docs/interactions.md` — the `interactions` prop: making a component answer a
   swipe, a held press, a shortcut, and registering a gesture navi does not have.
   Read it before reading the pointer by hand — who owns a press between nested
