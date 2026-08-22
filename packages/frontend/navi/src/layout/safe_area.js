@@ -42,6 +42,18 @@ export const SAFE_AREA_CSS = /* css */ `
       --navi-fixed-bar-space-bottom: 0px;
       --navi-fixed-bar-space-left: 0px;
 
+      /* What the on-screen keyboard covers — and ONLY where it overlays the
+         content rather than shrinking the viewport, which is navi's default
+         wherever the browser has the VirtualKeyboard API (see
+         layout/virtual_keyboard.js). Zero on Firefox/Safari, which have no
+         such API, and zero for an app that called
+         disableVirtualKeyboardOverlay(): both get a keyboard that shrinks the
+         visual viewport instead, which --navi-vvh already tracks. Reading
+         env() rather than a JS-written value keeps it live: the keyboard
+         slides in over several frames and this follows it without a
+         listener. */
+      --navi-keyboard-inset-bottom: env(keyboard-inset-height, 0px);
+
       /* Level 1. Centered bands, so that declaring one ceiling
          (--navi-app-max-width) is all an app has to do to be a narrow screen in
          a wide window; an app that wants them uneven writes these directly. */
@@ -49,7 +61,15 @@ export const SAFE_AREA_CSS = /* css */ `
         0px,
         (var(--navi-vvh) - var(--navi-app-max-height, var(--navi-vvh))) / 2
       );
-      --navi-app-inset-bottom: var(--navi-app-inset-top);
+      /* The keyboard on top of the band, and on this edge only: it eats into
+         the app's own rectangle exactly like a viewport that shrank, which is
+         what makes both paths end up at the same --navi-app-height (and so at
+         the same dialog/popover ceiling). Not part of the centering, hence
+         added here rather than folded into --navi-app-inset-top: a keyboard
+         takes the bottom, it doesn't re-center anything. */
+      --navi-app-inset-bottom: calc(
+        var(--navi-app-inset-top) + var(--navi-keyboard-inset-bottom)
+      );
       --navi-app-inset-left: max(
         0px,
         (var(--navi-vvw) - var(--navi-app-max-width, var(--navi-vvw))) / 2

@@ -13,10 +13,44 @@ import {
 } from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositionedParent } from "./offset_parent.js";
+import { getVirtualKeyboardOverlayHeight } from "./virtual_keyboard.js";
 import {
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
 } from "./window_size.js";
+
+/**
+ * The part of the viewport something can actually be placed in.
+ *
+ * visualViewport, not the layout viewport: only the visual one shrinks when
+ * the on-screen keyboard opens (where the browser is the one shrinking it —
+ * see below). Its offsetLeft/Top matter too, for pinch-zoom/pan.
+ *
+ * document.documentElement.clientWidth/Height is the fallback without
+ * visualViewport support — the layout viewport net of any classic scrollbar,
+ * which is what visualViewport itself reports, unlike window.innerWidth/Height
+ * which counts the scrollbar in. Both readings existed here, one per call
+ * site, for no reason anyone stated; they only ever differed by that scrollbar
+ * and only on browsers with no visualViewport at all.
+ *
+ * The keyboard is then subtracted rather than assumed to have already shrunk
+ * the viewport: with `overlaysContent` (virtual_keyboard.js, navi turns it on)
+ * the viewport stays full height and the keyboard is painted over its bottom.
+ * Zero everywhere else, the browser having done the subtraction itself.
+ */
+const getVisibleViewportRect = () => {
+  const visualViewport = window.visualViewport;
+  const documentElement = document.documentElement;
+  const height = visualViewport
+    ? visualViewport.height
+    : documentElement.clientHeight;
+  return {
+    left: visualViewport ? visualViewport.offsetLeft : 0,
+    top: visualViewport ? visualViewport.offsetTop : 0,
+    width: visualViewport ? visualViewport.width : documentElement.clientWidth,
+    height: Math.max(0, height - getVirtualKeyboardOverlayHeight()),
+  };
+};
 
 const DEBUG = false;
 
@@ -145,23 +179,17 @@ export const visibleRectEffect = (
       console.group(`visibleRect.check("${event.type}")`);
     }
 
-    // visualViewport, not window.innerWidth/Height: the layout viewport
-    // doesn't shrink when the on-screen keyboard opens (same reasoning as
-    // pickPositionRelativeTo's own identical choice). offsetLeft/Top matter
-    // too, for pinch-zoom/pan. Computed here regardless of scroll container
-    // (not just where the non-document branch below needs it) because a
-    // keyboard opening can change pickPositionRelativeTo's available space
-    // without moving this element's own visibleRect at all — see
-    // viewportRectChanged further down.
-    const visualViewport = window.visualViewport;
-    const viewportWidth = visualViewport
-      ? visualViewport.width
-      : window.innerWidth;
-    const viewportHeight = visualViewport
-      ? visualViewport.height
-      : window.innerHeight;
-    const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
-    const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
+    // Computed here regardless of scroll container (not just where the
+    // non-document branch below needs it) because a keyboard opening can
+    // change pickPositionRelativeTo's available space without moving this
+    // element's own visibleRect at all — see viewportRectChanged further
+    // down.
+    const {
+      left: viewportOffsetLeft,
+      top: viewportOffsetTop,
+      width: viewportWidth,
+      height: viewportHeight,
+    } = getVisibleViewportRect();
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollContainer;
@@ -1026,19 +1054,13 @@ export const pickPositionRelativeTo = (
     container,
   } = {},
 ) => {
-  // Needed before hasValidAnchor below. visualViewport, not
-  // document.documentElement.clientWidth/Height: the layout viewport
-  // doesn't shrink when the on-screen keyboard opens, only the visual one
-  // does.
-  const visualViewport = window.visualViewport;
-  const viewportWidth = visualViewport
-    ? visualViewport.width
-    : document.documentElement.clientWidth;
-  const viewportHeight = visualViewport
-    ? visualViewport.height
-    : document.documentElement.clientHeight;
-  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
-  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+  // Needed before hasValidAnchor below.
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = getVisibleViewportRect();
 
   // Resolved early: everything below that would otherwise reach for
   // viewportLeft/Top/Width/Height instead uses these, so a "local" popover

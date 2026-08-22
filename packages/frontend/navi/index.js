@@ -302,6 +302,14 @@ export {
   coarsePointerSignal,
   smallTouchScreenSignal,
 } from "./src/layout/responsive.js";
+// The way back out of the on-screen keyboard overlaying the app, which navi
+// turns on by default wherever the browser has the VirtualKeyboard API at all
+// (navi_css_vars.js) — for an app whose own layout was built around the
+// viewport shrinking instead. See virtual_keyboard.js in @jsenv/dom for the
+// whole deal, and safe_area.js's own --navi-keyboard-inset-bottom for what
+// navi does with the geometry. A no-op on Firefox/Safari, which never
+// overlaid anything in the first place.
+export { disableVirtualKeyboardOverlay } from "./src/layout/virtual_keyboard.js";
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";

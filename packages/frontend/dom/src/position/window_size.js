@@ -1,4 +1,5 @@
 import { createPubSub } from "../pub_sub.js";
+import { subscribeVirtualKeyboardGeometryChange } from "./virtual_keyboard.js";
 
 // Both "resize" sources fire transiently on mobile (keyboard/UI chrome
 // briefly shifting when focus moves between inputs) — debounced so
@@ -19,17 +20,29 @@ const [publishWindowResize, subscribeWindowResizeSettled] = createPubSub();
 // Calls `callback` once `window` settles after a resize. Returns an unsubscribe function.
 export { subscribeWindowResizeSettled };
 
+let visualViewportResizeTimeoutId;
+const scheduleVisualViewportResize = (event) => {
+  visualViewportResizePending = true;
+  clearTimeout(visualViewportResizeTimeoutId);
+  visualViewportResizeTimeoutId = setTimeout(() => {
+    visualViewportResizePending = false;
+    publishVisualViewportResize(event);
+  }, RESIZE_SETTLE_MS);
+};
 if (window.visualViewport) {
-  let timeoutId;
-  window.visualViewport.addEventListener("resize", (event) => {
-    visualViewportResizePending = true;
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      visualViewportResizePending = false;
-      publishVisualViewportResize(event);
-    }, RESIZE_SETTLE_MS);
-  });
+  window.visualViewport.addEventListener(
+    "resize",
+    scheduleVisualViewportResize,
+  );
 }
+// The same event, said differently: where the keyboard overlays the content
+// (virtual_keyboard.js) there is no visualViewport resize at all when it
+// opens — the room left to place anything in changed
+// all the same, and every consumer here asks the same question either way
+// (getVisibleViewportRect in visible_rect.js already subtracts it). Through
+// the same debounce, and for the same reason: going straight from one input
+// to the next hides and re-shows the keyboard.
+subscribeVirtualKeyboardGeometryChange(scheduleVisualViewportResize);
 
 let windowResizeTimeoutId;
 window.addEventListener("resize", (event) => {

@@ -1,4 +1,5 @@
 import {
+  getVirtualKeyboardOverlayHeight,
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
 } from "@jsenv/dom";
@@ -82,10 +83,18 @@ const readAppMax = (propertyName) => {
 };
 export const getAppWidth = () =>
   Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
+// Minus what the keyboard covers, so this stays the JS reading of the very
+// same rectangle --navi-app-height describes in CSS (see safe_area.js's own
+// --navi-keyboard-inset-bottom). Zero unless the app opted into the keyboard
+// overlaying its content — otherwise the shrinking visual viewport above has
+// already accounted for it, and subtracting again would count it twice.
 export const getAppHeight = () =>
-  Math.min(
-    visualViewportHeightSignal.value,
-    readAppMax("--navi-app-max-height"),
+  Math.max(
+    0,
+    Math.min(
+      visualViewportHeightSignal.value,
+      readAppMax("--navi-app-max-height"),
+    ) - getVirtualKeyboardOverlayHeight(),
   );
 
 // Whether the primary input is a finger rather than a mouse. A pointer type is

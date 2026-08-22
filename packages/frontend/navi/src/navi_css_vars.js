@@ -8,6 +8,13 @@ import {
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
 import { SAFE_AREA_CSS } from "./layout/safe_area.js";
+// Side-effect import: turns the on-screen keyboard into something that
+// overlays the app instead of resizing the viewport, which is navi's default
+// (see that module for why, and safe_area.js's own
+// --navi-keyboard-inset-bottom for what then reads the geometry). Here rather
+// than in each component: it is one decision about the whole window, and this
+// is the module that already makes those.
+import "./layout/virtual_keyboard.js";
 
 const button = document.createElement("button");
 button.style.display = "none";

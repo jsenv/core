@@ -166,6 +166,11 @@ export {
   visibleRectEffect,
 } from "./src/position/visible_rect.js";
 export {
+  getVirtualKeyboardOverlayHeight,
+  setVirtualKeyboardOverlaysContent,
+  subscribeVirtualKeyboardGeometryChange,
+} from "./src/position/virtual_keyboard.js";
+export {
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
 } from "./src/position/window_size.js";
