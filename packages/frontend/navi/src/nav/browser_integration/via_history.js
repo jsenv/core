@@ -3,6 +3,7 @@ import { signal } from "@preact/signals";
 import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { whenRenderingResumes } from "../rendering_hold.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
@@ -154,7 +155,7 @@ export const setupBrowserIntegrationViaHistory = ({
       state,
     });
     if (navigationType === "push") {
-      startAtTop(url);
+      whenRenderingResumes(() => startAtTop(url));
     }
     executeWithCleanup(
       () => allResult,
@@ -316,13 +317,16 @@ export const setupBrowserIntegrationViaHistory = ({
 // route_travel.jsx), and resetting there would throw the reader out of a page
 // they never left.
 //
-// After the routes have been told, and that ordering is the whole subtlety:
-// the routes changing is what sets a travel off, and a travel measures the box
-// it is leaving as it stands. Reset before that and the picture of the page
-// being left is taken at the top of a page the reader was not at the top of —
-// it is then watched jumping back to its first line before it even begins to
-// leave (see holdTravelGeometry in route_travel.jsx). After pushState too, so
-// the entry being left keeps the offset it is at.
+// After the routes have been told, and after the picture of the page being
+// left has been taken — that ordering is the whole subtlety. The routes
+// changing is what sets a movement off, and a movement measures the box it is
+// leaving as it stands; put the document back to its top any earlier and the
+// picture is of a page at its first line, which the reader was not at. The
+// browser paints what the new offset shows and nothing else, so what is kept
+// of the page being left is the band it had already painted, and the movement
+// carries a fragment (see rendering_hold.js, which is where the waiting
+// happens). After pushState too, so the entry being left keeps the offset it
+// is at.
 //
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.

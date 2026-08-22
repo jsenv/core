@@ -32,6 +32,7 @@ export const holdRendering = () => {
   const debounceRenderingBefore = options.debounceRendering;
   const hold = {
     render: null,
+    waiting: [],
     release: () => {
       // Only the hold that is still standing may be given back: a holder
       // releasing after another has taken over must not let go of what it
@@ -41,10 +42,14 @@ export const holdRendering = () => {
       }
       renderingHold = null;
       options.debounceRendering = debounceRenderingBefore;
-      const { render } = hold;
+      const { render, waiting } = hold;
       hold.render = null;
+      hold.waiting = [];
       if (render) {
         render();
+      }
+      for (const wait of waiting) {
+        wait();
       }
     },
   };
@@ -53,6 +58,24 @@ export const holdRendering = () => {
     hold.render = render;
   };
   return hold.release;
+};
+
+// Anything else that must not happen before the picture is taken, and the
+// scroll is the other one: a page one arrives at starts at its top, and the
+// document put back to its top while the page being left is still on screen is
+// a page that has ALREADY jumped when the picture is taken. Worse, the browser
+// paints what the new offset shows and nothing else, so the picture keeps only
+// the band it had already painted — the page being left is then seen in
+// fragments, whatever the movement does afterwards.
+//
+// Run at once when nobody is photographing anything, which is the common case
+// and must stay free.
+export const whenRenderingResumes = (callback) => {
+  if (!renderingHold) {
+    callback();
+    return;
+  }
+  renderingHold.waiting.push(callback);
 };
 
 // The hold a navigation takes on its way in — from before its first write,

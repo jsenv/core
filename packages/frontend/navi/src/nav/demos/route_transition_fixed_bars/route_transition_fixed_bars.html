@@ -76,40 +76,64 @@
       defineRouteTransition(ME_ROUTE, ME_EDIT_ROUTE, "slide-x");
       defineRouteTransition(ME_ROUTE, PLACES_ROUTE, "cover-y");
 
-      const LongPage = ({ title, color, rows, children }) => (
+      // Le lien est répété tous les cinq rangs: on part — et on revient —
+      // depuis n'importe quelle position de défilement, ce qui est la seule
+      // façon de voir ce que la page quittée fait de la sienne.
+      const LongPage = ({ title, color, rows, link }) => (
         <div className="pages" style={{ background: color }}>
           <h1 className="page_title">{title}</h1>
-          {children}
           {Array.from({ length: rows }, (_, index) => (
-            <div key={index} className="page_row">
-              {title} — ligne {index + 1}
+            <div key={index}>
+              {index % 5 === 0 && (
+                <Link
+                  className="card"
+                  route={link.route}
+                  data-testid={link.testId}
+                >
+                  {link.label} (ligne {index + 1})
+                </Link>
+              )}
+              <div className="page_row">
+                {title} — ligne {index + 1}
+              </div>
             </div>
           ))}
         </div>
       );
 
       const MePage = () => (
-        <LongPage title="Mon profil" color="#e8f0fe" rows={30}>
-          <Link className="card" route={ME_EDIT_ROUTE} data-testid="edit_link">
-            Modifier mon profil →
-          </Link>
-        </LongPage>
+        <LongPage
+          title="Mon profil"
+          color="#e8f0fe"
+          rows={30}
+          link={{
+            route: ME_EDIT_ROUTE,
+            testId: "edit_link",
+            label: "Modifier mon profil →",
+          }}
+        />
       );
 
       const MeEditPage = () => (
-        <LongPage title="Modifier" color="#fdf0e8" rows={40}>
-          <Link className="card" route={ME_ROUTE} data-testid="back_link">
-            ← Retour au profil
-          </Link>
-        </LongPage>
+        <LongPage
+          title="Modifier"
+          color="#fdf0e8"
+          rows={40}
+          link={{
+            route: ME_ROUTE,
+            testId: "back_link",
+            label: "← Retour au profil",
+          }}
+        />
       );
 
       const PlacesPage = () => (
-        <LongPage title="Mes lieux" color="#eaf7ec" rows={25}>
-          <Link className="card" route={ME_ROUTE} data-testid="me_link">
-            ← Mon profil
-          </Link>
-        </LongPage>
+        <LongPage
+          title="Mes lieux"
+          color="#eaf7ec"
+          rows={25}
+          link={{ route: ME_ROUTE, testId: "me_link", label: "← Mon profil" }}
+        />
       );
 
       const AppIndex = () => {

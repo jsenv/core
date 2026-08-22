@@ -8,7 +8,7 @@ decides which movement (if any) a navigation deserves. The API grammar itself
 
 Demos: [the movements](../src/nav/demos/route_transition/route_transition.html),
 [a default transition](../src/nav/demos/route_transition/route_transition_default.html),
-[pages between fixed bars](../src/nav/demos/route_transition/route_transition_fixed_bars.html),
+[pages between fixed bars](../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html),
 [with a RouteTravel inside](../src/nav/demos/route_transition/route_transition_with_travel.html)
 
 ## What a transition is for
@@ -109,6 +109,12 @@ For the same reason, how far a page travels is the **window** it is seen
 through, not the page's own size: a page is as tall as its content, and a
 vertical movement measured on the picture would send it several screens away —
 off screen for most of the transition, flying past at the end.
+
+A page that was **scrolled** is photographed where the reader was, and travels
+from there: the document is not put back to its top until the picture has been
+taken. Without that wait the picture keeps only the band the browser had
+already painted at the new offset, and the movement carries a fragment of the
+page instead of the page.
 
 With an area marked, the page around it is left LIVE rather than photographed:
 the bars keep answering the pointer for the whole movement, which a captured
