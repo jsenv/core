@@ -1,6 +1,9 @@
 /**
  * Detects the drop target based on what element is actually under the mouse cursor.
- * Uses document.elementsFromPoint() to respect visual stacking order naturally.
+ * Uses document.elementsFromPoint() to respect visual stacking order naturally,
+ * and falls back on the rectangles alone when the hit test cannot answer — which
+ * is not only "over nothing": during a view transition the browser hands back the
+ * root for every point of the page (see findTargetByGeometry).
  *
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
@@ -139,8 +142,20 @@ export const getDropTargetInfo = (
     }
   }
   if (!targetElement) {
-    targetElement = intersectingTargets[0];
-    intersectingIndex = 0;
+    // Nothing in the stack answered. The point may be over no target at all —
+    // and it may also be over one the hit test cannot see: a view transition
+    // covers the page with its pictures, and from then on every point of the
+    // document reads as the root, whatever is really under it. Taking the first
+    // of the overlapped targets then means taking the first one in DOM ORDER,
+    // which has nothing to do with where the hand is: a piece carried onto the
+    // place next door comes back down on the place it left, and the hint says so
+    // by lighting up the wrong one.
+    //
+    // Geometry is what is left, and it is the reading the eye makes anyway: the
+    // place the middle of the carried thing is IN, or — the middle being over a
+    // gap — the one it covers most of.
+    targetElement = findTargetByGeometry(intersectingTargets, dragElementRect);
+    intersectingIndex = intersectingTargets.indexOf(targetElement);
   }
   targetIndex = targetElements.indexOf(targetElement);
 
@@ -191,6 +206,41 @@ export const getDropTargetInfo = (
     intersecting: intersectingTargets,
   };
   return result;
+};
+
+/**
+ * Which of the overlapped targets the carried thing is on, said with rectangles
+ * alone: the one holding its centre, or the one it covers the most of. Used when
+ * the hit test cannot answer (see its caller).
+ */
+const findTargetByGeometry = (targetElements, dragElementRect) => {
+  const dragCenterX = dragElementRect.left + dragElementRect.width / 2;
+  const dragCenterY = dragElementRect.top + dragElementRect.height / 2;
+  let bestElement = null;
+  let bestOverlapArea = -1;
+  for (const targetElement of targetElements) {
+    const targetRect = targetElement.getBoundingClientRect();
+    if (
+      dragCenterX >= targetRect.left &&
+      dragCenterX <= targetRect.right &&
+      dragCenterY >= targetRect.top &&
+      dragCenterY <= targetRect.bottom
+    ) {
+      return targetElement;
+    }
+    const overlapWidth =
+      Math.min(targetRect.right, dragElementRect.right) -
+      Math.max(targetRect.left, dragElementRect.left);
+    const overlapHeight =
+      Math.min(targetRect.bottom, dragElementRect.bottom) -
+      Math.max(targetRect.top, dragElementRect.top);
+    const overlapArea = overlapWidth * overlapHeight;
+    if (overlapArea > bestOverlapArea) {
+      bestOverlapArea = overlapArea;
+      bestElement = targetElement;
+    }
+  }
+  return bestElement;
 };
 
 const rectangleAreIntersecting = (r1, r2) => {
