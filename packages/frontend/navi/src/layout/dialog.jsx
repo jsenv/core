@@ -1101,8 +1101,41 @@ const useDialogProps = (props) => {
     // argument at all) docks it against the viewport (layer="top"/isModal)
     // or its own positioned ancestor (layer="local", the same
     // positionedAncestor computed above), same mechanism as Popover's own
-    // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
-    // from the result, same as popover.jsx.
+    // custom renderer. applyDialogPosition sets --container-position-remaining-height/-width
+    // from the result, same as popover.jsx — except for layer="top", see its
+    // own comment just above.
+    // The placement is a snapshot taken on a debounce; the size caps must not
+    // be one too. applyNewPosition writes --container-position-remaining-
+    // height/width on every reposition, from what pickPositionRelativeTo
+    // measured the container as at that instant. For layer="top" that value
+    // says nothing --dialog-maxmax-height/width doesn't already say live: the
+    // container IS the visual viewport and Dialog is never anchored, so the
+    // "remaining" space is always the whole container net of its own margins
+    // — the very definition of --dialog-maxmax-*, which tracks the visual
+    // viewport through --navi-vvh/--navi-app-height without waiting for
+    // anything. Identical values, one of them one debounce late.
+    //
+    // That lag stays invisible while the viewport SHRINKS — the two are
+    // combined with min(), so the live var is the one that binds and the
+    // dialog follows the mobile keyboard down, its top edge pinned. On the
+    // way back up the stale pixel value is the smaller one, so it binds
+    // instead and the dialog stays keyboard-sized until the debounced
+    // reposition fires — which then places a still-shrunk box in a
+    // full-height viewport (centered: visibly lower), grows it in the same
+    // call, and has to slide it back up: the bounce. Dropping the property
+    // for layer="top" leaves the live var alone in charge, so the height
+    // comes back exactly the way it left, from the bottom edge.
+    //
+    // Kept for layer="local": there the container is a real element, its own
+    // box is what the caps must read, and nothing in CSS tracks it.
+    const applyDialogPosition = (position) => {
+      applyNewPosition(dialogEl, position);
+      if (isModal) {
+        dialogEl.style.removeProperty("--container-position-remaining-height");
+        dialogEl.style.removeProperty("--container-position-remaining-width");
+      }
+    };
+
     const positionDialog = (triggerEvent) => {
       const { positionArea, marginWithContainer } = positionPropsRef.current;
       // The dialog's PARENT, not the dialog: a modal one is promoted to the
@@ -1137,8 +1170,8 @@ const useDialogProps = (props) => {
         event: triggerEvent,
       };
       let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
-      applyNewPosition(dialogEl, position);
-      // applyNewPosition above just set --container-position-remaining-
+      applyDialogPosition(position);
+      // applyDialogPosition above just set --container-position-remaining-
       // width/height to the real available space — narrower than whatever
       // dialogEl measured at just before (nothing, on a first open — see
       // popover.jsx's own identical comment on its own positionPopover for
@@ -1154,7 +1187,7 @@ const useDialogProps = (props) => {
         dialogEl.offsetHeight !== position.height
       ) {
         position = pickPositionRelativeTo(dialogEl, null, pickOptions);
-        applyNewPosition(dialogEl, position);
+        applyDialogPosition(position);
       }
       // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
       // Callout anchored to something inside this Dialog) knowing to

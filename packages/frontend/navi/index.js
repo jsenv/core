@@ -17,9 +17,12 @@ export {
   rerunActions,
   updateActions,
 } from "./src/action/actions.js";
-// How an action reads which interaction asked for it: an interaction is an event
-// (see src/control/interaction/interactions.js), and the action receives the
-// event chain it belongs to — `findEvent(event, "swipe_left")` gets back to it.
+// How a callback reads what caused it. Every event navi dispatches carries the
+// one it came from, and findEvent walks that chain back: which interaction asked
+// for an action (`findEvent(event, "swipe_left")`, see
+// src/control/interaction/interactions.js), or whether the state change a
+// uiAction reports is a gesture at all (`findEvent(event,
+// "navi_clear_ui_state")` — the clear cross was pressed).
 export { findEvent } from "@jsenv/dom";
 // …and how code registers an interaction navi does not know: the door navi's own
 // swipes, holds and shortcuts come through.
