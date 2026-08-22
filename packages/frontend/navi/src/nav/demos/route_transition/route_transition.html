@@ -1,0 +1,295 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>routeTransition Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #app {
+        display: flex;
+        height: 100dvh;
+        flex-direction: column;
+      }
+      /* Everything that must NOT slide carries a view-transition-name of its
+         own: named, it is a picture of its own and stands still while the rest
+         of the document travels under it. */
+      .furniture {
+        padding-bottom: 8px;
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+        view-transition-name: demo-furniture;
+      }
+      .furniture_row {
+        display: flex;
+        padding: 0 16px;
+        align-items: center;
+        gap: 24px;
+      }
+      .steps_declaration {
+        margin: 0;
+        color: #555;
+        font-size: 12px;
+      }
+      .tab_bar {
+        flex: none;
+        background: white;
+        border-top: 1px solid #ddd;
+        view-transition-name: demo-tab-bar;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      .tab_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .app {
+        position: relative;
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        position: absolute;
+        inset: 0;
+        padding: 16px;
+        overflow-y: auto;
+      }
+      .page_title {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .card {
+        display: block;
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        color: inherit;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+      .page_top_bar {
+        display: flex;
+        margin: -16px -16px 12px;
+        padding: 10px 12px;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.7);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .page_top_bar button {
+        padding: 4px 10px;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      .page_top_bar strong {
+        font-size: 1.1rem;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect, useState } from "preact/hooks";
+      import {
+        Link,
+        Nav,
+        Route,
+        route,
+        routeTransition,
+        setupRoutes,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+
+      const PARTIES_ROUTE = route("/parties");
+      const RADARS_ROUTE = route("/radars");
+      const GAME_ROUTE = route("/games/:gameId");
+      const REGLAGES_ROUTE = route("/reglages");
+      setupRoutes([PARTIES_ROUTE, RADARS_ROUTE, GAME_ROUTE, REGLAGES_ROUTE]);
+
+      // A game is a page one goes INTO, wherever one opens it from — and the
+      // two tabs of the bottom bar are side by side: no pair says anything
+      // about "parties" and "radars", so nothing plays between them.
+      routeTransition({
+        steps: [
+          [PARTIES_ROUTE, GAME_ROUTE],
+          [RADARS_ROUTE, GAME_ROUTE],
+        ],
+      });
+      routeTransition({
+        steps: [
+          [PARTIES_ROUTE, REGLAGES_ROUTE],
+          [RADARS_ROUTE, REGLAGES_ROUTE],
+        ],
+        axis: "y",
+      });
+
+      const GoBackButton = () => (
+        <button onClick={() => window.history.back()}>←</button>
+      );
+
+      const PartiesPage = () => (
+        <div className="page" style={{ background: "#e8f0fe" }}>
+          <h1 className="page_title">Mes parties</h1>
+          {[1, 2, 3].map((gameId) => (
+            <Link
+              key={gameId}
+              className="card"
+              route={GAME_ROUTE}
+              routeParams={{ gameId }}
+            >
+              Partie {gameId}
+            </Link>
+          ))}
+        </div>
+      );
+
+      const RadarsPage = () => (
+        <div className="page" style={{ background: "#eaf7ec" }}>
+          <h1 className="page_title">Radars</h1>
+          {[4, 5].map((gameId) => (
+            <Link
+              key={gameId}
+              className="card"
+              route={GAME_ROUTE}
+              routeParams={{ gameId }}
+            >
+              Partie {gameId} (repérée au radar)
+            </Link>
+          ))}
+        </div>
+      );
+
+      const GamePage = () => {
+        const { gameId } = GAME_ROUTE.paramsSignal.value;
+        return (
+          <div className="page" style={{ background: "#fdf0e8" }}>
+            <div className="page_top_bar">
+              <GoBackButton />
+              <strong>Partie {gameId}</strong>
+            </div>
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className="page_row">
+                Partie {gameId} — coup {index + 1}
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      const ReglagesPage = () => (
+        <div className="page" style={{ background: "#f3e8fe" }}>
+          <div className="page_top_bar">
+            <GoBackButton />
+            <strong>Réglages</strong>
+          </div>
+          {["Son", "Notifications", "Thème", "Langue"].map((label) => (
+            <div key={label} className="page_row">
+              {label}
+            </div>
+          ))}
+        </div>
+      );
+
+      // The page has no route of its own: it opens on the first tab.
+      const AppIndex = () => {
+        useLayoutEffect(() => {
+          PARTIES_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const TabBar = () => (
+        <div className="tab_bar">
+          <Nav className="tab_row" expand currentIndicator>
+            <Link variant="tab" route={PARTIES_ROUTE} padding="m">
+              Mes parties
+            </Link>
+            <Link variant="tab" route={RADARS_ROUTE} padding="m">
+              Radars
+            </Link>
+            <Link variant="tab" route={REGLAGES_ROUTE} padding="m">
+              Réglages
+            </Link>
+          </Nav>
+        </div>
+      );
+
+      const SPEEDS = [
+        { label: "normale (300ms)", value: "300ms" },
+        { label: "lente (1s)", value: "1000ms" },
+        { label: "très lente (2,5s)", value: "2500ms" },
+      ];
+      const SPEED_STORAGE_KEY = "route_transition_demo_speed";
+      const SpeedPicker = () => {
+        const [speed, setSpeed] = useState(
+          () => localStorage.getItem(SPEED_STORAGE_KEY) || SPEEDS[0].value,
+        );
+        useLayoutEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-route-transition-duration",
+            speed,
+          );
+          localStorage.setItem(SPEED_STORAGE_KEY, speed);
+        }, [speed]);
+        return (
+          <label>
+            Durée{" "}
+            <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
+              {SPEEDS.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      };
+
+      const App = () => (
+        <>
+          <div className="furniture">
+            <DemoHeader title="routeTransition" />
+            <div className="furniture_row">
+              <pre className="steps_declaration">
+                {[
+                  `routeTransition({ steps: [[PARTIES, GAME], [RADARS, GAME]] });`,
+                  `routeTransition({ steps: [[PARTIES, RÉGLAGES], [RADARS, RÉGLAGES]], axis: "y" });`,
+                ].join("\n")}
+              </pre>
+              <SpeedPicker />
+            </div>
+          </div>
+          <div className="app">
+            <Route>
+              <Route route={PARTIES_ROUTE} element={PartiesPage} />
+              <Route route={RADARS_ROUTE} element={RadarsPage} />
+              <Route route={GAME_ROUTE} element={GamePage} />
+              <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
+              <Route fallback element={AppIndex} />
+            </Route>
+          </div>
+          <TabBar />
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

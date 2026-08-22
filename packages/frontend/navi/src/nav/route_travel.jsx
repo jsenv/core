@@ -36,7 +36,6 @@
  * can stay where it is, outside this box, and still move with the finger.
  */
 
-import { options } from "preact";
 import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 import { computed } from "@preact/signals";
 
@@ -49,6 +48,11 @@ import {
   observeAfterRouting,
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
+import {
+  holdRenderingForRouting,
+  releaseRoutingRenderingHold,
+  takeoverRoutingRenderingHold,
+} from "./rendering_hold.js";
 import {
   collectRoutePages,
   freezeRouteRender,
@@ -571,8 +575,7 @@ export const RouteTravel = ({
     const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
-    const releaseRendering = renderingHeldForRouting || holdRendering();
-    renderingHeldForRouting = null;
+    const releaseRendering = takeoverRoutingRenderingHold();
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered. Watched from
     // here rather than from inside the callback below: the browser calls that
@@ -719,25 +722,14 @@ export const RouteTravel = ({
   }, [pages]);
 
   // Rendering is held for the length of a navigation, so that whatever picture
-  // this box is about to take is of the page being LEFT (see holdRendering).
-  // Held from before the navigation's first write, because by the time a route
-  // announces that it matches, Preact has already been told and the render is
-  // queued — a hold taken then is a hold taken too late.
+  // this box is about to take is of the page being LEFT (see
+  // rendering_hold.js).
   useLayoutEffect(() => {
-    const stopWatchingStart = observeBeforeRouting(() => {
-      renderingHeldForRouting = holdRendering();
-    });
+    const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
     // Nobody may have had a picture to take: this navigation is not always one
-    // this box travels, and a page held for a change it does not animate is a
-    // page that stutters for nothing. Whoever wanted it took it over
-    // (beginTravel) while the change was being applied, and left nothing here.
-    const stopWatchingEnd = observeAfterRouting(() => {
-      const release = renderingHeldForRouting;
-      renderingHeldForRouting = null;
-      if (release) {
-        release();
-      }
-    });
+    // this box travels. Whoever wanted the hold took it over (beginTravel)
+    // while the change was being applied, and left nothing here.
+    const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
     return () => {
       stopWatchingStart();
       stopWatchingEnd();
@@ -1357,52 +1349,6 @@ const releaseTravelGeometry = () => {
   for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
     style.removeProperty(property);
   }
-};
-
-// The browser does not take the picture of the page being left when a
-// transition is ASKED for — it takes it at the next frame, just before running
-// the update callback. Preact renders sooner than that, in a microtask: so a
-// change nobody here asked for (a tab pressed, the back button) has already
-// reached the DOM when the picture is taken, and the picture is of the page
-// ARRIVING. Both sides of the travel then show it, and one watches a page slide
-// onto itself.
-//
-// So what Preact has queued waits until the update callback, which is the
-// moment the API is built around — the change belongs inside it. The whole
-// document is held, for the one frame the browser needs: it is about to be
-// frozen under a picture anyway.
-let renderingHold = null;
-// The hold a navigation took on its way in, until a travel takes it over or the
-// navigation turns out to be one nobody here animates.
-let renderingHeldForRouting = null;
-const holdRendering = () => {
-  if (renderingHold) {
-    return renderingHold.release;
-  }
-  const debounceRenderingBefore = options.debounceRendering;
-  const hold = {
-    render: null,
-    release: () => {
-      // Only the hold that is still standing may be given back: a travel
-      // ending after another has taken over must not let go of what it does
-      // not hold.
-      if (renderingHold !== hold) {
-        return;
-      }
-      renderingHold = null;
-      options.debounceRendering = debounceRenderingBefore;
-      const { render } = hold;
-      hold.render = null;
-      if (render) {
-        render();
-      }
-    },
-  };
-  renderingHold = hold;
-  options.debounceRendering = (render) => {
-    hold.render = render;
-  };
-  return hold.release;
 };
 
 // The animations of the pictures, asked for again until there are some: they

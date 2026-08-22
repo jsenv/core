@@ -1,0 +1,336 @@
+/**
+ * How two routes move against each other, said as pairs — without putting
+ * them in a row, and without a box in the tree.
+ *
+ * A page one goes INTO (a game, a profile, a place) slides in from the right,
+ * and slides back out when one leaves it — wherever one opened it from. That
+ * is a fact about PAIRS of pages, and only about the pairs it is written for:
+ *
+ *   routeTransition({
+ *     steps: [
+ *       [MY_GAMES_PAGE, GAME_PAGE],
+ *       [RADAR_PAGE, GAME_PAGE],
+ *     ],
+ *   });
+ *
+ * Going from the first page of a pair to the second is a step forward, the
+ * reverse is a step back, and two pages never written in the same pair play
+ * nothing between each other — two tabs of a bottom bar are side by side,
+ * neither is before the other, and being animated by the same mechanism does
+ * not order them. This is what tells this apart from <RouteTravel>: a travel
+ * box is a ROW — a total order, plus a drag gesture that walks it — while this
+ * declares individual relations and nothing else.
+ *
+ * There is no box: what slides is the document itself (its `root` view
+ * transition group). Anything that must NOT slide — a fixed bar, a header —
+ * stays still by carrying a `view-transition-name` of its own: named, it is a
+ * picture of its own, animated from where it was to where it is, which for a
+ * bar that does not move is standing still.
+ *
+ * The URL leads and the picture follows, as everywhere in navi: the change is
+ * a navigation somebody else started (a <Link>, the back button), this only
+ * watches it land and photographs the page being left in time (see
+ * rendering_hold.js for how the picture is kept honest). A browser without
+ * view transitions navigates without the movement.
+ */
+
+import { computed } from "@preact/signals";
+
+import {
+  observeAfterRouting,
+  observeBeforeRouting,
+} from "./browser_integration/before_routing.js";
+import { observeRouteRender } from "./route.jsx";
+import {
+  holdRenderingForRouting,
+  releaseRoutingRenderingHold,
+  takeoverRoutingRenderingHold,
+} from "./rendering_hold.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
+
+const startViewTransition = ensureDocumentStartViewTransition();
+
+const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
+const TRANSITION_AXIS_ATTRIBUTE = "data-navi-route-transition-axis";
+
+const css = /* css */ `
+  /* Only while a transition of OURS is playing: everything below changes how
+     the document animates, and the document belongs to the application the
+     rest of the time. */
+  :root[${TRANSITION_ATTRIBUTE}] {
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      /* The default cross-fade, dropped: two pages sliding past each other are
+         two solid things, and seeing through one to the other says they are
+         the same page changing its mind. */
+      mix-blend-mode: normal;
+      animation-duration: var(--navi-route-transition-duration, 300ms);
+      animation-timing-function: ease;
+      animation-fill-mode: both;
+    }
+  }
+  :root[${TRANSITION_ATTRIBUTE}="forward"] {
+    &::view-transition-old(root) {
+      animation-name: navi-route-transition-leave-towards-start;
+    }
+    &::view-transition-new(root) {
+      animation-name: navi-route-transition-enter-from-end;
+    }
+  }
+  :root[${TRANSITION_ATTRIBUTE}="back"] {
+    &::view-transition-old(root) {
+      animation-name: navi-route-transition-leave-towards-end;
+    }
+    &::view-transition-new(root) {
+      animation-name: navi-route-transition-enter-from-start;
+    }
+  }
+
+  /* The same four movements, along the other axis: the start of a column is
+     its top, so going forward there is the page rising and the next one coming
+     up from below. */
+  :root[${TRANSITION_AXIS_ATTRIBUTE}="y"] {
+    &[${TRANSITION_ATTRIBUTE}="forward"] {
+      &::view-transition-old(root) {
+        animation-name: navi-route-transition-leave-towards-top;
+      }
+      &::view-transition-new(root) {
+        animation-name: navi-route-transition-enter-from-bottom;
+      }
+    }
+    &[${TRANSITION_ATTRIBUTE}="back"] {
+      &::view-transition-old(root) {
+        animation-name: navi-route-transition-leave-towards-bottom;
+      }
+      &::view-transition-new(root) {
+        animation-name: navi-route-transition-enter-from-top;
+      }
+    }
+  }
+
+  @keyframes navi-route-transition-leave-towards-start {
+    to {
+      translate: -100% 0;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-end {
+    from {
+      translate: 100% 0;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-end {
+    to {
+      translate: 100% 0;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-start {
+    from {
+      translate: -100% 0;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-top {
+    to {
+      translate: 0 -100%;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-bottom {
+    from {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-bottom {
+    to {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-top {
+    from {
+      translate: 0 -100%;
+    }
+  }
+`;
+
+/**
+ * Declare how pairs of routes move against each other.
+ *
+ * @param {Object} options
+ * @param {Array<[from, to]>} options.steps - the pairs. Each side is a route,
+ *   or `{ route, params }` when the page is a param of a route rather than a
+ *   route of its own. Going from `from` to `to` plays forward, the reverse
+ *   plays back, and a change between two pages not written in the same pair
+ *   plays nothing.
+ * @param {"x"|"y"} [options.axis="x"] - which way the pages slide.
+ * @returns {() => void} stop declaring it.
+ */
+export const routeTransition = ({ steps, axis = "x" }) => {
+  import.meta.css = css;
+  const stepList = steps.map(([from, to]) => [
+    normalizePage(from),
+    normalizePage(to),
+  ]);
+  // Every page any pair mentions, each once: the position of the current page
+  // in this list is what turns "some signal moved" into "the document went
+  // from page A to page B".
+  const pages = [];
+  for (const [from, to] of stepList) {
+    if (pageIndexOf(pages, from) === -1) {
+      pages.push(from);
+    }
+    if (pageIndexOf(pages, to) === -1) {
+      pages.push(to);
+    }
+  }
+
+  const beginTransition = ({ page, direction }) => {
+    const transition = {};
+    currentTransition = transition;
+    document.documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
+    document.documentElement.setAttribute(TRANSITION_AXIS_ATTRIBUTE, axis);
+    const releaseRendering = takeoverRoutingRenderingHold();
+    // Armed from here rather than from inside the callback below: the browser
+    // calls that callback a frame later, and a navigation that has already
+    // been decided renders its page in between — a wait armed then waits for
+    // something that has already happened.
+    const renderWait = armRouteRenderWait();
+    const viewTransition = startViewTransition(async () => {
+      // The picture the browser is about to take must be of the page that was
+      // asked for, and a route matching is not yet a page rendered. Whatever
+      // is awaited here must be able to resolve without a frame: the document
+      // is frozen for the whole of this callback.
+      try {
+        releaseRendering();
+        if (pageIsCurrent(page)) {
+          await renderWait.rendered;
+        }
+      } finally {
+        renderWait.stop();
+      }
+    });
+    const end = () => {
+      // Whatever ends it — played out, skipped by another transition starting,
+      // failed before its callback ever ran — the hold is given back and the
+      // document is handed back to the application. Both are idempotent, and
+      // the attributes belong to the LAST transition begun: an earlier one
+      // ending late must not strip what a later one is wearing.
+      renderWait.stop();
+      releaseRendering();
+      if (currentTransition === transition) {
+        currentTransition = null;
+        document.documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+        document.documentElement.removeAttribute(TRANSITION_AXIS_ATTRIBUTE);
+      }
+    };
+    viewTransition.finished.then(end, end);
+  };
+
+  const currentIndexSignal = computed(() => currentPageIndex(pages));
+  let currentIndex;
+  let firstReading = true;
+  const onMove = (index) => {
+    const fromIndex = currentIndex;
+    currentIndex = index;
+    if (firstReading) {
+      // Where the document already is — nothing changed, there is nothing to
+      // animate.
+      firstReading = false;
+      return;
+    }
+    if (index === -1 || fromIndex === -1 || fromIndex === index) {
+      return;
+    }
+    const fromPage = pages[fromIndex];
+    const page = pages[index];
+    const direction = directionOfStep(stepList, fromPage, page);
+    if (!direction) {
+      // No pair says anything about these two: they are side by side, and
+      // silence is the fact — not a missing case.
+      return;
+    }
+    beginTransition({ page, direction });
+  };
+  // `subscribe` rather than `effect`: it hands the value to a callback that is
+  // not being tracked, and starting a view transition releases holds that make
+  // the very signals this is watched through move again.
+  const unsubscribe = currentIndexSignal.subscribe(onMove);
+  // The picture of the page being left has to be honest, so rendering is held
+  // from before the navigation's first write (see rendering_hold.js) — and
+  // given back right away when the change turns out to be one no pair here
+  // animates.
+  const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
+  const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
+  return () => {
+    unsubscribe();
+    stopWatchingStart();
+    stopWatchingEnd();
+  };
+};
+
+// The transition whose direction the document is currently wearing. One per
+// document, as with view transitions themselves: a new one starting takes the
+// attributes over, and only their owner may take them off.
+let currentTransition = null;
+
+// A route matching is a signal changing; how many passes Preact takes to
+// answer it is its own business, and the render is the moment the picture can
+// be taken. Listening starts before the change, or a render landing while the
+// change settles is a render nobody heard.
+const armRouteRenderWait = () => {
+  let stopListening;
+  const rendered = new Promise((resolve) => {
+    stopListening = observeRouteRender(resolve);
+  });
+  return { rendered, stop: () => stopListening() };
+};
+
+const normalizePage = (page) =>
+  page.isRoute ? { route: page, params: undefined } : page;
+
+// Two pages are the same page when they select the same thing, not when they
+// were written by the same hand.
+const samePage = (a, b) => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.route === b.route && compareTwoJsValues(a.params, b.params);
+};
+const pageIndexOf = (pages, page) =>
+  pages.findIndex((candidate) => samePage(candidate, page));
+
+const directionOfStep = (stepList, fromPage, toPage) => {
+  for (const [from, to] of stepList) {
+    if (samePage(from, fromPage) && samePage(to, toPage)) {
+      return "forward";
+    }
+    if (samePage(from, toPage) && samePage(to, fromPage)) {
+      return "back";
+    }
+  }
+  return null;
+};
+
+// Whether this page is the one on screen — same reading as route_travel.jsx's
+// own: matchingSignal is the necessary condition and is read whatever happens,
+// params only for a route that matches (the params of a route that does not
+// match are not params).
+const pageIsCurrent = ({ route, params }) => {
+  if (!route.matchingSignal.value) {
+    return false;
+  }
+  return params ? route.matchesParams(params) : true;
+};
+// The FIRST page that answers, and every page read all the same: a page that
+// is not the current one today is the one that must wake the reader tomorrow.
+const currentPageIndex = (pages) => {
+  let currentIndex = -1;
+  for (let i = 0; i < pages.length; i++) {
+    const isCurrent = pageIsCurrent(pages[i]);
+    if (isCurrent && currentIndex === -1) {
+      currentIndex = i;
+    }
+  }
+  return currentIndex;
+};
