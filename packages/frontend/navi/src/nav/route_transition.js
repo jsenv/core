@@ -1,30 +1,26 @@
 /**
- * How two routes move against each other, said as pairs — without putting
- * them in a row, and without a box in the tree.
+ * How two routes move against each other, said one relation at a time —
+ * without putting them in a row, and without a box in the tree.
  *
  * A page one goes INTO (a game, a profile, a place) is entered from wherever
- * one opened it, and left back out the same way. That is a fact about PAIRS of
- * pages, and only about the pairs it is written for:
+ * one opened it, and left back out the same way. That is a fact about a PAIR
+ * of pages, and only about the pairs it is written for:
  *
- *   routeTransition({
- *     steps: [
- *       [MY_GAMES_PAGE, GAME_PAGE],
- *       [RADAR_PAGE, GAME_PAGE],
- *     ],
- *     type: "slide-x",
- *   });
+ *   defineRouteTransition({ from: MY_GAMES_PAGE, to: GAME_PAGE, type: "slide-x" });
+ *   defineRouteTransition({ from: RADAR_PAGE, to: GAME_PAGE, type: "slide-x" });
  *
- * Going from the first page of a pair to the second is a step forward, the
- * reverse is a step back, and two pages never written in the same pair play
- * nothing between each other — two tabs of a bottom bar are side by side,
- * neither is before the other, and being animated by the same mechanism does
- * not order them. This is what tells this apart from <RouteTravel>: a travel
- * box is a ROW — a total order, plus a drag gesture that walks it — while this
- * declares individual relations and nothing else.
+ * Going from `from` to `to` plays forward, the reverse plays back, and two
+ * pages never written in the same relation play nothing between each other —
+ * two tabs of a bottom bar are side by side, neither is before the other, and
+ * being animated by the same mechanism does not order them. This is what tells
+ * this apart from <RouteTravel>: a travel box is a ROW — a total order, plus a
+ * drag gesture that walks it — while this declares individual relations and
+ * nothing else.
  *
- * The pairs say WHEN something plays and which way; `type` says WHAT plays — a
- * slide navi ships, or a name the application defines in its own CSS (see the
- * JSDoc below). Said without a type, a pair plays the browser's cross-fade.
+ * The relation says WHEN something plays and which way; `type` says WHAT plays
+ * — a movement navi ships, or a name the application defines in its own CSS
+ * (see the JSDoc below). Said without a type, the relation plays the browser's
+ * cross-fade.
  *
  * There is no box: what animates is the document itself (its `root` view
  * transition group). Anything that must NOT move — a fixed bar, a header —
@@ -37,6 +33,11 @@
  * watches it land and photographs the page being left in time (see
  * rendering_hold.js for how the picture is kept honest). A browser without
  * view transitions navigates without the movement.
+ *
+ * However many relations are defined, there is ONE watcher: every definition
+ * lands in a shared registry, and the watcher is rebuilt over the whole of it
+ * — a navigation is a single fact about the document, and the first relation
+ * that speaks about it answers for it.
  */
 
 import { computed } from "@preact/signals";
@@ -63,7 +64,7 @@ const css = /* css */ `
   /* Only while a transition of OURS is playing: everything below changes how
      the document animates, and the document belongs to the application the
      rest of the time. The duration is written here, on the direction alone, so
-     a pair with no type — the browser's cross-fade — answers to
+     a relation with no type — the browser's cross-fade — answers to
      --navi-route-transition-duration like every other. */
   :root[${TRANSITION_ATTRIBUTE}] {
     &::view-transition-old(root),
@@ -72,7 +73,7 @@ const css = /* css */ `
     }
   }
 
-  /* The two slides navi ships. Anything else written as a type belongs to the
+  /* The movements navi ships. Anything else written as a type belongs to the
      application: the attributes are on the root either way, and its CSS picks
      them up exactly as these rules do. */
   :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
@@ -128,6 +129,26 @@ const css = /* css */ `
     }
   }
 
+  /* Going deeper is coming closer: the page arriving lands from slightly too
+     big, and going back it is the page leaving that grows away. The other side
+     keeps the browser's own fade under it. */
+  :root[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      animation-fill-mode: both;
+    }
+    &[${TRANSITION_ATTRIBUTE}="forward"] {
+      &::view-transition-new(root) {
+        animation-name: navi-route-transition-zoom-in;
+      }
+    }
+    &[${TRANSITION_ATTRIBUTE}="back"] {
+      &::view-transition-old(root) {
+        animation-name: navi-route-transition-zoom-out;
+      }
+    }
+  }
+
   @keyframes navi-route-transition-leave-towards-start {
     to {
       translate: -100% 0;
@@ -168,44 +189,80 @@ const css = /* css */ `
       translate: 0 -100%;
     }
   }
+  @keyframes navi-route-transition-zoom-in {
+    from {
+      opacity: 0;
+      scale: 1.1;
+    }
+  }
+  @keyframes navi-route-transition-zoom-out {
+    to {
+      opacity: 0;
+      scale: 1.1;
+    }
+  }
 `;
 
 /**
- * Declare how pairs of routes move against each other.
+ * Declare how a pair of routes moves against each other.
  *
  * @param {Object} options
- * @param {Array<[from, to]>} options.steps - the pairs. Each side is a route,
- *   or `{ route, params }` when the page is a param of a route rather than a
- *   route of its own. Going from `from` to `to` plays forward, the reverse
- *   plays back, and a change between two pages not written in the same pair
- *   plays nothing.
- * @param {string} [options.type] - what plays when a pair does. Omitted, the
- *   browser's own cross-fade. `"slide-x"` and `"slide-y"` ship with navi: the
- *   pages slide past each other, forward towards the start of the axis. Any
- *   other name belongs to the application: for the length of the transition
- *   the root carries `data-navi-route-transition-type="<type>"` next to
+ * @param {object} options.from - a route, or `{ route, params }` when the page
+ *   is a param of a route rather than a route of its own.
+ * @param {object} options.to - same forms. Going from `from` to `to` plays
+ *   forward, the reverse plays back, and a change between two pages no
+ *   relation was defined for plays nothing.
+ * @param {string} [options.type] - what plays. Omitted, the browser's own
+ *   cross-fade. Shipped with navi: `"slide-x"` and `"slide-y"` (the pages
+ *   slide past each other, forward towards the start of the axis) and
+ *   `"zoom"` (the deeper page is the closer one). Any other name belongs to
+ *   the application: for the length of the transition the root carries
+ *   `data-navi-route-transition-type="<type>"` next to
  *   `data-navi-route-transition="forward"|"back"`, and the application's CSS
  *   defines the movement against the document's view transition
  *   pseudo-elements:
  *
- *     :root[data-navi-route-transition-type="zoom"][data-navi-route-transition="forward"] {
+ *     :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
  *       &::view-transition-new(root) {
- *         animation-name: my-zoom-in;
+ *         animation-name: my-spin-in;
  *       }
  *     }
- * @returns {() => void} stop declaring it.
+ * @returns {() => void} remove this relation.
  */
-export const routeTransition = ({ steps, type }) => {
+export const defineRouteTransition = ({ from, to, type }) => {
   import.meta.css = css;
-  const stepList = steps.map(([from, to]) => [
-    normalizePage(from),
-    normalizePage(to),
-  ]);
-  // Every page any pair mentions, each once: the position of the current page
-  // in this list is what turns "some signal moved" into "the document went
-  // from page A to page B".
+  const relation = {
+    from: normalizePage(from),
+    to: normalizePage(to),
+    type,
+  };
+  relations.push(relation);
+  rebuildWatcher();
+  return () => {
+    const index = relations.indexOf(relation);
+    if (index > -1) {
+      relations.splice(index, 1);
+      rebuildWatcher();
+    }
+  };
+};
+
+// Every relation defined, and the single watcher standing over all of them.
+const relations = [];
+let watcher = null;
+const rebuildWatcher = () => {
+  if (watcher) {
+    watcher.stop();
+    watcher = null;
+  }
+  if (relations.length === 0) {
+    return;
+  }
+  // Every page any relation mentions, each once: the position of the current
+  // page in this list is what turns "some signal moved" into "the document
+  // went from page A to page B".
   const pages = [];
-  for (const [from, to] of stepList) {
+  for (const { from, to } of relations) {
     if (pageIndexOf(pages, from) === -1) {
       pages.push(from);
     }
@@ -213,51 +270,6 @@ export const routeTransition = ({ steps, type }) => {
       pages.push(to);
     }
   }
-
-  const beginTransition = ({ page, direction }) => {
-    const transition = {};
-    currentTransition = transition;
-    document.documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
-    if (type) {
-      document.documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
-    }
-    const releaseRendering = takeoverRoutingRenderingHold();
-    // Armed from here rather than from inside the callback below: the browser
-    // calls that callback a frame later, and a navigation that has already
-    // been decided renders its page in between — a wait armed then waits for
-    // something that has already happened.
-    const renderWait = armRouteRenderWait();
-    const viewTransition = startViewTransition(async () => {
-      // The picture the browser is about to take must be of the page that was
-      // asked for, and a route matching is not yet a page rendered. Whatever
-      // is awaited here must be able to resolve without a frame: the document
-      // is frozen for the whole of this callback.
-      try {
-        releaseRendering();
-        if (pageIsCurrent(page)) {
-          await renderWait.rendered;
-        }
-      } finally {
-        renderWait.stop();
-      }
-    });
-    const end = () => {
-      // Whatever ends it — played out, skipped by another transition starting,
-      // failed before its callback ever ran — the hold is given back and the
-      // document is handed back to the application. Both are idempotent, and
-      // the attributes belong to the LAST transition begun: an earlier one
-      // ending late must not strip what a later one is wearing.
-      renderWait.stop();
-      releaseRendering();
-      if (currentTransition === transition) {
-        currentTransition = null;
-        document.documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
-        document.documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
-      }
-    };
-    viewTransition.finished.then(end, end);
-  };
-
   const currentIndexSignal = computed(() => currentPageIndex(pages));
   let currentIndex;
   let firstReading = true;
@@ -266,22 +278,25 @@ export const routeTransition = ({ steps, type }) => {
     currentIndex = index;
     if (firstReading) {
       // Where the document already is — nothing changed, there is nothing to
-      // animate.
+      // animate. Also the first reading after a definition landed mid-life:
+      // the watcher is standing again on whatever page is current.
       firstReading = false;
       return;
     }
     if (index === -1 || fromIndex === -1 || fromIndex === index) {
       return;
     }
-    const fromPage = pages[fromIndex];
-    const page = pages[index];
-    const direction = directionOfStep(stepList, fromPage, page);
-    if (!direction) {
-      // No pair says anything about these two: they are side by side, and
+    const found = findRelation(pages[fromIndex], pages[index]);
+    if (!found) {
+      // No relation says anything about these two: they are side by side, and
       // silence is the fact — not a missing case.
       return;
     }
-    beginTransition({ page, direction });
+    beginTransition({
+      page: pages[index],
+      direction: found.direction,
+      type: found.type,
+    });
   };
   // `subscribe` rather than `effect`: it hands the value to a callback that is
   // not being tracked, and starting a view transition releases holds that make
@@ -289,21 +304,80 @@ export const routeTransition = ({ steps, type }) => {
   const unsubscribe = currentIndexSignal.subscribe(onMove);
   // The picture of the page being left has to be honest, so rendering is held
   // from before the navigation's first write (see rendering_hold.js) — and
-  // given back right away when the change turns out to be one no pair here
+  // given back right away when the change turns out to be one no relation
   // animates.
   const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
   const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
-  return () => {
-    unsubscribe();
-    stopWatchingStart();
-    stopWatchingEnd();
+  watcher = {
+    stop: () => {
+      unsubscribe();
+      stopWatchingStart();
+      stopWatchingEnd();
+    },
   };
+};
+
+// The first relation that speaks about this pair answers for it.
+const findRelation = (fromPage, toPage) => {
+  for (const { from, to, type } of relations) {
+    if (samePage(from, fromPage) && samePage(to, toPage)) {
+      return { direction: "forward", type };
+    }
+    if (samePage(from, toPage) && samePage(to, fromPage)) {
+      return { direction: "back", type };
+    }
+  }
+  return null;
 };
 
 // The transition whose direction the document is currently wearing. One per
 // document, as with view transitions themselves: a new one starting takes the
 // attributes over, and only their owner may take them off.
 let currentTransition = null;
+
+const beginTransition = ({ page, direction, type }) => {
+  const transition = {};
+  currentTransition = transition;
+  document.documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
+  if (type) {
+    document.documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+  }
+  const releaseRendering = takeoverRoutingRenderingHold();
+  // Armed from here rather than from inside the callback below: the browser
+  // calls that callback a frame later, and a navigation that has already
+  // been decided renders its page in between — a wait armed then waits for
+  // something that has already happened.
+  const renderWait = armRouteRenderWait();
+  const viewTransition = startViewTransition(async () => {
+    // The picture the browser is about to take must be of the page that was
+    // asked for, and a route matching is not yet a page rendered. Whatever
+    // is awaited here must be able to resolve without a frame: the document
+    // is frozen for the whole of this callback.
+    try {
+      releaseRendering();
+      if (pageIsCurrent(page)) {
+        await renderWait.rendered;
+      }
+    } finally {
+      renderWait.stop();
+    }
+  });
+  const end = () => {
+    // Whatever ends it — played out, skipped by another transition starting,
+    // failed before its callback ever ran — the hold is given back and the
+    // document is handed back to the application. Both are idempotent, and
+    // the attributes belong to the LAST transition begun: an earlier one
+    // ending late must not strip what a later one is wearing.
+    renderWait.stop();
+    releaseRendering();
+    if (currentTransition === transition) {
+      currentTransition = null;
+      document.documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+      document.documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+    }
+  };
+  viewTransition.finished.then(end, end);
+};
 
 // A route matching is a signal changing; how many passes Preact takes to
 // answer it is its own business, and the render is the moment the picture can
@@ -333,18 +407,6 @@ const samePage = (a, b) => {
 };
 const pageIndexOf = (pages, page) =>
   pages.findIndex((candidate) => samePage(candidate, page));
-
-const directionOfStep = (stepList, fromPage, toPage) => {
-  for (const [from, to] of stepList) {
-    if (samePage(from, fromPage) && samePage(to, toPage)) {
-      return "forward";
-    }
-    if (samePage(from, toPage) && samePage(to, fromPage)) {
-      return "back";
-    }
-  }
-  return null;
-};
 
 // Whether this page is the one on screen — same reading as route_travel.jsx's
 // own: matchingSignal is the necessary condition and is read whatever happens,

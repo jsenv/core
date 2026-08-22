@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>routeTransition Demo</title>
+    <title>defineRouteTransition Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       * {
@@ -101,34 +101,36 @@
         border-radius: 8px;
       }
 
-      /* Le type "zoom" est à la page, pas à navi : les deux attributs sont sur
+      /* Le type "spin" est à la page, pas à navi : les deux attributs sont sur
          la racine pendant la transition, et ce CSS définit le mouvement. */
-      :root[data-navi-route-transition-type="zoom"] {
+      :root[data-navi-route-transition-type="spin"] {
         &::view-transition-old(root),
         &::view-transition-new(root) {
           animation-fill-mode: both;
         }
       }
-      :root[data-navi-route-transition-type="zoom"][data-navi-route-transition="forward"] {
+      :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
         &::view-transition-new(root) {
-          animation-name: demo-zoom-in;
+          animation-name: demo-spin-in;
         }
       }
-      :root[data-navi-route-transition-type="zoom"][data-navi-route-transition="back"] {
+      :root[data-navi-route-transition-type="spin"][data-navi-route-transition="back"] {
         &::view-transition-old(root) {
-          animation-name: demo-zoom-out;
+          animation-name: demo-spin-out;
         }
       }
-      @keyframes demo-zoom-in {
+      @keyframes demo-spin-in {
         from {
           opacity: 0;
-          scale: 1.1;
+          scale: 0.9;
+          rotate: 6deg;
         }
       }
-      @keyframes demo-zoom-out {
+      @keyframes demo-spin-out {
         to {
           opacity: 0;
-          scale: 1.1;
+          scale: 0.9;
+          rotate: 6deg;
         }
       }
     </style>
@@ -142,8 +144,8 @@
         Link,
         Nav,
         Route,
+        defineRouteTransition,
         route,
-        routeTransition,
         setupRoutes,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
@@ -153,6 +155,7 @@
       const GAME_ROUTE = route("/games/:gameId");
       const PROFIL_ROUTE = route("/profil");
       const BADGES_ROUTE = route("/badges");
+      const STATS_ROUTE = route("/stats");
       const REGLAGES_ROUTE = route("/reglages");
       setupRoutes([
         PARTIES_ROUTE,
@@ -160,38 +163,52 @@
         GAME_ROUTE,
         PROFIL_ROUTE,
         BADGES_ROUTE,
+        STATS_ROUTE,
         REGLAGES_ROUTE,
       ]);
 
       // A game is a page one goes INTO, wherever one opens it from — and the
-      // two tabs of the bottom bar are side by side: no pair says anything
+      // two tabs of the bottom bar are side by side: no relation says anything
       // about "parties" and "radars", so nothing plays between them.
-      routeTransition({
-        steps: [
-          [PARTIES_ROUTE, GAME_ROUTE],
-          [RADARS_ROUTE, GAME_ROUTE],
-        ],
+      defineRouteTransition({
+        from: PARTIES_ROUTE,
+        to: GAME_ROUTE,
         type: "slide-x",
       });
-      routeTransition({
-        steps: [
-          [PARTIES_ROUTE, REGLAGES_ROUTE],
-          [RADARS_ROUTE, REGLAGES_ROUTE],
-          [PROFIL_ROUTE, REGLAGES_ROUTE],
-        ],
+      defineRouteTransition({
+        from: RADARS_ROUTE,
+        to: GAME_ROUTE,
+        type: "slide-x",
+      });
+      defineRouteTransition({
+        from: PARTIES_ROUTE,
+        to: REGLAGES_ROUTE,
+        type: "slide-y",
+      });
+      defineRouteTransition({
+        from: RADARS_ROUTE,
+        to: REGLAGES_ROUTE,
+        type: "slide-y",
+      });
+      defineRouteTransition({
+        from: PROFIL_ROUTE,
+        to: REGLAGES_ROUTE,
         type: "slide-y",
       });
       // Pas de type : le cross-fade du navigateur.
-      routeTransition({
-        steps: [
-          [PARTIES_ROUTE, PROFIL_ROUTE],
-          [RADARS_ROUTE, PROFIL_ROUTE],
-        ],
+      defineRouteTransition({ from: PARTIES_ROUTE, to: PROFIL_ROUTE });
+      defineRouteTransition({ from: RADARS_ROUTE, to: PROFIL_ROUTE });
+      // "zoom" est fourni par navi.
+      defineRouteTransition({
+        from: PROFIL_ROUTE,
+        to: BADGES_ROUTE,
+        type: "zoom",
       });
       // Un type à soi, défini dans le CSS de cette page.
-      routeTransition({
-        steps: [[PROFIL_ROUTE, BADGES_ROUTE]],
-        type: "zoom",
+      defineRouteTransition({
+        from: PROFIL_ROUTE,
+        to: STATS_ROUTE,
+        type: "spin",
       });
 
       const GoBackButton = () => (
@@ -269,6 +286,25 @@
           <Link className="card" route={BADGES_ROUTE}>
             Mes badges →
           </Link>
+          <Link className="card" route={STATS_ROUTE}>
+            Statistiques →
+          </Link>
+        </div>
+      );
+
+      const StatsPage = () => (
+        <div className="page" style={{ background: "#fee8ee" }}>
+          <div className="page_top_bar">
+            <GoBackButton />
+            <strong>Statistiques</strong>
+          </div>
+          {["Parties jouées : 42", "Victoires : 28", "Série en cours : 5"].map(
+            (label) => (
+              <div key={label} className="page_row">
+                {label}
+              </div>
+            ),
+          )}
         </div>
       );
 
@@ -347,14 +383,15 @@
       const App = () => (
         <>
           <div className="furniture">
-            <DemoHeader title="routeTransition" />
+            <DemoHeader title="defineRouteTransition" />
             <div className="furniture_row">
               <pre className="steps_declaration">
                 {[
-                  `routeTransition({ steps: [[PARTIES, GAME], [RADARS, GAME]], type: "slide-x" });`,
-                  `routeTransition({ steps: [[PARTIES, RÉGLAGES], [RADARS, RÉGLAGES], [PROFIL, RÉGLAGES]], type: "slide-y" });`,
-                  `routeTransition({ steps: [[PARTIES, PROFIL], [RADARS, PROFIL]] }); // cross-fade`,
-                  `routeTransition({ steps: [[PROFIL, BADGES]], type: "zoom" }); // CSS de la page`,
+                  `defineRouteTransition({ from: PARTIES, to: GAME, type: "slide-x" }); // idem RADARS`,
+                  `defineRouteTransition({ from: PARTIES, to: RÉGLAGES, type: "slide-y" }); // idem RADARS, PROFIL`,
+                  `defineRouteTransition({ from: PARTIES, to: PROFIL }); // cross-fade`,
+                  `defineRouteTransition({ from: PROFIL, to: BADGES, type: "zoom" });`,
+                  `defineRouteTransition({ from: PROFIL, to: STATS, type: "spin" }); // CSS de la page`,
                 ].join("\n")}
               </pre>
               <SpeedPicker />
@@ -367,6 +404,7 @@
               <Route route={GAME_ROUTE} element={GamePage} />
               <Route route={PROFIL_ROUTE} element={ProfilPage} />
               <Route route={BADGES_ROUTE} element={BadgesPage} />
+              <Route route={STATS_ROUTE} element={StatsPage} />
               <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
               <Route fallback element={AppIndex} />
             </Route>
