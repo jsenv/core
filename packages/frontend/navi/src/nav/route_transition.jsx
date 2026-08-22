@@ -61,6 +61,10 @@ import {
   releaseRoutingRenderingHold,
   takeoverRoutingRenderingHold,
 } from "./rendering_hold.js";
+import {
+  holdTransitionWindow,
+  releaseTransitionWindow,
+} from "./transition_window.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 
@@ -90,14 +94,158 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // or the marked area. The guard keeps the two exclusive — with an area marked,
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
-const movementsCSS = (name, guard) => /* css */ `
-  :root${guard} {
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
-      &::view-transition-old(${name}),
-      &::view-transition-new(${name}) {
+
+const css = /* css */ `
+  /* The marked region is a picture of its own during every view transition of
+     the document — which is what keeps it out of the root snapshot, where its
+     place would otherwise be blank. */
+  [data-navi-route-transition-area] {
+    view-transition-name: navi-route-transition;
+  }
+
+  /* Only while a transition of OURS is playing: everything below changes how
+     the document animates, and the document belongs to the application the
+     rest of the time. */
+  :root[data-navi-route-transition] {
+    /* With an area marked, the page AROUND it is not taken as a picture — so
+       exactly one of the two names below exists at a time, and the movements
+       can be written once for both. It is also what a fixed bar wants: a
+       captured element is not painted where it stands and cannot be pointed
+       at either, so a bar photographed with the document is dead for the
+       length of every transition. Left live, it answers as it always did, and
+       nothing shows through where the pages are — the two pictures cover the
+       area's rectangle between them at every moment. Anything around that must
+       ANIMATE rather than stand still gets a view-transition-name of its own,
+       and the browser moves it on the same clock. */
+    &[data-navi-route-transition-target="area"] {
+      view-transition-name: none;
+    }
+
+    &::view-transition-old(root),
+    &::view-transition-new(root),
+    &::view-transition-old(navi-route-transition),
+    &::view-transition-new(navi-route-transition) {
+      /* Written on the direction alone, so a relation with no type — the
+         browser's cross-fade — answers to it like every other. */
+      animation-duration: var(--navi-route-transition-duration, 300ms);
+    }
+
+    /* The window the pages are seen through, when it is an area. Nothing here
+       names \`root\`: the root picture IS the window when the whole document
+       travels, already the size of the screen and already cut by it. */
+    &::view-transition-group(navi-route-transition),
+    &::view-transition-image-pair(navi-route-transition) {
+      /* The pages are cut at the edge of the area they move in. Said HERE and
+         nowhere else: these pictures are drawn in the top layer, so no
+         overflow on any element of the document can reach them. */
+      overflow: clip;
+    }
+    &::view-transition-group(navi-route-transition) {
+      /* Held still for the whole transition, at the taller of the two states,
+         and standing where the area stands (see transition_window.js). Held by
+         dropping the group's animation rather than by winning against it with
+         !important — which also drops its position animation, fine for an area
+         that stays in the same place from one page to the next. */
+      height: var(--navi-transition-window-height);
+      animation-name: none;
+
+      /* Cut at the safe area, on top of being cut at the area's own box. The
+         pictures are drawn in the top layer, so they cover a fixed bar as
+         easily as anything else — and the area runs UNDER the bars by design:
+         that is what a fixed bar is for, and what the room it gives back is
+         for. An area taller than the screen therefore ends below the bottom
+         bar, and a scrolled one starts above the top bar, so the movement
+         would be watched painting over them for its whole length.
+
+         The band left free is the app's own safe area (see
+         layout/safe_area.js) — every kind of furniture at once, not the bars
+         alone, and read rather than asked for, so one that grows, shrinks or
+         unmounts mid-transition is followed without anything being told. What
+         the window cannot know is only where it itself stands, and that is the
+         measured half. */
+      --navi-route-transition-clip-top: max(
+        0px,
+        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+      );
+      --navi-route-transition-clip-left: max(
+        0px,
+        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+      );
+      --navi-route-transition-clip-bottom: max(
+        0px,
+        var(--navi-transition-window-top) +
+          var(--navi-transition-window-height) +
+          var(--navi-safe-area-inset-bottom) - 100dvh
+      );
+      --navi-route-transition-clip-right: max(
+        0px,
+        var(--navi-transition-window-left) +
+          var(--navi-transition-window-width) +
+          var(--navi-safe-area-inset-right) - 100dvw
+      );
+      clip-path: inset(
+        var(--navi-route-transition-clip-top)
+          var(--navi-route-transition-clip-right)
+          var(--navi-route-transition-clip-bottom)
+          var(--navi-route-transition-clip-left)
+      );
+
+      /* How far a page travels: the WINDOW it is seen through, not its own
+         size. A page is as tall as its content — several screens of it — and a
+         movement measured on the picture would send it thousands of pixels
+         away, off screen for most of the transition and flying past at the
+         end. What one page crossing another means is one window's worth of
+         movement, whatever the pages are made of. Inherited by the pictures,
+         which is where it is used (see the keyframes). */
+      --navi-route-transition-travel-x: calc(
+        var(--navi-transition-window-width) - var(
+            --navi-route-transition-clip-left
+          ) - var(--navi-route-transition-clip-right)
+      );
+      --navi-route-transition-travel-y: calc(
+        var(--navi-transition-window-height) - var(
+            --navi-route-transition-clip-top
+          ) - var(--navi-route-transition-clip-bottom)
+      );
+    }
+    &::view-transition-old(navi-route-transition) {
+      /* Where the area WAS on screen, which is not where the window stands
+         (see transition_window.js). Offset here rather than by \`translate\`,
+         which the movement itself uses. */
+      top: calc(
+        var(--navi-transition-window-old-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+    }
+
+    /* ------------------------------------------------------------------
+       The movements. One of \`root\` and \`navi-route-transition\` exists at a
+       time (see the opt-out above), so each is written for both.
+       ------------------------------------------------------------------ */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
+        width: auto;
+        /* Each picture at the size it was taken at: a page is not resized by
+           the page it crosses. The picture is as wide as the box the browser
+           gives it — the arriving one's — so a page leaving a narrower box (a
+           scrollbar appeared, a side panel closed) would be seen zooming over
+           the length of the movement. Left to the untyped cross-fade, where
+           scaling one picture into the other is the whole idea. */
+        height: auto;
+        object-fit: none;
+        object-position: top left;
         /* The default cross-fade, dropped: two pages sliding past each other
            are two solid things, and seeing through one to the other says they
            are the same page changing its mind. */
@@ -106,184 +254,177 @@ const movementsCSS = (name, guard) => /* css */ `
         animation-fill-mode: both;
       }
     }
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+
+    &[data-navi-route-transition-type="slide-x"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-start;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-end;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-end;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-start;
         }
       }
     }
+
     /* The same four movements, along the other axis: the start of a column is
        its top, so going forward there is the page rising and the next one
        coming up from below. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="slide-y"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-top;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-bottom;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-bottom;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-top;
         }
       }
     }
+
     /* One page over the other, the way a sheet covers a desk: the page
        arriving slides in ON TOP of one that does not move, and going back it
        slides off, uncovering it. The still page is animated all the same — to
        a keyframe that goes nowhere — because left to the browser it would
        fade. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="cover-x"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-end;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           /* The page leaving is the cover: it must slide off ABOVE the one it
-             uncovers, against the browser's default of drawing the new page
-             on top. */
+             uncovers, against the browser's default of drawing the new page on
+             top. */
           z-index: 1;
           animation-name: navi-route-transition-leave-towards-end;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
       }
     }
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="cover-y"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-bottom;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           z-index: 1;
           animation-name: navi-route-transition-leave-towards-bottom;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
       }
     }
+
     /* Going deeper is coming closer: the page arriving lands from slightly too
        big, and going back it is the page leaving that grows away. The other
        side keeps the browser's own fade under it. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
-      &::view-transition-old(${name}),
-      &::view-transition-new(${name}) {
+    &[data-navi-route-transition-type="zoom"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
         animation-fill-mode: both;
       }
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-new(${name}) {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-zoom-in;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-zoom-out;
         }
       }
     }
   }
-`;
 
-const css = /* css */ `
-  /* The marked region is a picture of its own during every view transition of
-     the document — which is what keeps it out of the root snapshot, where its
-     place would be blank. */
-  [${TRANSITION_AREA_ATTRIBUTE}] {
-    view-transition-name: ${AREA_NAME};
-  }
-
-  /* Only while a transition of OURS is playing: everything below changes how
-     the document animates, and the document belongs to the application the
-     rest of the time. The duration is written here, on the direction alone, so
-     a relation with no type — the browser's cross-fade — answers to
-     --navi-route-transition-duration like every other. */
-  :root[${TRANSITION_ATTRIBUTE}] {
-    &::view-transition-old(root),
-    &::view-transition-new(root),
-    &::view-transition-old(${AREA_NAME}),
-    &::view-transition-new(${AREA_NAME}) {
-      animation-duration: var(${TRANSITION_DURATION_PROPERTY}, 300ms);
-    }
-
-    /* The pages are cut at the edge of the area they move in: its pictures are
-       drawn in the top layer, above the bars, and a page sliding in would
-       otherwise be seen crossing them. */
-    &::view-transition-group(${AREA_NAME}),
-    &::view-transition-image-pair(${AREA_NAME}) {
-      overflow: clip;
-    }
-  }
-
-  ${movementsCSS("root", `:not([${TRANSITION_TARGET_ATTRIBUTE}])`)}
-  ${movementsCSS(AREA_NAME, `[${TRANSITION_TARGET_ATTRIBUTE}="area"]`)}
-
+  /* One window's worth of movement. The fallback is the picture's own size,
+     which is what the window is when the whole document travels: the root
+     picture IS the viewport. */
   @keyframes navi-route-transition-leave-towards-start {
     to {
-      translate: -100% 0;
+      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
     }
   }
   @keyframes navi-route-transition-enter-from-end {
     from {
-      translate: 100% 0;
+      translate: var(--navi-route-transition-travel-x, 100%) 0;
     }
   }
   @keyframes navi-route-transition-leave-towards-end {
     to {
-      translate: 100% 0;
+      translate: var(--navi-route-transition-travel-x, 100%) 0;
     }
   }
   @keyframes navi-route-transition-enter-from-start {
     from {
-      translate: -100% 0;
+      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
     }
   }
   @keyframes navi-route-transition-leave-towards-top {
     to {
-      translate: 0 -100%;
+      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
     }
   }
   @keyframes navi-route-transition-enter-from-bottom {
     from {
-      translate: 0 100%;
+      translate: 0 var(--navi-route-transition-travel-y, 100%);
     }
   }
   @keyframes navi-route-transition-leave-towards-bottom {
     to {
-      translate: 0 100%;
+      translate: 0 var(--navi-route-transition-travel-y, 100%);
     }
   }
   @keyframes navi-route-transition-enter-from-top {
     from {
-      translate: 0 -100%;
+      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
     }
   }
   @keyframes navi-route-transition-zoom-in {
@@ -602,8 +743,13 @@ const beginTransition = ({ page, direction, type, duration }) => {
       `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`,
     );
   }
-  if (areaElements.length > 0) {
+  const areaElement = areaElements.length > 0 ? areaElements[0] : null;
+  // The area as it stands before anything moves: rendering is held, so this is
+  // still the page being left (see holdAreaGeometry).
+  let areaRectBefore = null;
+  if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
+    areaRectBefore = areaElement.getBoundingClientRect();
   }
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
@@ -683,6 +829,11 @@ const beginTransition = ({ page, direction, type, duration }) => {
     } finally {
       renderWait.stop();
     }
+    // The page arriving is in the DOM and the transition has not started
+    // playing: the one moment both states of the area can be known.
+    if (areaElement) {
+      holdTransitionWindow(transition, areaElement, areaRectBefore);
+    }
   });
   const end = () => {
     // Whatever ends it — played out, skipped by another transition starting,
@@ -697,6 +848,7 @@ const beginTransition = ({ page, direction, type, duration }) => {
       documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
       documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
       documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+      releaseTransitionWindow(transition);
       if (restoreDuration) {
         restoreDuration();
       }

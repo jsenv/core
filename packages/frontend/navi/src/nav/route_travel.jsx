@@ -49,6 +49,10 @@ import {
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
 import {
+  holdTransitionWindow,
+  releaseTransitionWindow,
+} from "./transition_window.js";
+import {
   holdRenderingForRouting,
   releaseRoutingRenderingHold,
   takeoverRoutingRenderingHold,
@@ -95,26 +99,6 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-// Where the two boxes of a travel stand in the window, published for the
-// length of it. Measurements only: what is DERIVED from them — where a picture
-// goes, what a bar covers — is derived in the CSS below, so the app's own
-// numbers (the room its fixed bars take) can take part in it. Only the
-// measuring needs JS, and only for the one moment both boxes exist (see
-// holdTravelGeometry).
-const TRAVEL_TOP_PROPERTY = "--navi-route-travel-top";
-const TRAVEL_LEFT_PROPERTY = "--navi-route-travel-left";
-const TRAVEL_WIDTH_PROPERTY = "--navi-route-travel-width";
-const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
-const TRAVEL_OLD_TOP_PROPERTY = "--navi-route-travel-old-top";
-const TRAVEL_OLD_LEFT_PROPERTY = "--navi-route-travel-old-left";
-const TRAVEL_GEOMETRY_PROPERTIES = [
-  TRAVEL_TOP_PROPERTY,
-  TRAVEL_LEFT_PROPERTY,
-  TRAVEL_WIDTH_PROPERTY,
-  TRAVEL_HEIGHT_PROPERTY,
-  TRAVEL_OLD_TOP_PROPERTY,
-  TRAVEL_OLD_LEFT_PROPERTY,
-];
 
 const css = /* css */ `
   /* The name that makes the page inside this box a picture of its own during a
@@ -198,10 +182,16 @@ const css = /* css */ `
          would be seen jumping back to its top before it even begins to leave.
          Offset here rather than by \`translate\`, which the movement itself uses,
          and at its own size rather than the group's so that nothing is cut off
-         the far side of the shift (see holdTravelGeometry). */
-      top: calc(var(${TRAVEL_OLD_TOP_PROPERTY}) - var(${TRAVEL_TOP_PROPERTY}));
+         the far side of the shift (see transition_window.js). */
+      top: calc(
+        var(--navi-transition-window-old-top) - var(
+            --navi-transition-window-top
+          )
+      );
       left: calc(
-        var(${TRAVEL_OLD_LEFT_PROPERTY}) - var(${TRAVEL_LEFT_PROPERTY})
+        var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
       );
       width: auto;
     }
@@ -216,7 +206,7 @@ const css = /* css */ `
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see holdTravelGeometry): the group
+         travel at the taller of the two boxes (see transition_window.js): the group
          is what CLIPS, and the browser animates its height from the box being
          left to the box arriving — so the window shrinks under the pictures and
          cuts the page leaving from the bottom, progressively. The box does end
@@ -227,7 +217,7 @@ const css = /* css */ `
          winning against it with !important — which also drops its position
          animation, fine while a travel box stands in the same place from one
          route to the next. */
-      height: var(${TRAVEL_HEIGHT_PROPERTY});
+      height: var(--navi-transition-window-height);
 
       /* Cut at the safe area, on top of being cut at the box. The pictures are
          drawn in the top layer, so they cover a fixed bar as easily as anything
@@ -244,20 +234,22 @@ const css = /* css */ `
          only where it itself stands, and that is the measured half. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(${TRAVEL_TOP_PROPERTY})
+        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(${TRAVEL_LEFT_PROPERTY})
+        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
-        var(${TRAVEL_TOP_PROPERTY}) + var(${TRAVEL_HEIGHT_PROPERTY}) +
+        var(--navi-transition-window-top) +
+          var(--navi-transition-window-height) +
           var(--navi-safe-area-inset-bottom) - 100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
-        var(${TRAVEL_LEFT_PROPERTY}) + var(${TRAVEL_WIDTH_PROPERTY}) +
+        var(--navi-transition-window-left) +
+          var(--navi-transition-window-width) +
           var(--navi-safe-area-inset-right) - 100dvw
       );
       clip-path: inset(
@@ -574,7 +566,7 @@ export const RouteTravel = ({
     }
     pageAskedForRef.current = page;
     // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see holdTravelGeometry).
+    // still the page being left (see transition_window.js).
     const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
@@ -606,7 +598,7 @@ export const RouteTravel = ({
       );
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
-      holdTravelGeometry(elementRef.current, rectBefore);
+      holdTransitionWindow(travel, elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {
@@ -933,7 +925,7 @@ export const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTravelGeometry();
+      releaseTransitionWindow(travel);
     }
   };
 
@@ -1317,41 +1309,6 @@ const releaseHold = (travel) => {
   }
   travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
-};
-
-// The two boxes of a travel, measured at the one moment both exist: the
-// arriving page is in the DOM and the transition has not started playing.
-//
-// The group stands at the ARRIVING box — its own animation is dropped, so it
-// takes the geometry the browser declared for it and holds it for the whole
-// travel. That is why both rectangles have to be published: a group that does
-// not move says nothing about where the page being left was, and its rectangle
-// in the window is the only thing CSS cannot work out on its own.
-const holdTravelGeometry = (element, rectBefore) => {
-  const rectAfter = element.getBoundingClientRect();
-  // The height it is held at is the taller of the two boxes, so neither picture
-  // is ever cut. It cannot be measured from one side alone: a page arriving
-  // shorter than the one it replaces would cut the one leaving, a page arriving
-  // taller would be cut itself.
-  const height =
-    rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
-  const { style } = document.documentElement;
-  style.setProperty(TRAVEL_TOP_PROPERTY, `${rectAfter.top}px`);
-  style.setProperty(TRAVEL_LEFT_PROPERTY, `${rectAfter.left}px`);
-  style.setProperty(TRAVEL_WIDTH_PROPERTY, `${rectAfter.width}px`);
-  style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
-  style.setProperty(TRAVEL_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
-  style.setProperty(TRAVEL_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
-};
-// The live layout takes the box back. A discontinuity by construction — the
-// group stands at the held height, the box is at the new one — and an invisible
-// one: the page arriving is fully in place, and the strip below it that the
-// group still covers shows the page leaving only while it is still on screen.
-const releaseTravelGeometry = () => {
-  const { style } = document.documentElement;
-  for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
-    style.removeProperty(property);
-  }
 };
 
 // The animations of the pictures, asked for again until there are some: they

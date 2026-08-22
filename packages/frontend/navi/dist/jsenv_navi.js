@@ -38399,6 +38399,93 @@ const takeoverRoutingRenderingHold = () => {
   return release;
 };
 
+/**
+ * The window two pages are seen through while one replaces the other, measured
+ * once and published for the length of the movement.
+ *
+ * Both ways of moving from one route to another need the same six numbers, so
+ * they are written under the same names and read by the same CSS formulas —
+ * `route_travel.jsx` for a row a finger pushes, `route_transition.jsx` for a
+ * relation between two pages. Only one of them ever plays at a time (there is
+ * one view transition per document), which is what lets them share the names.
+ *
+ * What the numbers are for:
+ *
+ * - **the box the movement happens in**, in the WINDOW's coordinates. The
+ *   pictures of a transition are drawn in the top layer, above everything, so
+ *   no overflow of the document reaches them: where to cut them can only be
+ *   said from outside the document, and this is where that outside is known.
+ * - **the height it is held at**, the taller of the two states. Left to the
+ *   browser the window's height animates from one to the other, and a window
+ *   that changes size under the pictures cuts the page being left from the
+ *   bottom, progressively. It does end up at the arriving height, and that is
+ *   right; what must not happen is the user watching it get there.
+ * - **where the page being left WAS**, which is not where the window stands:
+ *   the two states are at the same place in the layout without being at the
+ *   same place in the window — one page is scrolled and the other is not.
+ *   Drawn at the window's own corner, the page being left would be seen
+ *   jumping to its top before it begins to leave.
+ *
+ * Only the measuring needs JS, and only for the one moment both states exist:
+ * the page arriving is in the DOM and the transition has not started playing.
+ * Everything DERIVED from these numbers — the band a fixed bar covers, how far
+ * a page travels — is derived in CSS, so the application's own numbers (the
+ * room its bars give back, see layout/safe_area.js) take part in it.
+ */
+
+const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
+const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";
+const WINDOW_WIDTH_PROPERTY = "--navi-transition-window-width";
+const WINDOW_HEIGHT_PROPERTY = "--navi-transition-window-height";
+const WINDOW_OLD_TOP_PROPERTY = "--navi-transition-window-old-top";
+const WINDOW_OLD_LEFT_PROPERTY = "--navi-transition-window-old-left";
+const WINDOW_PROPERTIES = [
+  WINDOW_TOP_PROPERTY,
+  WINDOW_LEFT_PROPERTY,
+  WINDOW_WIDTH_PROPERTY,
+  WINDOW_HEIGHT_PROPERTY,
+  WINDOW_OLD_TOP_PROPERTY,
+  WINDOW_OLD_LEFT_PROPERTY,
+];
+
+// Whose numbers are currently published. The window belongs to the movement
+// that measured it, and only that one may take it down: a movement ending
+// after another has replaced it must not wipe numbers the new one is standing
+// on.
+let windowOwner = null;
+
+const holdTransitionWindow = (owner, element, rectBefore) => {
+  const rectAfter = element.getBoundingClientRect();
+  // It cannot be measured from one side alone: a page arriving shorter than
+  // the one it replaces would cut the one leaving, a page arriving taller
+  // would be cut itself.
+  const height =
+    rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
+  windowOwner = owner;
+  const { style } = document.documentElement;
+  style.setProperty(WINDOW_TOP_PROPERTY, `${rectAfter.top}px`);
+  style.setProperty(WINDOW_LEFT_PROPERTY, `${rectAfter.left}px`);
+  style.setProperty(WINDOW_WIDTH_PROPERTY, `${rectAfter.width}px`);
+  style.setProperty(WINDOW_HEIGHT_PROPERTY, `${height}px`);
+  style.setProperty(WINDOW_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
+  style.setProperty(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
+};
+
+// The live layout takes the box back. A discontinuity by construction — the
+// window stands at the held height, the box is at its own — and an invisible
+// one: the page arriving is fully in place, and the strip below it that the
+// window still covers shows the page leaving only while it is still on screen.
+const releaseTransitionWindow = (owner) => {
+  if (owner !== windowOwner) {
+    return;
+  }
+  windowOwner = null;
+  const { style } = document.documentElement;
+  for (const property of WINDOW_PROPERTIES) {
+    style.removeProperty(property);
+  }
+};
+
 installImportMetaCssBuild(import.meta);/**
  * How two routes move against each other, said one relation at a time —
  * without putting them in a row, and without a box in the tree.
@@ -38473,14 +38560,158 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // or the marked area. The guard keeps the two exclusive — with an area marked,
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
-const movementsCSS = (name, guard) => /* css */`
-  :root${guard} {
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"],
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
-      &::view-transition-old(${name}),
-      &::view-transition-new(${name}) {
+
+const css$T = /* css */`
+  /* The marked region is a picture of its own during every view transition of
+     the document — which is what keeps it out of the root snapshot, where its
+     place would otherwise be blank. */
+  [data-navi-route-transition-area] {
+    view-transition-name: navi-route-transition;
+  }
+
+  /* Only while a transition of OURS is playing: everything below changes how
+     the document animates, and the document belongs to the application the
+     rest of the time. */
+  :root[data-navi-route-transition] {
+    /* With an area marked, the page AROUND it is not taken as a picture — so
+       exactly one of the two names below exists at a time, and the movements
+       can be written once for both. It is also what a fixed bar wants: a
+       captured element is not painted where it stands and cannot be pointed
+       at either, so a bar photographed with the document is dead for the
+       length of every transition. Left live, it answers as it always did, and
+       nothing shows through where the pages are — the two pictures cover the
+       area's rectangle between them at every moment. Anything around that must
+       ANIMATE rather than stand still gets a view-transition-name of its own,
+       and the browser moves it on the same clock. */
+    &[data-navi-route-transition-target="area"] {
+      view-transition-name: none;
+    }
+
+    &::view-transition-old(root),
+    &::view-transition-new(root),
+    &::view-transition-old(navi-route-transition),
+    &::view-transition-new(navi-route-transition) {
+      /* Written on the direction alone, so a relation with no type — the
+         browser's cross-fade — answers to it like every other. */
+      animation-duration: var(--navi-route-transition-duration, 300ms);
+    }
+
+    /* The window the pages are seen through, when it is an area. Nothing here
+       names \`root\`: the root picture IS the window when the whole document
+       travels, already the size of the screen and already cut by it. */
+    &::view-transition-group(navi-route-transition),
+    &::view-transition-image-pair(navi-route-transition) {
+      /* The pages are cut at the edge of the area they move in. Said HERE and
+         nowhere else: these pictures are drawn in the top layer, so no
+         overflow on any element of the document can reach them. */
+      overflow: clip;
+    }
+    &::view-transition-group(navi-route-transition) {
+      /* Held still for the whole transition, at the taller of the two states,
+         and standing where the area stands (see transition_window.js). Held by
+         dropping the group's animation rather than by winning against it with
+         !important — which also drops its position animation, fine for an area
+         that stays in the same place from one page to the next. */
+      height: var(--navi-transition-window-height);
+      animation-name: none;
+
+      /* Cut at the safe area, on top of being cut at the area's own box. The
+         pictures are drawn in the top layer, so they cover a fixed bar as
+         easily as anything else — and the area runs UNDER the bars by design:
+         that is what a fixed bar is for, and what the room it gives back is
+         for. An area taller than the screen therefore ends below the bottom
+         bar, and a scrolled one starts above the top bar, so the movement
+         would be watched painting over them for its whole length.
+
+         The band left free is the app's own safe area (see
+         layout/safe_area.js) — every kind of furniture at once, not the bars
+         alone, and read rather than asked for, so one that grows, shrinks or
+         unmounts mid-transition is followed without anything being told. What
+         the window cannot know is only where it itself stands, and that is the
+         measured half. */
+      --navi-route-transition-clip-top: max(
+        0px,
+        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+      );
+      --navi-route-transition-clip-left: max(
+        0px,
+        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+      );
+      --navi-route-transition-clip-bottom: max(
+        0px,
+        var(--navi-transition-window-top) +
+          var(--navi-transition-window-height) +
+          var(--navi-safe-area-inset-bottom) - 100dvh
+      );
+      --navi-route-transition-clip-right: max(
+        0px,
+        var(--navi-transition-window-left) +
+          var(--navi-transition-window-width) +
+          var(--navi-safe-area-inset-right) - 100dvw
+      );
+      clip-path: inset(
+        var(--navi-route-transition-clip-top)
+          var(--navi-route-transition-clip-right)
+          var(--navi-route-transition-clip-bottom)
+          var(--navi-route-transition-clip-left)
+      );
+
+      /* How far a page travels: the WINDOW it is seen through, not its own
+         size. A page is as tall as its content — several screens of it — and a
+         movement measured on the picture would send it thousands of pixels
+         away, off screen for most of the transition and flying past at the
+         end. What one page crossing another means is one window's worth of
+         movement, whatever the pages are made of. Inherited by the pictures,
+         which is where it is used (see the keyframes). */
+      --navi-route-transition-travel-x: calc(
+        var(--navi-transition-window-width) - var(
+            --navi-route-transition-clip-left
+          ) - var(--navi-route-transition-clip-right)
+      );
+      --navi-route-transition-travel-y: calc(
+        var(--navi-transition-window-height) - var(
+            --navi-route-transition-clip-top
+          ) - var(--navi-route-transition-clip-bottom)
+      );
+    }
+    &::view-transition-old(navi-route-transition) {
+      /* Where the area WAS on screen, which is not where the window stands
+         (see transition_window.js). Offset here rather than by \`translate\`,
+         which the movement itself uses. */
+      top: calc(
+        var(--navi-transition-window-old-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+    }
+
+    /* ------------------------------------------------------------------
+       The movements. One of \`root\` and \`navi-route-transition\` exists at a
+       time (see the opt-out above), so each is written for both.
+       ------------------------------------------------------------------ */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
+        width: auto;
+        /* Each picture at the size it was taken at: a page is not resized by
+           the page it crosses. The picture is as wide as the box the browser
+           gives it — the arriving one's — so a page leaving a narrower box (a
+           scrollbar appeared, a side panel closed) would be seen zooming over
+           the length of the movement. Left to the untyped cross-fade, where
+           scaling one picture into the other is the whole idea. */
+        height: auto;
+        object-fit: none;
+        object-position: top left;
         /* The default cross-fade, dropped: two pages sliding past each other
            are two solid things, and seeing through one to the other says they
            are the same page changing its mind. */
@@ -38489,183 +38720,177 @@ const movementsCSS = (name, guard) => /* css */`
         animation-fill-mode: both;
       }
     }
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+
+    &[data-navi-route-transition-type="slide-x"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-start;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-end;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-end;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-start;
         }
       }
     }
+
     /* The same four movements, along the other axis: the start of a column is
        its top, so going forward there is the page rising and the next one
        coming up from below. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="slide-y"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-top;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-bottom;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-leave-towards-bottom;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-top;
         }
       }
     }
+
     /* One page over the other, the way a sheet covers a desk: the page
        arriving slides in ON TOP of one that does not move, and going back it
        slides off, uncovering it. The still page is animated all the same — to
        a keyframe that goes nowhere — because left to the browser it would
        fade. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="cover-x"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-end;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           /* The page leaving is the cover: it must slide off ABOVE the one it
-             uncovers, against the browser's default of drawing the new page
-             on top. */
+             uncovers, against the browser's default of drawing the new page on
+             top. */
           z-index: 1;
           animation-name: navi-route-transition-leave-towards-end;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
       }
     }
-    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-old(${name}) {
+    &[data-navi-route-transition-type="cover-y"] {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-enter-from-bottom;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           z-index: 1;
           animation-name: navi-route-transition-leave-towards-bottom;
         }
-        &::view-transition-new(${name}) {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-still;
         }
       }
     }
+
     /* Going deeper is coming closer: the page arriving lands from slightly too
        big, and going back it is the page leaving that grows away. The other
        side keeps the browser's own fade under it. */
-    &[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
-      &::view-transition-old(${name}),
-      &::view-transition-new(${name}) {
+    &[data-navi-route-transition-type="zoom"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
         animation-fill-mode: both;
       }
-      &[${TRANSITION_ATTRIBUTE}="forward"] {
-        &::view-transition-new(${name}) {
+      &[data-navi-route-transition="forward"] {
+        &::view-transition-new(root),
+        &::view-transition-new(navi-route-transition) {
           animation-name: navi-route-transition-zoom-in;
         }
       }
-      &[${TRANSITION_ATTRIBUTE}="back"] {
-        &::view-transition-old(${name}) {
+      &[data-navi-route-transition="back"] {
+        &::view-transition-old(root),
+        &::view-transition-old(navi-route-transition) {
           animation-name: navi-route-transition-zoom-out;
         }
       }
     }
   }
-`;
-const css$T = /* css */`
-  /* The marked region is a picture of its own during every view transition of
-     the document — which is what keeps it out of the root snapshot, where its
-     place would be blank. */
-  [${TRANSITION_AREA_ATTRIBUTE}] {
-    view-transition-name: ${AREA_NAME};
-  }
 
-  /* Only while a transition of OURS is playing: everything below changes how
-     the document animates, and the document belongs to the application the
-     rest of the time. The duration is written here, on the direction alone, so
-     a relation with no type — the browser's cross-fade — answers to
-     --navi-route-transition-duration like every other. */
-  :root[${TRANSITION_ATTRIBUTE}] {
-    &::view-transition-old(root),
-    &::view-transition-new(root),
-    &::view-transition-old(${AREA_NAME}),
-    &::view-transition-new(${AREA_NAME}) {
-      animation-duration: var(${TRANSITION_DURATION_PROPERTY}, 300ms);
-    }
-
-    /* The pages are cut at the edge of the area they move in: its pictures are
-       drawn in the top layer, above the bars, and a page sliding in would
-       otherwise be seen crossing them. */
-    &::view-transition-group(${AREA_NAME}),
-    &::view-transition-image-pair(${AREA_NAME}) {
-      overflow: clip;
-    }
-  }
-
-  ${movementsCSS("root", `:not([${TRANSITION_TARGET_ATTRIBUTE}])`)}
-  ${movementsCSS(AREA_NAME, `[${TRANSITION_TARGET_ATTRIBUTE}="area"]`)}
-
+  /* One window's worth of movement. The fallback is the picture's own size,
+     which is what the window is when the whole document travels: the root
+     picture IS the viewport. */
   @keyframes navi-route-transition-leave-towards-start {
     to {
-      translate: -100% 0;
+      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
     }
   }
   @keyframes navi-route-transition-enter-from-end {
     from {
-      translate: 100% 0;
+      translate: var(--navi-route-transition-travel-x, 100%) 0;
     }
   }
   @keyframes navi-route-transition-leave-towards-end {
     to {
-      translate: 100% 0;
+      translate: var(--navi-route-transition-travel-x, 100%) 0;
     }
   }
   @keyframes navi-route-transition-enter-from-start {
     from {
-      translate: -100% 0;
+      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
     }
   }
   @keyframes navi-route-transition-leave-towards-top {
     to {
-      translate: 0 -100%;
+      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
     }
   }
   @keyframes navi-route-transition-enter-from-bottom {
     from {
-      translate: 0 100%;
+      translate: 0 var(--navi-route-transition-travel-y, 100%);
     }
   }
   @keyframes navi-route-transition-leave-towards-bottom {
     to {
-      translate: 0 100%;
+      translate: 0 var(--navi-route-transition-travel-y, 100%);
     }
   }
   @keyframes navi-route-transition-enter-from-top {
     from {
-      translate: 0 -100%;
+      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
     }
   }
   @keyframes navi-route-transition-zoom-in {
@@ -38688,6 +38913,41 @@ const css$T = /* css */`
     }
   }
 `;
+
+/**
+ * The region the pages live in — where the movements play.
+ *
+ * Wrap the `<Route>` tree with it in an application that has fixed furniture
+ * (a top bar, a tab bar): the movements then play on THIS element's pictures,
+ * clipped at its bounds, and the bars never move. Without it the document
+ * itself travels, which is right only when the pages are the whole viewport —
+ * with bars around, the moving root picture drags a blank band across the
+ * screen where they stand.
+ *
+ * It is a real box, and it must be: what is photographed and clipped IS its
+ * rectangle. So `display: contents` cannot be used on it — an element with no
+ * box is never captured, the movement plays on nothing and the browser aborts
+ * the transition. Give it the layout the pages need instead — it is a `Box`,
+ * so `flex`, `className`, `style` and the rest are there for that. An
+ * application that already has an element holding its pages can mark that one
+ * with `data-navi-route-transition-area` rather than nesting another.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{ children?: any, [key: string]: any }>}
+ */
+const RouteTransitionArea = ({
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
+  const props = {
+    ...rest,
+    [TRANSITION_AREA_ATTRIBUTE]: ""
+  };
+  return jsx(Box, {
+    ...props,
+    children: children
+  });
+};
 
 /**
  * Declare how a pair of routes moves against each other.
@@ -38729,7 +38989,7 @@ const css$T = /* css */`
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.js"];
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
   const {
     type,
     duration
@@ -38767,7 +39027,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.js"];
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
   const value = normalizeTransition(transition);
   defaultTransition = value;
   updateRoutingObservers();
@@ -38971,8 +39231,17 @@ const beginTransition = ({
   // Looked up per transition, not once: the area is the application's own
   // element and follows its lifecycle — a page layout without bars has none,
   // and the movement then plays on the document itself.
-  if (document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`)) {
+  const areaElements = document.querySelectorAll(`[${TRANSITION_AREA_ATTRIBUTE}]`);
+  if (areaElements.length > 1) {
+    warnOnce("several-areas", `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`);
+  }
+  const areaElement = areaElements.length > 0 ? areaElements[0] : null;
+  // The area as it stands before anything moves: rendering is held, so this is
+  // still the page being left (see holdAreaGeometry).
+  let areaRectBefore = null;
+  if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
+    areaRectBefore = areaElement.getBoundingClientRect();
   }
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
@@ -38995,6 +39264,28 @@ const beginTransition = ({
   // been decided renders its page in between — a wait armed then waits for
   // something that has already happened.
   const renderWait = armRouteRenderWait$1();
+  // What the browser ACTUALLY captured, read once the pictures exist: it is
+  // the only place the two silent misconfigurations show. Both are about the
+  // same thing — a movement playing on pictures that are not the pages.
+  const viewTransitionReady = () => {
+    const capturedNames = capturedViewTransitionNames();
+    if (areaElements.length > 0) {
+      if (!capturedNames.has(AREA_NAME)) {
+        warnOnce("area-not-captured", `The element marked ${TRANSITION_AREA_ATTRIBUTE} was not captured, so the movement plays on nothing. An element is captured only if it generates a box: \`display: contents\` (or an element not rendered) cannot be the area — its rectangle is what gets photographed and clipped.`);
+      }
+      return;
+    }
+    for (const name of capturedNames) {
+      if (name === "root") {
+        continue;
+      }
+      // Something stands still while the whole document travels under it. The
+      // root picture spans the viewport and has a HOLE where that thing was
+      // captured, so what crosses the screen is a blank band.
+      warnOnce("pages-travel-under-named-elements", `The movement plays on the whole document while "${name}" is captured on its own, so a blank band travels where it stands. Wrap the pages in <RouteTransitionArea> (or mark their element with ${TRANSITION_AREA_ATTRIBUTE}) so the movement plays on them rather than on the document.`);
+      break;
+    }
+  };
   const viewTransition = startViewTransition$1(async () => {
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered. Whatever
@@ -39016,6 +39307,11 @@ const beginTransition = ({
     } finally {
       renderWait.stop();
     }
+    // The page arriving is in the DOM and the transition has not started
+    // playing: the one moment both states of the area can be known.
+    if (areaElement) {
+      holdTransitionWindow(transition, areaElement, areaRectBefore);
+    }
   });
   const end = () => {
     // Whatever ends it — played out, skipped by another transition starting,
@@ -39030,12 +39326,48 @@ const beginTransition = ({
       documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
       documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
       documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+      releaseTransitionWindow(transition);
       if (restoreDuration) {
         restoreDuration();
       }
     }
   };
+  viewTransition.ready.then(viewTransitionReady, ignoreSkipped$1);
   viewTransition.finished.then(end, end);
+};
+
+// A transition skipped by another one starting is an outcome, not a failure.
+const ignoreSkipped$1 = () => {};
+
+// The names the browser captured, read off the pictures themselves: what was
+// asked for in CSS and what was taken are not the same question (see
+// viewTransitionReady).
+const capturedViewTransitionNames = () => {
+  const names = new Set();
+  for (const animation of document.getAnimations()) {
+    const pseudoElement = animation.effect?.pseudoElement;
+    if (!pseudoElement || !pseudoElement.startsWith("::view-transition")) {
+      continue;
+    }
+    const nameStart = pseudoElement.indexOf("(");
+    if (nameStart === -1) {
+      continue;
+    }
+    names.add(pseudoElement.slice(nameStart + 1, -1));
+  }
+  return names;
+};
+
+// Said once per kind, whatever the number of navigations: a misconfiguration
+// is one fact about the application, and repeating it every time the user
+// moves would bury it.
+const warningsSaid = new Set();
+const warnOnce = (id, message) => {
+  if (warningsSaid.has(id)) {
+    return;
+  }
+  warningsSaid.add(id);
+  console.warn(message);
 };
 
 // A route matching is a signal changing; how many passes Preact takes to
@@ -39159,19 +39491,6 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-// Where the two boxes of a travel stand in the window, published for the
-// length of it. Measurements only: what is DERIVED from them — where a picture
-// goes, what a bar covers — is derived in the CSS below, so the app's own
-// numbers (the room its fixed bars take) can take part in it. Only the
-// measuring needs JS, and only for the one moment both boxes exist (see
-// holdTravelGeometry).
-const TRAVEL_TOP_PROPERTY = "--navi-route-travel-top";
-const TRAVEL_LEFT_PROPERTY = "--navi-route-travel-left";
-const TRAVEL_WIDTH_PROPERTY = "--navi-route-travel-width";
-const TRAVEL_HEIGHT_PROPERTY = "--navi-route-travel-height";
-const TRAVEL_OLD_TOP_PROPERTY = "--navi-route-travel-old-top";
-const TRAVEL_OLD_LEFT_PROPERTY = "--navi-route-travel-old-left";
-const TRAVEL_GEOMETRY_PROPERTIES = [TRAVEL_TOP_PROPERTY, TRAVEL_LEFT_PROPERTY, TRAVEL_WIDTH_PROPERTY, TRAVEL_HEIGHT_PROPERTY, TRAVEL_OLD_TOP_PROPERTY, TRAVEL_OLD_LEFT_PROPERTY];
 const css$S = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
@@ -39254,10 +39573,16 @@ const css$S = /* css */`
          would be seen jumping back to its top before it even begins to leave.
          Offset here rather than by \`translate\`, which the movement itself uses,
          and at its own size rather than the group's so that nothing is cut off
-         the far side of the shift (see holdTravelGeometry). */
-      top: calc(var(${TRAVEL_OLD_TOP_PROPERTY}) - var(${TRAVEL_TOP_PROPERTY}));
+         the far side of the shift (see transition_window.js). */
+      top: calc(
+        var(--navi-transition-window-old-top) - var(
+            --navi-transition-window-top
+          )
+      );
       left: calc(
-        var(${TRAVEL_OLD_LEFT_PROPERTY}) - var(${TRAVEL_LEFT_PROPERTY})
+        var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
       );
       width: auto;
     }
@@ -39272,7 +39597,7 @@ const css$S = /* css */`
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see holdTravelGeometry): the group
+         travel at the taller of the two boxes (see transition_window.js): the group
          is what CLIPS, and the browser animates its height from the box being
          left to the box arriving — so the window shrinks under the pictures and
          cuts the page leaving from the bottom, progressively. The box does end
@@ -39283,7 +39608,7 @@ const css$S = /* css */`
          winning against it with !important — which also drops its position
          animation, fine while a travel box stands in the same place from one
          route to the next. */
-      height: var(${TRAVEL_HEIGHT_PROPERTY});
+      height: var(--navi-transition-window-height);
 
       /* Cut at the safe area, on top of being cut at the box. The pictures are
          drawn in the top layer, so they cover a fixed bar as easily as anything
@@ -39300,20 +39625,22 @@ const css$S = /* css */`
          only where it itself stands, and that is the measured half. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(${TRAVEL_TOP_PROPERTY})
+        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(${TRAVEL_LEFT_PROPERTY})
+        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
-        var(${TRAVEL_TOP_PROPERTY}) + var(${TRAVEL_HEIGHT_PROPERTY}) +
+        var(--navi-transition-window-top) +
+          var(--navi-transition-window-height) +
           var(--navi-safe-area-inset-bottom) - 100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
-        var(${TRAVEL_LEFT_PROPERTY}) + var(${TRAVEL_WIDTH_PROPERTY}) +
+        var(--navi-transition-window-left) +
+          var(--navi-transition-window-width) +
           var(--navi-safe-area-inset-right) - 100dvw
       );
       clip-path: inset(
@@ -39635,7 +39962,7 @@ const RouteTravel = ({
     }
     pageAskedForRef.current = page;
     // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see holdTravelGeometry).
+    // still the page being left (see transition_window.js).
     const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
@@ -39663,7 +39990,7 @@ const RouteTravel = ({
       }, renderWait);
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known.
-      holdTravelGeometry(elementRef.current, rectBefore);
+      holdTransitionWindow(travel, elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {
@@ -39981,7 +40308,7 @@ const RouteTravel = ({
       document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTravelGeometry();
+      releaseTransitionWindow(travel);
     }
   };
 
@@ -40362,44 +40689,6 @@ const releaseHold = travel => {
   }
   travelHoldingPictures = null;
   document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
-};
-
-// The two boxes of a travel, measured at the one moment both exist: the
-// arriving page is in the DOM and the transition has not started playing.
-//
-// The group stands at the ARRIVING box — its own animation is dropped, so it
-// takes the geometry the browser declared for it and holds it for the whole
-// travel. That is why both rectangles have to be published: a group that does
-// not move says nothing about where the page being left was, and its rectangle
-// in the window is the only thing CSS cannot work out on its own.
-const holdTravelGeometry = (element, rectBefore) => {
-  const rectAfter = element.getBoundingClientRect();
-  // The height it is held at is the taller of the two boxes, so neither picture
-  // is ever cut. It cannot be measured from one side alone: a page arriving
-  // shorter than the one it replaces would cut the one leaving, a page arriving
-  // taller would be cut itself.
-  const height = rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
-  const {
-    style
-  } = document.documentElement;
-  style.setProperty(TRAVEL_TOP_PROPERTY, `${rectAfter.top}px`);
-  style.setProperty(TRAVEL_LEFT_PROPERTY, `${rectAfter.left}px`);
-  style.setProperty(TRAVEL_WIDTH_PROPERTY, `${rectAfter.width}px`);
-  style.setProperty(TRAVEL_HEIGHT_PROPERTY, `${height}px`);
-  style.setProperty(TRAVEL_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
-  style.setProperty(TRAVEL_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
-};
-// The live layout takes the box back. A discontinuity by construction — the
-// group stands at the held height, the box is at the new one — and an invisible
-// one: the page arriving is fully in place, and the strip below it that the
-// group still covers shows the page leaving only while it is still on screen.
-const releaseTravelGeometry = () => {
-  const {
-    style
-  } = document.documentElement;
-  for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
-    style.removeProperty(property);
-  }
 };
 
 // The animations of the pictures, asked for again until there are some: they
@@ -73738,5 +74027,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

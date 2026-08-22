@@ -6,9 +6,10 @@ decides which movement (if any) a navigation deserves. The API grammar itself
 (accepted forms, shipped type names) lives in the JSDoc of
 `defineRouteTransition`; this file holds what a signature cannot say.
 
-Demos:
-[../src/nav/demos/route_transition/route_transition.html](../src/nav/demos/route_transition/route_transition.html),
-[../src/nav/demos/route_transition/route_transition_default.html](../src/nav/demos/route_transition/route_transition_default.html)
+Demos: [the movements](../src/nav/demos/route_transition/route_transition.html),
+[a default transition](../src/nav/demos/route_transition/route_transition_default.html),
+[pages between fixed bars](../src/nav/demos/route_transition/route_transition_fixed_bars.html),
+[with a RouteTravel inside](../src/nav/demos/route_transition/route_transition_with_travel.html)
 
 ## What a transition is for
 
@@ -89,9 +90,32 @@ across the screen where they stand. Wrap the pages instead:
 </RouteTransitionArea>
 ```
 
-The movement then plays on that region's own pictures, clipped at its bounds,
-and the bars never move — without being named one by one. An app with fixed
-bars should consider this part of declaring transitions at all, not an option.
+The movement then plays on that region's own pictures, and the bars never move
+— without being named one by one. An app with fixed bars should consider this
+part of declaring transitions at all, not an option.
+
+The pages are cut twice: at the area's own bounds, and at the app's **safe
+area** (see [safe_area.md](./safe_area.md)). The second cut is not a detail. A
+fixed bar is fixed to the window while the area is a long box in the document —
+the room the bar gives back is padding, so the content runs under it by design.
+The pictures are drawn in the top layer, above everything the document can
+clip, so without that cut a page taller than the screen, or a scrolled one,
+would be watched sliding over the bars for the whole movement. The band is read
+from the safe area rather than from the bars, so every kind of furniture is
+covered at once and one that unmounts mid-movement is followed without anything
+being told.
+
+For the same reason, how far a page travels is the **window** it is seen
+through, not the page's own size: a page is as tall as its content, and a
+vertical movement measured on the picture would send it several screens away —
+off screen for most of the transition, flying past at the end.
+
+With an area marked, the page around it is left LIVE rather than photographed:
+the bars keep answering the pointer for the whole movement, which a captured
+element cannot do. The flip side is that anything around the area which must
+_animate_ rather than stand still — a title that changes with the route — needs
+a `view-transition-name` of its own; named, the browser moves it on the same
+clock as the pages.
 
 It is a `Box`, so the layout the pages need is written on it directly (`flex`,
 `className`, `style`, …). An app that already has an element holding its pages
