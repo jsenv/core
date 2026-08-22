@@ -21811,6 +21811,244 @@ const updateDocumentState = (value) => {
 };
 
 /**
+ * The document's rendering, held for the one frame a view transition needs.
+ *
+ * The browser does not take the picture of the page being left when a
+ * transition is ASKED for — it takes it at the next frame, just before running
+ * the update callback. Preact renders sooner than that, in a microtask: so a
+ * change nobody asked for (a tab pressed, the back button) has already reached
+ * the DOM when the picture is taken, and the picture is of the page ARRIVING.
+ * Both sides of the animation then show it, and one watches a page slide onto
+ * itself.
+ *
+ * So what Preact has queued waits until the update callback, which is the
+ * moment the API is built around — the change belongs inside it. The whole
+ * document is held: it is about to be frozen under a picture anyway.
+ *
+ * ONE hold for the whole document, whoever animates. The hold is a wrapper
+ * around Preact's `options.debounceRendering`, and two of them installed
+ * independently restore each other in the wrong order when they let go — every
+ * render queued in between is then handed to a wrapper nobody will ever
+ * release. Everything that photographs a navigation (RouteTravel's box, a
+ * route transition) must therefore hold through this module, never through a
+ * wrapper of its own.
+ */
+
+
+let renderingHold = null;
+const holdRendering = () => {
+  if (renderingHold) {
+    return renderingHold.release;
+  }
+  const debounceRenderingBefore = options.debounceRendering;
+  const hold = {
+    render: null,
+    waiting: [],
+    release: () => {
+      // Only the hold that is still standing may be given back: a holder
+      // releasing after another has taken over must not let go of what it
+      // does not hold.
+      if (renderingHold !== hold) {
+        return;
+      }
+      renderingHold = null;
+      options.debounceRendering = debounceRenderingBefore;
+      const { render, waiting } = hold;
+      hold.render = null;
+      hold.waiting = [];
+      if (render) {
+        render();
+      }
+      for (const wait of waiting) {
+        wait();
+      }
+    },
+  };
+  renderingHold = hold;
+  options.debounceRendering = (render) => {
+    hold.render = render;
+  };
+  return hold.release;
+};
+
+// Anything else that must not happen before the picture is taken, and the
+// scroll is the other one: a page one arrives at starts at its top, and the
+// document put back to its top while the page being left is still on screen is
+// a page that has ALREADY jumped when the picture is taken. Worse, the browser
+// paints what the new offset shows and nothing else, so the picture keeps only
+// the band it had already painted — the page being left is then seen in
+// fragments, whatever the movement does afterwards.
+//
+// Run at once when nobody is photographing anything, which is the common case
+// and must stay free.
+const whenRenderingResumes = (callback) => {
+  if (!renderingHold) {
+    callback();
+    return;
+  }
+  renderingHold.waiting.push(callback);
+};
+
+// The hold a navigation takes on its way in — from before its first write,
+// because by the time a route announces that it matches, Preact has already
+// been told and the render is queued; a hold taken then is a hold taken too
+// late. Kept here until whoever animates the change takes it over, or the
+// navigation turns out to be one nobody animates.
+let routingRenderingHold = null;
+const holdRenderingForRouting = () => {
+  routingRenderingHold = holdRendering();
+};
+// Nobody had a picture to take: a page held for a change it does not animate
+// is a page that stutters for nothing.
+const releaseRoutingRenderingHold = () => {
+  const release = routingRenderingHold;
+  routingRenderingHold = null;
+  if (release) {
+    release();
+  }
+};
+// An animator takes the navigation's hold as its own — taking another would be
+// taking a hold on a page that is holding still — or takes a fresh one when
+// the change it animates is not a navigation.
+const takeoverRoutingRenderingHold = () => {
+  const release = routingRenderingHold || holdRendering();
+  routingRenderingHold = null;
+  return release;
+};
+
+/**
+ * A container has put its page on screen — or as much of it as it can.
+ *
+ * A route matching is a signal changing, and the page it selects reaches the
+ * DOM only once Preact has rendered — an unknown number of passes later, in an
+ * unknown number of microtasks. Anyone who needs the page as it IS rather than
+ * as it has been decided (a travel about to have its picture taken by the
+ * browser, see route_travel.jsx) waits for this instead of counting.
+ *
+ * A page waiting on data is announced too, by the boundary showing its loading
+ * state (see Loading in use_async_data.jsx): what the container could put on
+ * screen is what the browser is about to take a picture of, and a page that
+ * cannot render yet would otherwise be waited on until the transition dies of
+ * it. It lives in a module of its own for that: the async layer says it as much
+ * as the router does, and neither can import the other.
+ */
+const [publishRouteRender, observeRouteRender] = createPubSub();
+
+/**
+ * Where a page was left, given back when one comes back to it.
+ *
+ * The browser does this on its own, and gets it wrong here for a reason that
+ * has nothing to do with it: it puts the offset back at the instant the entry
+ * changes, when the document still holds the page being LEFT. A position
+ * further down than that page is tall is clamped to its bottom and lost — so
+ * coming back to a long page from a short one lands short, and the deeper one
+ * was, the more is missing.
+ *
+ * So the browser is told to stop (`scrollRestoration = "manual"`) and the
+ * position is put back once the page one is coming back to is really there —
+ * through the same wait as everything else that must not happen before the
+ * picture of a transition is taken (see rendering_hold.js): restored after the
+ * picture, the page arriving would be photographed at the top and seen jumping
+ * from it.
+ *
+ * Kept per URL rather than per history entry: an entry has no name of its own
+ * that survives a reload, and two entries on the same URL are the same place
+ * to a reader. Kept in the session too, so a reload lands where the browser
+ * would have landed — the flag above is a promise to do the whole job.
+ *
+ * What is NOT covered, and cannot be from here: a page whose height depends on
+ * something still loading. Its content is not there at the moment it is put
+ * back, so a position beyond what has arrived is clamped as before. Only the
+ * page knows when it is whole.
+ */
+
+
+const STORAGE_KEY = "navi_scroll_positions";
+
+const positionByUrl = new Map();
+const readStoredPositions = () => {
+  let stored;
+  try {
+    stored = window.sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    // A session storage that refuses to answer (a private window, a policy) is
+    // not a reason to lose the positions of THIS session.
+    return;
+  }
+  if (!stored) {
+    return;
+  }
+  try {
+    for (const [url, position] of Object.entries(JSON.parse(stored))) {
+      positionByUrl.set(url, position);
+    }
+  } catch {
+    // Something else wrote there, or it was truncated.
+  }
+};
+const storePositions = () => {
+  try {
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(positionByUrl)),
+    );
+  } catch {
+    // Full, or refused: the session is the only thing lost.
+  }
+};
+
+let installed = false;
+const installScrollRestoration = () => {
+  if (installed) {
+    return;
+  }
+  installed = true;
+  if (!("scrollRestoration" in window.history)) {
+    return;
+  }
+  window.history.scrollRestoration = "manual";
+  readStoredPositions();
+  // Read as it happens rather than when leaving: a traverse changes the url
+  // before anything here is told, so a position read then would be read for
+  // the wrong page.
+  window.addEventListener(
+    "scroll",
+    () => {
+      positionByUrl.set(window.location.href, {
+        x: window.scrollX,
+        y: window.scrollY,
+      });
+    },
+    { passive: true },
+  );
+  window.addEventListener("pagehide", storePositions);
+  // What a reload asks for, now that the browser has been told not to do it.
+  // Once, and at the first render of a route: the position is only meaningful
+  // once there is a page under it.
+  const positionOnLoad = positionByUrl.get(window.location.href);
+  if (positionOnLoad && (positionOnLoad.x || positionOnLoad.y)) {
+    const stopListening = observeRouteRender(() => {
+      stopListening();
+      scrollTo(positionOnLoad);
+    });
+  }
+};
+
+// Nothing to put back is not the same as putting back the top: a page arrived
+// at for the first time is startAtTop's business, and this must not step on it.
+const restoreScrollPosition = (url) => {
+  const position = positionByUrl.get(new URL(url, window.location.href).href);
+  if (!position) {
+    return;
+  }
+  scrollTo(position);
+};
+
+const scrollTo = ({ x, y }) => {
+  window.scrollTo({ top: y, left: x, behavior: "instant" });
+};
+
+/**
  * A navigation is ABOUT to be applied — said before its very first write.
  *
  * Everything else a router says arrives once the change is made: a route
@@ -21978,7 +22216,12 @@ const setupBrowserIntegrationViaHistory = ({
       state,
     });
     if (navigationType === "push") {
-      startAtTop(url);
+      whenRenderingResumes(() => startAtTop(url));
+    } else if (navigationType === "traverse") {
+      // Where this entry was left. Waited for like the reset above, and for
+      // the same two reasons: the page has to be there to be scrolled, and a
+      // picture taken before it would be of a page at its top.
+      whenRenderingResumes(() => restoreScrollPosition(url));
     }
     executeWithCleanup(
       () => allResult,
@@ -22055,6 +22298,11 @@ const setupBrowserIntegrationViaHistory = ({
     },
     { capture: true },
   );
+
+  // The browser's own scroll restoration is taken over here rather than left
+  // to whoever navigates: it is a decision about the document, and the entry
+  // being left must be recorded from the first pixel scrolled.
+  installScrollRestoration();
 
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
@@ -22140,13 +22388,16 @@ const setupBrowserIntegrationViaHistory = ({
 // route_travel.jsx), and resetting there would throw the reader out of a page
 // they never left.
 //
-// After the routes have been told, and that ordering is the whole subtlety:
-// the routes changing is what sets a travel off, and a travel measures the box
-// it is leaving as it stands. Reset before that and the picture of the page
-// being left is taken at the top of a page the reader was not at the top of —
-// it is then watched jumping back to its first line before it even begins to
-// leave (see holdTravelGeometry in route_travel.jsx). After pushState too, so
-// the entry being left keeps the offset it is at.
+// After the routes have been told, and after the picture of the page being
+// left has been taken — that ordering is the whole subtlety. The routes
+// changing is what sets a movement off, and a movement measures the box it is
+// leaving as it stands; put the document back to its top any earlier and the
+// picture is of a page at its first line, which the reader was not at. The
+// browser paints what the new offset shows and nothing else, so what is kept
+// of the page being left is the band it had already painted, and the movement
+// carries a fragment (see rendering_hold.js, which is where the waiting
+// happens). After pushState too, so the entry being left keeps the offset it
+// is at.
 //
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
@@ -36224,24 +36475,6 @@ const TYPE_CONVERTERS = {
   },
 };
 
-/**
- * A container has put its page on screen — or as much of it as it can.
- *
- * A route matching is a signal changing, and the page it selects reaches the
- * DOM only once Preact has rendered — an unknown number of passes later, in an
- * unknown number of microtasks. Anyone who needs the page as it IS rather than
- * as it has been decided (a travel about to have its picture taken by the
- * browser, see route_travel.jsx) waits for this instead of counting.
- *
- * A page waiting on data is announced too, by the boundary showing its loading
- * state (see Loading in use_async_data.jsx): what the container could put on
- * screen is what the browser is about to take a picture of, and a page that
- * cannot render yet would otherwise be waited on until the transition dies of
- * it. It lives in a module of its own for that: the async layer says it as much
- * as the router does, and neither can import the other.
- */
-const [publishRouteRender, observeRouteRender] = createPubSub();
-
 const promiseStateWeakMap = new WeakMap();
 const usePromiseAsyncData = (
   promise,
@@ -38314,89 +38547,6 @@ const RouteUI = ({
     return h(element, elementProps);
   }
   return element;
-};
-
-/**
- * The document's rendering, held for the one frame a view transition needs.
- *
- * The browser does not take the picture of the page being left when a
- * transition is ASKED for — it takes it at the next frame, just before running
- * the update callback. Preact renders sooner than that, in a microtask: so a
- * change nobody asked for (a tab pressed, the back button) has already reached
- * the DOM when the picture is taken, and the picture is of the page ARRIVING.
- * Both sides of the animation then show it, and one watches a page slide onto
- * itself.
- *
- * So what Preact has queued waits until the update callback, which is the
- * moment the API is built around — the change belongs inside it. The whole
- * document is held: it is about to be frozen under a picture anyway.
- *
- * ONE hold for the whole document, whoever animates. The hold is a wrapper
- * around Preact's `options.debounceRendering`, and two of them installed
- * independently restore each other in the wrong order when they let go — every
- * render queued in between is then handed to a wrapper nobody will ever
- * release. Everything that photographs a navigation (RouteTravel's box, a
- * route transition) must therefore hold through this module, never through a
- * wrapper of its own.
- */
-
-
-let renderingHold = null;
-const holdRendering = () => {
-  if (renderingHold) {
-    return renderingHold.release;
-  }
-  const debounceRenderingBefore = options.debounceRendering;
-  const hold = {
-    render: null,
-    release: () => {
-      // Only the hold that is still standing may be given back: a holder
-      // releasing after another has taken over must not let go of what it
-      // does not hold.
-      if (renderingHold !== hold) {
-        return;
-      }
-      renderingHold = null;
-      options.debounceRendering = debounceRenderingBefore;
-      const { render } = hold;
-      hold.render = null;
-      if (render) {
-        render();
-      }
-    },
-  };
-  renderingHold = hold;
-  options.debounceRendering = (render) => {
-    hold.render = render;
-  };
-  return hold.release;
-};
-
-// The hold a navigation takes on its way in — from before its first write,
-// because by the time a route announces that it matches, Preact has already
-// been told and the render is queued; a hold taken then is a hold taken too
-// late. Kept here until whoever animates the change takes it over, or the
-// navigation turns out to be one nobody animates.
-let routingRenderingHold = null;
-const holdRenderingForRouting = () => {
-  routingRenderingHold = holdRendering();
-};
-// Nobody had a picture to take: a page held for a change it does not animate
-// is a page that stutters for nothing.
-const releaseRoutingRenderingHold = () => {
-  const release = routingRenderingHold;
-  routingRenderingHold = null;
-  if (release) {
-    release();
-  }
-};
-// An animator takes the navigation's hold as its own — taking another would be
-// taking a hold on a page that is holding still — or takes a fresh one when
-// the change it animates is not a navigation.
-const takeoverRoutingRenderingHold = () => {
-  const release = routingRenderingHold || holdRendering();
-  routingRenderingHold = null;
-  return release;
 };
 
 /**
