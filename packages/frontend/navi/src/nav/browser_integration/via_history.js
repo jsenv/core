@@ -63,8 +63,67 @@ export const setupBrowserIntegrationViaHistory = ({
     visitedUrlsSignal.value++;
   };
 
+  // The one thing the History API cannot say and the Navigation API can: what
+  // stands NEXT to the current entry. A link to the page one just came from is
+  // morally a back — pushed, it grows the stack (A, B, A, B…) and lands at the
+  // top; traversed, the stack stays what the reader thinks it is and the page
+  // comes back where they left it. So a push whose destination is the entry
+  // right behind (or right ahead) is turned into a traversal, and the whole
+  // traverse machinery (routing, scroll, movement) answers it as if the
+  // browser's own button had been pressed.
+  //
+  // Only where the browser exposes the stack (window.navigation — everywhere
+  // but Firefox today; without it a push stays a push, which is what this
+  // whole file already does). And only towards entries of THIS document: a
+  // traversal to another document is a full page load, which no press on a
+  // link asked for — the entries that are ours are recorded as they are
+  // created, starting with the one this document was loaded into.
+  const sameDocumentEntryKeys = new Set();
+  const rememberEntryIsOfThisDocument = () => {
+    if (window.navigation) {
+      sameDocumentEntryKeys.add(window.navigation.currentEntry.key);
+    }
+  };
+  rememberEntryIsOfThisDocument();
+  const adjacentEntryDelta = (url) => {
+    const { navigation } = window;
+    if (!navigation) {
+      return 0;
+    }
+    const entries = navigation.entries();
+    const index = navigation.currentEntry.index;
+    // Behind first: when the same page stands on both sides (A, B, A and one
+    // is on B), a link to it reads as going back.
+    for (const delta of [-1, 1]) {
+      const entry = entries[index + delta];
+      if (entry && entry.url === url && sameDocumentEntryKeys.has(entry.key)) {
+        return delta;
+      }
+    }
+    return 0;
+  };
+
   let abortController = null;
   const handleRoutingTask = (url, options) => {
+    // Decided before anything is announced: an elided push IS the traversal it
+    // becomes, and the traversal will make its own announcements when the
+    // browser answers — a before/after cycle here would be about a navigation
+    // that never happens.
+    if (
+      options.navigationType === "push" &&
+      options.state === undefined &&
+      url !== window.location.href
+    ) {
+      const delta = adjacentEntryDelta(url);
+      if (delta === -1) {
+        window.history.back();
+        return undefined;
+      }
+      if (delta === 1) {
+        window.history.forward();
+        return undefined;
+      }
+    }
     // Before anything is written: the visited set, the URL and every route are
     // about to change, and this is the last moment the page still stands as it
     // was. And after, whichever way the change went out — so that whoever took
@@ -124,6 +183,7 @@ export const setupBrowserIntegrationViaHistory = ({
       } else {
         window.history.replaceState(effectiveState, null, url);
       }
+      rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
     } else {

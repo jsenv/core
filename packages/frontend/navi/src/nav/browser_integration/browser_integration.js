@@ -13,6 +13,7 @@ import {
 import { documentStateSignal } from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
+import { setupBrowserIntegrationViaNavigation } from "./via_navigation.js";
 
 let updateRoutes;
 
@@ -83,7 +84,19 @@ const applyRouting = (
   return { ...updateActionsResult, activeRouteSet };
 };
 
-const browserIntegration = setupBrowserIntegrationViaHistory({
+// via_navigation.js is ready and implements the same contract, but history is
+// the integration every browser gets today: Firefox has no window.navigation,
+// and one implementation serving everyone beats two serving each their half —
+// what the API uniquely offers (reading the stack) via_history.js already
+// borrows. Flip this to try the other one; it falls back by itself where the
+// API is missing.
+const USE_NAVIGATION_API = false;
+
+const setupBrowserIntegration =
+  USE_NAVIGATION_API && window.navigation
+    ? setupBrowserIntegrationViaNavigation
+    : setupBrowserIntegrationViaHistory;
+const browserIntegration = setupBrowserIntegration({
   applyActions,
   applyRouting,
   // Routes are declared by the consumer and registered through

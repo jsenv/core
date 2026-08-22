@@ -228,10 +228,13 @@ const css = /* css */ `
        The movements. One of \`root\` and \`navi-route-transition\` exists at a
        time (see the opt-out above), so each is written for both.
        ------------------------------------------------------------------ */
-    &[data-navi-route-transition-type="slide-x"],
-    &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"] {
+    /* What a NAMED movement is made of, whatever the movement is — the types
+       navi ships and the ones an application writes alike. The attribute is
+       present for a type and only for a type ("cross-fade" normalizes to no
+       type at all, "none" starts nothing), so the browser's own cross-fade
+       keeps every default below: scaling one picture into the other and seeing
+       through both IS the movement there. */
+    &[data-navi-route-transition-type] {
       &::view-transition-old(root),
       &::view-transition-new(root),
       &::view-transition-old(navi-route-transition),
@@ -241,17 +244,31 @@ const css = /* css */ `
            the page it crosses. The picture is as wide as the box the browser
            gives it — the arriving one's — so a page leaving a narrower box (a
            scrollbar appeared, a side panel closed) would be seen zooming over
-           the length of the movement. Left to the untyped cross-fade, where
-           scaling one picture into the other is the whole idea. */
+           the length of the movement, and one leaving a shorter box would be
+           seen inflating. */
         height: auto;
         object-fit: none;
         object-position: top left;
-        /* The default cross-fade, dropped: two pages sliding past each other
-           are two solid things, and seeing through one to the other says they
-           are the same page changing its mind. */
+        /* Two pages crossing are two solid things, and seeing through one to
+           the other says they are the same page changing its mind. A movement
+           that keeps the browser's fade on one of its two sides wants the
+           opposite, and says so — see zoom below. */
         mix-blend-mode: normal;
-        animation-timing-function: ease;
         animation-fill-mode: both;
+      }
+    }
+
+    /* Eased, which is a taste about THESE four: a custom type says its own
+       curve. */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
+        animation-timing-function: ease;
       }
     }
 
@@ -367,7 +384,11 @@ const css = /* css */ `
       &::view-transition-new(root),
       &::view-transition-old(navi-route-transition),
       &::view-transition-new(navi-route-transition) {
-        animation-fill-mode: both;
+        /* One side of this one is the browser's fade, and a fade is two
+           half-transparent pictures: they must ADD up rather than cover each
+           other, or the page behind shows through the middle of the
+           movement. */
+        mix-blend-mode: plus-lighter;
       }
       &[data-navi-route-transition="forward"] {
         &::view-transition-new(root),

@@ -310,11 +310,21 @@ Three cases, and they are not a policy to configure but three different facts:
   tall is clamped away.
 - **A reload** lands where one was, as it would have without navi.
 
-The consequence worth knowing when building a screen: **a "back" written as a
-`<Link>` is a push**, so it lands at the top like any arrival — no mechanism
-can guess that a push was morally a return. A back arrow that should feel like
-one is `navBack()`. Where there may be nothing to go back to (a shared link
-opened cold), decide what the arrow does from the history, not from the link.
+One consequence is softened where the browser exposes its stack (the
+Navigation API — everywhere but Firefox today): **a `<Link>` whose destination
+is the entry right next to the current one becomes a real traversal** instead
+of a push. A "back" link to the page one just came from therefore behaves as a
+back — the stack stays what the reader thinks it is (no A, B, A, B… growth)
+and the scroll comes back; one step forward too, so returning to the page one
+just left resumes it where it was. Only towards entries of this document (a
+traversal to another one would be a full page load no link asked for), and
+never when the push carries explicit state.
+
+Everywhere else a `<Link>` is an arrival and lands at the top. A back arrow
+that must ALWAYS behave as a back — even far from the entry it targets, even
+in a browser with no Navigation API — is `navBack()`. Where there may be
+nothing to go back to (a shared link opened cold), decide what the arrow does
+from the history, not from the link.
 
 What is not covered: a page whose height depends on something still loading is
 not tall enough at the moment its position is put back, so a deep position is

@@ -98,11 +98,19 @@
 
       /* Le type "spin" est à la page, pas à navi : les deux attributs sont sur
          la racine pendant la transition, et ce CSS définit le mouvement — sur
-         les images de la zone, puisque cette page en marque une. */
+         les images de la zone, puisque cette page en marque une. Un type nommé
+         reçoit de navi de quoi ressembler à un mouvement (images à leur taille,
+         pages opaques, animation tenue) : ce qui reste à écrire, ce sont les
+         deux animation-name. */
       :root[data-navi-route-transition-type="spin"] {
         &::view-transition-old(navi-route-transition),
         &::view-transition-new(navi-route-transition) {
-          animation-fill-mode: both;
+          /* Un seul des deux côtés tourne, l'autre garde le fondu du
+             navigateur — et un fondu, ce sont deux images à demi transparentes
+             qui doivent S'AJOUTER plutôt que se recouvrir, sinon le fond se
+             voit au milieu du mouvement. Un mouvement où les deux pages
+             bougent garde l'opacité que navi pose. */
+          mix-blend-mode: plus-lighter;
         }
       }
       :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {

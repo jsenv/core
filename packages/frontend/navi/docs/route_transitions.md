@@ -151,6 +151,20 @@ movement against the view transition pseudo-elements — of the document, or of
 the marked area. See the JSDoc of `defineRouteTransition` for the selector
 shape, and the `spin` type in the demo for a working one.
 
+What is left to write is the `animation-name`s and nothing else: navi attaches
+to ANY named type what makes a movement look like one — each picture at the
+size it was taken at (a page half the height of the one it crosses would
+otherwise be seen inflating over the length of the movement), two solid pages
+rather than two panes of glass, and the animation held where it ends. The
+untyped cross-fade keeps the browser's defaults, since scaling one picture into
+the other is the whole idea there.
+
+The one knob a custom movement may want back: a movement that animates ONE of
+its two sides leaves the other on the browser's fade, and a fade needs its two
+half-transparent pictures to add up rather than cover each other
+(`mix-blend-mode: plus-lighter`, as the shipped `zoom` and the demo's `spin`
+both do). A movement where both pages move wants what navi poses.
+
 ## Route transitions and `RouteTravel` — one pair, one system
 
 `RouteTravel` and `defineRouteTransition` answer different questions:

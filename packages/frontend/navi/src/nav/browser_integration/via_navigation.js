@@ -1,168 +1,396 @@
+/**
+ * The same integration as via_history.js, written on the Navigation API.
+ *
+ * PREPARED, NOT PLUGGED: history is the integration every browser gets today,
+ * because Firefox has no `window.navigation` and one implementation serving
+ * everyone beats two serving each their half. This file exists so the switch
+ * is a one-line decision (see browser_integration.js) rather than a project;
+ * it implements the exact contract of setupBrowserIntegrationViaHistory and is
+ * verified against the same demos when flipped on.
+ *
+ * What the API changes, and what it does not:
+ *
+ * - ONE interception point. Every navigation — a link, the back button, a
+ *   programmatic navigate — arrives as a `navigate` event, so there is no
+ *   click listener guessing which presses are navigations: the browser says
+ *   so. What must not be taken over (a fragment, a download, a form, a page
+ *   with no routes, jsenv's own full reload) is declined there, explicitly.
+ * - The stack is readable. The push-elision that via_history.js does by
+ *   peeking at `navigation.entries()` is native ground here: a push whose
+ *   destination is the entry next door becomes `traverseTo()` before anything
+ *   commits.
+ * - The browser's loading UI is honest: the intercept handler's promise IS
+ *   the navigation, so the spinner spins while routing loads.
+ *
+ * What does NOT change: the scroll, the rendering hold and the announcements
+ * are the shared modules (scroll_restoration.js, rendering_hold.js,
+ * before_routing.js) — a picture of the page being left must be taken before
+ * anything moves, whichever API drives the entries. Interception asks for
+ * `scroll: "manual"` precisely so the browser does not scroll at commit time,
+ * which is before the picture.
+ */
+
+import { signal } from "@preact/signals";
+
+import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
+import { setActionDispatcher } from "../../action/actions.js";
+import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { whenRenderingResumes } from "../rendering_hold.js";
+import { rearmUrlTarget } from "../url_target/url_target.js";
+import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
+import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
+import { getHrefTargetInfo } from "./href_target_info.js";
+import {
+  installScrollRestoration,
+  restoreScrollPosition,
+} from "./scroll_restoration.js";
 
-let DEBUG = false;
+export const setupBrowserIntegrationViaNavigation = ({
+  applyActions,
+  applyRouting,
+  isRouting,
+}) => {
+  const { navigation } = window;
 
-export const setupRoutingViaNavigation = (handler) => {
-  updateDocumentUrl(navigation.currentEntry.url);
+  let globalAbortController = new AbortController();
+  const triggerGlobalAbort = (reason) => {
+    globalAbortController.abort(reason);
+    globalAbortController = new AbortController();
+  };
+
+  const dispatchActions = (params) => {
+    const { requestedResult } = applyActions({
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: new AbortController().signal,
+      ...params,
+    });
+    return requestedResult;
+  };
+  setActionDispatcher(dispatchActions);
+
+  const getDocumentState = () => {
+    const state = navigation.currentEntry.getState();
+    return state ? { ...state } : null;
+  };
+
+  const stateAtStart = getDocumentState();
+  const visitedUrlSet = stateAtStart
+    ? new Set(stateAtStart.jsenv_visited_urls || [])
+    : new Set();
+  const visitedUrlsSignal = signal(0);
+  const isVisited = (url) => {
+    url = new URL(url, window.location.href).href;
+    return visitedUrlSet.has(url);
+  };
+  const markUrlAsVisited = (url) => {
+    if (visitedUrlSet.has(url)) {
+      return;
+    }
+    visitedUrlSet.add(url);
+    visitedUrlsSignal.value++;
+  };
+
+  // Entries of THIS document: any entry seen current while this document is
+  // alive belongs to it — a traversal to a cross-document entry unloads us
+  // before any event fires. Traversing to one of these stays in the page;
+  // traversing to any other is a full load no link asked for.
+  const sameDocumentEntryKeys = new Set([navigation.currentEntry.key]);
   navigation.addEventListener("currententrychange", () => {
+    sameDocumentEntryKeys.add(navigation.currentEntry.key);
     updateDocumentUrl(navigation.currentEntry.url);
   });
 
+  const adjacentEntryKey = (url) => {
+    const entries = navigation.entries();
+    const index = navigation.currentEntry.index;
+    // Behind first: when the same page stands on both sides, a link to it
+    // reads as going back.
+    for (const delta of [-1, 1]) {
+      const entry = entries[index + delta];
+      if (entry && entry.url === url && sameDocumentEntryKeys.has(entry.key)) {
+        return entry.key;
+      }
+    }
+    return null;
+  };
+
+  // The routing itself — what the intercept handler, init and reload share.
+  // Aborting: each run aborts the previous one, and the navigate event's own
+  // signal (superseded navigation, stop button) aborts the current one.
+  let abortController = null;
+  const runRouting = (url, { reason, navigationType, state, abortEvent }) => {
+    if (navigationType === "push" || navigationType === "replace") {
+      markUrlAsVisited(url);
+      // Same reading as via_history.js: undefined inherits the current state,
+      // null resets it, an object replaces it — and the visited set rides
+      // along in every case. The entry already exists (interception commits
+      // before the handler runs), so the state is written onto it.
+      let effectiveState;
+      const sharedState = {
+        jsenv_visited_urls: Array.from(visitedUrlSet),
+      };
+      if (state === undefined) {
+        effectiveState = { ...(getDocumentState() || {}), ...sharedState };
+      } else if (state === null) {
+        effectiveState = sharedState;
+      } else {
+        effectiveState = { ...state, ...sharedState };
+      }
+      navigation.updateCurrentEntry({ state: effectiveState });
+      updateDocumentUrl(url);
+      updateDocumentState(effectiveState);
+    } else {
+      markUrlAsVisited(url);
+      updateDocumentUrl(url);
+      updateDocumentState(state);
+    }
+
+    if (abortController) {
+      abortController.abort(`navigating to ${url}`);
+    }
+    abortController = new AbortController();
+    const routingAbortController = abortController;
+    if (abortEvent) {
+      abortEvent.addEventListener("abort", () => {
+        routingAbortController.abort(abortEvent.reason);
+      });
+    }
+    const { allResult, requestedResult } = applyRouting(url, {
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: routingAbortController.signal,
+      reason,
+      navigationType,
+      isVisited,
+      state,
+    });
+    if (navigationType === "push") {
+      whenRenderingResumes(() => startAtTop(url));
+    } else if (navigationType === "traverse") {
+      whenRenderingResumes(() => restoreScrollPosition(url));
+    }
+    executeWithCleanup(
+      () => allResult,
+      () => {
+        abortController = undefined;
+      },
+    );
+    return { allResult, requestedResult };
+  };
+
+  // window.location.reload() — jsenv's hot reload uses it — must stay a full
+  // document reload; navigation.reload() would arrive as an interceptable
+  // "reload" and be swallowed. Told apart by wrapping the one caller that is
+  // ours (nobody here calls navigation.reload today, the wrapper is the
+  // contract for whoever does).
   let isReloadFromNavigationAPI = false;
-  const navigationReload = navigation.reload;
+  const navigationReload = navigation.reload.bind(navigation);
   navigation.reload = (...args) => {
     isReloadFromNavigationAPI = true;
-    navigationReload.call(navigation, ...args);
-    isReloadFromNavigationAPI = false;
+    try {
+      return navigationReload(...args);
+    } finally {
+      isReloadFromNavigationAPI = false;
+    }
   };
 
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
+      // Another origin, or a cross-document traversal: the browser's business.
       return;
     }
     if (event.hashChange || event.downloadRequest !== null) {
+      // A fragment belongs to the browser (`:target`, focus); a download is
+      // not a navigation at all.
+      return;
+    }
+    if (event.formData) {
+      // Forms are not taken over (same stance as via_history.js's empty
+      // submit listener): the browser submits.
       return;
     }
     if (
-      !event.userInitiated &&
       event.navigationType === "reload" &&
       event.isTrusted &&
       !isReloadFromNavigationAPI
     ) {
-      // let window.location.reload() reload the whole document
-      // (used by jsenv hot reload)
+      // window.location.reload(): the full document reload it asks for.
       return;
     }
-    const { signal } = event;
-    const formAction = event.info?.formAction;
-    const isReload = event.navigationType === "reload";
-    const isReplace = event.navigationType === "replace";
-    const currentUrl = navigation.currentEntry.url;
-    const destinationUrl = event.destination.url;
-    const currentState = navigation.currentEntry.getState();
-    const destinationState = event.destination.getState();
-    const formData = event.formData || event.info?.formData;
-    const formUrl = event.info?.formUrl;
-    const stopAbortController = new AbortController();
-    const stopSignal = stopAbortController.signal;
-    const removeStopButtonClickDetector = detectBrowserStopButtonClick(
-      signal,
-      () => {
-        stopAbortController.abort("stop button clicked");
-      },
-    );
+    if (!isRouting()) {
+      // No routes declared: the page is a plain document and a link in it is
+      // a plain link.
+      return;
+    }
+    const url = event.destination.url;
+    const navigationType = event.navigationType;
 
-    if (DEBUG) {
-      console.log("receive navigate event", {
-        destinationUrl,
-        destinationState,
-      });
+    // A push to the entry next door is morally a traversal: taken as one, the
+    // stack stays what the reader thinks it is and the page comes back where
+    // they left it. Decided before anything commits — preventDefault is only
+    // legal here because a same-document push is cancelable.
+    if (
+      navigationType === "push" &&
+      event.destination.getState() === undefined &&
+      url !== window.location.href
+    ) {
+      const key = adjacentEntryKey(url);
+      if (key !== null) {
+        event.preventDefault();
+        navigation.traverseTo(key);
+        return;
+      }
     }
 
+    // Before the commit writes anything: the last moment the page still
+    // stands as it was, which is what the rendering hold (and the picture of
+    // a transition) needs.
+    publishBeforeRouting({ url, navigationType });
+    const isSameUrl = url === window.location.href;
     event.intercept({
+      // The browser would scroll at commit time — before the picture of the
+      // page being left is taken. The shared scroll machinery does it at the
+      // right moment instead (see runRouting).
+      scroll: "manual",
+      // Without this, focus goes to document.body after every navigation,
+      // which kills keyboard shortcuts aimed at what was focused.
+      focusReset: "manual",
       handler: async () => {
-        if (event.info?.onStart) {
-          event.info.onStart();
-        }
         try {
-          await handler(event, {
-            abortSignal: signal,
-            stopSignal,
-            formAction,
-            formData,
-            formUrl,
-            isReload,
-            isReplace,
-            currentUrl,
-            destinationUrl,
-            currentState,
-            destinationState,
+          const state = event.destination.getState();
+          // State-only change on the same url (useNavState): the state signals
+          // move, the routes do not.
+          if (
+            isSameUrl &&
+            (navigationType === "push" || navigationType === "replace")
+          ) {
+            runStateOnly(state);
+            return;
+          }
+          const { allResult } = runRouting(url, {
+            reason: `"navigate" event towards ${url}`,
+            navigationType,
+            state,
+            abortEvent: event.signal,
           });
-        } catch (e) {
-          console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
-          throw e;
+          // The handler's promise IS the navigation for the browser (its
+          // loading UI follows it) — but a routing that fails is displayed by
+          // the page, never thrown at the navigation: rejected here, the
+          // browser would abort a navigation whose page is busy explaining
+          // what went wrong.
+          await Promise.resolve(allResult).catch((e) => {
+            reportErrorIfNobodyDisplaysIt(e);
+          });
         } finally {
-          removeStopButtonClickDetector();
+          publishAfterRouting({ url, navigationType });
         }
       },
-      // https://github.com/WICG/navigation-api?tab=readme-ov-file#focus-management
-      // without this, after clicking <a href="...">, the focus does to document.body
-      // which is problematic for shortcuts for instance
-      focusReset: "manual",
     });
   });
+
+  const runStateOnly = (state) => {
+    let effectiveState;
+    const sharedState = { jsenv_visited_urls: Array.from(visitedUrlSet) };
+    if (state === undefined) {
+      effectiveState = { ...(getDocumentState() || {}), ...sharedState };
+    } else if (state === null) {
+      effectiveState = sharedState;
+    } else {
+      effectiveState = { ...state, ...sharedState };
+    }
+    navigation.updateCurrentEntry({ state: effectiveState });
+    updateDocumentState(effectiveState);
+  };
+
+  // The one press the browser answers with a scroll and nothing else: same
+  // pathname, same hash. No navigate event reaches anyone, so the element the
+  // url designates has to be re-armed by hand — the same corner case
+  // via_history.js keeps a click listener for.
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (e.button !== 0 || e.metaKey || e.defaultPrevented) {
+        return;
+      }
+      const linkElement = e.target.closest("a");
+      if (!linkElement) {
+        return;
+      }
+      const { isCurrent, isAnchor } = getHrefTargetInfo(linkElement.href);
+      if (isAnchor && isCurrent) {
+        rearmUrlTarget();
+      }
+    },
+    { capture: true },
+  );
+
+  installScrollRestoration();
+
+  const navTo = async (url, { replace, state } = {}) => {
+    navigation.navigate(url, {
+      // undefined stays "inherit" through the event: navigate() stores no
+      // state, destination.getState() answers undefined, and runRouting reads
+      // that as "keep what the document holds".
+      state,
+      history: replace ? "replace" : "auto",
+    });
+  };
+
+  const stop = (reason = "stop called") => {
+    triggerGlobalAbort(reason);
+  };
+
+  const reload = () => {
+    const url = window.location.href;
+    runRouting(url, {
+      reason: "reload called",
+      navigationType: "reload",
+      state: getDocumentState(),
+    });
+  };
+
+  const navBack = () => {
+    // history.back() with nowhere to go is silent; navigation.back() throws.
+    // The silent reading is the contract.
+    if (navigation.canGoBack) {
+      navigation.back();
+    }
+  };
+  const navForward = () => {
+    if (navigation.canGoForward) {
+      navigation.forward();
+    }
+  };
+
+  const init = () => {
+    const url = window.location.href;
+    runRouting(url, {
+      reason: "routing initialization",
+      navigationType: "load",
+      state: getDocumentState(),
+    });
+  };
+
+  return {
+    integration: "browser_navigation_api",
+    init,
+    navTo,
+    stop,
+    reload,
+    navBack,
+    navForward,
+    getDocumentState,
+    isVisited,
+    visitedUrlsSignal,
+  };
 };
 
-// setupNavigateHandler(async (event, { stopSignal, formAction, formData }) => {
-//   if (formAction) {
-//     const result = await applyAction(formAction, {
-//       signal: stopSignal,
-//       formData,
-//     });
-//     event.info.formActionCallback(result);
-//   }
-
-//   await navMethods.applyRouting({
-//     sourceUrl: currentUrl,
-//     targetUrl: formUrl || destinationUrl,
-//     sourceState: currentState,
-//     targetState: destinationState || currentState,
-//     abortSignal,
-//     stopSignal,
-//     isReload,
-//     isReplace,
-//     info: event.info,
-//   });
-//   if (formUrl) {
-//     const finishedPromise = event.target.transition.finished;
-//     (async () => {
-//       try {
-//         await finishedPromise;
-//       } finally {
-//         navigation.navigate(window.location.href, {
-//           state: navigation.currentEntry.getState(),
-//           history: "replace",
-//         });
-//       }
-//     })();
-//   }
-// });
-
-/**
- * There is 2 distinct reason to abort a navigation:
- * - the user clicked the browser stop button
- * - the user navigate to an other page
- *
- * When navigating to an other page we don't want to abort anything, the routing does that
- * When clicking the stop button we want to cancel everything
- *
- * To detect that when aborted, we wait a setTimeout to see if we receive a new navigation
- * If yes it means this is an abort due to a new navigation
- * Otherwise it's an abort due to the stop button
- *
- * On top of that stop button must cancel X navigation so the last navigation detecting the stop click
- * is notifying any current navigation that stop button was clicked
- */
-let callEffect = () => {};
-const browserStopButtonClickCallbackSet = new Set();
-const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
-  callEffect();
-  browserStopButtonClickCallbackSet.add(callback);
-  navigateEventSignal.addEventListener("abort", async () => {
-    const timeout = setTimeout(() => {
-      callEffect = () => {};
-
-      for (const browserStopButtonClickCallback of browserStopButtonClickCallbackSet) {
-        browserStopButtonClickCallback();
-      }
-      browserStopButtonClickCallbackSet.clear();
-    });
-    callEffect = () => {
-      clearTimeout(timeout);
-    };
-  });
-
-  return () => {
-    browserStopButtonClickCallbackSet.delete(callback);
-  };
+// Same rule, same timing as via_history.js's own: a page one arrives at for
+// the first time starts at its top, once the picture of the page being left
+// has been taken.
+const startAtTop = (url) => {
+  if (new URL(url, window.location.href).hash) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
