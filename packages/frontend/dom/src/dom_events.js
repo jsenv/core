@@ -73,11 +73,22 @@ export const chainEvent = (customEvent, parentEvent) => {
   if (!parentEvent) {
     return customEvent;
   }
-  if (!customEvent.detail) {
-    console.warn(
-      `Event "${customEvent.type}" has no detail object. Cannot chain to parent event "${parentEvent.type}".`,
-    );
-    return customEvent;
+  if (!customEvent.detail || typeof customEvent.detail !== "object") {
+    // A native event has nowhere to hang the chain: `Event` has no detail at
+    // all and `UIEvent` (so `InputEvent` too) exposes it as a readonly number.
+    // Give it an own detail object, shadowing the prototype getter, so a
+    // synthetic event dispatched on behalf of a gesture can still say what
+    // caused it.
+    if (nativeDetailHasMeaning(customEvent)) {
+      console.warn(
+        `Chaining "${customEvent.type}" to "${parentEvent.type}" replaces its native detail (${customEvent.detail}), which carries the click count on this event type. Chain a custom event instead, or read the click count before chaining.`,
+      );
+    }
+    Object.defineProperty(customEvent, "detail", {
+      value: {},
+      configurable: true,
+      enumerable: true,
+    });
   }
   // Always build eventChain from the first wrapping so callers can rely on it
   // being present whenever `parentEvent` is set.
@@ -119,6 +130,24 @@ export const findEvent = (event, predicate) => {
     }
   }
   return undefined;
+};
+
+// `detail` is a click count on the pointer events that define one, and 0
+// everywhere else (`input`, `focus`, `wheel`…). Overwriting it there loses the
+// only way to tell a real click from a keyboard/programmatic one (detail === 0),
+// so those events must not be chained.
+const EVENT_TYPES_WITH_MEANINGFUL_DETAIL = new Set([
+  "click",
+  "auxclick",
+  "dblclick",
+  "mousedown",
+  "mouseup",
+]);
+const nativeDetailHasMeaning = (event) => {
+  if (EVENT_TYPES_WITH_MEANINGFUL_DETAIL.has(event.type)) {
+    return true;
+  }
+  return typeof event.detail === "number" && event.detail !== 0;
 };
 
 const resolveEventPredicate = (predicate) => {
