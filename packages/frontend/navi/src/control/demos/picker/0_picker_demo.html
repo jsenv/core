@@ -105,6 +105,7 @@
         setupRoutes,
       } from "@jsenv/navi";
       import { NavInspect } from "@jsenv/navi/src/control/demos/utils/nav_inspect.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
       // ── State signals (persisted in URL search params) ────────────────────
 
@@ -126,6 +127,7 @@
             </Chapter>
             <Chapter id="icon" title="Picker icon">
               <PickerIconDemo />
+              <RightSlotDemo />
             </Chapter>
             <Chapter id="variant" title="Variants">
               <VariantDemo />
@@ -155,6 +157,11 @@
             <Chapter id="loading" title="Loading & error">
               <ContentLoadingDemo />
               <ValueLoadingDemo />
+            </Chapter>
+            <Chapter id="clearing" title="Clearing">
+              <ClearableDemo />
+              <ClearConfirmDemo />
+              <ClearObjectRowDemo />
             </Chapter>
           </Box>
         </NaviDebug>
@@ -223,6 +230,13 @@
             </li>
             <li>
               <Link href="#icon">Picker icon</Link>
+              <ol>
+                <li>
+                  <Link href="#icon-right-slot">
+                    rightSlot — something interactive in the slot
+                  </Link>
+                </li>
+              </ol>
             </li>
             <li>
               <Link href="#variant">Variants</Link>
@@ -287,6 +301,26 @@
                 </li>
                 <li>
                   <Link href="#loading-value">Loading the selected label</Link>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <Link href="#clearing">Clearing</Link>
+              <ol>
+                <li>
+                  <Link href="#clearing-clearable">
+                    clearable — navi&apos;s own cross
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#clearing-action">
+                    A cross that asks, then sends the clear
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#clearing-custom-ui">
+                    A settings row that holds an object
+                  </Link>
                 </li>
               </ol>
             </li>
@@ -1570,6 +1604,215 @@
                   selectedId={articleId}
                 />
               </Picker>
+            </Box>
+          </Subsection>
+        );
+      };
+
+      // ── Clearing ─────────────────────────────────────────────────────────────
+
+      const FRUITS = ["Apple", "Cherry", "Elderberry"];
+      const FruitList = ({ selected }) => (
+        <List selectable command="--navi-send">
+          {FRUITS.map((fruit, i) => (
+            <ListItem
+              selectable
+              key={fruit}
+              id={`fruit_${fruit}`}
+              index={i}
+              value={fruit}
+              selected={selected === fruit}
+              paddingX="m"
+              paddingY="s"
+            >
+              {fruit}
+            </ListItem>
+          ))}
+        </List>
+      );
+
+      const ClearableDemo = () => {
+        const [value, setValue] = useState("Apple");
+
+        return (
+          <Subsection
+            id="clearing-clearable"
+            title="clearable — navi's own cross"
+          >
+            <p>
+              The cross shows while the picker&apos;s own ui state holds
+              something, replaces the chevron, and clears then sends on press —
+              no question asked. Everything below is what a caller does when
+              that is not the wanted behaviour.
+            </p>
+            <Field vertical>
+              <Label>clearable</Label>
+              <Picker
+                name="clear_clearable"
+                minWidth="200"
+                clearable
+                placeholder="Pick a fruit…"
+                value={value}
+                action={(v) => {
+                  setValue(v);
+                }}
+              >
+                <FruitList selected={value} />
+              </Picker>
+            </Field>
+          </Subsection>
+        );
+      };
+
+      const ClearConfirmDemo = () => (
+        <Subsection
+          id="clearing-action"
+          title="A cross that asks, then sends the clear"
+        >
+          <p>
+            <code>clearConfirm</code> is the question the cross asks — the same
+            thing <code>&lt;Button confirm&gt;</code> takes, plain text or JSX.
+            It is asked BEFORE anything is emptied: while it is on the screen
+            the field is exactly as it was, and answering no leaves it that way.
+            Answering yes clears and sends, so the picker&apos;s own action
+            receives the cleared value like any other choice — nothing else to
+            wire.
+          </p>
+          <p>
+            The clear is <strong>optimistic</strong>: the field empties on the
+            spot and the send commits it afterwards. Press <em>échouer</em>{" "}
+            below to refuse the call — the value comes back where it was, and
+            the error lands on the picker rather than on the cross, which left
+            with the value it had cleared.
+          </p>
+          <FakeBackend value={{ fruit: "Cherry" }}>
+            {({ value, action }) => (
+              <Field vertical>
+                <Label>clearable + clearConfirm</Label>
+                <Picker
+                  name="clear_action"
+                  minWidth="200"
+                  clearable
+                  clearConfirm={`Remove "${value.fruit}" from this field?`}
+                  placeholder="Pick a fruit…"
+                  value={value.fruit}
+                  action={(fruit) => action({ fruit })}
+                >
+                  <FruitList selected={value.fruit} />
+                </Picker>
+              </Field>
+            )}
+          </FakeBackend>
+        </Subsection>
+      );
+
+      const ClearObjectRowDemo = () => (
+        <Subsection
+          id="clearing-custom-ui"
+          title="A settings row that holds an object"
+        >
+          <p>
+            The picker wears its own <code>ui</code> — a label above the value —
+            and holds one field of a bigger object. The cross sends what the
+            picker now holds, so the action puts the cleared nickname back into
+            the object and the visibility next to it is left alone.
+          </p>
+          <FakeBackend value={{ nickname: "Dam", visibility: "public" }}>
+            {({ value, action }) => (
+              <Field vertical>
+                <Label>Settings row</Label>
+                <Picker
+                  name="clear_custom_ui"
+                  mode="dialog"
+                  minWidth="260"
+                  clearable
+                  clearConfirm="Remove your nickname?"
+                  value={value.nickname}
+                  ui={
+                    <Box flex="y" style={{ padding: "6px 0" }}>
+                      <span style={{ fontWeight: "500" }}>Nickname</span>
+                      <span style={{ color: "#777", fontSize: "13px" }}>
+                        {value.nickname || "Not set"}
+                      </span>
+                    </Box>
+                  }
+                  action={(nickname) => action({ ...value, nickname })}
+                >
+                  <List selectable command="--navi-send">
+                    {["Dam", "Damien", "dmail"].map((nickname, i) => (
+                      <ListItem
+                        selectable
+                        key={nickname}
+                        id={`nickname_${nickname}`}
+                        index={i}
+                        value={nickname}
+                        selected={value.nickname === nickname}
+                        paddingX="m"
+                        paddingY="s"
+                      >
+                        {nickname}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+            )}
+          </FakeBackend>
+        </Subsection>
+      );
+
+      const RightSlotDemo = () => {
+        const [pressCount, setPressCount] = useState(0);
+
+        return (
+          <Subsection
+            id="icon-right-slot"
+            title="rightSlot — something interactive in the slot"
+          >
+            <p>
+              <code>rightSlotIcon</code> is wrapped in an{" "}
+              <code>&lt;Icon&gt;</code>, which is <code>aria-hidden</code>: a
+              button in there is reachable by tab and invisible to assistive
+              tech. <code>rightSlot</code> renders what it is given as-is, so
+              anything interactive goes there instead. The slot holds one thing
+              at a time — a clear cross, when there is one, takes the place of
+              both.
+            </p>
+            <Box flex="x" spacing="m" alignY="center">
+              <Picker
+                name="right_slot"
+                minWidth="200"
+                placeholder="Pick a fruit…"
+                rightSlot={
+                  <Button
+                    icon
+                    variant="discrete"
+                    tabIndex="-1"
+                    loadingOutline={false}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    action={() => {
+                      setPressCount(pressCount + 1);
+                    }}
+                  >
+                    ⓘ
+                  </Button>
+                }
+              >
+                <FruitList />
+              </Picker>
+              <div
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "12px",
+                  background: "#f1f8e9",
+                  border: "1px solid #c5e1a5",
+                  borderRadius: "4px",
+                }}
+              >
+                ⓘ pressed {pressCount} time(s)
+              </div>
             </Box>
           </Subsection>
         );

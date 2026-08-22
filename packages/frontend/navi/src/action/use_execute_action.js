@@ -70,6 +70,14 @@ export const useExecuteAction = (
     // so the validation message appears on the button, not the form.
     const element = elementRef.current;
     let target = requester;
+    // A requester that is no longer on the page is not a place to show
+    // anything: the clear cross leaves with the value it optimistically
+    // cleared, and by the time the refusal comes back there is nothing left to
+    // point at — the callout would anchor on a detached node. The control that
+    // ran the action is still there, and the error is about it, so it takes it.
+    if (target && !target.isConnected) {
+      target = undefined;
+    }
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);

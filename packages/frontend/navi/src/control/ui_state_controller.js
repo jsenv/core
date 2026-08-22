@@ -200,6 +200,10 @@ export const useUIStateController = (
         defaultValue: controlInfo.defaultValue,
 
         facadeChild: null,
+        // Set for the duration of one interaction by whatever wants the
+        // command to wait for something (a button's own action) — see the
+        // command trigger in onUIAction below.
+        commandDeferral: null,
         getManagedControls: () => {
           if (controller.facadeChild) {
             const child = controller.facadeChild;
@@ -256,7 +260,19 @@ export const useUIStateController = (
                 debugUIState(
                   `triggering command "${command}" for "${controlType}"`,
                 );
-                triggerNaviCommand(element, command, e);
+                const runCommand = () => {
+                  triggerNaviCommand(element, command, e);
+                };
+                // What the press means may not be due yet: a button with an
+                // action of its own runs the work first and lets its command
+                // follow only once that work succeeded (see control_hooks).
+                // The command is handed over rather than run; nobody claiming
+                // it means now.
+                if (controller.commandDeferral) {
+                  controller.commandDeferral(runCommand);
+                } else {
+                  runCommand();
+                }
               }
             }
           }
@@ -1785,6 +1801,12 @@ const INTERNAL_EVENT_SET = new Set([
   // on registration, and group pushing value/defaultValue to children on registerChild.
   // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
   "initial_state_push",
+  // navi undoing its own optimistic write: the clear cross emptied the control
+  // before the send that commits it, the send failed, and the value it emptied
+  // goes back where it was (see the --navi-clear command). Nothing acted — the
+  // control is being put back on the state the caller still holds — so this
+  // must not fire a uiAction, a command, or a report on the way.
+  "clear_rollback",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);

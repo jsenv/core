@@ -214,48 +214,39 @@ refuses the one close that matters, the one over a control mid-action.
 
 ### Closing when a button also runs an action
 
-Closing from inside the `action` does not close. While the action runs, the
-button that started it is busy, and a busy control is exactly what a popup
-refuses to close over (see the top of this page). The refusal is not silent —
-the busy control raises a callout saying so — but the popup stays open, and the
-first Escape afterwards dismisses that callout rather than the popup, which
-reads as a popup that no longer closes at all.
-
-There are two shapes, and they say different things:
+A button that carries both runs them in that order: the action first, the
+command once it succeeded.
 
 ```jsx
-// Closes on the press. The popup does NOT wait for save(): it is already
-// closed when the action starts, and the action finishes behind it.
+// Stays open while save() runs, closes when it resolves, stays open if it
+// throws — with what was typed still there and the error on the button.
 <Button command="--navi-close" commandfor="note-dialog" action={save}>
   Save
 </Button>
 ```
 
-`command` next to `action` is the one to reach for when the answer is taken as
-soon as it is given — the popup gets out of the way, the save runs on its own.
-Know what it costs: **a save that fails does so behind a closed popup**, and the
-error callout it raises lands on a button nobody can see any more. Use it where
-the failure is reported somewhere else, or where losing it is acceptable.
+The command is what the press means AFTER the work, so it waits for the work:
+closing first would take the form off the screen over a request that can still
+fail, and the error callout it raises would land on a button nobody can see any
+more. An action that ends in an error or an abort — a `confirm` answered "no" is
+an abort — leaves the popup where it is. Same rule a form already follows for
+what comes after its send (`data-after-send`, see `resolveAfterSend` in
+commands.js).
 
-```jsx
-// Closes only once save() has resolved, and stays open if it throws.
-<Button
-  action={save}
-  onActionEnd={() => {
-    // NOT synchronously: the button still counts as busy while its own
-    // action-end handlers run, and the popup would refuse the close.
-    queueMicrotask(() => {
-      triggerNaviCommand(dialogRef.current, "--navi-close");
-    });
-  }}
->
-  Save
-</Button>
-```
+The wait is why closing **from inside** the action still does not close: while
+the action runs, the button that started it is busy, and a busy control is
+exactly what a popup refuses to close over (see the top of this page). The
+refusal is not silent — the busy control raises a callout saying so — but the
+popup stays open, and the first Escape afterwards dismisses that callout rather
+than the popup, which reads as a popup that no longer closes at all. Nothing has
+to be hand-written to work around it: `command` next to `action` is that
+workaround, done at the one moment where the action has settled and the button
+is no longer busy.
 
-`onActionEnd` only fires when the action succeeded, so the popup stays open on
-failure — the answer is then neither committed nor given up, and it is still
-there to be corrected, with the error shown on the button that raised it.
+To close on the press instead — the answer taken as soon as it is given, the
+save running on its own behind a closed popup — close from somewhere the action
+does not hold up, e.g. an `onClick` of your own. Know what it costs: **a save
+that fails does so behind a closed popup**.
 
 ## Escape cancels, the other gestures keep
 

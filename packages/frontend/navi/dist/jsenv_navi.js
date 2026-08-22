@@ -693,7 +693,31 @@ const getConfirmParams = (element) => {
   if (!element) {
     return undefined;
   }
+  if (confirmAnsweredSet.has(element)) {
+    return undefined;
+  }
   return confirmParamsWeakMap.get(element);
+};
+
+const confirmAnsweredSet = new WeakSet();
+
+/**
+ * One press asks its question once. What a press sets off can come back through
+ * the action path with the same element as requester — clearing a picker sends
+ * it, and the send reads the question off whoever asked for it — so whoever
+ * already asked says so, for as long as that press lasts.
+ *
+ * @param {Element} element - The one that was asked.
+ * @returns {() => void} Call it when the press is over.
+ */
+const suspendConfirmParams = (element) => {
+  if (!element) {
+    return () => {};
+  }
+  confirmAnsweredSet.add(element);
+  return () => {
+    confirmAnsweredSet.delete(element);
+  };
 };
 
 /**
@@ -15727,6 +15751,14 @@ const useExecuteAction = (
     // so the validation message appears on the button, not the form.
     const element = elementRef.current;
     let target = requester;
+    // A requester that is no longer on the page is not a place to show
+    // anything: the clear cross leaves with the value it optimistically
+    // cleared, and by the time the refusal comes back there is nothing left to
+    // point at — the callout would anchor on a detached node. The control that
+    // ran the action is still there, and the error is about it, so it takes it.
+    if (target && !target.isConnected) {
+      target = undefined;
+    }
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
@@ -22671,34 +22703,122 @@ registerNaviCommand("--navi-clear", (source, event) => {
   // moment a value is chosen — has nothing that would commit a clear: its
   // action never runs on a ui state change. Left alone, the field goes empty
   // while the caller still holds the value it gave, and renders it right back.
+  //
+  // Unless the source committed the clear itself: a clear button given its own
+  // action (`<Button action={remove} command="--navi-clear">`) already made the
+  // request — the ui state is being brought in line with what just happened, and
+  // sending the picker's own action on top would ask twice.
+  const sourceController = source.__uiStateController__;
   const fromSendOnlyControl = Boolean(
-    source.closest?.(`[navi-control=picker]`),
+    source.closest?.(`[navi-control=picker]`) &&
+    !sourceController?.props.action,
   );
+
+  const performClear = (clearEvent) => {
+    dispatchRequestInteraction(target, {
+      event: clearEvent,
+      name: "--navi-clear",
+      prevented: () => clearEvent.preventDefault(),
+      allowed: () => {
+        // What the control holds, before it holds nothing: the clear is
+        // optimistic — the field empties now and the send that commits it may
+        // still fail — so what it emptied has to be kept to be put back.
+        const uiStateBefore = getUIStateFromElement(target);
+        dispatchRequestClearUIState(target, clearEvent);
+        if (!fromSendOnlyControl) {
+          return;
+        }
+        // After the clear, never before: the action is bound to the ui
+        // state signal, so this sends the value the control now holds.
+        const actionHost = findControlHost(target) || target;
+        const completion = watchActionCompletion(actionHost, () => {
+          triggerNaviCommand(source, "--navi-send", clearEvent, {
+            optional: true,
+          });
+        });
+        completion.whenSettled(({ error, aborted }) => {
+          if (!error && !aborted) {
+            return;
+          }
+          // The removal did not happen, so the field must stop saying it did.
+          // The error itself stays where the action put it — on the control,
+          // which is still there, unlike the cross that has just gone with the
+          // value it cleared (see addErrorMessage in use_execute_action.js).
+          //
+          // Put back from the inside ("clear_rollback" is an internal event
+          // type, see ui_state_controller.js) rather than asked for the way a
+          // user would: nobody acted, the control is being returned to the
+          // state its caller still holds. Asked from the outside it would be
+          // answered with "this element is busy" — the action is still
+          // settling — over the very error that explains why the value is back.
+          const controller = actionHost.__uiStateController__;
+          if (!controller) {
+            return;
+          }
+          const rollbackEvent = new CustomEvent("clear_rollback", {
+            detail: {},
+          });
+          chainEvent(rollbackEvent, clearEvent);
+          controller.setUIState(uiStateBefore, rollbackEvent);
+        });
+      },
+    });
+
+    if (fromInput) ; else if (
+      // Only what is open: the clear cross of a picker sits on the closed
+      // trigger, and asking that trigger to close is asking it to do nothing —
+      // except that the ask goes through the interaction gate, which turns it
+      // down while the clear it just sent is still running and says so out loud
+      // ("this element is busy"). A clear pressed INSIDE an open popup is the
+      // one this is for: it answers the popup, so the popup goes away.
+      resolveClosestExpandable(source)?.getAttribute("aria-expanded") === "true"
+    ) {
+      triggerNaviCommand(source, "--navi-close", clearEvent, {
+        optional: true,
+      });
+    }
+  };
 
   return {
     target,
     implementation: () => {
-      dispatchRequestInteraction(target, {
-        event,
-        name: "--navi-clear",
-        prevented: () => event.preventDefault(),
-        allowed: () => {
-          dispatchRequestClearUIState(target, event);
-          if (fromSendOnlyControl) {
-            // After the clear, never before: the action is bound to the ui
-            // state signal, so this sends the value the control now holds.
-            triggerNaviCommand(source, "--navi-send", event, {
-              optional: true,
-            });
-          }
-        },
-      });
-
-      if (fromInput) ; else {
-        triggerNaviCommand(source, "--navi-close", event, {
-          optional: true,
-        });
+      // "Are you sure?" comes before anything is cleared. It is asked here
+      // rather than by the action the clear ends up sending (which is where a
+      // confirmation is normally asked, see use_execute_action) because that
+      // one only runs AFTER the ui state was emptied: the field would go blank
+      // behind the question, and answering "no" would leave it blank over a
+      // value that was never removed.
+      const confirmParams = getConfirmParams(source);
+      if (!confirmParams) {
+        performClear(event);
+        return;
       }
+      requestConfirmation({
+        ...confirmParams,
+        anchor: source,
+      }).then((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        // A new event, chained to the press: the press itself is over and has
+        // been consumed — the control that took the click cancelled it on its
+        // way out so the region around it would not read it as "unfold me" (see
+        // click_to_expand.js), and navi refuses an interaction on a cancelled
+        // event. What happens now happens BECAUSE of that press, which is what
+        // the chain says, but it is no longer that press.
+        const clearConfirmedEvent = new CustomEvent("navi_clear_confirmed", {
+          detail: {},
+        });
+        chainEvent(clearConfirmedEvent, event);
+        // Answered — and the send that follows must not ask it again: it reads
+        // the same question off this same element (getConfirmParams(requester)).
+        const restoreConfirmParams = suspendConfirmParams(source);
+        try {
+          performClear(clearConfirmedEvent);
+        } finally {
+          restoreConfirmParams();
+        }
+      });
     },
   };
 });
@@ -23907,6 +24027,10 @@ const useUIStateController = (
         defaultValue: controlInfo.defaultValue,
 
         facadeChild: null,
+        // Set for the duration of one interaction by whatever wants the
+        // command to wait for something (a button's own action) — see the
+        // command trigger in onUIAction below.
+        commandDeferral: null,
         getManagedControls: () => {
           if (controller.facadeChild) {
             const child = controller.facadeChild;
@@ -23962,7 +24086,19 @@ const useUIStateController = (
                 debugUIState(
                   `triggering command "${command}" for "${controlType}"`,
                 );
-                triggerNaviCommand(element, command, e);
+                const runCommand = () => {
+                  triggerNaviCommand(element, command, e);
+                };
+                // What the press means may not be due yet: a button with an
+                // action of its own runs the work first and lets its command
+                // follow only once that work succeeded (see control_hooks).
+                // The command is handed over rather than run; nobody claiming
+                // it means now.
+                if (controller.commandDeferral) {
+                  controller.commandDeferral(runCommand);
+                } else {
+                  runCommand();
+                }
               }
             }
           }
@@ -25455,6 +25591,12 @@ const INTERNAL_EVENT_SET = new Set([
   // on registration, and group pushing value/defaultValue to children on registerChild.
   // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
   "initial_state_push",
+  // navi undoing its own optimistic write: the clear cross emptied the control
+  // before the send that commits it, the send failed, and the value it emptied
+  // goes back where it was (see the --navi-clear command). Nothing acted — the
+  // control is being put back on the state the caller still holds — so this
+  // must not fire a uiAction, a command, or a report on the way.
+  "clear_rollback",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
@@ -25790,7 +25932,30 @@ const useControlProps = (props, {
       }
       if (controlType === "button") {
         const onButtonInteractionAllowed = e => {
-          triggerUIAction(e);
+          // A command that follows the control's OWN action has to wait for it:
+          // `<Button action={remove} command="--navi-clear">` means "remove it,
+          // then clear the field" — clearing first would empty the field over a
+          // request that can still fail, and a confirm popup refusing the action
+          // would leave the clear standing. Same rule the form counterpart
+          // already has (data-after-send, see resolveAfterSend in commands.js).
+          //
+          // Armed here, around the ui action, because the command fires from
+          // there (see the command trigger in ui_state_controller). A button is
+          // where this arises: its press IS the ui action, the action and the
+          // command, in one breath. A field's ui action and its action are two
+          // different moments (typing, then change/blur), and its command
+          // belongs to the first — there is nothing to wait for.
+          let deferredCommand = null;
+          if (props.action && props.command) {
+            uiStateController.commandDeferral = runCommand => {
+              deferredCommand = runCommand;
+            };
+          }
+          try {
+            triggerUIAction(e);
+          } finally {
+            uiStateController.commandDeferral = null;
+          }
           const control = ref.current;
           if (!control) {
             // What the button just did took the button away: a command that
@@ -25799,11 +25964,36 @@ const useControlProps = (props, {
             // press was for has already happened.
             return;
           }
-          tryActionAfterInteractionAllowed(control, {
+          const completion = watchActionCompletion(control, () => tryActionAfterInteractionAllowed(control, {
             event: e,
             action: boundAction,
             requester: control
+          }));
+          if (!deferredCommand) {
+            return;
+          }
+          if (completion.result === false) {
+            // The action was turned down (a failing constraint, a gate saying
+            // no) — nothing happened, so nothing follows.
+            return;
+          }
+          if (completion.isRunning) {
+            completion.whenSucceeded(deferredCommand);
+            return;
+          }
+          // Synchronous: already settled, and how it ended still decides. An
+          // action that never started (nothing to run) leaves no outcome, and
+          // the command runs as it always did.
+          let succeeded = true;
+          completion.whenSettled(({
+            error,
+            aborted
+          }) => {
+            succeeded = !error && !aborted;
           });
+          if (succeeded) {
+            deferredCommand();
+          }
         };
         return {
           keyDown: keyDownDefault,
@@ -28324,7 +28514,6 @@ const createOpenController = (
         cancelable: true,
       });
       chainEvent(requestOpenEvent, e);
-      controller.opened = true;
       // we prepare focus transfer before actually opening the popover/dialog
       // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
       const focusTransfer = prepareFocusTransfer(
@@ -28372,6 +28561,18 @@ const createOpenController = (
       // before anything inside the popup can claim it, and before openEffect,
       // which measures the popup to place it.
       controller.mountContent?.();
+      // Only now — after the content has been built, before openEffect shows
+      // it. Dialog/Popover recompute aria-expanded and navi-hidden from this
+      // flag on every render, and mountContent above renders synchronously:
+      // flipping it any earlier commits an already-open DOM (aria-expanded
+      // "true", navi-hidden gone) before openEffect has run a single
+      // statement, so the "closed" frame it pins to transition from is in
+      // fact the open one and the entrance animation has nothing to play.
+      // It also gives the content it just built the opening it is documented
+      // to observe — mounted while the popup reads as closed, told it opened
+      // right after (see popup_content_mount.js and
+      // use_displayed_layout_effect.js).
+      controller.opened = true;
       const openEffectReturnValue =
         controller.openEffect(requestOpenEvent) || null;
       openEffectCleanup = (closeEvent) => {
@@ -29802,6 +30003,11 @@ const css$W = /* css */`
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
+ *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
+ *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
+ *   triggering event carried. Same prop as Popover's, applied to the only
+ *   thing an anchor does here: sizing (`--anchor-width`/`--anchor-height`).
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -30063,6 +30269,10 @@ const useDialogProps = props => {
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
     anchor,
+    // Same meaning as Popover's own prop, applied to the only thing an anchor
+    // does here: sizing. "ignore" is how a dialog that must not inherit its
+    // trigger's width says so (SidePanel does exactly that).
+    anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
     // nothing focusable of its own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -30242,9 +30452,10 @@ const useDialogProps = props => {
         console.warn(`Dialog: anchor="${anchor}" did not match any element`);
       }
     } else if (anchor) {
-      // anchor prop is a ref or a DOM element
+      // anchor prop is a ref or a DOM element — always a real anchor,
+      // regardless of anchorCustomEventDetail.
       anchorElement = anchor.current ?? anchor;
-    } else if (e.detail.anchor) {
+    } else if (anchorCustomEventDetail === "override") {
       // e.g. the button that triggered a --navi-toggle/--navi-open command,
       // already resolved from detail.anchor/detail.source by the caller
       // (see UncontrolledDialog's onnavi_request_open).
@@ -52746,10 +52957,10 @@ installImportMetaCssBuild(import.meta);/**
  * the hook's own `resetMode` return value, from its own onClose.
  *
  * `layer` (shared by both — picks the top-layer vs. local-container rendering
- * strategy either way) and `anchorCustomEventDetail` (Popover-only, Dialog
- * ignores it — Dialog never resolves an anchor for positioning purposes)
- * pass through untouched via `...rest` to whichever of Popover/Dialog
- * actually renders.
+ * strategy either way) and `anchorCustomEventDetail` (shared too: Popover
+ * resolves an anchor to position against, Dialog to size itself from) pass
+ * through untouched via `...rest` to whichever of Popover/Dialog actually
+ * renders.
  */
 const css$A = /* css */`
   @layer navi {
@@ -52789,12 +53000,14 @@ const css$A = /* css */`
  * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
  *   sizing-only for `Dialog`, positioning for `Popover` (see each
  *   component's own doc for what it actually does there).
- * @param {"override"|"ignore"} [props.anchorCustomEventDetail] -
- *   **Popover-only** (`Dialog` never resolves an anchor for positioning) —
- *   never forwarded to `Dialog`, so it can't leak onto the real `<dialog>`
- *   element as a stray DOM attribute when `mode="dialog"` is picked.
- * @param {string} [props.marginWithAnchor] - **Popover-only**, same
- *   Dialog-leak guard as `anchorCustomEventDetail` above.
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail] - Forwarded
+ *   as-is to both — what it governs differs (positioning for `Popover`,
+ *   sizing for `Dialog`), but "ignore whatever anchor the triggering event
+ *   carried" has to mean the same thing in either mode, or the same
+ *   `<Popup>` usage silently picks up its trigger's width on small screens.
+ * @param {string} [props.marginWithAnchor] - **Popover-only**, destructured
+ *   out so it can't leak onto the real `<dialog>` element as a stray DOM
+ *   attribute when `mode="dialog"` is picked.
  * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
@@ -52882,7 +53095,6 @@ const Popup = props => {
     // they're never part of ...rest, and therefore never forwarded to
     // Dialog below, where they'd otherwise leak onto the real <dialog>
     // element as stray, unrecognized DOM attributes.
-    anchorCustomEventDetail,
     marginWithAnchor,
     focusCapture,
     scrollCapture,
@@ -52917,7 +53129,6 @@ const Popup = props => {
     ...rest,
     maxWidth: maxWidth,
     pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
-    anchorCustomEventDetail: anchorCustomEventDetail,
     marginWithAnchor: marginWithAnchor,
     focusCapture: focusCapture,
     scrollCapture: scrollCapture === "popover" || scrollCapture,
@@ -60640,6 +60851,11 @@ const PickerButton = props => {
     variant,
     rightSlotIcon,
     rightSlotIconSize = "inherit",
+    // What goes in the right slot as-is — no <Icon> around it, so a caller can
+    // put something interactive there. `rightSlotIcon` cannot: it is wrapped in
+    // an <Icon>, which is aria-hidden, and a focusable node under aria-hidden is
+    // invisible to assistive tech while still being reachable by tab.
+    rightSlot,
     placeholder,
     ui,
     maxLines = 1,
@@ -60652,6 +60868,13 @@ const PickerButton = props => {
     // the end of an input: a picker holds a value the user chose, and unsetting
     // it should not require reopening the popup to hunt for a "none" entry.
     clearable,
+    // "Are you sure?" before the cross clears anything. A cross of three
+    // millimetres at the edge of a touch screen, right where the chevron is
+    // aimed at, is the button pressed by accident — and what it removes does
+    // not come back. Asked before the clear, so a "no" leaves the field
+    // untouched (see the --navi-clear command).
+    clearConfirm,
+    clearConfirmPopupContent,
     error
   } = props;
   const isSingleLine = maxLines === 1;
@@ -60694,6 +60917,9 @@ const PickerButton = props => {
     variant: undefined,
     rightSlotIcon: undefined,
     rightSlotIconSize: undefined,
+    rightSlot: undefined,
+    clearConfirm: undefined,
+    clearConfirmPopupContent: undefined,
     ui: undefined,
     maxLines: undefined,
     popupWidthFitContent: undefined,
@@ -60808,40 +61034,59 @@ const PickerButton = props => {
         })
       }), variant === "headless" || ui === "default" ? null : jsx("span", {
         className: "navi_picker_right_slot",
-        children: clearable && value !== undefined && value !== "" ? jsx(Button, {
-          command: "--navi-clear",
-          commandFor: inputProps.id,
-          tabIndex: "-1"
-          // No navi-focus-delegate, unlike the identical button inside an
-          // input: handing focus back to the picker's own input is what
-          // opens the popup, and clearing is the opposite intention.
-          ,
+        children: jsx(ControlIdContext.Provider, {
+          value: undefined,
+          children: jsx(ControlNameContext.Provider, {
+            value: undefined,
+            children: clearable && value !== undefined && value !== "" ? jsx(Button, {
+              command: "--navi-clear",
+              commandFor: inputProps.id
+              // The question, asked before the clear rather than by the
+              // action the clear sends — see the --navi-clear command.
+              ,
 
-          icon: true,
-          variant: "discrete"
-          // preventDefault, not just tabIndex="-1": a mousedown focuses
-          // its target before any click happens, and this button should
-          // never hold focus at all — the field keeps it.
-          ,
+              confirm: clearConfirm,
+              confirmPopupContent: clearConfirmPopupContent,
+              tabIndex: "-1"
+              // No navi-focus-delegate, unlike the identical button inside an
+              // input: handing focus back to the picker's own input is what
+              // opens the popup, and clearing is the opposite intention.
+              ,
 
-          onMouseDown: e => {
-            e.preventDefault();
-          },
-          flex: true,
-          align: "center",
-          children: jsx(Icon, {
-            size: rightSlotIconSize,
-            lineOverflow: "allow",
-            children: jsx(CloseSvg, {})
+              icon: true,
+              variant: "discrete"
+              // What is busy once the clear is sent is the picker — the value
+              // being removed is the whole field's, and the picker already
+              // draws the wait around all of it. Two outlines for one wait is
+              // one too many.
+              ,
+
+              loadingOutline: false
+              // preventDefault, not just tabIndex="-1": a mousedown focuses
+              // its target before any click happens, and this button should
+              // never hold focus at all — the field keeps it.
+              ,
+
+              onMouseDown: e => {
+                e.preventDefault();
+              },
+              flex: true,
+              align: "center",
+              children: jsx(Icon, {
+                size: rightSlotIconSize,
+                lineOverflow: "allow",
+                children: jsx(CloseSvg, {})
+              })
+            }) : rightSlot === undefined ?
+            // lineOverflow: what sits in the slot is an affordance, not a
+            // character — a caller asking for a bigger one wants it bigger,
+            // not capped at the height of the line it sits on
+            jsx(Icon, {
+              size: rightSlotIconSize,
+              lineOverflow: "allow",
+              children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
+            }) : rightSlot
           })
-        }) :
-        // lineOverflow: what sits in the slot is an affordance, not a
-        // character — a caller asking for a bigger one wants it bigger,
-        // not capped at the height of the line it sits on
-        jsx(Icon, {
-          size: rightSlotIconSize,
-          lineOverflow: "allow",
-          children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
         })
       })]
     }), jsx(ControlFacadeChildrenWrapper, {
@@ -72275,19 +72520,13 @@ installImportMetaCssBuild(import.meta);/**
  * `navi-side`/`data-layer` attributes) rather than computed in JS — read
  * the CSS block below instead of expecting a JS equivalent of it here.
  *
- * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it,
- * Popover would dock next to whatever triggered the open instead of flush
- * against the edge, defeating the point of a side panel.
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic, and in both
+ * modes: without it Popover docks next to whatever triggered the open instead
+ * of flush against the edge, and Dialog takes that trigger's width as its own
+ * `min-width` floor (`--anchor-width`), overriding the `width` prop.
  */
 const css = /* css */`
   .navi_side_panel {
-    /* Dialog's own \`min-width: var(--anchor-width, 0px)\` exists so a
-       dialog naturally matches whatever triggered it (picker_custom.jsx's
-       dialog mode relies on this) — SidePanel's own "anchor" is just its
-       container, so this would otherwise force min-width to the full
-       container width, overriding \`width\`/\`height\` below entirely. Popover
-       ignores this var. */
-    --anchor-width: 0px;
     /* Side panel create a barriere with the content that is full size */
     /* So by default they don't have border-radius */
     --popup-border-radius: 0px;

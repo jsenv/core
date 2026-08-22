@@ -60,7 +60,31 @@ export const getConfirmParams = (element) => {
   if (!element) {
     return undefined;
   }
+  if (confirmAnsweredSet.has(element)) {
+    return undefined;
+  }
   return confirmParamsWeakMap.get(element);
+};
+
+const confirmAnsweredSet = new WeakSet();
+
+/**
+ * One press asks its question once. What a press sets off can come back through
+ * the action path with the same element as requester — clearing a picker sends
+ * it, and the send reads the question off whoever asked for it — so whoever
+ * already asked says so, for as long as that press lasts.
+ *
+ * @param {Element} element - The one that was asked.
+ * @returns {() => void} Call it when the press is over.
+ */
+export const suspendConfirmParams = (element) => {
+  if (!element) {
+    return () => {};
+  }
+  confirmAnsweredSet.add(element);
+  return () => {
+    confirmAnsweredSet.delete(element);
+  };
 };
 
 /**

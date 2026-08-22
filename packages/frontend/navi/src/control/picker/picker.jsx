@@ -13,6 +13,7 @@ import {
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
+import { ControlIdContext, ControlNameContext } from "../control_context.js";
 import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
@@ -453,6 +454,11 @@ const PickerButton = (props) => {
     variant,
     rightSlotIcon,
     rightSlotIconSize = "inherit",
+    // What goes in the right slot as-is — no <Icon> around it, so a caller can
+    // put something interactive there. `rightSlotIcon` cannot: it is wrapped in
+    // an <Icon>, which is aria-hidden, and a focusable node under aria-hidden is
+    // invisible to assistive tech while still being reachable by tab.
+    rightSlot,
     placeholder,
     ui,
     maxLines = 1,
@@ -465,6 +471,13 @@ const PickerButton = (props) => {
     // the end of an input: a picker holds a value the user chose, and unsetting
     // it should not require reopening the popup to hunt for a "none" entry.
     clearable,
+    // "Are you sure?" before the cross clears anything. A cross of three
+    // millimetres at the edge of a touch screen, right where the chevron is
+    // aimed at, is the button pressed by accident — and what it removes does
+    // not come back. Asked before the clear, so a "no" leaves the field
+    // untouched (see the --navi-clear command).
+    clearConfirm,
+    clearConfirmPopupContent,
     error,
   } = props;
   const isSingleLine = maxLines === 1;
@@ -508,6 +521,9 @@ const PickerButton = (props) => {
       variant={undefined}
       rightSlotIcon={undefined}
       rightSlotIconSize={undefined}
+      rightSlot={undefined}
+      clearConfirm={undefined}
+      clearConfirmPopupContent={undefined}
       ui={undefined}
       maxLines={undefined}
       popupWidthFitContent={undefined}
@@ -633,41 +649,62 @@ const PickerButton = (props) => {
         )}
         {variant === "headless" || ui === "default" ? null : (
           <span className="navi_picker_right_slot">
-            {clearable && value !== undefined && value !== "" ? (
-              <Button
-                command="--navi-clear"
-                commandFor={inputProps.id}
-                tabIndex="-1"
-                // No navi-focus-delegate, unlike the identical button inside an
-                // input: handing focus back to the picker's own input is what
-                // opens the popup, and clearing is the opposite intention.
-                icon
-                variant="discrete"
-                // preventDefault, not just tabIndex="-1": a mousedown focuses
-                // its target before any click happens, and this button should
-                // never hold focus at all — the field keeps it.
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                }}
-                flex
-                align="center"
-              >
-                <Icon size={rightSlotIconSize} lineOverflow="allow">
-                  <CloseSvg />
-                </Icon>
-              </Button>
-            ) : (
-              // lineOverflow: what sits in the slot is an affordance, not a
-              // character — a caller asking for a bigger one wants it bigger,
-              // not capped at the height of the line it sits on
-              <Icon size={rightSlotIconSize} lineOverflow="allow">
-                {rightSlotIcon === undefined ? (
-                  <ChevronDownSvg />
+            {/* The slot holds the control's own furniture, not another control
+                of the field around it: what lives here must not take the id
+                (nor the name) a <Field> hands down, which is the picker's. Two
+                controls under one id is one registry entry, and the one that
+                unmounts first — the cross, the moment the value it cleared is
+                gone — takes the picker's own entry with it. */}
+            <ControlIdContext.Provider value={undefined}>
+              <ControlNameContext.Provider value={undefined}>
+                {clearable && value !== undefined && value !== "" ? (
+                  <Button
+                    command="--navi-clear"
+                    commandFor={inputProps.id}
+                    // The question, asked before the clear rather than by the
+                    // action the clear sends — see the --navi-clear command.
+                    confirm={clearConfirm}
+                    confirmPopupContent={clearConfirmPopupContent}
+                    tabIndex="-1"
+                    // No navi-focus-delegate, unlike the identical button inside an
+                    // input: handing focus back to the picker's own input is what
+                    // opens the popup, and clearing is the opposite intention.
+                    icon
+                    variant="discrete"
+                    // What is busy once the clear is sent is the picker — the value
+                    // being removed is the whole field's, and the picker already
+                    // draws the wait around all of it. Two outlines for one wait is
+                    // one too many.
+                    loadingOutline={false}
+                    // preventDefault, not just tabIndex="-1": a mousedown focuses
+                    // its target before any click happens, and this button should
+                    // never hold focus at all — the field keeps it.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    flex
+                    align="center"
+                  >
+                    <Icon size={rightSlotIconSize} lineOverflow="allow">
+                      <CloseSvg />
+                    </Icon>
+                  </Button>
+                ) : rightSlot === undefined ? (
+                  // lineOverflow: what sits in the slot is an affordance, not a
+                  // character — a caller asking for a bigger one wants it bigger,
+                  // not capped at the height of the line it sits on
+                  <Icon size={rightSlotIconSize} lineOverflow="allow">
+                    {rightSlotIcon === undefined ? (
+                      <ChevronDownSvg />
+                    ) : (
+                      rightSlotIcon
+                    )}
+                  </Icon>
                 ) : (
-                  rightSlotIcon
+                  rightSlot
                 )}
-              </Icon>
-            )}
+              </ControlNameContext.Provider>
+            </ControlIdContext.Provider>
           </span>
         )}
       </span>
@@ -874,6 +911,9 @@ const PickerFirstResolver = (props) => {
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
  *   rightSlotIconSize?: number | string,
+ *   rightSlot?: import("preact").ComponentChildren,
+ *   clearConfirm?: string | import("preact").ComponentChildren,
+ *   clearConfirmPopupContent?: import("preact").ComponentChildren,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
@@ -913,7 +953,20 @@ const PickerFirstResolver = (props) => {
  * @param {import("preact").ComponentChildren} [rightSlotIcon] What the right
  *   slot draws in place of the chevron. It is the whole slot, not an addition
  *   to it: the picker then no longer says on its own that it opens, so pass
- *   something that does.
+ *   something that does. Decoration only — it is wrapped in an `<Icon>`, which
+ *   is `aria-hidden`, so anything focusable in there would be reachable by tab
+ *   while invisible to assistive tech. Use `rightSlot` for that.
+ * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
+ *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
+ *   interactive right slot goes.
+ * @param {string|import("preact").ComponentChildren} [clearConfirm] The
+ *   question asked before the clear cross clears anything — same prop a
+ *   `<Button confirm>` takes, plain text or JSX. Asked BEFORE the ui state is
+ *   emptied, so answering no leaves the field exactly as it was; answering yes
+ *   clears and sends, and the picker's own action receives the cleared value
+ *   like any other choice.
+ * @param {import("preact").ComponentChildren} [clearConfirmPopupContent] The
+ *   whole confirmation popup body, replacing the default question + buttons.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.

@@ -35,6 +35,7 @@ import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_el
 import {
   dispatchRequestAction,
   tryActionAfterInteractionAllowed,
+  watchActionCompletion,
 } from "@jsenv/navi/src/control/rules/control_action.js";
 import {
   dispatchRequestInteraction,
@@ -388,7 +389,30 @@ export const useControlProps = (
 
       if (controlType === "button") {
         const onButtonInteractionAllowed = (e) => {
-          triggerUIAction(e);
+          // A command that follows the control's OWN action has to wait for it:
+          // `<Button action={remove} command="--navi-clear">` means "remove it,
+          // then clear the field" — clearing first would empty the field over a
+          // request that can still fail, and a confirm popup refusing the action
+          // would leave the clear standing. Same rule the form counterpart
+          // already has (data-after-send, see resolveAfterSend in commands.js).
+          //
+          // Armed here, around the ui action, because the command fires from
+          // there (see the command trigger in ui_state_controller). A button is
+          // where this arises: its press IS the ui action, the action and the
+          // command, in one breath. A field's ui action and its action are two
+          // different moments (typing, then change/blur), and its command
+          // belongs to the first — there is nothing to wait for.
+          let deferredCommand = null;
+          if (props.action && props.command) {
+            uiStateController.commandDeferral = (runCommand) => {
+              deferredCommand = runCommand;
+            };
+          }
+          try {
+            triggerUIAction(e);
+          } finally {
+            uiStateController.commandDeferral = null;
+          }
           const control = ref.current;
           if (!control) {
             // What the button just did took the button away: a command that
@@ -397,11 +421,35 @@ export const useControlProps = (
             // press was for has already happened.
             return;
           }
-          tryActionAfterInteractionAllowed(control, {
-            event: e,
-            action: boundAction,
-            requester: control,
+          const completion = watchActionCompletion(control, () =>
+            tryActionAfterInteractionAllowed(control, {
+              event: e,
+              action: boundAction,
+              requester: control,
+            }),
+          );
+          if (!deferredCommand) {
+            return;
+          }
+          if (completion.result === false) {
+            // The action was turned down (a failing constraint, a gate saying
+            // no) — nothing happened, so nothing follows.
+            return;
+          }
+          if (completion.isRunning) {
+            completion.whenSucceeded(deferredCommand);
+            return;
+          }
+          // Synchronous: already settled, and how it ended still decides. An
+          // action that never started (nothing to run) leaves no outcome, and
+          // the command runs as it always did.
+          let succeeded = true;
+          completion.whenSettled(({ error, aborted }) => {
+            succeeded = !error && !aborted;
           });
+          if (succeeded) {
+            deferredCommand();
+          }
         };
 
         return {

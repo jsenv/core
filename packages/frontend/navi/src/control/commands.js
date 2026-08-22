@@ -1,5 +1,10 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
+import { chainEvent, dispatchCustomEvent } from "@jsenv/dom";
 
+import {
+  getConfirmParams,
+  requestConfirmation,
+  suspendConfirmParams,
+} from "../action/confirm.js";
 import { navTo } from "../nav/browser_integration/browser_integration.js";
 import {
   findClosestControlWithAction,
@@ -286,36 +291,124 @@ registerNaviCommand("--navi-clear", (source, event) => {
   // moment a value is chosen — has nothing that would commit a clear: its
   // action never runs on a ui state change. Left alone, the field goes empty
   // while the caller still holds the value it gave, and renders it right back.
+  //
+  // Unless the source committed the clear itself: a clear button given its own
+  // action (`<Button action={remove} command="--navi-clear">`) already made the
+  // request — the ui state is being brought in line with what just happened, and
+  // sending the picker's own action on top would ask twice.
+  const sourceController = source.__uiStateController__;
   const fromSendOnlyControl = Boolean(
-    source.closest?.(`[navi-control=picker]`),
+    source.closest?.(`[navi-control=picker]`) &&
+    !sourceController?.props.action,
   );
+
+  const performClear = (clearEvent) => {
+    dispatchRequestInteraction(target, {
+      event: clearEvent,
+      name: "--navi-clear",
+      prevented: () => clearEvent.preventDefault(),
+      allowed: () => {
+        // What the control holds, before it holds nothing: the clear is
+        // optimistic — the field empties now and the send that commits it may
+        // still fail — so what it emptied has to be kept to be put back.
+        const uiStateBefore = getUIStateFromElement(target);
+        dispatchRequestClearUIState(target, clearEvent);
+        if (!fromSendOnlyControl) {
+          return;
+        }
+        // After the clear, never before: the action is bound to the ui
+        // state signal, so this sends the value the control now holds.
+        const actionHost = findControlHost(target) || target;
+        const completion = watchActionCompletion(actionHost, () => {
+          triggerNaviCommand(source, "--navi-send", clearEvent, {
+            optional: true,
+          });
+        });
+        completion.whenSettled(({ error, aborted }) => {
+          if (!error && !aborted) {
+            return;
+          }
+          // The removal did not happen, so the field must stop saying it did.
+          // The error itself stays where the action put it — on the control,
+          // which is still there, unlike the cross that has just gone with the
+          // value it cleared (see addErrorMessage in use_execute_action.js).
+          //
+          // Put back from the inside ("clear_rollback" is an internal event
+          // type, see ui_state_controller.js) rather than asked for the way a
+          // user would: nobody acted, the control is being returned to the
+          // state its caller still holds. Asked from the outside it would be
+          // answered with "this element is busy" — the action is still
+          // settling — over the very error that explains why the value is back.
+          const controller = actionHost.__uiStateController__;
+          if (!controller) {
+            return;
+          }
+          const rollbackEvent = new CustomEvent("clear_rollback", {
+            detail: {},
+          });
+          chainEvent(rollbackEvent, clearEvent);
+          controller.setUIState(uiStateBefore, rollbackEvent);
+        });
+      },
+    });
+
+    if (fromInput) {
+      // clearing input search should not close a popover/dialog
+    } else if (
+      // Only what is open: the clear cross of a picker sits on the closed
+      // trigger, and asking that trigger to close is asking it to do nothing —
+      // except that the ask goes through the interaction gate, which turns it
+      // down while the clear it just sent is still running and says so out loud
+      // ("this element is busy"). A clear pressed INSIDE an open popup is the
+      // one this is for: it answers the popup, so the popup goes away.
+      resolveClosestExpandable(source)?.getAttribute("aria-expanded") === "true"
+    ) {
+      triggerNaviCommand(source, "--navi-close", clearEvent, {
+        optional: true,
+      });
+    }
+  };
 
   return {
     target,
     implementation: () => {
-      dispatchRequestInteraction(target, {
-        event,
-        name: "--navi-clear",
-        prevented: () => event.preventDefault(),
-        allowed: () => {
-          dispatchRequestClearUIState(target, event);
-          if (fromSendOnlyControl) {
-            // After the clear, never before: the action is bound to the ui
-            // state signal, so this sends the value the control now holds.
-            triggerNaviCommand(source, "--navi-send", event, {
-              optional: true,
-            });
-          }
-        },
-      });
-
-      if (fromInput) {
-        // clearing input search should not close a popover/dialog
-      } else {
-        triggerNaviCommand(source, "--navi-close", event, {
-          optional: true,
-        });
+      // "Are you sure?" comes before anything is cleared. It is asked here
+      // rather than by the action the clear ends up sending (which is where a
+      // confirmation is normally asked, see use_execute_action) because that
+      // one only runs AFTER the ui state was emptied: the field would go blank
+      // behind the question, and answering "no" would leave it blank over a
+      // value that was never removed.
+      const confirmParams = getConfirmParams(source);
+      if (!confirmParams) {
+        performClear(event);
+        return;
       }
+      requestConfirmation({
+        ...confirmParams,
+        anchor: source,
+      }).then((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        // A new event, chained to the press: the press itself is over and has
+        // been consumed — the control that took the click cancelled it on its
+        // way out so the region around it would not read it as "unfold me" (see
+        // click_to_expand.js), and navi refuses an interaction on a cancelled
+        // event. What happens now happens BECAUSE of that press, which is what
+        // the chain says, but it is no longer that press.
+        const clearConfirmedEvent = new CustomEvent("navi_clear_confirmed", {
+          detail: {},
+        });
+        chainEvent(clearConfirmedEvent, event);
+        // Answered — and the send that follows must not ask it again: it reads
+        // the same question off this same element (getConfirmParams(requester)).
+        const restoreConfirmParams = suspendConfirmParams(source);
+        try {
+          performClear(clearConfirmedEvent);
+        } finally {
+          restoreConfirmParams();
+        }
+      });
     },
   };
 });
