@@ -79,6 +79,7 @@
         Link,
         Nav,
         Route,
+        RouteTransitionArea,
         defineRouteDefaultTransition,
         defineRouteTransition,
         route,
@@ -132,7 +133,7 @@
               </pre>
             </div>
           </div>
-          <div className="app" data-navi-route-transition-area>
+          <RouteTransitionArea className="app">
             <Route>
               {PAGES.map(({ route, label, color }) => (
                 <Route
@@ -144,7 +145,7 @@
               ))}
               <Route fallback element={AppIndex} />
             </Route>
-          </div>
+          </RouteTransitionArea>
           <div className="tab_bar">
             <Nav className="tab_row" expand currentIndicator>
               {PAGES.map(({ route, label }) => (

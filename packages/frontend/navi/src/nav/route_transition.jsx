@@ -54,6 +54,7 @@ import {
   observeAfterRouting,
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
+import { Box } from "../box/box.jsx";
 import { observeRouteRender } from "./route.jsx";
 import {
   holdRenderingForRouting,
@@ -305,6 +306,32 @@ const css = /* css */ `
     }
   }
 `;
+
+/**
+ * The region the pages live in — where the movements play.
+ *
+ * Wrap the `<Route>` tree with it in an application that has fixed furniture
+ * (a top bar, a tab bar): the movements then play on THIS element's pictures,
+ * clipped at its bounds, and the bars never move. Without it the document
+ * itself travels, which is right only when the pages are the whole viewport —
+ * with bars around, the moving root picture drags a blank band across the
+ * screen where they stand.
+ *
+ * It is a real box, and it must be: what is photographed and clipped IS its
+ * rectangle. So `display: contents` cannot be used on it — an element with no
+ * box is never captured, the movement plays on nothing and the browser aborts
+ * the transition. Give it the layout the pages need instead — it is a `Box`,
+ * so `flex`, `className`, `style` and the rest are there for that. An
+ * application that already has an element holding its pages can mark that one
+ * with `data-navi-route-transition-area` rather than nesting another.
+ *
+ * @type {import("preact").FunctionComponent<{ children?: any, [key: string]: any }>}
+ */
+export const RouteTransitionArea = ({ children, ...rest }) => {
+  import.meta.css = css;
+  const props = { ...rest, [TRANSITION_AREA_ATTRIBUTE]: "" };
+  return <Box {...props}>{children}</Box>;
+};
 
 /**
  * Declare how a pair of routes moves against each other.
@@ -566,7 +593,16 @@ const beginTransition = ({ page, direction, type, duration }) => {
   // Looked up per transition, not once: the area is the application's own
   // element and follows its lifecycle — a page layout without bars has none,
   // and the movement then plays on the document itself.
-  if (document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`)) {
+  const areaElements = document.querySelectorAll(
+    `[${TRANSITION_AREA_ATTRIBUTE}]`,
+  );
+  if (areaElements.length > 1) {
+    warnOnce(
+      "several-areas",
+      `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`,
+    );
+  }
+  if (areaElements.length > 0) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
   }
   // A duration of this relation's own, worn for the length of the transition —
@@ -598,6 +634,34 @@ const beginTransition = ({ page, direction, type, duration }) => {
   // been decided renders its page in between — a wait armed then waits for
   // something that has already happened.
   const renderWait = armRouteRenderWait();
+  // What the browser ACTUALLY captured, read once the pictures exist: it is
+  // the only place the two silent misconfigurations show. Both are about the
+  // same thing — a movement playing on pictures that are not the pages.
+  const viewTransitionReady = () => {
+    const capturedNames = capturedViewTransitionNames();
+    if (areaElements.length > 0) {
+      if (!capturedNames.has(AREA_NAME)) {
+        warnOnce(
+          "area-not-captured",
+          `The element marked ${TRANSITION_AREA_ATTRIBUTE} was not captured, so the movement plays on nothing. An element is captured only if it generates a box: \`display: contents\` (or an element not rendered) cannot be the area — its rectangle is what gets photographed and clipped.`,
+        );
+      }
+      return;
+    }
+    for (const name of capturedNames) {
+      if (name === "root") {
+        continue;
+      }
+      // Something stands still while the whole document travels under it. The
+      // root picture spans the viewport and has a HOLE where that thing was
+      // captured, so what crosses the screen is a blank band.
+      warnOnce(
+        "pages-travel-under-named-elements",
+        `The movement plays on the whole document while "${name}" is captured on its own, so a blank band travels where it stands. Wrap the pages in <RouteTransitionArea> (or mark their element with ${TRANSITION_AREA_ATTRIBUTE}) so the movement plays on them rather than on the document.`,
+      );
+      break;
+    }
+  };
   const viewTransition = startViewTransition(async () => {
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered. Whatever
@@ -638,7 +702,42 @@ const beginTransition = ({ page, direction, type, duration }) => {
       }
     }
   };
+  viewTransition.ready.then(viewTransitionReady, ignoreSkipped);
   viewTransition.finished.then(end, end);
+};
+
+// A transition skipped by another one starting is an outcome, not a failure.
+const ignoreSkipped = () => {};
+
+// The names the browser captured, read off the pictures themselves: what was
+// asked for in CSS and what was taken are not the same question (see
+// viewTransitionReady).
+const capturedViewTransitionNames = () => {
+  const names = new Set();
+  for (const animation of document.getAnimations()) {
+    const pseudoElement = animation.effect?.pseudoElement;
+    if (!pseudoElement || !pseudoElement.startsWith("::view-transition")) {
+      continue;
+    }
+    const nameStart = pseudoElement.indexOf("(");
+    if (nameStart === -1) {
+      continue;
+    }
+    names.add(pseudoElement.slice(nameStart + 1, -1));
+  }
+  return names;
+};
+
+// Said once per kind, whatever the number of navigations: a misconfiguration
+// is one fact about the application, and repeating it every time the user
+// moves would bury it.
+const warningsSaid = new Set();
+const warnOnce = (id, message) => {
+  if (warningsSaid.has(id)) {
+    return;
+  }
+  warningsSaid.add(id);
+  console.warn(message);
 };
 
 // A route matching is a signal changing; how many passes Preact takes to

@@ -140,6 +140,7 @@
         Link,
         Nav,
         Route,
+        RouteTransitionArea,
         defineRouteTransition,
         route,
         setupRoutes,
@@ -376,9 +377,9 @@
               <SpeedPicker />
             </div>
           </div>
-          {/* Les pages vivent entre deux barres : la zone est marquée, et les
-              mouvements jouent dedans plutôt que sur le document. */}
-          <div className="app" data-navi-route-transition-area>
+          {/* Les pages vivent entre deux barres : les mouvements jouent
+              dedans plutôt que sur le document. */}
+          <RouteTransitionArea className="app">
             <Route>
               <Route route={PARTIES_ROUTE} element={PartiesPage} />
               <Route route={RADARS_ROUTE} element={RadarsPage} />
@@ -389,7 +390,7 @@
               <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
               <Route fallback element={AppIndex} />
             </Route>
-          </div>
+          </RouteTransitionArea>
           <TabBar />
         </>
       );

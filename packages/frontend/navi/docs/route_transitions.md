@@ -76,21 +76,40 @@ A default has no direction (nothing says which of two arbitrary pages is
 "before" the other), so only directionless movements make sense there. Written
 relations, and `"none"`, always win over it.
 
-## Pages between fixed bars: mark the area
+## Pages between fixed bars: the transition area
 
 By default the movement plays on the document itself — right when pages are the
 whole viewport. With fixed bars it is not: the root snapshot spans the viewport
-and the bars' regions are blank in it, so a vertical movement drags a blank
-band across the screen. Mark the region the pages live in instead:
+and the bars' regions are blank in it, so the moving picture drags a blank band
+across the screen where they stand. Wrap the pages instead:
 
-```html
-<div class="app" data-navi-route-transition-area>…routes…</div>
+```jsx
+<RouteTransitionArea className="app">
+  <Route>…</Route>
+</RouteTransitionArea>
 ```
 
-One attribute, on an element the layout already has. The movement then plays on
-that region's own pictures, clipped at its bounds, and the bars never move —
-without being named one by one. An app with fixed bars should consider this
-attribute part of declaring transitions at all, not an option.
+The movement then plays on that region's own pictures, clipped at its bounds,
+and the bars never move — without being named one by one. An app with fixed
+bars should consider this part of declaring transitions at all, not an option.
+
+It is a `Box`, so the layout the pages need is written on it directly (`flex`,
+`className`, `style`, …). An app that already has an element holding its pages
+can mark that one with `data-navi-route-transition-area` rather than nesting
+another — the component does exactly that.
+
+**The area is a real box, and it has to be**: what gets photographed and
+clipped IS its rectangle. So `display: contents` cannot be used on it — an
+element with no box is never captured, and the movement then plays on nothing
+(the browser also aborts the transition). This is measured behaviour, not a
+precaution.
+
+Three misconfigurations are silent enough to be worth a console warning, each
+said once: an area that was not captured (the case above), several elements
+marked at once (they would share one `view-transition-name`, and the browser
+then refuses **every** view transition of the document), and pages travelling
+on the document while something else is captured on its own — the blank band.
+A warning here is a bug to fix, not a mechanism to lean on.
 
 ## Custom movements
 
@@ -111,12 +130,27 @@ shape, and the `spin` type in the demo for a working one.
 - **`defineRouteTransition`** declares individual relations, with no gesture
   and no order beyond each pair.
 
-A given pair of routes must be animated by one of the two, never both: a
+A given PAIR of routes must be animated by one of the two, never both: a
 travel's pictures can be under a finger, and a transition starting on top would
 skip them mid-slide — and a page one can drag has promised a translation, which
 a cross-fade would break. The runtime enforces the priority (a travel in flight
 wins; the route transition is skipped with a console warning); the warning is
 the sign of a misconfiguration to fix, not a mechanism to rely on.
+
+The two DO live together in one app, on different pairs, including a
+`<RouteTravel>` nested inside a `<RouteTransitionArea>` — a row of sections the
+thumb pushes, inside pages one goes into. Write the relations on the routes the
+row does not own: the tabs of the row travel, and opening something from any of
+them plays its own movement. A relation written on a bare route covers every
+one of its params at once, which is what makes "from any section" one line
+rather than one per tab. Demo:
+[../src/nav/demos/route_transition/route_transition_with_travel.html](../src/nav/demos/route_transition/route_transition_with_travel.html)
+
+One trap that belongs to `RouteTravel` rather than to transitions, but bites
+here first: the travelling box must stay MOUNTED across the changes it
+animates. A `<RouteTravel>` rendered inside the `element` of each of the routes
+it travels between is destroyed mid-travel by the router. Give the row a single
+branch — its tabs as params of one route is the usual shape.
 
 ## The rest, briefly
 

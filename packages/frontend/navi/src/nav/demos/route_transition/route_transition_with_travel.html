@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Route transition + RouteTravel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #app {
+        display: flex;
+        height: 100dvh;
+        flex-direction: column;
+      }
+      .furniture {
+        padding-bottom: 8px;
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .furniture_row {
+        display: flex;
+        padding: 0 16px;
+        align-items: center;
+        gap: 24px;
+      }
+      .steps_declaration {
+        margin: 0;
+        color: #555;
+        font-size: 12px;
+      }
+      .tab_bar {
+        flex: none;
+        background: white;
+        border-top: 1px solid #ddd;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      .tab_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .app {
+        position: relative;
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+      }
+      .page_scroll {
+        min-height: 0;
+        padding: 16px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .page_title {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .card {
+        display: block;
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        color: inherit;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+      }
+      .page_top_bar {
+        display: flex;
+        padding: 10px 12px;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.7);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .page_top_bar button {
+        padding: 4px 10px;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      .section_row {
+        flex: none;
+        background: rgba(255, 255, 255, 0.6);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .section_row .navi_nav {
+        width: 100%;
+      }
+      .section_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .travel_box {
+        min-height: 0;
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import {
+        Link,
+        Nav,
+        Route,
+        RouteTransitionArea,
+        RouteTravel,
+        defineRouteTransition,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+
+      // Les trois sections sont les valeurs d'UN param : la boîte qui les fait
+      // voyager reste montée pendant qu'on passe de l'une à l'autre.
+      const sectionSignal = stateSignal("en_cours", {
+        id: "route_transition_with_travel_section",
+        oneOf: ["en_cours", "terminees", "archivees"],
+        autoFix: true,
+      });
+      const PARTIES_ROUTE = route("/parties", {
+        searchParams: { section: sectionSignal },
+      });
+      const GAME_ROUTE = route("/games/:gameId");
+      const REGLAGES_ROUTE = route("/reglages");
+      setupRoutes([PARTIES_ROUTE, GAME_ROUTE, REGLAGES_ROUTE]);
+
+      const SECTIONS = [
+        { section: "en_cours", label: "En cours", color: "#e8f0fe" },
+        { section: "terminees", label: "Terminées", color: "#eaf7ec" },
+        { section: "archivees", label: "Archivées", color: "#fdf0e8" },
+      ];
+
+      // Les sections sont une RANGÉE que le pouce pousse : c'est RouteTravel
+      // qui les anime, et aucune relation n'est écrite entre elles. Ce qu'on
+      // ouvre DEPUIS elles est une relation de paire, écrite sur la route nue —
+      // elle vaut donc depuis n'importe quelle section.
+      defineRouteTransition(PARTIES_ROUTE, GAME_ROUTE, "slide-x");
+      defineRouteTransition(PARTIES_ROUTE, REGLAGES_ROUTE, "cover-y");
+
+      const GoBackButton = () => (
+        <button onClick={() => window.history.back()}>←</button>
+      );
+
+      const SectionPage = ({ label, color, gameIds }) => (
+        <div className="page_scroll" style={{ background: color }}>
+          <h1 className="page_title">{label}</h1>
+          {gameIds.map((gameId) => (
+            <Link
+              key={gameId}
+              className="card"
+              route={GAME_ROUTE}
+              routeParams={{ gameId }}
+            >
+              Partie {gameId}
+            </Link>
+          ))}
+          {Array.from({ length: 8 }, (_, index) => (
+            <div key={index} className="page_row">
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const GamePage = () => {
+        const { gameId } = GAME_ROUTE.paramsSignal.value;
+        return (
+          <div className="page" style={{ background: "#f3e8fe" }}>
+            <div className="page_top_bar">
+              <GoBackButton />
+              <strong>Partie {gameId}</strong>
+            </div>
+            <div className="page_scroll">
+              {Array.from({ length: 10 }, (_, index) => (
+                <div key={index} className="page_row">
+                  Partie {gameId} — coup {index + 1}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const ReglagesPage = () => (
+        <div className="page" style={{ background: "#fee8ee" }}>
+          <div className="page_top_bar">
+            <GoBackButton />
+            <strong>Réglages</strong>
+          </div>
+          <div className="page_scroll">
+            {["Son", "Notifications", "Thème", "Langue"].map((label) => (
+              <div key={label} className="page_row">
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      const SectionsPage = () => (
+        <div className="page">
+          <div className="section_row">
+            <Nav expand currentIndicator>
+              {SECTIONS.map(({ section, label }) => (
+                <Link
+                  key={section}
+                  variant="tab"
+                  route={PARTIES_ROUTE}
+                  routeParams={{ section }}
+                  padding="s"
+                >
+                  {label}
+                </Link>
+              ))}
+            </Nav>
+          </div>
+          <RouteTravel className="travel_box">
+            <Route>
+              {SECTIONS.map(({ section, label, color }, index) => (
+                <Route
+                  key={section}
+                  route={PARTIES_ROUTE}
+                  routeParams={{ section }}
+                  element={SectionPage}
+                  elementProps={{
+                    label,
+                    color,
+                    gameIds: [index * 2 + 1, index * 2 + 2],
+                  }}
+                />
+              ))}
+            </Route>
+          </RouteTravel>
+        </div>
+      );
+
+      const AppIndex = () => {
+        useLayoutEffect(() => {
+          PARTIES_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const App = () => (
+        <>
+          <div className="furniture">
+            <DemoHeader title="Route transition + RouteTravel" />
+            <div className="furniture_row">
+              <pre className="steps_declaration">
+                {[
+                  `<RouteTravel> anime les 3 sections (une rangée, le pouce la pousse)`,
+                  `defineRouteTransition(PARTIES, GAME, "slide-x");`,
+                  `defineRouteTransition(PARTIES, RÉGLAGES, "cover-y");`,
+                ].join("\n")}
+              </pre>
+            </div>
+          </div>
+          <RouteTransitionArea className="app">
+            <Route>
+              <Route route={GAME_ROUTE} element={GamePage} />
+              <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
+              {/* une seule branche pour les trois sections: elle reste montée
+                  pendant que le param bouge, donc la boîte qui voyage aussi */}
+              <Route route={PARTIES_ROUTE} element={SectionsPage} />
+              <Route fallback element={AppIndex} />
+            </Route>
+          </RouteTransitionArea>
+          <div className="tab_bar">
+            <Nav className="tab_row" expand currentIndicator>
+              <Link variant="tab" route={PARTIES_ROUTE} padding="m">
+                Parties
+              </Link>
+              <Link variant="tab" route={REGLAGES_ROUTE} padding="m">
+                Réglages
+              </Link>
+            </Nav>
+          </div>
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
