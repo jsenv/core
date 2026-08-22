@@ -168,8 +168,9 @@ consistency across the app, not from any single call site.
 - `docs/navigation.md` — how to build navigation: declaring routes
   (`route()` / `setupRoutes()`), when a section is a route of its own rather
   than a param, search params bound to signals, rendering with `<Route>`,
-  tab rows (`Nav` / `Link` / `RouteTravel`), and the few cases where tabs are
-  legitimately not URLs. Read it before writing any routing code — the
+  tab rows (`Nav` / `Link` / `RouteTravel`), where a navigation lands
+  (scroll: a push arrives at the top, a back or forward lands where the page
+  was left), and the few cases where tabs are legitimately not URLs. Read it before writing any routing code — the
   position of the user belongs in the URL by default, and that decision is
   not retrofittable.
 - Source code and demos on GitHub:

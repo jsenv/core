@@ -4,6 +4,10 @@ import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
+import {
+  installScrollRestoration,
+  restoreScrollPosition,
+} from "./scroll_restoration.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
@@ -156,6 +160,11 @@ export const setupBrowserIntegrationViaHistory = ({
     });
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url));
+    } else if (navigationType === "traverse") {
+      // Where this entry was left. Waited for like the reset above, and for
+      // the same two reasons: the page has to be there to be scrolled, and a
+      // picture taken before it would be of a page at its top.
+      whenRenderingResumes(() => restoreScrollPosition(url));
     }
     executeWithCleanup(
       () => allResult,
@@ -232,6 +241,11 @@ export const setupBrowserIntegrationViaHistory = ({
     },
     { capture: true },
   );
+
+  // The browser's own scroll restoration is taken over here rather than left
+  // to whoever navigates: it is a decision about the document, and the entry
+  // being left must be recorded from the first pixel scrolled.
+  installScrollRestoration();
 
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;

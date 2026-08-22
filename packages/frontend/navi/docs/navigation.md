@@ -294,6 +294,32 @@ settings page rising over whatever showed it — are animated with
 `defineRouteTransition` instead, and a given pair must be animated by one of
 the two, never both: see [route_transitions.md](./route_transitions.md).
 
+## Where a navigation lands: the scroll
+
+Three cases, and they are not a policy to configure but three different facts:
+
+- **Going somewhere new** (a `<Link>`, anything that pushes) lands at the top.
+  It is an arrival: the offset one had elsewhere means nothing here, and left
+  alone the new entry would be born holding the previous page's offset — which
+  the browser would then hand back as if it were this page's own.
+- **Going back or forward** (the browser's buttons, `navBack()`,
+  `history.back()`) lands where that page was left. navi keeps the position and
+  puts it back once the page is really rendered, which is what the browser
+  cannot do: it restores at the instant the entry changes, when the document
+  still holds the page being left, so anything further down than that page is
+  tall is clamped away.
+- **A reload** lands where one was, as it would have without navi.
+
+The consequence worth knowing when building a screen: **a "back" written as a
+`<Link>` is a push**, so it lands at the top like any arrival — no mechanism
+can guess that a push was morally a return. A back arrow that should feel like
+one is `navBack()`. Where there may be nothing to go back to (a shared link
+opened cold), decide what the arrow does from the history, not from the link.
+
+What is not covered: a page whose height depends on something still loading is
+not tall enough at the moment its position is put back, so a deep position is
+clamped as it was before. Only the page knows when it is whole.
+
 ## Creating something, then editing it
 
 The create screen, the page of what was created, the edit screen — three routes,
