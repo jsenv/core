@@ -17,6 +17,7 @@ return {
     "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
+    "same_node_on_each_revisit": "----------",
     "transitions_played": 0,
     "transition_left_on_root": false,
     "errors": []
@@ -29,6 +30,7 @@ return {
     "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
+    "same_node_on_each_revisit": "----------",
     "transitions_played": 40,
     "transition_left_on_root": false,
     "errors": []

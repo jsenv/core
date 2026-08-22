@@ -27,6 +27,7 @@ import {
   setupRoutes,
   useAsyncData,
 } from "@jsenv/navi";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 
 // Long enough for the list to hold rows it does not draw: a run standing for
@@ -75,17 +76,53 @@ export const start = ({ transition }) => {
     scope: "thread",
   }));
 
+  // Where the list is held: a row named by the URL, by id alone — the shape a
+  // "reopen the thread where I left it" search param has. The row's rank is
+  // NOT in it: nothing outside the collection knows a rank, and a rank written
+  // down goes stale the moment a row is inserted before it.
+  const readHeldRow = () => {
+    const at = new URL(window.location.href).searchParams.get("at");
+    return at ? { id: at } : undefined;
+  };
+  // The row the URL names follows the reading position, the way an app writing
+  // "reopen the thread where I left it" into its url does: the id alone is
+  // written down — a rank would go stale the moment a row is inserted before
+  // it — so what comes back names a row without saying where it sits.
+  const heldRowSignal = signal(readHeldRow());
+  const writeHeldRow = (next) => {
+    if (!next || next.id === undefined) {
+      return;
+    }
+    const current = heldRowSignal.peek();
+    if (current && current.id === next.id) {
+      return;
+    }
+    heldRowSignal.value = { id: next.id };
+    const url = new URL(window.location.href);
+    url.searchParams.set("at", next.id);
+    window.history.replaceState(window.history.state, "", url);
+  };
+
   const ListPage = () => {
     const [threadData] = useAsyncData(THREAD_ACTION);
+    // The count comes from elsewhere (a profile, a header): the list can draw
+    // before it has anything of its own to say about how long it is.
+    const count = threadData ? ITEMS.length : undefined;
     return (
       <div
         id="list_page"
         className="page"
         data-thread={String(Boolean(threadData))}
       >
-        <List renderBudget={30} renderBudgetSkipCheck>
+        <List
+          scroller="parent"
+          renderBudget={30}
+          renderBudgetSkipCheck
+          scrolled={heldRowSignal.value}
+          onScrolledChange={writeHeldRow}
+        >
           <List.Items
-            count={ITEMS.length}
+            count={count}
             itemsAction={ITEM.GET_RANGE.bindParams({ scope: "thread" })}
             renderItem={(item) => (
               <List.Item>

@@ -4,6 +4,9 @@ When a write touches one item of a list, two questions decide what the user
 sees: **what goes back to the network**, and **what stays on screen meanwhile**.
 Getting either wrong turns "pause one row" into a full page reload.
 
+The same two questions decide what a list does when the user leaves it and
+comes back, which is the second half of this file.
+
 The short answer:
 
 - A write that returns the modified item fixes every list containing it, with
@@ -11,6 +14,8 @@ The short answer:
 - `useAsyncData(action, { loading: true })` keeps returning the previous data
   while the action re-runs — the list is never taken away unless the component
   throws it away.
+- On the way back, the **source** decides whether anything is asked again — not
+  the navigation, and not a transition playing between the two pages.
 
 ## `loading: true` returns the previous value
 
@@ -173,10 +178,72 @@ it back. It never decides what the page arriving is allowed to ask for. Held by
 and without a relation on the pair — and walks the way back ten times on each,
 counting what goes out at every revisit.
 
-So the first thing to check, when a list stops refreshing after a transition was
-added, is which row of the table above it is on: a `GET_MANY` list never
-refreshed on its own, and what changed is whatever else in the app was doing the
-re-read.
+When a list stops refreshing after a transition was added, two things account
+for it, in this order:
+
+1. **The revisit did not happen.** A back taken before the page being opened was
+   ever on screen returns to a list that never left, and a page that never left
+   has nothing to come back from (see
+   [route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page)).
+   This is what an automated walk does by default, and it is the answer far more
+   often than the next one.
+2. **The list is on the first row of the table.** A `GET_MANY` list never
+   refreshed on its own; what changed is whatever else in the app was doing the
+   re-read.
+
+### Watching what the run asks for
+
+A run that decides **not** to ask is invisible from the application's side: it
+sends nothing and changes no state, so the network is silent and
+`onRequestStateChange` — which reports what a request is doing — has no request
+to report. A run that declined and a run that was never mounted look identical.
+`debugScroll` is where that difference is visible; it carries the render window
+and the run's asking, which are one subject.
+
+```jsx
+window.askLog = [];
+<NaviDebug debugScroll={(...args) => window.askLog.push(args.join(" "))}>
+  <MyList />
+</NaviDebug>;
+```
+
+One line per pass of the run, whatever the outcome:
+
+```
+ask 0-49: sent (revalidating=true holdPending=false count=412)
+ask -1--1: nothing missing (revalidating=false holdPending=false count=412)
+ask 0-49: held on a row not reached yet (revalidating=true holdPending=true count=412)
+```
+
+| outcome                              | what it means                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `sent`                               | the range on the line went out                                                                          |
+| `nothing missing`                    | the run holds every row it draws and has nothing to revalidate                                          |
+| `held on a row not reached yet`      | the list is on its way somewhere the window does not frame; only the row it is held on can be asked for |
+| `already revalidating`               | a revalidation for this window is in flight                                                             |
+| `a request still covers this window` | what is in flight is still what the list would draw                                                     |
+| `this range was asked for already`   | asking again could only produce the same answer                                                         |
+
+The state that decides is on the line rather than left to be inferred:
+
+- **`revalidating`** — the run knows what it holds is from before. A revisit
+  showing `revalidating=false` never restored a composition, which is a
+  different problem from one showing `revalidating=true` and no `sent`.
+- **`holdPending`** — the list is held somewhere it has not reached.
+- **`count`** — how many rows the run stands for, `undefined` before its first
+  answer.
+
+**Record, do not print.** The sink is called during rendering: push into an
+array. Formatting an object in a console costs far more than what it measures,
+and a timing-sensitive symptom moves under one — a list that fails to refresh on
+the first revisit can start refreshing on the first two as soon as a
+`console.log` is in the way, which makes the log a report about the log.
+
+An absence in the trace is a fact too: no line for a revisit means the run never
+rendered, which is about the list being mounted, not about what it asked for.
+The usual cause is a revisit that never happened — a back taken before the page
+being opened was ever on screen, which returns to a list that never left (see
+[route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page)).
 
 ## `rerunOn`, verb by verb
 
@@ -239,6 +306,9 @@ runs it again.
 
 ## See also
 
+- [route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page)
+  — why a walk away and back has to wait for the page arriving, and what a list
+  does when it did not
 - [resource.md](./resource.md) — `resource()`, relations, callback return
   contracts
 - [resource_dependencies.md](./resource_dependencies.md) — invalidating a

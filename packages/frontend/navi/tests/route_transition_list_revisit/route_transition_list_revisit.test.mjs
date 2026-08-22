@@ -107,7 +107,15 @@ const CYCLES = 10;
 // Both decors name the row that opens the detail page the same way.
 const OPEN_ROW = "[data-testid=item_open]";
 
-const openAndComeBack = async (name, search = "") => {
+// Pressing back the moment the URL changes is not pressing back from the page:
+// the document's rendering is held for the frame the browser needs to
+// photograph the page being left, so at that instant the address says one page
+// and the screen still shows the other. A back from there returns from
+// nowhere — nothing unmounted, so nothing remounts.
+const openAndComeBack = async (
+  name,
+  { search = "", rushBack = false } = {},
+) => {
   const page = await browser.newPage();
   await watchTransitions(page);
   const errors = [];
@@ -123,9 +131,19 @@ const openAndComeBack = async (name, search = "") => {
     let cycle = 0;
     while (cycle < CYCLES) {
       const before = await readAsks(page);
+      // The node on screen now, to be compared with the one that comes back:
+      // a revisit that never unmounted gives back the very same element.
+      await page.evaluate(() => {
+        // eslint-disable-next-line no-undef
+        window.listNodeWas = document.querySelector("#list_page");
+      });
       await page.locator(OPEN_ROW).first().click();
-      await page.waitForSelector("#item_page");
-      await settleLeaving(page);
+      if (rushBack) {
+        await page.waitForURL(/\/item\//);
+      } else {
+        await page.waitForSelector("#item_page");
+        await settleLeaving(page);
+      }
       await page.goBack();
       await page.waitForSelector(OPEN_ROW);
       await settle(page);
@@ -134,6 +152,10 @@ const openAndComeBack = async (name, search = "") => {
         range: after.range_asks - before.range_asks,
         many: after.many_asks - before.many_asks,
         rows: await page.locator(OPEN_ROW).count(),
+        sameNode: await page.evaluate(
+          // eslint-disable-next-line no-undef
+          () => window.listNodeWas === document.querySelector("#list_page"),
+        ),
       });
       cycle++;
     }
@@ -145,6 +167,11 @@ const openAndComeBack = async (name, search = "") => {
       // The rows are drawn every time, whatever the ask did: a page coming
       // back empty and a page coming back stale are not the same failure.
       rows_drawn_on_each_revisit: revisits.map((r) => r.rows).join(","),
+      // "S" where the list that came back is the element that was already
+      // there — a page that never left, not a page that came back.
+      same_node_on_each_revisit: revisits
+        .map((r) => (r.sameNode ? "S" : "-"))
+        .join(""),
       transitions_played: await page.evaluate(
         () => window.transitionsPlayed, // eslint-disable-line no-undef
       ),
@@ -181,8 +208,12 @@ try {
     // hold and an ask can pass each other.
     test("a list held on a row named by the url, revisited ten times", async () => {
       return {
-        without_transition: await openAndComeBack("plain", "?at=item_400"),
-        with_transition: await openAndComeBack("animated", "?at=item_400"),
+        without_transition: await openAndComeBack("plain", {
+          search: "?at=item_400",
+        }),
+        with_transition: await openAndComeBack("animated", {
+          search: "?at=item_400",
+        }),
       };
     });
 
@@ -194,6 +225,29 @@ try {
       return {
         without_transition: await openAndComeBack("plain_wm"),
         with_transition: await openAndComeBack("animated_wm"),
+      };
+    });
+
+    // Back pressed the instant the URL changes, which no thumb can do and a
+    // test does by default: `waitForURL` resolves while the rendering is still
+    // held, so the page being left is still the page on screen. Under a
+    // movement the list is then never unmounted — `same_node_on_each_revisit`
+    // says so, it is the same element — and a list that never left has no
+    // revisit to make. Without a movement nothing is held, the page has
+    // already changed by then, and the walk is a real one.
+    //
+    // This is the whole of a bug report we received, and it is a test writing
+    // a navigation that cannot happen rather than anything navi does wrong.
+    // Waiting for the arriving page instead of for its address is the fix, and
+    // the three tests above are what that looks like.
+    test("back pressed before the page being opened has rendered", async () => {
+      return {
+        without_transition: await openAndComeBack("plain_wm", {
+          rushBack: true,
+        }),
+        with_transition: await openAndComeBack("animated_wm", {
+          rushBack: true,
+        }),
       };
     });
   });

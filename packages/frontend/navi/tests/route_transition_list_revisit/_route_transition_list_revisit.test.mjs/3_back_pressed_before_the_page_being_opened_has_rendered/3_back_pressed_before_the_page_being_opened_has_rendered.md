@@ -1,12 +1,12 @@
-# [a list held on a row named by the url, revisited ten times](../../route_transition_list_revisit.test.mjs)
+# [back pressed before the page being opened has rendered](../../route_transition_list_revisit.test.mjs)
 
 ```js
 return {
-  without_transition: await openAndComeBack("plain", {
-    search: "?at=item_400",
+  without_transition: await openAndComeBack("plain_wm", {
+    rushBack: true,
   }),
-  with_transition: await openAndComeBack("animated", {
-    search: "?at=item_400",
+  with_transition: await openAndComeBack("animated_wm", {
+    rushBack: true,
   }),
 };
 ```
@@ -16,11 +16,11 @@ return {
   "without_transition": {
     "on_first_load": {
       "range_asks": 1,
-      "many_asks": 1
+      "many_asks": 0
     },
     "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
-    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
+    "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
     "same_node_on_each_revisit": "----------",
     "transitions_played": 0,
     "transition_left_on_root": false,
@@ -29,13 +29,13 @@ return {
   "with_transition": {
     "on_first_load": {
       "range_asks": 1,
-      "many_asks": 1
+      "many_asks": 0
     },
-    "range_asked_on_each_revisit": "1111111111",
+    "range_asked_on_each_revisit": "0000000000",
     "many_asked_on_each_revisit": "0000000000",
-    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
-    "same_node_on_each_revisit": "----------",
-    "transitions_played": 40,
+    "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
+    "same_node_on_each_revisit": "SSSSSSSSSS",
+    "transitions_played": 30,
     "transition_left_on_root": false,
     "errors": []
   }

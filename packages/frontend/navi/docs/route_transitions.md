@@ -289,15 +289,59 @@ one app mounted twice, the two mounts differing by a single
 `defineRouteTransition` line, walked back and forth **ten times each** with what
 goes to the network counted on every revisit. The loop is the point — a
 difference that came and went would pass a single comparison often enough to
-look like an invariant.
+look like an invariant. Three decors, chosen to be opposites: a long list
+virtualized against its scroller, the same one held on a row the url names, and
+a one-row list against the document scroller with its count known from
+elsewhere.
 
-What the test holds is that shape: pages between fixed bars, a marked area, a
-list virtualized against its scroller, held on a row the url names. It is
-evidence about the mechanism, not a proof about every application; a page that
-loses its revisit only under a movement is worth reporting with the loop above
-run against it. See
+One thing does make a page lose its revisit under a movement and not without
+one, and it is not about data either: a back taken before the page being opened
+has rendered, which returns to a page that never left. It has its own section
+below. See
 [list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)
 for which source refreshes on a revisit and which does not.
+
+## Waiting for a navigation: the address is not the page
+
+A navigation changes the URL first and the screen after — always. Under a
+transition the gap is wider on purpose: the rendering hold above spans the frame
+the picture is taken in, so for that frame the address says one page and the
+screen still shows the other. That is what makes the picture honest, and it is
+also long enough to be walked through by mistake.
+
+So a test that waits on the URL has not waited for anything to happen:
+
+```js
+// ✗ resolves while the page being left is still the page on screen
+await page.getByTestId("game_card").click();
+await page.waitForURL(/\/games\//);
+await page.goBack();
+```
+
+That back does not come back from anywhere. Nothing was unmounted, so nothing
+remounts — the list the user "returns to" is the element that never left, with
+no first load, no revisit, and no re-read (see
+[list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)).
+Every symptom of the arriving page being wrong follows from a walk that never
+took place.
+
+Wait for the page instead — anything only it can show:
+
+```js
+await page.getByTestId("game_card").click();
+await expect(page.getByTestId("game_edit_link")).toBeVisible();
+await page.goBack();
+```
+
+The window is **one frame**: the hold is given back inside the view
+transition's callback, which the browser runs at its next rendering
+opportunity. `tests/route_transition_list_revisit/` walks it the wrong way on
+purpose in its last case — under a movement the list that comes back is the same
+DOM element ten times out of ten and asks for nothing, while the same walk
+without a movement is a real one — and the window measured there is a back at 0
+or 8ms losing every round trip, at 16ms losing only the first, and past 64ms
+losing none. No thumb moves in one frame; an automated click continues in the
+same millisecond. This is a testing trap, not a user-facing behaviour.
 
 ## The rest, briefly
 

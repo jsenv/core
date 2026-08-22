@@ -1,9 +1,4 @@
-import {
-  getVirtualKeyboardOverlayHeight,
-  subscribeWindowResizeSettled,
-  subscribeVisualViewportResizeSettled,
-  setVirtualKeyboardOverlaysContent,
-} from "@jsenv/dom";
+import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
 import { signal, computed, effect } from "@preact/signals";
 
 const installImportMetaCssBuild = (importMeta) => {
@@ -370,13 +365,14 @@ const SAFE_AREA_CSS = /* css */ `
  * is the app's own to handle.
  */
 
+
 setVirtualKeyboardOverlaysContent(true);
 
 const disableVirtualKeyboardOverlay = () => {
   setVirtualKeyboardOverlaysContent(false);
 };
 
-installImportMetaCssBuild(import.meta); /**
+installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
 const button = document.createElement("button");
@@ -386,7 +382,7 @@ const computedStyle = getComputedStyle(button);
 const controlDefaultFontFamily = computedStyle.fontFamily;
 const controlDefaultFontSize = computedStyle.fontSize;
 document.body.removeChild(button);
-const css = /* css */ `
+const css = /* css */`
   @layer navi {
     :root {
       /* Overridden at runtime with precise VisualViewport pixel values so that dvw/dvh 
@@ -603,26 +599,9 @@ const css = /* css */ `
 `;
 import.meta.css = [css, "@jsenv/navi/src/navi_css_vars.js"];
 effect(() => {
-  document.documentElement.style.setProperty(
-    "--navi-vvw",
-    `${visualViewportWidthSignal.value}px`,
-  );
-  document.documentElement.style.setProperty(
-    "--navi-vvh",
-    `${visualViewportHeightSignal.value}px`,
-  );
+  document.documentElement.style.setProperty("--navi-vvw", `${visualViewportWidthSignal.value}px`);
+  document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export {
-  coarsePointerSignal,
-  disableVirtualKeyboardOverlay,
-  getAppHeight,
-  getAppWidth,
-  installImportMetaCssBuild,
-  smallTouchScreenSignal,
-  visualViewportHeightSignal,
-  visualViewportWidthSignal,
-  windowHeightSignal,
-  windowWidthSignal,
-};
+export { coarsePointerSignal, disableVirtualKeyboardOverlay, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

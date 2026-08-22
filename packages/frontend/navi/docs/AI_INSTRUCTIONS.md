@@ -168,8 +168,12 @@ consistency across the app, not from any single call site.
   default is right, how one link or one `navTo` overrides what the pair says
   for the length of a single navigation (`<Link routeTransition>`), marking the page
   area between fixed bars, and why a pair of routes is animated by
-  `RouteTravel` or by a route transition but never both. Read it before
-  animating any navigation.
+  `RouteTravel` or by a route transition but never both. It also says why a
+  test must wait for the page arriving rather than for its address — a back
+  taken before the page has rendered returns to a page that never left, which
+  looks exactly like the arriving page failing to load or refresh. Read it
+  before animating any navigation, and before believing a symptom that only
+  appears once a pair is animated.
 - `docs/navigation.md` — how to build navigation: declaring routes
   (`route()` / `setupRoutes()`), when a section is a route of its own rather
   than a param, search params bound to signals, rendering with `<Route>`,
