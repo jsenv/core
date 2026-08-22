@@ -8159,6 +8159,18 @@ const css$5 = /* css */`
   }
 `;
 import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
+
+/*
+ * Who asked for the capture of a pointer, last. This module is the only place
+ * that ever takes one, so the answer says whether a capture that goes was HANDED
+ * OVER — somebody here took it — or simply LET GO OF by the browser, which does
+ * that on its own more often than the specification suggests, in the middle of a
+ * gesture whose hand is still down and still moving.
+ *
+ * The two must not be answered the same way, and nothing in the event tells them
+ * apart: `lostpointercapture` says the same thing either way.
+ */
+const captureHolderByPointerId = new Map();
 const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -8786,6 +8798,11 @@ const createDragGestureController = (options = {}) => {
         let captured = false;
         dragGesture.capturePointer = () => {
           captured = true;
+          // Written down before it is taken: this is the only place a capture
+          // is ever taken from, so what this map says is who asked for it
+          // last — which is what tells a hand-over from a capture the browser
+          // dropped on its own (see onCaptureLost).
+          captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
           target.setPointerCapture(grabEvent.pointerId);
         };
         if (!options?.pointerCaptureDeferred) {
@@ -8833,14 +8850,44 @@ const createDragGestureController = (options = {}) => {
         // above it), and taken as our own it kills the new gesture one
         // millisecond after it started.
         //
-        // And when it IS ours, it is a loss, never an end: the ends a gesture
-        // has are the pointer going up and the pointer being cancelled, both
-        // listened for below. A capture that goes while the pointer is still
-        // down was taken — by another gesture, or by the element it was held
-        // on leaving the document — and what was being carried must go back
-        // rather than land wherever the hand happened to be.
+        // And when it IS ours, it is a loss and never an end: the ends a
+        // gesture has are the pointer going up and the pointer being
+        // cancelled, both listened for below. What a loss MEANS is the
+        // question, and the event does not answer it — two very different
+        // things arrive as the same one:
+        //
+        // - it was HANDED OVER: another gesture took the pointer, or the
+        //   element it was held on left the document. There is nothing to go
+        //   on with, and what was being carried must go back rather than land
+        //   wherever the hand happened to be.
+        // - it was simply LET GO OF by the browser, with the hand still down
+        //   and still moving. It happens, and not rarely: the capture is a
+        //   guarantee that events keep coming to one element, and the browser
+        //   drops it for reasons of its own that no code here can see. Killing
+        //   the gesture for that is dropping an object mid-air — the copy
+        //   vanishes, the place the hint had lit up is thrown away, and the
+        //   hand is left having done nothing.
+        //
+        // They are told apart by who asked (see captureHolderByPointerId): a
+        // capture nobody here took, on an element still in the document, was
+        // let go of. The gesture does not need it — every move and the release
+        // are read at the WINDOW, not at the element — so it goes on.
         const onCaptureLost = pointerEvent => {
           if (!captured || pointerEvent.target !== target) {
+            return;
+          }
+          const handedOver = captureHolderByPointerId.get(grabEvent.pointerId) !== dragGesture;
+          if (!handedOver && target.isConnected) {
+            // Nobody took it and the element it was held on is still there:
+            // the browser let the capture go by itself, which it does — a
+            // node moved by a re-render and put straight back, a decision of
+            // its own we are not told the reason for. The hand has not let go
+            // of anything, so neither does the gesture: it is a guarantee that
+            // was lost, not the gesture. Every move and the release are read
+            // at the window (see below), so it goes on without it rather than
+            // dropping what is still being carried — and the drop the hand was
+            // aiming at, which the hint had already lit up, still happens.
+            captured = false;
             return;
           }
           onRelease(pointerEvent, {
@@ -8902,6 +8949,9 @@ const createDragGestureController = (options = {}) => {
           // that is up no longer exists — the browser has already dropped the
           // capture with it, and asking again throws ("No active pointer with
           // the given id is found") on the most ordinary release there is.
+          if (captureHolderByPointerId.get(grabEvent.pointerId) === dragGesture) {
+            captureHolderByPointerId.delete(grabEvent.pointerId);
+          }
           if (captured && target.hasPointerCapture(grabEvent.pointerId)) {
             target.releasePointerCapture(grabEvent.pointerId);
           }
@@ -11064,7 +11114,10 @@ const roundForConstraints = (value) => {
 
 /**
  * Detects the drop target based on what element is actually under the mouse cursor.
- * Uses document.elementsFromPoint() to respect visual stacking order naturally.
+ * Uses document.elementsFromPoint() to respect visual stacking order naturally,
+ * and falls back on the rectangles alone when the hit test cannot answer — which
+ * is not only "over nothing": during a view transition the browser hands back the
+ * root for every point of the page (see findTargetByGeometry).
  *
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
@@ -11203,8 +11256,20 @@ const getDropTargetInfo = (
     }
   }
   if (!targetElement) {
-    targetElement = intersectingTargets[0];
-    intersectingIndex = 0;
+    // Nothing in the stack answered. The point may be over no target at all —
+    // and it may also be over one the hit test cannot see: a view transition
+    // covers the page with its pictures, and from then on every point of the
+    // document reads as the root, whatever is really under it. Taking the first
+    // of the overlapped targets then means taking the first one in DOM ORDER,
+    // which has nothing to do with where the hand is: a piece carried onto the
+    // place next door comes back down on the place it left, and the hint says so
+    // by lighting up the wrong one.
+    //
+    // Geometry is what is left, and it is the reading the eye makes anyway: the
+    // place the middle of the carried thing is IN, or — the middle being over a
+    // gap — the one it covers most of.
+    targetElement = findTargetByGeometry(intersectingTargets, dragElementRect);
+    intersectingIndex = intersectingTargets.indexOf(targetElement);
   }
   targetIndex = targetElements.indexOf(targetElement);
 
@@ -11255,6 +11320,41 @@ const getDropTargetInfo = (
     intersecting: intersectingTargets,
   };
   return result;
+};
+
+/**
+ * Which of the overlapped targets the carried thing is on, said with rectangles
+ * alone: the one holding its centre, or the one it covers the most of. Used when
+ * the hit test cannot answer (see its caller).
+ */
+const findTargetByGeometry = (targetElements, dragElementRect) => {
+  const dragCenterX = dragElementRect.left + dragElementRect.width / 2;
+  const dragCenterY = dragElementRect.top + dragElementRect.height / 2;
+  let bestElement = null;
+  let bestOverlapArea = -1;
+  for (const targetElement of targetElements) {
+    const targetRect = targetElement.getBoundingClientRect();
+    if (
+      dragCenterX >= targetRect.left &&
+      dragCenterX <= targetRect.right &&
+      dragCenterY >= targetRect.top &&
+      dragCenterY <= targetRect.bottom
+    ) {
+      return targetElement;
+    }
+    const overlapWidth =
+      Math.min(targetRect.right, dragElementRect.right) -
+      Math.max(targetRect.left, dragElementRect.left);
+    const overlapHeight =
+      Math.min(targetRect.bottom, dragElementRect.bottom) -
+      Math.max(targetRect.top, dragElementRect.top);
+    const overlapArea = overlapWidth * overlapHeight;
+    if (overlapArea > bestOverlapArea) {
+      bestOverlapArea = overlapArea;
+      bestElement = targetElement;
+    }
+  }
+  return bestElement;
 };
 
 const rectangleAreIntersecting = (r1, r2) => {

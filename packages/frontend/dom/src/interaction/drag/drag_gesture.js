@@ -38,6 +38,18 @@ const css = /* css */ `
 `;
 import.meta.css = css;
 
+/*
+ * Who asked for the capture of a pointer, last. This module is the only place
+ * that ever takes one, so the answer says whether a capture that goes was HANDED
+ * OVER — somebody here took it — or simply LET GO OF by the browser, which does
+ * that on its own more often than the specification suggests, in the middle of a
+ * gesture whose hand is still down and still moving.
+ *
+ * The two must not be answered the same way, and nothing in the event tells them
+ * apart: `lostpointercapture` says the same thing either way.
+ */
+const captureHolderByPointerId = new Map();
+
 export const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -697,6 +709,11 @@ export const createDragGestureController = (options = {}) => {
           let captured = false;
           dragGesture.capturePointer = () => {
             captured = true;
+            // Written down before it is taken: this is the only place a capture
+            // is ever taken from, so what this map says is who asked for it
+            // last — which is what tells a hand-over from a capture the browser
+            // dropped on its own (see onCaptureLost).
+            captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
             target.setPointerCapture(grabEvent.pointerId);
           };
           if (!options?.pointerCaptureDeferred) {
@@ -744,14 +761,45 @@ export const createDragGestureController = (options = {}) => {
           // above it), and taken as our own it kills the new gesture one
           // millisecond after it started.
           //
-          // And when it IS ours, it is a loss, never an end: the ends a gesture
-          // has are the pointer going up and the pointer being cancelled, both
-          // listened for below. A capture that goes while the pointer is still
-          // down was taken — by another gesture, or by the element it was held
-          // on leaving the document — and what was being carried must go back
-          // rather than land wherever the hand happened to be.
+          // And when it IS ours, it is a loss and never an end: the ends a
+          // gesture has are the pointer going up and the pointer being
+          // cancelled, both listened for below. What a loss MEANS is the
+          // question, and the event does not answer it — two very different
+          // things arrive as the same one:
+          //
+          // - it was HANDED OVER: another gesture took the pointer, or the
+          //   element it was held on left the document. There is nothing to go
+          //   on with, and what was being carried must go back rather than land
+          //   wherever the hand happened to be.
+          // - it was simply LET GO OF by the browser, with the hand still down
+          //   and still moving. It happens, and not rarely: the capture is a
+          //   guarantee that events keep coming to one element, and the browser
+          //   drops it for reasons of its own that no code here can see. Killing
+          //   the gesture for that is dropping an object mid-air — the copy
+          //   vanishes, the place the hint had lit up is thrown away, and the
+          //   hand is left having done nothing.
+          //
+          // They are told apart by who asked (see captureHolderByPointerId): a
+          // capture nobody here took, on an element still in the document, was
+          // let go of. The gesture does not need it — every move and the release
+          // are read at the WINDOW, not at the element — so it goes on.
           const onCaptureLost = (pointerEvent) => {
             if (!captured || pointerEvent.target !== target) {
+              return;
+            }
+            const handedOver =
+              captureHolderByPointerId.get(grabEvent.pointerId) !== dragGesture;
+            if (!handedOver && target.isConnected) {
+              // Nobody took it and the element it was held on is still there:
+              // the browser let the capture go by itself, which it does — a
+              // node moved by a re-render and put straight back, a decision of
+              // its own we are not told the reason for. The hand has not let go
+              // of anything, so neither does the gesture: it is a guarantee that
+              // was lost, not the gesture. Every move and the release are read
+              // at the window (see below), so it goes on without it rather than
+              // dropping what is still being carried — and the drop the hand was
+              // aiming at, which the hint had already lit up, still happens.
+              captured = false;
               return;
             }
             onRelease(pointerEvent, { cancelled: true });
@@ -811,6 +859,11 @@ export const createDragGestureController = (options = {}) => {
             // that is up no longer exists — the browser has already dropped the
             // capture with it, and asking again throws ("No active pointer with
             // the given id is found") on the most ordinary release there is.
+            if (
+              captureHolderByPointerId.get(grabEvent.pointerId) === dragGesture
+            ) {
+              captureHolderByPointerId.delete(grabEvent.pointerId);
+            }
             if (captured && target.hasPointerCapture(grabEvent.pointerId)) {
               target.releasePointerCapture(grabEvent.pointerId);
             }
