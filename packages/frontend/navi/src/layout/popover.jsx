@@ -368,12 +368,16 @@ const css = /* css */ `
     /* navi-animation mirrors the content popover's own resolved value (set
        imperatively in openEffect) — the backdrop only ever fades, regardless
        of which kind it is (translate/scale wouldn't mean anything on it).
-       display is included alongside opacity (+ allow-discrete) for the same
-       reason popup_css.js's own .navi_popover rule includes it — see this
-       file's top comment. */
+       display and overlay are included alongside opacity (+ allow-discrete)
+       for the same reason popup_css.js's own .navi_popover rule includes them
+       — see this file's top comment. They go together: display keeps the
+       backdrop rendered during the exit, overlay keeps it in the top layer
+       (hidePopover() is called synchronously, so without it the backdrop is
+       evicted immediately and, being z-index: unset, loses to FixedBar and to
+       any positioned element later in DOM order for the whole fade). */
     &[navi-animation] {
       opacity: 1;
-      transition-property: display, opacity;
+      transition-property: display, overlay, opacity;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;

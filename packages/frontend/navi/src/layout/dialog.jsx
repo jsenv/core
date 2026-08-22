@@ -445,9 +445,12 @@ const css = /* css */ `
       backdrop-filter: none;
     }
 
+    /* overlay is a no-op here (this backdrop is a plain div, never a
+       top-layer element) but stays in the list so all four transition lists in
+       these files agree — display and overlay always travel together. */
     &[navi-animation] {
       opacity: 1;
-      transition-property: display, opacity;
+      transition-property: display, overlay, opacity;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
