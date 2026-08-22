@@ -2,15 +2,16 @@
  * How two routes move against each other, said as pairs — without putting
  * them in a row, and without a box in the tree.
  *
- * A page one goes INTO (a game, a profile, a place) slides in from the right,
- * and slides back out when one leaves it — wherever one opened it from. That
- * is a fact about PAIRS of pages, and only about the pairs it is written for:
+ * A page one goes INTO (a game, a profile, a place) is entered from wherever
+ * one opened it, and left back out the same way. That is a fact about PAIRS of
+ * pages, and only about the pairs it is written for:
  *
  *   routeTransition({
  *     steps: [
  *       [MY_GAMES_PAGE, GAME_PAGE],
  *       [RADAR_PAGE, GAME_PAGE],
  *     ],
+ *     type: "slide-x",
  *   });
  *
  * Going from the first page of a pair to the second is a step forward, the
@@ -21,8 +22,12 @@
  * box is a ROW — a total order, plus a drag gesture that walks it — while this
  * declares individual relations and nothing else.
  *
- * There is no box: what slides is the document itself (its `root` view
- * transition group). Anything that must NOT slide — a fixed bar, a header —
+ * The pairs say WHEN something plays and which way; `type` says WHAT plays — a
+ * slide navi ships, or a name the application defines in its own CSS (see the
+ * JSDoc below). Said without a type, a pair plays the browser's cross-fade.
+ *
+ * There is no box: what animates is the document itself (its `root` view
+ * transition group). Anything that must NOT move — a fixed bar, a header —
  * stays still by carrying a `view-transition-name` of its own: named, it is a
  * picture of its own, animated from where it was to where it is, which for a
  * bar that does not move is standing still.
@@ -52,45 +57,59 @@ import { ensureDocumentStartViewTransition } from "../transition/start_view_tran
 const startViewTransition = ensureDocumentStartViewTransition();
 
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
-const TRANSITION_AXIS_ATTRIBUTE = "data-navi-route-transition-axis";
+const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
 
 const css = /* css */ `
   /* Only while a transition of OURS is playing: everything below changes how
      the document animates, and the document belongs to the application the
-     rest of the time. */
+     rest of the time. The duration is written here, on the direction alone, so
+     a pair with no type — the browser's cross-fade — answers to
+     --navi-route-transition-duration like every other. */
   :root[${TRANSITION_ATTRIBUTE}] {
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      animation-duration: var(--navi-route-transition-duration, 300ms);
+    }
+  }
+
+  /* The two slides navi ships. Anything else written as a type belongs to the
+     application: the attributes are on the root either way, and its CSS picks
+     them up exactly as these rules do. */
+  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
+  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
     &::view-transition-old(root),
     &::view-transition-new(root) {
       /* The default cross-fade, dropped: two pages sliding past each other are
          two solid things, and seeing through one to the other says they are
          the same page changing its mind. */
       mix-blend-mode: normal;
-      animation-duration: var(--navi-route-transition-duration, 300ms);
       animation-timing-function: ease;
       animation-fill-mode: both;
     }
   }
-  :root[${TRANSITION_ATTRIBUTE}="forward"] {
-    &::view-transition-old(root) {
-      animation-name: navi-route-transition-leave-towards-start;
+  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
+    &[${TRANSITION_ATTRIBUTE}="forward"] {
+      &::view-transition-old(root) {
+        animation-name: navi-route-transition-leave-towards-start;
+      }
+      &::view-transition-new(root) {
+        animation-name: navi-route-transition-enter-from-end;
+      }
     }
-    &::view-transition-new(root) {
-      animation-name: navi-route-transition-enter-from-end;
-    }
-  }
-  :root[${TRANSITION_ATTRIBUTE}="back"] {
-    &::view-transition-old(root) {
-      animation-name: navi-route-transition-leave-towards-end;
-    }
-    &::view-transition-new(root) {
-      animation-name: navi-route-transition-enter-from-start;
+    &[${TRANSITION_ATTRIBUTE}="back"] {
+      &::view-transition-old(root) {
+        animation-name: navi-route-transition-leave-towards-end;
+      }
+      &::view-transition-new(root) {
+        animation-name: navi-route-transition-enter-from-start;
+      }
     }
   }
 
   /* The same four movements, along the other axis: the start of a column is
      its top, so going forward there is the page rising and the next one coming
      up from below. */
-  :root[${TRANSITION_AXIS_ATTRIBUTE}="y"] {
+  :root[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
     &[${TRANSITION_ATTRIBUTE}="forward"] {
       &::view-transition-old(root) {
         animation-name: navi-route-transition-leave-towards-top;
@@ -160,10 +179,23 @@ const css = /* css */ `
  *   route of its own. Going from `from` to `to` plays forward, the reverse
  *   plays back, and a change between two pages not written in the same pair
  *   plays nothing.
- * @param {"x"|"y"} [options.axis="x"] - which way the pages slide.
+ * @param {string} [options.type] - what plays when a pair does. Omitted, the
+ *   browser's own cross-fade. `"slide-x"` and `"slide-y"` ship with navi: the
+ *   pages slide past each other, forward towards the start of the axis. Any
+ *   other name belongs to the application: for the length of the transition
+ *   the root carries `data-navi-route-transition-type="<type>"` next to
+ *   `data-navi-route-transition="forward"|"back"`, and the application's CSS
+ *   defines the movement against the document's view transition
+ *   pseudo-elements:
+ *
+ *     :root[data-navi-route-transition-type="zoom"][data-navi-route-transition="forward"] {
+ *       &::view-transition-new(root) {
+ *         animation-name: my-zoom-in;
+ *       }
+ *     }
  * @returns {() => void} stop declaring it.
  */
-export const routeTransition = ({ steps, axis = "x" }) => {
+export const routeTransition = ({ steps, type }) => {
   import.meta.css = css;
   const stepList = steps.map(([from, to]) => [
     normalizePage(from),
@@ -186,7 +218,9 @@ export const routeTransition = ({ steps, axis = "x" }) => {
     const transition = {};
     currentTransition = transition;
     document.documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
-    document.documentElement.setAttribute(TRANSITION_AXIS_ATTRIBUTE, axis);
+    if (type) {
+      document.documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+    }
     const releaseRendering = takeoverRoutingRenderingHold();
     // Armed from here rather than from inside the callback below: the browser
     // calls that callback a frame later, and a navigation that has already
@@ -218,7 +252,7 @@ export const routeTransition = ({ steps, axis = "x" }) => {
       if (currentTransition === transition) {
         currentTransition = null;
         document.documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
-        document.documentElement.removeAttribute(TRANSITION_AXIS_ATTRIBUTE);
+        document.documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
       }
     };
     viewTransition.finished.then(end, end);
