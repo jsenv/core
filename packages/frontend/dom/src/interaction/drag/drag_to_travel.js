@@ -175,13 +175,17 @@ const DRAG_RESISTANCE = 0.3;
 
 // What a drag must not start on: something that reads the pointer itself. A
 // button or a link is not in the list — dragging from one travels, and the
-// click it would have made is swallowed on the way out.
+// click it would have made is swallowed on the way out. A drag source is: it
+// answers the same press, and a travel starting there takes the pointer capture
+// away from a gesture already carrying something.
 const DRAG_EXCLUDED_SELECTOR = [
   "input",
   "textarea",
   "select",
   '[contenteditable=""]',
   '[contenteditable="true"]',
+  "[data-drag-source]",
+  "[data-drag-handle]",
   "[data-no-drag-travel]",
 ].join(",");
 
@@ -586,6 +590,9 @@ export const startDragToTravel = (
           pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+        // The travel exists: from here the pointer is this box's, and it is
+        // followed wherever it goes.
+        dragGesture.capturePointer();
       }
       const { axis } = travel;
       let pulled = pullOf(gestureInfo);
@@ -652,9 +659,10 @@ export const startDragToTravel = (
       const velocity =
         axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
       // A gesture taken away rather than let go of (the browser scrolling
-      // something else, a call coming in) said nothing: things go back.
+      // something else, a call coming in, another gesture taking the pointer)
+      // said nothing: things go back.
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
-      const cancelled = releaseEvent?.type === "pointercancel";
+      const { cancelled } = gestureInfo;
       onEnd({
         axis,
         pulled,
@@ -688,6 +696,14 @@ export const startDragToTravel = (
       // router unmounts the page being left), and a capture whose element
       // leaves the document is a capture the browser drops.
       pointerCaptureElement: element,
+      // A travel is established in two steps, and the pointer is only owned
+      // after the second: the distance below says the press is not a click, and
+      // the first move says which axis it leans on — which this box may not
+      // walk, or the caller may refuse. Taken at the first step, the capture
+      // would be taken away from whoever else is reading the same press for
+      // gestures that give themselves up one event later. It is claimed once
+      // the travel exists, in onDrag below.
+      pointerCaptureDeferred: true,
     });
     return dragGesture;
   };

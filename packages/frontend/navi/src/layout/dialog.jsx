@@ -920,6 +920,25 @@ const useDialogProps = (props) => {
   const onSwipePointerDown = swipeToCloseDown
     ? createSwipeToClose("bottom", { grip: DOCKED_SWIPE_GRIP })
     : null;
+  // A grip nobody matches leaves the whole sheet swipeable, which is the right
+  // answer for a sheet that has no header and the wrong one for a sheet whose
+  // header is buried a level down (wrapped in a form, a layout): the gesture
+  // then starts on content the finger came to operate, and nothing says so from
+  // the outside.
+  useEffect(() => {
+    const dialogEl = ref.current;
+    if (!dialogEl || !swipeToCloseDown || !openController.opened) {
+      return;
+    }
+    if (dialogEl.querySelector(DOCKED_SWIPE_GRIP)) {
+      return;
+    }
+    if (dialogEl.querySelector("[data-header]")) {
+      console.warn(
+        "Dialog: the header is not a direct child, so it is not the grip and the whole sheet is swiped to close. Put the header directly inside the dialog to hold the sheet by it.",
+      );
+    }
+  }, [swipeToCloseDown, openController.opened]);
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,
   // reading as a rendering glitch rather than as a rounded box. A corner is on

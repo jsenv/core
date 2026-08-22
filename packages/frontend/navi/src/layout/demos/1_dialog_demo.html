@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dialog demo</title>
     <style>
+      html,
+      body {
+        overflow-x: clip;
+      }
       body {
         margin: 20px;
         font-family:
@@ -110,6 +114,29 @@
         margin-top: 8px;
         flex-wrap: wrap;
         gap: 12px;
+      }
+      /* Somewhere to drag something, inside a sheet. */
+      .demo-sheet-board {
+        position: relative;
+        height: 130px;
+        border: 1px dashed #cfd8e3;
+        border-radius: 6px;
+      }
+      .demo-sheet-token {
+        position: absolute;
+        top: 12px;
+        display: flex;
+        width: 84px;
+        height: 46px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 13px;
+        background: #2f5fa8;
+        border-radius: 6px;
+      }
+      .demo-sheet-token-by-hand {
+        background: #b3261e;
       }
       .demo-position-grid {
         /* Same visual idea as 2_popover_demo.html's own .demo-area-grid — the
@@ -272,7 +299,7 @@
       import { render } from "preact";
       import { DocumentToc } from "../../internal/document_toc.jsx";
       import { DemoHeader } from "../../internal/demo_header.jsx";
-      import { useId, useState, useEffect } from "preact/hooks";
+      import { useId, useState, useEffect, useRef } from "preact/hooks";
       import {
         Box,
         Button,
@@ -1103,6 +1130,164 @@
         </section>
       );
 
+      // ── Dragging inside a docked sheet ────────────────────────────────────
+
+      const SheetToken = ({ left, ...rest }) => (
+        <Box
+          className="demo-sheet-token"
+          style={{ left }}
+          interactions={{ move: () => {} }}
+          {...rest}
+        >
+          drag me
+        </Box>
+      );
+
+      // The same token moved by hand: a pointerdown that reads the pointer
+      // itself, and says nothing about it in the DOM.
+      const SheetTokenByHand = ({ left }) => {
+        const positionRef = useRef({ x: 0, y: 0 });
+        const onPointerDown = (pointerDownEvent) => {
+          const element = pointerDownEvent.currentTarget;
+          const { x, y } = positionRef.current;
+          const grabX = pointerDownEvent.clientX;
+          const grabY = pointerDownEvent.clientY;
+          element.setPointerCapture(pointerDownEvent.pointerId);
+          const onPointerMove = (pointerMoveEvent) => {
+            positionRef.current = {
+              x: x + pointerMoveEvent.clientX - grabX,
+              y: y + pointerMoveEvent.clientY - grabY,
+            };
+            const { x: left, y: top } = positionRef.current;
+            element.style.translate = `${left}px ${top}px`;
+          };
+          const onPointerUp = () => {
+            element.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+          };
+          element.addEventListener("pointermove", onPointerMove);
+          window.addEventListener("pointerup", onPointerUp);
+        };
+        return (
+          <div
+            class="demo-sheet-token demo-sheet-token-by-hand"
+            style={{ left }}
+            onPointerDown={onPointerDown}
+          >
+            by hand
+          </div>
+        );
+      };
+
+      const SheetBoard = ({ children }) => (
+        <div class="demo-sheet-board">{children}</div>
+      );
+
+      const DockedDragSection = () => (
+        <section class="demo-section">
+          <Heading id="docked-drag">Dragging inside a docked sheet</Heading>
+          <p>
+            Small touch screen only (device emulation, as above): the sheet is
+            closed by being pushed back down, and the same finger may be
+            carrying something inside it.
+          </p>
+
+          <Heading level={3} id="docked-drag-header">
+            Held by its header
+          </Heading>
+          <p>Pushing the header down closes the sheet; the board does not.</p>
+          <div class="demo-row">
+            <Button command="--navi-open" commandFor="sheet_grip_dialog">
+              header
+            </Button>
+            <Dialog id="sheet_grip_dialog" dockedOnSmallTouchScreen animation>
+              <Box header padding="s" className="demo-overflow-part">
+                header
+              </Box>
+              <Box padding="m" flex="y" spacing="s">
+                <SheetBoard>
+                  <SheetToken id="sheet_grip_token" left="12px" />
+                </SheetBoard>
+                <Button command="--navi-close">Close</Button>
+              </Box>
+            </Dialog>
+          </div>
+
+          <Heading level={3} id="docked-drag-no-header">
+            No header
+          </Heading>
+          <p>
+            The sheet is pushed down from anywhere — from the token it is the
+            token that travels.
+          </p>
+          <div class="demo-row">
+            <Button command="--navi-open" commandFor="sheet_bare_dialog">
+              no header
+            </Button>
+            <Dialog id="sheet_bare_dialog" dockedOnSmallTouchScreen animation>
+              <Box padding="m" flex="y" spacing="s">
+                <SheetBoard>
+                  <SheetToken id="sheet_bare_token" left="12px" />
+                </SheetBoard>
+                <Button command="--navi-close">Close</Button>
+              </Box>
+            </Dialog>
+          </div>
+
+          <Heading level={3} id="docked-drag-header-nested">
+            A header one level down
+          </Heading>
+          <p>
+            Same sheet, its header wrapped in a box: pushing the content down
+            closes it too, and the console says why.
+          </p>
+          <div class="demo-row">
+            <Button command="--navi-open" commandFor="sheet_nested_dialog">
+              wrapped header
+            </Button>
+            <Dialog id="sheet_nested_dialog" dockedOnSmallTouchScreen animation>
+              <Box flex="y">
+                <Box header padding="s" className="demo-overflow-part">
+                  header
+                </Box>
+                <Box padding="m" flex="y" spacing="s">
+                  <SheetBoard>
+                    <SheetToken id="sheet_nested_token" left="12px" />
+                  </SheetBoard>
+                  <Button command="--navi-close">Close</Button>
+                </Box>
+              </Box>
+            </Dialog>
+          </div>
+
+          <Heading level={3} id="docked-drag-by-hand">
+            Reading the pointer by hand
+          </Heading>
+          <p>Two tokens in one sheet: pull each of them down, then sideways.</p>
+          <div class="demo-row">
+            <Button command="--navi-open" commandFor="sheet_by_hand_dialog">
+              interactions vs by hand
+            </Button>
+            <Dialog
+              id="sheet_by_hand_dialog"
+              dockedOnSmallTouchScreen
+              animation
+            >
+              <Box header padding="s" className="demo-overflow-part">
+                header
+              </Box>
+              <Box padding="m" flex="y" spacing="s">
+                <SheetBoard>
+                  <SheetToken id="sheet_by_hand_token" left="12px" />
+                  <SheetTokenByHand left="112px" />
+                </SheetBoard>
+                <Button command="--navi-close">Close</Button>
+              </Box>
+            </Dialog>
+          </div>
+        </section>
+      );
+
       // ── Overflow ──────────────────────────────────────────────────────────
 
       const OverflowFiller = ({ count = 12 }) =>
@@ -1509,6 +1694,7 @@
           <PointerInteractionOutsideSection />
           <OpenFromStartSection />
           <AdaptiveSection />
+          <DockedDragSection />
           <OverflowSection />
           <ValidationSection />
           <SlideContainerSection />

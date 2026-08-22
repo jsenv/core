@@ -938,6 +938,12 @@ const resolveDropMeaning = ({
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
 }) => {
+  if (gestureInfo.cancelled) {
+    // Nobody let go of anything: the gesture was taken away mid-air (the
+    // pointer cancelled, another gesture taking it). Where the thing happened
+    // to be at that moment is not a place it was put.
+    return "cancel";
+  }
   if (canToss) {
     const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);

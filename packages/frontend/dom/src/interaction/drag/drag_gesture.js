@@ -156,6 +156,11 @@ export const createDragGestureController = (options = {}) => {
       grabEvent: event,
       dragEvent: null,
       releaseEvent: null,
+      // The gesture ended without the hand ever letting go: the browser took
+      // the touch to scroll with, another gesture took the pointer. Whoever
+      // reads it must not commit anything — a release that was not asked for
+      // says nothing about where things belong.
+      cancelled: false,
     };
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
@@ -504,9 +509,13 @@ export const createDragGestureController = (options = {}) => {
 
     const release = ({
       event = new CustomEvent("programmatic"),
+      cancelled = event.type === "pointercancel",
       releaseX = gestureInfo.dragX,
       releaseY = gestureInfo.dragY,
     } = {}) => {
+      // Written before the last drag is reported, so the callbacks reading the
+      // end of the gesture all see the same one.
+      gestureInfo.cancelled = cancelled;
       drag(releaseX, releaseY, { event, isRelease: true });
       dispatchPublicCustomEvent(element, "navi_drag_release", { gestureInfo });
       publishRelease(gestureInfo);
@@ -553,10 +562,11 @@ export const createDragGestureController = (options = {}) => {
         event: dragEvent,
       });
     };
-    const releaseViaPointer = (mouseupEvent) => {
-      const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
+    const releaseViaPointer = (pointerEvent, { cancelled } = {}) => {
+      const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(pointerEvent);
       dragGesture.release({
-        event: mouseupEvent,
+        event: pointerEvent,
+        cancelled,
         releaseX: mouseReleaseX,
         releaseY: mouseReleaseY,
       });
@@ -657,6 +667,7 @@ export const createDragGestureController = (options = {}) => {
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
       gestureInfo: dragGesture.gestureInfo,
+      dragGesture,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
@@ -669,14 +680,26 @@ export const createDragGestureController = (options = {}) => {
       return initDragByPointer(
         grabEvent,
         options,
-        ({ onMove, onRelease, gestureInfo }) => {
+        ({ onMove, onRelease, gestureInfo, dragGesture }) => {
           // Captured on something that will still be there at the end of the
           // gesture: the browser releases the capture when its element leaves the
           // document, and a gesture whose own effect replaces the DOM under the
           // finger would lose the pointer at its first move. Callers whose target
           // is stable have nothing to say and keep it.
           const target = options?.pointerCaptureElement || grabEvent.target;
-          target.setPointerCapture(grabEvent.pointerId);
+          // The capture is ONE per pointer for the whole document: taking it is
+          // taking it away from whoever had it, who is then told the exact same
+          // thing it is told when its own gesture ends. So it is taken when this
+          // gesture is established and not a moment earlier — for most callers
+          // that is the grab itself (the intent was settled before, by a handle
+          // or a long press), and for a caller that is still deciding what the
+          // press means, it is whenever it says so (see capturePointer).
+          dragGesture.capturePointer = () => {
+            target.setPointerCapture(grabEvent.pointerId);
+          };
+          if (!options?.pointerCaptureDeferred) {
+            dragGesture.capturePointer();
+          }
           /*
            * A touchmove left alone is the browser deciding the touch belongs to
            * it: it takes it to scroll with, and a touch it has taken is a pointer
@@ -710,7 +733,7 @@ export const createDragGestureController = (options = {}) => {
           grabTarget.addEventListener("touchmove", preventTouchScroll, {
             passive: false,
           });
-          // Only OUR capture ending means this gesture is over:
+          // Only OUR capture ending is this gesture's business:
           // lostpointercapture bubbles, so a descendant giving up its own capture
           // walks straight into this listener. That is not a rare shape — it is
           // exactly what happens when a gesture hands over to another one (a
@@ -718,11 +741,18 @@ export const createDragGestureController = (options = {}) => {
           // the pressed element, while the real one is being held on a container
           // above it), and taken as our own it kills the new gesture one
           // millisecond after it started.
+          //
+          // And when it IS ours, it is a loss, never an end: the ends a gesture
+          // has are the pointer going up and the pointer being cancelled, both
+          // listened for below. A capture that goes while the pointer is still
+          // down was taken — by another gesture, or by the element it was held
+          // on leaving the document — and what was being carried must go back
+          // rather than land wherever the hand happened to be.
           const onCaptureLost = (pointerEvent) => {
             if (pointerEvent.target !== target) {
               return;
             }
-            onRelease(pointerEvent);
+            onRelease(pointerEvent, { cancelled: true });
           };
           target.addEventListener("lostpointercapture", onCaptureLost);
           target.addEventListener("pointercancel", onRelease);
