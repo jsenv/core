@@ -191,8 +191,11 @@ const DIMENSION_PROPS = {
       return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+      // width 100% is what fills the cross axis; align-self stretch would do
+      // the same but takes the parent's alignX away — a maxWidth-capped item
+      // in an alignX="center" parent would then sit at the start instead of
+      // in the middle.
       return {
-        alignSelf: "stretch",
         width: "100%",
       };
     }

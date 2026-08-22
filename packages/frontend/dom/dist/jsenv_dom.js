@@ -14363,6 +14363,90 @@ const stickyAsRelativeCoords = (
   return [leftPosition, topPosition];
 };
 
+/**
+ * The on-screen keyboard, when the app takes it over.
+ *
+ * By default a mobile browser answers the keyboard by shrinking the VISUAL
+ * viewport, and everything sized against that viewport follows for free —
+ * which is what the whole positioning layer here already relies on (see
+ * pickPositionRelativeTo's own visualViewport reads). The VirtualKeyboard API
+ * (Chromium only — no Firefox, no Safari) offers the other deal:
+ * `overlaysContent = true` and the keyboard stops resizing anything, painting
+ * over the page instead, while its geometry becomes readable — `boundingRect`
+ * and a `geometrychange` event here, `env(keyboard-inset-*)` in CSS.
+ *
+ * That deal has to be taken whole: the instant the viewport stops shrinking,
+ * whoever was sizing against it is sizing against a rectangle the keyboard now
+ * covers. So this module answers ONE question — how many pixels at the bottom
+ * of the visual viewport the keyboard covers — and the positioning layer
+ * subtracts it. The answer is 0 in every other case (unsupported, never opted
+ * in, keyboard closed), which is exactly what makes the two paths one path:
+ * where the browser shrinks the viewport itself, there is nothing left to
+ * subtract.
+ *
+ * Why take the deal at all, then, if the outcome is meant to match? Because a
+ * resizing viewport is a resize of EVERYTHING, whether or not it had anything
+ * to do with the field being typed into — the page reflows, fixed bars move,
+ * and a mobile browser fires that resize transiently as focus goes from one
+ * input to the next. Overlaying leaves the layout alone and hands over a
+ * number instead. So navi takes it by default (see its own index.js) and only
+ * offers a way back out, for an app whose own layout was built around the
+ * viewport shrinking.
+ */
+
+const virtualKeyboard = window.navigator.virtualKeyboard;
+
+/**
+ * Whether the keyboard overlays the content instead of resizing the viewport.
+ * Returns whether it applies at all — false means the browser has no
+ * VirtualKeyboard API and keeps shrinking the visual viewport, which is the
+ * behavior everything here already follows, so there is nothing to report to
+ * the caller beyond "not this way".
+ */
+const setVirtualKeyboardOverlaysContent = (value) => {
+  if (!virtualKeyboard) {
+    return false;
+  }
+  virtualKeyboard.overlaysContent = value;
+  return true;
+};
+
+/**
+ * How many pixels at the bottom of the visual viewport the keyboard currently
+ * covers — 0 unless the app opted in above AND the keyboard is up.
+ *
+ * `boundingRect` is all-zero when the keyboard is hidden, and also while
+ * `overlaysContent` is false: a keyboard that resized the viewport covers
+ * nothing that is left of it, so the zero is the right answer rather than a
+ * missing one.
+ */
+const getVirtualKeyboardOverlayHeight = () => {
+  if (!virtualKeyboard) {
+    return 0;
+  }
+  const { height } = virtualKeyboard.boundingRect;
+  return height > 0 ? height : 0;
+};
+
+/**
+ * Calls `callback` whenever the keyboard shows, hides or resizes. Returns an
+ * unsubscribe function; a no-op (never calls back) without support.
+ *
+ * Undebounced on purpose, unlike window/visualViewport resize
+ * (window_size.js): "geometrychange" is not the transient storm those are —
+ * it fires on the keyboard itself changing, not on the layout reacting to it,
+ * which is the whole point of overlaying.
+ */
+const subscribeVirtualKeyboardGeometryChange = (callback) => {
+  if (!virtualKeyboard) {
+    return () => {};
+  }
+  virtualKeyboard.addEventListener("geometrychange", callback);
+  return () => {
+    virtualKeyboard.removeEventListener("geometrychange", callback);
+  };
+};
+
 // Both "resize" sources fire transiently on mobile (keyboard/UI chrome
 // briefly shifting when focus moves between inputs) — debounced so
 // consumers skip that in-between state. One shared timer per source (not
@@ -14377,17 +14461,29 @@ const [publishVisualViewportResize, subscribeVisualViewportResizeSettled] =
   createPubSub();
 const [publishWindowResize, subscribeWindowResizeSettled] = createPubSub();
 
+let visualViewportResizeTimeoutId;
+const scheduleVisualViewportResize = (event) => {
+  visualViewportResizePending = true;
+  clearTimeout(visualViewportResizeTimeoutId);
+  visualViewportResizeTimeoutId = setTimeout(() => {
+    visualViewportResizePending = false;
+    publishVisualViewportResize(event);
+  }, RESIZE_SETTLE_MS);
+};
 if (window.visualViewport) {
-  let timeoutId;
-  window.visualViewport.addEventListener("resize", (event) => {
-    visualViewportResizePending = true;
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      visualViewportResizePending = false;
-      publishVisualViewportResize(event);
-    }, RESIZE_SETTLE_MS);
-  });
+  window.visualViewport.addEventListener(
+    "resize",
+    scheduleVisualViewportResize,
+  );
 }
+// The same event, said differently: where the keyboard overlays the content
+// (virtual_keyboard.js) there is no visualViewport resize at all when it
+// opens — the room left to place anything in changed
+// all the same, and every consumer here asks the same question either way
+// (getVisibleViewportRect in visible_rect.js already subtracts it). Through
+// the same debounce, and for the same reason: going straight from one input
+// to the next hides and re-shows the keyboard.
+subscribeVirtualKeyboardGeometryChange(scheduleVisualViewportResize);
 
 let windowResizeTimeoutId;
 window.addEventListener("resize", (event) => {
@@ -14405,6 +14501,39 @@ window.addEventListener("resize", (event) => {
     publishWindowResize(event);
   }, RESIZE_SETTLE_MS);
 });
+
+/**
+ * The part of the viewport something can actually be placed in.
+ *
+ * visualViewport, not the layout viewport: only the visual one shrinks when
+ * the on-screen keyboard opens (where the browser is the one shrinking it —
+ * see below). Its offsetLeft/Top matter too, for pinch-zoom/pan.
+ *
+ * document.documentElement.clientWidth/Height is the fallback without
+ * visualViewport support — the layout viewport net of any classic scrollbar,
+ * which is what visualViewport itself reports, unlike window.innerWidth/Height
+ * which counts the scrollbar in. Both readings existed here, one per call
+ * site, for no reason anyone stated; they only ever differed by that scrollbar
+ * and only on browsers with no visualViewport at all.
+ *
+ * The keyboard is then subtracted rather than assumed to have already shrunk
+ * the viewport: with `overlaysContent` (virtual_keyboard.js, navi turns it on)
+ * the viewport stays full height and the keyboard is painted over its bottom.
+ * Zero everywhere else, the browser having done the subtraction itself.
+ */
+const getVisibleViewportRect = () => {
+  const visualViewport = window.visualViewport;
+  const documentElement = document.documentElement;
+  const height = visualViewport
+    ? visualViewport.height
+    : documentElement.clientHeight;
+  return {
+    left: visualViewport ? visualViewport.offsetLeft : 0,
+    top: visualViewport ? visualViewport.offsetTop : 0,
+    width: visualViewport ? visualViewport.width : documentElement.clientWidth,
+    height: Math.max(0, height - getVirtualKeyboardOverlayHeight()),
+  };
+};
 
 // Minimum fraction of element width/height that must be visible on the preferred side
 // before flipping to the opposite side. Prevents flickering near the flip threshold.
@@ -14528,23 +14657,17 @@ const visibleRectEffect = (
   const UNSET_EVENT = { type: "unset" };
   const check = (event = UNSET_EVENT) => {
 
-    // visualViewport, not window.innerWidth/Height: the layout viewport
-    // doesn't shrink when the on-screen keyboard opens (same reasoning as
-    // pickPositionRelativeTo's own identical choice). offsetLeft/Top matter
-    // too, for pinch-zoom/pan. Computed here regardless of scroll container
-    // (not just where the non-document branch below needs it) because a
-    // keyboard opening can change pickPositionRelativeTo's available space
-    // without moving this element's own visibleRect at all — see
-    // viewportRectChanged further down.
-    const visualViewport = window.visualViewport;
-    const viewportWidth = visualViewport
-      ? visualViewport.width
-      : window.innerWidth;
-    const viewportHeight = visualViewport
-      ? visualViewport.height
-      : window.innerHeight;
-    const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
-    const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
+    // Computed here regardless of scroll container (not just where the
+    // non-document branch below needs it) because a keyboard opening can
+    // change pickPositionRelativeTo's available space without moving this
+    // element's own visibleRect at all — see viewportRectChanged further
+    // down.
+    const {
+      left: viewportOffsetLeft,
+      top: viewportOffsetTop,
+      width: viewportWidth,
+      height: viewportHeight,
+    } = getVisibleViewportRect();
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollContainer;
@@ -15401,19 +15524,13 @@ const pickPositionRelativeTo = (
     container,
   } = {},
 ) => {
-  // Needed before hasValidAnchor below. visualViewport, not
-  // document.documentElement.clientWidth/Height: the layout viewport
-  // doesn't shrink when the on-screen keyboard opens, only the visual one
-  // does.
-  const visualViewport = window.visualViewport;
-  const viewportWidth = visualViewport
-    ? visualViewport.width
-    : document.documentElement.clientWidth;
-  const viewportHeight = visualViewport
-    ? visualViewport.height
-    : document.documentElement.clientHeight;
-  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
-  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+  // Needed before hasValidAnchor below.
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = getVisibleViewportRect();
 
   // Resolved early: everything below that would otherwise reach for
   // viewportLeft/Top/Width/Height instead uses these, so a "local" popover
@@ -19406,4 +19523,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };

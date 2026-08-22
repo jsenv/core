@@ -1,5 +1,5 @@
+import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
 import { signal, computed, effect } from "@preact/signals";
-import { subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled } from "@jsenv/dom";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -129,10 +129,18 @@ const readAppMax = (propertyName) => {
 };
 const getAppWidth = () =>
   Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
+// Minus what the keyboard covers, so this stays the JS reading of the very
+// same rectangle --navi-app-height describes in CSS (see safe_area.js's own
+// --navi-keyboard-inset-bottom). Zero unless the app opted into the keyboard
+// overlaying its content — otherwise the shrinking visual viewport above has
+// already accounted for it, and subtracting again would count it twice.
 const getAppHeight = () =>
-  Math.min(
-    visualViewportHeightSignal.value,
-    readAppMax("--navi-app-max-height"),
+  Math.max(
+    0,
+    Math.min(
+      visualViewportHeightSignal.value,
+      readAppMax("--navi-app-max-height"),
+    ) - getVirtualKeyboardOverlayHeight(),
   );
 
 // Whether the primary input is a finger rather than a mouse. A pointer type is
@@ -238,6 +246,18 @@ const SAFE_AREA_CSS = /* css */ `
       --navi-fixed-bar-space-bottom: 0px;
       --navi-fixed-bar-space-left: 0px;
 
+      /* What the on-screen keyboard covers — and ONLY where it overlays the
+         content rather than shrinking the viewport, which is navi's default
+         wherever the browser has the VirtualKeyboard API (see
+         layout/virtual_keyboard.js). Zero on Firefox/Safari, which have no
+         such API, and zero for an app that called
+         disableVirtualKeyboardOverlay(): both get a keyboard that shrinks the
+         visual viewport instead, which --navi-vvh already tracks. Reading
+         env() rather than a JS-written value keeps it live: the keyboard
+         slides in over several frames and this follows it without a
+         listener. */
+      --navi-keyboard-inset-bottom: env(keyboard-inset-height, 0px);
+
       /* Level 1. Centered bands, so that declaring one ceiling
          (--navi-app-max-width) is all an app has to do to be a narrow screen in
          a wide window; an app that wants them uneven writes these directly. */
@@ -245,7 +265,15 @@ const SAFE_AREA_CSS = /* css */ `
         0px,
         (var(--navi-vvh) - var(--navi-app-max-height, var(--navi-vvh))) / 2
       );
-      --navi-app-inset-bottom: var(--navi-app-inset-top);
+      /* The keyboard on top of the band, and on this edge only: it eats into
+         the app's own rectangle exactly like a viewport that shrank, which is
+         what makes both paths end up at the same --navi-app-height (and so at
+         the same dialog/popover ceiling). Not part of the centering, hence
+         added here rather than folded into --navi-app-inset-top: a keyboard
+         takes the bottom, it doesn't re-center anything. */
+      --navi-app-inset-bottom: calc(
+        var(--navi-app-inset-top) + var(--navi-keyboard-inset-bottom)
+      );
       --navi-app-inset-left: max(
         0px,
         (var(--navi-vvw) - var(--navi-app-max-width, var(--navi-vvw))) / 2
@@ -307,6 +335,42 @@ const SAFE_AREA_CSS = /* css */ `
     }
   }
 `;
+
+/**
+ * navi's stance on the on-screen keyboard: it overlays the app rather than
+ * resizing the viewport, wherever the browser can be told so (the
+ * VirtualKeyboard API — Chromium only). See virtual_keyboard.js in @jsenv/dom
+ * for what that trades away and what it gives back.
+ *
+ * Turned on rather than offered, because navi already sizes everything that
+ * escapes normal flow against the app's own rectangle rather than against the
+ * window (--navi-app-width/height, see navi_css_vars.js), and
+ * --navi-keyboard-inset-bottom (safe_area.js) puts the keyboard into exactly
+ * that rectangle. So the two mechanisms reach the same numbers here, and the
+ * overlay reaches them without reflowing the page underneath — a resizing
+ * viewport is a resize of everything, fired transiently every time focus goes
+ * from one input to the next.
+ *
+ * An app that built its own layout around the viewport shrinking can say so
+ * with disableVirtualKeyboardOverlay(), and gets the behavior Firefox and
+ * Safari give it anyway.
+ *
+ * The one thing it hands back to the app: scrolling the focused field into
+ * view. A viewport that shrinks makes the browser do it; a keyboard that
+ * merely paints over the page leaves whatever is under it under it. navi
+ * answers that for what it places itself — a popup is sized and positioned
+ * against the app rectangle the keyboard was just subtracted from — and for
+ * anything marked [data-navi-safe-area], whose scroll-padding-bottom counts
+ * the keyboard in (safe_area.js). A field in a scroller the app never marked
+ * is the app's own to handle.
+ */
+
+
+setVirtualKeyboardOverlaysContent(true);
+
+const disableVirtualKeyboardOverlay = () => {
+  setVirtualKeyboardOverlaysContent(false);
+};
 
 installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
@@ -539,5 +603,5 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, disableVirtualKeyboardOverlay, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

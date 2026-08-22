@@ -347,6 +347,36 @@
               <DaySpin defaultValue={TODAY} size="xxl" width="300px" />
             </Variant>
           </Box>
+
+          <Heading level={3} id="centered">
+            maxWidth dans un conteneur centré
+          </Heading>
+          <p class="desc">
+            Conteneur de 500px (en pointillés), <code>alignX="center"</code> :
+            le spin plafonné à 300px doit se poser au milieu, pas à gauche.
+          </p>
+          <Box
+            flex="y"
+            alignX="center"
+            width="500px"
+            border="2px dashed #94a3b8"
+            padding="m"
+          >
+            <DaySpin defaultValue={TODAY} maxWidth="300px" />
+          </Box>
+          <p class="desc" style="margin-top: 12px">
+            Le même, en <code>expandX</code> : la largeur va jusqu'au plafond de
+            300px et reste centrée.
+          </p>
+          <Box
+            flex="y"
+            alignX="center"
+            width="500px"
+            border="2px dashed #94a3b8"
+            padding="m"
+          >
+            <DaySpin defaultValue={TODAY} maxWidth="300px" expandX />
+          </Box>
         </div>
       );
 

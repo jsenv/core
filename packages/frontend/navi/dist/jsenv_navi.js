@@ -3,7 +3,7 @@
  * using @jsenv/navi as intended.
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
-export { coarsePointerSignal } from "./jsenv_navi_side_effects.js";
+export { coarsePointerSignal, disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
@@ -16829,8 +16829,11 @@ const DIMENSION_PROPS = {
       return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
+      // width 100% is what fills the cross axis; align-self stretch would do
+      // the same but takes the parent's alignX away — a maxWidth-capped item
+      // in an alignX="center" parent would then sit at the start instead of
+      // in the middle.
       return {
-        alignSelf: "stretch",
         width: "100%",
       };
     }
