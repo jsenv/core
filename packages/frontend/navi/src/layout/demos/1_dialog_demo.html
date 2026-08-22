@@ -292,6 +292,38 @@
         border: 1px solid #cfe0f5;
         content-visibility: auto;
       }
+      .demo_dialog_keyboard_box {
+        /* expandY only decides how tall the dialog is — what's inside still
+           has to fill it, hence the column: the search input keeps its own
+           height at the top and the colored block takes whatever is left,
+           which is exactly the part that must visibly shrink and grow back
+           as the virtual keyboard comes and goes. */
+        display: flex;
+        box-sizing: border-box;
+        padding: 16px;
+        flex-direction: column;
+        gap: 12px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .demo-keyboard-fill {
+        display: flex;
+        /* min-height: 0 so this block can actually be squeezed by the
+           keyboard instead of forcing the column to keep its full height and
+           overflow the dialog. */
+        min-height: 0;
+        padding: 12px;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 14px;
+        text-align: center;
+        background: #2f5fa8;
+        border-radius: 8px;
+      }
       .demo-content-tall-block {
         /* flex-shrink: 0 (+ matching min-height) so a flex/column ancestor
            can't shrink these back down — the whole point is to force the
@@ -1683,6 +1715,105 @@
       // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
       // anchor>` owns the id (derived from its href); the "#" child renders as
       // the visible affordance (shown on hover via revealOnInteraction).
+      // Typing inside a dialog on a phone: the virtual keyboard shrinks the
+      // *visual* viewport, which is what --dialog-maxmax-height is derived
+      // from — so an expandY dialog (the only kind whose height is that
+      // ceiling rather than its own content) is where the shrink is visible
+      // at all. Blurring must give the height straight back.
+      const KeyboardDialog = ({
+        label,
+        inputCount,
+        animation,
+        animationDuration,
+      }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              expandY
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_keyboard_box"
+            >
+              {Array.from({ length: inputCount }).map((_, index) => (
+                <Input
+                  key={index}
+                  type="search"
+                  placeholder={`Search ${String.fromCharCode(65 + index)}…`}
+                />
+              ))}
+              {/* Blurs explicitly rather than relying on the tap alone:
+                  whether a tap on a non-focusable element dismisses the
+                  keyboard is browser-dependent, and the point here is to
+                  test the dialog's reaction to the keyboard leaving, not to
+                  test that. */}
+              <div class="demo-keyboard-fill">
+                Tap here to blur — the keyboard goes away and the dialog must
+                grow back to its full height.
+              </div>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const KeyboardSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_keyboard");
+        return (
+          <section class="demo-section">
+            <Heading id="keyboard">Virtual keyboard</Heading>
+            <p>
+              Phone only (or a desktop device emulation with a real on-screen
+              keyboard — a desktop browser never shrinks its visual viewport, so
+              nothing moves there). Both dialogs are <code>expandY</code>: their
+              height is the container ceiling, not their content, so the
+              keyboard opening is the one thing that can change it.
+            </p>
+            <Heading level={3} id="keyboard-single-input">
+              One input
+            </Heading>
+            <p>
+              Focus the search input: the dialog shrinks to the space the
+              keyboard leaves. Tap the blue block: focus goes, the keyboard
+              goes, and the dialog takes its full height back.
+            </p>
+            <div class="demo-row">
+              <KeyboardDialog
+                label="search + content"
+                inputCount={1}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <Heading level={3} id="keyboard-two-inputs">
+              Two inputs (tap-to-tap)
+            </Heading>
+            <p>
+              Going straight from input A to input B keeps the keyboard up the
+              whole time, but the browser still fires a blur/focus pair —
+              historically enough to make the dialog flicker back to full height
+              and down again between the two. It must stay still instead (see{" "}
+              <code>visibleRectEffect</code>'s own debounce in{" "}
+              <code>dialog.jsx</code>).
+            </p>
+            <div class="demo-row">
+              <KeyboardDialog
+                label="two search inputs"
+                inputCount={2}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
         return (
@@ -1728,6 +1859,7 @@
           <OpenFromStartSection />
           <AdaptiveSection />
           <DockedDragSection />
+          <KeyboardSection />
           <OverflowSection />
           <ValidationSection />
           <SlideContainerSection />
