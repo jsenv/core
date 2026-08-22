@@ -73,6 +73,9 @@ const CAN_KEEP_PICTURE = Boolean(
 );
 const startViewTransition = ensureDocumentStartViewTransition();
 
+// route_transition.js reads this attribute by name (not imported, see its
+// ROUTE_TRAVEL_ATTRIBUTE) to refuse animating a navigation a travel already
+// animates — keep the two in sync.
 const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // Which way the pages move, said on the document: the pictures of a transition
 // hang off the root, not off the box that travels, so the box's own `axis` has

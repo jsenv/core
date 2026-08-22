@@ -196,6 +196,11 @@
               Partie {gameId}
             </Link>
           ))}
+          {Array.from({ length: 8 }, (_, index) => (
+            <div key={index} className="page_row">
+              Partie archivée — {index + 1}
+            </div>
+          ))}
         </div>
       );
 
@@ -257,6 +262,11 @@
           <Link className="card" route={STATS_ROUTE}>
             Statistiques →
           </Link>
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="page_row">
+              Succès débloqué — {index + 1}
+            </div>
+          ))}
         </div>
       );
 

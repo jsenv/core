@@ -79,6 +79,11 @@ const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 const AREA_NAME = "navi-route-transition";
+// route_travel.jsx wears this on the root for the length of one of its
+// travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
+// name rather than imported: importing route_travel.jsx would pull the whole
+// travel machinery into an application that only defines transitions.
+const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 
 // The same movements, written once and played on either target: the document,
 // or the marked area. The guard keeps the two exclusive — with an area marked,
@@ -322,7 +327,9 @@ const css = /* css */ `
  *   - `"zoom"`: the deeper page is the closer one — it lands from slightly too
  *     big, and grows away when left;
  *   - `"none"`: nothing, said out loud — written on one way of a pair, it cuts
- *     where the reverse of the other way would have played.
+ *     where the reverse of the other way (or the default) would have played;
+ *   - `"cross-fade"`: the omitted case, nameable — so one way of a pair can
+ *     fade while the other way moves.
  *   Every type plays on the document, or on the element marked
  *   `data-navi-route-transition-area` when the application has one (see the
  *   top of this file). Any other name belongs to the application: for the
@@ -340,8 +347,7 @@ const css = /* css */ `
  */
 export const defineRouteTransition = (from, to, transition) => {
   import.meta.css = css;
-  const { type, duration } =
-    typeof transition === "string" ? { type: transition } : transition || {};
+  const { type, duration } = normalizeTransition(transition);
   const relation = {
     from: normalizePage(from),
     to: normalizePage(to),
@@ -350,13 +356,50 @@ export const defineRouteTransition = (from, to, transition) => {
   };
   relations.push(relation);
   rebuildWatcher();
+  updateRoutingObservers();
   return () => {
     const index = relations.indexOf(relation);
     if (index > -1) {
       relations.splice(index, 1);
       rebuildWatcher();
+      updateRoutingObservers();
     }
   };
+};
+
+/**
+ * What plays on a navigation no relation was written for: every route change
+ * then plays this transition, and the written relations keep their own.
+ *
+ * A default has no direction — nothing says which of two arbitrary pages is
+ * "before" the other — so give it a movement that does not need one:
+ * `"cross-fade"`, or a custom type whose CSS is keyed on the type alone.
+ *
+ * @param {string|{type?: string, duration?: number|string}} transition - same
+ *   forms as defineRouteTransition's. `"none"` (or removing the default) puts
+ *   the silence back.
+ * @returns {() => void} remove this default.
+ */
+export const defineRouteDefaultTransition = (transition) => {
+  import.meta.css = css;
+  const value = normalizeTransition(transition);
+  defaultTransition = value;
+  updateRoutingObservers();
+  return () => {
+    if (defaultTransition === value) {
+      defaultTransition = null;
+      updateRoutingObservers();
+    }
+  };
+};
+
+// "cross-fade" is a name for what plays when nothing is asked for — the
+// browser's own animation — so it normalizes to asking for nothing. Having the
+// name lets one way of a pair say it out loud while the other way slides.
+const normalizeTransition = (transition) => {
+  const { type, duration } =
+    typeof transition === "string" ? { type: transition } : transition || {};
+  return { type: type === "cross-fade" ? undefined : type, duration };
 };
 
 // Every relation defined, and the single watcher standing over all of them.
@@ -407,7 +450,9 @@ const rebuildWatcher = () => {
     const { direction, relation } = found;
     if (relation.type === "none") {
       // Silence said out loud: this way of the pair was written to play
-      // nothing, where the reverse of the other way would have played.
+      // nothing, where the reverse of the other way — or the default — would
+      // have played.
+      navigationAnimated = true;
       return;
     }
     beginTransition({
@@ -421,19 +466,58 @@ const rebuildWatcher = () => {
   // not being tracked, and starting a view transition releases holds that make
   // the very signals this is watched through move again.
   const unsubscribe = currentIndexSignal.subscribe(onMove);
-  // The picture of the page being left has to be honest, so rendering is held
-  // from before the navigation's first write (see rendering_hold.js) — and
-  // given back right away when the change turns out to be one no relation
-  // animates.
-  const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
-  const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
-  watcher = {
-    stop: () => {
-      unsubscribe();
+  watcher = { stop: unsubscribe };
+};
+
+// What plays when no relation matched (see defineRouteDefaultTransition), and
+// whether the navigation now landing found an answer already — a relation's
+// transition, a "none", a RouteTravel travel. The flag is reset when a
+// navigation begins, so it is always about the latest one.
+let defaultTransition = null;
+let navigationAnimated = false;
+
+// The two ends of a navigation, watched while there is anyone to animate it.
+// The picture of the page being left has to be honest, so rendering is held
+// from before the navigation's first write (see rendering_hold.js) — and given
+// back at the far end when the change turns out to be one nobody animates,
+// which is also the one moment the DEFAULT can decide: every relation has had
+// its say by then.
+let stopRoutingObservers = null;
+const updateRoutingObservers = () => {
+  const wanted = relations.length > 0 || defaultTransition !== null;
+  if (wanted && !stopRoutingObservers) {
+    const stopWatchingStart = observeBeforeRouting(() => {
+      navigationAnimated = false;
+      holdRenderingForRouting();
+    });
+    const stopWatchingEnd = observeAfterRouting(() => {
+      if (
+        defaultTransition &&
+        defaultTransition.type !== "none" &&
+        !navigationAnimated
+      ) {
+        beginTransition({
+          page: null,
+          // A default has no direction: nothing says which of two arbitrary
+          // pages is before the other. The attribute is worn empty — present
+          // for whoever keys on "one of ours is playing", silent on the way.
+          direction: "",
+          type: defaultTransition.type,
+          duration: defaultTransition.duration,
+        });
+      }
+      releaseRoutingRenderingHold();
+    });
+    stopRoutingObservers = () => {
       stopWatchingStart();
       stopWatchingEnd();
-    },
-  };
+    };
+    return;
+  }
+  if (!wanted && stopRoutingObservers) {
+    stopRoutingObservers();
+    stopRoutingObservers = null;
+  }
 };
 
 // The exact way travelled first, over the whole registry, and only then the
@@ -461,9 +545,20 @@ const findRelation = (fromPage, toPage) => {
 let currentTransition = null;
 
 const beginTransition = ({ page, direction, type, duration }) => {
+  navigationAnimated = true;
+  const documentElement = document.documentElement;
+  // One navigation, one animator. A RouteTravel box already travelling this
+  // change owns the document's transition — and possibly a finger; starting
+  // one here on top would skip its pictures mid-slide. A pair of routes must
+  // be animated by RouteTravel or by a route transition, never both.
+  if (documentElement.hasAttribute(ROUTE_TRAVEL_ATTRIBUTE)) {
+    console.warn(
+      "A RouteTravel is animating this navigation; the route transition defined between these routes is skipped. Animate a pair of routes with RouteTravel or defineRouteTransition, not both.",
+    );
+    return;
+  }
   const transition = {};
   currentTransition = transition;
-  const documentElement = document.documentElement;
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
@@ -509,8 +604,16 @@ const beginTransition = ({ page, direction, type, duration }) => {
     // is awaited here must be able to resolve without a frame: the document
     // is frozen for the whole of this callback.
     try {
+      // Releasing flushes the held render synchronously, so a route that
+      // rendered has already resolved the wait by the next line.
       releaseRendering();
-      if (pageIsCurrent(page)) {
+      if (page === null) {
+        // A default transition: which page is arriving is unknown, and some
+        // navigations render no route at all (a search param bound to a
+        // signal) — waited on, those would freeze the page until the browser
+        // gives up. The wait is raced with a short timer instead.
+        await Promise.race([renderWait.rendered, waitMs(50)]);
+      } else if (pageIsCurrent(page)) {
         await renderWait.rendered;
       }
     } finally {
@@ -549,6 +652,8 @@ const armRouteRenderWait = () => {
   });
   return { rendered, stop: () => stopListening() };
 };
+
+const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const normalizePage = (page) =>
   page.isRoute ? { route: page, params: undefined } : page;

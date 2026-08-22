@@ -288,6 +288,12 @@ Demo: [../src/nav/demos/route_travel/route_travel.html](../src/nav/demos/route_t
 and [../src/nav/demos/tabs/tabs.html](../src/nav/demos/tabs/tabs.html). The full
 spec of the gesture is [drag_to_travel.md](./drag_to_travel.md).
 
+`RouteTravel` is for pages that form a ROW the finger can push. Pages related
+pair by pair without being a row — a game opened from several places, a
+settings page rising over whatever showed it — are animated with
+`defineRouteTransition` instead, and a given pair must be animated by one of
+the two, never both: see [route_transitions.md](./route_transitions.md).
+
 ## Creating something, then editing it
 
 The create screen, the page of what was created, the edit screen — three routes,

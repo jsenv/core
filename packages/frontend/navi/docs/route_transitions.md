@@ -1,0 +1,129 @@
+# Route transitions
+
+How pages of an app move against each other when the user navigates —
+`defineRouteTransition`, `defineRouteDefaultTransition`, and the thinking that
+decides which movement (if any) a navigation deserves. The API grammar itself
+(accepted forms, shipped type names) lives in the JSDoc of
+`defineRouteTransition`; this file holds what a signature cannot say.
+
+Demos:
+[../src/nav/demos/route_transition/route_transition.html](../src/nav/demos/route_transition/route_transition.html),
+[../src/nav/demos/route_transition/route_transition_default.html](../src/nav/demos/route_transition/route_transition_default.html)
+
+## What a transition is for
+
+A transition is not decoration: it states a **relation** between two pages, and
+the user reads it as a map. A page sliding in from the right says "this place is
+deeper, the way back is to the left" — which is why the back arrow then feels
+inevitable rather than learned. A movement that states a relation the app does
+not actually have (a slide between two sibling tabs) teaches a false map, and a
+false map is worse than no animation at all.
+
+So the unit of declaration is the pair, not the app:
+
+```js
+defineRouteTransition(MY_GAMES_PAGE, GAME_PAGE, "slide-x");
+defineRouteTransition(RADAR_PAGE, GAME_PAGE, "slide-x");
+```
+
+and two pages never written in the same relation play **nothing** between each
+other. That silence is a statement too: "Mes parties" and "Radars" are two tabs
+of a bottom bar, side by side, neither before the other — a cut is the honest
+rendering of that fact. Resist the urge to fill every navigation with movement;
+declare the relations that exist and let the rest cut.
+
+## Choosing a movement
+
+- **`slide-x`** — going INTO something: a list item opened, a card followed, a
+  notification tapped. The page is deeper on the same plane; leaving it slides
+  back out. The most common relation in an app, and the one every phone has
+  taught.
+- **`slide-y`** — the same relation on a vertical arrangement, when the layout
+  genuinely reads as a column.
+- **`cover-x` / `cover-y`** — a page that INTERRUPTS rather than continues:
+  settings, a composer, anything modal-like that one returns from to find the
+  page beneath unchanged. The covered page holding still is the point — it
+  promises "you are not leaving, this is on top".
+- **`zoom`** — a detail brought closer: a photo, a card expanded into a page.
+- **`cross-fade`** — a soft change with no spatial claim. Use it where a cut
+  feels harsh but no direction would be true.
+- **`none`** — silence, written down. Needed only to override: one way of a
+  pair, or the default.
+
+Two recommendations that matter more than the individual choices:
+
+- **One movement per KIND of relation, app-wide.** If opening a game slides
+  from the right, opening a profile should too — the user learns one grammar,
+  not one rule per page.
+- **Keep reciprocity.** The way back being the same movement reversed is what
+  makes the map hold together; it is the default, and breaking it (a relation
+  written for the exact way travelled wins over being the reverse of another)
+  should answer a real asymmetry in the app, not a styling whim.
+
+## A default transition — when
+
+`defineRouteDefaultTransition("cross-fade")` plays on every navigation no
+relation was written for. Two situations, two answers:
+
+- **App-shaped UI** (bars, tabs, pages one goes into): don't. The silence
+  between sibling tabs is part of the grammar, and a default erases it. Declare
+  the relations by hand.
+- **Content-shaped site** (documents, articles, browsing): a global cross-fade
+  can be right — every navigation is a soft change of subject and no pair
+  deserves a direction. This is the case the export exists for.
+
+A default has no direction (nothing says which of two arbitrary pages is
+"before" the other), so only directionless movements make sense there. Written
+relations, and `"none"`, always win over it.
+
+## Pages between fixed bars: mark the area
+
+By default the movement plays on the document itself — right when pages are the
+whole viewport. With fixed bars it is not: the root snapshot spans the viewport
+and the bars' regions are blank in it, so a vertical movement drags a blank
+band across the screen. Mark the region the pages live in instead:
+
+```html
+<div class="app" data-navi-route-transition-area>…routes…</div>
+```
+
+One attribute, on an element the layout already has. The movement then plays on
+that region's own pictures, clipped at its bounds, and the bars never move —
+without being named one by one. An app with fixed bars should consider this
+attribute part of declaring transitions at all, not an option.
+
+## Custom movements
+
+A type navi does not ship belongs to the application: the name is written on
+the root for the length of the transition
+(`data-navi-route-transition-type="<type>"`, next to
+`data-navi-route-transition="forward"|"back"`), and the app's CSS defines the
+movement against the view transition pseudo-elements — of the document, or of
+the marked area. See the JSDoc of `defineRouteTransition` for the selector
+shape, and the `spin` type in the demo for a working one.
+
+## Route transitions and `RouteTravel` — one pair, one system
+
+`RouteTravel` and `defineRouteTransition` answer different questions:
+
+- **`RouteTravel`** is a ROW: a total order of tabs, plus the drag gesture that
+  walks it. Use it when the pages are genuinely a row the finger should push.
+- **`defineRouteTransition`** declares individual relations, with no gesture
+  and no order beyond each pair.
+
+A given pair of routes must be animated by one of the two, never both: a
+travel's pictures can be under a finger, and a transition starting on top would
+skip them mid-slide — and a page one can drag has promised a translation, which
+a cross-fade would break. The runtime enforces the priority (a travel in flight
+wins; the route transition is skipped with a console warning); the warning is
+the sign of a misconfiguration to fix, not a mechanism to rely on.
+
+## The rest, briefly
+
+- Pace: `--navi-route-transition-duration` (CSS, default 300ms) for everyone;
+  a per-relation `{ type, duration }` for one relation.
+- The URL leads: transitions play on navigations somebody else started (a
+  `<Link>`, the back button, `history.back()`). Nothing here navigates.
+- A browser without view transitions (Firefox) navigates with a cut. The app
+  must remain fully usable that way — which it is, if the transitions state
+  relations rather than carry information.

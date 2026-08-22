@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>defineRouteDefaultTransition Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #app {
+        display: flex;
+        height: 100dvh;
+        flex-direction: column;
+      }
+      .furniture {
+        padding-bottom: 8px;
+        flex: none;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .furniture_row {
+        display: flex;
+        padding: 0 16px;
+        align-items: center;
+        gap: 24px;
+      }
+      .steps_declaration {
+        margin: 0;
+        color: #555;
+        font-size: 12px;
+      }
+      .tab_bar {
+        flex: none;
+        background: white;
+        border-top: 1px solid #ddd;
+      }
+      .tab_row {
+        width: 100%;
+      }
+      .tab_row .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+      .app {
+        position: relative;
+        min-height: 0;
+        flex: 1;
+      }
+      .page {
+        position: absolute;
+        inset: 0;
+        padding: 16px;
+        overflow-y: auto;
+      }
+      .page_title {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import {
+        Link,
+        Nav,
+        Route,
+        defineRouteDefaultTransition,
+        defineRouteTransition,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+
+      const A_ROUTE = route("/a");
+      const B_ROUTE = route("/b");
+      const C_ROUTE = route("/c");
+      setupRoutes([A_ROUTE, B_ROUTE, C_ROUTE]);
+
+      defineRouteDefaultTransition("cross-fade");
+      // Une relation écrite garde son propre mouvement par-dessus le défaut.
+      defineRouteTransition(A_ROUTE, C_ROUTE, "slide-x");
+
+      const PAGES = [
+        { route: A_ROUTE, label: "A", color: "#e8f0fe" },
+        { route: B_ROUTE, label: "B", color: "#eaf7ec" },
+        { route: C_ROUTE, label: "C", color: "#fdf0e8" },
+      ];
+
+      const Page = ({ label, color }) => (
+        <div className="page" style={{ background: color }}>
+          <h1 className="page_title">Page {label}</h1>
+          {Array.from({ length: 10 }, (_, index) => (
+            <div key={index} className="page_row">
+              {label} — {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const AppIndex = () => {
+        useLayoutEffect(() => {
+          A_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const App = () => (
+        <>
+          <div className="furniture">
+            <DemoHeader title="defineRouteDefaultTransition" />
+            <div className="furniture_row">
+              <pre className="steps_declaration">
+                {[
+                  `defineRouteDefaultTransition("cross-fade");`,
+                  `defineRouteTransition(A, C, "slide-x"); // gagne sur le défaut`,
+                ].join("\n")}
+              </pre>
+            </div>
+          </div>
+          <div className="app" data-navi-route-transition-area>
+            <Route>
+              {PAGES.map(({ route, label, color }) => (
+                <Route
+                  key={label}
+                  route={route}
+                  element={Page}
+                  elementProps={{ label, color }}
+                />
+              ))}
+              <Route fallback element={AppIndex} />
+            </Route>
+          </div>
+          <div className="tab_bar">
+            <Nav className="tab_row" expand currentIndicator>
+              {PAGES.map(({ route, label }) => (
+                <Link key={label} variant="tab" route={route} padding="m">
+                  {label}
+                </Link>
+              ))}
+            </Nav>
+          </div>
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

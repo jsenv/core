@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$11 = /* css */`
+const css$12 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -90,7 +90,7 @@ const css$11 = /* css */`
     }
   }
 `;
-import.meta.css = [css$11, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$12, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -359,7 +359,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$10 = /* css */`
+const css$11 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -377,7 +377,7 @@ const css$10 = /* css */`
     }
   }
 `;
-import.meta.css = [css$10, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$11, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "center",
   behavior: "smooth",
@@ -7753,7 +7753,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$$ = /* css */`
+const css$10 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -7996,7 +7996,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$$, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$10, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -20118,7 +20118,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`
+installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -20150,7 +20150,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -20355,7 +20355,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Z = /* css */`
+installImportMetaCssBuild(import.meta);const css$_ = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -20392,7 +20392,7 @@ installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -20682,7 +20682,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$Y = /* css */`
+const css$Z = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -21188,7 +21188,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -27266,7 +27266,7 @@ const getAssociatedLabels = element => {
   return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$X = /* css */`
+installImportMetaCssBuild(import.meta);const css$Y = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -27697,7 +27697,7 @@ installImportMetaCssBuild(import.meta);const css$X = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -29551,7 +29551,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$W = /* css */`
+const css$X = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -30074,7 +30074,7 @@ const css$W = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$W, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -31030,7 +31030,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$V = /* css */`
+const css$W = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -31467,7 +31467,7 @@ const css$V = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$V, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -32486,7 +32486,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$U = /* css */`
+const css$V = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -32623,7 +32623,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -32707,7 +32707,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$T = /* css */`
+installImportMetaCssBuild(import.meta);const css$U = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -32732,7 +32732,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -36806,7 +36806,7 @@ const ensureDocumentStartViewTransition = () => {
     startViewTransitionPolyfill.isPolyfill = true;
     document.startViewTransition = startViewTransitionPolyfill;
   }
-  return startViewTransition$1;
+  return startViewTransition$2;
 };
 
 // A transition a finger is holding still (see route_travel.jsx): it has to be
@@ -36828,7 +36828,7 @@ const holdViewTransition = (release) => {
   };
 };
 
-const startViewTransition$1 = (updateCallback) => {
+const startViewTransition$2 = (updateCallback) => {
   if (releaseHeldViewTransition) {
     const release = releaseHeldViewTransition;
     releaseHeldViewTransition = null;
@@ -38316,6 +38316,787 @@ const RouteUI = ({
   return element;
 };
 
+/**
+ * The document's rendering, held for the one frame a view transition needs.
+ *
+ * The browser does not take the picture of the page being left when a
+ * transition is ASKED for — it takes it at the next frame, just before running
+ * the update callback. Preact renders sooner than that, in a microtask: so a
+ * change nobody asked for (a tab pressed, the back button) has already reached
+ * the DOM when the picture is taken, and the picture is of the page ARRIVING.
+ * Both sides of the animation then show it, and one watches a page slide onto
+ * itself.
+ *
+ * So what Preact has queued waits until the update callback, which is the
+ * moment the API is built around — the change belongs inside it. The whole
+ * document is held: it is about to be frozen under a picture anyway.
+ *
+ * ONE hold for the whole document, whoever animates. The hold is a wrapper
+ * around Preact's `options.debounceRendering`, and two of them installed
+ * independently restore each other in the wrong order when they let go — every
+ * render queued in between is then handed to a wrapper nobody will ever
+ * release. Everything that photographs a navigation (RouteTravel's box, a
+ * route transition) must therefore hold through this module, never through a
+ * wrapper of its own.
+ */
+
+
+let renderingHold = null;
+const holdRendering = () => {
+  if (renderingHold) {
+    return renderingHold.release;
+  }
+  const debounceRenderingBefore = options.debounceRendering;
+  const hold = {
+    render: null,
+    release: () => {
+      // Only the hold that is still standing may be given back: a holder
+      // releasing after another has taken over must not let go of what it
+      // does not hold.
+      if (renderingHold !== hold) {
+        return;
+      }
+      renderingHold = null;
+      options.debounceRendering = debounceRenderingBefore;
+      const { render } = hold;
+      hold.render = null;
+      if (render) {
+        render();
+      }
+    },
+  };
+  renderingHold = hold;
+  options.debounceRendering = (render) => {
+    hold.render = render;
+  };
+  return hold.release;
+};
+
+// The hold a navigation takes on its way in — from before its first write,
+// because by the time a route announces that it matches, Preact has already
+// been told and the render is queued; a hold taken then is a hold taken too
+// late. Kept here until whoever animates the change takes it over, or the
+// navigation turns out to be one nobody animates.
+let routingRenderingHold = null;
+const holdRenderingForRouting = () => {
+  routingRenderingHold = holdRendering();
+};
+// Nobody had a picture to take: a page held for a change it does not animate
+// is a page that stutters for nothing.
+const releaseRoutingRenderingHold = () => {
+  const release = routingRenderingHold;
+  routingRenderingHold = null;
+  if (release) {
+    release();
+  }
+};
+// An animator takes the navigation's hold as its own — taking another would be
+// taking a hold on a page that is holding still — or takes a fresh one when
+// the change it animates is not a navigation.
+const takeoverRoutingRenderingHold = () => {
+  const release = routingRenderingHold || holdRendering();
+  routingRenderingHold = null;
+  return release;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * How two routes move against each other, said one relation at a time —
+ * without putting them in a row, and without a box in the tree.
+ *
+ * A page one goes INTO (a game, a profile, a place) is entered from wherever
+ * one opened it, and left back out the same way. That is a fact about a PAIR
+ * of pages, and only about the pairs it is written for:
+ *
+ *   defineRouteTransition(MY_GAMES_PAGE, GAME_PAGE, "slide-x");
+ *   defineRouteTransition(RADAR_PAGE, GAME_PAGE, "slide-x");
+ *
+ * Going from the first page to the second plays forward, the reverse plays
+ * back, and two pages never written in the same relation play nothing between
+ * each other — two tabs of a bottom bar are side by side, neither is before
+ * the other, and being animated by the same mechanism does not order them.
+ * This is what tells this apart from <RouteTravel>: a travel box is a ROW — a
+ * total order, plus a drag gesture that walks it — while this declares
+ * individual relations and nothing else.
+ *
+ * A relation is reciprocal by DEFAULT, not by decree: the way back is the same
+ * movement run the other way, because that is what lets a user build a map of
+ * the app — but a relation written for the exact way travelled wins over being
+ * the reverse of another, so B → A can be given a movement of its own, or
+ * silenced with "none", by writing it (see findRelation).
+ *
+ * The relation says WHEN something plays and which way; the transition says
+ * WHAT plays — a movement navi ships, or a name the application defines in its
+ * own CSS (see the JSDoc below). Said without one, the relation plays the
+ * browser's cross-fade.
+ *
+ * There is no box in the tree: by default what animates is the document itself
+ * (its `root` view transition group), which is right for pages that ARE the
+ * whole viewport. An application whose pages live between fixed bars marks the
+ * region they live in with `data-navi-route-transition-area` — one attribute
+ * on an element it already has — and the movement then plays on that region's
+ * own pictures, clipped at its bounds, while the bars simply never move (see
+ * TRANSITION_AREA_ATTRIBUTE for why the root pictures cannot do this job).
+ *
+ * The URL leads and the picture follows, as everywhere in navi: the change is
+ * a navigation somebody else started (a <Link>, the back button), this only
+ * watches it land and photographs the page being left in time (see
+ * rendering_hold.js for how the picture is kept honest). A browser without
+ * view transitions navigates without the movement.
+ *
+ * However many relations are defined, there is ONE watcher: every definition
+ * lands in a shared registry, and the watcher is rebuilt over the whole of it
+ * — a navigation is a single fact about the document, and the first relation
+ * that speaks about it answers for it.
+ */
+const startViewTransition$1 = ensureDocumentStartViewTransition();
+const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
+const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
+const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
+// What the movement is played on. The root snapshot spans the viewport, and
+// the regions of elements captured on their own (a named bar) are BLANK in it
+// — a page sliding vertically then drags a blank band across the screen where
+// the top bar was. An application with fixed bars therefore marks the region
+// its pages live in with this attribute: the marked element is captured on its
+// own, the movement plays on ITS pictures, clipped at its bounds, and the bars
+// simply never move. Without the mark the document itself travels, which is
+// right for a page that IS the whole viewport.
+const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
+const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
+const AREA_NAME = "navi-route-transition";
+// route_travel.jsx wears this on the root for the length of one of its
+// travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
+// name rather than imported: importing route_travel.jsx would pull the whole
+// travel machinery into an application that only defines transitions.
+const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
+
+// The same movements, written once and played on either target: the document,
+// or the marked area. The guard keeps the two exclusive — with an area marked,
+// the root pictures must NOT move (they carry the whole viewport, blank bands
+// included).
+const movementsCSS = (name, guard) => /* css */`
+  :root${guard} {
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"],
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
+      &::view-transition-old(${name}),
+      &::view-transition-new(${name}) {
+        /* The default cross-fade, dropped: two pages sliding past each other
+           are two solid things, and seeing through one to the other says they
+           are the same page changing its mind. */
+        mix-blend-mode: normal;
+        animation-timing-function: ease;
+        animation-fill-mode: both;
+      }
+    }
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-x"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-start;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-end;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-end;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-start;
+        }
+      }
+    }
+    /* The same four movements, along the other axis: the start of a column is
+       its top, so going forward there is the page rising and the next one
+       coming up from below. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="slide-y"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-top;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-bottom;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-leave-towards-bottom;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-top;
+        }
+      }
+    }
+    /* One page over the other, the way a sheet covers a desk: the page
+       arriving slides in ON TOP of one that does not move, and going back it
+       slides off, uncovering it. The still page is animated all the same — to
+       a keyframe that goes nowhere — because left to the browser it would
+       fade. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-x"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-end;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          /* The page leaving is the cover: it must slide off ABOVE the one it
+             uncovers, against the browser's default of drawing the new page
+             on top. */
+          z-index: 1;
+          animation-name: navi-route-transition-leave-towards-end;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+      }
+    }
+    &[${TRANSITION_TYPE_ATTRIBUTE}="cover-y"] {
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-enter-from-bottom;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          z-index: 1;
+          animation-name: navi-route-transition-leave-towards-bottom;
+        }
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-still;
+        }
+      }
+    }
+    /* Going deeper is coming closer: the page arriving lands from slightly too
+       big, and going back it is the page leaving that grows away. The other
+       side keeps the browser's own fade under it. */
+    &[${TRANSITION_TYPE_ATTRIBUTE}="zoom"] {
+      &::view-transition-old(${name}),
+      &::view-transition-new(${name}) {
+        animation-fill-mode: both;
+      }
+      &[${TRANSITION_ATTRIBUTE}="forward"] {
+        &::view-transition-new(${name}) {
+          animation-name: navi-route-transition-zoom-in;
+        }
+      }
+      &[${TRANSITION_ATTRIBUTE}="back"] {
+        &::view-transition-old(${name}) {
+          animation-name: navi-route-transition-zoom-out;
+        }
+      }
+    }
+  }
+`;
+const css$T = /* css */`
+  /* The marked region is a picture of its own during every view transition of
+     the document — which is what keeps it out of the root snapshot, where its
+     place would be blank. */
+  [${TRANSITION_AREA_ATTRIBUTE}] {
+    view-transition-name: ${AREA_NAME};
+  }
+
+  /* Only while a transition of OURS is playing: everything below changes how
+     the document animates, and the document belongs to the application the
+     rest of the time. The duration is written here, on the direction alone, so
+     a relation with no type — the browser's cross-fade — answers to
+     --navi-route-transition-duration like every other. */
+  :root[${TRANSITION_ATTRIBUTE}] {
+    &::view-transition-old(root),
+    &::view-transition-new(root),
+    &::view-transition-old(${AREA_NAME}),
+    &::view-transition-new(${AREA_NAME}) {
+      animation-duration: var(${TRANSITION_DURATION_PROPERTY}, 300ms);
+    }
+
+    /* The pages are cut at the edge of the area they move in: its pictures are
+       drawn in the top layer, above the bars, and a page sliding in would
+       otherwise be seen crossing them. */
+    &::view-transition-group(${AREA_NAME}),
+    &::view-transition-image-pair(${AREA_NAME}) {
+      overflow: clip;
+    }
+  }
+
+  ${movementsCSS("root", `:not([${TRANSITION_TARGET_ATTRIBUTE}])`)}
+  ${movementsCSS(AREA_NAME, `[${TRANSITION_TARGET_ATTRIBUTE}="area"]`)}
+
+  @keyframes navi-route-transition-leave-towards-start {
+    to {
+      translate: -100% 0;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-end {
+    from {
+      translate: 100% 0;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-end {
+    to {
+      translate: 100% 0;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-start {
+    from {
+      translate: -100% 0;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-top {
+    to {
+      translate: 0 -100%;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-bottom {
+    from {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-transition-leave-towards-bottom {
+    to {
+      translate: 0 100%;
+    }
+  }
+  @keyframes navi-route-transition-enter-from-top {
+    from {
+      translate: 0 -100%;
+    }
+  }
+  @keyframes navi-route-transition-zoom-in {
+    from {
+      opacity: 0;
+      scale: 1.1;
+    }
+  }
+  @keyframes navi-route-transition-zoom-out {
+    to {
+      opacity: 0;
+      scale: 1.1;
+    }
+  }
+  /* Standing still, said as an animation: naming it replaces the browser's own
+     fade on that side, which is the whole point. */
+  @keyframes navi-route-transition-still {
+    to {
+      translate: 0 0;
+    }
+  }
+`;
+
+/**
+ * Declare how a pair of routes moves against each other.
+ *
+ * @param {object} from - a route, or `{ route, params }` when the page is a
+ *   param of a route rather than a route of its own.
+ * @param {object} to - same forms. Going from `from` to `to` plays forward,
+ *   the reverse plays back — unless the reverse is written as a relation of
+ *   its own, which then owns that way (a movement of its own, or `"none"` for
+ *   a plain cut). A change between two pages no relation was written for plays
+ *   nothing.
+ * @param {string|{type?: string, duration?: number|string}} [transition] -
+ *   what plays: a type name, or `{ type, duration }` to also say how long
+ *   (`--navi-route-transition-duration` says it for everyone otherwise).
+ *   Omitted, the browser's own cross-fade. Shipped with navi:
+ *   - `"slide-x"`, `"slide-y"`: the two pages slide past each other, forward
+ *     towards the start of the axis;
+ *   - `"cover-x"`, `"cover-y"`: the page arriving slides in OVER one that does
+ *     not move, and slides off it on the way back;
+ *   - `"zoom"`: the deeper page is the closer one — it lands from slightly too
+ *     big, and grows away when left;
+ *   - `"none"`: nothing, said out loud — written on one way of a pair, it cuts
+ *     where the reverse of the other way (or the default) would have played;
+ *   - `"cross-fade"`: the omitted case, nameable — so one way of a pair can
+ *     fade while the other way moves.
+ *   Every type plays on the document, or on the element marked
+ *   `data-navi-route-transition-area` when the application has one (see the
+ *   top of this file). Any other name belongs to the application: for the
+ *   length of the transition the root carries
+ *   `data-navi-route-transition-type="<type>"` next to
+ *   `data-navi-route-transition="forward"|"back"`, and the application's CSS
+ *   defines the movement against the view transition pseudo-elements:
+ *
+ *     :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
+ *       &::view-transition-new(root) {
+ *         animation-name: my-spin-in;
+ *       }
+ *     }
+ * @returns {() => void} remove this relation.
+ */
+const defineRouteTransition = (from, to, transition) => {
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.js"];
+  const {
+    type,
+    duration
+  } = normalizeTransition(transition);
+  const relation = {
+    from: normalizePage$1(from),
+    to: normalizePage$1(to),
+    type,
+    duration
+  };
+  relations.push(relation);
+  rebuildWatcher();
+  updateRoutingObservers();
+  return () => {
+    const index = relations.indexOf(relation);
+    if (index > -1) {
+      relations.splice(index, 1);
+      rebuildWatcher();
+      updateRoutingObservers();
+    }
+  };
+};
+
+/**
+ * What plays on a navigation no relation was written for: every route change
+ * then plays this transition, and the written relations keep their own.
+ *
+ * A default has no direction — nothing says which of two arbitrary pages is
+ * "before" the other — so give it a movement that does not need one:
+ * `"cross-fade"`, or a custom type whose CSS is keyed on the type alone.
+ *
+ * @param {string|{type?: string, duration?: number|string}} transition - same
+ *   forms as defineRouteTransition's. `"none"` (or removing the default) puts
+ *   the silence back.
+ * @returns {() => void} remove this default.
+ */
+const defineRouteDefaultTransition = transition => {
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.js"];
+  const value = normalizeTransition(transition);
+  defaultTransition = value;
+  updateRoutingObservers();
+  return () => {
+    if (defaultTransition === value) {
+      defaultTransition = null;
+      updateRoutingObservers();
+    }
+  };
+};
+
+// "cross-fade" is a name for what plays when nothing is asked for — the
+// browser's own animation — so it normalizes to asking for nothing. Having the
+// name lets one way of a pair say it out loud while the other way slides.
+const normalizeTransition = transition => {
+  const {
+    type,
+    duration
+  } = typeof transition === "string" ? {
+    type: transition
+  } : transition || {};
+  return {
+    type: type === "cross-fade" ? undefined : type,
+    duration
+  };
+};
+
+// Every relation defined, and the single watcher standing over all of them.
+const relations = [];
+let watcher = null;
+const rebuildWatcher = () => {
+  if (watcher) {
+    watcher.stop();
+    watcher = null;
+  }
+  if (relations.length === 0) {
+    return;
+  }
+  // Every page any relation mentions, each once: the position of the current
+  // page in this list is what turns "some signal moved" into "the document
+  // went from page A to page B".
+  const pages = [];
+  for (const {
+    from,
+    to
+  } of relations) {
+    if (pageIndexOf$1(pages, from) === -1) {
+      pages.push(from);
+    }
+    if (pageIndexOf$1(pages, to) === -1) {
+      pages.push(to);
+    }
+  }
+  const currentIndexSignal = computed(() => currentPageIndex$1(pages));
+  let currentIndex;
+  let firstReading = true;
+  const onMove = index => {
+    const fromIndex = currentIndex;
+    currentIndex = index;
+    if (firstReading) {
+      // Where the document already is — nothing changed, there is nothing to
+      // animate. Also the first reading after a definition landed mid-life:
+      // the watcher is standing again on whatever page is current.
+      firstReading = false;
+      return;
+    }
+    if (index === -1 || fromIndex === -1 || fromIndex === index) {
+      return;
+    }
+    const found = findRelation(pages[fromIndex], pages[index]);
+    if (!found) {
+      // No relation says anything about these two: they are side by side, and
+      // silence is the fact — not a missing case.
+      return;
+    }
+    const {
+      direction,
+      relation
+    } = found;
+    if (relation.type === "none") {
+      // Silence said out loud: this way of the pair was written to play
+      // nothing, where the reverse of the other way — or the default — would
+      // have played.
+      navigationAnimated = true;
+      return;
+    }
+    beginTransition({
+      page: pages[index],
+      direction,
+      type: relation.type,
+      duration: relation.duration
+    });
+  };
+  // `subscribe` rather than `effect`: it hands the value to a callback that is
+  // not being tracked, and starting a view transition releases holds that make
+  // the very signals this is watched through move again.
+  const unsubscribe = currentIndexSignal.subscribe(onMove);
+  watcher = {
+    stop: unsubscribe
+  };
+};
+
+// What plays when no relation matched (see defineRouteDefaultTransition), and
+// whether the navigation now landing found an answer already — a relation's
+// transition, a "none", a RouteTravel travel. The flag is reset when a
+// navigation begins, so it is always about the latest one.
+let defaultTransition = null;
+let navigationAnimated = false;
+
+// The two ends of a navigation, watched while there is anyone to animate it.
+// The picture of the page being left has to be honest, so rendering is held
+// from before the navigation's first write (see rendering_hold.js) — and given
+// back at the far end when the change turns out to be one nobody animates,
+// which is also the one moment the DEFAULT can decide: every relation has had
+// its say by then.
+let stopRoutingObservers = null;
+const updateRoutingObservers = () => {
+  const wanted = relations.length > 0 || defaultTransition !== null;
+  if (wanted && !stopRoutingObservers) {
+    const stopWatchingStart = observeBeforeRouting(() => {
+      navigationAnimated = false;
+      holdRenderingForRouting();
+    });
+    const stopWatchingEnd = observeAfterRouting(() => {
+      if (defaultTransition && defaultTransition.type !== "none" && !navigationAnimated) {
+        beginTransition({
+          page: null,
+          // A default has no direction: nothing says which of two arbitrary
+          // pages is before the other. The attribute is worn empty — present
+          // for whoever keys on "one of ours is playing", silent on the way.
+          direction: "",
+          type: defaultTransition.type,
+          duration: defaultTransition.duration
+        });
+      }
+      releaseRoutingRenderingHold();
+    });
+    stopRoutingObservers = () => {
+      stopWatchingStart();
+      stopWatchingEnd();
+    };
+    return;
+  }
+  if (!wanted && stopRoutingObservers) {
+    stopRoutingObservers();
+    stopRoutingObservers = null;
+  }
+};
+
+// The exact way travelled first, over the whole registry, and only then the
+// reverses: a relation written B → A owns that way, and being the reverse of
+// one written A → B never outranks it. This is what makes reciprocity a
+// default rather than a decree — write the way back to give it a movement of
+// its own, or "none" to silence it.
+const findRelation = (fromPage, toPage) => {
+  for (const relation of relations) {
+    if (samePage$1(relation.from, fromPage) && samePage$1(relation.to, toPage)) {
+      return {
+        direction: "forward",
+        relation
+      };
+    }
+  }
+  for (const relation of relations) {
+    if (samePage$1(relation.from, toPage) && samePage$1(relation.to, fromPage)) {
+      return {
+        direction: "back",
+        relation
+      };
+    }
+  }
+  return null;
+};
+
+// The transition whose direction the document is currently wearing. One per
+// document, as with view transitions themselves: a new one starting takes the
+// attributes over, and only their owner may take them off.
+let currentTransition = null;
+const beginTransition = ({
+  page,
+  direction,
+  type,
+  duration
+}) => {
+  navigationAnimated = true;
+  const documentElement = document.documentElement;
+  // One navigation, one animator. A RouteTravel box already travelling this
+  // change owns the document's transition — and possibly a finger; starting
+  // one here on top would skip its pictures mid-slide. A pair of routes must
+  // be animated by RouteTravel or by a route transition, never both.
+  if (documentElement.hasAttribute(ROUTE_TRAVEL_ATTRIBUTE)) {
+    console.warn("A RouteTravel is animating this navigation; the route transition defined between these routes is skipped. Animate a pair of routes with RouteTravel or defineRouteTransition, not both.");
+    return;
+  }
+  const transition = {};
+  currentTransition = transition;
+  documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
+  if (type) {
+    documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+  }
+  // Looked up per transition, not once: the area is the application's own
+  // element and follows its lifecycle — a page layout without bars has none,
+  // and the movement then plays on the document itself.
+  if (document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`)) {
+    documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
+  }
+  // A duration of this relation's own, worn for the length of the transition —
+  // and whatever the application had written inline put back afterwards, not
+  // erased.
+  let restoreDuration = null;
+  if (duration !== undefined) {
+    const durationBefore = documentElement.style.getPropertyValue(TRANSITION_DURATION_PROPERTY);
+    documentElement.style.setProperty(TRANSITION_DURATION_PROPERTY, typeof duration === "number" ? `${duration}ms` : duration);
+    restoreDuration = () => {
+      if (durationBefore) {
+        documentElement.style.setProperty(TRANSITION_DURATION_PROPERTY, durationBefore);
+      } else {
+        documentElement.style.removeProperty(TRANSITION_DURATION_PROPERTY);
+      }
+    };
+  }
+  const releaseRendering = takeoverRoutingRenderingHold();
+  // Armed from here rather than from inside the callback below: the browser
+  // calls that callback a frame later, and a navigation that has already
+  // been decided renders its page in between — a wait armed then waits for
+  // something that has already happened.
+  const renderWait = armRouteRenderWait$1();
+  const viewTransition = startViewTransition$1(async () => {
+    // The picture the browser is about to take must be of the page that was
+    // asked for, and a route matching is not yet a page rendered. Whatever
+    // is awaited here must be able to resolve without a frame: the document
+    // is frozen for the whole of this callback.
+    try {
+      // Releasing flushes the held render synchronously, so a route that
+      // rendered has already resolved the wait by the next line.
+      releaseRendering();
+      if (page === null) {
+        // A default transition: which page is arriving is unknown, and some
+        // navigations render no route at all (a search param bound to a
+        // signal) — waited on, those would freeze the page until the browser
+        // gives up. The wait is raced with a short timer instead.
+        await Promise.race([renderWait.rendered, waitMs(50)]);
+      } else if (pageIsCurrent$1(page)) {
+        await renderWait.rendered;
+      }
+    } finally {
+      renderWait.stop();
+    }
+  });
+  const end = () => {
+    // Whatever ends it — played out, skipped by another transition starting,
+    // failed before its callback ever ran — the hold is given back and the
+    // document is handed back to the application. Both are idempotent, and
+    // the attributes belong to the LAST transition begun: an earlier one
+    // ending late must not strip what a later one is wearing.
+    renderWait.stop();
+    releaseRendering();
+    if (currentTransition === transition) {
+      currentTransition = null;
+      documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+      documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+      documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+      if (restoreDuration) {
+        restoreDuration();
+      }
+    }
+  };
+  viewTransition.finished.then(end, end);
+};
+
+// A route matching is a signal changing; how many passes Preact takes to
+// answer it is its own business, and the render is the moment the picture can
+// be taken. Listening starts before the change, or a render landing while the
+// change settles is a render nobody heard.
+const armRouteRenderWait$1 = () => {
+  let stopListening;
+  const rendered = new Promise(resolve => {
+    stopListening = observeRouteRender(resolve);
+  });
+  return {
+    rendered,
+    stop: () => stopListening()
+  };
+};
+const waitMs = ms => new Promise(resolve => setTimeout(resolve, ms));
+const normalizePage$1 = page => page.isRoute ? {
+  route: page,
+  params: undefined
+} : page;
+
+// Two pages are the same page when they select the same thing, not when they
+// were written by the same hand.
+const samePage$1 = (a, b) => {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.route === b.route && compareTwoJsValues(a.params, b.params);
+};
+const pageIndexOf$1 = (pages, page) => pages.findIndex(candidate => samePage$1(candidate, page));
+
+// Whether this page is the one on screen — same reading as route_travel.jsx's
+// own: matchingSignal is the necessary condition and is read whatever happens,
+// params only for a route that matches (the params of a route that does not
+// match are not params).
+const pageIsCurrent$1 = ({
+  route,
+  params
+}) => {
+  if (!route.matchingSignal.value) {
+    return false;
+  }
+  return params ? route.matchesParams(params) : true;
+};
+// The FIRST page that answers, and every page read all the same: a page that
+// is not the current one today is the one that must wake the reader tomorrow.
+const currentPageIndex$1 = pages => {
+  let currentIndex = -1;
+  for (let i = 0; i < pages.length; i++) {
+    const isCurrent = pageIsCurrent$1(pages[i]);
+    if (isCurrent && currentIndex === -1) {
+      currentIndex = i;
+    }
+  }
+  return currentIndex;
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Dragging from one route to the next, when the tabs of a page are URLs.
  *
@@ -38355,6 +39136,10 @@ installImportMetaCssBuild(import.meta);/**
  */
 const CAN_KEEP_PICTURE = Boolean(document.startViewTransition && !document.startViewTransition.isPolyfill);
 const startViewTransition = ensureDocumentStartViewTransition();
+
+// route_transition.js reads this attribute by name (not imported, see its
+// ROUTE_TRAVEL_ATTRIBUTE) to refuse animating a navigation a travel already
+// animates — keep the two in sync.
 const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // Which way the pages move, said on the document: the pictures of a transition
 // hang off the root, not off the box that travels, so the box's own `axis` has
@@ -38854,8 +39639,7 @@ const RouteTravel = ({
     const rectBefore = elementRef.current.getBoundingClientRect();
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
-    const releaseRendering = renderingHeldForRouting || holdRendering();
-    renderingHeldForRouting = null;
+    const releaseRendering = takeoverRoutingRenderingHold();
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered. Watched from
     // here rather than from inside the callback below: the browser calls that
@@ -38998,25 +39782,14 @@ const RouteTravel = ({
   }, [pages]);
 
   // Rendering is held for the length of a navigation, so that whatever picture
-  // this box is about to take is of the page being LEFT (see holdRendering).
-  // Held from before the navigation's first write, because by the time a route
-  // announces that it matches, Preact has already been told and the render is
-  // queued — a hold taken then is a hold taken too late.
+  // this box is about to take is of the page being LEFT (see
+  // rendering_hold.js).
   useLayoutEffect(() => {
-    const stopWatchingStart = observeBeforeRouting(() => {
-      renderingHeldForRouting = holdRendering();
-    });
+    const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
     // Nobody may have had a picture to take: this navigation is not always one
-    // this box travels, and a page held for a change it does not animate is a
-    // page that stutters for nothing. Whoever wanted it took it over
-    // (beginTravel) while the change was being applied, and left nothing here.
-    const stopWatchingEnd = observeAfterRouting(() => {
-      const release = renderingHeldForRouting;
-      renderingHeldForRouting = null;
-      if (release) {
-        release();
-      }
-    });
+    // this box travels. Whoever wanted the hold took it over (beginTravel)
+    // while the change was being applied, and left nothing here.
+    const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
     return () => {
       stopWatchingStart();
       stopWatchingEnd();
@@ -39627,54 +40400,6 @@ const releaseTravelGeometry = () => {
   for (const property of TRAVEL_GEOMETRY_PROPERTIES) {
     style.removeProperty(property);
   }
-};
-
-// The browser does not take the picture of the page being left when a
-// transition is ASKED for — it takes it at the next frame, just before running
-// the update callback. Preact renders sooner than that, in a microtask: so a
-// change nobody here asked for (a tab pressed, the back button) has already
-// reached the DOM when the picture is taken, and the picture is of the page
-// ARRIVING. Both sides of the travel then show it, and one watches a page slide
-// onto itself.
-//
-// So what Preact has queued waits until the update callback, which is the
-// moment the API is built around — the change belongs inside it. The whole
-// document is held, for the one frame the browser needs: it is about to be
-// frozen under a picture anyway.
-let renderingHold = null;
-// The hold a navigation took on its way in, until a travel takes it over or the
-// navigation turns out to be one nobody here animates.
-let renderingHeldForRouting = null;
-const holdRendering = () => {
-  if (renderingHold) {
-    return renderingHold.release;
-  }
-  const debounceRenderingBefore = options.debounceRendering;
-  const hold = {
-    render: null,
-    release: () => {
-      // Only the hold that is still standing may be given back: a travel
-      // ending after another has taken over must not let go of what it does
-      // not hold.
-      if (renderingHold !== hold) {
-        return;
-      }
-      renderingHold = null;
-      options.debounceRendering = debounceRenderingBefore;
-      const {
-        render
-      } = hold;
-      hold.render = null;
-      if (render) {
-        render();
-      }
-    }
-  };
-  renderingHold = hold;
-  options.debounceRendering = render => {
-    hold.render = render;
-  };
-  return hold.release;
 };
 
 // The animations of the pictures, asked for again until there are some: they
@@ -73013,5 +73738,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
