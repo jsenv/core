@@ -291,6 +291,42 @@ const chainEvent = (customEvent, parentEvent) => {
 };
 
 /**
+ * Whether `event` was caused by a finger — a predicate for findEvent, so a
+ * question about a whole interaction reads as
+ * `findEvent(openEvent, isTouchDrivenEvent)`.
+ *
+ * Asked of the interaction and not of the device (a media query, a pointer:
+ * coarse signal) on purpose: a hybrid tablet has both a touchscreen and a
+ * trackpad, and answers "coarse" whichever one was just used. What matters is
+ * which one WAS used — a tap brings the on-screen keyboard up, the trackpad
+ * next to it does not.
+ *
+ * Three readings, because no single one covers every path from a finger to an
+ * event:
+ * - a touch* event says it outright;
+ * - `pointerType` says it on a PointerEvent, which "click" also is in some
+ *   engines and not in others — hence not the only reading;
+ * - `sourceCapabilities.firesTouchEvents` is what is left for the compatibility
+ *   mouse events a tap synthesizes, where nothing else remembers the finger.
+ *   Absent outside Chromium, where it costs nothing: the readings above have
+ *   already answered by then, or there was no pointer event to answer about.
+ */
+const isTouchDrivenEvent = (event) => {
+  if (!event) {
+    return false;
+  }
+  if (typeof event.type === "string" && event.type.startsWith("touch")) {
+    return true;
+  }
+  // "" on a pointer event the engine could not attribute — not an answer, so
+  // it falls through to the last reading rather than being read as "not touch".
+  if (event.pointerType) {
+    return event.pointerType === "touch";
+  }
+  return event.sourceCapabilities?.firesTouchEvents === true;
+};
+
+/**
  * Returns true if the event itself or any event in its chain matches the predicate.
  *
  * The full chain checked (oldest to newest) is:
@@ -14621,6 +14657,40 @@ if (window.visualViewport) {
 // to the next hides and re-shows the keyboard.
 subscribeVirtualKeyboardGeometryChange(scheduleVisualViewportResize);
 
+// A focus change is not a resize, and yet: on a phone, giving focus to a field
+// is the moment the browser decides what to put over the page — the on-screen
+// keyboard, and above it the suggestion/autofill strip whose height NOTHING
+// reports. No event describes that strip: visualViewport stays silent about
+// it, and so does the keyboard's own geometrychange. So the focus itself is
+// taken as the only hint there is, and whoever sizes against the viewport
+// re-measures while the furniture settles.
+//
+// Several delays rather than one because there is nothing to wait for: the
+// strip comes up on its own schedule, after the keyboard, sometimes after a
+// round-trip to the IME. Polling is what is left when the platform describes
+// nothing — bounded, and free whenever it finds nothing: a re-measure that
+// reads the same numbers does nothing at all (visible_rect.js's own check()
+// dedupes on exactly that).
+const FOCUS_SETTLE_DELAYS = [250, 350, 700];
+const [publishFocusSettled, subscribeFocusSettled] = createPubSub();
+let focusSettleTimeoutIds = [];
+document.addEventListener(
+  "focusin",
+  (event) => {
+    for (const timeoutId of focusSettleTimeoutIds) {
+      clearTimeout(timeoutId);
+    }
+    focusSettleTimeoutIds = FOCUS_SETTLE_DELAYS.map((delay) =>
+      setTimeout(() => {
+        publishFocusSettled(event);
+      }, delay),
+    );
+  },
+  // Capture: a focus moving into something that stops the event on its way up
+  // still moved the furniture.
+  { capture: true },
+);
+
 let windowResizeTimeoutId;
 window.addEventListener("resize", (event) => {
   clearTimeout(windowResizeTimeoutId);
@@ -15091,6 +15161,27 @@ const visibleRectEffect = (
         subscribeVisualViewportResizeSettled(onWindowOrViewportResize),
       );
       addTeardown(subscribeWindowResizeSettled(onWindowOrViewportResize));
+    }
+    {
+      // The room left on screen can change with nothing announcing it — see
+      // subscribeFocusSettled in window_size.js for what does that and why a
+      // focus change is the only hint available. Same guard as the resize
+      // reaction just above, for the same reason.
+      //
+      // Not routed through onWindowOrViewportResize despite doing the same
+      // thing: the event reaching autoCheck is what decides whether the move
+      // is animated (pickPositionRelativeTo's own shouldTransition reads
+      // event.type === "resize"), and a focus change must not animate. It is
+      // a correction of a measurement that went stale unannounced, not a
+      // viewport the user watched change — and it fires on every focus, where
+      // an animated slide of a popup nobody touched would be the bug.
+      const onFocusSettled = (event) => {
+        if (ancestorRepositioningCount > 0) {
+          return;
+        }
+        autoCheck(event);
+      };
+      addTeardown(subscribeFocusSettled(onFocusSettled));
     }
     on_element_resize: {
       if (skipElementResize) {
@@ -19659,4 +19750,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };

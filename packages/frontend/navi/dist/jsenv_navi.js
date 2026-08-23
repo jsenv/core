@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { coarsePointerSignal, disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -19345,8 +19345,46 @@ import.meta.css = [/* css */`
         outline-offset: calc(-1 * var(--navi-focus-outline-width));
         overflow: auto;
 
+        /* The same reading as the header's corners above, on all four: a body
+           follows the corners of the box it is drawn in — which is also what
+           it clips its content to, the overflow just above. */
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+        border-bottom-left-radius: inherit;
+
         &:focus-visible {
           outline-style: solid;
+        }
+      }
+
+      /* A corner a header or a footer covers is not the body's to follow:
+         what the body meets there is their flat separator line, not a curve,
+         and a radius against it shows the box through the gap it opens. */
+      > [data-header] ~ [data-body] {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      > [data-body]:has(~ [data-footer]) {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+
+      /* A body with no padding of its own holds content running edge to edge:
+         whatever sits at one of its ends is drawn ON the corner the body just
+         resolved, so a radius of its own there carves a notch out of it. The
+         body already clips to that corner, which makes "none" the right radius
+         for what lands on it — square, and the body draws the curve. The ask
+         travels down as a corner claim (see group.jsx) so a navi control
+         answers it wherever it sits inside. */
+      > [data-body][data-body-flush] {
+        > :first-child {
+          --x-corner-top-left-radius: 0;
+          --x-corner-top-right-radius: 0;
+        }
+        > :last-child {
+          --x-corner-bottom-right-radius: 0;
+          --x-corner-bottom-left-radius: 0;
         }
       }
     }
@@ -19551,6 +19589,11 @@ const Box = props => {
   }
   if (body) {
     rest["data-body"] = "";
+    // Padding is what decides whether the content reaches the body's own
+    // corners — see the corner claims in this file's CSS.
+    if (!PADDING_PROP_NAMES.some(name => isNonZeroSpacing(rest[name]))) {
+      rest["data-body-flush"] = "";
+    }
   }
   const defaultDisplay = getDefaultDisplay(TagName);
   // Read the parent flow early so we can use it when display="inherit" is requested.
@@ -20011,6 +20054,16 @@ const shouldInjectSeparatorBetween = (left, right) => {
     return false;
   }
   if (isValidElement(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+const PADDING_PROP_NAMES = ["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"];
+const isNonZeroSpacing = value => {
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+  if (value === 0 || value === "0" || value === "none") {
     return false;
   }
   return true;
@@ -28546,7 +28599,21 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     focusedElement,
     focusVisible,
 
-    transferFocus: (transferEvent, containerEl) => {
+    /**
+     * Moves the focus into `containerEl`, on the element the ladder above
+     * picks.
+     *
+     * `getDelay(target)` — asked once the target is known, answers how many
+     * milliseconds to wait before actually focusing it. The ladder is what
+     * decides WHO gets the focus and it may only run once (it consumes the
+     * autofocus-restore mark), so a caller with a policy about WHEN cannot
+     * resolve the target itself to make up its mind: it is handed the answer
+     * instead. Returns a cancel function when it did delay, so a container
+     * closing before the delay is up takes back a focus it never gave;
+     * undefined when it focused straight away and there is nothing to take
+     * back.
+     */
+    transferFocus: (transferEvent, containerEl, { getDelay } = {}) => {
       let target;
       let reason;
       const lastFocused = clearAutofocusRestore(containerEl);
@@ -28574,24 +28641,39 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        return;
+        return undefined;
       }
       // The modality speaks for the transfer, but an editable target outranks
       // it: it draws its ring on any focus (see isMatchingFocusVisible), so
       // the native :focus-visible is told the same.
       const targetFocusVisible = focusVisible || isEditableTarget(target);
+      const giveFocus = () => {
+        debugFocus(
+          transferEvent,
+          `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
+        );
+        target.focus({
+          preventScroll: true,
+          focusVisible: targetFocusVisible,
+        });
+        if (target.hasAttribute("navi-autofocus-select")) {
+          target.select();
+          target.scrollLeft = 0;
+        }
+      };
+      const delay = getDelay?.(target) || 0;
+      if (!delay) {
+        giveFocus();
+        return undefined;
+      }
       debugFocus(
         transferEvent,
-        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
+        `Delaying focus to ${getElementSignature(target)} by ${delay}ms`,
       );
-      target.focus({
-        preventScroll: true,
-        focusVisible: targetFocusVisible,
-      });
-      if (target.hasAttribute("navi-autofocus-select")) {
-        target.select();
-        target.scrollLeft = 0;
-      }
+      const timeout = setTimeout(giveFocus, delay);
+      return () => {
+        clearTimeout(timeout);
+      };
     },
 
     restoreFocus: (restoreEvent) => {
@@ -28632,6 +28714,21 @@ const getFocusedBeforeTransfer = (e) => {
   }
   return document.activeElement;
 };
+
+// How long a popup waits before handing the focus to a field, when giving it
+// is what raises the on-screen keyboard.
+//
+// The focus is normally given as early as possible. But a popup places itself
+// against the viewport, and on a phone the keyboard takes a third of that
+// viewport away the moment a field receives focus — so the two landing in the
+// same tick means the popup is still arriving when the room under it changes,
+// and it re-places itself mid-entrance. Waiting lets it settle first, and the
+// keyboard then shrinks a box that has stopped moving.
+//
+// Long enough to outlast an entrance transition rather than merely reaching
+// the next frame: what has to be over is the popup MOVING, not one paint of
+// it.
+const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
 
 /**
  * Owns open/close decision-making for a popup (Dialog or Popover): guards
@@ -28871,8 +28968,32 @@ const createOpenController = (
         // once mousedown.preventDefault() has kept focus from landing
         // anywhere yet.
 
-        focusTransfer.transferFocus(e, el);
+        // Two conditions, and both are about THIS opening rather than about
+        // the device:
+        // - the interaction: only a finger raises a virtual keyboard, and a
+        //   hybrid tablet answers "coarse" to every device-level signal
+        //   whichever of its two inputs was just used — the open event still
+        //   remembers which one it was. An opening with no pointer in it at
+        //   all (a keyboard shortcut, defaultOpen, an app calling open()) is
+        //   not one either.
+        // - the target: focusing a button raises nothing, so there is nothing
+        //   to wait for and the focus stays immediate. Only a field the
+        //   keyboard comes up for is worth delaying — which is why the
+        //   decision is taken on the resolved target, inside transferFocus.
+        const openedByTouch = Boolean(
+          findEvent(requestOpenEvent, isTouchDrivenEvent),
+        );
+        const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
+          getDelay: (target) =>
+            openedByTouch && isEditableTarget(target)
+              ? FOCUS_DELAY_ON_KEYBOARD_MS
+              : 0,
+        });
         return (closeEvent) => {
+          // Closed before the delay was up: the focus was never given, so it
+          // must not be given now — to a field inside a popup on its way out,
+          // raising the keyboard as it goes.
+          cancelPendingFocus?.();
           markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
           const focusoutEvent = findEvent(closeEvent, "focusout");
           if (focusoutEvent) {
@@ -29140,6 +29261,60 @@ const flushSyncRendering = (fn) => {
  * of which of the two owns it.
  */
 
+
+/**
+ * Whether a visibleRectEffect delivery is one that can have taken height away
+ * from a popup, and so pushed whatever holds focus out of sight:
+ * - "resize": the window/visual viewport settled — which is also how the
+ *   on-screen keyboard arrives, overlay or not (window_size.js);
+ * - ELEMENT_SIZE_CHANGE: the popup's own box measured different;
+ * - "focusin": the focus-settled re-measure, for the room that changes with
+ *   nothing announcing it (subscribeFocusSettled in window_size.js).
+ *
+ * Everything else is a scroll of one kind or another, where nothing got
+ * smaller and scrolling the focused element back would fight the very gesture
+ * that fired it.
+ */
+const mayHaveHiddenFocus = (event) => {
+  const type = event?.type;
+  return (
+    type === "resize" || type === ELEMENT_SIZE_CHANGE || type === "focusin"
+  );
+};
+
+/**
+ * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
+ * getting shorter has pushed it out.
+ *
+ * The case this exists for: a field low in the scrolling body of a popup that
+ * also has a footer (box.jsx — with a body, the body is the only thing that
+ * scrolls and the footer is a sibling sitting right under it). Focusing the
+ * field makes the browser scroll it into view, which it does against the
+ * popup's height AT THAT MOMENT; the on-screen keyboard then opens and takes
+ * that height away. The body shrinks, its scrollTop does not move, so the
+ * content slides down relative to the shorter scrollport and the field ends up
+ * past its bottom edge — visually, swallowed by the footer. The browser does
+ * not redo a scroll-into-view it already answered, so this does.
+ *
+ * Scoped to the field's own scroll container (never the page): a popup traps
+ * scrolling precisely so the document underneath cannot move, and a plain
+ * scrollIntoView walks past a container whose scrollbar isn't visible — see
+ * scrollIntoViewScoped's own doc.
+ *
+ * "nearest": the smallest scroll that makes it visible, and none at all when
+ * it already is — so this is free to call on every resize, and never fights
+ * where the user had scrolled to.
+ */
+const keepFocusedElementVisible = (popupEl) => {
+  const { activeElement } = document;
+  if (!activeElement || activeElement === popupEl) {
+    return;
+  }
+  if (!popupEl.contains(activeElement)) {
+    return;
+  }
+  scrollIntoViewScoped(activeElement, { block: "nearest" });
+};
 
 /**
  * Calls `onSettled` once `el`'s current CSS transition is over — via
@@ -30990,6 +31165,11 @@ const useDialogProps = props => {
       // handled generically by applyNewPosition itself (dispatches
       // navi_position_change on every call) — nothing to do here.
     };
+    // Cleared here rather than on close, where the box is deliberately left
+    // frozen at the size it was closing at (see the closing function's own
+    // comment): this opening has its own content to be measured against, and
+    // measuring it inside last time's box would answer with last time's size.
+    unfreezeSize(dialogEl);
     positionDialog();
     if (sizing === "frozen") {
       // After positionDialog: the caps it writes
@@ -31012,6 +31192,12 @@ const useDialogProps = props => {
       event
     }) => {
       positionDialog(event);
+      // Only for what can have taken height away from the dialog — a
+      // scroll never does, and re-scrolling on one would fight the finger
+      // that caused it. See keepFocusedElementVisible's own doc.
+      if (mayHaveHiddenFocus(event)) {
+        keepFocusedElementVisible(dialogEl);
+      }
     }, {
       event: e,
       skipElementResize: true
@@ -31064,6 +31250,12 @@ const useDialogProps = props => {
     }
     const hasCssTransitionAnimation = Boolean(resolvedAnimation);
     const cancelOpenInteractionSuppression = !silent && hasCssTransitionAnimation ? suppressPointerEventsDuringTransition(dialogEl) : null;
+    // Handing the focus to a field is what raises the on-screen keyboard, and
+    // the keyboard takes away the very room this dialog was just placed
+    // against — so on a touch-driven opening the transfer waits for the
+    // entrance to be over. Decided by transferFocusOnOpen, the only place that
+    // knows WHICH element is about to be focused (open_controller.js and its
+    // FOCUS_DELAY_ON_KEYBOARD_MS).
     const restoreFocus = openController.transferFocusOnOpen(dialogEl);
 
     // isModal outside-click detection (see this file's top comment for why
@@ -31129,9 +31321,16 @@ const useDialogProps = props => {
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
-      // The freeze only ever holds for one opening: the next one has its own
-      // content to be measured against.
-      unfreezeSize(dialogEl);
+      // Held at the size it has right now, for the whole way out. cleanup()
+      // below already stops the JS repositioning, but the size is CSS-driven
+      // (--x-dialog-max-height, and `height` outright under expandY) and
+      // keeps following the visual viewport on its own — so a dialog closed
+      // while the keyboard is up grows back to fill the room the keyboard is
+      // giving back, WHILE fading out. Coherent, and still wrong to watch: a
+      // box being dismissed has nothing left to adapt to, and the growth
+      // reads as something happening at the exact moment nothing should. The
+      // next opening clears it (see openEffect's own unfreezeSize).
+      freezeSize(dialogEl);
       cancelOpenInteractionSuppression?.();
       if (hasCssTransitionAnimation) {
         suppressPointerEventsDuringTransition(dialogEl);
@@ -32443,6 +32642,12 @@ const usePopoverProps = props => {
       }
       popoverEl.removeAttribute("data-anchor-out-of-view");
       positionPopover(event);
+      // Same as Dialog's own — a popup with a scrolling body and a footer
+      // swallows the field it just got shorter around. See
+      // keepFocusedElementVisible's own doc in popup_shared.js.
+      if (mayHaveHiddenFocus(event)) {
+        keepFocusedElementVisible(popoverEl);
+      }
     }, {
       event: e,
       // it's ok for the popover to become unsync with the anchor size
@@ -38830,24 +39035,34 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css$T = /* css */`
-  /* The marked region is a picture of its own during every view transition of
-     the document — which is what keeps it out of the root snapshot, where its
-     place would otherwise be blank. */
-  [data-navi-route-transition-area] {
+  /* The marked region is a picture of its own for the length of a transition of
+     OURS, and only then — the name is what makes the pages a picture the
+     movement below can carry.
+
+     Named outside that, it would be a picture during every view transition the
+     APPLICATION starts — two rows swapping, a list changing — and a page is
+     several screens tall: its picture is the whole element, drawn in the top
+     layer from wherever the element starts, so it paints over the fixed bars
+     and past the bottom of the screen for the length of a movement that has
+     nothing to do with the pages. Unnamed, it stays part of the document's own
+     picture, where the browser cuts it at the viewport like everything else. */
+  :root[data-navi-route-transition] [data-navi-route-transition-area] {
     view-transition-name: navi-route-transition;
   }
 
-  /* A named descendant — a row named for a reorder gesture, a thumbnail named
-     for a morph — is a hole in the area's picture and a group of its own at the
-     top of the tree: it stands still and cross-fades on its own clock while the
-     pages move. Nested groups put it back INSIDE the area's picture, so it
-     travels with the pages and is cut at their edge. Said here rather than
-     erasing the name: a name inside the area is legitimate, and "contain" says
-     "these move with the page" where "none" would say "these do not exist". A
-     browser without nested groups is warned instead (see
+  /* A named descendant — a thumbnail named for a morph, a row named for a
+     reorder gesture — is a hole in the area's picture and a group of its own.
+     Nested groups keep that group inside the area's, which is what cuts it at
+     the pages' edge instead of letting it paint across the screen. What it does
+     NOT do is make it travel: the movement is carried by the area's two
+     pictures, and a group is not one of them, so a named descendant stands
+     where it was captured while the pages slide under it. A morph wants exactly
+     that; a component that names its parts for changes of its own does not, and
+     drops its names for the length of the movement (see list.jsx). A browser
+     without nested groups is warned instead (see
      warnAboutNamesEscapingArea). */
   @supports (view-transition-group: contain) {
-    [data-navi-route-transition-area] {
+    :root[data-navi-route-transition] [data-navi-route-transition-area] {
       view-transition-group: contain;
     }
   }
@@ -45736,9 +45951,12 @@ installImportMetaCssBuild(import.meta);/**
  *    along the bar it adds to the padding asked for. Note that every
  *    `env(safe-area-inset-*)` is 0 unless the page asks for it:
  *    `<meta name="viewport" content="…, viewport-fit=cover">`.
- * 4. **Its hairline is a box-shadow, not a border.** A real border would eat
- *    into the size; a box-shadow draws the identical line and stays out of
- *    layout.
+ * 4. **Its hairline is part of its box.** The line covers the content just as
+ *    the bar does, so the room given back has to include it — a line drawn
+ *    outside the box (a box-shadow, an outline) is a line the content scrolls
+ *    under, and a line a page transition paints over. It is a real border,
+ *    added to the size asked for exactly like the notch inset is, so the
+ *    content still gets the size the prop names.
  */
 const css$M = /* css */`
   @layer navi {
@@ -45798,38 +46016,49 @@ const css$M = /* css */`
     }
 
     /* Across the bar, the inset of the edge it is pinned to is padding AND is
-       added to the size: the background then runs under the notch while the
-       content keeps the whole width/height asked for. */
+       added to the size, and the hairline on the content side is added the
+       same way: the background then runs under the notch, the line stands
+       clear of the content, and the content keeps the whole width/height asked
+       for. */
     &[data-area="top"] {
       top: var(--navi-app-inset-top);
-      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top));
+      height: calc(
+        var(--navi-fixed-bar-height) + env(safe-area-inset-top) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-top: env(safe-area-inset-top);
-      box-shadow: 0 var(--navi-fixed-bar-border-width) 0
+      border-bottom: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="bottom"] {
       bottom: var(--navi-app-inset-bottom);
-      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom));
+      height: calc(
+        var(--navi-fixed-bar-height) + env(safe-area-inset-bottom) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-bottom: env(safe-area-inset-bottom);
-      box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
+      border-top: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="left"] {
       left: var(--navi-app-inset-left);
-      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left));
+      width: calc(
+        var(--navi-fixed-bar-width) + env(safe-area-inset-left) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-left: env(safe-area-inset-left);
-      box-shadow: var(--navi-fixed-bar-border-width) 0 0
+      border-right: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="right"] {
       right: var(--navi-app-inset-right);
-      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right));
+      width: calc(
+        var(--navi-fixed-bar-width) + env(safe-area-inset-right) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-right: env(safe-area-inset-right);
-      box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0
+      border-left: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
-    }
-    &[data-border="none"] {
-      box-shadow: none;
     }
   }
 `;
@@ -45864,9 +46093,10 @@ const FixedBarStyleCSSVars = {
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
  *   inset is NOT part of it: it is added on top, so the content keeps the size
  *   asked for.
- * @param {boolean} [props.border=true] - The hairline on the content side.
- *   Drawn with a box-shadow so it never eats into the size; give it a
- *   `borderWidth`/`borderColor`, or `border={false}` for none.
+ * @param {boolean} [props.border=true] - The hairline on the content side. It
+ *   is added to the size rather than taken out of it, and counts in the room
+ *   the bar gives back; give it a `borderWidth`/`borderColor`, or
+ *   `border={false}` for none.
  * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
  *   content column narrower than the window (it stays centered).
  */
@@ -45879,9 +46109,16 @@ const FixedBar = ({
   import.meta.css = [css$M, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
+  // Said with the width the border rule reads rather than with an attribute of
+  // its own: the width is what the size calc adds, so a line asked away here
+  // is a line that takes no room either.
+  if (!border) {
+    props.borderWidth = "0px";
+  }
   // Whichever of width/height crosses the edge the bar sits on is what the
   // content has to be given back — and the bar's border box already IS that:
-  // the size it was given plus the inset of that edge. Measured rather than
+  // the size it was given, the inset of that edge, and the hairline standing
+  // between it and the content. Measured rather than
   // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
   // theme variable, the content itself — is reserved just the same, and each
   // `env()` inset stays the browser's business alone.
@@ -45928,7 +46165,6 @@ const FixedBar = ({
   return jsx(Box, {
     baseClassName: "navi_fixed_bar",
     "data-area": area,
-    "data-border": border ? undefined : "none",
     ...props,
     styleCSSVars: FixedBarStyleCSSVars,
     children: children
@@ -57051,7 +57287,26 @@ const css$w = /* css */`
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
-    border-radius: var(--x-list-border-radius);
+    /* Squared from the outside, corner by corner: whoever draws the surface
+       the list is laid on says which corners are the list's to draw (a popup's
+       body does, see box.jsx), and each corner falls back to the list's own
+       radius when nothing asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--x-list-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--x-list-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--x-list-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--x-list-border-radius)
+    );
 
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
@@ -57060,6 +57315,13 @@ const css$w = /* css */`
     overflow: hidden;
 
     .navi_list_scroll_container {
+      /* The ask stops here: this element is inside the list's frame, so a row
+         or a control it holds is not at the surface's corner. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       width: inherit;
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
@@ -57533,9 +57795,19 @@ const css$w = /* css */`
      without being contained animate across the page (the pictures live in the
      top layer, where no overflow of the document reaches them), which is worse
      than not animating at all. So a browser with no nested groups gets no name
-     either, and the change simply happens. */
+     either, and the change simply happens.
+
+     Named for a change of the list's own, and for that alone: while the PAGES
+     are the ones moving — a route transition, a route travel — the list is part
+     of what travels, and a picture of its own is precisely what does not
+     travel. A page is carried by its own picture; anything named inside it is
+     lifted out of that picture into a group of its own, which stays where it
+     was captured while the page slides away under it. So the names are dropped
+     for the length of such a movement and the list crosses the screen with the
+     page, as a block. */
   @supports (view-transition-group: contain) {
-    .navi_list_container[data-item-transition] {
+    :root:not([data-navi-route-transition], [data-navi-route-travel])
+      .navi_list_container[data-item-transition] {
       /* The list needs a name to be a group at all; which name does not matter,
          only that no other element in the document carries it. */
       view-transition-name: match-element;
