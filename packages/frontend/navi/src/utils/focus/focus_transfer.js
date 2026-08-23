@@ -220,7 +220,21 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     focusedElement,
     focusVisible,
 
-    transferFocus: (transferEvent, containerEl) => {
+    /**
+     * Moves the focus into `containerEl`, on the element the ladder above
+     * picks.
+     *
+     * `getDelay(target)` — asked once the target is known, answers how many
+     * milliseconds to wait before actually focusing it. The ladder is what
+     * decides WHO gets the focus and it may only run once (it consumes the
+     * autofocus-restore mark), so a caller with a policy about WHEN cannot
+     * resolve the target itself to make up its mind: it is handed the answer
+     * instead. Returns a cancel function when it did delay, so a container
+     * closing before the delay is up takes back a focus it never gave;
+     * undefined when it focused straight away and there is nothing to take
+     * back.
+     */
+    transferFocus: (transferEvent, containerEl, { getDelay } = {}) => {
       let target;
       let reason;
       const lastFocused = clearAutofocusRestore(containerEl);
@@ -248,24 +262,39 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        return;
+        return undefined;
       }
       // The modality speaks for the transfer, but an editable target outranks
       // it: it draws its ring on any focus (see isMatchingFocusVisible), so
       // the native :focus-visible is told the same.
       const targetFocusVisible = focusVisible || isEditableTarget(target);
+      const giveFocus = () => {
+        debugFocus(
+          transferEvent,
+          `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
+        );
+        target.focus({
+          preventScroll: true,
+          focusVisible: targetFocusVisible,
+        });
+        if (target.hasAttribute("navi-autofocus-select")) {
+          target.select();
+          target.scrollLeft = 0;
+        }
+      };
+      const delay = getDelay?.(target) || 0;
+      if (!delay) {
+        giveFocus();
+        return undefined;
+      }
       debugFocus(
         transferEvent,
-        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
+        `Delaying focus to ${getElementSignature(target)} by ${delay}ms`,
       );
-      target.focus({
-        preventScroll: true,
-        focusVisible: targetFocusVisible,
-      });
-      if (target.hasAttribute("navi-autofocus-select")) {
-        target.select();
-        target.scrollLeft = 0;
-      }
+      const timeout = setTimeout(giveFocus, delay);
+      return () => {
+        clearTimeout(timeout);
+      };
     },
 
     restoreFocus: (restoreEvent) => {

@@ -2,6 +2,7 @@ import {
   chainEvent,
   findEvent,
   getKeyboardEventDefaultAction,
+  isTouchDrivenEvent,
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
@@ -10,7 +11,23 @@ import {
   prepareFocusTransfer,
   markAutofocusRestoreOnClose,
 } from "../utils/focus/focus_transfer.js";
+import { isEditableTarget } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+
+// How long a popup waits before handing the focus to a field, when giving it
+// is what raises the on-screen keyboard.
+//
+// The focus is normally given as early as possible. But a popup places itself
+// against the viewport, and on a phone the keyboard takes a third of that
+// viewport away the moment a field receives focus — so the two landing in the
+// same tick means the popup is still arriving when the room under it changes,
+// and it re-places itself mid-entrance. Waiting lets it settle first, and the
+// keyboard then shrinks a box that has stopped moving.
+//
+// Long enough to outlast an entrance transition rather than merely reaching
+// the next frame: what has to be over is the popup MOVING, not one paint of
+// it.
+const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
 
 /**
  * Owns open/close decision-making for a popup (Dialog or Popover): guards
@@ -250,8 +267,32 @@ export const createOpenController = (
         // once mousedown.preventDefault() has kept focus from landing
         // anywhere yet.
 
-        focusTransfer.transferFocus(e, el);
+        // Two conditions, and both are about THIS opening rather than about
+        // the device:
+        // - the interaction: only a finger raises a virtual keyboard, and a
+        //   hybrid tablet answers "coarse" to every device-level signal
+        //   whichever of its two inputs was just used — the open event still
+        //   remembers which one it was. An opening with no pointer in it at
+        //   all (a keyboard shortcut, defaultOpen, an app calling open()) is
+        //   not one either.
+        // - the target: focusing a button raises nothing, so there is nothing
+        //   to wait for and the focus stays immediate. Only a field the
+        //   keyboard comes up for is worth delaying — which is why the
+        //   decision is taken on the resolved target, inside transferFocus.
+        const openedByTouch = Boolean(
+          findEvent(requestOpenEvent, isTouchDrivenEvent),
+        );
+        const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
+          getDelay: (target) =>
+            openedByTouch && isEditableTarget(target)
+              ? FOCUS_DELAY_ON_KEYBOARD_MS
+              : 0,
+        });
         return (closeEvent) => {
+          // Closed before the delay was up: the focus was never given, so it
+          // must not be given now — to a field inside a popup on its way out,
+          // raising the keyboard as it goes.
+          cancelPendingFocus?.();
           markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
           const focusoutEvent = findEvent(closeEvent, "focusout");
           if (focusoutEvent) {
