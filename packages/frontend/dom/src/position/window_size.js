@@ -44,6 +44,44 @@ if (window.visualViewport) {
 // to the next hides and re-shows the keyboard.
 subscribeVirtualKeyboardGeometryChange(scheduleVisualViewportResize);
 
+// A focus change is not a resize, and yet: on a phone, giving focus to a field
+// is the moment the browser decides what to put over the page — the on-screen
+// keyboard, and above it the suggestion/autofill strip whose height NOTHING
+// reports. No event describes that strip: visualViewport stays silent about
+// it, and so does the keyboard's own geometrychange. So the focus itself is
+// taken as the only hint there is, and whoever sizes against the viewport
+// re-measures while the furniture settles.
+//
+// Several delays rather than one because there is nothing to wait for: the
+// strip comes up on its own schedule, after the keyboard, sometimes after a
+// round-trip to the IME. Polling is what is left when the platform describes
+// nothing — bounded, and free whenever it finds nothing: a re-measure that
+// reads the same numbers does nothing at all (visible_rect.js's own check()
+// dedupes on exactly that).
+const FOCUS_SETTLE_DELAYS = [250, 350, 700];
+const [publishFocusSettled, subscribeFocusSettled] = createPubSub();
+// Calls `callback` a few times over the ~700ms following a focus change, while
+// the browser's own on-screen furniture settles. Returns an unsubscribe
+// function.
+export { subscribeFocusSettled };
+let focusSettleTimeoutIds = [];
+document.addEventListener(
+  "focusin",
+  (event) => {
+    for (const timeoutId of focusSettleTimeoutIds) {
+      clearTimeout(timeoutId);
+    }
+    focusSettleTimeoutIds = FOCUS_SETTLE_DELAYS.map((delay) =>
+      setTimeout(() => {
+        publishFocusSettled(event);
+      }, delay),
+    );
+  },
+  // Capture: a focus moving into something that stops the event on its way up
+  // still moved the furniture.
+  { capture: true },
+);
+
 let windowResizeTimeoutId;
 window.addEventListener("resize", (event) => {
   clearTimeout(windowResizeTimeoutId);

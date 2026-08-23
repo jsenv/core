@@ -1,0 +1,268 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Échanger deux pièces dans une page qui a une transition</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .page {
+        padding: 16px;
+      }
+      .page_title {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.75);
+        border-radius: 8px;
+      }
+
+      .court {
+        position: relative;
+        height: 320px;
+        margin-bottom: 16px;
+        background: #2f6f4e;
+        border: 3px solid white;
+        border-radius: 10px;
+      }
+      .court_net {
+        position: absolute;
+        top: 50%;
+        right: 0;
+        left: 0;
+        border-top: 2px dashed rgba(255, 255, 255, 0.7);
+      }
+      .player,
+      .free {
+        position: absolute;
+        display: flex;
+        width: 56px;
+        height: 56px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        border-radius: 50%;
+        translate: -50% -50%;
+        touch-action: none;
+      }
+      .player {
+        background: #1d4ed8;
+        cursor: grab;
+      }
+      .player[data-team="b"] {
+        background: #b91c1c;
+      }
+      .free {
+        color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+      }
+
+      /* Les deux qui échangent: celui qui est pris passe au-dessus. */
+      ::view-transition-group(swap_over) {
+        z-index: 20;
+      }
+      ::view-transition-group(swap_under) {
+        z-index: 1;
+      }
+      ::view-transition-group(swap_over),
+      ::view-transition-group(swap_under) {
+        animation-duration: 520ms;
+        animation-timing-function: ease-in-out;
+      }
+
+      .bar_content {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        font-weight: 600;
+      }
+      .bar_content .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-safe-area></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect, useState } from "preact/hooks";
+      import {
+        Box,
+        FixedBar,
+        Link,
+        Nav,
+        Route,
+        RouteTransitionArea,
+        defineRouteTransition,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const COURT_ROUTE = route("/court");
+      const LIST_ROUTE = route("/list");
+      setupRoutes([COURT_ROUTE, LIST_ROUTE]);
+
+      defineRouteTransition(COURT_ROUTE, LIST_ROUTE, "slide-x");
+
+      const SPOTS = [
+        { id: "far_left", x: 30, y: 22 },
+        { id: "far_right", x: 70, y: 22 },
+        { id: "near_left", x: 30, y: 78 },
+        { id: "near_right", x: 70, y: 78 },
+      ];
+      const PLAYERS = {
+        lea: { label: "Léa", team: "a" },
+        marc: { label: "Marc", team: "a" },
+        sofia: { label: "Sofia", team: "b" },
+        tom: { label: "Tom", team: "b" },
+      };
+      const INITIAL_LINEUP = {
+        far_left: "lea",
+        far_right: "marc",
+        near_left: "sofia",
+        near_right: "tom",
+      };
+
+      const spotOf = (lineup, playerId) =>
+        Object.keys(lineup).find((spotId) => lineup[spotId] === playerId);
+
+      const Court = () => {
+        const [lineup, setLineup] = useState(INITIAL_LINEUP);
+        // Qui passe au-dessus et qui passe en dessous, tenu en état: le rendu
+        // qui a lieu dans la transition remettrait aussitôt les noms nus.
+        const [swapRoles, setSwapRoles] = useState(null);
+
+        const land = (event) => {
+          const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+          const roles = { [fromId]: "swap_over", [toId]: "swap_under" };
+          // Avant que la transition démarre: l'état d'avant est photographié à
+          // l'instant où elle démarre, et c'est ce nom-là qui est cherché.
+          for (const playerId of Object.keys(roles)) {
+            document.getElementById(playerId).style.viewTransitionName =
+              roles[playerId];
+          }
+          const transition = document.startViewTransition(() => {
+            syncCloneWithDropTarget?.(document.getElementById(toId));
+            setSwapRoles(roles);
+            setLineup((previous) => {
+              const fromSpot = spotOf(previous, fromId);
+              const toSpot = spotOf(previous, toId);
+              return { ...previous, [fromSpot]: toId, [toSpot]: fromId };
+            });
+          });
+          transition.finished.then(() => {
+            setSwapRoles(null);
+          });
+          return transition.finished;
+        };
+
+        return (
+          <div className="page" style={{ background: "#5b8dd9" }}>
+            <h1 className="page_title">Le terrain</h1>
+            <div className="court">
+              <div className="court_net" />
+              {SPOTS.map((spot) => {
+                const playerId = lineup[spot.id];
+                const place = { left: `${spot.x}%`, top: `${spot.y}%` };
+                if (!playerId) {
+                  return (
+                    <div
+                      key={spot.id}
+                      id={spot.id}
+                      className="free"
+                      style={place}
+                      data-droppable
+                    >
+                      +
+                    </div>
+                  );
+                }
+                const player = PLAYERS[playerId];
+                return (
+                  <Box
+                    key={playerId}
+                    id={playerId}
+                    className="player"
+                    data-team={player.team}
+                    data-droppable
+                    style={{
+                      ...place,
+                      viewTransitionName: swapRoles?.[playerId] || "none",
+                    }}
+                    interactions={{ land }}
+                  >
+                    {player.label}
+                  </Box>
+                );
+              })}
+            </div>
+            {Array.from({ length: 20 }, (_, index) => (
+              <div className="page_row" key={index}>
+                Terrain — ligne {index + 1}
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      const ListPage = () => (
+        <div className="page" style={{ background: "#63b672" }}>
+          <h1 className="page_title">La liste</h1>
+          {Array.from({ length: 30 }, (_, index) => (
+            <div className="page_row" key={index}>
+              Liste — ligne {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const AppIndex = () => {
+        useLayoutEffect(() => {
+          COURT_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const App = () => (
+        <>
+          <RouteTransitionArea>
+            <Route>
+              <Route route={COURT_ROUTE} element={Court} />
+              <Route route={LIST_ROUTE} element={ListPage} />
+              <Route fallback element={AppIndex} />
+            </Route>
+          </RouteTransitionArea>
+          <FixedBar area="bottom" height="64">
+            <Nav className="bar_content" expand currentIndicator>
+              <Link variant="tab" route={COURT_ROUTE} padding="m">
+                Terrain
+              </Link>
+              <Link variant="tab" route={LIST_ROUTE} padding="m">
+                Liste
+              </Link>
+            </Nav>
+          </FixedBar>
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

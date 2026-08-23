@@ -4,7 +4,65 @@
  * of which of the two owns it.
  */
 
-import { findEvent } from "@jsenv/dom";
+import {
+  ELEMENT_SIZE_CHANGE,
+  findEvent,
+  scrollIntoViewScoped,
+} from "@jsenv/dom";
+
+/**
+ * Whether a visibleRectEffect delivery is one that can have taken height away
+ * from a popup, and so pushed whatever holds focus out of sight:
+ * - "resize": the window/visual viewport settled — which is also how the
+ *   on-screen keyboard arrives, overlay or not (window_size.js);
+ * - ELEMENT_SIZE_CHANGE: the popup's own box measured different;
+ * - "focusin": the focus-settled re-measure, for the room that changes with
+ *   nothing announcing it (subscribeFocusSettled in window_size.js).
+ *
+ * Everything else is a scroll of one kind or another, where nothing got
+ * smaller and scrolling the focused element back would fight the very gesture
+ * that fired it.
+ */
+export const mayHaveHiddenFocus = (event) => {
+  const type = event?.type;
+  return (
+    type === "resize" || type === ELEMENT_SIZE_CHANGE || type === "focusin"
+  );
+};
+
+/**
+ * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
+ * getting shorter has pushed it out.
+ *
+ * The case this exists for: a field low in the scrolling body of a popup that
+ * also has a footer (box.jsx — with a body, the body is the only thing that
+ * scrolls and the footer is a sibling sitting right under it). Focusing the
+ * field makes the browser scroll it into view, which it does against the
+ * popup's height AT THAT MOMENT; the on-screen keyboard then opens and takes
+ * that height away. The body shrinks, its scrollTop does not move, so the
+ * content slides down relative to the shorter scrollport and the field ends up
+ * past its bottom edge — visually, swallowed by the footer. The browser does
+ * not redo a scroll-into-view it already answered, so this does.
+ *
+ * Scoped to the field's own scroll container (never the page): a popup traps
+ * scrolling precisely so the document underneath cannot move, and a plain
+ * scrollIntoView walks past a container whose scrollbar isn't visible — see
+ * scrollIntoViewScoped's own doc.
+ *
+ * "nearest": the smallest scroll that makes it visible, and none at all when
+ * it already is — so this is free to call on every resize, and never fights
+ * where the user had scrolled to.
+ */
+export const keepFocusedElementVisible = (popupEl) => {
+  const { activeElement } = document;
+  if (!activeElement || activeElement === popupEl) {
+    return;
+  }
+  if (!popupEl.contains(activeElement)) {
+    return;
+  }
+  scrollIntoViewScoped(activeElement, { block: "nearest" });
+};
 
 /**
  * Calls `onSettled` once `el`'s current CSS transition is over — via

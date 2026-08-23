@@ -15,6 +15,7 @@ import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositionedParent } from "./offset_parent.js";
 import { getVirtualKeyboardOverlayHeight } from "./virtual_keyboard.js";
 import {
+  subscribeFocusSettled,
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
 } from "./window_size.js";
@@ -485,6 +486,27 @@ export const visibleRectEffect = (
         subscribeVisualViewportResizeSettled(onWindowOrViewportResize),
       );
       addTeardown(subscribeWindowResizeSettled(onWindowOrViewportResize));
+    }
+    on_focus_settled: {
+      // The room left on screen can change with nothing announcing it — see
+      // subscribeFocusSettled in window_size.js for what does that and why a
+      // focus change is the only hint available. Same guard as the resize
+      // reaction just above, for the same reason.
+      //
+      // Not routed through onWindowOrViewportResize despite doing the same
+      // thing: the event reaching autoCheck is what decides whether the move
+      // is animated (pickPositionRelativeTo's own shouldTransition reads
+      // event.type === "resize"), and a focus change must not animate. It is
+      // a correction of a measurement that went stale unannounced, not a
+      // viewport the user watched change — and it fires on every focus, where
+      // an animated slide of a popup nobody touched would be the bug.
+      const onFocusSettled = (event) => {
+        if (ancestorRepositioningCount > 0) {
+          return;
+        }
+        autoCheck(event);
+      };
+      addTeardown(subscribeFocusSettled(onFocusSettled));
     }
     on_element_resize: {
       if (skipElementResize) {

@@ -308,6 +308,17 @@
         border-radius: 10px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
       }
+      .demo_dialog_parts_box {
+        /* No padding of its own, unlike the boxes above: with a header, a body
+           and a footer inside, the padding belongs to each part (see box.jsx)
+           — the dialog is only the box they are stacked in. */
+        width: 320px;
+        max-width: 100%;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
       .demo-keyboard-fill {
         display: flex;
         /* min-height: 0 so this block can actually be squeezed by the
@@ -1766,6 +1777,45 @@
         );
       };
 
+      // The other keyboard problem, and a different one: nothing here is
+      // mis-sized, the field just stops being in view. With a body, the body
+      // is the only thing that scrolls and the footer sits right under it
+      // (box.jsx). Focusing the field makes the browser scroll it into view
+      // against the dialog's height at that instant; the keyboard then takes
+      // that height away, the body shrinks, its scrollTop does not move — and
+      // the field is past the bottom edge, looking swallowed by the footer.
+      // Six tall blocks so it really is out of reach without scrolling.
+      const KeyboardPartsDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              expandY
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_parts_box"
+            >
+              <Box header padding="m">
+                <Text>Header</Text>
+              </Box>
+              <Box body padding="m" flex="y" spacing="s">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} class="demo-content-tall-block" />
+                ))}
+                <Input type="text" placeholder="Field at the very bottom…" />
+              </Box>
+              <Box footer padding="m" flex="x" spacing="s">
+                <Button command="--navi-close">Close</Button>
+              </Box>
+            </Dialog>
+          </>
+        );
+      };
+
       // Both mechanisms at once, on the same dialogs. Checked (navi's own
       // default) is the VirtualKeyboard API's overlay: the viewport keeps its
       // full height and env(keyboard-inset-height) is what navi subtracts
@@ -1850,6 +1900,25 @@
               <KeyboardDialog
                 label="two search inputs"
                 inputCount={2}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <Heading level={3} id="keyboard-scrolling-body">
+              Header / scrolling body / footer
+            </Heading>
+            <p>
+              Scroll to the field at the bottom of the body and focus it. The
+              keyboard takes height from the dialog, the body shrinks around a
+              scroll position that did not move, and without help the field ends
+              up past the body's bottom edge — behind the footer. The popup
+              scrolls it back (<code>keepFocusedElementVisible</code>,
+              popup_shared.js), within the body only: the page underneath must
+              not move.
+            </p>
+            <div class="demo-row">
+              <KeyboardPartsDialog
+                label="header + body + footer"
                 animation={animation}
                 animationDuration={animationDuration}
               />

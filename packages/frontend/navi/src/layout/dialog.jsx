@@ -89,6 +89,8 @@ import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 import {
   armPointerDownOutsideClose,
+  keepFocusedElementVisible,
+  mayHaveHiddenFocus,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
@@ -1243,6 +1245,12 @@ const useDialogProps = (props) => {
       positionedAncestor,
       (visibleRect, { event }) => {
         positionDialog(event);
+        // Only for what can have taken height away from the dialog — a
+        // scroll never does, and re-scrolling on one would fight the finger
+        // that caused it. See keepFocusedElementVisible's own doc.
+        if (mayHaveHiddenFocus(event)) {
+          keepFocusedElementVisible(dialogEl);
+        }
       },
       { event: e, skipElementResize: true },
     );

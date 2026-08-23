@@ -112,10 +112,18 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css = /* css */ `
-  /* The marked region is a picture of its own during every view transition of
-     the document — which is what keeps it out of the root snapshot, where its
-     place would otherwise be blank. */
-  [data-navi-route-transition-area] {
+  /* The marked region is a picture of its own for the length of a transition of
+     OURS, and only then — the name is what makes the pages a picture the
+     movement below can carry.
+
+     Named outside that, it would be a picture during every view transition the
+     APPLICATION starts — two rows swapping, a list changing — and a page is
+     several screens tall: its picture is the whole element, drawn in the top
+     layer from wherever the element starts, so it paints over the fixed bars
+     and past the bottom of the screen for the length of a movement that has
+     nothing to do with the pages. Unnamed, it stays part of the document's own
+     picture, where the browser cuts it at the viewport like everything else. */
+  :root[data-navi-route-transition] [data-navi-route-transition-area] {
     view-transition-name: navi-route-transition;
   }
 
@@ -131,7 +139,7 @@ const css = /* css */ `
      without nested groups is warned instead (see
      warnAboutNamesEscapingArea). */
   @supports (view-transition-group: contain) {
-    [data-navi-route-transition-area] {
+    :root[data-navi-route-transition] [data-navi-route-transition-area] {
       view-transition-group: contain;
     }
   }

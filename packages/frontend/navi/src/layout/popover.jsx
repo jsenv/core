@@ -78,6 +78,8 @@ import { popupCss } from "./popup_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
+  keepFocusedElementVisible,
+  mayHaveHiddenFocus,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
@@ -1181,6 +1183,12 @@ const usePopoverProps = (props) => {
         }
         popoverEl.removeAttribute("data-anchor-out-of-view");
         positionPopover(event);
+        // Same as Dialog's own — a popup with a scrolling body and a footer
+        // swallows the field it just got shorter around. See
+        // keepFocusedElementVisible's own doc in popup_shared.js.
+        if (mayHaveHiddenFocus(event)) {
+          keepFocusedElementVisible(popoverEl);
+        }
       },
       {
         event: e,
