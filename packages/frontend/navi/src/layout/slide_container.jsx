@@ -1062,7 +1062,16 @@ export const SlideContainer = ({
     // Where the track ends up, always — the animation below only covers the way
     // there, and when it is over this is what holds.
     track.style.setProperty("--slide-container-offset", offset);
+    // A travel to this very offset is already playing: left to play. Same
+    // courtesy as the stage above — a re-render in the middle of a travel (a
+    // signal read higher up answering) changes nothing here, and setting off
+    // again from the on-screen position would replay what is left over a full
+    // duration (the ask is zero, so ratioOfOneTravel answers 1), slowing the
+    // travel at every re-render.
+    const sameTravelPlaying =
+      travelInFlight && !offsetDragged && offsetTargetBefore === offset;
     const travels =
+      !sameTravelPlaying &&
       !noTravel &&
       durationMs > 0 &&
       offsetBefore !== undefined &&
