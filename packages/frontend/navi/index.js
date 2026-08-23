@@ -321,6 +321,12 @@ export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Interactions
 export { startDragTo } from "@jsenv/dom";
+// The escape hatch for a window-capture click listener that may run before the
+// gesture click suppressor and must stand aside on its own. A last resort —
+// see its JSDoc in @jsenv/dom (click_suppression.js) for the one situation
+// that justifies it. Re-exported so that situation does not cost an app a
+// direct dependency on @jsenv/dom.
+export { clickIsSuppressed } from "@jsenv/dom";
 
 // Other
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";

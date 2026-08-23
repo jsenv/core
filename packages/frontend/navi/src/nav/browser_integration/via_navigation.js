@@ -30,6 +30,7 @@
  * which is before the picture.
  */
 
+import { clickIsSuppressed } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 
 import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
@@ -319,6 +320,13 @@ export const setupBrowserIntegrationViaNavigation = ({
     "click",
     (e) => {
       if (e.button !== 0 || e.metaKey || e.defaultPrevented) {
+        return;
+      }
+      if (clickIsSuppressed()) {
+        // The click that ends a gesture (click_suppression.js in @jsenv/dom).
+        // Its suppressor also listens on window in capture, so whichever
+        // module registered first runs first — asked explicitly, the order
+        // stops mattering.
         return;
       }
       const linkElement = e.target.closest("a");

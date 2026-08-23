@@ -69,7 +69,10 @@ export {
 } from "./src/traversal.js";
 
 // interaction
-export { suppressClickAfterGesture } from "./src/interaction/click_suppression.js";
+export {
+  clickIsSuppressed,
+  suppressClickAfterGesture,
+} from "./src/interaction/click_suppression.js";
 export { waitForPressHeld } from "./src/interaction/press_held.js";
 // interaction/focus
 export {
