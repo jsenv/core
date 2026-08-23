@@ -23,9 +23,12 @@
  *    along the bar it adds to the padding asked for. Note that every
  *    `env(safe-area-inset-*)` is 0 unless the page asks for it:
  *    `<meta name="viewport" content="…, viewport-fit=cover">`.
- * 4. **Its hairline is a box-shadow, not a border.** A real border would eat
- *    into the size; a box-shadow draws the identical line and stays out of
- *    layout.
+ * 4. **Its hairline is part of its box.** The line covers the content just as
+ *    the bar does, so the room given back has to include it — a line drawn
+ *    outside the box (a box-shadow, an outline) is a line the content scrolls
+ *    under, and a line a page transition paints over. It is a real border,
+ *    added to the size asked for exactly like the notch inset is, so the
+ *    content still gets the size the prop names.
  */
 
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -91,38 +94,49 @@ const css = /* css */ `
     }
 
     /* Across the bar, the inset of the edge it is pinned to is padding AND is
-       added to the size: the background then runs under the notch while the
-       content keeps the whole width/height asked for. */
+       added to the size, and the hairline on the content side is added the
+       same way: the background then runs under the notch, the line stands
+       clear of the content, and the content keeps the whole width/height asked
+       for. */
     &[data-area="top"] {
       top: var(--navi-app-inset-top);
-      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top));
+      height: calc(
+        var(--navi-fixed-bar-height) + env(safe-area-inset-top) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-top: env(safe-area-inset-top);
-      box-shadow: 0 var(--navi-fixed-bar-border-width) 0
+      border-bottom: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="bottom"] {
       bottom: var(--navi-app-inset-bottom);
-      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom));
+      height: calc(
+        var(--navi-fixed-bar-height) + env(safe-area-inset-bottom) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-bottom: env(safe-area-inset-bottom);
-      box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
+      border-top: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="left"] {
       left: var(--navi-app-inset-left);
-      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left));
+      width: calc(
+        var(--navi-fixed-bar-width) + env(safe-area-inset-left) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-left: env(safe-area-inset-left);
-      box-shadow: var(--navi-fixed-bar-border-width) 0 0
+      border-right: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="right"] {
       right: var(--navi-app-inset-right);
-      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right));
+      width: calc(
+        var(--navi-fixed-bar-width) + env(safe-area-inset-right) +
+          var(--navi-fixed-bar-border-width)
+      );
       padding-right: env(safe-area-inset-right);
-      box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0
+      border-left: var(--navi-fixed-bar-border-width) solid
         var(--navi-fixed-bar-border-color);
-    }
-    &[data-border="none"] {
-      box-shadow: none;
     }
   }
 `;
@@ -158,9 +172,10 @@ const FixedBarStyleCSSVars = {
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
  *   inset is NOT part of it: it is added on top, so the content keeps the size
  *   asked for.
- * @param {boolean} [props.border=true] - The hairline on the content side.
- *   Drawn with a box-shadow so it never eats into the size; give it a
- *   `borderWidth`/`borderColor`, or `border={false}` for none.
+ * @param {boolean} [props.border=true] - The hairline on the content side. It
+ *   is added to the size rather than taken out of it, and counts in the room
+ *   the bar gives back; give it a `borderWidth`/`borderColor`, or
+ *   `border={false}` for none.
  * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
  *   content column narrower than the window (it stays centered).
  */
@@ -174,9 +189,16 @@ export const FixedBar = ({
 
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
+  // Said with the width the border rule reads rather than with an attribute of
+  // its own: the width is what the size calc adds, so a line asked away here
+  // is a line that takes no room either.
+  if (!border) {
+    props.borderWidth = "0px";
+  }
   // Whichever of width/height crosses the edge the bar sits on is what the
   // content has to be given back — and the bar's border box already IS that:
-  // the size it was given plus the inset of that edge. Measured rather than
+  // the size it was given, the inset of that edge, and the hairline standing
+  // between it and the content. Measured rather than
   // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
   // theme variable, the content itself — is reserved just the same, and each
   // `env()` inset stays the browser's business alone.
@@ -221,7 +243,6 @@ export const FixedBar = ({
     <Box
       baseClassName="navi_fixed_bar"
       data-area={area}
-      data-border={border ? undefined : "none"}
       {...props}
       styleCSSVars={FixedBarStyleCSSVars}
     >
