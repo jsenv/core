@@ -5,10 +5,11 @@
  * `navi-side`/`data-layer` attributes) rather than computed in JS — read
  * the CSS block below instead of expecting a JS equivalent of it here.
  *
- * `anchorCustomEventDetail="ignore"` is required, not cosmetic, and in both
- * modes: without it Popover docks next to whatever triggered the open instead
- * of flush against the edge, and Dialog takes that trigger's width as its own
- * `min-width` floor (`--anchor-width`), overriding the `width` prop.
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it
+ * Popover docks next to whatever triggered the open instead of flush against
+ * the edge. Dialog needs nothing here — it never sizes itself from an anchor
+ * unless asked to (`sizeFromAnchor`, see dialog.jsx), which a side panel
+ * never does: its `width`/`height` props are what size it.
  */
 import { stringifyStyle } from "@jsenv/dom";
 

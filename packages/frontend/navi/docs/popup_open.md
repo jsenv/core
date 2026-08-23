@@ -112,8 +112,9 @@ timing.
 
 A popup with no `anchor` prop uses the command's source as its anchor
 (`detail.anchor ?? detail.source`). Passing the popup itself as the source
-therefore makes it its own anchor. For `Dialog` this only affects the
-`--anchor-width`/`--anchor-height` CSS vars; for `Popover`, which really is
+therefore makes it its own anchor. For `Dialog` the anchor does nothing at all
+unless `sizeFromAnchor` is passed (then, and only then, it feeds the
+`--anchor-width`/`--anchor-height` CSS vars); for `Popover`, which really is
 positioned relative to its anchor, say what the anchor is:
 
 ```jsx
@@ -122,8 +123,9 @@ positioned relative to its anchor, say what the anchor is:
 
 The `anchor` prop always wins over whatever the command carried.
 `anchorCustomEventDetail="ignore"` goes further and drops the event's anchor
-entirely — for a popover that must never be anchored to whatever opened it, and
-for a dialog that must never be sized from it (`SidePanel` needs both).
+entirely — for a popover that must never be anchored to whatever opened it
+(`SidePanel` does this), and for a `sizeFromAnchor` dialog that must never be
+sized from it.
 
 ## Opening it ON something
 

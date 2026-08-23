@@ -29852,10 +29852,13 @@ installImportMetaCssBuild(import.meta);/**
  * `positionArea` accepts the same grammar Popover does (see
  * popup_shared.js), even though several combinations land identically here
  * since Dialog is never really anchored — kept distinct anyway because
- * `positionArea` still picks which animation direction plays. `anchor` only
- * ever affects the `--anchor-width`/`--anchor-height` CSS vars (sizing the
- * dialog relative to whatever opened it) — Dialog's own positioning is never
- * relative to it, unlike Popover.
+ * `positionArea` still picks which animation direction plays. `anchor` is
+ * inert here unless `sizeFromAnchor` asks for it: a dialog is a surface of
+ * its own, sized by its content, not a panel grown out of the control that
+ * opened it — that is Popover's job. With `sizeFromAnchor`, the anchor's box
+ * reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
+ * min-width/min-height floor. Either way Dialog's own positioning is never
+ * relative to the anchor, unlike Popover.
  *
  * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
  * `<dialog>`, `showModal()`, top layer — native focus trap,
@@ -30340,17 +30343,24 @@ const css$X = /* css */`
  *   value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}|string} [props.anchor] - Only ever sizes
- *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars — never
- *   used for positioning (see this file's top comment). Defaults to whatever
+ * @param {Element|{current: Element}|string} [props.anchor] - Never used for
+ *   positioning (see this file's top comment), and ignored entirely unless
+ *   `sizeFromAnchor` is set — then it sizes the dialog via the
+ *   `--anchor-width`/`--anchor-height` CSS vars. Defaults to whatever
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
+ * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
+ *   anchor's width/height as a min-width/min-height floor
+ *   (`--anchor-width`/`--anchor-height`). Off by default: unlike a popover,
+ *   a dialog is not attached to what opened it, so following that element's
+ *   box is a deliberate choice (a picker-style surface meant to read as the
+ *   trigger's own continuation), not the norm.
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
  *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
  *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
  *   triggering event carried. Same prop as Popover's, applied to the only
- *   thing an anchor does here: sizing (`--anchor-width`/`--anchor-height`).
+ *   thing an anchor can do here: sizing, and only under `sizeFromAnchor`.
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -30609,12 +30619,15 @@ const useDialogProps = props => {
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
     animation,
-    // Only ever affects --anchor-width/--anchor-height (see this file's top
-    // comment) — Dialog's own positioning is never relative to it.
+    // Inert unless sizeFromAnchor below (see this file's top comment) —
+    // Dialog's own positioning is never relative to it.
     anchor,
+    // Opt-in: --anchor-width/--anchor-height are only set when this is true.
+    // See this prop's own JSDoc above for why a dialog does not follow its
+    // trigger's box by default.
+    sizeFromAnchor = false,
     // Same meaning as Popover's own prop, applied to the only thing an anchor
-    // does here: sizing. "ignore" is how a dialog that must not inherit its
-    // trigger's width says so (SidePanel does exactly that).
+    // can do here: sizing under sizeFromAnchor.
     anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
@@ -30809,7 +30822,7 @@ const useDialogProps = props => {
       // see openLocalDialogCount's own comment
       dialogEl.style.setProperty("--dialog-stack-order", openLocalDialogCount++);
     }
-    if (anchorElement) {
+    if (sizeFromAnchor && anchorElement) {
       const {
         width,
         height
@@ -54442,9 +54455,9 @@ installImportMetaCssBuild(import.meta);/**
  *
  * `layer` (shared by both — picks the top-layer vs. local-container rendering
  * strategy either way) and `anchorCustomEventDetail` (shared too: Popover
- * resolves an anchor to position against, Dialog to size itself from) pass
- * through untouched via `...rest` to whichever of Popover/Dialog actually
- * renders.
+ * resolves an anchor to position against, Dialog only to size itself from,
+ * and only under its own `sizeFromAnchor`) pass through untouched via
+ * `...rest` to whichever of Popover/Dialog actually renders.
  */
 const css$A = /* css */`
   @layer navi {
@@ -54482,13 +54495,12 @@ const css$A = /* css */`
  * @param {"top"|"local"} [props.layer] - Forwarded as-is to whichever of
  *   `Dialog`/`Popover` renders — see either component's own doc.
  * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
- *   sizing-only for `Dialog`, positioning for `Popover` (see each
- *   component's own doc for what it actually does there).
+ *   positioning for `Popover`, and for `Dialog` sizing only, and only when
+ *   `sizeFromAnchor` is also passed (see each component's own doc).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail] - Forwarded
  *   as-is to both — what it governs differs (positioning for `Popover`,
- *   sizing for `Dialog`), but "ignore whatever anchor the triggering event
- *   carried" has to mean the same thing in either mode, or the same
- *   `<Popup>` usage silently picks up its trigger's width on small screens.
+ *   `sizeFromAnchor` sizing for `Dialog`), but "ignore whatever anchor the
+ *   triggering event carried" has to mean the same thing in either mode.
  * @param {string} [props.marginWithAnchor] - **Popover-only**, destructured
  *   out so it can't leak onto the real `<dialog>` element as a stray DOM
  *   attribute when `mode="dialog"` is picked.
@@ -54691,12 +54703,17 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
 
         /* No fallback on purpose (same as --popover-max-height above): unset
            picker props leave these declarations invalid at computed-value
-           time, so the dialog keeps its own ceilings. */
+           time, so the dialog keeps its own floors/ceilings. */
+        --dialog-min-width: var(--picker-dialog-min-width);
+        --dialog-min-height: var(--picker-dialog-min-height);
         --dialog-max-width: var(--picker-dialog-max-width);
         --dialog-max-height: var(--picker-dialog-max-height);
 
-        /* Dialog itself already sizes min-width off --anchor-width — only
-           the cursor reset below is picker-specific here. */
+        /* Nothing bridges the trigger's width in here: a dialog does not
+           follow its anchor's box (dialog.jsx, sizeFromAnchor) — it is not
+           visually attached to the trigger, so it is sized by its content,
+           and dialogMinWidth/dialogMinHeight are how a caller says otherwise.
+           Only the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
 
         /* Dialog already applies display: flex to [open] itself, but
@@ -54718,24 +54735,10 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
     }
 
     /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
-       popup shrinks to its content. Inherits down to the popover. */
+       popup shrinks to its content. Popover-only — the dialog has no such
+       floor to drop (see the dialog block above). */
     &[data-popup-width-fit-content] {
       --picker-popover-min-width: 0px;
-
-      /* The popover var above only reaches the popover — the dialog reads
-         --anchor-width directly for its own min-width floor (dialog.jsx). A
-         modal dialog isn't visually attached to the trigger, so with
-         fit-content we drop that floor here too, letting the content size the
-         dialog like the popover. (More specific than dialog.jsx's own
-         .navi_dialog rule; both are unlayered, so this wins.) */
-      &[aria-haspopup="dialog"] {
-        .navi_dialog {
-          min-width: min(
-            var(--dialog-min-width, 0px),
-            var(--x-dialog-max-width)
-          );
-        }
-      }
     }
   }
 `;
@@ -62691,6 +62694,8 @@ const PickerStyleCSSVars = {
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
   "popoverMaxHeight": "--picker-popover-max-height",
+  "dialogMinWidth": "--picker-dialog-min-width",
+  "dialogMinHeight": "--picker-dialog-min-height",
   "dialogMaxWidth": "--picker-dialog-max-width",
   "dialogMaxHeight": "--picker-dialog-max-height",
   "popupBackgroundColor": "--picker-popup-background-color",
@@ -74034,10 +74039,11 @@ installImportMetaCssBuild(import.meta);/**
  * `navi-side`/`data-layer` attributes) rather than computed in JS — read
  * the CSS block below instead of expecting a JS equivalent of it here.
  *
- * `anchorCustomEventDetail="ignore"` is required, not cosmetic, and in both
- * modes: without it Popover docks next to whatever triggered the open instead
- * of flush against the edge, and Dialog takes that trigger's width as its own
- * `min-width` floor (`--anchor-width`), overriding the `width` prop.
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it
+ * Popover docks next to whatever triggered the open instead of flush against
+ * the edge. Dialog needs nothing here — it never sizes itself from an anchor
+ * unless asked to (`sizeFromAnchor`, see dialog.jsx), which a side panel
+ * never does: its `width`/`height` props are what size it.
  */
 const css = /* css */`
   .navi_side_panel {

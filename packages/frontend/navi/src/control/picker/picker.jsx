@@ -821,6 +821,8 @@ const PickerStyleCSSVars = {
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
   "popoverMaxHeight": "--picker-popover-max-height",
+  "dialogMinWidth": "--picker-dialog-min-width",
+  "dialogMinHeight": "--picker-dialog-min-height",
   "dialogMaxWidth": "--picker-dialog-max-width",
   "dialogMaxHeight": "--picker-dialog-max-height",
   "popupBackgroundColor": "--picker-popup-background-color",
@@ -917,6 +919,8 @@ const PickerFirstResolver = (props) => {
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
+ *   dialogMinWidth?: number | string,
+ *   dialogMinHeight?: number | string,
  *   dialogMaxWidth?: number | string,
  *   dialogMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
@@ -947,9 +951,11 @@ const PickerFirstResolver = (props) => {
  *   popoverMode is "overlay"), and to Dialog's own "center" in dialog mode. A
  *   popover still flips to the opposite side on its own when there isn't
  *   enough room.
- * @param {boolean} [popupWidthFitContent] By default the popup is at least as
+ * @param {boolean} [popupWidthFitContent] By default the popover is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
- *   popup narrower than the trigger stays narrow.
+ *   popover narrower than the trigger stays narrow. Popover mode only — a
+ *   dialog never takes the trigger's width to begin with (see
+ *   `dialogMinWidth`).
  * @param {import("preact").ComponentChildren} [rightSlotIcon] What the right
  *   slot draws in place of the chevron. It is the whole slot, not an addition
  *   to it: the picker then no longer says on its own that it opens, so pass
@@ -977,6 +983,11 @@ const PickerFirstResolver = (props) => {
  *   horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
+ * @param {number|string} [dialogMinWidth] Floor on the dialog's width. A dialog
+ *   picker is not attached to its trigger and does not take its width (unlike
+ *   the popover, which uses it as a floor) — this is how a dialog too narrow
+ *   for what it holds is widened. Clamped by `dialogMaxWidth`/the container.
+ * @param {number|string} [dialogMinHeight] Same, on the height.
  * @param {number|string} [dialogMaxWidth] Ceiling on the dialog's width, the
  *   one `dialogExpand`/`dialogExpandX` grows up to — what makes an expanded
  *   dialog a large sheet rather than a full screen. Capped in turn by the

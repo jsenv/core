@@ -683,7 +683,9 @@
       };
 
       // The triggering button doubles as the dialog's own anchor by default
-      // (no anchor prop set — see dialog.jsx's own openEffect), so a very
+      // (no anchor prop set — see dialog.jsx's own openEffect), and
+      // sizeFromAnchor asks for that anchor's box to be honored (off by
+      // default: a dialog is not attached to what opened it), so a very
       // wide button forces --anchor-width (and therefore .navi_dialog's own
       // min-width) up accordingly. Regression coverage for two related
       // fixes: min-width must never push the dialog's real, padding-
@@ -704,6 +706,7 @@
             </Button>
             <Dialog
               id={dialogId}
+              sizeFromAnchor
               animation={animation}
               animationDuration={animationDuration}
               className="demo_dialog_box"

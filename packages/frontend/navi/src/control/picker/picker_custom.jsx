@@ -95,12 +95,17 @@ const css = /* css */ `
 
         /* No fallback on purpose (same as --popover-max-height above): unset
            picker props leave these declarations invalid at computed-value
-           time, so the dialog keeps its own ceilings. */
+           time, so the dialog keeps its own floors/ceilings. */
+        --dialog-min-width: var(--picker-dialog-min-width);
+        --dialog-min-height: var(--picker-dialog-min-height);
         --dialog-max-width: var(--picker-dialog-max-width);
         --dialog-max-height: var(--picker-dialog-max-height);
 
-        /* Dialog itself already sizes min-width off --anchor-width — only
-           the cursor reset below is picker-specific here. */
+        /* Nothing bridges the trigger's width in here: a dialog does not
+           follow its anchor's box (dialog.jsx, sizeFromAnchor) — it is not
+           visually attached to the trigger, so it is sized by its content,
+           and dialogMinWidth/dialogMinHeight are how a caller says otherwise.
+           Only the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
 
         /* Dialog already applies display: flex to [open] itself, but
@@ -122,24 +127,10 @@ const css = /* css */ `
     }
 
     /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
-       popup shrinks to its content. Inherits down to the popover. */
+       popup shrinks to its content. Popover-only — the dialog has no such
+       floor to drop (see the dialog block above). */
     &[data-popup-width-fit-content] {
       --picker-popover-min-width: 0px;
-
-      /* The popover var above only reaches the popover — the dialog reads
-         --anchor-width directly for its own min-width floor (dialog.jsx). A
-         modal dialog isn't visually attached to the trigger, so with
-         fit-content we drop that floor here too, letting the content size the
-         dialog like the popover. (More specific than dialog.jsx's own
-         .navi_dialog rule; both are unlayered, so this wins.) */
-      &[aria-haspopup="dialog"] {
-        .navi_dialog {
-          min-width: min(
-            var(--dialog-min-width, 0px),
-            var(--x-dialog-max-width)
-          );
-        }
-      }
     }
   }
 `;

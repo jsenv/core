@@ -14,10 +14,13 @@
  * `positionArea` accepts the same grammar Popover does (see
  * popup_shared.js), even though several combinations land identically here
  * since Dialog is never really anchored — kept distinct anyway because
- * `positionArea` still picks which animation direction plays. `anchor` only
- * ever affects the `--anchor-width`/`--anchor-height` CSS vars (sizing the
- * dialog relative to whatever opened it) — Dialog's own positioning is never
- * relative to it, unlike Popover.
+ * `positionArea` still picks which animation direction plays. `anchor` is
+ * inert here unless `sizeFromAnchor` asks for it: a dialog is a surface of
+ * its own, sized by its content, not a panel grown out of the control that
+ * opened it — that is Popover's job. With `sizeFromAnchor`, the anchor's box
+ * reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
+ * min-width/min-height floor. Either way Dialog's own positioning is never
+ * relative to the anchor, unlike Popover.
  *
  * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
  * `<dialog>`, `showModal()`, top layer — native focus trap,
@@ -548,17 +551,24 @@ const css = /* css */ `
  *   value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}|string} [props.anchor] - Only ever sizes
- *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars — never
- *   used for positioning (see this file's top comment). Defaults to whatever
+ * @param {Element|{current: Element}|string} [props.anchor] - Never used for
+ *   positioning (see this file's top comment), and ignored entirely unless
+ *   `sizeFromAnchor` is set — then it sizes the dialog via the
+ *   `--anchor-width`/`--anchor-height` CSS vars. Defaults to whatever
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
+ * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
+ *   anchor's width/height as a min-width/min-height floor
+ *   (`--anchor-width`/`--anchor-height`). Off by default: unlike a popover,
+ *   a dialog is not attached to what opened it, so following that element's
+ *   box is a deliberate choice (a picker-style surface meant to read as the
+ *   trigger's own continuation), not the norm.
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
  *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
  *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
  *   triggering event carried. Same prop as Popover's, applied to the only
- *   thing an anchor does here: sizing (`--anchor-width`/`--anchor-height`).
+ *   thing an anchor can do here: sizing, and only under `sizeFromAnchor`.
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -816,12 +826,15 @@ const useDialogProps = (props) => {
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
     animation,
-    // Only ever affects --anchor-width/--anchor-height (see this file's top
-    // comment) — Dialog's own positioning is never relative to it.
+    // Inert unless sizeFromAnchor below (see this file's top comment) —
+    // Dialog's own positioning is never relative to it.
     anchor,
+    // Opt-in: --anchor-width/--anchor-height are only set when this is true.
+    // See this prop's own JSDoc above for why a dialog does not follow its
+    // trigger's box by default.
+    sizeFromAnchor = false,
     // Same meaning as Popover's own prop, applied to the only thing an anchor
-    // does here: sizing. "ignore" is how a dialog that must not inherit its
-    // trigger's width says so (SidePanel does exactly that).
+    // can do here: sizing under sizeFromAnchor.
     anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
@@ -1027,7 +1040,7 @@ const useDialogProps = (props) => {
         openLocalDialogCount++,
       );
     }
-    if (anchorElement) {
+    if (sizeFromAnchor && anchorElement) {
       const { width, height } = anchorElement.getBoundingClientRect();
       dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
       dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
