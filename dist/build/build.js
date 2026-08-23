@@ -6089,9 +6089,15 @@ const createNodeEsmResolver = ({
         }
       }
       version_relationship: {
-        const packageVersion = packageDirectory.read(
+        const closestPackageJson = packageDirectory.read(
           closestPackageDirectoryUrl,
-        ).version;
+        );
+        if (!closestPackageJson) {
+          // package.json can be momentarily missing while a package manager
+          // is installing/updating that package (npm install running in watch mode)
+          break version_relationship;
+        }
+        const packageVersion = closestPackageJson.version;
         if (!packageVersion) {
           // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
           break version_relationship;

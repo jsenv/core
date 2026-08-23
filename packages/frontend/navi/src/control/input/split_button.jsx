@@ -82,6 +82,8 @@ const css = /* css */ `
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   popoverMaxHeight?: number | string,
+ *   dialogMinWidth?: number | string,
+ *   dialogMinHeight?: number | string,
  *   dialogMaxWidth?: number | string,
  *   dialogMaxHeight?: number | string,
  *   dialogExpand?: boolean,
@@ -131,7 +133,8 @@ const css = /* css */ `
  *   popover; a dialog keeps Dialog's own "center".
  *
  * Every other prop the Picker's popup answers to is forwarded as-is —
- * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMaxWidth`/`Height`,
+ * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMinWidth`/`Height`,
+ * `dialogMaxWidth`/`Height`,
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
  * `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
  * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
@@ -379,6 +382,8 @@ const POPUP_PROP_SET = new Set([
   "popoverSpacing",
   "popupWidthFitContent",
   "popoverMaxHeight",
+  "dialogMinWidth",
+  "dialogMinHeight",
   "dialogMaxWidth",
   "dialogMaxHeight",
   "dialogExpand",

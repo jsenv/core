@@ -255,6 +255,28 @@ const DIMENSION_PROPS = {
     return { transform: `scaleZ(${value})` };
   },
 };
+const applyPositionSticky = applyToCssPropWhenTruthy(
+  "position",
+  "sticky",
+  "static",
+);
+// A sticky box is one something scrolls under, which is what
+// --navi-z-index-sticky names; without it the box is a positioned element at
+// z-index: auto and loses to anything the page raised — a Group member holding
+// focus (2) is seen passing in front of a sticky submit bar. Like Box's own
+// header/footer, the band applies always and not only while stuck: a box
+// written by an app is the generic case, it cannot read its own stuck state
+// (see docs/z_index.md), and dropping to auto loses to a single
+// position: relative. An explicit zIndex (including zIndex="auto") wins.
+const stickyZIndex = (styleContext) => {
+  if (
+    styleContext.styles.zIndex !== undefined ||
+    styleContext.remainingProps.zIndex !== undefined
+  ) {
+    return null;
+  }
+  return { zIndex: "var(--navi-z-index-sticky)" };
+};
 const POSITION_PROPS = {
   // For row, selfAlignX uses auto margins for positioning
   // NOTE: Auto margins only work effectively for positioning individual items.
@@ -322,11 +344,22 @@ const POSITION_PROPS = {
     }
     return undefined;
   },
-  position: PASS_THROUGH,
+  position: (value, styleContext) => {
+    if (value === "sticky") {
+      return { position: "sticky", ...stickyZIndex(styleContext) };
+    }
+    return { position: value };
+  },
   absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
-  sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
+  sticky: (value, styleContext) => {
+    const positionStyles = applyPositionSticky(value, styleContext);
+    if (!value) {
+      return positionStyles;
+    }
+    return { ...positionStyles, ...stickyZIndex(styleContext) };
+  },
   zIndex: PASS_THROUGH,
   // Keeps the zIndex values used inside this box local to it — see
   // docs/z_index.md: a z-index that opens no stacking context competes with

@@ -99,6 +99,17 @@ consistency across the app, not from any single call site.
   before hand-writing an offset to clear a `FixedBar`, before reaching for
   `env(safe-area-inset-*)` directly, and before making an app simulate a phone
   screen.
+- `docs/dialog_shape.md` — where a `Dialog` sits and how big it gets: bounds
+  rather than a width, the container ceiling no prop can exceed, the two shapes
+  one dialog has (centered box vs. bottom sheet under
+  `dockedOnSmallTouchScreen`) and which bounds apply to which — `maxWidth`
+  describes the centered shape and docking withdraws it, so both can be stated
+  at once. Also `expandX`/`expandY` vs. docking, `marginWithContainer` deciding
+  the gap and the ceiling together, `sizing="frozen"`, `layer="local"`, and the
+  `dialog*` props a `Picker`/`SplitButton` forwards. Read it before deriving
+  `smallTouchScreenSignal` in an app to change a dialog's size, before passing
+  `expandX={false}` to stop a dialog sprawling, and before writing CSS to make a
+  dialog fit the screen.
 - `docs/scroll.md` — where scrolling happens: what turns `Box`
   `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, scroll
   inside a `Dialog`/`Popover`, and what a scroll does to hover

@@ -254,6 +254,24 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+
+    /* Docking answers a different question than --dialog-max-width: a sheet
+       spans its container's full width, flush against the two side edges —
+       that shape IS the mode — while the caller's ceiling was an answer about
+       the *centered* box ("do not sprawl on a wide window"). Applying it here
+       turns the sheet into a small floating box that no longer touches the
+       edges it was docked to, so it is dropped out of the clamp entirely; the
+       container ceiling still holds. --dialog-min-width needs no such rule:
+       the floor is below the full width a docked dialog takes, so it stops
+       mattering on its own. Height is untouched — a sheet is content-tall, not
+       container-tall (expandY cancels docking outright), so --dialog-max-height
+       still means what it meant. */
+    &[data-docked] {
+      --x-dialog-max-width: min(
+        var(--container-position-remaining-width, var(--dialog-maxmax-width)),
+        var(--dialog-maxmax-width)
+      );
+    }
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local
        dialog is confined to its positioned ancestor, whose size reaches here
@@ -494,7 +512,15 @@ const css = /* css */ `
  *   from where the finger just tapped, and size alone would dock a narrow
  *   desktop window, which is still a mouse. It supplies defaults for
  *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
- *   any of them can still be pinned explicitly. Ignored entirely when `expandY`
+ *   any of them can still be pinned explicitly — including `expandX={false}`,
+ *   which opts the docked dialog out of the full-width stretch and leaves it a
+ *   floating box at the bottom. It also withdraws `maxWidth` while docked: a
+ *   sheet is container-wide by definition, and a `maxWidth` is an answer about
+ *   the *centered* shape, so the two can be stated together (`maxWidth="16rem"
+ *   dockedOnSmallTouchScreen`) and each applies where it means something.
+ *   `minWidth` needs no such rule — its floor is below the full width — and
+ *   `maxHeight`/`minHeight` keep applying, a sheet being content-tall.
+ *   Ignored entirely when `expandY`
  *   (or `expand`) is set: a dialog already filling the height is on the bottom
  *   edge docking would bring it to, so docking could only take away the shape
  *   the caller asked for. Re-resolves live as the pointer
@@ -516,7 +542,10 @@ const css = /* css */ `
  * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
  * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
  *   container allows (`--dialog-maxmax-width`). Set by
- *   `dockedOnSmallTouchScreen` on a small touch screen.
+ *   `dockedOnSmallTouchScreen` on a small touch screen — so passing `false`
+ *   here also opts out of *that* stretch, leaving a docked dialog a floating
+ *   box instead of a flush sheet. To keep the sheet flush and merely cap the
+ *   centered shape, use `maxWidth`: docking withdraws it on its own.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`). Cancels `dockedOnSmallTouchScreen`.
  * @param {string|number} [props.marginWithContainer="3appw"] - Minimum gap kept
@@ -575,7 +604,9 @@ const css = /* css */ `
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
  *   passed.
- * @param {string} [props.maxWidth] - Maps to `--dialog-max-width`.
+ * @param {string} [props.maxWidth] - Maps to `--dialog-max-width`. Describes
+ *   the centered shape only: a dialog docked by `dockedOnSmallTouchScreen`
+ *   ignores it and stays container-wide.
  * @param {string} [props.minHeight] - Maps to `--dialog-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
@@ -1540,6 +1571,10 @@ const useDialogProps = (props) => {
     // scrolling area, so it says so once, here.
     "overflow": "auto",
     "data-layer": layer,
+    // The sheet shape is live in CSS, not just a set of resolved defaults:
+    // it is what withdraws the caller's --dialog-max-width (see the stylesheet
+    // above), which is an answer about the centered box only.
+    "data-docked": isDocked ? "" : undefined,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,
     "data-flush-top": flushEdges.top ? "" : undefined,

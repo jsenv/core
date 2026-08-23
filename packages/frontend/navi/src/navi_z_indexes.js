@@ -43,7 +43,9 @@ const css = /* css */ `
          what the page positioned itself, which loses to DOM order otherwise
          (a sticky part is written before what scrolls under it). Box applies
          it by default, isolated, and lets a call site write auto back:
-         --box-header-z-index / --box-footer-z-index.
+         --box-header-z-index / --box-footer-z-index. <Box sticky> gets it from
+         the prop itself, for the same reason and with the same way out (an
+         explicit zIndex, "auto" included).
 
          "While stuck" is the condition the name states, and it costs something
          to ignore: a sticky part at rest is a block in the flow with nothing

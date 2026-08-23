@@ -991,7 +991,9 @@ const PickerFirstResolver = (props) => {
  * @param {number|string} [dialogMaxWidth] Ceiling on the dialog's width, the
  *   one `dialogExpand`/`dialogExpandX` grows up to — what makes an expanded
  *   dialog a large sheet rather than a full screen. Capped in turn by the
- *   container minus `marginWithContainer`.
+ *   container minus `marginWithContainer`. Describes the centered shape only:
+ *   a dialog docked by `dockedOnSmallTouchScreen` withdraws it and stays
+ *   container-wide, so both can be stated at once.
  * @param {number|string} [dialogMaxHeight] Same, on the height.
  * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
