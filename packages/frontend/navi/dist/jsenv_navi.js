@@ -57395,6 +57395,28 @@ const css$w = /* css */`
        the corners would visually overflow the rounded corners during scroll. */
     overflow: hidden;
 
+    /* overflow="visible" asks for the exact opposite of the clipping above: the
+       content must be free to paint outside the list's box and to overflow into
+       whatever scroll container is around it. Setting it on the inner scroll
+       element alone changes nothing visible — this frame would clip it right
+       back — so the frame has to let go of it too, and with it of the rounded
+       corners it was clipping to. The two cannot both be true.
+       An axis asked to be visible pairs with "clip" on the other one rather
+       than "hidden": mixing visible with a scrollport value makes the browser
+       compute the visible one to "auto" (a scrollport again), while
+       visible/clip is the one pairing it keeps as written. */
+    &[data-overflow-visible="both"] {
+      overflow: visible;
+    }
+    &[data-overflow-visible="x"] {
+      overflow-x: visible;
+      overflow-y: clip;
+    }
+    &[data-overflow-visible="y"] {
+      overflow-x: clip;
+      overflow-y: visible;
+    }
+
     .navi_list_scroll_container {
       /* The ask stops here: this element is inside the list's frame, so a row
          or a control it holds is not at the surface's corner. */
@@ -58135,6 +58157,7 @@ const ListUI = props => {
     popover: popover,
     "data-horizontal": horizontal ? "" : undefined,
     "data-scroller": getScrollerAttribute(scroller),
+    "data-overflow-visible": getOverflowVisibleAttribute(overflow, overflowX, overflowY),
     "navi-hover-while-scrolling": hoverWhileScrolling ? "" : undefined,
     "data-expand-x": expandX || expand ? "" : undefined,
     "data-expand-y": expandY || expand ? "" : undefined,
@@ -59411,6 +59434,27 @@ const getScrollerAttribute = scroller => {
     return "document";
   }
   return "parent";
+};
+
+// overflow lands as an inline style on the inner scroll element, which is
+// enough for every value but "visible": that one only means anything once the
+// frame around it stops clipping too. Reading the per-axis props over the
+// shorthand mirrors how CSS itself resolves them.
+const getOverflowVisibleAttribute = (overflow, overflowX, overflowY) => {
+  const x = overflowX === undefined ? overflow : overflowX;
+  const y = overflowY === undefined ? overflow : overflowY;
+  const xVisible = x === "visible";
+  const yVisible = y === "visible";
+  if (xVisible && yVisible) {
+    return "both";
+  }
+  if (xVisible) {
+    return "x";
+  }
+  if (yVisible) {
+    return "y";
+  }
+  return undefined;
 };
 
 // scroller="parent": the list virtualizes against the scroll box it lives in
