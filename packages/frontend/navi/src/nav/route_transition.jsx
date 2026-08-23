@@ -119,14 +119,16 @@ const css = /* css */ `
     view-transition-name: navi-route-transition;
   }
 
-  /* A named descendant — a row named for a reorder gesture, a thumbnail named
-     for a morph — is a hole in the area's picture and a group of its own at the
-     top of the tree: it stands still and cross-fades on its own clock while the
-     pages move. Nested groups put it back INSIDE the area's picture, so it
-     travels with the pages and is cut at their edge. Said here rather than
-     erasing the name: a name inside the area is legitimate, and "contain" says
-     "these move with the page" where "none" would say "these do not exist". A
-     browser without nested groups is warned instead (see
+  /* A named descendant — a thumbnail named for a morph, a row named for a
+     reorder gesture — is a hole in the area's picture and a group of its own.
+     Nested groups keep that group inside the area's, which is what cuts it at
+     the pages' edge instead of letting it paint across the screen. What it does
+     NOT do is make it travel: the movement is carried by the area's two
+     pictures, and a group is not one of them, so a named descendant stands
+     where it was captured while the pages slide under it. A morph wants exactly
+     that; a component that names its parts for changes of its own does not, and
+     drops its names for the length of the movement (see list.jsx). A browser
+     without nested groups is warned instead (see
      warnAboutNamesEscapingArea). */
   @supports (view-transition-group: contain) {
     [data-navi-route-transition-area] {

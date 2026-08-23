@@ -221,8 +221,46 @@ import.meta.css = /* css */ `
         outline-offset: calc(-1 * var(--navi-focus-outline-width));
         overflow: auto;
 
+        /* The same reading as the header's corners above, on all four: a body
+           follows the corners of the box it is drawn in — which is also what
+           it clips its content to, the overflow just above. */
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+        border-bottom-left-radius: inherit;
+
         &:focus-visible {
           outline-style: solid;
+        }
+      }
+
+      /* A corner a header or a footer covers is not the body's to follow:
+         what the body meets there is their flat separator line, not a curve,
+         and a radius against it shows the box through the gap it opens. */
+      > [data-header] ~ [data-body] {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      > [data-body]:has(~ [data-footer]) {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+
+      /* A body with no padding of its own holds content running edge to edge:
+         whatever sits at one of its ends is drawn ON the corner the body just
+         resolved, so a radius of its own there carves a notch out of it. The
+         body already clips to that corner, which makes "none" the right radius
+         for what lands on it — square, and the body draws the curve. The ask
+         travels down as a corner claim (see group.jsx) so a navi control
+         answers it wherever it sits inside. */
+      > [data-body][data-body-flush] {
+        > :first-child {
+          --x-corner-top-left-radius: 0;
+          --x-corner-top-right-radius: 0;
+        }
+        > :last-child {
+          --x-corner-bottom-right-radius: 0;
+          --x-corner-bottom-left-radius: 0;
         }
       }
     }
@@ -429,6 +467,11 @@ export const Box = (props) => {
   }
   if (body) {
     rest["data-body"] = "";
+    // Padding is what decides whether the content reaches the body's own
+    // corners — see the corner claims in this file's CSS.
+    if (!PADDING_PROP_NAMES.some((name) => isNonZeroSpacing(rest[name]))) {
+      rest["data-body-flush"] = "";
+    }
   }
 
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -984,6 +1027,25 @@ const shouldInjectSeparatorBetween = (left, right) => {
     return false;
   }
   if (isValidElement(right) && right.props?.hidden) {
+    return false;
+  }
+  return true;
+};
+
+const PADDING_PROP_NAMES = [
+  "padding",
+  "paddingX",
+  "paddingY",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+];
+const isNonZeroSpacing = (value) => {
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+  if (value === 0 || value === "0" || value === "none") {
     return false;
   }
   return true;

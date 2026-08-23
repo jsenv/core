@@ -22,12 +22,6 @@
         margin: 0 0 12px;
         font-size: 1.3rem;
       }
-      .page_row {
-        margin-bottom: 8px;
-        padding: 14px 12px;
-        background: rgba(255, 255, 255, 0.75);
-        border-radius: 8px;
-      }
       .bar_content {
         display: flex;
         width: 100%;
@@ -50,6 +44,8 @@
       import {
         FixedBar,
         Link,
+        List,
+        ListItem,
         Nav,
         Route,
         RouteTransitionArea,
@@ -64,19 +60,25 @@
 
       defineRouteTransition(A_ROUTE, B_ROUTE, "slide-x");
 
-      const LongPage = ({ title, color, rows }) => (
+      const LongPage = ({ title, color, rows, prefix }) => (
         <div className="page" style={{ background: color }}>
           <h1 className="page_title">{title}</h1>
-          {Array.from({ length: rows }, (_, index) => (
-            <div className="page_row" key={index}>
-              {title} — ligne {index + 1}
-            </div>
-          ))}
+          <List itemTransition separator>
+            {Array.from({ length: rows }, (_, index) => (
+              <ListItem key={index} id={`${prefix}${index}`}>
+                {title} — ligne {index + 1}
+              </ListItem>
+            ))}
+          </List>
         </div>
       );
 
-      const APage = () => <LongPage title="Page A" color="#5b8dd9" rows={40} />;
-      const BPage = () => <LongPage title="Page B" color="#63b672" rows={40} />;
+      const APage = () => (
+        <LongPage title="Page A" color="#5b8dd9" rows={200} prefix="a" />
+      );
+      const BPage = () => (
+        <LongPage title="Page B" color="#63b672" rows={200} prefix="b" />
+      );
 
       const AppIndex = () => {
         useLayoutEffect(() => {

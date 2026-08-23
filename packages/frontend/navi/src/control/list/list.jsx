@@ -215,7 +215,26 @@ const css = /* css */ `
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
-    border-radius: var(--x-list-border-radius);
+    /* Squared from the outside, corner by corner: whoever draws the surface
+       the list is laid on says which corners are the list's to draw (a popup's
+       body does, see box.jsx), and each corner falls back to the list's own
+       radius when nothing asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--x-list-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--x-list-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--x-list-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--x-list-border-radius)
+    );
 
     transition: opacity 0.2s ease;
     /* overflow:hidden is required on the container (not the inner scroll element)
@@ -224,6 +243,13 @@ const css = /* css */ `
     overflow: hidden;
 
     .navi_list_scroll_container {
+      /* The ask stops here: this element is inside the list's frame, so a row
+         or a control it holds is not at the surface's corner. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       width: inherit;
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
@@ -697,9 +723,19 @@ const css = /* css */ `
      without being contained animate across the page (the pictures live in the
      top layer, where no overflow of the document reaches them), which is worse
      than not animating at all. So a browser with no nested groups gets no name
-     either, and the change simply happens. */
+     either, and the change simply happens.
+
+     Named for a change of the list's own, and for that alone: while the PAGES
+     are the ones moving — a route transition, a route travel — the list is part
+     of what travels, and a picture of its own is precisely what does not
+     travel. A page is carried by its own picture; anything named inside it is
+     lifted out of that picture into a group of its own, which stays where it
+     was captured while the page slides away under it. So the names are dropped
+     for the length of such a movement and the list crosses the screen with the
+     page, as a block. */
   @supports (view-transition-group: contain) {
-    .navi_list_container[data-item-transition] {
+    :root:not([data-navi-route-transition], [data-navi-route-travel])
+      .navi_list_container[data-item-transition] {
       /* The list needs a name to be a group at all; which name does not matter,
          only that no other element in the document carries it. */
       view-transition-name: match-element;
