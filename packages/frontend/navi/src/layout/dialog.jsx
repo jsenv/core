@@ -59,8 +59,10 @@
 import {
   applyNewPosition,
   createPubSub,
+  findEvent,
   getElementSignature,
   getPositionedParent,
+  isTouchDrivenEvent,
   parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
@@ -1223,6 +1225,11 @@ const useDialogProps = (props) => {
       // handled generically by applyNewPosition itself (dispatches
       // navi_position_change on every call) — nothing to do here.
     };
+    // Cleared here rather than on close, where the box is deliberately left
+    // frozen at the size it was closing at (see the closing function's own
+    // comment): this opening has its own content to be measured against, and
+    // measuring it inside last time's box would answer with last time's size.
+    unfreezeSize(dialogEl);
     positionDialog();
     if (sizing === "frozen") {
       // After positionDialog: the caps it writes
@@ -1305,7 +1312,36 @@ const useDialogProps = (props) => {
       !silent && hasCssTransitionAnimation
         ? suppressPointerEventsDuringTransition(dialogEl)
         : null;
-    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
+    // Focus is normally given as early as possible — but on a touch screen
+    // it is also what brings the on-screen keyboard up, and the keyboard
+    // shrinks the very viewport the dialog was just placed against. Given in
+    // the same tick as the placement, the two land together: the dialog is
+    // still arriving when the room under it changes, and it re-places itself
+    // mid-entrance. One animation frame is enough to separate them — the
+    // dialog is painted where it belongs, and the keyboard then shrinks a box
+    // that has stopped moving.
+    //
+    // Read off THIS opening's own event chain, not off the device: a hybrid
+    // tablet has a touchscreen and a trackpad, and every device-level signal
+    // (pointer: coarse, coarsePointerSignal) answers the same for both. The
+    // open event still remembers which one was used — that is what the chain
+    // is for — and only the tap brings a keyboard up. An opening with no
+    // pointer in it at all (a keyboard shortcut, defaultOpen, an app calling
+    // open()) is not one either: nothing about it is going to raise a virtual
+    // keyboard.
+    let restoreFocus;
+    if (findEvent(e, isTouchDrivenEvent)) {
+      const focusFrameId = setTimeout(() => {
+        restoreFocus = openController.transferFocusOnOpen(dialogEl);
+      }, 150);
+      // Closed within that single frame — nothing was transferred, so there
+      // is nothing to restore either.
+      addCleanup(() => {
+        clearTimeout(focusFrameId);
+      });
+    } else {
+      restoreFocus = openController.transferFocusOnOpen(dialogEl);
+    }
 
     // isModal outside-click detection (see this file's top comment for why
     // this is a plain document-level listener rather than anything
@@ -1390,9 +1426,16 @@ const useDialogProps = (props) => {
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
-      // The freeze only ever holds for one opening: the next one has its own
-      // content to be measured against.
-      unfreezeSize(dialogEl);
+      // Held at the size it has right now, for the whole way out. cleanup()
+      // below already stops the JS repositioning, but the size is CSS-driven
+      // (--x-dialog-max-height, and `height` outright under expandY) and
+      // keeps following the visual viewport on its own — so a dialog closed
+      // while the keyboard is up grows back to fill the room the keyboard is
+      // giving back, WHILE fading out. Coherent, and still wrong to watch: a
+      // box being dismissed has nothing left to adapt to, and the growth
+      // reads as something happening at the exact moment nothing should. The
+      // next opening clears it (see openEffect's own unfreezeSize).
+      freezeSize(dialogEl);
       cancelOpenInteractionSuppression?.();
       if (hasCssTransitionAnimation) {
         suppressPointerEventsDuringTransition(dialogEl);
@@ -1406,7 +1449,7 @@ const useDialogProps = (props) => {
           },
         );
       }
-      restoreFocus(closeEvent);
+      restoreFocus?.(closeEvent);
       cleanup();
     };
   };

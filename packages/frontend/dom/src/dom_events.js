@@ -103,6 +103,42 @@ export const chainEvent = (customEvent, parentEvent) => {
 };
 
 /**
+ * Whether `event` was caused by a finger — a predicate for findEvent, so a
+ * question about a whole interaction reads as
+ * `findEvent(openEvent, isTouchDrivenEvent)`.
+ *
+ * Asked of the interaction and not of the device (a media query, a pointer:
+ * coarse signal) on purpose: a hybrid tablet has both a touchscreen and a
+ * trackpad, and answers "coarse" whichever one was just used. What matters is
+ * which one WAS used — a tap brings the on-screen keyboard up, the trackpad
+ * next to it does not.
+ *
+ * Three readings, because no single one covers every path from a finger to an
+ * event:
+ * - a touch* event says it outright;
+ * - `pointerType` says it on a PointerEvent, which "click" also is in some
+ *   engines and not in others — hence not the only reading;
+ * - `sourceCapabilities.firesTouchEvents` is what is left for the compatibility
+ *   mouse events a tap synthesizes, where nothing else remembers the finger.
+ *   Absent outside Chromium, where it costs nothing: the readings above have
+ *   already answered by then, or there was no pointer event to answer about.
+ */
+export const isTouchDrivenEvent = (event) => {
+  if (!event) {
+    return false;
+  }
+  if (typeof event.type === "string" && event.type.startsWith("touch")) {
+    return true;
+  }
+  // "" on a pointer event the engine could not attribute — not an answer, so
+  // it falls through to the last reading rather than being read as "not touch".
+  if (event.pointerType) {
+    return event.pointerType === "touch";
+  }
+  return event.sourceCapabilities?.firesTouchEvents === true;
+};
+
+/**
  * Returns true if the event itself or any event in its chain matches the predicate.
  *
  * The full chain checked (oldest to newest) is:
