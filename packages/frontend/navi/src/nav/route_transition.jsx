@@ -119,6 +119,21 @@ const css = /* css */ `
     view-transition-name: navi-route-transition;
   }
 
+  /* A named descendant — a row named for a reorder gesture, a thumbnail named
+     for a morph — is a hole in the area's picture and a group of its own at the
+     top of the tree: it stands still and cross-fades on its own clock while the
+     pages move. Nested groups put it back INSIDE the area's picture, so it
+     travels with the pages and is cut at their edge. Said here rather than
+     erasing the name: a name inside the area is legitimate, and "contain" says
+     "these move with the page" where "none" would say "these do not exist". A
+     browser without nested groups is warned instead (see
+     warnAboutNamesEscapingArea). */
+  @supports (view-transition-group: contain) {
+    [data-navi-route-transition-area] {
+      view-transition-group: contain;
+    }
+  }
+
   /* Only while a transition of OURS is playing: everything below changes how
      the document animates, and the document belongs to the application the
      rest of the time. */
@@ -154,6 +169,12 @@ const css = /* css */ `
       /* The pages are cut at the edge of the area they move in. Said HERE and
          nowhere else: these pictures are drawn in the top layer, so no
          overflow on any element of the document can reach them. */
+      overflow: clip;
+    }
+    /* The nested groups of named descendants, cut at that same edge. On its own
+       rule: a selector a browser cannot parse takes the whole list it is
+       written in down with it, and the pages must be cut everywhere. */
+    &::view-transition-group-children(navi-route-transition) {
       overflow: clip;
     }
     &::view-transition-group(navi-route-transition) {
@@ -915,7 +936,7 @@ const beginTransition = ({ page, direction, type, duration }) => {
   // something that has already happened.
   const renderWait = armRouteRenderWait();
   // What the browser ACTUALLY captured, read once the pictures exist: it is
-  // the only place the two silent misconfigurations show. Both are about the
+  // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
   const viewTransitionReady = () => {
     const capturedNames = capturedViewTransitionNames();
@@ -926,6 +947,7 @@ const beginTransition = ({ page, direction, type, duration }) => {
           `The element marked ${TRANSITION_AREA_ATTRIBUTE} was not captured, so the movement plays on nothing. An element is captured only if it generates a box: \`display: contents\` (or an element not rendered) cannot be the area — its rectangle is what gets photographed and clipped.`,
         );
       }
+      warnAboutNamesEscapingArea(areaElement, capturedNames);
       return;
     }
     for (const name of capturedNames) {
@@ -1012,6 +1034,46 @@ const capturedViewTransitionNames = () => {
     names.add(pseudoElement.slice(nameStart + 1, -1));
   }
   return names;
+};
+
+// Nested groups keep a name written inside the area inside its picture (see
+// the @supports block in the CSS above). Without them the name escapes to the
+// top of the ::view-transition tree and the element it belongs to stands still,
+// fading on its own, while the pages move under it.
+const NESTED_GROUPS_SUPPORTED = window.CSS.supports(
+  "view-transition-group",
+  "contain",
+);
+const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
+  if (NESTED_GROUPS_SUPPORTED) {
+    return;
+  }
+  let escapedName = null;
+  for (const name of capturedNames) {
+    if (name === "root" || name === AREA_NAME) {
+      continue;
+    }
+    escapedName = name;
+    break;
+  }
+  // A name captured next to the area is not necessarily inside it — a bar the
+  // application animates on the same clock is named on purpose. The subtree is
+  // walked only once something is there to find, so the common case reads
+  // nothing.
+  if (!escapedName) {
+    return;
+  }
+  for (const descendant of areaElement.querySelectorAll("*")) {
+    const { viewTransitionName } = getComputedStyle(descendant);
+    if (!viewTransitionName || viewTransitionName === "none") {
+      continue;
+    }
+    warnOnce(
+      "names-escaping-area",
+      `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and this browser has no nested groups (view-transition-group: contain): the element it names is lifted out of the area's picture, so it stands still and fades on its own while the pages move. Give that name only for the length of the gesture it serves, or drop it while a route transition plays (:root[${TRANSITION_ATTRIBUTE}] { view-transition-name: none }).`,
+    );
+    return;
+  }
 };
 
 // Said once per kind, whatever the number of navigations: a misconfiguration
