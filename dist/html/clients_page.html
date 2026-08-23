@@ -138,23 +138,6 @@ tr:last-child td {
   background: #1d4ed8;
 }
 
-.picker-filter {
-  box-sizing: border-box;
-  width: 100%;
-  font: inherit;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  padding: 8px 10px;
-}
-
-.pagepick {
-  text-align: left;
-  word-break: break-all;
-  width: 100%;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
 .monitor {
   color: #2563eb;
   white-space: nowrap;
@@ -254,6 +237,16 @@ ul.list li:last-child {
       <tbody id="other-rows"></tbody>
     </table>
 
+    <h2>Headless browsers</h2>
+    <p class="intro">
+      Browsers driven by a program — a test run, a screenshot script — rather
+      than by someone looking at them.
+    </p>
+    <table>
+      <thead id="head3"></thead>
+      <tbody id="headless-rows"></tbody>
+    </table>
+
     <dialog id="dlg">
       <div class="dlg-head">
         <strong id="dlg-title"></strong>
@@ -264,8 +257,11 @@ ul.list li:last-child {
       <div class="dlg-body" id="dlg-body"></div>
     </dialog>
 
-    <script type="module">const selfRows = document.getElementById("self-rows");
+    <script type="module">import { openPagePicker } from "../page_picker.js";
+
+const selfRows = document.getElementById("self-rows");
       const otherRows = document.getElementById("other-rows");
+      const headlessRows = document.getElementById("headless-rows");
       // The monitoring script (injected into this page too) stores our own id.
       let selfId = null;
       try {
@@ -280,6 +276,7 @@ ul.list li:last-child {
       </tr>`;
       document.getElementById("head").innerHTML = headHtml;
       document.getElementById("head2").innerHTML = headHtml;
+      document.getElementById("head3").innerHTML = headHtml;
       const COLSPAN = 8;
 
       const ago = (ts) => {
@@ -446,16 +443,26 @@ ul.list li:last-child {
       const render = (clients) => {
         lastClients = clients;
         const self = selfId ? clients.find((d) => d.id === selfId) : null;
-        // Others ordered by when they first connected, so rows don't reshuffle.
+        // Ordered by when they first connected, so rows don't reshuffle.
+        const byFirstSeen = (a, b) => a.firstSeen - b.firstSeen;
+        // A headless browser is a program's, not a person's: it comes and goes
+        // with a test run, so it gets its own table instead of pushing the
+        // clients someone is actually browsing with out of sight.
         const others = clients
-          .filter((d) => d !== self)
-          .sort((a, b) => a.firstSeen - b.firstSeen);
+          .filter((d) => d !== self && !d.headless)
+          .sort(byFirstSeen);
+        const headless = clients
+          .filter((d) => d !== self && d.headless)
+          .sort(byFirstSeen);
         selfRows.innerHTML = self
           ? rowHtml(self)
           : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
         otherRows.innerHTML = others.length
           ? others.map(rowHtml).join("")
           : `<tr><td class="empty" colspan="${COLSPAN}">No other client has connected.</td></tr>`;
+        headlessRows.innerHTML = headless.length
+          ? headless.map(rowHtml).join("")
+          : `<tr><td class="empty" colspan="${COLSPAN}">No headless browser has connected.</td></tr>`;
       };
 
       // Dialogs (all tabs / recent activity / user agent).
@@ -540,68 +547,33 @@ ul.list li:last-child {
           // dev server gone — ignore
         }
       };
-      // The .html pages available to navigate to (fetched once, lazily).
-      let navigablePages = null;
-      const loadPages = async () => {
-        if (navigablePages) {
-          return navigablePages;
-        }
-        try {
-          navigablePages = await (await fetch("/.internal/pages.json")).json();
-        } catch {
-          navigablePages = [];
-        }
-        return navigablePages;
-      };
       const shortLabel = (d) => {
         const parts = [d.os && d.os.name, d.runtime && d.runtime.name].filter(
           Boolean,
         );
         return parts.length ? parts.join(" ") : d.id.slice(0, 8);
       };
-      // A searchable list of pages; picking one navigates the client's active
-      // tab there (tabId from activeTab so only that tab moves).
-      const openNavigateDialog = async (client) => {
-        dlgTitle.textContent = `Navigate ${shortLabel(client)} to…`;
-        dlgCopy.style.display = "none";
-        dlgBody.innerHTML = `
-          <input class="picker-filter" id="page-filter" type="search" placeholder="Filter pages…" />
-          <ul class="list" id="page-list"></ul>`;
-        dlg.showModal();
-        const pages = await loadPages();
-        const listEl = document.getElementById("page-list");
-        const filterEl = document.getElementById("page-filter");
-        const renderPages = (query) => {
-          const needle = query.trim().toLowerCase();
-          const matches = needle
-            ? pages.filter((p) => p.toLowerCase().includes(needle))
-            : pages;
-          listEl.innerHTML = matches.length
-            ? matches
-                .slice(0, 300)
-                .map(
-                  (p) =>
-                    `<li><button class="btn pagepick" data-url="${escapeHtml(p)}">${escapeHtml(p)}</button></li>`,
-                )
-                .join("")
-            : '<li class="muted">No page matches.</li>';
-        };
-        renderPages("");
-        filterEl.oninput = () => renderPages(filterEl.value);
-        filterEl.focus();
-        listEl.onclick = (event) => {
-          const button = event.target.closest("button.pagepick");
-          if (!button) {
-            return;
-          }
-          sendCommand({
-            clientId: client.id,
-            tabId: client.activeTab ? client.activeTab.id : null,
-            type: "navigate",
-            url: button.getAttribute("data-url"),
-          });
-          dlg.close();
-        };
+      // Which page to send a client to is the same question cmd+K asks on any
+      // dev-served page, so it is the same tree that answers it (see
+      // protocol_file/client/page_picker.js) — filters, folding and all. Only
+      // the ending differs: the url goes to the client's active tab (tabId from
+      // activeTab, so no other tab moves) instead of to this window. No href on
+      // the rows for that very reason: a click here must not take THIS browser
+      // to a page meant for another one.
+      const openNavigateDialog = (client) => {
+        openPagePicker({
+          title: `Navigate ${shortLabel(client)} to…`,
+          placeholder: "Go to page…",
+          hereUrl: client.activeTab ? client.activeTab.url : null,
+          onPick: (page) => {
+            sendCommand({
+              clientId: client.id,
+              tabId: client.activeTab ? client.activeTab.id : null,
+              type: "navigate",
+              url: page.url,
+            });
+          },
+        });
       };
 
       document.addEventListener("click", async (event) => {

@@ -906,6 +906,13 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
+// A browser driven by a program rather than by someone looking at it: a test
+// run, a screenshot script. Chromium says so in its user-agent ("HeadlessChrome"
+// / "Headless"), the others do not — so the reporter also sends
+// navigator.webdriver, which every automated browser sets, and either one is
+// enough to classify the client (see the headless flag on the record).
+const isHeadlessUserAgent = (userAgent) => /Headless/i.test(userAgent);
+
 // The machine the dev server runs on, talking to itself: the main client. A
 // phone (or any other device) reaching the server over the network reports
 // with the machine's LAN address instead — which is why the ip is kept on
@@ -939,6 +946,10 @@ const jsenvPluginClientMonitoring = () => {
         userAgent,
         runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
+        // Automated browser (test run, script) rather than someone browsing;
+        // set from the user-agent here, and again from navigator.webdriver when
+        // a report brings it (the only signal for headless firefox/webkit).
+        headless: isHeadlessUserAgent(userAgent),
         // The address the reports come from; request.ipForwarded when a proxy
         // sits in between, so the client's own address is kept, not the proxy's.
         ip: request.ipForwarded || request.ip,
@@ -958,6 +969,7 @@ const jsenvPluginClientMonitoring = () => {
         client.userAgent = userAgent;
         client.runtime = runtimeFromRequest(request);
         client.os = osFromUserAgent(userAgent);
+        client.headless = client.headless || isHeadlessUserAgent(userAgent);
       }
       // A device changes address (wifi drop, DHCP): the record follows it.
       const ip = request.ipForwarded || request.ip;
@@ -1076,6 +1088,7 @@ const jsenvPluginClientMonitoring = () => {
       // parsed { name, version } so pages can show a friendly browser/OS
       runtime: client.runtime,
       os: client.os,
+      headless: client.headless,
       ip: client.ip,
       // The main client — the machine the dev server runs on, talking to
       // itself over localhost.
@@ -1133,6 +1146,11 @@ const jsenvPluginClientMonitoring = () => {
     const wasOnline = !firstEver && isOnline(client);
     client.everSeen = true;
     client.lastSeen = now();
+    // navigator.webdriver, reported once per batch: true for any browser under
+    // automation, including the headless firefox/webkit the user-agent hides.
+    if (body.webdriver === true) {
+      client.headless = true;
+    }
 
     updateTab(client, body.tab);
     pruneTabs(client);
@@ -1391,6 +1409,9 @@ const jsenvPluginPageSwitcher = () => {
       html: (urlInfo) => {
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         injectJsenvScript(htmlAst, {
+          // A module: the tree it opens is the shared page picker
+          // (protocol_file/client/page_picker.js), which it imports.
+          type: "module",
           src: clientFileUrl$1,
           pluginName: "jsenv:page_switcher",
         });
