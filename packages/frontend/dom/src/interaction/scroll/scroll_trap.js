@@ -1,13 +1,33 @@
 import { getPaddingSizes } from "../../size/get_padding_sizes.js";
+import { trapScrollGestureInside } from "./scroll_gesture_trap.js";
 import { getStyle, setStyles } from "../../style/dom_styles.js";
 import { isScrollable } from "./is_scrollable.js";
 import { getSelfAndAncestorScrolls } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
 
+// "gesture": cancel the scroll gestures aimed at the background, keeping it
+// scrollable (see scroll_gesture_trap.js) — only possible when a backdrop
+// covers it.
+// "overflow": hide the overflow of every scroll container behind the overlay.
+// Set this to "overflow" to put every scroll lock on that single strategy.
+const SCROLL_LOCK_STRATEGY = "gesture";
+
 /**
  * Prevents scrolling on all scrollable containers that are ancestors of (or
  * siblings preceding) `element`. Used when an overlay (popover, dialog) is
  * open and background scroll should be disabled.
+ *
+ * **Two strategies, and why the gesture one comes first**
+ * Hiding the overflow makes the scroller unable to scroll, and a scroller that
+ * cannot scroll has no sticky offsets: every `position: sticky` element behind
+ * the overlay drops back to its flow position — off screen, since the page
+ * stays visually scrolled where it was. So whenever a backdrop covers the
+ * background (`backdrop`), the lock is done by cancelling scroll gestures
+ * (`scroll_gesture_trap.js`): nothing in the page moves, sticky included, and
+ * there is no scrollbar to compensate for. The overflow lock below is what
+ * remains when nothing covers the background — a gesture trap would then let
+ * the user scroll by dragging the scrollbar of a container they can still see
+ * and reach. `SCROLL_LOCK_STRATEGY` forces that overflow lock everywhere.
  *
  * **Why padding instead of scrollbar-gutter?**
  * `scrollbar-gutter: stable` would be the modern, CSS-native way to reserve
@@ -30,9 +50,23 @@ import { measureScrollbar } from "./scrollbar_size.js";
  *   inside this element (itself included). For an overlay confined to a local
  *   container rather than the viewport: the container's own scroll must stop,
  *   the rest of the page keeps scrolling as usual.
+ * @param {true|HTMLElement} [options.backdrop] - What covers the background
+ *   while the overlay is open: the backdrop element, or `true` when the browser
+ *   paints it itself (a modal dialog's `::backdrop`). Enables the gesture
+ *   strategy described above.
  * @returns {() => void} Cleanup function that restores all modified styles.
  */
-export const trapScrollInside = (element, { boundaryElement } = {}) => {
+export const trapScrollInside = (
+  element,
+  { boundaryElement, backdrop } = {},
+) => {
+  if (backdrop && SCROLL_LOCK_STRATEGY === "gesture") {
+    return trapScrollGestureInside(element, {
+      boundaryElement,
+      backdropElement: backdrop === true ? null : backdrop,
+    });
+  }
+
   const cleanupCallbackSet = new Set();
 
   // Collect every element to lock first (preceding scrollable siblings + all

@@ -1136,7 +1136,7 @@ const usePopoverProps = (props) => {
     };
 
     if (scrollCapture) {
-      addCleanup(trapScrollInside(popoverEl));
+      addCleanup(trapScrollInside(popoverEl, { backdrop: backdropEl }));
     }
     if (focusCapture) {
       addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));

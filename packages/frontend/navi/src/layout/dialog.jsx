@@ -255,6 +255,11 @@ const css = /* css */ `
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
 
+    /* A gesture landing on the dialog belongs to the dialog: what it cannot
+       scroll (a short body, an axis with nowhere to go) must not travel to
+       whatever is behind. */
+    overscroll-behavior: none;
+
     /* Docking answers a different question than --dialog-max-width: a sheet
        spans its container's full width, flush against the two side edges —
        that shape IS the mode — while the caller's ceiling was an answer about
@@ -1139,7 +1144,13 @@ const useDialogProps = (props) => {
       );
     }
     if (scrollCapture) {
-      addCleanup(trapScrollInside(dialogEl));
+      // A modal dialog always has its own ::backdrop; the custom renderer has
+      // the backdrop element when it renders one.
+      addCleanup(
+        trapScrollInside(dialogEl, {
+          backdrop: isModal || backdropEl,
+        }),
+      );
     } else if (!isModal) {
       // A local dialog is confined to its positioned ancestor, and so is its
       // backdrop (inset: 0 covers the scrollport, not the scrolled content):
