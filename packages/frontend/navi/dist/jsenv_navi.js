@@ -22827,7 +22827,15 @@ const setupBrowserIntegrationViaHistory = ({
   };
 
   let abortController = null;
-  const handleRoutingTask = (url, options) => {
+  const handleRoutingTask = (target, options) => {
+    // Everything below this line reasons on the URL as a whole: it is compared
+    // to window.location.href, looked up in the history stack, written into the
+    // document url signal and parsed there. A relative target ("/", "../x")
+    // would silently lose every one of those — the browser would still resolve
+    // it in pushState, but nothing else here would. So it is resolved once, at
+    // the single door every navigation goes through, rather than by each caller
+    // (navBack's fallback in particular arrives here raw).
+    const url = new URL(target, window.location.href).href;
     // Decided before anything is announced: an elided push IS the traversal it
     // becomes, and the traversal will make its own announcements when the
     // browser answers — a before/after cycle here would be about a navigation
@@ -55408,7 +55416,12 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
         /* The list scrolls inside the popover */
         .navi_list_container {
           width: 100%;
-          border-radius: max(
+          /* The list's radius var, not border-radius itself: the longhands it
+             feeds are what read the --x-corner-*-radius claims coming from
+             outside (a header/footer covering a corner, a flush body — see
+             box.jsx). Writing the shorthand here would flatten those four
+             longhands back to one curve and square nothing. */
+          --list-border-radius: max(
             0px,
             var(--picker-border-radius) - var(--picker-border-width)
           );
@@ -55474,7 +55487,9 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
 
       .navi_list_container {
         width: 100%;
-        border-radius: max(
+        /* See the popover block above: the var, not the shorthand, so the
+           corner claims survive. */
+        --list-border-radius: max(
           0px,
           var(--picker-border-radius) - var(--picker-border-width)
         );

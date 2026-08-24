@@ -58,7 +58,12 @@ const css = /* css */ `
         /* The list scrolls inside the popover */
         .navi_list_container {
           width: 100%;
-          border-radius: max(
+          /* The list's radius var, not border-radius itself: the longhands it
+             feeds are what read the --x-corner-*-radius claims coming from
+             outside (a header/footer covering a corner, a flush body — see
+             box.jsx). Writing the shorthand here would flatten those four
+             longhands back to one curve and square nothing. */
+          --list-border-radius: max(
             0px,
             var(--picker-border-radius) - var(--picker-border-width)
           );
@@ -124,7 +129,9 @@ const css = /* css */ `
 
       .navi_list_container {
         width: 100%;
-        border-radius: max(
+        /* See the popover block above: the var, not the shorthand, so the
+           corner claims survive. */
+        --list-border-radius: max(
           0px,
           var(--picker-border-radius) - var(--picker-border-width)
         );
