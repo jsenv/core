@@ -2,8 +2,8 @@
 
 ```js
 return {
-  without_transition: await openAndComeBack("plain_wm"),
-  with_transition: await openAndComeBack("animated_wm"),
+  without_transition: await walks.plain_wm(),
+  with_transition: await walks.animated_wm(),
 };
 ```
 

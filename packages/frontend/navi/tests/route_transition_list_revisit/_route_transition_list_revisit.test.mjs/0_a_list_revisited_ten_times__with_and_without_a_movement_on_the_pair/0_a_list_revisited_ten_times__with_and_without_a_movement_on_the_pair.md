@@ -2,8 +2,8 @@
 
 ```js
 return {
-  without_transition: await openAndComeBack("plain"),
-  with_transition: await openAndComeBack("animated"),
+  without_transition: await walks.plain(),
+  with_transition: await walks.animated(),
 };
 ```
 
