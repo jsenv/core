@@ -62,8 +62,15 @@ const css = /* css */ `
             0px,
             var(--picker-border-radius) - var(--picker-border-width)
           );
-          overflow: auto;
           overscroll-behavior: none;
+
+          /* Skipped when the list asks for overflow="visible": that ask is
+             about escaping every box the list sits in, and this selector is
+             specific enough to win over the list's own rules and silently put
+             the scroll back. */
+          &:not([data-overflow-visible]) {
+            overflow: auto;
+          }
         }
       }
 
@@ -121,8 +128,13 @@ const css = /* css */ `
           0px,
           var(--picker-border-radius) - var(--picker-border-width)
         );
-        overflow: auto;
         overscroll-behavior: none;
+
+        /* See the popover block above: overflow="visible" on the list must not
+           be overridden back into a scroll by this rule. */
+        &:not([data-overflow-visible]) {
+          overflow: auto;
+        }
       }
     }
 

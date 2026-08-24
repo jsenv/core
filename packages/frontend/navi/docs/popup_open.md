@@ -13,6 +13,9 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [When `open` is the right answer, and what it costs](#when-open-is-the-right-answer-and-what-it-costs)
 - [What the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)
 
+Where the focus goes once it is open is its own subject — see
+[autofocus.md](./autofocus.md).
+
 ## The popup owns its open state
 
 A `Dialog`/`Popover` with no `open` prop keeps its own open state and listens

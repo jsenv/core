@@ -256,7 +256,7 @@ export const createOpenController = (
         requestOpenEvent,
         debugInteraction,
       );
-      controller.transferFocusOnOpen = (el) => {
+      controller.transferFocusOnOpen = (el, { avoidEditable } = {}) => {
         // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
         // e.detail.eventChain (built by chainEvent above) to recover the
         // element a mousedown/click landed on. `e` itself is usually the raw
@@ -283,6 +283,7 @@ export const createOpenController = (
           findEvent(requestOpenEvent, isTouchDrivenEvent),
         );
         const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
+          avoidEditable,
           getDelay: (target) =>
             openedByTouch && isEditableTarget(target)
               ? FOCUS_DELAY_ON_KEYBOARD_MS

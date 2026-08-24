@@ -19,6 +19,11 @@ import {
  *
  * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
  * a fresh open, it only gets it back.
+ *
+ * A ladder that comes back empty — a container holding nothing focusable yet —
+ * places no focus, and says so on the container ([navi-autofocus-unplaced]),
+ * because content arriving a moment later would otherwise stand aside for a
+ * transfer that never happened (see claimUnplacedAutofocus).
  */
 
 // The element that held focus when a container closed is marked with
@@ -52,6 +57,31 @@ const clearAutofocusRestore = (containerEl) => {
     lastFocused.removeAttribute("navi-autofocus-last-focused");
   }
   return lastFocused;
+};
+
+// An opening whose transfer had nothing to give: the ladder came back empty, or
+// only found somewhere outside the container to leave the focus (see
+// transferFocus). Nothing inside was focused, so nothing inside owes the
+// opening anything either — what mounts or gets displayed right after may
+// claim the focus with its own autofocus (see use_auto_focus.js), instead of
+// standing aside for a transfer that placed nothing.
+const AUTOFOCUS_UNPLACED_ATTRIBUTE = "navi-autofocus-unplaced";
+
+/**
+ * "Did this container's opening leave the focus unplaced, and may I take it?" —
+ * asked by whatever appears inside it right after. Answering yes settles the
+ * debt: the first to ask is the one the opening was missing, and the ones after
+ * it are content appearing alongside, which has no more claim than usual.
+ *
+ * @param {HTMLElement} containerEl
+ * @returns {boolean}
+ */
+export const claimUnplacedAutofocus = (containerEl) => {
+  if (!containerEl.hasAttribute?.(AUTOFOCUS_UNPLACED_ATTRIBUTE)) {
+    return false;
+  }
+  containerEl.removeAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE);
+  return true;
 };
 
 /**
@@ -128,9 +158,15 @@ export const markAutofocusRestoreOnClose = (
  * walks them) is exactly what makes the container a last resort.
  *
  * @param {HTMLElement} containerEl
+ * @param {object} [options]
+ * @param {boolean} [options.avoidEditable]
+ *   Keeps step 2 off anything the virtual keyboard comes up for. Step 1 is
+ *   untouched: a field that says `autoFocus` still gets the keyboard, because
+ *   asking for it is the one way to mean it (see open_controller.js, which
+ *   turns this on for a surface docked on a small touch screen).
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-export const findFocusTarget = (containerEl) => {
+export const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
   // Not while there is anything else: what takes the focus only for want of
   // anything better ("last-resort") and what only takes it back ("restore").
   // Neither is dropped, both are simply tried later — step 3 below for the
@@ -167,7 +203,11 @@ export const findFocusTarget = (containerEl) => {
       return { target: askedFocusable, reason: "navi-autofocus" };
     }
   }
-  const focusable = findFocusable(containerEl, { exclude: skip });
+  const focusable = findFocusable(containerEl, {
+    exclude: avoidEditable
+      ? (element) => skip(element) || isEditableTarget(element)
+      : skip,
+  });
   if (focusable) {
     return { target: focusable, reason: "first focusable element" };
   }
@@ -234,9 +274,14 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
      * undefined when it focused straight away and there is nothing to take
      * back.
      */
-    transferFocus: (transferEvent, containerEl, { getDelay } = {}) => {
+    transferFocus: (
+      transferEvent,
+      containerEl,
+      { getDelay, avoidEditable } = {},
+    ) => {
       let target;
       let reason;
+      containerEl.removeAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE);
       const lastFocused = clearAutofocusRestore(containerEl);
       if (lastFocused) {
         // Through findFocusable: what was remembered may have become a wrapper
@@ -249,7 +294,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        const found = findFocusTarget(containerEl);
+        const found = findFocusTarget(containerEl, { avoidEditable });
         if (found) {
           reason = found.reason;
           target = found.target;
@@ -260,6 +305,17 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
           reason = "focused element before open (fallback)";
           target = focusedElement;
         }
+      }
+      // Whether the focus ends up inside is what the transfer is asked for; a
+      // container that has to say no leaves the mark saying so, for whatever
+      // appears inside it next (see claimUnplacedAutofocus). Both ways of
+      // saying no count: finding nothing at all, and the fallback above, which
+      // leaves the focus where it already was — outside.
+      if (
+        !target ||
+        !(containerEl === target || containerEl.contains(target))
+      ) {
+        containerEl.setAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE, "");
       }
       if (!target) {
         return undefined;

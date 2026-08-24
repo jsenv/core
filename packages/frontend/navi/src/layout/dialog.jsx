@@ -631,10 +631,20 @@ const css = /* css */ `
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
  *   `autoFocus="last-resort"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
- * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
- *   `focus_transfer.js` — `"last-resort"` focuses the dialog itself only if it
- *   has no other focusable descendant, `"restore"` keeps it out of the
- *   opening focus chain unless it held focus when the dialog closed.
+ * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] -
+ *   Where the keyboard goes when this dialog opens — one rung of the ladder in
+ *   `docs/autofocus.md`, which is what to read for the whole of it.
+ *   - `true` — the dialog element itself takes the keyboard, whatever it holds.
+ *     For a dialog whose content is READ before it is filled: the focus starts
+ *     at the top of the reading order and no virtual keyboard rises over it.
+ *   - `"last-resort"` — the dialog takes the keyboard only if it holds nothing
+ *     focusable of its own.
+ *   - `"restore"` — the dialog stays out of the opening focus chain unless it
+ *     held focus when it closed.
+ *   Docked on a small touch screen, the default already withdraws fields from
+ *   the choice: a bottom sheet is read before it is typed in, so the keyboard
+ *   goes to a field only when that field asks for it by name (`autoFocus` on
+ *   the field, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
@@ -1358,7 +1368,16 @@ const useDialogProps = (props) => {
     // entrance to be over. Decided by transferFocusOnOpen, the only place that
     // knows WHICH element is about to be focused (open_controller.js and its
     // FOCUS_DELAY_ON_KEYBOARD_MS).
-    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
+    //
+    // Docked, the keyboard costs more than a wait: it takes a third of a phone
+    // screen from a dialog that starts at the bottom edge, pushing whatever
+    // comes before the field — the title, the sentence saying why it is asked
+    // for — above the top edge before the dialog has even been looked at. So a
+    // docked dialog is READ first: the transfer only reaches a field that asked
+    // for the keyboard by name (see findFocusTarget's `avoidEditable`).
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl, {
+      avoidEditable: isDocked,
+    });
 
     // isModal outside-click detection (see this file's top comment for why
     // this is a plain document-level listener rather than anything

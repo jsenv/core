@@ -4,6 +4,7 @@ import { getElementSignature } from "@jsenv/dom";
 
 import { useDebugFocus } from "../../navi_debug.jsx";
 import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
+import { claimUnplacedAutofocus } from "./focus_transfer.js";
 
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.
@@ -84,10 +85,21 @@ export const useAutoFocus = (
     // added to a visible list), nothing else speaks for it — an autofocus it
     // declares is the only word there is, exactly like dialog content saying
     // where the keyboard goes when the dialog's transfer looks for it.
+    //
+    // Unless that owner came back empty-handed: a transfer that found nothing
+    // to focus inside the ancestor placed no focus to steal back, and marks
+    // itself as such (see claimUnplacedAutofocus in focus_transfer.js). What
+    // this element says is then the only word there is after all — this runs
+    // right after the transfer, which is exactly when content the transfer was
+    // too early to see arrives. "last-resort" stays out of it: it means "not me
+    // unless you have nothing else", a question the transfer's own ladder has
+    // already asked and answered.
     const { ancestor, ancestorType, becauseAncestorOpened } = e.detail;
     const isSelfAncestor = ancestor === focusableElement;
     if (becauseAncestorOpened && !isSelfAncestor) {
-      return () => {};
+      if (autoFocus === "last-resort" || !claimUnplacedAutofocus(ancestor)) {
+        return () => {};
+      }
     }
     if (autoFocus === "last-resort" && !isSelfAncestor) {
       // "not me, unless you have nothing else" is a question only whoever hands

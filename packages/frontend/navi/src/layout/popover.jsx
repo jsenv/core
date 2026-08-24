@@ -487,13 +487,20 @@ const css = /* css */ `
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
  *   so `autoFocus="last-resort"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
- * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
- *   `focus_transfer.js` — `"last-resort"` focuses the popover itself only if it
- *   has no other focusable descendant, `"restore"` keeps it out of the
- *   opening focus chain unless it held focus when the popover closed. `false`
- *   disables the open-time focus transfer entirely: nothing inside the popover
- *   receives focus, whoever had the keyboard keeps it — the combobox case,
- *   where suggestions open under an input being typed in.
+ * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] -
+ *   Where the keyboard goes when this popover opens — one rung of the ladder in
+ *   `docs/autofocus.md`, which is what to read for the whole of it.
+ *   - `true` — the popover element itself takes the keyboard, whatever it
+ *     holds. For a popover whose content is READ before it is filled: the focus
+ *     starts at the top of the reading order and no virtual keyboard rises over
+ *     it.
+ *   - `"last-resort"` — the popover takes the keyboard only if it holds nothing
+ *     focusable of its own.
+ *   - `"restore"` — the popover stays out of the opening focus chain unless it
+ *     held focus when it closed.
+ *   - `false` — no open-time focus transfer at all: nothing inside the popover
+ *     receives focus, whoever had the keyboard keeps it — the combobox case,
+ *     where suggestions open under an input being typed in.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was
