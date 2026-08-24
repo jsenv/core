@@ -166,6 +166,20 @@ export const useUIStateController = (
           })
         : ownUIStateSignal;
 
+      // The two-way half of a bound `signal` prop: setting it re-renders and
+      // re-syncs via state_prop_change, but with the same value → guarded as a
+      // no-op, so no loop. For a checkbox/radio the signal holds the boolean
+      // checked state.
+      const writeBoundSignal = (uiState) => {
+        const boundSignal = s.controlInfo?.signal;
+        if (!boundSignal) {
+          return;
+        }
+        boundSignal.value = s.controlInfo.signalHoldsChecked
+          ? uiState !== undefined
+          : uiState;
+      };
+
       const controller = {
         controlType,
         parentUIStateController,
@@ -236,16 +250,7 @@ export const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
-          // Write the new state back into a bound signal (the two-way `signal`
-          // prop). Setting it re-renders and re-syncs via state_prop_change, but
-          // with the same value → guarded as a no-op, so no loop. For a
-          // checkbox/radio the signal holds the boolean checked state.
-          const boundSignal = s.controlInfo?.signal;
-          if (boundSignal) {
-            boundSignal.value = s.controlInfo.signalHoldsChecked
-              ? currentUIState !== undefined
-              : currentUIState;
-          }
+          writeBoundSignal(currentUIState);
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             debugUIState(`calling uiAction for ${controlType}`, currentUIState);
@@ -406,6 +411,11 @@ export const useUIStateController = (
             }
           }
           if (isInternalEvent(e)) {
+            if (isPropagateDownEvent(e)) {
+              // A bound signal mirrors what the control holds, and what it
+              // holds just changed — see isPropagateDownEvent.
+              writeBoundSignal(newUIState);
+            }
             if (e.type === "facade_child_mount_sync") {
               const wasEmptyString =
                 currentUIState === "" && newUIState === undefined;
@@ -1073,12 +1083,12 @@ export const useUIGroupStateController = (
       // makes from its own setUIState (see useUIStateController's boundSignal),
       // for a group whose value is its children's put together.
       //
-      // Called from both paths a user-driven change can take — applyState when
-      // the change is notified outward, syncInternalState when the group only
-      // brings itself up to date — because either one can be the user
-      // answering. The paths that are NOT the user (a value prop pushed down,
-      // the initial push, mount/unmount) are excluded at each call site rather
-      // than guessed at here.
+      // Called from every path where what the group holds really moves:
+      // applyState when the change is notified outward, syncInternalState when
+      // the group only brings itself up to date, and the value arriving from
+      // above (see isPropagateDownEvent). Which one it is gets decided at each
+      // call site rather than guessed at here — the initial push and the
+      // mount/unmount syncs leave the signal alone.
       const writeBoundSignal = (newUIState) => {
         const boundSignal = s.props?.signal;
         if (boundSignal) {
@@ -1181,6 +1191,9 @@ export const useUIGroupStateController = (
             return;
           }
           applyState(groupUIState, e, { internalBehavior: true });
+          if (isPropagateDownEvent(e)) {
+            writeBoundSignal(groupUIState);
+          }
         },
         syncInternalState: (newUIState) => {
           const currentUIState = controller.uiState;
@@ -1810,6 +1823,27 @@ const INTERNAL_EVENT_SET = new Set([
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+
+/**
+ * A value handed DOWN to a control by whoever owns it: a picker filling its
+ * popup (on open, and again when Escape puts back what it held), a group
+ * placing its children, a reset cascading through them.
+ *
+ * Internal, so no reaction fires — nobody acted. But the control's state really
+ * did move, and a bound `signal` is that state's mirror rather than a reaction
+ * to it: leaving it behind makes the app and the control disagree about what is
+ * on screen, which is how a popup reopens on the tab the user cancelled out of.
+ * The way UP is deliberately not part of this: a picker's own signal is written
+ * when the picker commits, not while its popup is being played with.
+ */
+const PROPAGATE_DOWN_EVENT_SET = new Set([
+  "propagate_down_set_ui_state",
+  "propagate_down_reset_ui_state",
+  "propagate_down_clear_ui_state",
+]);
+const isPropagateDownEvent = (e) => {
+  return PROPAGATE_DOWN_EVENT_SET.has(e.type);
 };
 
 /**

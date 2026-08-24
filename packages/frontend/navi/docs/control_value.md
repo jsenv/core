@@ -46,6 +46,15 @@ const minutesSignal = useSignal(0);
 minutesSignal.value = 30;
 ```
 
+"Every change" includes the ones the control did not decide: a group placing
+its children, a picker filling its popup at open, and the same picker putting
+back what it held when Escape cancels. The signal mirrors the control, so it
+always says where the control actually is — which is what lets a settings sheet
+reopen on the tab it was left on (see
+[control_object.md](./control_object.md#a-settings-sheet)). What it does NOT
+mirror is a picker's popup being played with: a picker's own signal is written
+when the picker commits, on close.
+
 Both halves are worth knowing about, because each replaces a habit:
 
 - the write-back replaces `uiAction={(v) => (mySignal.value = v)}`;

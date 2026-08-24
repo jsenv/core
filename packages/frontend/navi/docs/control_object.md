@@ -11,6 +11,7 @@ whose value is an object needs in its popup.
 - [`<Form>`: the shape, plus a send](#form-the-shape-plus-a-send)
 - [Naming, and what a nameless group does](#naming-and-what-a-nameless-group-does)
 - [A picker whose value is an object](#a-picker-whose-value-is-an-object)
+- [A settings sheet](#a-settings-sheet)
 - [`Group` is not `ControlGroup`](#group-is-not-controlgroup)
 
 ## `<ControlGroup>`: the shape
@@ -112,6 +113,92 @@ Two things to get right:
   kind a scalar type and there is no group to distribute anything — the whole
   object lands on one control, which is how `"[object Object]"` ends up in a
   url.
+
+## A settings sheet
+
+A popup that is not one choice but a handful of settings — four tabs, a select,
+a field, a button that answers with a place — and ONE answer, which must reach
+the app only when the popup closes. The list behind it must not move while it is
+open, and Escape must leave things exactly as they were found.
+
+Nothing new is needed for that: it is the object picker above, with the group in
+its popup. A picker's `action` runs on close and only on close (its `uiAction`
+follows every gesture, which is what the popup shows), so what is inside acts on
+nothing until the user is done.
+
+```jsx
+<Picker
+  type="object"
+  mode="dialog"
+  value={zone}
+  ui={<ZoneSummary zone={zone} />}
+  action={save}
+>
+  <ControlGroup>
+    <Nav slideContainer="zone_slides" currentIndicator>
+      <Link slide="city">Ville</Link>…
+    </Nav>
+    <Input type="hidden" name="origin" signal={originSignal} />
+    <SlideContainer
+      id="zone_slides"
+      current={originSignal.value}
+      onCurrentChange={(area) => (originSignal.value = area)}
+    >
+      <Slide area="city">
+        <Input name="city" />
+      </Slide>
+      …
+    </SlideContainer>
+  </ControlGroup>
+</Picker>
+```
+
+```js
+// what `save` receives, on close and once
+{ origin: "city", city: "Antibes", radius: "30", department: "" }
+```
+
+**Which tab is showing is part of the answer.** The same fields mean different
+things depending on the tab they were filled on, so the tab is a key of the
+value like the rest — a sheet handing back `{ city: "Antibes" }` without saying
+which tab it was left on has not said what was chosen. A tab bar is a navigation
+(`<Nav slideContainer>` + `<Link slide>`), so nothing in it is a field: the
+current area reaches the value through an `<Input type="hidden">` bound to the
+signal the container's `current` follows. That is what a hidden field is for — a
+piece of the answer with no control to be read from, here because the tabs are
+places rather than choices. A tab bar made of radios needs none: it is a field
+already, under its own name.
+
+That signal is written in both directions, which is what makes the sheet reopen
+where it was left: a value handed DOWN to a control writes it too — on open, and
+when Escape puts back what the picker held — so the tabs go back to the answer
+rather than staying on the one that was being tried.
+
+**Every field answers, including the ones the current tab does not use.** A
+field on another tab stays mounted, keeps what was typed in it, and comes back
+in the object. Which of them count is read from `origin` by whoever receives the
+value — the group has no opinion about it, and does not need one. Deriving
+something narrower (a stored string, an id) is that reader's business too:
+`action` receives the object and stores whatever it wants, `value` hands the
+object back.
+
+A group CAN be worth a single value of its own — `aggregateChildStates` and
+`distributeChildUIState`, see the top of this file — and a sheet is precisely
+where that is the wrong reach: it throws away the state that makes the answer
+readable, starting with the tab.
+
+**A button inside is not a field.** The one asking for a position acts on the
+press, like anywhere else; what it answers goes into a control that IS a field
+(a read-only one showing the place it found), and the group picks it up from
+there.
+
+The façade stays on what is saved by reading the app's own state
+(`value={zone}` + a `ui` rendered from `zone`), while the picker holds the
+draft: the summary behind the open dialog then shows the answer, not the
+attempt.
+
+Seen working — the tabs, the geolocation button, the cancel — in
+`control/demos/picker/9_picker_settings_sheet_demo.html`.
 
 ## `Group` is not `ControlGroup`
 

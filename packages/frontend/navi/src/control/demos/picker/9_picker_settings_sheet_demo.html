@@ -37,17 +37,6 @@
         color: #555;
         font-size: 13px;
       }
-      /* Le panneau visible est celui de l'onglet coché. */
-      .zone_panel {
-        display: none;
-      }
-      .zone_sheet:has(input[value="department"]:checked) .zone_panel_department,
-      .zone_sheet:has(input[value="city"]:checked) .zone_panel_city,
-      .zone_sheet:has(input[value="city"]:checked) .zone_panel_radius,
-      .zone_sheet:has(input[value="here"]:checked) .zone_panel_here,
-      .zone_sheet:has(input[value="here"]:checked) .zone_panel_radius {
-        display: block;
-      }
     </style>
   </head>
   <body>
@@ -67,10 +56,11 @@
         Label,
         Link,
         Picker,
-        RadioGroup,
+        Nav,
         Select,
+        Slide,
+        SlideContainer,
         Text,
-        stateSignal,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
@@ -88,8 +78,9 @@
         );
       };
 
-      const zoneSignal = stateSignal("all", { id: "zone" });
-      const zoneInFormSignal = stateSignal("all", { id: "zone_in_form" });
+      const ZONE_INITIAL = { origin: "all" };
+      const zoneSignal = signal(ZONE_INITIAL);
+      const zoneInFormSignal = signal(ZONE_INITIAL);
       const DEMO_SIGNALS = [zoneSignal, zoneInFormSignal];
 
       const App = () => (
@@ -111,7 +102,7 @@
             <Button
               onClick={() => {
                 for (const demoSignal of DEMO_SIGNALS) {
-                  demoSignal.value = "all";
+                  demoSignal.value = ZONE_INITIAL;
                 }
               }}
             >
@@ -148,7 +139,7 @@
                 />
               </Field>
               <Text size="s" color="#666">
-                zoneSignal : <code>{zoneSignal.value}</code>
+                zoneSignal : <code>{JSON.stringify(zoneSignal.value)}</code>
               </Text>
             </Box>
             <CallLog entries={entries} onClear={clear} />
@@ -208,6 +199,7 @@
 
         return (
           <Picker
+            type="object"
             mode="dialog"
             // Le résumé lit ce qui est enregistré, pas ce qui est en train
             // d'être essayé dans la dialog.
@@ -221,78 +213,86 @@
             minWidth="220"
             {...rest}
           >
-            <ControlGroup
-              className="zone_sheet"
-              aggregateChildStates={aggregateZone}
-              distributeChildUIState={distributeZone}
-              flex="y"
-              spacing="m"
-              padding="m"
-              alignX="stretch"
-            >
-              <RadioGroup name="origin" flex spacing="s" defaultValue="all">
-                <ZoneTab value="all">Tous</ZoneTab>
-                <ZoneTab value="department">Département</ZoneTab>
-                <ZoneTab value="city">Ville</ZoneTab>
-                <ZoneTab value="here">Ma position</ZoneTab>
-              </RadioGroup>
+            <ControlGroup flex="y" spacing="m" padding="m" alignX="stretch">
+              <Nav slideContainer="zone_slides" currentIndicator spacing="m">
+                <Link slide="all">Tous</Link>
+                <Link slide="department">Département</Link>
+                <Link slide="city">Ville</Link>
+                <Link slide="here">Ma position</Link>
+              </Nav>
 
-              <div class="zone_panel zone_panel_department">
-                <Box flex="y" spacing="s" alignX="start">
-                  <Field vertical>
-                    <Label>Département</Label>
-                    <Select name="department" defaultValue="">
-                      <option value="">Choisir</option>
-                      <option value="06">06 — Alpes-Maritimes</option>
-                      <option value="13">13 — Bouches-du-Rhône</option>
-                      <option value="83">83 — Var</option>
-                    </Select>
-                  </Field>
-                  <Field as="label" flex alignY="center" spacing="s">
-                    <Input type="checkbox" name="periphery" value="around" />
-                    Départements limitrophes
-                  </Field>
-                </Box>
-              </div>
+              {/* Les onglets sont une navigation, pas un champ : l'onglet
+                  courant entre dans la valeur par ici. */}
+              <Input type="hidden" name="origin" signal={originSignal} />
 
-              <div class="zone_panel zone_panel_city">
-                <Box flex="y" spacing="s" alignX="start">
-                  <Field vertical>
-                    <Label>Ville</Label>
-                    <Input name="city" placeholder="Antibes" />
-                  </Field>
-                </Box>
-              </div>
+              <SlideContainer
+                id="zone_slides"
+                current={originSignal.value}
+                onCurrentChange={(area) => {
+                  originSignal.value = area;
+                }}
+                minHeight="150"
+              >
+                <Slide area="all">
+                  <Text size="s" color="#666">
+                    Tous les lieux.
+                  </Text>
+                </Slide>
+                <Slide area="department">
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field vertical>
+                      <Label>Département</Label>
+                      <Select name="department" defaultValue="">
+                        <option value="">Choisir</option>
+                        <option value="06">06 — Alpes-Maritimes</option>
+                        <option value="13">13 — Bouches-du-Rhône</option>
+                        <option value="83">83 — Var</option>
+                      </Select>
+                    </Field>
+                    <Field as="label" flex alignY="center" spacing="s">
+                      <Input type="checkbox" name="periphery" value="around" />
+                      Départements limitrophes
+                    </Field>
+                  </Box>
+                </Slide>
+                <Slide area="city">
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field vertical>
+                      <Label>Ville</Label>
+                      <Input name="city" placeholder="Antibes" />
+                    </Field>
+                  </Box>
+                </Slide>
+                <Slide area="here">
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field vertical>
+                      <Label>Commune détectée</Label>
+                      <Input name="here" readOnly signal={hereSignal} />
+                    </Field>
+                    <Button
+                      action={async () => {
+                        await new Promise((resolve) => {
+                          setTimeout(resolve, 800);
+                        });
+                        hereSignal.value = "Antibes (06)";
+                      }}
+                    >
+                      Utiliser ma position
+                    </Button>
+                  </Box>
+                </Slide>
+              </SlideContainer>
 
-              <div class="zone_panel zone_panel_here">
-                <Box flex="y" spacing="s" alignX="start">
-                  <Field vertical>
-                    <Label>Commune détectée</Label>
-                    <Input name="here" readOnly signal={hereSignal} />
-                  </Field>
-                  <Button
-                    action={async () => {
-                      await new Promise((resolve) => {
-                        setTimeout(resolve, 800);
-                      });
-                      hereSignal.value = "Antibes (06)";
-                    }}
-                  >
-                    Utiliser ma position
-                  </Button>
-                </Box>
-              </div>
-
-              <div class="zone_panel zone_panel_radius">
-                <Field vertical>
-                  <Label>Rayon</Label>
-                  <Select name="radius" defaultValue="10">
-                    <option value="5">5 km</option>
-                    <option value="10">10 km</option>
-                    <option value="30">30 km</option>
-                  </Select>
-                </Field>
-              </div>
+              {/* Monté quel que soit l'onglet : il garde ce qu'il montre, et
+                  revient dans la réponse même quand l'onglet ne s'en sert pas —
+                  c'est en la lisant qu'on décide s'il compte. */}
+              <Box
+                hidden={
+                  originSignal.value !== "city" && originSignal.value !== "here"
+                }
+              >
+                <RadiusField />
+              </Box>
 
               <Box flex spacing="s" alignX="end">
                 <Button command="--navi-cancel" variant="discrete">
@@ -305,86 +305,41 @@
         );
       };
 
-      const ZoneTab = ({ value, children }) => (
-        <Field as="label" flex alignY="center" spacing="xs">
-          <Input type="radio" value={value} />
-          {children}
-        </Field>
-      );
-
       const ZoneSummary = ({ zone }) => {
-        const [kind, first, second] = String(zone ?? "all").split("|");
-        if (kind === "department") {
+        const { origin, department, periphery, city, radius, here } = zone;
+        if (origin === "department" && department) {
           return (
             <Text>
-              {second === "around"
-                ? `${first} et limitrophes`
-                : `Département ${first}`}
+              {periphery
+                ? `${department} et limitrophes`
+                : `Département ${department}`}
             </Text>
           );
         }
-        if (kind === "city" || kind === "here") {
-          return <Text>{`${first} · ${second} km`}</Text>;
+        if (origin === "city" && city) {
+          return <Text>{`${city} · ${radius} km`}</Text>;
+        }
+        if (origin === "here" && here) {
+          return <Text>{`${here} · ${radius} km`}</Text>;
         }
         return <Text>Tous les lieux</Text>;
       };
 
+      // L'onglet montré. C'est le champ "origin" de la réponse, donc rouvrir
+      // la feuille — ou l'annuler — remet les slides là où la réponse les met.
+      const originSignal = signal("all");
       const hereSignal = signal(undefined);
 
-      // Ce que la feuille vaut : une chaîne, celle qui est stockée. L'onglet
-      // coché dit quels champs comptent ; un onglet incomplet (une ville pas
-      // encore saisie) vaut "tous les lieux" plutôt que rien.
-      const aggregateZone = (children) => {
-        const held = {};
-        for (const child of children) {
-          if (child.name) {
-            held[child.name] = child.uiState;
-          }
-        }
-        const { origin, department, periphery, city, radius, here } = held;
-        if (origin === "department" && department) {
-          return periphery
-            ? `department|${department}|around`
-            : `department|${department}`;
-        }
-        if (origin === "city" && city) {
-          return `city|${city}|${radius}`;
-        }
-        if (origin === "here" && here) {
-          return `here|${here}|${radius}`;
-        }
-        return "all";
-      };
-
-      // Et la même chaîne redescendue dans les champs — à l'ouverture, et
-      // quand Échap remet celle qui était là. Rendre ce que l'enfant a déjà,
-      // c'est le laisser tranquille : le rayon reste sur ce qu'il montrait
-      // même quand la valeur ne parle pas de rayon.
-      const distributeZone = (zone, child) => {
-        const [kind, first, second] = String(zone ?? "all").split("|");
-        const { name } = child;
-        if (name === "origin") {
-          return kind;
-        }
-        if (name === "department") {
-          return kind === "department" ? first : child.uiState;
-        }
-        if (name === "periphery") {
-          return kind === "department" && second === "around"
-            ? "around"
-            : undefined;
-        }
-        if (name === "city") {
-          return kind === "city" ? first : child.uiState;
-        }
-        if (name === "here") {
-          return kind === "here" ? first : child.uiState;
-        }
-        if (name === "radius") {
-          return kind === "city" || kind === "here" ? second : child.uiState;
-        }
-        return child.uiState;
-      };
+      const RadiusField = () => (
+        <Field vertical>
+          <Label>Rayon</Label>
+          <Select name="radius" defaultValue="10">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="30">30 km</option>
+          </Select>
+        </Field>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>
