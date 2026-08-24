@@ -82,17 +82,24 @@ itself.
 
 ## On a touch device: the surface is what one arrives on
 
-Where the keyboard is a virtual one — anything answering `pointer: coarse` — a
-popup opening drops step 3 of the ladder entirely: the focus goes where
-something ASKED for it, and otherwise to the surface itself.
+Where the keyboard is a virtual one — anything answering `pointer: coarse` — an
+arrival drops step 3 of the ladder entirely: the focus goes where something
+ASKED for it, and otherwise to the surface itself.
 
-The condition is the device, not the popup's shape and not the gesture that
-opened it. A virtual keyboard is a fact about the screen: it costs a third of
-the height whichever popup raised it, and a popup opened by the page loading —
-no pointer in it at all — is exactly the one that must not be answered "no
-keyboard here". Docking only makes the cost more visible (a bottom sheet is
-short, so there is less room to lose before the title goes), it is not what
-creates it.
+Every arrival, not just a popup opening. A slide travelling in (so a
+`RouteTravel` screen too) hands out the focus the same way and loses the same
+thing by landing on the first focusable — more of it, even, a screen having more
+above the fold than a popup. Its surface is the `SlideContainer` box, which is
+what takes the keyboard when the slide holds nothing that can, so the arrows
+keep working from there.
+
+The condition is the device, not the shape of what arrives and not the gesture
+that brought it. A virtual keyboard is a fact about the screen: it costs a third
+of the height whatever raised it, and an arrival with no pointer in it at all —
+a popup opened by the page loading, a travel asked for by code — is exactly the
+one that must not be answered "no keyboard here". Docking only makes the cost
+more visible (a bottom sheet is short, so there is less room to lose before the
+title goes), it is not what creates it.
 
 Withdrawing only the FIELDS would not be enough either. The first focusable is
 wherever the content happens to put it — and in a popup that explains before it
@@ -105,7 +112,8 @@ Nothing to pass, and nothing to remember per call site.
 
 ### Opting a field back in
 
-Some popups really are opened to type in: one comment box, one rename field.
+Some popups — and some screens — really are opened to type in: one comment box,
+one rename field.
 There, the field says so itself, and that beats the device — step 2 of the
 ladder comes before step 3 was ever skipped.
 

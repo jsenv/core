@@ -21855,11 +21855,11 @@ const markAutofocusRestoreOnClose = (
  * @param {object} [options]
  * @param {boolean} [options.skipFirstFocusable]
  *   Drops step 2 — the focus then goes where something ASKED for it, or to the
- *   last resort, which for a container is itself. For a surface that is read
- *   before it is reached: the first focusable is wherever the content happens
- *   to put it, so landing there scrolls whatever comes before it out of sight
- *   (see open_controller.js, which turns this on wherever the keyboard is a
- *   virtual one).
+ *   last resort, which for a container is itself. What arrives is read before
+ *   it is reached: the first focusable is wherever the content happens to put
+ *   it, so landing there scrolls whatever comes before it out of sight.
+ *   transferFocus turns this on by itself wherever the keyboard is a virtual
+ *   one — see the reasoning there.
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
 const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
@@ -21978,11 +21978,22 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
      * undefined when it focused straight away and there is nothing to take
      * back.
      */
-    transferFocus: (
-      transferEvent,
-      containerEl,
-      { getDelay, skipFirstFocusable } = {},
-    ) => {
+    transferFocus: (transferEvent, containerEl, { getDelay } = {}) => {
+      // Where the keyboard is a virtual one, an arrival lands on what ASKED for
+      // the focus, or on the surface — never on the first focusable that
+      // happens to be there. That element costs the top of what just arrived
+      // twice over: the browser scrolls it into view, and a field raises a
+      // keyboard taking a third of what is left, so the title and the sentence
+      // saying what this is about are gone before it has been looked at. A
+      // field that really is what one came for asks by name (step 2) and gets
+      // the keyboard anyway.
+      //
+      // The device, not the interaction (unlike the delay callers apply on top
+      // of this): whether focusing raises a keyboard over what arrived is true
+      // of the screen, and an arrival with no pointer in it at all — a popup
+      // opened by the page loading, a travel asked for by code — is precisely
+      // the one that must not be answered "no keyboard here".
+      const skipFirstFocusable = coarsePointerSignal.value;
       let target;
       let reason;
       containerEl.removeAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE);
@@ -29413,19 +29424,6 @@ const createOpenController = (
           findEvent(requestOpenEvent, isTouchDrivenEvent),
         );
         const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
-          // A popup is READ before it is reached wherever the keyboard is a
-          // virtual one. Landing on the first focusable there costs the top of
-          // the popup twice over: the browser scrolls that element into view,
-          // and a field raises a keyboard that takes a third of what is left —
-          // so the title and the sentence saying what this is about are gone
-          // before the popup has been looked at. Only something that ASKED for
-          // the focus is worth that, and asking is what `autoFocus` is.
-          //
-          // The device, not the opening (unlike the delay below): whether
-          // focusing raises a keyboard over the popup is true of the screen,
-          // and a popup opened by the page loading — no pointer in it at all —
-          // is precisely the one that must not be answered "no keyboard here".
-          skipFirstFocusable: coarsePointerSignal.value,
           getDelay: (target) =>
             openedByTouch && isEditableTarget(target)
               ? FOCUS_DELAY_ON_KEYBOARD_MS
