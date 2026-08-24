@@ -579,66 +579,17 @@ This prevents cross-test pollution and ensures clean state.`,
                   continue;
                 }
                 const otherRawParams = otherRoute.rawParamsSignal.value;
-                const otherRoutePrivateProperties =
-                  getRoutePrivateProperties(otherRoute);
 
                 // Check if this matching route extracts the parameter
                 if (paramName in otherRawParams) {
                   parameterExtractedByMatchingRoute = true;
                 }
 
-                // Check if this matching route is in the same family using parent-child relationships
-                const thisPatternObj = routePattern;
+                // Same family = same topmost ancestor
+                // (familyRoot, computed in setupRoutePatterns)
                 const otherPatternObj =
-                  otherRoutePrivateProperties.routePattern;
-
-                // Routes are in same family if they share a hierarchical relationship:
-                // 1. One is parent/ancestor of the other
-                // 2. They share a common parent/ancestor
-                let inSameFamily = false;
-
-                // Check if other route is ancestor of this route
-                let currentParent = thisPatternObj.parent;
-                while (currentParent) {
-                  if (currentParent === otherPatternObj) {
-                    inSameFamily = true;
-                    break;
-                  }
-                  currentParent = currentParent.parent;
-                }
-
-                // Check if this route is ancestor of other route
-                if (!inSameFamily) {
-                  currentParent = otherPatternObj.parent;
-                  while (currentParent) {
-                    if (currentParent === thisPatternObj) {
-                      inSameFamily = true;
-                      break;
-                    }
-                    currentParent = currentParent.parent;
-                  }
-                }
-
-                // Check if they share a common parent (siblings or cousins)
-                if (!inSameFamily) {
-                  const thisAncestors = new Set();
-                  currentParent = thisPatternObj.parent;
-                  while (currentParent) {
-                    thisAncestors.add(currentParent);
-                    currentParent = currentParent.parent;
-                  }
-
-                  currentParent = otherPatternObj.parent;
-                  while (currentParent) {
-                    if (thisAncestors.has(currentParent)) {
-                      inSameFamily = true;
-                      break;
-                    }
-                    currentParent = currentParent.parent;
-                  }
-                }
-
-                if (inSameFamily) {
+                  getRoutePrivateProperties(otherRoute).routePattern;
+                if (otherPatternObj.familyRoot === routePattern.familyRoot) {
                   matchingRouteInSameFamily = true;
                 }
               }

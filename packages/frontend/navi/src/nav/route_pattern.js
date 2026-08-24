@@ -1933,6 +1933,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     parsedPattern,
     children: [],
     parent: null,
+    familyRoot: null, // Topmost ancestor, computed during setupPatterns
     depth: 0, // Will be calculated after relationships are built
     descendantPathSignals: new Map(), // Precomputed during setupPatterns (Map<segmentIndex, conn[]>)
 
@@ -2947,6 +2948,17 @@ export const setupRoutePatterns = (routePatterns) => {
       }
       otherRoutePattern.children.push(routePattern);
     }
+  }
+  // Phase 2b: Compute family roots. Two patterns are in the same family when
+  // their parent chains meet — one is ancestor of the other, or they share a
+  // common ancestor. Each pattern has a single parent, so that is exactly:
+  // same topmost ancestor (familyRoot equality).
+  for (const routePattern of routePatternSet) {
+    let root = routePattern;
+    while (root.parent) {
+      root = root.parent;
+    }
+    routePattern.familyRoot = root;
   }
   // Phase 3: Inherit search parameter connections from ancestors
   // Search params are global and should be inherited by descendants regardless of path segments
