@@ -206,6 +206,7 @@ export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
 export { Wheel, WheelGroup, WheelItem } from "./src/control/wheel/wheel.jsx";
+export { TimeRangeWheel, TimeWheel } from "./src/control/wheel/wheel_time.jsx";
 // --- Table start---
 export {
   filterTableSelection,

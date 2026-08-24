@@ -16,6 +16,7 @@ import { useId } from "preact/hooks";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlGroup } from "../../control_group.jsx";
+import { formatTimeParts, parseTimeParts } from "../time_helpers.js";
 import { NumberSpin, SpinGroup } from "../picker_spin.jsx";
 
 const HOUR_MAX = 23;
@@ -82,8 +83,7 @@ export const TimeSpin = ({
   </SpinGroup>
 );
 
-// The two fields as one value, "HH:MM" — and nothing at all while one of them
-// is empty: half a time is not a time, and a form has nothing to send about it.
+// The two fields as one value, "HH:MM".
 const aggregateTime = (childUIStateControllers) => {
   let hour = "";
   let minute = "";
@@ -95,36 +95,18 @@ const aggregateTime = (childUIStateControllers) => {
       minute = child.uiState ?? "";
     }
   }
-  if (hour === "" || minute === "") {
-    return undefined;
-  }
-  return `${padTwo(hour)}:${padTwo(minute)}`;
+  return formatTimeParts(hour, minute);
 };
 
 // The way back: what the group is set to (a picked value, a form being reset)
 // lands on the field it belongs to.
 const distributeTime = (groupState, childUIStateController) => {
-  const parts = parseTime(groupState);
+  const parts = parseTimeParts(groupState);
   if (!parts) {
     return undefined;
   }
   return parts[childUIStateController.name];
 };
-
-const parseTime = (time) => {
-  if (typeof time !== "string") {
-    return null;
-  }
-  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
-  if (!match) {
-    return null;
-  }
-  // Numbers: what an hour and a minute are held as. How they are written —
-  // "07" — is the field's business (see NumberSpin's `pad`).
-  return { hour: Number(match[1]), minute: Number(match[2]) };
-};
-
-const padTwo = (value) => String(value).padStart(2, "0");
 
 /**
  * @type {import("preact").FunctionComponent<{

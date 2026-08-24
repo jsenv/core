@@ -88,3 +88,52 @@ export const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
   const m = clamped % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
+
+/**
+ * "HH:MM" and its two numbers, in both directions — what any control made of an
+ * hour beside a minute (fields, wheels) aggregates to and is placed from. Held
+ * as numbers, written on two digits: how they are shown is each control's own
+ * business.
+ */
+export const parseTimeParts = (time) => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
+  if (!match) {
+    return null;
+  }
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+};
+
+// Half a time is not a time: a control holding one of the two and nothing in
+// the other has no value at all, and a form has nothing to send about it.
+export const formatTimeParts = (hour, minute) => {
+  if (
+    hour === "" ||
+    hour === undefined ||
+    minute === "" ||
+    minute === undefined
+  ) {
+    return undefined;
+  }
+  return `${padTwo(hour)}:${padTwo(minute)}`;
+};
+
+export const minutesFromTime = (time) => {
+  const parts = parseTimeParts(time);
+  if (!parts) {
+    return null;
+  }
+  return parts.hour * 60 + parts.minute;
+};
+
+export const timeFromMinutes = (minutes) => {
+  const inDay =
+    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  return `${padTwo(Math.floor(inDay / 60))}:${padTwo(inDay % 60)}`;
+};
+
+const MINUTES_PER_DAY = 24 * 60;
+
+const padTwo = (value) => String(value).padStart(2, "0");

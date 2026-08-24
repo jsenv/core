@@ -136,6 +136,7 @@ export const useUIStateController = (
   const controlType = controlInfo.controlType;
   const isRadio = controlType === "input" && props.type === "radio";
   const isProxy = Boolean(props["navi-control-proxy-for"]);
+  const emptyUIState = resolveEmptyUIState(props, controlType);
 
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
@@ -186,6 +187,7 @@ export const useUIStateController = (
         parentUiStateSignalHolder,
         isProxy,
         allowNameless,
+        emptyUIState,
         // Set here too, not only in `update` below: a control rendered once and
         // never re-rendered would otherwise never say whether it was GIVEN a
         // value (`value`, or a bound signal with no default of its own) or is
@@ -379,6 +381,9 @@ export const useUIStateController = (
           }
           debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
           publishUIState(newUIState, e);
+          // A picker hands what it holds to the control in its popup — see
+          // useUIFacadeStateController, which is what puts this here.
+          controller.pushStateDownToFacadeChild?.(newUIState, e);
           const el = controller.ref.current;
           // Always notify the element that its UI state changed.
           // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
@@ -570,12 +575,7 @@ export const useUIStateController = (
           return true;
         },
         clearUIState: (e) => {
-          // Radio and checkbox "unchecked" state is `undefined`, not `""`.
-          // Passing `""` would set checked=true because `"" !== undefined`.
-          const isCheckable =
-            controlType === "input" &&
-            (props.type === "radio" || props.type === "checkbox");
-          controller.setUIState(isCheckable ? undefined : "", e);
+          controller.setUIState(resolveClearedUIState(controller), e);
         },
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
@@ -652,6 +652,7 @@ export const useUIStateController = (
       controller.ref = props.ref;
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
+      controller.emptyUIState = emptyUIState;
       controller.parentUIStateController = parentUIStateController;
       const {
         value,
@@ -842,12 +843,16 @@ const GROUP_DEFAULTS = {
   single: {
     // The same exclusions canRegisterAsFacadeChild already makes below (the
     // picker façade asked the very same question: which child IS the value).
-    // Buttons and links never hold one. And a control *carrying* navi-list is
-    // the search box driving some other list — not the list itself, which stays
-    // a perfectly good single value here (one item, or the array a multiple
-    // list exposes). Excluding the searcher is what leaves the list alone.
+    // Buttons and links never hold one, and neither does a control that
+    // declared itself nameless. A control *carrying* navi-list is the search
+    // box driving some other list — not the list itself, which stays a
+    // perfectly good single value here (one item, or the array a multiple list
+    // exposes). Excluding the searcher is what leaves the list alone.
     childControlFilter: (child) => {
       if (child.controlType === "button" || child.controlType === "link") {
+        return false;
+      }
+      if (child.allowNameless) {
         return false;
       }
       if (child.props?.["navi-list"]) {
@@ -882,7 +887,14 @@ const GROUP_DEFAULTS = {
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
-        const { name, uiState, allowNameless } = child;
+        const { name, allowNameless, emptyUIState } = child;
+        // A control holding nothing writes its own empty, not a hole: the key
+        // is in the object either way, and what is read from it keeps the shape
+        // the reader was promised (see resolveEmptyUIState).
+        const uiState =
+          child.uiState === undefined && emptyUIState !== undefined
+            ? emptyUIState
+            : child.uiState;
         if (!name) {
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
@@ -1137,6 +1149,26 @@ export const useUIGroupStateController = (
         ref,
         getPropFromState: (uiState) => uiState,
         distributeChildUIState: resolvedDistributeChildUIState,
+        // Where the group puts a value on ONE child: the only place that knows
+        // what each child gets, and the only one that sees a child it cannot
+        // place — see warnChildAnswersForItself.
+        placeChildUIState: (childUIStateController, groupUIState, e) => {
+          if (!shouldPropagateStateToChild(childUIStateController)) {
+            return;
+          }
+          if (childUIStateController.hasStateProp) {
+            warnChildAnswersForItself(controller, childUIStateController);
+            return;
+          }
+          const childNewState = resolvedDistributeChildUIState(
+            groupUIState,
+            childUIStateController,
+          );
+          if (childNewState === CANNOT_DERIVE) {
+            return;
+          }
+          childUIStateController.setUIState(childNewState, e);
+        },
         setUIState: (newUIState, e) => {
           if (
             stateType === "object" &&
@@ -1169,14 +1201,9 @@ export const useUIGroupStateController = (
           });
           chainEvent(propagateDownEvent, e);
           for (const childUIStateController of childUIStateControllerArray) {
-            if (!shouldPropagateStateToChild(childUIStateController)) continue;
-            const childNewState = resolvedDistributeChildUIState(
-              newUIState,
+            controller.placeChildUIState(
               childUIStateController,
-            );
-            if (childNewState === CANNOT_DERIVE) continue;
-            childUIStateController.setUIState(
-              childNewState,
+              newUIState,
               propagateDownEvent,
             );
           }
@@ -1235,27 +1262,17 @@ export const useUIGroupStateController = (
           debugUIGroup(
             `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
           );
-          if (!childUIStateController.hasStateProp) {
+          if (controller.hasValueProp || controller.hasDefaultValueProp) {
             const initialEvent = new CustomEvent("initial_state_push", {
               detail: {},
             });
-            if (controller.hasValueProp) {
-              const childNewState = resolvedDistributeChildUIState(
-                controller.value,
-                childUIStateController,
-              );
-              if (childNewState !== CANNOT_DERIVE) {
-                childUIStateController.setUIState(childNewState, initialEvent);
-              }
-            } else if (controller.hasDefaultValueProp) {
-              const childNewState = resolvedDistributeChildUIState(
-                controller.defaultValue,
-                childUIStateController,
-              );
-              if (childNewState !== CANNOT_DERIVE) {
-                childUIStateController.setUIState(childNewState, initialEvent);
-              }
-            }
+            controller.placeChildUIState(
+              childUIStateController,
+              controller.hasValueProp
+                ? controller.value
+                : controller.defaultValue,
+              initialEvent,
+            );
           }
           onChange(new CustomEvent(`${childControlType}_mount`), {
             notifyExternal: "silent",
@@ -1434,14 +1451,11 @@ export const useUIGroupStateController = (
           { detail: {} },
         );
         for (const childUIStateController of childUIStateControllerArray) {
-          if (!shouldPropagateStateToChild(childUIStateController)) continue;
-          if (childUIStateController.hasStateProp) continue;
-          const childNewState = controller.distributeChildUIState(
-            value,
+          controller.placeChildUIState(
             childUIStateController,
+            value,
+            propagateDownEvent,
           );
-          if (childNewState === CANNOT_DERIVE) continue;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(value);
       }
@@ -1459,14 +1473,11 @@ export const useUIGroupStateController = (
           { detail: {} },
         );
         for (const childUIStateController of childUIStateControllerArray) {
-          if (!shouldPropagateStateToChild(childUIStateController)) continue;
-          if (childUIStateController.hasStateProp) continue;
-          const childNewState = controller.distributeChildUIState(
-            defaultValue,
+          controller.placeChildUIState(
             childUIStateController,
+            defaultValue,
+            propagateDownEvent,
           );
-          if (childNewState === CANNOT_DERIVE) continue;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(defaultValue);
       }
@@ -1584,6 +1595,12 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         if (childController.controlType === "link") return false;
         if (childController.controlType === "facade") return false;
         if (childController.isProxy) return false;
+        if (childController.allowNameless) {
+          // A control saying it is not a field is not the one the picker talks
+          // to: the search box above the list, the "select all" switch beside
+          // it. It is there to help find the answer, not to be it.
+          return false;
+        }
         if (childController.props["navi-list"]) {
           // Controls with navi-list act as standalone list navigators and should
           // not be treated as the picker's synced child.
@@ -1592,9 +1609,39 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         return true;
       };
 
+      // Picker → child. Handed to the real controller during THIS render so it
+      // is in place before any layout effect runs: the value a parent form
+      // distributes reaches its children from their registration effect, which
+      // fires before the picker's own effects — a façade that only started
+      // listening from an effect of its own was told nothing, and the popup
+      // opened empty on a value the picker already held.
+      const pushStateDownToChild = (newUIState, e) => {
+        if (updatingRef.current) {
+          return;
+        }
+        const child = firstChildControllerRef.current;
+        if (!child) {
+          return;
+        }
+        updatingRef.current = true;
+        const propagateEventType =
+          e.type === "initial_state_push"
+            ? "initial_state_push"
+            : "propagate_down_set_ui_state";
+        const propagateDownEvent = new CustomEvent(propagateEventType, {
+          detail: {},
+        });
+        chainEvent(propagateDownEvent, e);
+        warnIfChildCannotHold(props, child, newUIState);
+        child.setUIState(newUIState, propagateDownEvent);
+        updatingRef.current = false;
+      };
+      realUIStateController.pushStateDownToFacadeChild = pushStateDownToChild;
+
       const facadeUIStateController = {
         controlType: "facade",
         props,
+        pushStateDownToChild,
         ref: realUIStateController.ref,
         uiStateSignal: realUIStateController.uiStateSignal,
         controlHostProps: realUIStateController.controlHostProps,
@@ -1608,7 +1655,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
               `[navi] a second control ("${childType}"${child.name ? ` name="${child.name}"` : ""}) registered in the ${describePicker(props)} popup. ` +
                 `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
                 `so this one is neither filled nor collected. ` +
-                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object".`,
+                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object". ` +
+                `A control that is there to FIND the answer rather than be it (a search box, a "select all") says so with allowNameless and steps out of the way.`,
               child,
             );
           } else {
@@ -1709,33 +1757,14 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       s.controller.ref = realUIStateController.ref;
       s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
+      realUIStateController.pushStateDownToFacadeChild =
+        s.controller.pushStateDownToChild;
 
       return {
         realUIStateController,
       };
     },
   );
-
-  useLayoutEffect(() => {
-    return realUIStateController.subscribe((newUIState, e) => {
-      if (updatingRef.current) {
-        return;
-      }
-      const child = firstChildControllerRef.current;
-      if (!child) {
-        return;
-      }
-      updatingRef.current = true;
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
-      chainEvent(propagateDownEvent, e);
-      warnIfChildCannotHold(props, child, newUIState);
-      child.setUIState(newUIState, propagateDownEvent);
-      updatingRef.current = false;
-    });
-  }, [realUIStateController]);
 
   return scope.controller;
 };
@@ -1856,6 +1885,106 @@ const isPropagateDownEvent = (e) => {
 const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
   chainEvent(inputEvent, causeEvent);
   el.dispatchEvent(inputEvent);
+};
+
+/**
+ * Both ends claim the same state: the group is placing a value on its children,
+ * and one of them answers for itself. The child wins and the group never moves
+ * it — which on screen is a row that does not respond to being clicked, with
+ * nothing said anywhere.
+ *
+ * A child following a signal is not that case: it is bound, not frozen, and
+ * whoever writes the signal moves it.
+ */
+const childAnswersForItselfWarnedSet = new WeakSet();
+const warnChildAnswersForItself = (groupController, child) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const childProps = child.props;
+  if (childProps.signal) {
+    return;
+  }
+  const statePropName = Object.hasOwn(childProps, "checked")
+    ? "checked"
+    : Object.hasOwn(childProps, "value")
+      ? "value"
+      : null;
+  if (!statePropName) {
+    return;
+  }
+  // Once per group: the mistake is made on all the rows at once and repeating
+  // it per row buries the one line that matters.
+  if (childAnswersForItselfWarnedSet.has(groupController)) {
+    return;
+  }
+  childAnswersForItselfWarnedSet.add(groupController);
+  const groupType = groupController.controlType;
+  const isSelectableList =
+    groupType === "checkbox_group" || groupType === "radio_group";
+  const childDescription = isSelectableList
+    ? "a <List.Item> declares `selected`"
+    : `a "${child.controlType}"${child.name ? ` name="${child.name}"` : ""} declares \`${statePropName}\``;
+  const groupDescription = isSelectableList ? "the list" : `the "${groupType}"`;
+  console.warn(
+    `[navi] ${childDescription} while ${groupDescription} around it is placed from a value — ${groupDescription} cannot move it, so clicking it changes nothing and what it shows never follows. ` +
+      `Bind one end or the other, not both.`,
+    child,
+  );
+};
+
+/**
+ * What a control is worth when it holds nothing — nothing, in the shape of the
+ * question it answers. A list of days nobody picked is an empty list, not an
+ * empty string; a yes/no nobody said yes to is `false`. Without this the shape
+ * changes under the reader as soon as the answer is empty, and the conversion
+ * back gets written after the wrong value has already been sent.
+ *
+ * `undefined` means the control has no empty of its own — it is simply not
+ * there, which is what an untouched date or an unchecked radio is.
+ */
+const resolveEmptyUIState = (props, controlType) => {
+  if (controlType === "input" && props.type === "checkbox") {
+    // A checkbox is a member of a set, the way HTML has it: checked it sends
+    // its value ("on" by default), unchecked it sends nothing at all. Only one
+    // holding `true` is a yes/no, and a yes/no nobody said yes to is `false`.
+    return props.value === true ? false : undefined;
+  }
+  const stateShape = props["navi-state-shape"];
+  if (stateShape === "array") {
+    return EMPTY_ARRAY;
+  }
+  if (stateShape === "object") {
+    return EMPTY_OBJECT;
+  }
+  return undefined;
+};
+
+// What a cleared control shows: its own empty, kept in the shape it was holding.
+const resolveClearedUIState = (controller) => {
+  const { controlType, props } = controller;
+  if (
+    controlType === "input" &&
+    (props.type === "radio" || props.type === "checkbox")
+  ) {
+    // Unchecked is `undefined`: any other value reads as checked, `false`
+    // included (see the `checked` line in control_hooks' toDomProps). What such
+    // a control is worth once unchecked is `emptyUIState`, read where the value
+    // is collected rather than stored here.
+    return undefined;
+  }
+  const { emptyUIState } = controller;
+  if (emptyUIState !== undefined) {
+    return emptyUIState;
+  }
+  const currentUIState = controller.uiState;
+  if (Array.isArray(currentUIState)) {
+    return EMPTY_ARRAY;
+  }
+  if (currentUIState !== null && typeof currentUIState === "object") {
+    return EMPTY_OBJECT;
+  }
+  return "";
 };
 
 // What a control says when it has nothing to say: no value at all, or the empty

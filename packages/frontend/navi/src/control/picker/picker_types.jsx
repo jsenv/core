@@ -67,7 +67,14 @@ const PickerText = (props) => {
 const PickerObject = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<PickerObjectUI />} {...props} type="navi_js" />;
+  return (
+    <Next
+      ui={<PickerObjectUI />}
+      {...props}
+      type="navi_js"
+      navi-state-shape="object"
+    />
+  );
 };
 export const PickerObjectUI = () => {
   const { value, placeholder } = useContext(PickerContext);
@@ -96,7 +103,15 @@ export const PickerObjectUI = () => {
 const PickerArray = (props) => {
   const Next = useNextResolver();
 
-  return <Next maxLines="3" ui={<PickerArrayUI />} {...props} type="navi_js" />;
+  return (
+    <Next
+      maxLines="3"
+      ui={<PickerArrayUI />}
+      {...props}
+      type="navi_js"
+      navi-state-shape="array"
+    />
+  );
 };
 export const PickerArrayUI = () => {
   const { value, placeholder, maxLines } = useContext(PickerContext);

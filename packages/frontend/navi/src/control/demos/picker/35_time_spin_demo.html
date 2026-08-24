@@ -60,7 +60,9 @@
         SpinGroup,
         Text,
         TimeRangeSpin,
+        TimeRangeWheel,
         TimeSpin,
+        TimeWheel,
         stateSignal,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
@@ -93,6 +95,7 @@
           <BasicsDemo />
           <StatesDemo />
           <RangeDemo />
+          <WheelDemo />
           <ValidationDemo />
           <LoopDemo />
           <MinuteStepDemo />
@@ -192,6 +195,39 @@
                 defaultValue={{ start: "07:00", end: "21:00" }}
                 startLabel={null}
                 endLabel={<Text>→</Text>}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Wheels ────────────────────────────────────────────────────────────
+
+      const WheelDemo = () => (
+        <div class="demo-section">
+          <Heading id="wheels">À la roue</Heading>
+          <p class="desc">
+            Une roue ne connaît que des heures qui existent, et les deux bornes
+            d'une plage se poussent en tournant.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="TimeWheel">
+              <TimeWheel defaultValue="07:00" />
+            </Variant>
+            <Variant caption="minuteStep={15}">
+              <TimeWheel defaultValue="07:00" minuteStep={15} />
+            </Variant>
+            <Variant caption="TimeRangeWheel minuteStep={15} minDuration={30}">
+              <TimeRangeWheel
+                defaultValue={{ start: "09:00", end: "10:00" }}
+                minuteStep={15}
+                minDuration={30}
+              />
+            </Variant>
+            <Variant caption="minDuration={0}">
+              <TimeRangeWheel
+                defaultValue={{ start: "09:00", end: "10:00" }}
+                minuteStep={15}
               />
             </Variant>
           </Box>

@@ -15122,8 +15122,8 @@ const TIME_RANGE_CONSTRAINT = {
       console.warn(`Time after constraint: no control with id "${after}"`);
       return null;
     }
-    const timeBefore = minutesFromTime(otherController.uiState);
-    const timeAfter = minutesFromTime(field.uiState);
+    const timeBefore = minutesFromTime$1(otherController.uiState);
+    const timeAfter = minutesFromTime$1(field.uiState);
     if (timeBefore === null || timeAfter === null) {
       return null;
     }
@@ -15148,7 +15148,7 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-time-min-duration");
 
 // "HH:MM" as a number of minutes, which is what two times are compared and
 // subtracted as. Anything else is a time nobody has finished writing.
-const minutesFromTime = (time) => {
+const minutesFromTime$1 = (time) => {
   if (typeof time !== "string") {
     return null;
   }
@@ -25000,6 +25000,7 @@ const useUIStateController = (
   const controlType = controlInfo.controlType;
   const isRadio = controlType === "input" && props.type === "radio";
   const isProxy = Boolean(props["navi-control-proxy-for"]);
+  const emptyUIState = resolveEmptyUIState(props, controlType);
 
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
@@ -25050,6 +25051,7 @@ const useUIStateController = (
         parentUiStateSignalHolder,
         isProxy,
         allowNameless,
+        emptyUIState,
         // Set here too, not only in `update` below: a control rendered once and
         // never re-rendered would otherwise never say whether it was GIVEN a
         // value (`value`, or a bound signal with no default of its own) or is
@@ -25242,6 +25244,9 @@ const useUIStateController = (
           }
           debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
           publishUIState(newUIState, e);
+          // A picker hands what it holds to the control in its popup — see
+          // useUIFacadeStateController, which is what puts this here.
+          controller.pushStateDownToFacadeChild?.(newUIState, e);
           const el = controller.ref.current;
           // Always notify the element that its UI state changed.
           // Listeners use this to stay in sync (e.g. input_effect.js tracks currentState,
@@ -25433,12 +25438,7 @@ const useUIStateController = (
           return true;
         },
         clearUIState: (e) => {
-          // Radio and checkbox "unchecked" state is `undefined`, not `""`.
-          // Passing `""` would set checked=true because `"" !== undefined`.
-          const isCheckable =
-            controlType === "input" &&
-            (props.type === "radio" || props.type === "checkbox");
-          controller.setUIState(isCheckable ? undefined : "", e);
+          controller.setUIState(resolveClearedUIState(controller), e);
         },
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
@@ -25515,6 +25515,7 @@ const useUIStateController = (
       controller.ref = props.ref;
       controller.id = props.id; // never supposed to change, not supported for now
       controller.name = props.name;
+      controller.emptyUIState = emptyUIState;
       controller.parentUIStateController = parentUIStateController;
       const {
         value,
@@ -25705,12 +25706,16 @@ const GROUP_DEFAULTS = {
   single: {
     // The same exclusions canRegisterAsFacadeChild already makes below (the
     // picker façade asked the very same question: which child IS the value).
-    // Buttons and links never hold one. And a control *carrying* navi-list is
-    // the search box driving some other list — not the list itself, which stays
-    // a perfectly good single value here (one item, or the array a multiple
-    // list exposes). Excluding the searcher is what leaves the list alone.
+    // Buttons and links never hold one, and neither does a control that
+    // declared itself nameless. A control *carrying* navi-list is the search
+    // box driving some other list — not the list itself, which stays a
+    // perfectly good single value here (one item, or the array a multiple list
+    // exposes). Excluding the searcher is what leaves the list alone.
     childControlFilter: (child) => {
       if (child.controlType === "button" || child.controlType === "link") {
+        return false;
+      }
+      if (child.allowNameless) {
         return false;
       }
       if (child.props?.["navi-list"]) {
@@ -25745,7 +25750,14 @@ const GROUP_DEFAULTS = {
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
-        const { name, uiState, allowNameless } = child;
+        const { name, allowNameless, emptyUIState } = child;
+        // A control holding nothing writes its own empty, not a hole: the key
+        // is in the object either way, and what is read from it keeps the shape
+        // the reader was promised (see resolveEmptyUIState).
+        const uiState =
+          child.uiState === undefined && emptyUIState !== undefined
+            ? emptyUIState
+            : child.uiState;
         if (!name) {
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
@@ -25993,6 +26005,25 @@ const useUIGroupStateController = (
         ref,
         getPropFromState: (uiState) => uiState,
         distributeChildUIState: resolvedDistributeChildUIState,
+        // Where the group puts a value on ONE child: the only place that knows
+        // what each child gets, and the only one that sees a child it cannot
+        // place — see warnChildAnswersForItself.
+        placeChildUIState: (childUIStateController, groupUIState, e) => {
+          if (!shouldPropagateStateToChild(childUIStateController)) {
+            return;
+          }
+          if (childUIStateController.hasStateProp) {
+            return;
+          }
+          const childNewState = resolvedDistributeChildUIState(
+            groupUIState,
+            childUIStateController,
+          );
+          if (childNewState === CANNOT_DERIVE) {
+            return;
+          }
+          childUIStateController.setUIState(childNewState, e);
+        },
         setUIState: (newUIState, e) => {
           if (
             stateType === "object" &&
@@ -26025,14 +26056,9 @@ const useUIGroupStateController = (
           });
           chainEvent(propagateDownEvent, e);
           for (const childUIStateController of childUIStateControllerArray) {
-            if (!shouldPropagateStateToChild(childUIStateController)) continue;
-            const childNewState = resolvedDistributeChildUIState(
-              newUIState,
+            controller.placeChildUIState(
               childUIStateController,
-            );
-            if (childNewState === CANNOT_DERIVE) continue;
-            childUIStateController.setUIState(
-              childNewState,
+              newUIState,
               propagateDownEvent,
             );
           }
@@ -26091,27 +26117,17 @@ const useUIGroupStateController = (
           debugUIGroup(
             `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
           );
-          if (!childUIStateController.hasStateProp) {
+          if (controller.hasValueProp || controller.hasDefaultValueProp) {
             const initialEvent = new CustomEvent("initial_state_push", {
               detail: {},
             });
-            if (controller.hasValueProp) {
-              const childNewState = resolvedDistributeChildUIState(
-                controller.value,
-                childUIStateController,
-              );
-              if (childNewState !== CANNOT_DERIVE) {
-                childUIStateController.setUIState(childNewState, initialEvent);
-              }
-            } else if (controller.hasDefaultValueProp) {
-              const childNewState = resolvedDistributeChildUIState(
-                controller.defaultValue,
-                childUIStateController,
-              );
-              if (childNewState !== CANNOT_DERIVE) {
-                childUIStateController.setUIState(childNewState, initialEvent);
-              }
-            }
+            controller.placeChildUIState(
+              childUIStateController,
+              controller.hasValueProp
+                ? controller.value
+                : controller.defaultValue,
+              initialEvent,
+            );
           }
           onChange(new CustomEvent(`${childControlType}_mount`), {
             notifyExternal: "silent",
@@ -26290,14 +26306,11 @@ const useUIGroupStateController = (
           { detail: {} },
         );
         for (const childUIStateController of childUIStateControllerArray) {
-          if (!shouldPropagateStateToChild(childUIStateController)) continue;
-          if (childUIStateController.hasStateProp) continue;
-          const childNewState = controller.distributeChildUIState(
-            value,
+          controller.placeChildUIState(
             childUIStateController,
+            value,
+            propagateDownEvent,
           );
-          if (childNewState === CANNOT_DERIVE) continue;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(value);
       }
@@ -26315,14 +26328,11 @@ const useUIGroupStateController = (
           { detail: {} },
         );
         for (const childUIStateController of childUIStateControllerArray) {
-          if (!shouldPropagateStateToChild(childUIStateController)) continue;
-          if (childUIStateController.hasStateProp) continue;
-          const childNewState = controller.distributeChildUIState(
-            defaultValue,
+          controller.placeChildUIState(
             childUIStateController,
+            defaultValue,
+            propagateDownEvent,
           );
-          if (childNewState === CANNOT_DERIVE) continue;
-          childUIStateController.setUIState(childNewState, propagateDownEvent);
         }
         controller.syncInternalState(defaultValue);
       }
@@ -26440,6 +26450,12 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         if (childController.controlType === "link") return false;
         if (childController.controlType === "facade") return false;
         if (childController.isProxy) return false;
+        if (childController.allowNameless) {
+          // A control saying it is not a field is not the one the picker talks
+          // to: the search box above the list, the "select all" switch beside
+          // it. It is there to help find the answer, not to be it.
+          return false;
+        }
         if (childController.props["navi-list"]) {
           // Controls with navi-list act as standalone list navigators and should
           // not be treated as the picker's synced child.
@@ -26448,9 +26464,38 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         return true;
       };
 
+      // Picker → child. Handed to the real controller during THIS render so it
+      // is in place before any layout effect runs: the value a parent form
+      // distributes reaches its children from their registration effect, which
+      // fires before the picker's own effects — a façade that only started
+      // listening from an effect of its own was told nothing, and the popup
+      // opened empty on a value the picker already held.
+      const pushStateDownToChild = (newUIState, e) => {
+        if (updatingRef.current) {
+          return;
+        }
+        const child = firstChildControllerRef.current;
+        if (!child) {
+          return;
+        }
+        updatingRef.current = true;
+        const propagateEventType =
+          e.type === "initial_state_push"
+            ? "initial_state_push"
+            : "propagate_down_set_ui_state";
+        const propagateDownEvent = new CustomEvent(propagateEventType, {
+          detail: {},
+        });
+        chainEvent(propagateDownEvent, e);
+        child.setUIState(newUIState, propagateDownEvent);
+        updatingRef.current = false;
+      };
+      realUIStateController.pushStateDownToFacadeChild = pushStateDownToChild;
+
       const facadeUIStateController = {
         controlType: "facade",
         props,
+        pushStateDownToChild,
         ref: realUIStateController.ref,
         uiStateSignal: realUIStateController.uiStateSignal,
         controlHostProps: realUIStateController.controlHostProps,
@@ -26464,7 +26509,8 @@ const useUIFacadeStateController = (props, realUIStateController) => {
               `[navi] a second control ("${childType}"${child.name ? ` name="${child.name}"` : ""}) registered in the ${describePicker(props)} popup. ` +
                 `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
                 `so this one is neither filled nor collected. ` +
-                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object".`,
+                `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object". ` +
+                `A control that is there to FIND the answer rather than be it (a search box, a "select all") says so with allowNameless and steps out of the way.`,
               child,
             );
           } else {
@@ -26564,32 +26610,14 @@ const useUIFacadeStateController = (props, realUIStateController) => {
       s.controller.ref = realUIStateController.ref;
       s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
+      realUIStateController.pushStateDownToFacadeChild =
+        s.controller.pushStateDownToChild;
 
       return {
         realUIStateController,
       };
     },
   );
-
-  useLayoutEffect(() => {
-    return realUIStateController.subscribe((newUIState, e) => {
-      if (updatingRef.current) {
-        return;
-      }
-      const child = firstChildControllerRef.current;
-      if (!child) {
-        return;
-      }
-      updatingRef.current = true;
-      const propagateDownEvent = new CustomEvent(
-        "propagate_down_set_ui_state",
-        { detail: {} },
-      );
-      chainEvent(propagateDownEvent, e);
-      child.setUIState(newUIState, propagateDownEvent);
-      updatingRef.current = false;
-    });
-  }, [realUIStateController]);
 
   return scope.controller;
 };
@@ -26683,6 +26711,60 @@ const isPropagateDownEvent = (e) => {
 const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
   chainEvent(inputEvent, causeEvent);
   el.dispatchEvent(inputEvent);
+};
+
+/**
+ * What a control is worth when it holds nothing — nothing, in the shape of the
+ * question it answers. A list of days nobody picked is an empty list, not an
+ * empty string; a yes/no nobody said yes to is `false`. Without this the shape
+ * changes under the reader as soon as the answer is empty, and the conversion
+ * back gets written after the wrong value has already been sent.
+ *
+ * `undefined` means the control has no empty of its own — it is simply not
+ * there, which is what an untouched date or an unchecked radio is.
+ */
+const resolveEmptyUIState = (props, controlType) => {
+  if (controlType === "input" && props.type === "checkbox") {
+    // A checkbox is a member of a set, the way HTML has it: checked it sends
+    // its value ("on" by default), unchecked it sends nothing at all. Only one
+    // holding `true` is a yes/no, and a yes/no nobody said yes to is `false`.
+    return props.value === true ? false : undefined;
+  }
+  const stateShape = props["navi-state-shape"];
+  if (stateShape === "array") {
+    return EMPTY_ARRAY;
+  }
+  if (stateShape === "object") {
+    return EMPTY_OBJECT;
+  }
+  return undefined;
+};
+
+// What a cleared control shows: its own empty, kept in the shape it was holding.
+const resolveClearedUIState = (controller) => {
+  const { controlType, props } = controller;
+  if (
+    controlType === "input" &&
+    (props.type === "radio" || props.type === "checkbox")
+  ) {
+    // Unchecked is `undefined`: any other value reads as checked, `false`
+    // included (see the `checked` line in control_hooks' toDomProps). What such
+    // a control is worth once unchecked is `emptyUIState`, read where the value
+    // is collected rather than stored here.
+    return undefined;
+  }
+  const { emptyUIState } = controller;
+  if (emptyUIState !== undefined) {
+    return emptyUIState;
+  }
+  const currentUIState = controller.uiState;
+  if (Array.isArray(currentUIState)) {
+    return EMPTY_ARRAY;
+  }
+  if (currentUIState !== null && typeof currentUIState === "object") {
+    return EMPTY_OBJECT;
+  }
+  return "";
 };
 
 // What a control says when it has nothing to say: no value at all, or the empty
@@ -50583,6 +50665,55 @@ const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+/**
+ * "HH:MM" and its two numbers, in both directions — what any control made of an
+ * hour beside a minute (fields, wheels) aggregates to and is placed from. Held
+ * as numbers, written on two digits: how they are shown is each control's own
+ * business.
+ */
+const parseTimeParts = (time) => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
+  if (!match) {
+    return null;
+  }
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+};
+
+// Half a time is not a time: a control holding one of the two and nothing in
+// the other has no value at all, and a form has nothing to send about it.
+const formatTimeParts = (hour, minute) => {
+  if (
+    hour === "" ||
+    hour === undefined ||
+    minute === "" ||
+    minute === undefined
+  ) {
+    return undefined;
+  }
+  return `${padTwo$1(hour)}:${padTwo$1(minute)}`;
+};
+
+const minutesFromTime = (time) => {
+  const parts = parseTimeParts(time);
+  if (!parts) {
+    return null;
+  }
+  return parts.hour * 60 + parts.minute;
+};
+
+const timeFromMinutes = (minutes) => {
+  const inDay =
+    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  return `${padTwo$1(Math.floor(inDay / 60))}:${padTwo$1(inDay % 60)}`;
+};
+
+const MINUTES_PER_DAY = 24 * 60;
+
+const padTwo$1 = (value) => String(value).padStart(2, "0");
+
 // Maps validity type names → navi input type names.
 // Numeric signal types must not fall through to the native type="number"
 // (which adds spinner buttons and has poor UX) — they map to navi_number instead.
@@ -62007,8 +62138,7 @@ const PickerNaviTime = props => {
   const {
     min = "00:00",
     max = "23:30",
-    step,
-    value
+    step
   } = props;
   const stepSeconds = timeStringToSeconds(step) ?? 1800;
   const slots = useMemo(() => generateTimeSlots(min, max, stepSeconds), [min, max, stepSeconds]);
@@ -62023,7 +62153,6 @@ const PickerNaviTime = props => {
         id: slot,
         index: i,
         value: slot,
-        selected: value === slot,
         children: jsx(Time, {
           type: "time",
           children: slot
@@ -62522,7 +62651,8 @@ const PickerObject = props => {
   return jsx(Next, {
     ui: jsx(PickerObjectUI, {}),
     ...props,
-    type: "navi_js"
+    type: "navi_js",
+    "navi-state-shape": "object"
   });
 };
 const PickerObjectUI = () => {
@@ -62557,7 +62687,8 @@ const PickerArray = props => {
     maxLines: "3",
     ui: jsx(PickerArrayUI, {}),
     ...props,
-    type: "navi_js"
+    type: "navi_js",
+    "navi-state-shape": "array"
   });
 };
 const PickerArrayUI = () => {
@@ -65031,8 +65162,8 @@ const TimeSpin = ({
   minuteLabel = naviI18n("time.minute_label"),
   ...rest
 }) => jsxs(SpinGroup, {
-  aggregateChildStates: aggregateTime,
-  distributeChildUIState: distributeTime,
+  aggregateChildStates: aggregateTime$1,
+  distributeChildUIState: distributeTime$1,
   ...rest,
   children: [jsx(NumberSpin, {
     name: "hour",
@@ -65058,9 +65189,8 @@ const TimeSpin = ({
   })]
 });
 
-// The two fields as one value, "HH:MM" — and nothing at all while one of them
-// is empty: half a time is not a time, and a form has nothing to send about it.
-const aggregateTime = childUIStateControllers => {
+// The two fields as one value, "HH:MM".
+const aggregateTime$1 = childUIStateControllers => {
   let hour = "";
   let minute = "";
   for (const child of childUIStateControllers) {
@@ -65071,37 +65201,18 @@ const aggregateTime = childUIStateControllers => {
       minute = child.uiState ?? "";
     }
   }
-  if (hour === "" || minute === "") {
-    return undefined;
-  }
-  return `${padTwo(hour)}:${padTwo(minute)}`;
+  return formatTimeParts(hour, minute);
 };
 
 // The way back: what the group is set to (a picked value, a form being reset)
 // lands on the field it belongs to.
-const distributeTime = (groupState, childUIStateController) => {
-  const parts = parseTime(groupState);
+const distributeTime$1 = (groupState, childUIStateController) => {
+  const parts = parseTimeParts(groupState);
   if (!parts) {
     return undefined;
   }
   return parts[childUIStateController.name];
 };
-const parseTime = time => {
-  if (typeof time !== "string") {
-    return null;
-  }
-  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
-  if (!match) {
-    return null;
-  }
-  // Numbers: what an hour and a minute are held as. How they are written —
-  // "07" — is the field's business (see NumberSpin's `pad`).
-  return {
-    hour: Number(match[1]),
-    minute: Number(match[2])
-  };
-};
-const padTwo = value => String(value).padStart(2, "0");
 
 /**
  * @type {import("ignore:preact").FunctionComponent<{
@@ -66658,7 +66769,6 @@ const SplitButton = props => {
                 id: `${menuId}_${index}`,
                 index: index,
                 value: optionValue,
-                selected: optionValue === valueResolved,
                 padding: "s",
                 spacing: "s",
                 ...optionRest,
@@ -69351,6 +69461,258 @@ const WheelColon = props => {
   });
 };
 Wheel.Colon = WheelColon;
+
+/**
+ * A time of day, and a span between two of them, set by turning rather than by
+ * typing. A wheel only ever shows values that exist: there is no half-written
+ * hour to bound and correct under the fingers, which is what a time typed digit
+ * by digit puts a field through ("1" on its way to "18").
+ *
+ * `TimeWheel` is a `WheelGroup` of two `Wheel`s and carries a single "HH:MM",
+ * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
+ * two of those and carries `{ start, end }`, with the rule such a pair always
+ * has: the end comes after the start. Here that rule is lived rather than
+ * checked — the bounds push each other while they turn, so what the wheels show
+ * is always a span. The send-time constraint stays underneath for what pushing
+ * cannot fix (a start so late the span no longer fits in the day).
+ */
+
+const HOUR_COUNT = 24;
+const MINUTES_PER_HOUR = 60;
+const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   minuteStep?: number,
+ *   loop?: boolean,
+ *   separator?: import("ignore:preact").ComponentChildren,
+ *   hourLabel?: string,
+ *   minuteLabel?: string,
+ *   size?: string,
+ *   visibleCount?: number,
+ *   wheelProps?: object,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The time shown, as "HH:MM".
+ * @param {number} [minuteStep=1] How many minutes apart the values on the
+ *   minute wheel are — 15 for quarters of an hour.
+ * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
+ *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
+ *   past.
+ * @param {import("ignore:preact").ComponentChildren} [separator] What is written
+ *   between the hours and the minutes. "h" in French, ":" elsewhere.
+ * @param {object} [wheelProps] Anything a `Wheel` takes, said once for both of
+ *   them — `visibleCount`, `itemWidth`, `glideSpeed`.
+ */
+const TimeWheel = ({
+  minuteStep = 1,
+  loop = true,
+  separator = naviI18n("time.hour_separator"),
+  hourLabel = naviI18n("time.hour_label"),
+  minuteLabel = naviI18n("time.minute_label"),
+  size,
+  wheelProps,
+  ...rest
+}) => {
+  const minutes = useMemo(() => {
+    const minuteList = [];
+    let minute = 0;
+    while (minute < MINUTES_PER_HOUR) {
+      minuteList.push(minute);
+      minute += minuteStep;
+    }
+    return minuteList;
+  }, [minuteStep]);
+  return jsxs(WheelGroup, {
+    aggregateChildStates: aggregateTime,
+    distributeChildUIState: distributeTime,
+    ...rest,
+    children: [jsx(Wheel, {
+      name: "hour",
+      type: "integer",
+      bounded: !loop,
+      size: size,
+      "aria-label": hourLabel,
+      ...wheelProps,
+      children: HOURS.map(hour => jsx(Wheel.Item, {
+        value: hour,
+        paddingX: "s",
+        children: padTwo(hour)
+      }, hour))
+    }), jsx(WheelGroup.Separator, {
+      size: size,
+      children: separator
+    }), jsx(Wheel, {
+      name: "minute",
+      type: "integer",
+      bounded: !loop,
+      size: size,
+      "aria-label": minuteLabel,
+      ...wheelProps,
+      children: minutes.map(minute => jsx(Wheel.Item, {
+        value: minute,
+        paddingX: "s",
+        children: padTwo(minute)
+      }, minute))
+    })]
+  });
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   value?: { start?: string, end?: string },
+ *   defaultValue?: { start?: string, end?: string },
+ *   signal?: import("@preact/signals").Signal<{ start?: string, end?: string }>,
+ *   minuteStep?: number,
+ *   minDuration?: number,
+ *   loop?: boolean,
+ *   size?: string,
+ *   startLabel?: import("ignore:preact").ComponentChildren,
+ *   endLabel?: import("ignore:preact").ComponentChildren,
+ *   timeProps?: object,
+ *   [key: string]: any,
+ * }>}
+ * @param {{ start?: string, end?: string }} [value] The span shown, as two
+ *   "HH:MM".
+ * @param {import("ignore:preact").ComponentChildren} [startLabel] What is written
+ *   before the first time ("De"), and `endLabel` between the two ("à"). Say
+ *   `null` for neither.
+ * @param {number} [minuteStep=1] How many minutes apart the values on both
+ *   minute wheels are.
+ * @param {number} [minDuration=0] How long the span must last at least, in
+ *   minutes. Zero by default: a span of no length is a span all the same, only
+ *   one that goes backwards is not. It is what the bounds keep between them as
+ *   they turn — turn the start into the end and the end moves along, keeping
+ *   that much room.
+ * @param {object} [timeProps] Anything a `TimeWheel` takes, said once for both
+ *   of them. `startTimeProps`/`endTimeProps` say it to one of the two, and win
+ *   over this one.
+ */
+const TimeRangeWheel = ({
+  minuteStep = 1,
+  minDuration = 0,
+  loop = true,
+  size,
+  startLabel = naviI18n("time_range.from"),
+  endLabel = naviI18n("time_range.to"),
+  timeProps,
+  startTimeProps,
+  endTimeProps,
+  ...rest
+}) => {
+  const startId = useId();
+  const startRef = useRef(null);
+  const endRef = useRef(null);
+
+  // What the pair does while it is being turned: the bound that just moved is
+  // the one the user is holding, so it stays where it was put and the OTHER one
+  // gives way. A refusal at the end of the gesture would leave the person to
+  // undo what they just did.
+  const keepBoundsApart = (movedSide, movedTime, e) => {
+    const movedMinutes = minutesFromTime(movedTime);
+    if (movedMinutes === null) {
+      return;
+    }
+    const otherEl = movedSide === "start" ? endRef.current : startRef.current;
+    if (!otherEl) {
+      return;
+    }
+    const otherMinutes = minutesFromTime(getUIStateFromElement(otherEl));
+    if (otherMinutes === null) {
+      return;
+    }
+    const duration = movedSide === "start" ? otherMinutes - movedMinutes : movedMinutes - otherMinutes;
+    if (duration >= minDuration) {
+      return;
+    }
+    let pushedMinutes = movedSide === "start" ? movedMinutes + minDuration : movedMinutes - minDuration;
+    // The day has ends the wheels do not: pushed past midnight, the other bound
+    // would come back round on the wrong side of the one that pushed it. It
+    // stops at the edge instead, and the span that no longer fits is what the
+    // send-time constraint is there to say (see time_range_constraint.js).
+    if (pushedMinutes < 0) {
+      pushedMinutes = 0;
+    } else if (pushedMinutes > LAST_MINUTE_OF_DAY) {
+      pushedMinutes = LAST_MINUTE_OF_DAY;
+    }
+    dispatchRequestSetUIState(otherEl, timeFromMinutes(pushedMinutes), {
+      event: e
+    });
+  };
+  return jsxs(ControlGroup, {
+    flex: true,
+    alignY: "center",
+    spacing: "s",
+    size: size,
+    ...rest,
+    children: [startLabel === null ? null : jsx(Text, {
+      size: size,
+      children: startLabel
+    }), jsx(TimeWheel, {
+      id: startId,
+      ref: startRef,
+      name: "start",
+      minuteStep: minuteStep,
+      loop: loop,
+      size: size,
+      uiAction: (value, e) => keepBoundsApart("start", value, e),
+      ...timeProps,
+      ...startTimeProps
+    }), endLabel === null ? null : jsx(Text, {
+      size: size,
+      children: endLabel
+    }), jsx(TimeWheel, {
+      ref: endRef,
+      name: "end",
+      minuteStep: minuteStep,
+      loop: loop,
+      size: size,
+      uiAction: (value, e) => keepBoundsApart("end", value, e)
+      // Which time it comes after, and how much room there must be between
+      // the two: said on the LATER of the two, so the answer is given where
+      // the time one would have to move is (see time_range_constraint.js).
+      ,
+      "data-time-after": startId,
+      "data-time-min-duration": minDuration,
+      ...timeProps,
+      ...endTimeProps
+    })]
+  });
+};
+const HOURS = Array.from({
+  length: HOUR_COUNT
+}, (_, hour) => hour);
+const padTwo = value => String(value).padStart(2, "0");
+
+// The two wheels as one value, "HH:MM".
+const aggregateTime = childUIStateControllers => {
+  let hour = "";
+  let minute = "";
+  for (const child of childUIStateControllers) {
+    if (child.name === "hour") {
+      hour = child.uiState ?? "";
+    }
+    if (child.name === "minute") {
+      minute = child.uiState ?? "";
+    }
+  }
+  return formatTimeParts(hour, minute);
+};
+
+// The way back: what the group is set to (a value given to it, a form being
+// reset, the other bound pushing it) lands on the wheel it belongs to.
+const distributeTime = (groupState, childUIStateController) => {
+  const parts = parseTimeParts(groupState);
+  if (!parts) {
+    return undefined;
+  }
+  return parts[childUIStateController.name];
+};
 
 const TableSelectionContext = createContext();
 const useTableSelectionContextValue = (
@@ -75378,5 +75740,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

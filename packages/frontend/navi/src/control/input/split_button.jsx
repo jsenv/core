@@ -320,7 +320,6 @@ export const SplitButton = (props) => {
                       id={`${menuId}_${index}`}
                       index={index}
                       value={optionValue}
-                      selected={optionValue === valueResolved}
                       padding="s"
                       spacing="s"
                       {...optionRest}

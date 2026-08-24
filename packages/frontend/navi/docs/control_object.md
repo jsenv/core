@@ -11,6 +11,7 @@ whose value is an object needs in its popup.
 - [`<Form>`: the shape, plus a send](#form-the-shape-plus-a-send)
 - [Naming, and what a nameless group does](#naming-and-what-a-nameless-group-does)
 - [A picker whose value is an object](#a-picker-whose-value-is-an-object)
+- [One line, one key](#one-line-one-key)
 - [A settings sheet](#a-settings-sheet)
 - [`Group` is not `ControlGroup`](#group-is-not-controlgroup)
 
@@ -113,6 +114,39 @@ Two things to get right:
   kind a scalar type and there is no group to distribute anything — the whole
   object lands on one control, which is how `"[object Object]"` ends up in a
   url.
+- **A control that helps FIND the answer is not the answer.** A search box above
+  a long list, a "select all" beside it: they are tools, and a tool says so with
+  `allowNameless`. The picker then walks past it and talks to the list, which is
+  what a popup made of one choice and the means to reach it needs.
+
+```jsx
+<Picker name="place_ids" type="array">
+  <Input allowNameless placeholder="chercher" navi-list="places" />
+  <List id="places" selectable multiple>
+    …
+  </List>
+</Picker>
+```
+
+## One line, one key
+
+A row that opens a popup is one control, so what it answers arrives under its
+one name. A row answering two questions at once — where the level comes from
+AND which levels, when it starts AND when it ends — hands back a sub-object:
+
+```jsx
+<Picker name="level" type="object">   // { level: { level_mode, levels } }
+<Picker name="hours" type="object">   // { hours: { from_minute, to_minute } }
+```
+
+Flattening those into the sent object is the caller's business
+(`{ ...value.level, ...value.hours }`), and it is the only reasonable place for
+it: a picker with no name of its own could not be collected, and one merging its
+keys into the object around it would take the row's own identity away — nothing
+would say which row a key came from, nor which row to put an incoming value
+back on. A `<ControlGroup>` with no name IS that merge, and it exists for the
+case where there is no row: several controls in one screen, no door between
+them.
 
 ## A settings sheet
 

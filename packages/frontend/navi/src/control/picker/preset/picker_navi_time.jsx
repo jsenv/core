@@ -18,7 +18,7 @@ import { timeStringToSeconds } from "../time_helpers.js";
  */
 export const PickerNaviTime = (props) => {
   const Next = useNextResolver();
-  const { min = "00:00", max = "23:30", step, value } = props;
+  const { min = "00:00", max = "23:30", step } = props;
   const stepSeconds = timeStringToSeconds(step) ?? 1800;
   const slots = useMemo(
     () => generateTimeSlots(min, max, stepSeconds),
@@ -29,14 +29,7 @@ export const PickerNaviTime = (props) => {
     <Next {...props} type="time">
       <List selectable command="--navi-send">
         {slots.map((slot, i) => (
-          <List.Item
-            selectable
-            key={slot}
-            id={slot}
-            index={i}
-            value={slot}
-            selected={value === slot}
-          >
+          <List.Item selectable key={slot} id={slot} index={i} value={slot}>
             <Time type="time">{slot}</Time>
           </List.Item>
         ))}

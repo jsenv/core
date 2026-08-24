@@ -8,6 +8,7 @@ somewhere else in the app.
 - [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
+- [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
 - [Which controls take a `signal`](#which-controls-take-a-signal)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
@@ -117,6 +118,31 @@ writes it, and what they change is written back into it. One signal for a screen
 whose values arrive together — see
 [create_and_edit.md](./create_and_edit.md#two-screens-two-states).
 
+## Empty keeps the shape of the question
+
+What a control is worth when it holds nothing has the type of what it holds when
+it holds something. A list of days nobody picked is `[]`, not `""`:
+
+| control                                           | empty is |
+| ------------------------------------------------- | -------- |
+| `Picker type="array"`, `List selectable multiple` | `[]`     |
+| `Picker type="object"`                            | `{}`     |
+| text/number/date `Input`, `Select`                | `""`     |
+| `Input type="checkbox" value={true}`              | `false`  |
+| radio, checkbox holding a value of its own        | absent   |
+
+This is what a clear (`--navi-clear`, a row's cross) leaves behind and what the
+object around it carries, so the conversion nobody writes — `value.days || []` —
+is not needed, and not needed only after having watched the wrong shape reach
+the server.
+
+A checkbox is a member of a set, the way HTML has it: checked it carries its
+`value` (`"on"` when it was given none), unchecked it carries nothing at all —
+which is what lets several checkboxes sharing a name aggregate into an array. A
+checkbox that is a yes/no rather than a member says so with `value={true}`, and
+is then `true` or `false`. Its bound `signal` holds the boolean either way (see
+the table above): what a signal on a checkbox is about is whether it is checked.
+
 ## Which controls take a `signal`
 
 All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,
@@ -131,7 +157,8 @@ something else read where the slides are — or move them by writing it.
 Inside a `List selectable` you can bind the list, or give each `List.Item` its
 own `selected` — but not expect the two to arbitrate. An item that declares
 `selected` is answering for itself, and the list's signal does not reposition
-it.
+it. On screen that reads as a list where clicking does nothing, so navi says it
+in dev the moment the two claims meet: bind one end or the other, not both.
 
 ## `value` and `signal` exclude each other
 

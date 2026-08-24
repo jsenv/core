@@ -168,7 +168,10 @@ row whose value is carried by a hidden input beside it) says so with
 <Picker allowNameless ui={…}>
 ```
 
-It is then neither collected nor complained about.
+It is then neither collected nor complained about — and inside a picker's popup
+it is not the control the picker talks to either, which is what lets a search
+box sit above the list that IS the answer (see
+[control_object.md](./control_object.md#a-picker-whose-value-is-an-object)).
 
 ## See also
 
