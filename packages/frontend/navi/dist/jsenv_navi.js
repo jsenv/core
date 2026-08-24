@@ -24381,6 +24381,13 @@ const GROUP_DEFAULTS = {
             ? emptyUIState
             : child.uiState;
         if (!name) {
+          if (allowNameless) {
+            // A control that says it is not a field is not one, whatever it
+            // holds: a picker used as a door holds the shape its popup draws,
+            // and merging that in would put the popup's keys in the object as
+            // if the door had been a group.
+            continue;
+          }
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
           // cluster) without claiming a key of its own, so what it holds is
@@ -24390,12 +24397,10 @@ const GROUP_DEFAULTS = {
             Object.assign(groupValues, uiState);
             continue;
           }
-          if (!allowNameless) {
-            console.warn(
-              "A group child is missing a name property, its state won't be included in the group state",
-              child,
-            );
-          }
+          console.warn(
+            "A group child is missing a name property, its state won't be included in the group state",
+            child,
+          );
           continue;
         }
         groupValues[name] = uiState;
@@ -24520,6 +24525,14 @@ const useUIGroupStateController = (
       : stateType === "object"
         ? EMPTY_OBJECT
         : undefined;
+  // A group told what it holds holds it from the start, before any child has
+  // registered to show it: what it was given is the answer, and the children
+  // are where that answer is shown (see stateGivenFromAbove).
+  const stateInitial = hasValueProp
+    ? value
+    : hasDefaultValueProp && defaultValue !== undefined
+      ? defaultValue
+      : fallbackState;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   // Tracks children rejected by the filter and delegated upward (bubble-up).
@@ -24583,14 +24596,35 @@ const useUIGroupStateController = (
         `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
       );
       const [publishUIState, subscribeUIState] = createPubSub();
-      const uiStateSignal = signal(fallbackState);
+      const uiStateSignal = signal(stateInitial);
 
-      const aggregateGroupUIState = () => {
+      // What the group is worth right now, and what it keeps when there is
+      // nobody to ask: a list whose items have not arrived yet, a popup built
+      // at open, a group whose children are still mounting. Such a group has
+      // no opinion — its aggregate falls back to the empty of its type, and
+      // taking that for an answer is how a value handed to it evaporates on
+      // the way in, and how that emptiness then travels back up to whoever
+      // handed it (a picker showing its row as unanswered).
+      const aggregateGroupUIState = (whenNobodyCanAnswer) => {
+        const someChildCanAnswer = childUIStateControllerArray.some(
+          shouldPropagateStateToChild,
+        );
+        if (!someChildCanAnswer) {
+          return whenNobodyCanAnswer;
+        }
         const aggChildState = resolvedAggregateChildStates(
           childUIStateControllerArray,
           fallbackState,
         );
-        return aggChildState === undefined ? fallbackState : aggChildState;
+        if (aggChildState !== undefined) {
+          return aggChildState;
+        }
+        // A group with an aggregate of its own is the one who knows what its
+        // children add up to, `undefined` included — half a time is not a time,
+        // wheels nobody turned have settled nothing. Only the default shapes
+        // fall back to the empty of their type, where "no child says anything"
+        // and "the value is empty" are the same sentence.
+        return stateShapeIsTheDefaultOne ? fallbackState : undefined;
       };
 
       // onChange and applyState live inside init so they close over the stable
@@ -24611,13 +24645,26 @@ const useUIGroupStateController = (
           };
           return;
         }
-        const groupUIState = aggregateGroupUIState();
+        const { controller } = s;
+        // A child mounting or unmounting is not somebody answering: while the
+        // children of a group are still arriving, their aggregate is a partial
+        // reading, and taking it for the truth is how the value the group was
+        // given gets destroyed one row at a time — the first row to register
+        // aggregates alone, the group drops to that, and every row after it is
+        // placed from what is left. A group that derived its own value has
+        // nothing to protect and aggregates as usual.
+        const groupUIState =
+          notifyExternal === "silent" && controller.stateGivenFromAbove
+            ? controller.uiState
+            : aggregateGroupUIState(controller.uiState);
         debugUIGroup(
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
         );
-        const { controller } = s;
         if (notifyExternal === true) {
+          // Somebody answered: what the group is worth is what its children say
+          // between them, from here on.
+          controller.stateGivenFromAbove = false;
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
@@ -24683,7 +24730,11 @@ const useUIGroupStateController = (
         hasValueProp,
         hasDefaultValueProp,
         props,
-        uiState: fallbackState,
+        uiState: stateInitial,
+        // Whether what the group holds was HANDED to it (a parent distributing,
+        // a picker filling its popup, a value prop) rather than worked out from
+        // its children. What it protects is read in onChange.
+        stateGivenFromAbove: hasValueProp || hasDefaultValueProp,
         uiStateSignal,
         wantRequesterButtonState,
         ref,
@@ -24731,6 +24782,7 @@ const useUIGroupStateController = (
             );
             return;
           }
+          controller.stateGivenFromAbove = true;
           const propagateEventType =
             e.type === "initial_state_push"
               ? "initial_state_push"
@@ -24746,9 +24798,10 @@ const useUIGroupStateController = (
               propagateDownEvent,
             );
           }
-          const groupUIState = aggregateGroupUIState();
+          const groupUIState = aggregateGroupUIState(newUIState);
           if (e.type === "initial_state_push") {
             controller.syncInternalState(groupUIState);
+            writeBoundSignal(groupUIState);
             return;
           }
           applyState(groupUIState, e, { internalBehavior: true });
@@ -24800,15 +24853,28 @@ const useUIGroupStateController = (
           debugUIGroup(
             `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
           );
-          if (controller.hasValueProp || controller.hasDefaultValueProp) {
+          const stateToPlaceChildFrom = controller.hasValueProp
+            ? controller.value
+            : controller.hasDefaultValueProp
+              ? controller.defaultValue
+              : // What the group HOLDS, for a child arriving after the value
+                // did: a list item loaded later, a row scrolled back into a
+                // virtualized list, a popup built at open. Two conditions, and
+                // both are about not overwriting an answer with a silence — the
+                // group must actually hold something, and the child must have
+                // nothing of its own to show (one arriving with its own default
+                // is answering, and the group is what its answers add up to).
+                uiStateHoldsNothing(controller.uiState) ||
+                  !uiStateHoldsNothing(childUIStateController.uiState)
+                ? undefined
+                : controller.uiState;
+          if (stateToPlaceChildFrom !== undefined) {
             const initialEvent = new CustomEvent("initial_state_push", {
               detail: {},
             });
             controller.placeChildUIState(
               childUIStateController,
-              controller.hasValueProp
-                ? controller.value
-                : controller.defaultValue,
+              stateToPlaceChildFrom,
               initialEvent,
             );
           }
@@ -25097,6 +25163,7 @@ const EMPTY_OBJECT = {};
  */
 const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
+  const namelessChildSetRef = useRef(new Set());
   const updatingRef = useRef(false);
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
@@ -25128,6 +25195,7 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           // A control saying it is not a field is not the one the picker talks
           // to: the search box above the list, the "select all" switch beside
           // it. It is there to help find the answer, not to be it.
+          namelessChildSetRef.current.add(childController);
           return false;
         }
         if (childController.props["navi-list"]) {
@@ -25150,6 +25218,10 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         }
         const child = firstChildControllerRef.current;
         if (!child) {
+          warnPopupHasNothingButNamelessControls(
+            props,
+            namelessChildSetRef.current,
+          );
           return;
         }
         updatingRef.current = true;
@@ -25298,6 +25370,11 @@ const useUIFacadeStateController = (props, realUIStateController) => {
 
 const describePicker = (props) =>
   `<Picker${props.name ? ` name="${props.name}"` : ""}${props.type ? ` type="${props.type}"` : ""}>`;
+const warnPopupHasNothingButNamelessControls = (props, namelessChildSet) => {
+  {
+    return;
+  }
+};
 
 /**
  * Returns true when `e` should trigger parent notification (child → parent bubbling).
@@ -68158,12 +68235,19 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  *   past.
  * @param {import("ignore:preact").ComponentChildren} [separator] What is written
  *   between the hours and the minutes. "h" in French, ":" elsewhere.
+ * @param {string} [placeholder] What the wheels show while the time holds
+ *   nothing, as "HH:MM". Wheels have no blank row to land on, so their
+ *   placeholder is a position rather than a grey word — shown, but not an
+ *   answer: the value stays `undefined` until a wheel is turned or a real value
+ *   arrives. `defaultValue` is the other half of the pair — a time that IS the
+ *   answer, and where a reset goes back to.
  * @param {object} [wheelProps] Anything a `Wheel` takes, said once for both of
  *   them — `visibleCount`, `itemWidth`, `glideSpeed`.
  */
 const TimeWheel = ({
   minuteStep = 1,
   loop = true,
+  placeholder,
   separator = naviI18n("time.hour_separator"),
   hourLabel = naviI18n("time.hour_label"),
   minuteLabel = naviI18n("time.minute_label"),
@@ -68180,8 +68264,12 @@ const TimeWheel = ({
     }
     return minuteList;
   }, [minuteStep]);
+  const {
+    aggregateChildStates
+  } = useAnswered(placeholder, rest, aggregateTime);
+  const placeholderParts = parseTimeParts(placeholder);
   return jsxs(WheelGroup, {
-    aggregateChildStates: aggregateTime,
+    aggregateChildStates: aggregateChildStates,
     distributeChildUIState: distributeTime,
     ...rest,
     children: [jsx(Wheel, {
@@ -68190,6 +68278,7 @@ const TimeWheel = ({
       bounded: !loop,
       size: size,
       "aria-label": hourLabel,
+      defaultValue: placeholderParts ? placeholderParts.hour : undefined,
       ...wheelProps,
       children: HOURS.map(hour => jsx(Wheel.Item, {
         value: hour,
@@ -68205,6 +68294,7 @@ const TimeWheel = ({
       bounded: !loop,
       size: size,
       "aria-label": minuteLabel,
+      defaultValue: placeholderParts ? placeholderParts.minute : undefined,
       ...wheelProps,
       children: minutes.map(minute => jsx(Wheel.Item, {
         value: minute,
@@ -68242,6 +68332,12 @@ const TimeWheel = ({
  *   one that goes backwards is not. It is what the bounds keep between them as
  *   they turn — turn the start into the end and the end moves along, keeping
  *   that much room.
+ * @param {{ start?: string, end?: string }} [placeholder] What the two wheels
+ *   show while the span holds nothing — a position, since wheels have no blank
+ *   row to land on, and not an answer: the value stays `undefined` until one of
+ *   them is turned. One turn settles both, the untouched bound included, left
+ *   where the placeholder put it. For a span that is optional ("any time of
+ *   day") and still has to show hours.
  * @param {object} [timeProps] Anything a `TimeWheel` takes, said once for both
  *   of them. `startTimeProps`/`endTimeProps` say it to one of the two, and win
  *   over this one.
@@ -68250,6 +68346,7 @@ const TimeRangeWheel = ({
   minuteStep = 1,
   minDuration = 0,
   loop = true,
+  placeholder,
   size,
   startLabel = naviI18n("time_range.from"),
   endLabel = naviI18n("time_range.to"),
@@ -68261,6 +68358,12 @@ const TimeRangeWheel = ({
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
+  // One turn settles the whole span: a start somebody chose makes the end an
+  // answer too, left where the placeholder put it.
+  const {
+    answeredRef,
+    aggregateChildStates
+  } = useAnswered(placeholder, rest, aggregateSpan);
 
   // What the pair does while it is being turned: the bound that just moved is
   // the one the user is holding, so it stays where it was put and the OTHER one
@@ -68297,50 +68400,126 @@ const TimeRangeWheel = ({
       event: e
     });
   };
-  return jsxs(ControlGroup, {
+  return jsx(ControlGroup, {
     flex: true,
     alignY: "center",
     spacing: "s",
     size: size,
+    aggregateChildStates: aggregateChildStates,
     ...rest,
-    children: [startLabel === null ? null : jsx(Text, {
-      size: size,
-      children: startLabel
-    }), jsx(TimeWheel, {
-      id: startId,
-      ref: startRef,
-      name: "start",
-      minuteStep: minuteStep,
-      loop: loop,
-      size: size,
-      uiAction: (value, e) => keepBoundsApart("start", value, e),
-      ...timeProps,
-      ...startTimeProps
-    }), endLabel === null ? null : jsx(Text, {
-      size: size,
-      children: endLabel
-    }), jsx(TimeWheel, {
-      ref: endRef,
-      name: "end",
-      minuteStep: minuteStep,
-      loop: loop,
-      size: size,
-      uiAction: (value, e) => keepBoundsApart("end", value, e)
-      // Which time it comes after, and how much room there must be between
-      // the two: said on the LATER of the two, so the answer is given where
-      // the time one would have to move is (see time_range_constraint.js).
-      ,
-      "data-time-after": startId,
-      "data-time-min-duration": minDuration,
-      ...timeProps,
-      ...endTimeProps
-    })]
+    children: jsxs(AnsweredContext.Provider, {
+      value: answeredRef,
+      children: [startLabel === null ? null : jsx(Text, {
+        size: size,
+        children: startLabel
+      }), jsx(TimeWheel, {
+        id: startId,
+        ref: startRef,
+        name: "start",
+        minuteStep: minuteStep,
+        loop: loop,
+        size: size,
+        placeholder: placeholder ? placeholder.start : undefined,
+        uiAction: (value, e) => keepBoundsApart("start", value, e),
+        ...timeProps,
+        ...startTimeProps
+      }), endLabel === null ? null : jsx(Text, {
+        size: size,
+        children: endLabel
+      }), jsx(TimeWheel, {
+        ref: endRef,
+        name: "end",
+        minuteStep: minuteStep,
+        loop: loop,
+        size: size,
+        placeholder: placeholder ? placeholder.end : undefined,
+        uiAction: (value, e) => keepBoundsApart("end", value, e)
+        // Which time it comes after, and how much room there must be between
+        // the two: said on the LATER of the two, so the answer is given where
+        // the time one would have to move is (see time_range_constraint.js).
+        ,
+        "data-time-after": startId,
+        "data-time-min-duration": minDuration,
+        ...timeProps,
+        ...endTimeProps
+      })]
+    })
   });
 };
+
+/**
+ * Wheels always show something — there is no blank row to land on — so a pair of
+ * them cannot say "nothing set" by looking empty. Their `placeholder` is
+ * therefore a position rather than a grey word: shown like a value, and not one.
+ * The value stays `undefined` until a wheel is turned, which is what tells "any
+ * time of day" from a span somebody chose. `defaultValue` remains what it is
+ * everywhere else — a time that IS the answer.
+ *
+ * What counts as turned is read from the value itself rather than from a
+ * gesture: while nothing has moved off the placeholder, nothing is set; the
+ * moment it differs, it is an answer and stays one, even turned back onto the
+ * placeholder. A wheel's own `uiAction` runs after its group has aggregated, so
+ * a flag set from there would always be one turn late.
+ *
+ * The flag is a ref rather than state because the aggregate a group is created
+ * with is the one it keeps: swapping the function on a later render changes
+ * nothing (see useUIGroupStateController). One stable function reading one ref.
+ *
+ * A pair shares ONE flag through `AnsweredContext`: turning the start settles
+ * the end too, left where the placeholder put it. Each of the two times gating
+ * on its own would answer half a span — and would leave the pair nothing to
+ * compare its own placeholder against.
+ */
+const AnsweredContext = createContext(null);
+const useAnswered = (placeholder, props, aggregateWhenAnswered) => {
+  const answeredFromPair = useContext(AnsweredContext);
+  const ownAnsweredRef = useRef(false);
+  const answeredRef = answeredFromPair || ownAnsweredRef;
+  if (!placeholder || isAnswerGivenByProps(props)) {
+    answeredRef.current = true;
+  }
+  // Inside a pair, only the pair decides: a time that gated on its own would
+  // hand the pair nothing to compare, and half a span cannot be read.
+  const gates = !answeredFromPair;
+  const placeholderRef = useRef(placeholder);
+  placeholderRef.current = placeholder;
+  const aggregateRef = useRef(null);
+  if (!aggregateRef.current) {
+    aggregateRef.current = children => {
+      const aggregated = aggregateWhenAnswered(children);
+      if (answeredRef.current) {
+        return aggregated;
+      }
+      if (compareTwoJsValues(aggregated, placeholderRef.current)) {
+        return undefined;
+      }
+      // It moved: from here on this is an answer, and stays one even when it is
+      // turned back onto the placeholder — somebody chose that time.
+      answeredRef.current = true;
+      return aggregated;
+    };
+  }
+  return {
+    answeredRef,
+    aggregateChildStates: gates ? aggregateRef.current : aggregateWhenAnswered
+  };
+};
+const isAnswerGivenByProps = props => props.value !== undefined || props.defaultValue !== undefined || props.signal && props.signal.value !== undefined;
 const HOURS = Array.from({
   length: HOUR_COUNT
 }, (_, hour) => hour);
 const padTwo = value => String(value).padStart(2, "0");
+
+// The two times as one span, { start, end } — the shape a pair carries.
+const aggregateSpan = childUIStateControllers => {
+  const span = {};
+  for (const child of childUIStateControllers) {
+    if (child.name === "start" || child.name === "end") {
+      span[child.name] = child.uiState;
+    }
+  }
+  return span;
+};
 
 // The two wheels as one value, "HH:MM".
 const aggregateTime = childUIStateControllers => {
