@@ -224,7 +224,9 @@ export const useUIStateController = (
           if (controller.facadeChild) {
             const child = controller.facadeChild;
             const childManaged = child.getManagedControls();
-            if (childManaged.length > 0) return childManaged;
+            if (childManaged.length > 0) {
+              return childManaged;
+            }
             return [child];
           }
           return [];
@@ -368,7 +370,9 @@ export const useUIStateController = (
               );
               chainEvent(siblingUncheckEvent, e);
               for (const siblingController of siblings) {
-                if (siblingController === controller) continue;
+                if (siblingController === controller) {
+                  continue;
+                }
                 if (
                   siblingController.parentUIStateController !==
                   s.parentUIStateController
@@ -580,10 +584,8 @@ export const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
-        onActionEnd: async (e) => {
+        onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
-          // wait for preact to re-render to update readonly as action end side effects are runned
-          // await new Promise((r) => requestAnimationFrame(r));
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -733,11 +735,13 @@ export const useUIStateController = (
       return undefined;
     }
 
-    debugUIState(`"${controlType}" registering into "${parent.controlType}"`);
+    debugUIState(
+      `"${controlType}" registering into "${parentController.controlType}"`,
+    );
     parentController.registerChild(controller);
     return () => {
       debugUIState(
-        `"${controlType}" unregistering from "${parent.controlType}"`,
+        `"${controlType}" unregistering from "${parentController.controlType}"`,
       );
       parentController.unregisterChild(controller);
     };
@@ -746,42 +750,8 @@ export const useUIStateController = (
   return controller;
 };
 
-/**
- * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
- *
- * Children register themselves automatically on mount and unregister on unmount.
- * Whenever a child fires a UI action, the group re-aggregates all child states
- * via `aggregateChildStates` and reacts accordingly.
- *
- * **Three distinct methods — each with a clear responsibility**:
- *
- * - `setUIState(newUIState, e)` — called when a child UI action **changes** the aggregated value.
- *   Updates the group state, then calls `onUIAction(e)` for user-observable reactions
- *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
- *   can trigger the action pipeline (constraints → execute action).
- *
- * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
- *   Updates state and signal with no external reactions whatsoever.
- *
- * - `onUIAction(e)` — called when a child's UI action does **not** change the aggregated
- *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
- *   does not touch state, does not trigger the action pipeline.
- *
- * **Child UI action flow**:
- * 1. Child leaf fires `notifyParentAboutChildUIAction(e, { stateChanged })`.
- * 2. Group's `onChildUIAction` receives it.
- *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
- *    - If `stateChanged=false`: calls `onUIAction` → uiAction + command only.
- *
- * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
- * (e.g. ignoring buttons inside a selectable list).
- */
 const CANNOT_DERIVE = Symbol("cannot_derive");
 
-// Default aggregate/distribute implementations keyed by controlType or stateType.
-// Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
-// distributeChildUIState. If neither a default nor an explicit impl is found for a
-// group, creation throws so the caller knows it must supply them.
 // A child that groups other controls and was given no name of its own, holding
 // an object — the only shape that can be merged into the object around it.
 // A nameless LEAF (an input nobody named) is still a mistake and still warns.
@@ -791,19 +761,25 @@ const isNamelessGrouping = (child, uiState) =>
   typeof uiState === "object" &&
   !Array.isArray(uiState);
 
+const firstDefinedChildUIState = (children) => {
+  for (const child of children) {
+    const childUIState = child.uiState;
+    if (childUIState !== undefined) {
+      return childUIState;
+    }
+  }
+  return undefined;
+};
+
+// Default aggregate/distribute implementations keyed by controlType or stateType.
+// Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
+// distributeChildUIState. If neither a default nor an explicit impl is found for a
+// group, creation throws so the caller knows it must supply them.
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
       child.controlType === "input" && child.controlHostProps?.type === "radio",
-    aggregateChildStates: (children) => {
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          return childUIState;
-        }
-      }
-      return undefined;
-    },
+    aggregateChildStates: firstDefinedChildUIState,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected = childUIStateController.props.value === newUIState;
       if (childSelected) {
@@ -860,15 +836,7 @@ const GROUP_DEFAULTS = {
       }
       return true;
     },
-    aggregateChildStates: (children) => {
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          return childUIState;
-        }
-      }
-      return undefined;
-    },
+    aggregateChildStates: firstDefinedChildUIState,
     distributeChildUIState: (newUIState) => newUIState,
   },
   object: {
@@ -937,6 +905,36 @@ const GROUP_DEFAULTS = {
   },
 };
 
+/**
+ * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
+ *
+ * Children register themselves automatically on mount and unregister on unmount.
+ * Whenever a child fires a UI action, the group re-aggregates all child states
+ * via `aggregateChildStates` and reacts accordingly.
+ *
+ * **Three distinct methods — each with a clear responsibility**:
+ *
+ * - `setUIState(newUIState, e)` — called when a child UI action **changes** the aggregated value.
+ *   Updates the group state, then calls `onUIAction(e)` for user-observable reactions
+ *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
+ *   can trigger the action pipeline (constraints → execute action).
+ *
+ * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
+ *   Updates state and signal with no external reactions whatsoever.
+ *
+ * - `onUIAction(e)` — called when a child's UI action does **not** change the aggregated
+ *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
+ *   does not touch state, does not trigger the action pipeline.
+ *
+ * **Child UI action flow**:
+ * 1. Child leaf fires `notifyParentAboutChildUIAction(e, { stateChanged })`.
+ * 2. Group's `onChildUIAction` receives it.
+ *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
+ *    - If `stateChanged=false`: calls `onUIAction` → uiAction + command only.
+ *
+ * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
+ * (e.g. ignoring buttons inside a selectable list).
+ */
 export const useUIGroupStateController = (
   props,
   controlType,
@@ -1023,7 +1021,9 @@ export const useUIGroupStateController = (
   pendingChangeRef.current = null;
 
   const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isProxy) return false;
+    if (childUIStateController.isProxy) {
+      return false;
+    }
     if (
       resolvedChildControlFilter &&
       !resolvedChildControlFilter(childUIStateController)
@@ -1033,9 +1033,15 @@ export const useUIGroupStateController = (
     return true;
   };
   const shouldPropagateStateToChild = (childUIStateController) => {
-    if (!isMonitoringChild(childUIStateController)) return false;
-    if (childUIStateController.controlType === "button") return false;
-    if (childUIStateController.controlType === "link") return false;
+    if (!isMonitoringChild(childUIStateController)) {
+      return false;
+    }
+    if (childUIStateController.controlType === "button") {
+      return false;
+    }
+    if (childUIStateController.controlType === "link") {
+      return false;
+    }
     return true;
   };
 
@@ -1047,6 +1053,14 @@ export const useUIGroupStateController = (
       );
       const [publishUIState, subscribeUIState] = createPubSub();
       const uiStateSignal = signal(fallbackState);
+
+      const aggregateGroupUIState = () => {
+        const aggChildState = resolvedAggregateChildStates(
+          childUIStateControllerArray,
+          fallbackState,
+        );
+        return aggChildState === undefined ? fallbackState : aggChildState;
+      };
 
       // onChange and applyState live inside init so they close over the stable
       // signals/pubsub without needing external refs.
@@ -1066,12 +1080,7 @@ export const useUIGroupStateController = (
           };
           return;
         }
-        const aggChildState = resolvedAggregateChildStates(
-          childUIStateControllerArray,
-          fallbackState,
-        );
-        const groupUIState =
-          aggChildState === undefined ? fallbackState : aggChildState;
+        const groupUIState = aggregateGroupUIState();
         debugUIGroup(
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
@@ -1080,13 +1089,13 @@ export const useUIGroupStateController = (
         if (notifyExternal === true) {
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
-          controller.syncInternalState(groupUIState, e);
+          controller.syncInternalState(groupUIState);
           s.parentUIStateController?.onChildUIAction(controller, e, {
             stateChanged: true,
             silent: true,
           });
         } else {
-          controller.syncInternalState(groupUIState, e);
+          controller.syncInternalState(groupUIState);
           writeBoundSignal(groupUIState);
         }
       };
@@ -1207,12 +1216,7 @@ export const useUIGroupStateController = (
               propagateDownEvent,
             );
           }
-          const aggChildState = resolvedAggregateChildStates(
-            childUIStateControllerArray,
-            fallbackState,
-          );
-          const groupUIState =
-            aggChildState === undefined ? fallbackState : aggChildState;
+          const groupUIState = aggregateGroupUIState();
           if (e.type === "initial_state_push") {
             controller.syncInternalState(groupUIState);
             return;
@@ -1224,7 +1228,9 @@ export const useUIGroupStateController = (
         },
         syncInternalState: (newUIState) => {
           const currentUIState = controller.uiState;
-          if (newUIState === currentUIState) return;
+          if (newUIState === currentUIState) {
+            return;
+          }
           controller.uiState = newUIState;
           uiStateSignal.value = newUIState;
           publishUIState(newUIState);
@@ -1242,7 +1248,9 @@ export const useUIGroupStateController = (
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {
             const el = controller.ref.current;
-            if (el) triggerNaviCommand(el, controller.props.command, e);
+            if (el) {
+              triggerNaviCommand(el, controller.props.command, e);
+            }
           }
         },
         registerChild: (childUIStateController) => {
@@ -1293,7 +1301,9 @@ export const useUIGroupStateController = (
             });
             return;
           }
-          if (!isMonitoringChild(childUIStateController)) return;
+          if (!isMonitoringChild(childUIStateController)) {
+            return;
+          }
           const childControlType = childUIStateController.controlType;
           debugUIGroup(
             `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
@@ -1315,7 +1325,9 @@ export const useUIGroupStateController = (
             delegatedTo.unregisterChild(childUIStateController);
             return;
           }
-          if (!isMonitoringChild(childUIStateController)) return;
+          if (!isMonitoringChild(childUIStateController)) {
+            return;
+          }
           const childControlType = childUIStateController.controlType;
           const index = childUIStateControllerArray.indexOf(
             childUIStateController,
@@ -1328,7 +1340,7 @@ export const useUIGroupStateController = (
           }
           childUIStateControllerArray.splice(index, 1);
           debugUIGroup(
-            `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+            `${controlType}.unregisterChild("${childControlType}") -> unregistered (remaining: ${childUIStateControllerArray.length})`,
           );
           onChange(new CustomEvent(`${childControlType}_unmount`), {
             notifyExternal: "silent",
@@ -1340,7 +1352,9 @@ export const useUIGroupStateController = (
           });
           chainEvent(ev, e);
           for (const c of childUIStateControllerArray) {
-            if (shouldPropagateStateToChild(c)) c.resetUIState(ev);
+            if (shouldPropagateStateToChild(c)) {
+              c.resetUIState(ev);
+            }
           }
           onChange(e, { notifyExternal: true });
         },
@@ -1388,13 +1402,17 @@ export const useUIGroupStateController = (
         },
         findChildById: (searchId) => {
           for (const c of childUIStateControllerArray) {
-            if (c.id === searchId) return c;
+            if (c.id === searchId) {
+              return c;
+            }
           }
           return null;
         },
         getChildControllers: () => childUIStateControllerArray,
         getManagedControls: () => {
-          if (!cascadeValidationToChildren) return [];
+          if (!cascadeValidationToChildren) {
+            return [];
+          }
           return childUIStateControllerArray.slice();
         },
         // Group children sit next to the group itself: a busy one really does
@@ -1442,10 +1460,7 @@ export const useUIGroupStateController = (
       controller.defaultValue = defaultValue;
       controller.hasValueProp = hasValueProp;
       controller.hasDefaultValueProp = hasDefaultValueProp;
-      if (
-        hasValueProp &&
-        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
-      ) {
+      const placeChildrenFrom = (groupUIState) => {
         const propagateDownEvent = new CustomEvent(
           "propagate_down_set_ui_state",
           { detail: {} },
@@ -1453,11 +1468,17 @@ export const useUIGroupStateController = (
         for (const childUIStateController of childUIStateControllerArray) {
           controller.placeChildUIState(
             childUIStateController,
-            value,
+            groupUIState,
             propagateDownEvent,
           );
         }
-        controller.syncInternalState(value);
+        controller.syncInternalState(groupUIState);
+      };
+      if (
+        hasValueProp &&
+        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
+      ) {
+        placeChildrenFrom(value);
       }
       if (
         boundSignal &&
@@ -1468,18 +1489,7 @@ export const useUIGroupStateController = (
         // again, exactly as they were when they registered. Without this a
         // group would answer a write to its own signal by silently writing its
         // former value back over it on the next child interaction.
-        const propagateDownEvent = new CustomEvent(
-          "propagate_down_set_ui_state",
-          { detail: {} },
-        );
-        for (const childUIStateController of childUIStateControllerArray) {
-          controller.placeChildUIState(
-            childUIStateController,
-            defaultValue,
-            propagateDownEvent,
-          );
-        }
-        controller.syncInternalState(defaultValue);
+        placeChildrenFrom(defaultValue);
       }
 
       return {
@@ -1591,10 +1601,18 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     // ── init: runs once on mount ───────────────────────────────────────────
     (s) => {
       const canRegisterAsFacadeChild = (childController) => {
-        if (childController.controlType === "button") return false;
-        if (childController.controlType === "link") return false;
-        if (childController.controlType === "facade") return false;
-        if (childController.isProxy) return false;
+        if (childController.controlType === "button") {
+          return false;
+        }
+        if (childController.controlType === "link") {
+          return false;
+        }
+        if (childController.controlType === "facade") {
+          return false;
+        }
+        if (childController.isProxy) {
+          return false;
+        }
         if (childController.allowNameless) {
           // A control saying it is not a field is not the one the picker talks
           // to: the search box above the list, the "select all" switch beside

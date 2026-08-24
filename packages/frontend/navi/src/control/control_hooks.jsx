@@ -188,11 +188,9 @@ export const useControlProps = (
   const controlName = useContext(ControlNameContext);
   props.name = props.name || controlName;
 
+  const isCheckable = isCheckableInput(controlType, props.type);
   const toDomProps = (newUIState) => {
-    if (
-      controlType === "input" &&
-      (props.type === "radio" || props.type === "checkbox")
-    ) {
+    if (isCheckable) {
       const domValue = toDomValue(props.value, {
         controlType,
         id: props.id,
@@ -588,10 +586,7 @@ export const useControlProps = (
         return keyDownDefault(e);
       };
 
-      const isInputCheckable =
-        controlType === "input" &&
-        (props.type === "radio" || props.type === "checkbox");
-      if (isInputCheckable) {
+      if (isCheckable) {
         const isRadio = props.type === "radio";
 
         // I've decided that enter on radio/checkbox would not submit form like browser does but
@@ -606,7 +601,6 @@ export const useControlProps = (
           keyDown: (e) => {
             if (e.key === "Enter") {
               const inputEl = ref.current;
-              const isRadio = props.type === "radio";
               const checked = inputEl.checked;
               const always = () => {
                 if (inputEl.form) {
@@ -635,22 +629,16 @@ export const useControlProps = (
                   always,
                 };
               }
-              if (checked) {
-                return {
-                  name: "enter to uncheck checkbox",
-                  allowed: () =>
-                    dispatchRequestSetUIState(inputEl, undefined, {
-                      event: e,
-                    }),
-                  always,
-                };
-              }
               return {
-                name: "enter to check checkbox",
+                name: checked
+                  ? "enter to uncheck checkbox"
+                  : "enter to check checkbox",
                 allowed: () =>
-                  dispatchRequestSetUIState(inputEl, uiStateController.value, {
-                    event: e,
-                  }),
+                  dispatchRequestSetUIState(
+                    inputEl,
+                    checked ? undefined : uiStateController.value,
+                    { event: e },
+                  ),
                 always,
               };
             }
@@ -788,9 +776,6 @@ export const useControlProps = (
       // Same for radio siblings: when a sibling check unchecks this radio
       // (radio_sibling_uncheck, internal event, no synthetic input), lastActionValueRef
       // keeps the stale value and blocks the user from re-checking this radio.
-      const isCheckable =
-        controlType === "input" &&
-        (props.type === "radio" || props.type === "checkbox");
       if (!isCheckable) {
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction =
@@ -1201,6 +1186,7 @@ const useIsControlListenedTo = (props) => {
 };
 const useReadOnlyUncontrolled = (props, controlInfo) => {
   const listenedTo = useIsControlListenedTo(props);
+  const warnedRef = useRef(false);
   if (!controlInfo.hasStateProp) {
     return false;
   }
@@ -1210,8 +1196,10 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
   if (
     // explicit readonly is ok
     !props.readOnly &&
-    import.meta.dev
+    import.meta.dev &&
+    !warnedRef.current
   ) {
+    warnedRef.current = true;
     const { controlType, statePropName, defaultStatePropName } = controlInfo;
     console.warn(
       `"${controlType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction"/"action" to make field interactive.`,
@@ -1268,9 +1256,11 @@ export const useControlgroupProps = (
   // can't change. A form or a group around it IS someone listening — that is
   // what will send the value and hand a new one back.
   const listenedTo = useIsControlListenedTo(props);
+  const implicitReadOnlyWarnedRef = useRef(false);
   const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;
   if (implicitReadOnly && !props.readOnly) {
-    if (import.meta.dev) {
+    if (import.meta.dev && !implicitReadOnlyWarnedRef.current) {
+      implicitReadOnlyWarnedRef.current = true;
       console.warn(
         `[${controlType}] is controlled (has "value" prop) but has no action handler. ` +
           `Use "defaultValue" for uncontrolled mode, or provide "action"/"uiAction".`,
@@ -1320,8 +1310,8 @@ export const useControlgroupProps = (
     controlRootProps,
     {
       ...controlgroupProps,
-      "name": undefined, // useful to children, not the the group itself
-      "required": undefined, // useful to children, not the the group itself
+      "name": undefined, // useful to children, not the group itself
+      "required": undefined, // useful to children, not the group itself
       // How many items the group accepts, read by its controller and by the
       // children asking whether there is still room for them. Not an attribute
       // any element wears: a <fieldset maxlength> means nothing.
@@ -1336,29 +1326,6 @@ export const useControlgroupProps = (
   ];
 };
 
-/**
- * Like `useControlProps` but also establishes a 1:1 facade sync between the
- * picker's hidden input and the first child control inside the picker popup.
- *
- * Child → picker input: when the child's UI state changes, the picker input
- * is updated automatically (no `command="--navi-update"` needed on the child).
- *
- * Picker input → child: when the picker input is updated externally (e.g.
- * via `--navi-update` or `--navi-clear` from outside), the change is
- * propagated down to the child automatically.
- *
- * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
- * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
- * children — it resets field contexts and injects the facade controller:
- *
- * ```jsx
- * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
- * // …
- * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
- *   {children}
- * </ControlFacadeChildrenWrapper>
- * ```
- */
 /**
  * What a control holds, read from the control itself.
  *
@@ -1406,6 +1373,29 @@ export const useControlUIState = (ref, uiStateInitial) => {
   return uiState;
 };
 
+/**
+ * Like `useControlProps` but also establishes a 1:1 facade sync between the
+ * picker's hidden input and the first child control inside the picker popup.
+ *
+ * Child → picker input: when the child's UI state changes, the picker input
+ * is updated automatically (no `command="--navi-update"` needed on the child).
+ *
+ * Picker input → child: when the picker input is updated externally (e.g.
+ * via `--navi-update` or `--navi-clear` from outside), the change is
+ * propagated down to the child automatically.
+ *
+ * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
+ * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
+ * children — it resets field contexts and injects the facade controller:
+ *
+ * ```jsx
+ * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * // …
+ * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+ *   {children}
+ * </ControlFacadeChildrenWrapper>
+ * ```
+ */
 export const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, { uiStateController }] =
     useControlProps(props, options);
@@ -1430,17 +1420,9 @@ export const ControlFacadeChildrenWrapper = ({
   children,
   facadeController,
 }) => (
-  <ParentUIStateControllerContext.Provider value={facadeController}>
-    <MessagePropsRefContext.Provider value={undefined}>
-      <ControlIdContext.Provider value={undefined}>
-        <RequiredContext.Provider value={undefined}>
-          <ControlNameContext.Provider value={undefined}>
-            {children}
-          </ControlNameContext.Provider>
-        </RequiredContext.Provider>
-      </ControlIdContext.Provider>
-    </MessagePropsRefContext.Provider>
-  </ParentUIStateControllerContext.Provider>
+  <ControlChildrenWrapper uiStateController={facadeController}>
+    {children}
+  </ControlChildrenWrapper>
 );
 
 const useInteractiveProps = (
@@ -1585,9 +1567,10 @@ const useInteractiveProps = (
     }, []);
   }
   ui_state_and_value: {
-    const isCheckable =
-      uiStateController.controlType === "input" &&
-      (props.type === "radio" || props.type === "checkbox");
+    const isCheckable = isCheckableInput(
+      uiStateController.controlType,
+      props.type,
+    );
     Object.assign(controlHostProps, {
       onnavi_clear_ui_state: (e) => {
         uiStateController.clearUIState(e);
@@ -1820,8 +1803,7 @@ const splitControlProps = (props) => {
     ref,
   };
   const controlRootProps = {};
-  const propKeySet = new Set(Object.keys(props));
-  for (const key of propKeySet) {
+  for (const key of Object.keys(props)) {
     if (CONTROL_PROP_SET.has(key)) {
       if (CONTROL_ATTRIBUTE_SET.has(key)) {
         controlHostProps[key] = props[key];
@@ -1832,6 +1814,9 @@ const splitControlProps = (props) => {
   }
   return [controlRootProps, controlHostProps];
 };
+
+const isCheckableInput = (controlType, typeProp) =>
+  controlType === "input" && (typeProp === "radio" || typeProp === "checkbox");
 
 // The labels the DOM itself can hand over: a wrapping <label>, or a label[for]
 // pointing at a native form element. Everything else — a label[for] on a
