@@ -2,16 +2,15 @@
  * cmd+K / ctrl+K on any dev-served page: the .html files the server serves, as a
  * tree one walks, filter as you type, Enter to go there.
  *
+ * The tree itself is not this file's: it is the page picker the dev server ships
+ * for everyone who has to ask "which page?" (see protocol_file/client/page_picker.js
+ * — the clients dashboard asks it too, to send another browser somewhere). What
+ * belongs here is the key, and what taking a row means in this tab.
+ *
  * cmd+E / ctrl+E is the other half of the same question: instead of going to a
  * page, open its file in the editor (the server does it, see
  * GET /.internal/open_file/*). Pressed on the page itself it opens the page one
  * is on; pressed inside the switcher it opens the row one is looking at.
- *
- * A tree rather than a list of paths, because the paths are mostly the same
- * path: folding every directory that holds a single thing turns
- * "packages/frontend/navi/src/layout/demos/…" repeated forty times into one
- * line holding forty files — and the packages become something one can see,
- * count and fold away rather than something to type.
  *
  * Injected into every page (see jsenv_plugin_page_switcher.js), which is why it
  * is careful about what it takes:
@@ -23,832 +22,209 @@
  *   reach it and it cannot reach the page's.
  */
 
-// Everything below lives in here rather than at the top level: this file is
-// injected as a classic script, where a top-level `const` becomes a global
-// lexical binding shared with every other script on the page — one named CSS
-// took window.CSS away from the whole page, one named setup collided with
-// another injected client. A function scope owes nothing to anybody.
-(() => {
-  const PAGES_ENDPOINT = "/.internal/pages.json";
-  // The server asks the OS to open a file in whatever editor is configured
-  // (VSCode here) — it takes a file url, which is why the page list carries one
-  // per page (see html_pages.js).
-  const OPEN_FILE_ENDPOINT = "/.internal/open_file/";
-  const STORAGE_KEY = "jsenv_page_switcher";
-  // Open across a reload: this is a dev tool on a page one is editing, and a hot
-  // reload in the middle of looking for the next page should not close what one
-  // was looking at. In sessionStorage, not localStorage: it says what THIS tab was
-  // doing a second ago, which is not something to remember tomorrow.
-  const OPEN_KEY = "jsenv_page_switcher_open";
-  // What kind of page it is, as the server reads it from where the file sits and
-  // what it is called (see html_pages.js): something tried out, something shown,
-  // or a page like any other.
-  const KINDS = [
-    { id: "demo", icon: "🎬", label: "demos" },
-    { id: "experiment", icon: "🧪", label: "experiments" },
-    { id: "page", icon: "📄", label: "pages" },
-  ];
-  // Demos alone to begin with: they are what one comes here for nine times out of
-  // ten, and a tree opening on five hundred files is a tree nobody reads. The
-  // other two are one click away, and the choice is remembered.
-  const DEFAULT_KIND_STATE = { demo: true, experiment: false, page: false };
+import {
+  asPageUrl,
+  isEditorKey,
+  isCommandKey,
+  loadPages,
+  openPagePicker,
+} from "/@fs@jsenv/core/src/plugins/protocol_file/client/page_picker.js";
 
-  // The page this script is running in, as the list spells its urls (see
-  // html_pages.js: "/" + the path from the root). Decoded, because a name with a
-  // space or an accent reaches location.pathname percent-encoded and would never
-  // match the list.
-  const currentPageUrl = () => {
-    try {
-      return decodeURIComponent(window.location.pathname);
-    } catch {
-      return window.location.pathname;
-    }
-  };
+// The server asks the OS to open a file in whatever editor is configured
+// (VSCode here) — it takes a file url, which is why the page list carries one
+// per page (see html_pages.js).
+const OPEN_FILE_ENDPOINT = "/.internal/open_file/";
+// Open across a reload: this is a dev tool on a page one is editing, and a hot
+// reload in the middle of looking for the next page should not close what one
+// was looking at. In sessionStorage, not localStorage: it says what THIS tab was
+// doing a second ago, which is not something to remember tomorrow.
+const OPEN_KEY = "jsenv_page_switcher_open";
 
-  // cmd on mac, ctrl elsewhere — the same split every editor makes.
-  const isCommandKey = (event) =>
-    window.navigator.platform.toLowerCase().includes("mac")
-      ? event.metaKey && !event.ctrlKey
-      : event.ctrlKey && !event.metaKey;
+// The page this script is running in, as the list spells its urls.
+const currentPageUrl = () => asPageUrl(window.location.href);
 
-  const isSwitcherKey = (event) =>
-    (event.key === "k" || event.key === "K") && isCommandKey(event);
-  // E for edit, next to K for the same reason the two belong together: K asks
-  // "which page", E asks "where does this page live". Outside the switcher it
-  // means the page one is on; inside it, the row one is looking at — so the
-  // same press reads the same way in both places.
-  const isEditorKey = (event) =>
-    (event.key === "e" || event.key === "E") && isCommandKey(event);
+const isSwitcherKey = (event) =>
+  (event.key === "k" || event.key === "K") && isCommandKey(event);
 
-  const STYLE_TEXT = /* css */ `
-    :host {
-      position: fixed;
-      inset: 0;
-      z-index: 2147483647;
-      display: block;
-      font-family: system-ui, sans-serif;
-    }
-    .backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.45);
-    }
-    .panel {
-      position: absolute;
-      top: 10vh;
-      left: 50%;
-      display: flex;
-      width: min(640px, calc(100vw - 32px));
-      max-height: 70vh;
-      flex-direction: column;
-      color: light-dark(#0f172a, #e2e8f0);
-      background: light-dark(white, #1e293b);
-      border-radius: 10px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-      color-scheme: light dark;
-      translate: -50% 0;
-      overflow: hidden;
-    }
-    input {
-      padding: 14px 16px;
-      color: inherit;
-      font-size: 15px;
-      font-family: inherit;
-      background: transparent;
-      border: none;
-      outline: none;
-    }
-    .kinds {
-      display: flex;
-      padding: 0 12px 10px;
-      gap: 6px;
-      border-bottom: 1px solid light-dark(#e2e8f0, #334155);
-    }
-    .kind_toggle {
-      display: flex;
-      padding: 4px 9px;
-      align-items: center;
-      gap: 5px;
-      color: light-dark(#475569, #cbd5e1);
-      font-size: 12px;
-      font-family: inherit;
-      background: light-dark(#f1f5f9, #0f172a);
-      border: 1px solid transparent;
-      border-radius: 999px;
-      cursor: pointer;
-    }
-    .kind_toggle[data-on] {
-      color: light-dark(#1d4ed8, #bfdbfe);
-      background: light-dark(#dbeafe, #1e3a8a);
-      border-color: light-dark(#93c5fd, #3b82f6);
-    }
-    .kind_toggle .count {
-      margin: 0;
-      padding: 0;
-      opacity: 0.7;
-    }
-    ul {
-      margin: 0;
-      padding: 6px;
-      list-style: none;
-      overflow-y: auto;
-    }
-    li {
-      display: flex;
-      padding: 5px 8px;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      font-family: ui-monospace, monospace;
-      white-space: nowrap;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    /* A file IS a link — an href, so cmd/ctrl+click opens it in a tab and the
-       browser's own menu offers the rest. It fills its row so the whole line
-       stays the target. */
-    li > a {
-      display: flex;
-      min-width: 0;
-      flex: 1;
-      align-items: center;
-      gap: 6px;
-      color: inherit;
-      text-decoration: none;
-    }
-    /* The page one is already on, so a switcher opened blind says where it was
-       opened from. Under the selection rule below, which must win when the two
-       are the same row. */
-    li[data-here] {
-      background: light-dark(#eff6ff, #172554);
-    }
-    li[data-here] .strong {
-      color: light-dark(#1d4ed8, #93c5fd);
-    }
-    li[data-current] {
-      color: white;
-      background: light-dark(#2563eb, #3b82f6);
-    }
-    /* Selected AND the page one is on: the selection owns the row's colours,
-       accents included, or the name would be dark blue on blue. */
-    li[data-current] .strong {
-      color: inherit;
-    }
-    li[data-current] .dim,
-    li[data-current] .count {
-      color: inherit;
-      opacity: 0.85;
-    }
-    .twisty {
-      width: 1em;
-      flex: none;
-      opacity: 0.6;
-    }
-    .kind_icon {
-      width: 1.2em;
-      flex: none;
-      font-size: 12px;
-    }
-    /* The name is what one reads; the road to it is context — grey, but grey one
-       can still read: on the dark panel #64748b sat barely above the background. */
-    .dim {
-      color: light-dark(#94a3b8, #94a3b8);
-    }
-    .strong {
-      font-weight: 600;
-    }
-    .here {
-      margin-left: auto;
-      padding-left: 8px;
-      color: light-dark(#1d4ed8, #93c5fd);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    li[data-current] .here {
-      color: inherit;
-      opacity: 0.85;
-    }
-    .count {
-      margin-left: auto;
-      padding-left: 8px;
-      color: light-dark(#94a3b8, #94a3b8);
-      font-size: 11px;
-      font-variant-numeric: tabular-nums;
-    }
-    .empty {
-      padding: 14px 16px;
-      color: light-dark(#64748b, #94a3b8);
-      font-size: 13px;
-      cursor: default;
-    }
-  `;
+const FLASH_STYLE_TEXT = /* css */ `
+  :host {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    /* Above the picker's own panel: it is the switcher that triggers it. */
+    z-index: 2147483647;
+    display: block;
+    font-family: system-ui, sans-serif;
+    pointer-events: none;
+  }
+  .flash {
+    padding: 8px 14px;
+    color: light-dark(#0f172a, #e2e8f0);
+    font-size: 13px;
+    background: light-dark(white, #1e293b);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    color-scheme: light dark;
+  }
+  .flash[data-error] {
+    color: light-dark(#991b1b, #fecaca);
+    background: light-dark(#fee2e2, #7f1d1d);
+  }
+`;
 
-  const FLASH_STYLE_TEXT = /* css */ `
-    :host {
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
-      /* Above the switcher's own panel: it is the switcher that triggers it. */
-      z-index: 2147483647;
-      display: block;
-      font-family: system-ui, sans-serif;
-      pointer-events: none;
-    }
-    .flash {
-      padding: 8px 14px;
-      color: light-dark(#0f172a, #e2e8f0);
-      font-size: 13px;
-      background: light-dark(white, #1e293b);
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      color-scheme: light dark;
-    }
-    .flash[data-error] {
-      color: light-dark(#991b1b, #fecaca);
-      background: light-dark(#fee2e2, #7f1d1d);
-    }
-  `;
-
-  let pagesPromise = null;
-  const loadPages = () => {
-    // Once per page load: the list is a filesystem scan behind a short cache
-    // server-side, and a switcher opened twice in a row is the same list.
-    pagesPromise ||= fetch(PAGES_ENDPOINT)
-      .then((response) => response.json())
-      .catch(() => []);
-    return pagesPromise;
-  };
-
-  // Opening a file in an editor happens in another application, on another
-  // screen sometimes: without a word here, a press that failed and a press that
-  // worked look exactly the same. Its own host and its own shadow root, so it
-  // can be shown whether or not the switcher is open.
-  let flashHost = null;
-  let flashBox = null;
-  let flashTimeout = null;
-  const flash = (message, isError) => {
-    if (!flashHost) {
-      flashHost = document.createElement("div");
-      const shadow = flashHost.attachShadow({ mode: "open" });
-      const style = document.createElement("style");
-      style.textContent = FLASH_STYLE_TEXT;
-      flashBox = document.createElement("div");
-      flashBox.className = "flash";
-      shadow.append(style, flashBox);
-    }
-    flashBox.textContent = message;
-    flashBox.toggleAttribute("data-error", Boolean(isError));
-    // Appended last every time, so it sits above the switcher's host when both
-    // are on the page and they share the same z-index.
-    document.body.append(flashHost);
-    window.clearTimeout(flashTimeout);
-    flashTimeout = window.setTimeout(() => flashHost.remove(), 2500);
-  };
-
-  const openInEditor = async (file) => {
-    if (!file || !file.fileUrl) {
-      flash("This page is not a file the server lists.", true);
-      return;
-    }
-    flash(`Opening ${file.name || file.url} in editor…`);
-    try {
-      const response = await fetch(
-        `${OPEN_FILE_ENDPOINT}${encodeURIComponent(file.fileUrl)}`,
-      );
-      if (response.status === 404) {
-        // The route exists only when the server is willing to expose the
-        // machine it runs on (see start_server.js).
-        flash("This server does not open files in an editor.", true);
-      } else if (!response.ok) {
-        flash(`Editor said no (${response.status}).`, true);
-      }
-    } catch {
-      flash("Could not reach the dev server.", true);
-    }
-  };
-
-  const readStoredState = () => {
-    try {
-      const stored = JSON.parse(
-        window.localStorage.getItem(STORAGE_KEY) || "{}",
-      );
-      return {
-        kinds: { ...DEFAULT_KIND_STATE, ...stored.kinds },
-        // What was folded AWAY is what is remembered, not what was opened: a
-        // directory that appears later (a new package, a new demos/) is open like
-        // everything else rather than hidden by a memory that predates it.
-        collapsed: new Set(
-          Array.isArray(stored.collapsed) ? stored.collapsed : [],
-        ),
-      };
-    } catch {
-      return { kinds: { ...DEFAULT_KIND_STATE }, collapsed: new Set() };
-    }
-  };
-  const writeStoredState = (state) => {
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ kinds: state.kinds, collapsed: [...state.collapsed] }),
-      );
-    } catch {
-      // private mode, quota — the switcher works, it just forgets
-    }
-  };
-
-  /*
-   * The tree, built from the paths and folded where folding loses nothing: a
-   * directory holding a single directory and no file of its own is merged with
-   * it, so one line reads "docs/users/b_dev/" instead of three. What is left is
-   * the shape of the choices there are to make.
-   */
-  const buildTree = (pages) => {
-    const root = { segments: [], path: "", directories: new Map(), files: [] };
-    // The directories that ARE a package (the server found the package.json, see
-    // html_pages.js): in a monorepo that is what one is looking for, so it is
-    // written plainly while the rest of the road stays grey.
-    const packagePathSet = new Set(
-      pages.map((page) => page.packageUrl).filter(Boolean),
-    );
-    for (const page of pages) {
-      const segments = page.url.split("/").filter(Boolean);
-      const fileName = segments.pop();
-      let node = root;
-      for (const segment of segments) {
-        let child = node.directories.get(segment);
-        if (!child) {
-          const path = `${node.path}/${segment}`;
-          child = {
-            // Segment by segment rather than one string: folding glues several
-            // directories into one row, and only the one that IS a package is
-            // written plainly (see renderRow).
-            segments: [{ name: segment, isPackage: packagePathSet.has(path) }],
-            path,
-            directories: new Map(),
-            files: [],
-          };
-          node.directories.set(segment, child);
-        }
-        node = child;
-      }
-      node.files.push({ ...page, name: fileName });
-    }
-
-    const fold = (node) => {
-      for (const child of node.directories.values()) {
-        fold(child);
-      }
-      // Nothing of its own and a single way down: the two are one step.
-      while (node.files.length === 0 && node.directories.size === 1) {
-        const [only] = node.directories.values();
-        node.segments = [...node.segments, ...only.segments];
-        node.path = only.path;
-        node.directories = only.directories;
-        node.files = only.files;
-      }
-      node.files.sort((a, b) => a.name.localeCompare(b.name));
-      return node;
-    };
-    return fold(root);
-  };
-
-  // The whole of a folded row, for sorting and nothing else.
-  const nodeName = (node) =>
-    node.segments.map((segment) => segment.name).join("/");
-
-  // What is left of a node once the filters have had their say — used both to
-  // decide whether to draw it and to say how much is under it.
-  const countMatches = (node, matches) => {
-    let count = 0;
-    for (const file of node.files) {
-      if (matches(file)) {
-        count++;
-      }
-    }
-    for (const child of node.directories.values()) {
-      count += countMatches(child, matches);
-    }
-    return count;
-  };
-
-  // The road down to a file, as node paths — what has to be open for that file
-  // to be a row at all.
-  const pathTo = (node, matches, trail = []) => {
-    if (node.files.some(matches)) {
-      return trail;
-    }
-    for (const child of node.directories.values()) {
-      const found = pathTo(child, matches, [...trail, child.path]);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  };
-
-  const rememberOpen = (isOpen) => {
-    try {
-      if (isOpen) {
-        window.sessionStorage.setItem(OPEN_KEY, "1");
-      } else {
-        window.sessionStorage.removeItem(OPEN_KEY);
-      }
-    } catch {
-      // private mode, quota — it just will not come back
-    }
-  };
-  const wasOpen = () => {
-    try {
-      return window.sessionStorage.getItem(OPEN_KEY) === "1";
-    } catch {
-      return false;
-    }
-  };
-
-  let open = null;
-
-  const openSwitcher = async () => {
-    if (open) {
-      open.input.select();
-      return;
-    }
-    const state = readStoredState();
-    const host = document.createElement("div");
-    const shadow = host.attachShadow({ mode: "open" });
+// Opening a file in an editor happens in another application, on another
+// screen sometimes: without a word here, a press that failed and a press that
+// worked look exactly the same. Its own host and its own shadow root, so it
+// can be shown whether or not the switcher is open.
+let flashHost = null;
+let flashBox = null;
+let flashTimeout = null;
+const flash = (message, isError) => {
+  if (!flashHost) {
+    flashHost = document.createElement("div");
+    const shadow = flashHost.attachShadow({ mode: "open" });
     const style = document.createElement("style");
-    style.textContent = STYLE_TEXT;
-    const backdrop = document.createElement("div");
-    backdrop.className = "backdrop";
-    const panel = document.createElement("div");
-    panel.className = "panel";
-    const input = document.createElement("input");
-    input.type = "search";
+    style.textContent = FLASH_STYLE_TEXT;
+    flashBox = document.createElement("div");
+    flashBox.className = "flash";
+    shadow.append(style, flashBox);
+  }
+  flashBox.textContent = message;
+  flashBox.toggleAttribute("data-error", Boolean(isError));
+  // Appended last every time, so it sits above the picker's host when both
+  // are on the page and they share the same z-index.
+  document.body.append(flashHost);
+  window.clearTimeout(flashTimeout);
+  flashTimeout = window.setTimeout(() => flashHost.remove(), 2500);
+};
+
+const openInEditor = async (file) => {
+  if (!file || !file.fileUrl) {
+    flash("This page is not a file the server lists.", true);
+    return;
+  }
+  flash(`Opening ${file.name || file.url} in editor…`);
+  try {
+    const response = await fetch(
+      `${OPEN_FILE_ENDPOINT}${encodeURIComponent(file.fileUrl)}`,
+    );
+    if (response.status === 404) {
+      // The route exists only when the server is willing to expose the
+      // machine it runs on (see start_server.js).
+      flash("This server does not open files in an editor.", true);
+    } else if (!response.ok) {
+      flash(`Editor said no (${response.status}).`, true);
+    }
+  } catch {
+    flash("Could not reach the dev server.", true);
+  }
+};
+
+const rememberOpen = (isOpen) => {
+  try {
+    if (isOpen) {
+      window.sessionStorage.setItem(OPEN_KEY, "1");
+    } else {
+      window.sessionStorage.removeItem(OPEN_KEY);
+    }
+  } catch {
+    // private mode, quota — it just will not come back
+  }
+};
+const wasOpen = () => {
+  try {
+    return window.sessionStorage.getItem(OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+let picker = null;
+
+// The same key opens it and puts it away: pressed while it is up, cmd+K is the
+// reader saying "not this, back to what I was doing".
+const toggleSwitcher = () => {
+  if (picker) {
+    picker.close();
+    return;
+  }
+  openSwitcher();
+};
+
+const openSwitcher = () => {
+  picker = openPagePicker({
     // The other key is written where one is already looking: a shortcut nobody
     // is told about is a shortcut nobody presses. Both names, not the one this
     // platform uses — the reader knows which of the two their keyboard has, and
     // it keeps what the panel says the same everywhere.
-    input.placeholder = "Go to page…  (cmd/ctrl+E to open in editor)";
-    input.setAttribute("aria-label", "Go to page");
-    const kindsRow = document.createElement("div");
-    kindsRow.className = "kinds";
-    const list = document.createElement("ul");
-    panel.append(input, kindsRow, list);
-    shadow.append(style, backdrop, panel);
-    document.body.append(host);
-
-    const focusedBefore = document.activeElement;
-    let tree = null;
-    // The rows as drawn, in order: what ↑/↓ walks and what Enter acts on.
-    let rows = [];
-    let currentIndex = 0;
-    const here = currentPageUrl();
-    const isHere = (file) => file.url === here;
-    // Folded away, but holding the page one is on: opened for this session only
-    // and never written down — what the reader folded is still what they folded
-    // the next time they come here from somewhere else.
-    const revealed = new Set();
-
-    const close = () => {
-      open = null;
+    placeholder: "Go to page…  (cmd/ctrl+E to open in editor)",
+    hereUrl: window.location.href,
+    // Going there is something this browser can do, so a row is a link: its
+    // menu, its middle click and its cmd+click all work.
+    getHref: (page) => page.url,
+    onPick: (page) => {
+      // Going somewhere is done with it: what reopens across a reload is a
+      // switcher one was still using.
       rememberOpen(false);
-      host.remove();
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (focusedBefore && focusedBefore.isConnected) {
-        focusedBefore.focus();
-      }
-    };
-    const searchNeedle = () => input.value.trim().toLowerCase();
-    const matchesText = (file) => {
-      const needle = searchNeedle();
-      return needle ? file.url.toLowerCase().includes(needle) : true;
-    };
-    const matchesFilters = (file) =>
-      state.kinds[file.kind] && matchesText(file);
-    const toggleCollapsed = (path) => {
-      if (state.collapsed.has(path)) {
-        state.collapsed.delete(path);
-      } else {
-        state.collapsed.add(path);
-      }
-      writeStoredState(state);
-      render();
-    };
-    const activate = (row) => {
-      if (!row) {
-        return;
-      }
-      if (row.type === "file") {
-        // Going somewhere is done with it: what reopens across a reload is a
-        // switcher one was still using.
-        rememberOpen(false);
-        window.location.href = row.file.url;
-        return;
-      }
-      toggleCollapsed(row.node.path);
-    };
+      window.location.href = page.url;
+    },
+    onEdit: (page) => {
+      // Done with the switcher: the answer to "where does this live" arrives
+      // in the editor, not here.
+      rememberOpen(false);
+      openInEditor(page);
+    },
+    onClose: () => {
+      picker = null;
+      rememberOpen(false);
+    },
+  });
+  rememberOpen(true);
+};
 
-    const renderKinds = () => {
-      kindsRow.textContent = "";
-      for (const kind of KINDS) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "kind_toggle";
-        if (state.kinds[kind.id]) {
-          button.setAttribute("data-on", "");
-        }
-        const label = document.createElement("span");
-        label.textContent = `${kind.icon} ${kind.label}`;
-        const count = document.createElement("span");
-        count.className = "count";
-        // How many there would be, not how many there are: a count that answered
-        // to its own toggle would read 0 for everything switched off.
-        count.textContent = tree
-          ? countMatches(
-              tree,
-              (file) => file.kind === kind.id && matchesText(file),
-            )
-          : 0;
-        button.append(label, count);
-        button.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-          state.kinds[kind.id] = !state.kinds[kind.id];
-          writeStoredState(state);
-          render();
-        });
-        kindsRow.append(button);
-      }
-    };
+// The page one is looking at, in the editor. The list is where the file url
+// comes from, so a page the server does not list (an @fs url, something under
+// node_modules) says so rather than opening the wrong thing.
+const openCurrentPageInEditor = async () => {
+  const here = currentPageUrl();
+  const pages = await loadPages();
+  const page = pages.find((candidate) => candidate.url === here);
+  openInEditor(page && { ...page, name: here.split("/").pop() });
+};
 
-    const buildRows = () => {
-      const nextRows = [];
-      // While something is typed the tree opens itself: what one is looking at is
-      // the matches, not the folders that happen to hold them.
-      const searching = searchNeedle() !== "";
-      const walk = (node, depth) => {
-        const directories = [...node.directories.values()].sort((a, b) =>
-          nodeName(a).localeCompare(nodeName(b)),
-        );
-        for (const child of directories) {
-          const count = countMatches(child, matchesFilters);
-          if (count === 0) {
-            continue;
-          }
-          const collapsed =
-            !searching &&
-            state.collapsed.has(child.path) &&
-            !revealed.has(child.path);
-          nextRows.push({
-            type: "directory",
-            node: child,
-            depth,
-            count,
-            collapsed,
-          });
-          if (!collapsed) {
-            walk(child, depth + 1);
-          }
-        }
-        for (const file of node.files) {
-          if (matchesFilters(file)) {
-            nextRows.push({ type: "file", file, depth });
-          }
-        }
-      };
-      walk(tree, 0);
-      return nextRows;
-    };
-
-    const renderRow = (row, index) => {
-      const item = document.createElement("li");
-      item.style.paddingLeft = `${8 + row.depth * 14}px`;
-      if (index === currentIndex) {
-        item.setAttribute("data-current", "");
-      }
-      if (row.type === "directory") {
-        const twisty = document.createElement("span");
-        twisty.className = "twisty";
-        twisty.textContent = row.collapsed ? "▸" : "▾";
-        // One box for the whole path, so the row's own gap does not fall between
-        // two halves of the same name.
-        const path = document.createElement("span");
-        for (const segment of row.node.segments) {
-          const name = document.createElement("span");
-          name.className = segment.isPackage ? "strong" : "dim";
-          name.textContent = `${segment.name}/`;
-          path.append(name);
-        }
-        item.append(twisty, path);
-        const count = document.createElement("span");
-        count.className = "count";
-        count.textContent = row.count;
-        item.append(count);
-      } else {
-        const link = document.createElement("a");
-        link.href = row.file.url;
-        const icon = document.createElement("span");
-        icon.className = "kind_icon";
-        icon.textContent =
-          KINDS.find((kind) => kind.id === row.file.kind)?.icon || "📄";
-        icon.title = row.file.kind;
-        const name = document.createElement("span");
-        name.className = "strong";
-        name.textContent = row.file.name;
-        link.append(icon, name);
-        if (isHere(row.file)) {
-          item.setAttribute("data-here", "");
-          const hereLabel = document.createElement("span");
-          hereLabel.className = "here";
-          hereLabel.textContent = "here";
-          link.append(hereLabel);
-        }
-        item.append(link);
-        link.addEventListener("click", (event) => {
-          currentIndex = index;
-          // Anything but a plain left click is the browser's business — a new
-          // tab, a new window, a download: the switcher stays exactly as it is,
-          // still open, for the next one.
-          if (
-            event.button !== 0 ||
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.altKey
-          ) {
-            return;
-          }
-          // Going somewhere is done with it (see activate) — and the link does
-          // the going, so nothing here has to touch location.
-          rememberOpen(false);
-        });
-        return item;
-      }
-      item.addEventListener("mousedown", (event) => {
-        event.preventDefault();
-        currentIndex = index;
-        activate(row);
-      });
-      return item;
-    };
-
-    const render = () => {
-      renderKinds();
-      rows = buildRows();
-      if (currentIndex >= rows.length) {
-        currentIndex = 0;
-      }
-      list.textContent = "";
-      if (rows.length === 0) {
-        const empty = document.createElement("li");
-        empty.className = "empty";
-        empty.textContent = "Nothing matches.";
-        list.append(empty);
-        return;
-      }
-      for (const [index, row] of rows.entries()) {
-        list.append(renderRow(row, index));
-      }
-    };
-    const moveCurrent = (delta) => {
-      if (rows.length === 0) {
-        return;
-      }
-      currentIndex = (currentIndex + delta + rows.length) % rows.length;
-      render();
-      list.children[currentIndex]?.scrollIntoView({ block: "nearest" });
-    };
-
-    // In the capture phase, and on the document: while this is open it IS the
-    // page as far as the keyboard goes, and whatever the page below listens for
-    // must not answer at the same time.
-    function onKeyDown(event) {
-      const stop = () => {
-        event.preventDefault();
-        event.stopPropagation();
-      };
-      if (event.key === "Escape") {
-        stop();
-        close();
-        return;
-      }
-      if (event.key === "Enter") {
-        stop();
-        activate(rows[currentIndex]);
-        return;
-      }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        stop();
-        moveCurrent(event.key === "ArrowDown" ? 1 : -1);
-        return;
-      }
-      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-        const row = rows[currentIndex];
-        // A file has nothing to fold, and a folder already the right way round
-        // has nothing to do: the caret keeps the key in both cases.
-        if (!row || row.type !== "directory") {
-          return;
-        }
-        const wantCollapsed = event.key === "ArrowLeft";
-        if (row.collapsed === wantCollapsed) {
-          return;
-        }
-        stop();
-        toggleCollapsed(row.node.path);
-        return;
-      }
-      if (isEditorKey(event)) {
-        // Taken whatever the row is: let go of on a directory it would reach
-        // the page below and open the page one came from, which is not what a
-        // key pressed inside an open switcher can be asking for.
-        stop();
-        const row = rows[currentIndex];
-        if (!row || row.type !== "file") {
-          return;
-        }
-        // Done with the switcher: the answer to "where does this live" arrives
-        // in the editor, not here.
-        close();
-        openInEditor(row.file);
-        return;
-      }
-      if (isSwitcherKey(event)) {
-        stop();
-        close();
-      }
+// Last in line, on purpose: on window (the end of the bubble), and registered
+// once the page has loaded — so every listener the page set up while parsing is
+// already in place and has already had this press. If any of them called
+// preventDefault, the key was theirs and nothing happens here.
+const listenSwitcherKey = () => {
+  window.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented) {
+      return;
     }
-    document.addEventListener("keydown", onKeyDown, true);
-    backdrop.addEventListener("mousedown", close);
+    if (isSwitcherKey(event)) {
+      // Ours now: the browser has its own use for cmd+K (the address bar),
+      // which it must not get.
+      event.preventDefault();
+      toggleSwitcher();
+      return;
+    }
+    if (isEditorKey(event)) {
+      event.preventDefault();
+      openCurrentPageInEditor();
+    }
+  });
+};
 
-    open = { input, close };
-    rememberOpen(true);
-    input.focus();
-
-    const pages = await loadPages();
-    if (!open) {
-      return; // closed while the list was still coming
-    }
-    tree = buildTree(pages);
-    // Opened on the page one is on: it is selected and scrolled to, so the list
-    // starts from where the reader already is rather than from the top of a
-    // tree they then have to find themselves in.
-    for (const path of pathTo(tree, isHere) || []) {
-      revealed.add(path);
-    }
-    render();
-    const hereIndex = rows.findIndex(
-      (row) => row.type === "file" && isHere(row.file),
-    );
-    if (hereIndex !== -1) {
-      currentIndex = hereIndex;
-      render();
-      list.children[currentIndex]?.scrollIntoView({ block: "center" });
-    }
-    input.addEventListener("input", () => {
-      currentIndex = 0;
-      render();
-    });
-  };
-
-  // Last in line, on purpose: on window (the end of the bubble), and registered
-  // once the page has loaded — so every listener the page set up while parsing is
-  // already in place and has already had this press. If any of them called
-  // preventDefault, the key was theirs and nothing happens here.
-  const listenSwitcherKey = () => {
-    window.addEventListener("keydown", (event) => {
-      if (event.defaultPrevented) {
-        return;
-      }
-      if (isSwitcherKey(event)) {
-        // Ours now: the browser has its own use for cmd+K (the address bar),
-        // which it must not get.
-        event.preventDefault();
-        openSwitcher();
-        return;
-      }
-      if (isEditorKey(event)) {
-        event.preventDefault();
-        openCurrentPageInEditor();
-      }
-    });
-  };
-  // The page one is looking at, in the editor. The list is where the file url
-  // comes from, so a page the server does not list (an @fs url, something under
-  // node_modules) says so rather than opening the wrong thing.
-  const openCurrentPageInEditor = async () => {
-    const here = currentPageUrl();
-    const pages = await loadPages();
-    const page = pages.find((candidate) => candidate.url === here);
-    openInEditor(page && { ...page, name: here.split("/").pop() });
-  };
-  const setup = () => {
-    listenSwitcherKey();
-    if (wasOpen()) {
-      openSwitcher();
-    }
-  };
-  if (document.readyState === "complete") {
-    setup();
-  } else {
-    window.addEventListener("load", setup, { once: true });
+const setup = () => {
+  listenSwitcherKey();
+  if (wasOpen()) {
+    openSwitcher();
   }
-})();
+};
+if (document.readyState === "complete") {
+  setup();
+} else {
+  window.addEventListener("load", setup, { once: true });
+}
+
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vVXNlcnMvZG1haWwvRG9jdW1lbnRzL2Rldi9qc2Vudi9jb3JlL3NyYy9wbHVnaW5zL3BhZ2Vfc3dpdGNoZXIvY2xpZW50L3BhZ2Vfc3dpdGNoZXIuanMiXSwic291cmNlc0NvbnRlbnQiOlsiLypcbiAqIGNtZCtLIC8gY3RybCtLIG9uIGFueSBkZXYtc2VydmVkIHBhZ2U6IHRoZSAuaHRtbCBmaWxlcyB0aGUgc2VydmVyIHNlcnZlcywgYXMgYVxuICogdHJlZSBvbmUgd2Fsa3MsIGZpbHRlciBhcyB5b3UgdHlwZSwgRW50ZXIgdG8gZ28gdGhlcmUuXG4gKlxuICogVGhlIHRyZWUgaXRzZWxmIGlzIG5vdCB0aGlzIGZpbGUnczogaXQgaXMgdGhlIHBhZ2UgcGlja2VyIHRoZSBkZXYgc2VydmVyIHNoaXBzXG4gKiBmb3IgZXZlcnlvbmUgd2hvIGhhcyB0byBhc2sgXCJ3aGljaCBwYWdlP1wiIChzZWUgcHJvdG9jb2xfZmlsZS9jbGllbnQvcGFnZV9waWNrZXIuanNcbiAqIOKAlCB0aGUgY2xpZW50cyBkYXNoYm9hcmQgYXNrcyBpdCB0b28sIHRvIHNlbmQgYW5vdGhlciBicm93c2VyIHNvbWV3aGVyZSkuIFdoYXRcbiAqIGJlbG9uZ3MgaGVyZSBpcyB0aGUga2V5LCBhbmQgd2hhdCB0YWtpbmcgYSByb3cgbWVhbnMgaW4gdGhpcyB0YWIuXG4gKlxuICogY21kK0UgLyBjdHJsK0UgaXMgdGhlIG90aGVyIGhhbGYgb2YgdGhlIHNhbWUgcXVlc3Rpb246IGluc3RlYWQgb2YgZ29pbmcgdG8gYVxuICogcGFnZSwgb3BlbiBpdHMgZmlsZSBpbiB0aGUgZWRpdG9yICh0aGUgc2VydmVyIGRvZXMgaXQsIHNlZVxuICogR0VUIC8uaW50ZXJuYWwvb3Blbl9maWxlLyopLiBQcmVzc2VkIG9uIHRoZSBwYWdlIGl0c2VsZiBpdCBvcGVucyB0aGUgcGFnZSBvbmVcbiAqIGlzIG9uOyBwcmVzc2VkIGluc2lkZSB0aGUgc3dpdGNoZXIgaXQgb3BlbnMgdGhlIHJvdyBvbmUgaXMgbG9va2luZyBhdC5cbiAqXG4gKiBJbmplY3RlZCBpbnRvIGV2ZXJ5IHBhZ2UgKHNlZSBqc2Vudl9wbHVnaW5fcGFnZV9zd2l0Y2hlci5qcyksIHdoaWNoIGlzIHdoeSBpdFxuICogaXMgY2FyZWZ1bCBhYm91dCB3aGF0IGl0IHRha2VzOlxuICogLSB0aGUga2V5IGlzIHdhdGNoZWQgYXQgdGhlIGVuZCBvZiB0aGUgYnViYmxlLCBvbiB3aW5kb3csIGFuZCBhIHByZXNzIHRoYXRcbiAqICAgd2FzIGFscmVhZHkgaGFuZGxlZCAoZGVmYXVsdFByZXZlbnRlZCkgaXMgbGVmdCBhbG9uZSDigJQgYSBwYWdlIHdpdGggaXRzIG93blxuICogICBjbWQrSyBrZWVwcyBpdCwgYW5kIGdldHMgaXQgZmlyc3Q7XG4gKiAtIG5vdGhpbmcgaXMgZmV0Y2hlZCwgYnVpbHQgb3Igc3R5bGVkIHVudGlsIHRoZSBmaXJzdCB0aW1lIGl0IG9wZW5zO1xuICogLSBldmVyeXRoaW5nIGl0IHJlbmRlcnMgbGl2ZXMgaW4gYSBzaGFkb3cgcm9vdCwgc28gdGhlIHBhZ2UncyBvd24gQ1NTIGNhbm5vdFxuICogICByZWFjaCBpdCBhbmQgaXQgY2Fubm90IHJlYWNoIHRoZSBwYWdlJ3MuXG4gKi9cblxuaW1wb3J0IHtcbiAgYXNQYWdlVXJsLFxuICBpc0VkaXRvcktleSxcbiAgaXNDb21tYW5kS2V5LFxuICBsb2FkUGFnZXMsXG4gIG9wZW5QYWdlUGlja2VyLFxufSBmcm9tIFwiLi4vLi4vcHJvdG9jb2xfZmlsZS9jbGllbnQvcGFnZV9waWNrZXIuanNcIjtcblxuLy8gVGhlIHNlcnZlciBhc2tzIHRoZSBPUyB0byBvcGVuIGEgZmlsZSBpbiB3aGF0ZXZlciBlZGl0b3IgaXMgY29uZmlndXJlZFxuLy8gKFZTQ29kZSBoZXJlKSDigJQgaXQgdGFrZXMgYSBmaWxlIHVybCwgd2hpY2ggaXMgd2h5IHRoZSBwYWdlIGxpc3QgY2FycmllcyBvbmVcbi8vIHBlciBwYWdlIChzZWUgaHRtbF9wYWdlcy5qcykuXG5jb25zdCBPUEVOX0ZJTEVfRU5EUE9JTlQgPSBcIi8uaW50ZXJuYWwvb3Blbl9maWxlL1wiO1xuLy8gT3BlbiBhY3Jvc3MgYSByZWxvYWQ6IHRoaXMgaXMgYSBkZXYgdG9vbCBvbiBhIHBhZ2Ugb25lIGlzIGVkaXRpbmcsIGFuZCBhIGhvdFxuLy8gcmVsb2FkIGluIHRoZSBtaWRkbGUgb2YgbG9va2luZyBmb3IgdGhlIG5leHQgcGFnZSBzaG91bGQgbm90IGNsb3NlIHdoYXQgb25lXG4vLyB3YXMgbG9va2luZyBhdC4gSW4gc2Vzc2lvblN0b3JhZ2UsIG5vdCBsb2NhbFN0b3JhZ2U6IGl0IHNheXMgd2hhdCBUSElTIHRhYiB3YXNcbi8vIGRvaW5nIGEgc2Vjb25kIGFnbywgd2hpY2ggaXMgbm90IHNvbWV0aGluZyB0byByZW1lbWJlciB0b21vcnJvdy5cbmNvbnN0IE9QRU5fS0VZID0gXCJqc2Vudl9wYWdlX3N3aXRjaGVyX29wZW5cIjtcblxuLy8gVGhlIHBhZ2UgdGhpcyBzY3JpcHQgaXMgcnVubmluZyBpbiwgYXMgdGhlIGxpc3Qgc3BlbGxzIGl0cyB1cmxzLlxuY29uc3QgY3VycmVudFBhZ2VVcmwgPSAoKSA9PiBhc1BhZ2VVcmwod2luZG93LmxvY2F0aW9uLmhyZWYpO1xuXG5jb25zdCBpc1N3aXRjaGVyS2V5ID0gKGV2ZW50KSA9PlxuICAoZXZlbnQua2V5ID09PSBcImtcIiB8fCBldmVudC5rZXkgPT09IFwiS1wiKSAmJiBpc0NvbW1hbmRLZXkoZXZlbnQpO1xuXG5jb25zdCBGTEFTSF9TVFlMRV9URVhUID0gLyogY3NzICovIGBcbiAgOmhvc3Qge1xuICAgIHBvc2l0aW9uOiBmaXhlZDtcbiAgICByaWdodDogMTZweDtcbiAgICBib3R0b206IDE2cHg7XG4gICAgLyogQWJvdmUgdGhlIHBpY2tlcidzIG93biBwYW5lbDogaXQgaXMgdGhlIHN3aXRjaGVyIHRoYXQgdHJpZ2dlcnMgaXQuICovXG4gICAgei1pbmRleDogMjE0NzQ4MzY0NztcbiAgICBkaXNwbGF5OiBibG9jaztcbiAgICBmb250LWZhbWlseTogc3lzdGVtLXVpLCBzYW5zLXNlcmlmO1xuICAgIHBvaW50ZXItZXZlbnRzOiBub25lO1xuICB9XG4gIC5mbGFzaCB7XG4gICAgcGFkZGluZzogOHB4IDE0cHg7XG4gICAgY29sb3I6IGxpZ2h0LWRhcmsoIzBmMTcyYSwgI2UyZThmMCk7XG4gICAgZm9udC1zaXplOiAxM3B4O1xuICAgIGJhY2tncm91bmQ6IGxpZ2h0LWRhcmsod2hpdGUsICMxZTI5M2IpO1xuICAgIGJvcmRlci1yYWRpdXM6IDhweDtcbiAgICBib3gtc2hhZG93OiAwIDEwcHggMzBweCByZ2JhKDAsIDAsIDAsIDAuMyk7XG4gICAgY29sb3Itc2NoZW1lOiBsaWdodCBkYXJrO1xuICB9XG4gIC5mbGFzaFtkYXRhLWVycm9yXSB7XG4gICAgY29sb3I6IGxpZ2h0LWRhcmsoIzk5MWIxYiwgI2ZlY2FjYSk7XG4gICAgYmFja2dyb3VuZDogbGlnaHQtZGFyaygjZmVlMmUyLCAjN2YxZDFkKTtcbiAgfVxuYDtcblxuLy8gT3BlbmluZyBhIGZpbGUgaW4gYW4gZWRpdG9yIGhhcHBlbnMgaW4gYW5vdGhlciBhcHBsaWNhdGlvbiwgb24gYW5vdGhlclxuLy8gc2NyZWVuIHNvbWV0aW1lczogd2l0aG91dCBhIHdvcmQgaGVyZSwgYSBwcmVzcyB0aGF0IGZhaWxlZCBhbmQgYSBwcmVzcyB0aGF0XG4vLyB3b3JrZWQgbG9vayBleGFjdGx5IHRoZSBzYW1lLiBJdHMgb3duIGhvc3QgYW5kIGl0cyBvd24gc2hhZG93IHJvb3QsIHNvIGl0XG4vLyBjYW4gYmUgc2hvd24gd2hldGhlciBvciBub3QgdGhlIHN3aXRjaGVyIGlzIG9wZW4uXG5sZXQgZmxhc2hIb3N0ID0gbnVsbDtcbmxldCBmbGFzaEJveCA9IG51bGw7XG5sZXQgZmxhc2hUaW1lb3V0ID0gbnVsbDtcbmNvbnN0IGZsYXNoID0gKG1lc3NhZ2UsIGlzRXJyb3IpID0+IHtcbiAgaWYgKCFmbGFzaEhvc3QpIHtcbiAgICBmbGFzaEhvc3QgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KFwiZGl2XCIpO1xuICAgIGNvbnN0IHNoYWRvdyA9IGZsYXNoSG9zdC5hdHRhY2hTaGFkb3coeyBtb2RlOiBcIm9wZW5cIiB9KTtcbiAgICBjb25zdCBzdHlsZSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoXCJzdHlsZVwiKTtcbiAgICBzdHlsZS50ZXh0Q29udGVudCA9IEZMQVNIX1NUWUxFX1RFWFQ7XG4gICAgZmxhc2hCb3ggPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KFwiZGl2XCIpO1xuICAgIGZsYXNoQm94LmNsYXNzTmFtZSA9IFwiZmxhc2hcIjtcbiAgICBzaGFkb3cuYXBwZW5kKHN0eWxlLCBmbGFzaEJveCk7XG4gIH1cbiAgZmxhc2hCb3gudGV4dENvbnRlbnQgPSBtZXNzYWdlO1xuICBmbGFzaEJveC50b2dnbGVBdHRyaWJ1dGUoXCJkYXRhLWVycm9yXCIsIEJvb2xlYW4oaXNFcnJvcikpO1xuICAvLyBBcHBlbmRlZCBsYXN0IGV2ZXJ5IHRpbWUsIHNvIGl0IHNpdHMgYWJvdmUgdGhlIHBpY2tlcidzIGhvc3Qgd2hlbiBib3RoXG4gIC8vIGFyZSBvbiB0aGUgcGFnZSBhbmQgdGhleSBzaGFyZSB0aGUgc2FtZSB6LWluZGV4LlxuICBkb2N1bWVudC5ib2R5LmFwcGVuZChmbGFzaEhvc3QpO1xuICB3aW5kb3cuY2xlYXJUaW1lb3V0KGZsYXNoVGltZW91dCk7XG4gIGZsYXNoVGltZW91dCA9IHdpbmRvdy5zZXRUaW1lb3V0KCgpID0+IGZsYXNoSG9zdC5yZW1vdmUoKSwgMjUwMCk7XG59O1xuXG5jb25zdCBvcGVuSW5FZGl0b3IgPSBhc3luYyAoZmlsZSkgPT4ge1xuICBpZiAoIWZpbGUgfHwgIWZpbGUuZmlsZVVybCkge1xuICAgIGZsYXNoKFwiVGhpcyBwYWdlIGlzIG5vdCBhIGZpbGUgdGhlIHNlcnZlciBsaXN0cy5cIiwgdHJ1ZSk7XG4gICAgcmV0dXJuO1xuICB9XG4gIGZsYXNoKGBPcGVuaW5nICR7ZmlsZS5uYW1lIHx8IGZpbGUudXJsfSBpbiBlZGl0b3LigKZgKTtcbiAgdHJ5IHtcbiAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IGZldGNoKFxuICAgICAgYCR7T1BFTl9GSUxFX0VORFBPSU5UfSR7ZW5jb2RlVVJJQ29tcG9uZW50KGZpbGUuZmlsZVVybCl9YCxcbiAgICApO1xuICAgIGlmIChyZXNwb25zZS5zdGF0dXMgPT09IDQwNCkge1xuICAgICAgLy8gVGhlIHJvdXRlIGV4aXN0cyBvbmx5IHdoZW4gdGhlIHNlcnZlciBpcyB3aWxsaW5nIHRvIGV4cG9zZSB0aGVcbiAgICAgIC8vIG1hY2hpbmUgaXQgcnVucyBvbiAoc2VlIHN0YXJ0X3NlcnZlci5qcykuXG4gICAgICBmbGFzaChcIlRoaXMgc2VydmVyIGRvZXMgbm90IG9wZW4gZmlsZXMgaW4gYW4gZWRpdG9yLlwiLCB0cnVlKTtcbiAgICB9IGVsc2UgaWYgKCFyZXNwb25zZS5vaykge1xuICAgICAgZmxhc2goYEVkaXRvciBzYWlkIG5vICgke3Jlc3BvbnNlLnN0YXR1c30pLmAsIHRydWUpO1xuICAgIH1cbiAgfSBjYXRjaCB7XG4gICAgZmxhc2goXCJDb3VsZCBub3QgcmVhY2ggdGhlIGRldiBzZXJ2ZXIuXCIsIHRydWUpO1xuICB9XG59O1xuXG5jb25zdCByZW1lbWJlck9wZW4gPSAoaXNPcGVuKSA9PiB7XG4gIHRyeSB7XG4gICAgaWYgKGlzT3Blbikge1xuICAgICAgd2luZG93LnNlc3Npb25TdG9yYWdlLnNldEl0ZW0oT1BFTl9LRVksIFwiMVwiKTtcbiAgICB9IGVsc2Uge1xuICAgICAgd2luZG93LnNlc3Npb25TdG9yYWdlLnJlbW92ZUl0ZW0oT1BFTl9LRVkpO1xuICAgIH1cbiAgfSBjYXRjaCB7XG4gICAgLy8gcHJpdmF0ZSBtb2RlLCBxdW90YSDigJQgaXQganVzdCB3aWxsIG5vdCBjb21lIGJhY2tcbiAgfVxufTtcbmNvbnN0IHdhc09wZW4gPSAoKSA9PiB7XG4gIHRyeSB7XG4gICAgcmV0dXJuIHdpbmRvdy5zZXNzaW9uU3RvcmFnZS5nZXRJdGVtKE9QRU5fS0VZKSA9PT0gXCIxXCI7XG4gIH0gY2F0Y2gge1xuICAgIHJldHVybiBmYWxzZTtcbiAgfVxufTtcblxubGV0IHBpY2tlciA9IG51bGw7XG5cbi8vIFRoZSBzYW1lIGtleSBvcGVucyBpdCBhbmQgcHV0cyBpdCBhd2F5OiBwcmVzc2VkIHdoaWxlIGl0IGlzIHVwLCBjbWQrSyBpcyB0aGVcbi8vIHJlYWRlciBzYXlpbmcgXCJub3QgdGhpcywgYmFjayB0byB3aGF0IEkgd2FzIGRvaW5nXCIuXG5jb25zdCB0b2dnbGVTd2l0Y2hlciA9ICgpID0+IHtcbiAgaWYgKHBpY2tlcikge1xuICAgIHBpY2tlci5jbG9zZSgpO1xuICAgIHJldHVybjtcbiAgfVxuICBvcGVuU3dpdGNoZXIoKTtcbn07XG5cbmNvbnN0IG9wZW5Td2l0Y2hlciA9ICgpID0+IHtcbiAgcGlja2VyID0gb3BlblBhZ2VQaWNrZXIoe1xuICAgIC8vIFRoZSBvdGhlciBrZXkgaXMgd3JpdHRlbiB3aGVyZSBvbmUgaXMgYWxyZWFkeSBsb29raW5nOiBhIHNob3J0Y3V0IG5vYm9keVxuICAgIC8vIGlzIHRvbGQgYWJvdXQgaXMgYSBzaG9ydGN1dCBub2JvZHkgcHJlc3Nlcy4gQm90aCBuYW1lcywgbm90IHRoZSBvbmUgdGhpc1xuICAgIC8vIHBsYXRmb3JtIHVzZXMg4oCUIHRoZSByZWFkZXIga25vd3Mgd2hpY2ggb2YgdGhlIHR3byB0aGVpciBrZXlib2FyZCBoYXMsIGFuZFxuICAgIC8vIGl0IGtlZXBzIHdoYXQgdGhlIHBhbmVsIHNheXMgdGhlIHNhbWUgZXZlcnl3aGVyZS5cbiAgICBwbGFjZWhvbGRlcjogXCJHbyB0byBwYWdl4oCmICAoY21kL2N0cmwrRSB0byBvcGVuIGluIGVkaXRvcilcIixcbiAgICBoZXJlVXJsOiB3aW5kb3cubG9jYXRpb24uaHJlZixcbiAgICAvLyBHb2luZyB0aGVyZSBpcyBzb21ldGhpbmcgdGhpcyBicm93c2VyIGNhbiBkbywgc28gYSByb3cgaXMgYSBsaW5rOiBpdHNcbiAgICAvLyBtZW51LCBpdHMgbWlkZGxlIGNsaWNrIGFuZCBpdHMgY21kK2NsaWNrIGFsbCB3b3JrLlxuICAgIGdldEhyZWY6IChwYWdlKSA9PiBwYWdlLnVybCxcbiAgICBvblBpY2s6IChwYWdlKSA9PiB7XG4gICAgICAvLyBHb2luZyBzb21ld2hlcmUgaXMgZG9uZSB3aXRoIGl0OiB3aGF0IHJlb3BlbnMgYWNyb3NzIGEgcmVsb2FkIGlzIGFcbiAgICAgIC8vIHN3aXRjaGVyIG9uZSB3YXMgc3RpbGwgdXNpbmcuXG4gICAgICByZW1lbWJlck9wZW4oZmFsc2UpO1xuICAgICAgd2luZG93LmxvY2F0aW9uLmhyZWYgPSBwYWdlLnVybDtcbiAgICB9LFxuICAgIG9uRWRpdDogKHBhZ2UpID0+IHtcbiAgICAgIC8vIERvbmUgd2l0aCB0aGUgc3dpdGNoZXI6IHRoZSBhbnN3ZXIgdG8gXCJ3aGVyZSBkb2VzIHRoaXMgbGl2ZVwiIGFycml2ZXNcbiAgICAgIC8vIGluIHRoZSBlZGl0b3IsIG5vdCBoZXJlLlxuICAgICAgcmVtZW1iZXJPcGVuKGZhbHNlKTtcbiAgICAgIG9wZW5JbkVkaXRvcihwYWdlKTtcbiAgICB9LFxuICAgIG9uQ2xvc2U6ICgpID0+IHtcbiAgICAgIHBpY2tlciA9IG51bGw7XG4gICAgICByZW1lbWJlck9wZW4oZmFsc2UpO1xuICAgIH0sXG4gIH0pO1xuICByZW1lbWJlck9wZW4odHJ1ZSk7XG59O1xuXG4vLyBUaGUgcGFnZSBvbmUgaXMgbG9va2luZyBhdCwgaW4gdGhlIGVkaXRvci4gVGhlIGxpc3QgaXMgd2hlcmUgdGhlIGZpbGUgdXJsXG4vLyBjb21lcyBmcm9tLCBzbyBhIHBhZ2UgdGhlIHNlcnZlciBkb2VzIG5vdCBsaXN0IChhbiBAZnMgdXJsLCBzb21ldGhpbmcgdW5kZXJcbi8vIG5vZGVfbW9kdWxlcykgc2F5cyBzbyByYXRoZXIgdGhhbiBvcGVuaW5nIHRoZSB3cm9uZyB0aGluZy5cbmNvbnN0IG9wZW5DdXJyZW50UGFnZUluRWRpdG9yID0gYXN5bmMgKCkgPT4ge1xuICBjb25zdCBoZXJlID0gY3VycmVudFBhZ2VVcmwoKTtcbiAgY29uc3QgcGFnZXMgPSBhd2FpdCBsb2FkUGFnZXMoKTtcbiAgY29uc3QgcGFnZSA9IHBhZ2VzLmZpbmQoKGNhbmRpZGF0ZSkgPT4gY2FuZGlkYXRlLnVybCA9PT0gaGVyZSk7XG4gIG9wZW5JbkVkaXRvcihwYWdlICYmIHsgLi4ucGFnZSwgbmFtZTogaGVyZS5zcGxpdChcIi9cIikucG9wKCkgfSk7XG59O1xuXG4vLyBMYXN0IGluIGxpbmUsIG9uIHB1cnBvc2U6IG9uIHdpbmRvdyAodGhlIGVuZCBvZiB0aGUgYnViYmxlKSwgYW5kIHJlZ2lzdGVyZWRcbi8vIG9uY2UgdGhlIHBhZ2UgaGFzIGxvYWRlZCDigJQgc28gZXZlcnkgbGlzdGVuZXIgdGhlIHBhZ2Ugc2V0IHVwIHdoaWxlIHBhcnNpbmcgaXNcbi8vIGFscmVhZHkgaW4gcGxhY2UgYW5kIGhhcyBhbHJlYWR5IGhhZCB0aGlzIHByZXNzLiBJZiBhbnkgb2YgdGhlbSBjYWxsZWRcbi8vIHByZXZlbnREZWZhdWx0LCB0aGUga2V5IHdhcyB0aGVpcnMgYW5kIG5vdGhpbmcgaGFwcGVucyBoZXJlLlxuY29uc3QgbGlzdGVuU3dpdGNoZXJLZXkgPSAoKSA9PiB7XG4gIHdpbmRvdy5hZGRFdmVudExpc3RlbmVyKFwia2V5ZG93blwiLCAoZXZlbnQpID0+IHtcbiAgICBpZiAoZXZlbnQuZGVmYXVsdFByZXZlbnRlZCkge1xuICAgICAgcmV0dXJuO1xuICAgIH1cbiAgICBpZiAoaXNTd2l0Y2hlcktleShldmVudCkpIHtcbiAgICAgIC8vIE91cnMgbm93OiB0aGUgYnJvd3NlciBoYXMgaXRzIG93biB1c2UgZm9yIGNtZCtLICh0aGUgYWRkcmVzcyBiYXIpLFxuICAgICAgLy8gd2hpY2ggaXQgbXVzdCBub3QgZ2V0LlxuICAgICAgZXZlbnQucHJldmVudERlZmF1bHQoKTtcbiAgICAgIHRvZ2dsZVN3aXRjaGVyKCk7XG4gICAgICByZXR1cm47XG4gICAgfVxuICAgIGlmIChpc0VkaXRvcktleShldmVudCkpIHtcbiAgICAgIGV2ZW50LnByZXZlbnREZWZhdWx0KCk7XG4gICAgICBvcGVuQ3VycmVudFBhZ2VJbkVkaXRvcigpO1xuICAgIH1cbiAgfSk7XG59O1xuXG5jb25zdCBzZXR1cCA9ICgpID0+IHtcbiAgbGlzdGVuU3dpdGNoZXJLZXkoKTtcbiAgaWYgKHdhc09wZW4oKSkge1xuICAgIG9wZW5Td2l0Y2hlcigpO1xuICB9XG59O1xuaWYgKGRvY3VtZW50LnJlYWR5U3RhdGUgPT09IFwiY29tcGxldGVcIikge1xuICBzZXR1cCgpO1xufSBlbHNlIHtcbiAgd2luZG93LmFkZEV2ZW50TGlzdGVuZXIoXCJsb2FkXCIsIHNldHVwLCB7IG9uY2U6IHRydWUgfSk7XG59XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsQ0FBQztBQUNELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEQsQ0FBQztBQUNELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNwRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQy9FLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbkUsQ0FBQztBQUNELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEUsQ0FBQztBQUNELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDakMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM1RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM5RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDdEMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM5RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDNUMsQ0FBQyxDQUFDOztBQUVGLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDUCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDWCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2QsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ1gsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLDJGQUEyQzs7QUFFbEQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzdFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2xELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM3RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEYsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQzs7QUFFM0MsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7O0FBRTVELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDOztBQUVqRSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbkMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ1IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNuQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNmLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDM0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3ZCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2xCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0QyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN4QixDQUFDLENBQUM7QUFDRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNULENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3JCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3ZDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbkIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDMUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0QixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDNUIsQ0FBQyxDQUFDO0FBQ0YsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDckIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDdkMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVDLENBQUMsQ0FBQztBQUNGLENBQUM7O0FBRUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzdFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzNFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ25ELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNwQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ25CLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN2QixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNwQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNsQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM3QyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDM0QsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNqRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3hDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM1QyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNsQyxDQUFDLENBQUM7QUFDRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUMxRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDMUUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNwRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNqQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbkMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbEUsQ0FBQzs7QUFFRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3JDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDVixDQUFDLENBQUM7QUFDRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0RCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNOLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2hFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2pDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDdEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNqRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNsRSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDN0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDekQsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNKLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDVixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbEQsQ0FBQyxDQUFDO0FBQ0YsQ0FBQzs7QUFFRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNqQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNOLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2xELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNYLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2hELENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDSixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ1YsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDdEQsQ0FBQyxDQUFDO0FBQ0YsQ0FBQztBQUNELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDdEIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDTixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzFELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDVixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2hCLENBQUMsQ0FBQztBQUNGLENBQUM7O0FBRUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDOztBQUVqQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUM5RSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDckQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzdCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNkLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2xCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDVixDQUFDLENBQUM7QUFDRixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2hCLENBQUM7O0FBRUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDM0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzFCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN2RCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDOUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDakMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDM0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3hELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0QixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDMUUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNyQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3pCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDckMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ0wsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0QixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3pCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3hCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbkIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNuQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3pCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDSixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDcEIsQ0FBQzs7QUFFRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUMzRSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDN0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDNUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0IsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDakMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoRSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ2hFLENBQUM7O0FBRUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzdFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDL0UsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlELENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNoRCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDaEMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDWixDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ0osQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDOUIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzFFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzlCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDNUIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN0QixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNaLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDSixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQzVCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDNUIsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUMvQixDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ0osQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNKLENBQUM7O0FBRUQsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3BCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3JCLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNqQixDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNsQixDQUFDLENBQUM7QUFDRixDQUFDO0FBQ0QsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN4QyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNULENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDUCxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDeEQ7In0=

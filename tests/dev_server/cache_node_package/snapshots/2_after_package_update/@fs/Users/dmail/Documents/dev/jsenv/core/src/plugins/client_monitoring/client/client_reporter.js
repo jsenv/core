@@ -185,6 +185,10 @@ const setup = () => {
     pendingActivities = [];
     const payload = JSON.stringify({
       clientId,
+      // The server reads browser/OS from the request headers, but a headless
+      // firefox/webkit looks exactly like a windowed one there; this flag is
+      // what tells them apart (chromium also says "Headless" in its user-agent).
+      webdriver: window.navigator.webdriver === true,
       tab: tabInfo({ closing }),
       activities,
       logs,
