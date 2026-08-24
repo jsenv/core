@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Text attachLastChild Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      h2 {
+        margin: 32px 0 4px;
+        font-size: 1rem;
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #666;
+        font-size: 13px;
+      }
+      .container-box {
+        padding: 8px;
+        border: 2px dotted #aaa;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Icon, Link, Text } from "@jsenv/navi";
+
+      const ArrowSvg = () => (
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14M13 6l6 6-6 6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+        </svg>
+      );
+
+      const LABEL =
+        "Un intitulé de section suffisamment long pour passer à la ligne";
+
+      const WidthSlider = ({ width, setWidth }) => (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            fontSize: "14px",
+          }}
+        >
+          Largeur du conteneur: <strong>{width}px</strong>
+          <input
+            type="range"
+            min="120"
+            max="600"
+            value={width}
+            onInput={(e) => setWidth(Number(e.target.value))}
+            style={{ width: "240px" }}
+          />
+        </label>
+      );
+
+      const App = () => {
+        const [width, setWidth] = useState(280);
+        return (
+          <div>
+            <h1>Text attachLastChild</h1>
+            <WidthSlider width={width} setWidth={setWidth} />
+
+            <h2>Sans attachLastChild</h2>
+            <p class="caption">
+              À certaines largeurs, la flèche se retrouve seule sur sa ligne.
+            </p>
+            <div class="container-box" style={{ width: `${width}px` }}>
+              <Text>
+                {LABEL}
+                <Icon>
+                  <ArrowSvg />
+                </Icon>
+              </Text>
+            </div>
+
+            <h2>attachLastChild</h2>
+            <div class="container-box" style={{ width: `${width}px` }}>
+              <Text attachLastChild>
+                {LABEL}
+                <Icon>
+                  <ArrowSvg />
+                </Icon>
+              </Text>
+            </div>
+
+            <h2>Une unité après un nombre</h2>
+            <div class="container-box" style={{ width: `${width}px` }}>
+              <Text attachLastChild>
+                Espace disque restant sur le volume principal 42
+                <Text bold>Go</Text>
+              </Text>
+            </div>
+
+            <h2>Link, avec son icône de fin</h2>
+            <p class="caption">
+              <code>attachLastChild</code> est déjà posé par <code>Link</code>.
+            </p>
+            <Box column spacing="s" width={`${width}px`}>
+              <div class="container-box">
+                <Link href="#une-ancre">{LABEL}</Link>
+              </div>
+              <div class="container-box">
+                <Link href="https://example.com">{LABEL}</Link>
+              </div>
+            </Box>
+
+            <h2>Un texte tronqué garde son icône dehors</h2>
+            <p class="caption">
+              Pas de retour à la ligne ici: l’icône est un frère du{" "}
+              <code>Text</code>, pas son dernier enfant.
+            </p>
+            <Box
+              flex
+              spacing="s"
+              alignY="center"
+              width={`${width}px`}
+              className="container-box"
+            >
+              <Text maxLines={1} expandX>
+                {LABEL}
+              </Text>
+              <Icon shrink={false}>
+                <ArrowSvg />
+              </Icon>
+            </Box>
+            <h2 id="une-ancre">Une ancre</h2>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -241,6 +241,56 @@
             <p
               style={{ fontSize: "13px", color: "#555", margin: "12px 0 6px" }}
             >
+              icon | text | icon &mdash; the end icon stays visible
+            </p>
+            <Box
+              flex
+              padding="s"
+              spacing="s"
+              width={width}
+              border="1px solid #ccc"
+              alignY="center"
+            >
+              <Icon shrink={false}>
+                <StarSvg />
+              </Icon>
+              <Text maxLines={1} expandX loading={isLoading}>
+                A very long label that gives way so the icons on both sides keep
+                their room
+              </Text>
+              <Icon shrink={false}>
+                <ChevronSvg />
+              </Icon>
+            </Box>
+
+            <p
+              style={{ fontSize: "13px", color: "#555", margin: "12px 0 6px" }}
+            >
+              same row, end icon without <code>{"shrink={false}"}</code>
+            </p>
+            <Box
+              flex
+              padding="s"
+              spacing="s"
+              width={width}
+              border="1px solid #ccc"
+              alignY="center"
+            >
+              <Icon shrink={false}>
+                <StarSvg />
+              </Icon>
+              <Text maxLines={1} expandX loading={isLoading}>
+                A very long label that gives way so the icons on both sides keep
+                their room
+              </Text>
+              <Icon>
+                <ChevronSvg />
+              </Icon>
+            </Box>
+
+            <p
+              style={{ fontSize: "13px", color: "#555", margin: "12px 0 6px" }}
+            >
               Nested: outer flex [fixed item | inner flex [text | icon]]
             </p>
             <Box
@@ -802,6 +852,22 @@
           </Box>
         );
       };
+
+      const ChevronSvg = () => (
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M9 6l6 6-6 6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+        </svg>
+      );
 
       const StarSvg = () => (
         <svg

@@ -360,6 +360,12 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 
 /**
+ * The typography primitive: every string an app displays goes through it, or
+ * through something built on it (`Title`, `Paragraph`, `Caption`, `Link`, a
+ * control's label). It accepts every `Box` prop on top of the ones below.
+ * See `docs/typography.md` for the decisions behind it — truncating, rows made
+ * of an icon, a text and an icon, and where a line may break.
+ *
  * @type {import("preact").FunctionComponent<{
  *   children?: import("preact").ComponentChildren,
  *   as?: string,
@@ -371,6 +377,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   spacing?: string | number | import("preact").ComponentChildren,
  *   loading?: boolean,
  *   skeleton?: boolean,
+ *   attachLastChild?: boolean,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -382,9 +389,14 @@ const shouldInjectSpacingBetween = (left, right) => {
  * }>}
  *
  * @param {number} [maxLines]
- *   Truncates overflowing text with an ellipsis. `maxLines={1}` produces a
- *   single-line truncation; `maxLines={n}` (n > 1) uses `-webkit-line-clamp`
- *   to allow up to n lines before clipping.
+ *   How many lines the text may take before it is truncated with an ellipsis.
+ *   `maxLines={1}` truncates on a single line; `maxLines={n}` (n > 1) clamps to
+ *   n lines. This is the only prop to use for that — `Box`'s `lineClamp` /
+ *   `overflowEllipsis` are raw CSS mappings meant for elements that are not a
+ *   `Text`, and `lineClamp={1}` is never the single-line truncation you want.
+ *   Truncation only happens if the element may become narrower than its
+ *   content: `maxLines` sets `min-width: 0` here, but each `Box` between this
+ *   one and the element that carries the width must set it too.
  *
  * @param {string|number} [spacing]
  *   Separator injected between child nodes. Accepts a size token (`"s"`, `"m"`, …),
@@ -400,7 +412,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [attachLastChild]
  *   Keeps the last child on the same line as the word before it — a trailing
  *   icon, a unit, an arrow. Without it the browser may break the line right
- *   before that child and leave it alone underneath.
+ *   before that child and leave it alone underneath, and no character can
+ *   prevent that break. For wrapping text; a child that must survive
+ *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
+ *   `Link` sets it on its own whenever it renders an end icon.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.

@@ -156,6 +156,12 @@ consistency across the app, not from any single call site.
 - `docs/z_index.md` (and its tokens in `src/navi_z_indexes.js`) — stacking: why DOM order is the first tool, what a
   `z-index` without `isolation: isolate` actually competes against, and the
   values navi's own popups/bars/tables use. Read it before writing a `z-index`.
+- `docs/typography.md` — text as a component: why every string goes through
+  `Text`, `maxLines` as the one way to truncate (and why `lineClamp={1}` is
+  not it), what makes truncation actually happen in a flex row, and the two
+  opposite shapes of "icon | text | icon" — the end icon kept outside the
+  truncating text, or `attachLastChild` so it never lands alone on a line.
+  Read it before writing an overflowing label or a row with a trailing icon.
 - `docs/i18n.md` — where the texts an app displays live: `interpolateText` /
   `<Interpolate>` for one sentence, `createI18n` for the app's registry,
   `naviI18n` for navi's own texts. Read it before writing a user-visible

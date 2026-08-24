@@ -452,6 +452,12 @@ const TYPO_PROPS = {
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
   letterSpacing: PASS_THROUGH,
+  // How many lines before truncation, for anything that is not a `Text`.
+  // On a `Text`, `maxLines` is the prop to use and it does more than this
+  // mapping (block display, min-width, white-space per tag) — see
+  // docs/typography.md. `lineClamp` and `overflowEllipsis` below are the raw
+  // one-to-one CSS mappings, kept for an element that opts out of `Text` and
+  // still wants that exact CSS; `lineClamp: 1` is NOT single-line truncation.
   maxLines: (value) => {
     if (!value) {
       return null;
