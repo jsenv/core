@@ -9,7 +9,11 @@ tabSignal.value = "advanced";
 const ROOT = route("/");
 const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
 const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
-const { clearRoutes } = setupRoutes([ROOT, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE]);
+const { clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+]);
 try {
   return {
     explicit_general_override: ADMIN_SETTINGS_ROUTE.buildUrl({

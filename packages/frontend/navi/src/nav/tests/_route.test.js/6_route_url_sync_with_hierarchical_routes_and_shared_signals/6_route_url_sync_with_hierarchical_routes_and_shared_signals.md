@@ -71,7 +71,8 @@ try {
       // Zone signal should affect MAP_ROUTE and MAP_PANEL_ROUTE and MAP_ISOCHRONE_ROUTE
       zone_affected_map: beforeUrls.map !== afterZoneUrls.map,
       zone_affected_panel: beforeUrls.panel !== afterZoneUrls.panel,
-      zone_affected_isochrone: beforeUrls.isochrone !== afterZoneUrls.isochrone,
+      zone_affected_isochrone:
+        beforeUrls.isochrone !== afterZoneUrls.isochrone,
 
       // Panel signal should only affect MAP_PANEL_ROUTE
       panel_affected_map: afterZoneUrls.map !== afterPanelUrls.map,
@@ -140,12 +141,12 @@ try {
       "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_panel_change": {
-      "map": "http://127.0.0.1/map/settings?zone=london",
+      "map": "http://127.0.0.1/map?zone=london",
       "panel": "http://127.0.0.1/map/settings?zone=london",
       "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_isolon_change": {
-      "map": "http://127.0.0.1/map/settings?zone=london&iso_lon=0.1278",
+      "map": "http://127.0.0.1/map?zone=london&iso_lon=0.1278",
       "panel": "http://127.0.0.1/map/settings?zone=london",
       "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
     }
@@ -154,7 +155,7 @@ try {
     "zone_affected_map": true,
     "zone_affected_panel": true,
     "zone_affected_isochrone": true,
-    "panel_affected_map": true,
+    "panel_affected_map": false,
     "panel_affected_panel": true,
     "panel_affected_isochrone": false,
     "isolon_affected_map": true,
@@ -168,7 +169,7 @@ try {
   },
   "test_results": {
     "zone_reactivity_correct": true,
-    "panel_selectivity_correct": false,
+    "panel_selectivity_correct": true,
     "isolon_selectivity_correct": false
   },
   "overall_result": "checking complex signal reactivity patterns"

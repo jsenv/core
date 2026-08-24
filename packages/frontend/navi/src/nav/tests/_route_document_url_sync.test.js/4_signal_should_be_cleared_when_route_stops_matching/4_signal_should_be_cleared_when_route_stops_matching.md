@@ -22,7 +22,10 @@ const MAP_PANEL_ROUTE = route(
   "/map/:panel={navi_state_signal:clearingTestPanel}",
   { searchParams: { zoom: zoomSignal } },
 );
-const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE, MAP_PANEL_ROUTE]);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+]);
 try {
   // Start with panel signal set to "isochrone"
   panelSignal.value = "isochrone";

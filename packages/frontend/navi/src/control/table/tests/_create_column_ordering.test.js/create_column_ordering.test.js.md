@@ -1,5 +1,6 @@
 # [create_column_ordering.test.js](../create_column_ordering.test.js)
 
+
 - [first sync: returns columns in source order](0_first_sync_returns_columns_in_source_order/0_first_sync_returns_columns_in_source_order.md)
 - [first sync: respects user-provided initial order](1_first_sync_respects_user-provided_initial_order/1_first_sync_respects_user-provided_initial_order.md)
 - [first sync: empty column list](2_first_sync_empty_column_list/2_first_sync_empty_column_list.md)
@@ -17,7 +18,7 @@
 - [rename does not trigger setOrderedColumnIds when not needed on next render](14_rename_does_not_trigger_setorderedcolumnids_when_not_needed_on_next_render/14_rename_does_not_trigger_setorderedcolumnids_when_not_needed_on_next_render.md)
 - [rename and add in the same sync](15_rename_and_add_in_the_same_sync/15_rename_and_add_in_the_same_sync.md)
 - [rename and remove in the same sync](16_rename_and_remove_in_the_same_sync/16_rename_and_remove_in_the_same_sync.md)
-- [remove and add different column in same sync (not a rename)](<17_remove_and_add_different_column_in_same_sync_(not_a_rename)/17_remove_and_add_different_column_in_same_sync_(not_a_rename).md>)
+- [remove and add different column in same sync (not a rename)](17_remove_and_add_different_column_in_same_sync_(not_a_rename)/17_remove_and_add_different_column_in_same_sync_(not_a_rename).md)
 - [custom columnIdKey: works with 'name' property](18_custom_columnidkey_works_with_'name'_property/18_custom_columnidkey_works_with_'name'_property.md)
 - [single column: rename works](19_single_column_rename_works/19_single_column_rename_works.md)
 - [add then remove the same column across two syncs](20_add_then_remove_the_same_column_across_two_syncs/20_add_then_remove_the_same_column_across_two_syncs.md)

@@ -9,7 +9,7 @@ return i18n("color", undefined, { lang: "fr" });
 ```
 
 ```js
-couleur;
+couleur
 ```
 
 ---

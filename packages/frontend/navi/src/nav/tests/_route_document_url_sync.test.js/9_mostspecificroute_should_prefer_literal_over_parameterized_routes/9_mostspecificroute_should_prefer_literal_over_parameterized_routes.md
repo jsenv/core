@@ -31,9 +31,10 @@ const isochroneLongitudeSignal = stateSignal(2.3522, {
 // - ISOCHRONE_ROUTE: `/map/isochrone/:tab` (generic with :tab parameter)
 // - ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare` (literal with "compare")
 // ISOCHRONE_COMPARE_ROUTE should be considered more specific
-const ISOCHRONE_ROUTE = route(`/map/isochrone/:tab=${isochroneTabSignal}/`, {
-  searchParams: { iso_lon: isochroneLongitudeSignal },
-});
+const ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
+);
 const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
   searchParams: {
     walk: walkEnabledSignal,
@@ -76,7 +77,9 @@ try {
     route_matching: routeMatching,
     nav_to_calls: navToCalls,
     most_specific_url_used:
-      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1].url : "none",
+      navToCalls.length > 0
+        ? navToCalls[navToCalls.length - 1].url
+        : "none",
 
     // Analysis:
     expected_most_specific_url: "/map/isochrone?walk", // Should navigate to compare route with walk param

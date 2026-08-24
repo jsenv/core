@@ -96,7 +96,7 @@ try {
     "isochrone": "http://127.0.0.1/map"
   },
   "updated_urls": {
-    "map": "http://127.0.0.1/map/settings?zone=london&iso_lon=0.1278",
+    "map": "http://127.0.0.1/map?zone=london&iso_lon=0.1278",
     "panel": "http://127.0.0.1/map/settings?zone=london",
     "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
   },

@@ -3,7 +3,10 @@
 ```js
 const HOME_ROUTE = route("/");
 const TABLE_ROUTE = route("/tables/:tablename");
-const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, TABLE_ROUTE]);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  TABLE_ROUTE,
+]);
 try {
   updateRoutes(`${baseUrl}/tables/a`);
 

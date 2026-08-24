@@ -9,7 +9,10 @@ results.same_order_strings = compareTwoJsValues(
   ["a", "b", "c"],
 );
 results.same_order_numbers = compareTwoJsValues([1, 2, 3], [1, 2, 3]);
-results.same_order_mixed = compareTwoJsValues(["a", 1, true], ["a", 1, true]);
+results.same_order_mixed = compareTwoJsValues(
+  ["a", 1, true],
+  ["a", 1, true],
+);
 
 // Different order - should be different
 results.different_order_strings = compareTwoJsValues(

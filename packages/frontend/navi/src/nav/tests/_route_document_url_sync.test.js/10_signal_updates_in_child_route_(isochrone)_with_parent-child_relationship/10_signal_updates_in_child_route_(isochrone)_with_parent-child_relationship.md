@@ -21,9 +21,10 @@ zoneSignal.value = "nice";
 const HOME_ROUTE = route("/");
 const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-const ISOCHRONE_ROUTE = route(`/map/isochrone/:tab=${isochroneTabSignal}/`, {
-  searchParams: { iso_lon: isochroneLongitudeSignal },
-});
+const ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
+);
 const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
   searchParams: {
     walk: walkEnabledSignal,

@@ -22,7 +22,11 @@ const MAP_ROUTE = route("/map", {
     lat: latitudeSignal,
   },
 });
-const { clearRoutes } = setupRoutes([HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE]);
+const { clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  SELECT_CITY_ROUTE,
+  MAP_ROUTE,
+]);
 try {
   return {
     // Default state with all signal values

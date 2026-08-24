@@ -2,12 +2,8 @@
 
 ```js
 return {
-  without_transition: await openAndComeBack("plain", {
-    search: "?at=item_400",
-  }),
-  with_transition: await openAndComeBack("animated", {
-    search: "?at=item_400",
-  }),
+  without_transition: await walks.plain_held(),
+  with_transition: await walks.animated_held(),
 };
 ```
 

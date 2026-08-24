@@ -1,5 +1,6 @@
 # [route_document_url_sync.test.js](../route_document_url_sync.test.js)
 
+
 - [replaceParams should use most specific route for redirect](0_replaceparams_should_use_most_specific_route_for_redirect/0_replaceparams_should_use_most_specific_route_for_redirect.md)
 - [signal updates should trigger redirect on most specific matching route](1_signal_updates_should_trigger_redirect_on_most_specific_matching_route/1_signal_updates_should_trigger_redirect_on_most_specific_matching_route.md)
 - [parameterized route vs literal route conflict after navigation](2_parameterized_route_vs_literal_route_conflict_after_navigation/2_parameterized_route_vs_literal_route_conflict_after_navigation.md)
@@ -10,10 +11,10 @@
 - [signal preserved when navigating between menu/tabs](7_signal_preserved_when_navigating_between_menutabs/7_signal_preserved_when_navigating_between_menutabs.md)
 - [signals preserved when navigating between different route families](8_signals_preserved_when_navigating_between_different_route_families/8_signals_preserved_when_navigating_between_different_route_families.md)
 - [mostSpecificRoute should prefer literal over parameterized routes](9_mostspecificroute_should_prefer_literal_over_parameterized_routes/9_mostspecificroute_should_prefer_literal_over_parameterized_routes.md)
-- [signal updates in child route (isochrone) with parent-child relationship](<10_signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/10_signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md>)
+- [signal updates in child route (isochrone) with parent-child relationship](10_signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/10_signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md)
 - [parameter value update in URL should sync to signal values](11_parameter_value_update_in_url_should_sync_to_signal_values/11_parameter_value_update_in_url_should_sync_to_signal_values.md)
 - [updating signals keep url in sync](12_updating_signals_keep_url_in_sync/12_updating_signals_keep_url_in_sync.md)
-- [updating signals after url change preserves signal value (no circular dependency)](<13_updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency)/13_updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency).md>)
+- [updating signals after url change preserves signal value (no circular dependency)](13_updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency)/13_updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency).md)
 - [updating url keep signals in sync](14_updating_url_keep_signals_in_sync/14_updating_url_keep_signals_in_sync.md)
 - [updating url with missing parameters uses signal current values](15_updating_url_with_missing_parameters_uses_signal_current_values/15_updating_url_with_missing_parameters_uses_signal_current_values.md)
 - [updating boolean signal](16_updating_boolean_signal/16_updating_boolean_signal.md)
@@ -21,7 +22,7 @@
 - [reset center](18_reset_center/18_reset_center.md)
 - [signal forces url back to parameterized route incorrectly](19_signal_forces_url_back_to_parameterized_route_incorrectly/19_signal_forces_url_back_to_parameterized_route_incorrectly.md)
 - [signal update should stay on current route](20_signal_update_should_stay_on_current_route/20_signal_update_should_stay_on_current_route.md)
-- [signal update should stay on current route (dynamic segment test)](<21_signal_update_should_stay_on_current_route_(dynamic_segment_test)/21_signal_update_should_stay_on_current_route_(dynamic_segment_test).md>)
+- [signal update should stay on current route (dynamic segment test)](21_signal_update_should_stay_on_current_route_(dynamic_segment_test)/21_signal_update_should_stay_on_current_route_(dynamic_segment_test).md)
 - [map style signal change](22_map_style_signal_change/22_map_style_signal_change.md)
 - [map style signal change advanced](23_map_style_signal_change_advanced/23_map_style_signal_change_advanced.md)
 - [deep signal update](24_deep_signal_update/24_deep_signal_update.md)

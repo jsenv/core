@@ -18,10 +18,10 @@ return runCalls;
 ```js
 [
   {
-    foo: true,
-    bar: true,
-  },
-];
+    "foo": true,
+    "bar": true
+  }
+]
 ```
 
 ---

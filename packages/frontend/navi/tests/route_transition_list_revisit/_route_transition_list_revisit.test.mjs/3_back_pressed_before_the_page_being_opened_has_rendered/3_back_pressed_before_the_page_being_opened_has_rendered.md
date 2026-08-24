@@ -1,14 +1,11 @@
 # [back pressed before the page being opened has rendered](../../route_transition_list_revisit.test.mjs)
 
 ```js
-return {
-  without_transition: await openAndComeBack("plain_wm", {
-    rushBack: true,
-  }),
-  with_transition: await openAndComeBack("animated_wm", {
-    rushBack: true,
-  }),
-};
+const [without_transition, with_transition] = await Promise.all([
+  openAndComeBack("plain_wm", { rushBack: true }),
+  openAndComeBack("animated_wm", { rushBack: true }),
+]);
+return { without_transition, with_transition };
 ```
 
 ```js

@@ -35,9 +35,9 @@ try {
 ```js
 {
   "map_url_before": "http://127.0.0.1/map",
-  "map_url_after": "http://127.0.0.1/map/settings",
-  "should_be_same": false,
-  "test_result": "FAIL - MAP_ROUTE affected by panelSignal"
+  "map_url_after": "http://127.0.0.1/map",
+  "should_be_same": true,
+  "test_result": "PASS"
 }
 ```
 

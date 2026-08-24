@@ -2777,6 +2777,11 @@ const stateSignal = (defaultValue, options = {}) => {
 
 const DEBUG$2 =
   typeof process === "object" ? process.env.DEBUG === "true" : false;
+const debug$3 = (...args) => {
+  if (DEBUG$2) {
+    console.debug(...args);
+  }
+};
 
 // Base URL management
 let baseFileUrl;
@@ -2820,10 +2825,8 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
   // Build pathConnectionMap from path signals
   const pathConnectionMap = new Map();
-  const signalSet = new Set();
   for (const connection of pathConnections) {
     pathConnectionMap.set(connection.paramName, connection);
-    signalSet.add(connection.signal);
   }
 
   // Build queryConnectionMap directly from searchParams
@@ -2835,7 +2838,6 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       const { signal, options } = registryEntry;
       const connection = { paramName, signal, paramType: "query", ...options };
       queryConnectionMap.set(paramName, connection);
-      signalSet.add(signal);
     }
   }
 
@@ -2847,16 +2849,10 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     queryConnectionMap,
   });
 
-  if (DEBUG$2) {
-    console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
-    console.debug(`[CustomPattern] Signal connections:`, connections);
-    console.debug(`[CustomPattern] Path connections:`, pathConnectionMap.size);
-    console.debug(
-      `[CustomPattern] Query connections:`,
-      queryConnectionMap.size,
-    );
-    console.debug(`[CustomPattern] SignalSet size:`, signalSet.size);
-  }
+  debug$3(`[CustomPattern] Created pattern:`, parsedPattern);
+  debug$3(`[CustomPattern] Signal connections:`, connections);
+  debug$3(`[CustomPattern] Path connections:`, pathConnectionMap.size);
+  debug$3(`[CustomPattern] Query connections:`, queryConnectionMap.size);
 
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
@@ -2866,58 +2862,33 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       patternObj: patternObject,
     });
 
-    if (DEBUG$2) {
-      console.debug(
-        `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
-        result,
-      );
-    }
+    debug$3(
+      `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
+      result,
+    );
 
     return result;
   };
 
   const resolveParams = (providedParams = {}) => {
-    let resolvedParams = { ...providedParams };
+    const resolvedParams = { ...providedParams };
 
-    // Process path connections for parameter resolution
-    for (const [paramName, connection] of pathConnectionMap) {
+    // Signal values for parameters that were not explicitly provided
+    for (const connection of connections) {
+      const { paramName } = connection;
       if (paramName in providedParams) {
         // Parameter was explicitly provided - always respect explicit parameters
         continue;
       }
       const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
-        // Parameter was not provided, check signal value
         resolvedParams[paramName] = signalValue;
       }
     }
 
-    // Process query connections for parameter resolution
-    for (const [paramName, connection] of queryConnectionMap) {
-      if (paramName in providedParams) {
-        // Parameter was explicitly provided - always respect explicit parameters
-        continue;
-      }
-      const signalValue = readSignalForUrlBuild(connection);
-      if (signalValue !== undefined) {
-        // Parameter was not provided, check signal value
-        resolvedParams[paramName] = signalValue;
-      }
-    }
-
-    // Add defaults for path parameters that are still missing
-    for (const [paramName, connection] of pathConnectionMap) {
-      if (paramName in resolvedParams) {
-        continue;
-      }
-      const currentDefault = connection.getDefaultValue();
-      if (currentDefault !== undefined) {
-        resolvedParams[paramName] = currentDefault;
-      }
-    }
-
-    // Add defaults for query parameters that are still missing
-    for (const [paramName, connection] of queryConnectionMap) {
+    // Defaults for parameters that are still missing
+    for (const connection of connections) {
+      const { paramName } = connection;
       if (paramName in resolvedParams) {
         continue;
       }
@@ -3035,1754 +3006,623 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   };
 
   /**
-   * Build the most precise URL by using route relationships from pattern registry.
-   * Each route is responsible for its own URL generation using its own signals.
-   */
-
-  /**
-   * Helper: Filter out default values from parameters for cleaner URLs
+   * Generate-and-verify url building.
    *
-   * This function removes parameters that match their default values (static or dynamic)
-   * while preserving custom values and inherited parameters from ancestor routes.
-   * Parameter inheritance from parent routes is intentional - only default values
-   * for the current route's own parameters are filtered out.
+   * One hard rule: a built url must ROUND-TRIP. Matched back against the
+   * route family and re-resolved (defaults included), it must reproduce
+   * exactly the state it was built from — and it must still match this
+   * route. The verifier makes a wrong url impossible; the candidate order
+   * then decides which of several faithful urls is canonical:
+   *
+   * - highest ancestor first: when everything this route adds over an
+   *   ancestor is default values, the ancestor's shorter url is the same
+   *   place ("/admin/settings" with default tab IS "/admin")
+   * - the route itself
+   * - descendants, deepest first: a descendant url is used when it carries
+   *   custom state that this route's own url cannot encode (a tab the user
+   *   selected must survive "/admin" being rebuilt)
    */
-  const removeDefaultValues = (params) => {
-    const filtered = { ...params };
-
-    // Process path parameters
-    for (const [paramName, connection] of pathConnectionMap) {
-      if (paramName in filtered) {
-        // Parameter is explicitly provided - check if we should remove it
-        const paramValue = filtered[paramName];
-
-        if (!connection.isCustomValue(paramValue)) {
-          delete filtered[paramName];
-        }
-      } else {
-        // Parameter not provided but signal has a value
-        const signalValue = readSignalForUrlBuild(connection);
-        if (connection.isCustomValue(signalValue)) {
-          // Only include custom values
-          filtered[paramName] = signalValue;
-        }
-      }
-    }
-
-    // Process query parameters
-    for (const [paramName, connection] of queryConnectionMap) {
-      if (paramName in filtered) {
-        // Parameter is explicitly provided - check if we should remove it
-        const paramValue = filtered[paramName];
-
-        if (!connection.isCustomValue(paramValue)) {
-          delete filtered[paramName];
-        }
-      } else {
-        // Parameter not provided but signal has a value
-        const signalValue = readSignalForUrlBuild(connection);
-        if (connection.isCustomValue(signalValue)) {
-          // Only include custom values
-          filtered[paramName] = signalValue;
-        }
-      }
-    }
-
-    return filtered;
-  };
 
   /**
-   * Helper: Check if a literal value can be reached through available parameters
+   * The state a url built by this route must encode, as a Map of
+   * paramName -> { value, connection, segmentIndex, owner, explicit }.
+   * owner is relative to this route: "own" | "ancestor" | "descendant" | "extra".
+   *
+   * Sources, in priority order (first write wins):
+   * - explicit params (an explicit undefined pins the param to its default)
+   * - own connection signals (path + query, inherited query included)
+   * - ancestor path params pinned by this pattern's own literals: being on
+   *   "/admin/settings" MEANS section=settings, whatever the signal says
+   * - ancestor query signals holding custom values
+   * - reachable descendants' connection signals. A descendant is reachable
+   *   when its literals agree with the state collected so far (a tab value
+   *   is unreachable while section conflicts with the tab route's literals)
+   *   and its extra literals are justified by a param value (building "/"
+   *   must not teleport to "/admin").
+   *
+   * Every family signal is read (not only the stored ones) so that a url
+   * computed inside a preact computed() subscribes to all of them.
    */
-  const canReachLiteralValue = (literalValue, params, literalPosition) => {
-    // Check parent's own parameters (signals and user params)
-    const parentCanProvide = connections.some((conn) => {
-      const signalValue = readSignalForUrlBuild(conn);
-      const userValue = params[conn.paramName];
-      const effectiveValue = userValue !== undefined ? userValue : signalValue;
+  const buildIntendedState = (explicitParams) => {
+    const intended = new Map();
+    const reachableDescendants = new Set();
+    const setEntry = (
+      name,
+      value,
+      connection,
+      segmentIndex,
+      owner,
+      explicit,
+      pageNaming = false,
+    ) => {
+      if (intended.has(name)) {
+        return;
+      }
+      intended.set(name, {
+        value,
+        connection,
+        segmentIndex,
+        owner,
+        explicit,
+        pageNaming,
+      });
+    };
+    const paramSegmentIndex = (patternObj, name) => {
+      const seg = patternObj.pattern.segments.find(
+        (s) => s.type === "param" && s.name === name,
+      );
+      return seg ? seg.index : undefined;
+    };
+    const findFamilyConnection = (name) => {
+      const own = pathConnectionMap.get(name) || queryConnectionMap.get(name);
+      if (own) {
+        return {
+          connection: own,
+          segmentIndex: paramSegmentIndex(patternObject, name),
+          owner: "own",
+        };
+      }
+      let ancestor = patternObject.parent;
+      while (ancestor) {
+        const conn =
+          ancestor.pathConnectionMap.get(name) ||
+          ancestor.queryConnectionMap.get(name);
+        if (conn) {
+          return {
+            connection: conn,
+            segmentIndex: paramSegmentIndex(ancestor, name),
+            owner: "ancestor",
+          };
+        }
+        ancestor = ancestor.parent;
+      }
+      let found = null;
+      const visit = (patternObj) => {
+        for (const child of patternObj.children) {
+          if (found) {
+            return;
+          }
+          const conn =
+            child.pathConnectionMap.get(name) ||
+            child.queryConnectionMap.get(name);
+          if (conn) {
+            found = {
+              connection: conn,
+              segmentIndex: paramSegmentIndex(child, name),
+              owner: "descendant",
+            };
+            return;
+          }
+          visit(child);
+        }
+      };
+      visit(patternObject);
       return (
-        effectiveValue === literalValue && conn.isCustomValue(effectiveValue)
+        found || {
+          connection: undefined,
+          segmentIndex: undefined,
+          owner: "extra",
+        }
       );
-    });
-    if (parentCanProvide) {
-      return true;
+    };
+
+    for (const [name, value] of Object.entries(explicitParams)) {
+      const { connection, segmentIndex, owner } = findFamilyConnection(name);
+      setEntry(name, value, connection, segmentIndex, owner, true);
+    }
+    for (const connection of connections) {
+      const { paramName } = connection;
+      const value = readSignalForUrlBuild(connection);
+      if (value !== undefined) {
+        setEntry(
+          paramName,
+          value,
+          connection,
+          paramSegmentIndex(patternObject, paramName),
+          "own",
+          false,
+        );
+      }
+    }
+    let ancestor = patternObject.parent;
+    while (ancestor) {
+      for (const seg of ancestor.pattern.segments) {
+        if (seg.type !== "param" || intended.has(seg.name)) {
+          continue;
+        }
+        const conn = ancestor.pathConnectionMap.get(seg.name);
+        if (!conn) {
+          continue;
+        }
+        const selfSeg = parsedPattern.segments[seg.index];
+        if (selfSeg && selfSeg.type === "literal") {
+          setEntry(seg.name, selfSeg.value, conn, seg.index, "ancestor", false);
+        }
+      }
+      for (const [name, conn] of ancestor.queryConnectionMap) {
+        if (intended.has(name)) {
+          continue;
+        }
+        const value = readSignalForUrlBuild(conn);
+        if (value !== undefined && conn.isCustomValue(value)) {
+          setEntry(name, value, conn, undefined, "ancestor", false);
+        }
+      }
+      ancestor = ancestor.parent;
     }
 
-    // Check user-provided parameters
-    const userCanProvide = Object.entries(params).some(
-      ([, value]) => value === literalValue,
-    );
-    if (userCanProvide) {
-      return true;
-    }
-
-    // Check if any descendant path signal provides this literal value AT THE SAME position.
-    // A signal from /map/isochrone/:tab can provide a literal at position 2 (tab position),
-    // but NOT a literal at position 1 (panel position) — even if the signal value matches.
-    // descendantPathSignals is a Map<segmentIndex, conn[]> precomputed during setupPatterns.
-    const connsAtPosition =
-      patternObject.descendantPathSignals.get(literalPosition);
-    if (!connsAtPosition) {
-      return false;
-    }
-    return connsAtPosition.some((conn) => {
-      const signalValue = readSignalForUrlBuild(conn);
-      return signalValue === literalValue && conn.isCustomValue(signalValue);
-    });
-  };
-  const checkChildRouteCompatibility = (childPatternObj, params) => {
-    const childParams = {};
-    let isCompatible = true;
-
-    // CRITICAL: Check if parent route can reach all child route's literal segments
-    // A route can only optimize to a descendant if there's a viable path through parameters
-    // to reach all the descendant's literal segments (e.g., "/" cannot reach "/admin"
-    // without a parameter that produces "admin")
-    const childLiterals = childPatternObj.pattern.segments.filter(
-      (segment) => segment.type === "literal",
-    );
-    // Check each child literal segment
-    for (let i = 0; i < childLiterals.length; i++) {
-      const childLiteral = childLiterals[i];
-      const childPosition = childLiteral.index;
-      const literalValue = childLiteral.value;
-
-      // Check what the parent has at this position
-      const parentSegmentAtPosition = parsedPattern.segments.find(
-        (segment) => segment.index === childPosition,
-      );
-
-      if (parentSegmentAtPosition) {
-        if (parentSegmentAtPosition.type === "literal") {
-          // Parent has a literal at this position
-          if (parentSegmentAtPosition.value === literalValue) {
-            // Same literal - no problem
+    const intendedValueAt = (name) => {
+      const entry = intended.get(name);
+      return entry ? entry.value : undefined;
+    };
+    const isDescendantReachable = (descendant) => {
+      const selfSegments = parsedPattern.segments;
+      for (const dSeg of descendant.pattern.segments) {
+        if (dSeg.type !== "literal") {
+          continue;
+        }
+        const selfSeg = selfSegments[dSeg.index];
+        if (selfSeg) {
+          if (selfSeg.type === "literal") {
+            if (selfSeg.value !== dSeg.value) {
+              return false;
+            }
             continue;
           }
-          // Different literal - incompatible
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
-            );
+          const value = intendedValueAt(selfSeg.name);
+          if (value === undefined || String(value) !== dSeg.value) {
+            return false;
           }
-          return { isCompatible: false, childParams: {} };
-        }
-        if (parentSegmentAtPosition.type === "param") {
-          // Parent has a parameter at this position - child literal can satisfy this parameter
-          // BUT we need to check if the parent's parameter value matches the child's literal
-
-          // Find the parent's parameter value from signals or params
-          const paramName = parentSegmentAtPosition.name;
-          let parentParamValue = params[paramName];
-
-          // If not in params, check signals
-          if (parentParamValue === undefined) {
-            const parentConnection =
-              pathConnectionMap.get(paramName) ||
-              queryConnectionMap.get(paramName);
-            if (parentConnection) {
-              parentParamValue = readSignalForUrlBuild(parentConnection);
-            }
-          }
-
-          // If parent has a specific value for this parameter, it must match the child literal
-          if (
-            parentParamValue !== undefined &&
-            parentParamValue !== literalValue
-          ) {
-            return { isCompatible: false, childParams: {} };
-          }
-
           continue;
         }
-      }
-      // Parent doesn't have a segment at this position - child extends beyond parent
-      // Check if any available parameter can produce this literal value
-      else if (!canReachLiteralValue(literalValue, params, childPosition)) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
+        // beyond this route's own segments: the literal must be justified by
+        // a custom param value at the same position, or by an explicit value
+        const connsAtPosition =
+          patternObject.descendantPathSignals.get(dSeg.index) || [];
+        const justifiedBySignal = connsAtPosition.some((conn) => {
+          const entry = intended.get(conn.paramName);
+          return (
+            entry &&
+            entry.value !== undefined &&
+            conn.isCustomValue(entry.value) &&
+            String(entry.value) === dSeg.value
           );
+        });
+        if (justifiedBySignal) {
+          continue;
         }
-        return { isCompatible: false, childParams: {} };
-      }
-    }
-
-    // Check both parent signals AND user-provided params for child route matching
-    const paramsToCheck = [
-      ...connections,
-      ...Object.entries(params).map(([key, value]) => ({
-        paramName: key,
-        userValue: value,
-        isUserProvided: true,
-      })),
-    ];
-
-    for (const item of paramsToCheck) {
-      const result = processParameterForChildRoute(
-        item,
-        childPatternObj.pattern,
-      );
-
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] Processing param '${item.paramName}' (userProvided: ${item.isUserProvided}, value: ${item.isUserProvided ? item.userValue : item.signal?.value}) for child ${childPatternObj.originalPattern}: compatible=${result.isCompatible}, shouldInclude=${result.shouldInclude}`,
+        const justifiedByExplicit = [...intended.values()].some(
+          (entry) => entry.explicit && String(entry.value) === dSeg.value,
         );
-      }
-
-      if (!result.isCompatible) {
-        isCompatible = false;
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] Child ${childPatternObj.originalPattern} INCOMPATIBLE due to param '${item.paramName}'`,
-          );
-        }
-        break;
-      }
-
-      if (result.shouldInclude) {
-        childParams[result.paramName] = result.paramValue;
-      }
-    }
-
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] Final compatibility result for ${childPatternObj.originalPattern}: ${isCompatible}`,
-      );
-    }
-
-    return { isCompatible, childParams };
-  };
-
-  /**
-   * Helper: Process a single parameter for child route compatibility
-   */
-  const processParameterForChildRoute = (item, childParsedPattern) => {
-    let paramName;
-    let paramValue;
-
-    if (item.isUserProvided) {
-      paramName = item.paramName;
-      paramValue = item.userValue;
-    } else {
-      paramName = item.paramName;
-      paramValue = readSignalForUrlBuild(item);
-      // Only include custom parent signal values (not using defaults)
-      if (paramValue === undefined || !item.isCustomValue(paramValue)) {
-        return { isCompatible: true, shouldInclude: false };
-      }
-    }
-
-    // Check if parameter value matches a literal segment in child pattern
-    const matchesChildLiteral = paramMatchesChildLiteral(
-      paramValue,
-      childParsedPattern,
-    );
-    if (matchesChildLiteral) {
-      // Compatible - parameter value matches child literal
-      return {
-        isCompatible: true,
-        shouldInclude: !item.isUserProvided,
-        paramName,
-        paramValue,
-      };
-    }
-
-    // ROBUST FIX: For path parameters, check semantic compatibility by verifying
-    // that parent parameter values can actually produce the child route structure
-    const isParentPathParam = pathConnectionMap.has(paramName);
-    if (isParentPathParam) {
-      // Check if parent parameter value matches any child literal where it should
-      // The key insight: if parent has a specific parameter value, child route must
-      // be reachable with that value or they're incompatible
-      const parameterCanReachChild = canParameterReachChildRoute(
-        paramName,
-        paramValue,
-        parsedPattern,
-        childParsedPattern,
-      );
-
-      if (!parameterCanReachChild) {
-        return { isCompatible: false };
-      }
-    }
-
-    // Check if this is a query parameter in the parent pattern
-    const isParentQueryParam = queryConnectionMap.has(paramName);
-    if (isParentQueryParam) {
-      // Query parameters are always compatible and can be inherited by child routes
-      return {
-        isCompatible: true,
-        shouldInclude: !item.isUserProvided && !matchesChildLiteral,
-        paramName,
-        paramValue,
-      };
-    }
-
-    // Check for generic parameter-literal conflicts (only for path parameters)
-    if (!matchesChildLiteral) {
-      // Check if this is a path parameter from parent pattern
-      const isParentPathParam = pathConnectionMap.has(paramName);
-      if (isParentPathParam) {
-        // Parameter value (from user or signal) doesn't match this child's literals
-        // Check if child has any literal segments that would conflict with this parameter
-        const hasConflictingLiteral = childParsedPattern.segments.some(
-          (segment) =>
-            segment.type === "literal" && segment.value !== paramValue,
-        );
-        if (hasConflictingLiteral) {
-          return { isCompatible: false };
-        }
-      }
-    }
-
-    // Compatible but should only include if from signal (not user-provided)
-    return {
-      isCompatible: true,
-      shouldInclude: !item.isUserProvided && !matchesChildLiteral,
-      paramName,
-      paramValue,
-    };
-  };
-
-  /**
-   * Helper: Determine if child route should be used based on active parameters
-   */
-  const shouldUseChildRoute = (
-    childPatternObj,
-    params,
-    compatibility,
-    resolvedParams,
-  ) => {
-    // CRITICAL: Check if user explicitly passed undefined for parameters that would
-    // normally be used to select this child route via sibling route relationships
-    for (const [paramName, paramValue] of Object.entries(params)) {
-      if (paramValue !== undefined) {
-        continue;
-      }
-
-      // Look for sibling routes (other children of the same parent) that use this parameter
-      const siblingPatternObjs = patternObject.children;
-      for (const siblingPatternObj of siblingPatternObjs) {
-        if (siblingPatternObj === childPatternObj) continue; // Skip self
-
-        // Check if sibling route uses this parameter and get the connection
-        const siblingConnection =
-          siblingPatternObj.pathConnectionMap.get(paramName) ||
-          siblingPatternObj.queryConnectionMap.get(paramName);
-        if (!siblingConnection) {
-          continue;
-        }
-        const siblingSignalValue = readSignalForUrlBuild(siblingConnection);
-        if (siblingSignalValue === undefined) {
-          continue;
-        }
-        // Check if this child route has a literal that matches the signal value
-        const signalMatchesThisChildLiteral =
-          childPatternObj.pattern.segments.some(
-            (segment) =>
-              segment.type === "literal" &&
-              segment.value === siblingSignalValue,
-          );
-        if (signalMatchesThisChildLiteral) {
-          // This child route's literal matches the sibling's signal value
-          // User passed undefined to override that signal - don't use this child route
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${siblingSignalValue}"`,
-            );
-          }
+        if (!justifiedByExplicit) {
           return false;
         }
       }
-    }
-
-    // CRITICAL: Block child routes that have literal segments requiring specific parameter values
-    // that aren't available. Only check literal segments that replace parameter positions.
-    // Example: /map/flow/ replaces /:panel/ with "flow", so panel must equal "flow"
-    let hasIncompatibleLiterals = false;
-    let hasMatchingNonDefaultLiterals = false;
-
-    for (let i = 0; i < childPatternObj.pattern.segments.length; i++) {
-      const childSegment = childPatternObj.pattern.segments[i];
-      const parentSegment = parsedPattern.segments[i];
-
-      if (
-        childSegment.type === "literal" &&
-        parentSegment &&
-        parentSegment.type === "param"
-      ) {
-        // This literal segment replaces a parameter in the parent
-        const paramName = parentSegment.name;
-        const explicitValue = params[paramName];
-        const connection =
-          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
-        const signalValue = readSignalForUrlBuild(connection);
-
-        // Check if the parameter has the required value
-        if (
-          explicitValue !== childSegment.value &&
-          signalValue !== childSegment.value
-        ) {
-          hasIncompatibleLiterals = true;
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because parameter "${paramName}" must be "${childSegment.value}" but current values are explicit="${explicitValue}" signal="${signalValue}"`,
-            );
-          }
-          break;
-        }
-
-        // Check if this matching literal represents a non-default parameter value
-        // (for forcing child route selection later)
-        if (explicitValue === childSegment.value && connection) {
-          const defaultValue = connection.getDefaultValue();
-          if (explicitValue !== defaultValue) {
-            hasMatchingNonDefaultLiterals = true;
-          }
-        }
-      }
-    }
-
-    // Block incompatible child routes immediately
-    if (hasIncompatibleLiterals) {
-      return false;
-    }
-
-    // Descending into a child path param means "this URL keeps the value you
-    // are on" — right for a param that QUALIFIES a position (a tab, a mode),
-    // wrong for one that NAMES a page. Two things must both hold for it to be
-    // a name:
-    //
-    // - literal routes are declared for its other values ("/games/me/done").
-    //   Declaring them is the developer saying these values are places; a tab
-    //   nobody named a route after stays a qualifier;
-    // - it has a default value, which makes THIS url the url of that default:
-    //   "/games/me" IS section=a-venir. Descending would leave the default
-    //   unaddressable — two states, one url. Without a default ("/map" is not
-    //   a panel, it is the absence of one) this url means nothing yet and
-    //   stays free to remember where you were.
-    const thisUrlAlreadyMeansAParamValue = (connection) => {
-      if (connection.paramType !== "path") {
-        return false;
-      }
-      if (pathConnectionMap.has(connection.paramName)) {
-        return false; // we carry that param ourselves, we are not its default
-      }
-      if (!connection.namedByLiteralRoutes) {
-        return false;
-      }
-      return connection.getDefaultValue() !== undefined;
+      return true;
     };
-
-    // Check if child has active non-default signal values
-    let hasActiveParams = false;
-    const childParams = { ...compatibility.childParams };
-
-    for (const [paramName, connection] of new Map([
-      ...childPatternObj.pathConnectionMap,
-      ...childPatternObj.queryConnectionMap,
-    ])) {
-      // Check if parameter was explicitly provided by user
-      const hasExplicitParam = paramName in params;
-      const explicitValue = params[paramName];
-
-      if (hasExplicitParam) {
-        // User explicitly provided this parameter - use their value
-        childParams[paramName] = explicitValue;
-        if (
-          explicitValue !== undefined &&
-          connection.isCustomValue(explicitValue)
-        ) {
-          hasActiveParams = true;
-        }
-      } else {
-        const signalValue = readSignalForUrlBuild(connection);
-        if (signalValue !== undefined) {
-          // No explicit override - use signal value
-          childParams[paramName] = signalValue;
-          if (
-            connection.isCustomValue(signalValue) &&
-            !thisUrlAlreadyMeansAParamValue(connection)
-          ) {
-            hasActiveParams = true;
-          }
-        }
-      }
-    }
-
-    // Check if child pattern can be fully satisfied
-    const initialMergedParams = { ...childParams, ...params };
-    const canBuildChildCompletely = childPatternObj.pattern.segments.every(
-      (segment) => {
-        if (segment.type === "literal") return true;
-        if (segment.type === "param") {
-          return (
-            segment.optional || initialMergedParams[segment.name] !== undefined
-          );
-        }
-        return true;
-      },
-    );
-
-    // Count only non-undefined provided parameters that are NOT default values
-    const nonDefaultParams = Object.entries(params).filter(
-      ([paramName, value]) => {
-        if (value === undefined) return false;
-
-        // Check if this parameter has a default value in child's connections
-        const childConnection =
-          childPatternObj.pathConnectionMap.get(paramName) ||
-          childPatternObj.queryConnectionMap.get(paramName);
-        if (childConnection) {
-          const childDefault = childConnection.getDefaultValue();
-          return value !== childDefault;
-        }
-
-        // Check if this parameter has a default value in parent's connections (current pattern)
-        const parentConnection =
-          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
-        if (parentConnection) {
-          const parentDefault = parentConnection.getDefaultValue();
-          return value !== parentDefault;
-        }
-
-        return true; // Non-connection parameters are considered non-default
-      },
-    );
-
-    const hasNonDefaultProvidedParams = nonDefaultParams.length > 0;
-
-    // Use child route if:
-    // 1. Child has active non-default parameters, OR
-    // 2. User provided non-default params AND child can be built completely, OR
-    // 3. User provided params that match child literal segments AND are non-default values
-    // EXCEPT: Don't use child if parent can produce cleaner URL by omitting defaults
-    let shouldUse =
-      hasActiveParams ||
-      (hasNonDefaultProvidedParams && canBuildChildCompletely) ||
-      (hasMatchingNonDefaultLiterals && canBuildChildCompletely);
-
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] shouldUseChildRoute decision for ${childPatternObj.originalPattern}:`,
-        {
-          hasActiveParams,
-          hasNonDefaultProvidedParams,
-          canBuildChildCompletely,
-          shouldUse,
-        },
-      );
-    }
-
-    // Optimization: Check if child would include literal segments that represent default values
-    if (shouldUse) {
-      // Check if child pattern has literal segments that correspond to default parameter values
-      const childLiterals = childPatternObj.pattern.segments
-        .filter((seg) => seg.type === "literal")
-        .map((seg) => seg.value);
-
-      const parentLiterals = parsedPattern.segments
-        .filter((seg) => seg.type === "literal")
-        .map((seg) => seg.value);
-
-      // If child has more literal segments than parent, check if the extra ones are defaults
-      if (childLiterals.length > parentLiterals.length) {
-        const extraLiterals = childLiterals.slice(parentLiterals.length);
-
-        // Check if any extra literal matches a default parameter value
-        // BUT only skip if user didn't explicitly provide that parameter AND
-        // both conditions are true:
-        // 1. The parameters that would cause us to use this child route are defaults
-        // 2. The child route doesn't have non-default parameters that would be lost
-        let childSpecificParamsAreDefaults = true;
-
-        // Check if parameters that determine child selection are non-default
-        // OR if any descendant parameters indicate explicit navigation
-        for (const [paramName, connection] of new Map([
-          ...pathConnectionMap,
-          ...queryConnectionMap,
-        ])) {
-          const currentDefault = connection.getDefaultValue(); // Use current dynamic default
-          const resolvedValue = resolvedParams[paramName];
-          const userProvidedParam = paramName in params;
-
-          if (extraLiterals.includes(currentDefault)) {
-            // This literal corresponds to a parameter in the parent
-            if (
-              userProvidedParam ||
-              (resolvedValue !== undefined &&
-                connection.isCustomValue(resolvedValue))
-            ) {
-              // Parameter was explicitly provided or has custom value - child is needed
-              childSpecificParamsAreDefaults = false;
-              break;
-            }
-          }
-        }
-
-        // Additional check: if child route has path parameters that are non-default,
-        // this indicates explicit navigation even if structural parameters happen to be default
-        // (Query parameters don't count as they don't indicate structural navigation)
-        if (childSpecificParamsAreDefaults) {
-          for (const childConnection of childPatternObj.connections) {
-            const childParamName = childConnection.paramName;
-            const childDefaultValue = childConnection.getDefaultValue();
-            const childResolvedValue = resolvedParams[childParamName];
-
-            // Only consider path parameters, not query parameters
-            const isPathParam = childPatternObj.pattern.segments.some(
-              (seg) => seg.type === "param" && seg.name === childParamName,
-            );
-
-            if (
-              isPathParam &&
-              childResolvedValue !== undefined &&
-              childResolvedValue !== childDefaultValue
-            ) {
-              // Child has non-default path parameters, indicating explicit navigation
-              childSpecificParamsAreDefaults = false;
-              if (DEBUG$2) {
-                console.debug(
-                  `[${pattern}] Child has non-default path parameter '${childParamName}=${childResolvedValue}' (default: ${childDefaultValue}) - indicates explicit navigation`,
-                );
-              }
-              break;
-            }
-          }
-        }
-
-        // When structural parameters (those that determine child selection) are defaults,
-        // prefer parent route ONLY if child doesn't have any non-default parameters
-        if (childSpecificParamsAreDefaults && !hasActiveParams) {
-          for (const [paramName, connection] of new Map([
-            ...pathConnectionMap,
-            ...queryConnectionMap,
-          ])) {
-            const currentDefault = connection.getDefaultValue(); // Use current dynamic default
-            const userProvidedParam = paramName in params;
-
-            if (extraLiterals.includes(currentDefault) && !userProvidedParam) {
-              // This child includes a literal that represents a default value
-              // AND user didn't explicitly provide this parameter
-              // When structural parameters are defaults, prefer parent for cleaner URL
-              shouldUse = false;
-              if (DEBUG$2) {
-                console.debug(
-                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default and no active params)`,
-                );
-              }
-              break;
-            }
-          }
-        } else if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] Using child route - parameters that determine child selection are non-default or child has active params`,
-          );
-        }
-      }
-    }
-
-    if (DEBUG$2 && shouldUse) {
-      console.debug(
-        `[${pattern}] Will use child route ${childPatternObj.originalPattern}`,
-      );
-    }
-
-    return shouldUse;
-  };
-
-  /**
-   * Helper: Build URL for selected child route with proper parameter filtering
-   */
-  const buildChildRouteUrl = (
-    childPatternObj,
-    params,
-    parentResolvedParams = {},
-  ) => {
-    // Start with child signal values
-    const baseParams = {};
-    for (const [paramName, connection] of new Map([
-      ...childPatternObj.pathConnectionMap,
-      ...childPatternObj.queryConnectionMap,
-    ])) {
-      // Check if parameter was explicitly provided by user
-      const hasExplicitParam = paramName in params;
-      const explicitValue = params[paramName];
-
-      if (hasExplicitParam) {
-        // User explicitly provided this parameter - use their value (even if undefined)
-        if (explicitValue !== undefined) {
-          baseParams[paramName] = explicitValue;
-        }
-        // If explicitly undefined, don't include it (which means don't use child route)
-      } else {
-        const signalValue = readSignalForUrlBuild(connection);
-        if (
-          signalValue !== undefined &&
-          connection.isCustomValue(signalValue)
-        ) {
-          // No explicit override - use signal value if non-default
-          baseParams[paramName] = signalValue;
-        }
-      }
-    }
-
-    // Collect parameters from ALL ancestor routes in the hierarchy (not just immediate parent)
-    const collectAncestorParameters = (currentPatternObj) => {
-      if (!currentPatternObj?.parent) {
-        return; // No more ancestors
-      }
-
-      const parentPatternObj = currentPatternObj.parent;
-
-      // Add parent's signal parameters (query params only, not path params)
-      // Path params from ancestors are structural path segments, not inheritable
-      for (const connection of parentPatternObj.connections) {
-        if (connection.paramType === "path") {
+    // Query values are inherited under a LOOSER rule than path descent: the
+    // descendant's extra literals only need a param position to exist there,
+    // not a param value naming them. Leaving a sub screen keeps its query
+    // prefs in the url; entering it by literal requires a value that says so.
+    const isDescendantQueryReachable = (descendant) => {
+      const selfSegments = parsedPattern.segments;
+      for (const dSeg of descendant.pattern.segments) {
+        if (dSeg.type !== "literal") {
           continue;
         }
-        const { paramName } = connection;
-
-        // Skip if child route already handles this parameter
-        if (
-          childPatternObj.pathConnectionMap.has(paramName) ||
-          childPatternObj.queryConnectionMap.has(paramName)
-        ) {
-          continue; // Child route handles this parameter directly
+        const selfSeg = selfSegments[dSeg.index];
+        if (selfSeg) {
+          if (selfSeg.type === "literal") {
+            if (selfSeg.value !== dSeg.value) {
+              return false;
+            }
+            continue;
+          }
+          const entry = intended.get(selfSeg.name);
+          const conn = pathConnectionMap.get(selfSeg.name);
+          const value =
+            entry && entry.value !== undefined
+              ? entry.value
+              : conn
+                ? conn.getDefaultValue()
+                : undefined;
+          if (String(value) !== dSeg.value) {
+            return false;
+          }
+          continue;
         }
-
-        // Skip if parameter is already collected
-        if (paramName in baseParams) {
-          continue; // Already have this parameter
+        const connsAtPosition = patternObject.descendantPathSignals.get(
+          dSeg.index,
+        );
+        if (!connsAtPosition || connsAtPosition.length === 0) {
+          return false;
         }
-
-        const signalValue = readSignalForUrlBuild(connection);
-        // Only include custom signal values (not using defaults)
-        if (
-          signalValue !== undefined &&
-          connection.isCustomValue(signalValue)
-        ) {
-          // Skip if parameter is consumed by child's literal path segments
-          const isConsumedByChildPath = childPatternObj.pattern.segments.some(
-            (segment) =>
-              segment.type === "literal" && segment.value === signalValue,
-          );
-          if (!isConsumedByChildPath) {
-            baseParams[paramName] = signalValue;
+      }
+      return true;
+    };
+    const visitDescendants = (patternObj) => {
+      for (const child of patternObj.children) {
+        const reachable = isDescendantReachable(child);
+        if (reachable) {
+          reachableDescendants.add(child);
+        }
+        const queryReachable = reachable || isDescendantQueryReachable(child);
+        for (const conn of child.connections) {
+          if (conn.inherited) {
+            continue;
+          }
+          const { paramName } = conn;
+          // read even when the value is not kept: subscribes the caller
+          const value = readSignalForUrlBuild(conn);
+          if (intended.has(paramName)) {
+            continue;
+          }
+          if (conn.paramType === "path") {
+            if (!reachable || value === undefined) {
+              continue;
+            }
+            // A param whose other values are declared as literal routes and
+            // which has a default NAMES pages: this route's url stays the
+            // url of the default value, it does not follow the signal. The
+            // value still travels along when something else picks the page
+            // (pageNaming entries build urls but neither trigger descent nor
+            // fail verification).
+            const pageNaming =
+              conn.namedByLiteralRoutes &&
+              conn.getDefaultValue() !== undefined &&
+              !pathConnectionMap.has(paramName);
+            setEntry(
+              paramName,
+              value,
+              conn,
+              paramSegmentIndex(child, paramName),
+              "descendant",
+              false,
+              pageNaming,
+            );
+            continue;
+          }
+          if (!queryReachable || value === undefined) {
+            continue;
+          }
+          if (conn.isCustomValue(value)) {
+            setEntry(paramName, value, conn, undefined, "descendant", false);
           }
         }
+        visitDescendants(child);
       }
-
-      // Recursively collect from higher ancestors
-      collectAncestorParameters(parentPatternObj);
     };
+    visitDescendants(patternObject);
 
-    // Start collecting from the child's parent
-    collectAncestorParameters(childPatternObj);
-
-    // Add parent parameters from the immediate calling context
-    for (const [paramName, parentValue] of Object.entries(
-      parentResolvedParams,
-    )) {
-      // Skip if already collected from ancestors or child handles it
-      if (paramName in baseParams) {
-        continue;
-      }
-
-      // Skip if child route already handles this parameter
-      if (
-        childPatternObj.pathConnectionMap.has(paramName) ||
-        childPatternObj.queryConnectionMap.has(paramName)
-      ) {
-        continue; // Child route handles this parameter directly
-      }
-
-      // Skip if parameter is consumed by child's literal path segments
-      const isConsumedByChildPath = childPatternObj.pattern.segments.some(
-        (segment) =>
-          segment.type === "literal" && segment.value === parentValue,
-      );
-      if (isConsumedByChildPath) {
-        continue; // Parameter is consumed by child's literal path
-      }
-
-      // Check if parent parameter is at default value
-      const parentConnection =
-        pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
-      const parentDefault = parentConnection
-        ? parentConnection.getDefaultValue()
-        : undefined;
-      if (parentValue === parentDefault) {
-        continue; // Don't inherit default values
-      }
-
-      // Inherit this parameter as it's not handled by child and not at default
-      baseParams[paramName] = parentValue;
-    }
-
-    // Apply user params with filtering logic
-    for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection =
-        childPatternObj.pathConnectionMap.get(paramName) ||
-        childPatternObj.queryConnectionMap.get(paramName);
-
-      if (childConnection) {
-        // Only include if it's a custom value (not default)
-        if (childConnection.isCustomValue(userValue)) {
-          baseParams[paramName] = userValue;
-        } else {
-          // User provided the default value - complete omission
-          delete baseParams[paramName];
-        }
-      } else {
-        // Check if param corresponds to a literal segment in child pattern
-        const isConsumedByChildPath = childPatternObj.pattern.segments.some(
-          (segment) =>
-            segment.type === "literal" && segment.value === userValue,
-        );
-
-        if (!isConsumedByChildPath) {
-          // Not consumed by child path, keep it as query param
-          baseParams[paramName] = userValue;
-        }
-      }
-    }
-
-    // Build child URL using buildUrl (not buildMostPreciseUrl) to prevent recursion
-    const childUrl = buildUrlFromPattern(
-      childPatternObj.pattern,
-      baseParams,
-      childPatternObj.originalPattern,
-      childPatternObj,
-    );
-
-    if (childUrl && !childUrl.includes(":")) {
-      // Check for parent optimization before returning
-      const optimizedUrl = checkChildParentOptimization(
-        childPatternObj,
-        childUrl,
-        baseParams,
-      );
-      return optimizedUrl || childUrl;
-    }
-
-    return null;
+    return { intended, reachableDescendants };
   };
 
   /**
-   * Helper: Check if parent route optimization applies to child route
+   * The natural url of one candidate route for the intended state.
+   * Values are placed where they belong: path params in the path, query
+   * connections and explicit extras in the query string. A meaningful path
+   * value the candidate can express neither as a param nor as a matching
+   * literal disqualifies it — except an explicit value for an ancestor path
+   * param, which travels as a search param ("/admin/settings?section=toto").
    */
-  const checkChildParentOptimization = (
-    childPatternObj,
-    childUrl,
-    baseParams,
+  const buildCandidateUrl = (
+    candidate,
+    intended,
+    { dropMissing, lenient } = {},
   ) => {
-    const childParent = childPatternObj.parent;
-
-    if (childParent && childParent.originalPattern === pattern) {
-      // Check if child path segments correspond to parent's default path parameters
-      // If so, we can optimize to use parent's path but preserve child's query parameters
-
-      let canOptimizeToParent = true;
-      const parentPathDefaults = {};
-
-      // Check each segment in child vs parent to see if child literals match parent defaults
-      for (
-        let i = 0;
-        i < childPatternObj.pattern.segments.length &&
-        i < parsedPattern.segments.length;
-        i++
-      ) {
-        const childSegment = childPatternObj.pattern.segments[i];
-        const parentSegment = parsedPattern.segments[i];
-
-        if (
-          childSegment.type === "literal" &&
-          parentSegment &&
-          parentSegment.type === "param"
-        ) {
-          // Child has literal where parent has parameter - check if literal matches default
-          const paramName = parentSegment.name;
-          const connection =
-            pathConnectionMap.get(paramName) ||
-            queryConnectionMap.get(paramName);
-
-          if (connection) {
-            const defaultValue = connection.getDefaultValue();
-            if (childSegment.value === defaultValue) {
-              // Child literal matches parent default - this is optimizable
-              parentPathDefaults[paramName] = defaultValue;
-            } else {
-              // Child literal doesn't match parent default - can't optimize
-              canOptimizeToParent = false;
-              break;
-            }
-          } else {
-            canOptimizeToParent = false;
-            break;
-          }
-        }
+    const urlParams = {};
+    const candidateSegments = candidate.pattern.segments;
+    for (const seg of candidateSegments) {
+      if (seg.type !== "param") {
+        continue;
       }
-
-      if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] checkChildParentOptimization: checking child ${childPatternObj.originalPattern}`,
-            { parentPathDefaults, canOptimizeToParent },
-          );
-        }
-
-        // CRITICAL: Check if child route has non-default path parameters
-        // If it does, don't optimize away the child route structure
-        for (const [
-          paramName,
-          connection,
-        ] of childPatternObj.pathConnectionMap) {
-          const signalValue = readSignalForUrlBuild(connection);
-          if (
-            signalValue !== undefined &&
-            connection.isCustomValue(signalValue)
-          ) {
-            // Child has non-default path parameters - don't optimize away the structure
-            if (DEBUG$2) {
-              console.debug(
-                `[${pattern}] Not optimizing child route because it has non-default path parameter '${paramName}=${signalValue}'`,
-              );
-            }
-            return null;
-          }
-        }
-
-        // Check if child has non-default query parameters that should be preserved
-        const nonDefaultQueryParams = {};
-
-        for (const [
-          paramName,
-          connection,
-        ] of childPatternObj.queryConnectionMap) {
-          const signalValue = readSignalForUrlBuild(connection);
-          if (
-            signalValue !== undefined &&
-            connection.isCustomValue(signalValue)
-          ) {
-            nonDefaultQueryParams[paramName] = signalValue;
-          }
-        }
-
-        // Also include any query parameters from baseParams
-        for (const [paramName, paramValue] of Object.entries(baseParams)) {
-          // Check if this parameter is not a path parameter that we're optimizing away
-          if (!(paramName in parentPathDefaults)) {
-            nonDefaultQueryParams[paramName] = paramValue;
-          }
-        }
-
-        // Build optimized URL using parent path but child's query parameters
-        // Always optimize when we can, even if there are no query parameters
-        const parentParams = { ...nonDefaultQueryParams };
-
-        // Remove default path parameters to get clean parent URL
-        for (const defaultParam of Object.keys(parentPathDefaults)) {
-          delete parentParams[defaultParam];
-        }
-
-        const optimizedUrl = buildUrlFromPattern(
-          parsedPattern,
-          parentParams,
-          pattern,
-          patternObject,
-        );
-
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
-            { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
-          );
-        }
-
-        return optimizedUrl;
+      const entry = intended.get(seg.name);
+      if (!entry || entry.value === undefined) {
+        continue;
+      }
+      const meaningful = entry.connection
+        ? entry.connection.isCustomValue(entry.value)
+        : true;
+      if (meaningful) {
+        urlParams[seg.name] = entry.value;
       }
     }
+    for (const [name, entry] of intended) {
+      if (name in urlParams) {
+        continue;
+      }
+      if (entry.value === undefined) {
+        continue;
+      }
+      const conn = entry.connection;
+      if (!conn) {
+        if (entry.explicit) {
+          urlParams[name] = entry.value;
+        }
+        continue;
+      }
+      if (!conn.isCustomValue(entry.value)) {
+        continue;
+      }
+      if (conn.paramType === "path") {
+        const literalSeg =
+          entry.segmentIndex === undefined
+            ? undefined
+            : candidateSegments[entry.segmentIndex];
+        if (
+          literalSeg &&
+          literalSeg.type === "literal" &&
+          literalSeg.value === String(entry.value)
+        ) {
+          continue; // the candidate's path itself encodes this value
+        }
+        if (entry.explicit && entry.owner === "ancestor") {
+          urlParams[name] = entry.value;
+          continue;
+        }
+        if (entry.pageNaming) {
+          // deliberately left out: this url does not follow the signal
+          continue;
+        }
+        if (lenient) {
+          if (entry.explicit) {
+            urlParams[name] = entry.value;
+          }
+          continue;
+        }
+        return null;
+      }
+      urlParams[name] = entry.value;
+    }
+    let buildPattern = candidate.pattern;
+    if (dropMissing) {
+      const keptSegments = candidateSegments.filter(
+        (seg) => seg.type !== "param" || seg.name in urlParams,
+      );
+      if (keptSegments.length !== candidateSegments.length) {
+        buildPattern = { ...buildPattern, segments: keptSegments };
+        if (buildPattern.trailingSlash) {
+          buildPattern.trailingSlash = false;
+        }
+      }
+    }
+    const url = buildUrlFromPattern(
+      buildPattern,
+      urlParams,
+      candidate.originalPattern,
+      candidate,
+    );
+    if (url.includes("/:")) {
+      return null;
+    }
+    return url;
+  };
 
-    return null;
+  const urlValueEquals = (intendedValue, reproducedValue) => {
+    let a = intendedValue;
+    if (a && typeof a === "object" && a[rawUrlPartSymbol]) {
+      a = a.value;
+    }
+    if (a instanceof Date) {
+      const yyyy = a.getUTCFullYear();
+      const mm = String(a.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(a.getUTCDate()).padStart(2, "0");
+      a = `${yyyy}-${mm}-${dd}`;
+    }
+    if (compareTwoJsValues(a, reproducedValue)) {
+      return true;
+    }
+    if (a === true && reproducedValue === "") {
+      // `true` is written as a bare "?flag", which an untyped connection
+      // reads back as an empty string
+      return true;
+    }
+    return String(a) === String(reproducedValue);
+  };
+
+  /**
+   * Does the url reproduce the intended state?
+   * A connection's reproduced value is what the url gives back on a reload:
+   * the value extracted by a matching family pattern that carries the
+   * connection, or the connection's default when no matching pattern does.
+   */
+  const verifyUrl = (url, intended) => {
+    if (!applyOn(url)) {
+      return false; // whatever this url is, it is not one of OUR urls
+    }
+    const familyPatterns = [];
+    const seen = new Set();
+    const visit = (patternObj) => {
+      if (seen.has(patternObj)) {
+        return;
+      }
+      seen.add(patternObj);
+      familyPatterns.push(patternObj);
+      for (const child of patternObj.children) {
+        visit(child);
+      }
+    };
+    visit(patternObject.familyRoot || patternObject);
+    const matchResultMap = new Map();
+    for (const familyPattern of familyPatterns) {
+      matchResultMap.set(familyPattern, familyPattern.applyOn(url));
+    }
+    for (const [name, entry] of intended) {
+      const conn = entry.connection;
+      if (!conn) {
+        continue; // extra params have no state to lose
+      }
+      if (entry.pageNaming) {
+        continue; // losing it is deliberate (see buildIntendedState)
+      }
+      let reproducedValue;
+      let extracted = false;
+      for (const familyPattern of familyPatterns) {
+        const matchResult = matchResultMap.get(familyPattern);
+        if (!matchResult) {
+          continue;
+        }
+        const holdsParam =
+          familyPattern.queryConnectionMap.has(name) ||
+          familyPattern.pattern.segments.some(
+            (seg) => seg.type === "param" && seg.name === name,
+          );
+        if (!holdsParam) {
+          continue;
+        }
+        if (name in matchResult && matchResult[name] !== undefined) {
+          reproducedValue = matchResult[name];
+          extracted = true;
+          break;
+        }
+      }
+      if (!extracted) {
+        reproducedValue = conn.getDefaultValue();
+      }
+      const wantedValue =
+        entry.value === undefined ? conn.getDefaultValue() : entry.value;
+      if (!urlValueEquals(wantedValue, reproducedValue)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * When may this route's url collapse to an ancestor's shorter url?
+   * Policy kept from behavior the round-trip check cannot decide alone
+   * (several faithful urls exist, one is canonical):
+   * - immediate parent, when this pattern's literals sitting at the parent's
+   *   param positions all spell the params' DEFAULT values ("/admin/settings"
+   *   is "/admin" when settings is the default section) — custom query values
+   *   ride along, custom own path values forbid it
+   * - immediate parent otherwise: only when none of this route's own
+   *   (non-inherited) connections holds a custom value
+   * - higher ancestors: only for a pure-literal route with no connections
+   */
+  const isAncestorCollapseAllowed = (ancestorPattern, intended) => {
+    const entryIsMeaningful = (conn) => {
+      const entry = intended.get(conn.paramName);
+      return (
+        Boolean(entry) && entry.value !== undefined && conn.isCustomValue(entry.value)
+      );
+    };
+    if (ancestorPattern !== patternObject.parent) {
+      return (
+        connections.length === 0 &&
+        parsedPattern.segments.every((seg) => seg.type === "literal")
+      );
+    }
+    let literalsPinDefaults = false;
+    for (const seg of ancestorPattern.pattern.segments) {
+      if (seg.type !== "param") {
+        continue;
+      }
+      const conn = ancestorPattern.pathConnectionMap.get(seg.name);
+      const selfSeg = parsedPattern.segments[seg.index];
+      if (!conn || !selfSeg || selfSeg.type !== "literal") {
+        continue;
+      }
+      if (selfSeg.value !== String(conn.getDefaultValue())) {
+        literalsPinDefaults = false;
+        break;
+      }
+      literalsPinDefaults = true;
+    }
+    if (literalsPinDefaults) {
+      return !connections.some(
+        (conn) =>
+          !conn.inherited &&
+          conn.paramType === "path" &&
+          entryIsMeaningful(conn),
+      );
+    }
+    return !connections.some(
+      (conn) => !conn.inherited && entryIsMeaningful(conn),
+    );
   };
 
   const buildMostPreciseUrl = (params = {}) => {
-    if (DEBUG$2) {
-      console.debug(`[${pattern}] buildMostPreciseUrl called`);
-    }
-
-    // Use the pattern object's signalSet (updated by setupPatterns)
-    const effectiveSignalSet = patternObject.signalSet;
-
-    // Access signal.value to trigger dependency tracking
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] Reading ${effectiveSignalSet.size} signals for reactive dependencies`,
-      );
-    }
-    // for (const signal of effectiveSignalSet) {
-    //   // Access signal.value to trigger dependency tracking
-    //   // eslint-disable-next-line no-unused-expressions
-    //   signal.value; // This line is critical for signal reactivity - when commented out, routes may not update properly
-    // }
-
-    // Step 1: Resolve and clean parameters
-    const resolvedParams = resolveParams(params);
-
-    // Step 2: Try ancestors first - find the highest ancestor that works
-    const parentPattern = patternObject.parent;
-
-    if (DEBUG$2 && parentPattern) {
-      console.debug(
-        `[${pattern}] Available ancestor:`,
-        parentPattern.originalPattern,
-      );
-    }
-
-    let bestAncestorUrl = null;
-    if (parentPattern) {
-      // Skip root route - never use as optimization target
-      if (parentPattern.originalPattern !== "/") {
-        // Try to use this ancestor and traverse up to find the highest possible
-        const highestAncestorUrl = findHighestAncestor(
-          parentPattern,
-          resolvedParams,
-        );
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] Highest ancestor from ${parentPattern.originalPattern}:`,
-            highestAncestorUrl,
-          );
-        }
-
-        if (highestAncestorUrl) {
-          bestAncestorUrl = highestAncestorUrl;
-        }
+    const { intended, reachableDescendants } = buildIntendedState(params);
+    // ancestors: start at the immediate parent, climb while urls keep round-
+    // tripping, keep the highest one ("/" is never a target)
+    let ancestorUrl = null;
+    let ancestor = patternObject.parent;
+    while (ancestor && ancestor.originalPattern !== "/") {
+      if (!isAncestorCollapseAllowed(ancestor, intended)) {
+        break;
       }
-    }
-
-    if (bestAncestorUrl) {
-      if (DEBUG$2) {
-        console.debug(`[${pattern}] Using ancestor optimization`);
-      }
-      return bestAncestorUrl;
-    }
-
-    // Step 3: Remove default values for normal URL building
-    let finalParams = removeDefaultValues(resolvedParams);
-
-    // Step 4: Try descendants - find the deepest descendant that works
-    const childPatternObjs = patternObject.children;
-
-    let bestDescendantUrl = null;
-    for (const childPatternObj of childPatternObjs) {
-      const deepestDescendantUrl = findDeepestDescendant(
-        childPatternObj,
-        params,
-        resolvedParams,
-      );
-      if (deepestDescendantUrl) {
-        // Take the first valid deepest descendant we find (or keep deepest among multiple)
-        if (!bestDescendantUrl) {
-          bestDescendantUrl = deepestDescendantUrl;
-        }
-      }
-    }
-
-    if (bestDescendantUrl) {
-      if (DEBUG$2) {
-        console.debug(`[${pattern}] Using descendant optimization`);
-      }
-      return bestDescendantUrl;
-    }
-    if (DEBUG$2) {
-      console.debug(`[${pattern}] No suitable child route found`);
-    }
-
-    // Step 5: Inherit parameters from parent routes
-    inheritParentParameters(finalParams);
-
-    // Step 6: Build the current route URL
-    const generatedUrl = buildCurrentRouteUrl(finalParams);
-
-    return generatedUrl;
-  };
-
-  /**
-   * Helper: Find the highest ancestor by traversing parent chain recursively
-   */
-  const findHighestAncestor = (startAncestor, resolvedParams) => {
-    // Check if we can use this ancestor directly
-    const directUrl = tryUseAncestor(startAncestor, resolvedParams);
-    if (!directUrl) {
-      return null;
-    }
-
-    // Look for an even higher ancestor by checking the ancestor's parent
-    if (startAncestor.parent) {
-      const higherAncestor = startAncestor.parent;
-
-      // Skip root pattern
-      if (higherAncestor.originalPattern === "/") {
-        return directUrl;
-      }
-
-      // Recursively check if we can optimize to an even higher ancestor
-      const higherUrl = findHighestAncestor(higherAncestor, resolvedParams);
-      if (higherUrl) {
-        return higherUrl; // Found a higher ancestor, return that
-      }
-    }
-
-    // No higher ancestor found, return the direct optimization
-    return directUrl;
-  };
-
-  /**
-   * Helper: Find the deepest descendant that can be used for this route
-   */
-  const findDeepestDescendant = (startChild, params, resolvedParams) => {
-    // Check if we can use this child directly
-    const directUrl = tryUseDescendant(startChild, params, resolvedParams);
-    if (!directUrl) {
-      return null;
-    }
-
-    // Now traverse down the child chain to find the deepest possible descendant
-    let currentChild = startChild;
-    let deepestUrl = directUrl;
-
-    while (true) {
-      const childChildren = currentChild.children || [];
-
-      let foundDeeper = false;
-      for (const deeperChild of childChildren) {
-        const deeperUrl = tryUseDescendant(deeperChild, params, resolvedParams);
-        if (deeperUrl) {
-          // Found a deeper descendant that works
-          deepestUrl = deeperUrl;
-          currentChild = deeperChild;
-          foundDeeper = true;
-          break;
-        }
-      }
-
-      if (!foundDeeper) {
-        break; // No deeper descendant found, we're at the bottom
-      }
-    }
-
-    return deepestUrl;
-  };
-
-  /**
-   * Helper: Check if child route can optimize to parent based on path segment matching
-   */
-  const canChildOptimizeToParentPath = (
-    childPattern,
-    parentPattern,
-    parentConnections,
-  ) => {
-    if (!childPattern || !parentPattern) {
-      return false;
-    }
-
-    // Check each segment in child vs parent to see if child literals match parent defaults
-    let hasMatchingPathOptimization = false;
-    for (
-      let i = 0;
-      i < childPattern.segments.length && i < parentPattern.segments.length;
-      i++
-    ) {
-      const childSegment = childPattern.segments[i];
-      const parentSegment = parentPattern.segments[i];
-
-      if (
-        childSegment.type === "literal" &&
-        parentSegment &&
-        parentSegment.type === "param"
-      ) {
-        // Child has literal where parent has parameter - check if literal matches default
-        const paramName = parentSegment.name;
-        const connection = parentConnections.find(
-          (conn) => conn.paramName === paramName,
-        );
-
-        if (connection) {
-          const defaultValue = connection.getDefaultValue();
-          if (childSegment.value === defaultValue) {
-            // Child literal matches parent default - this enables path-based optimization
-            hasMatchingPathOptimization = true;
-          } else {
-            // Child literal doesn't match parent default - can't optimize
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-    }
-
-    return hasMatchingPathOptimization;
-  };
-
-  /**
-   * Helper: Try to use an ancestor route (only immediate parent for parameter optimization)
-   */
-  const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
-    // Check if this ancestor is the immediate parent (for parameter optimization safety)
-    const immediateParent = patternObject.parent;
-
-    if (
-      immediateParent &&
-      immediateParent.originalPattern === ancestorPatternObj.originalPattern
-    ) {
-      // This is the immediate parent - check if we can optimize
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: Trying immediate parent ${ancestorPatternObj.originalPattern}`,
-        );
-      }
-
-      // For immediate parent optimization, check if we can optimize based on path segments
-      // Even if query parameters are non-default, we should still optimize if the child's
-      // literal path segments correspond to the parent's default path parameter values
-      const canOptimizeBasedOnPath = canChildOptimizeToParentPath(
-        parsedPattern,
-        ancestorPatternObj.pattern,
-        ancestorPatternObj.connections,
-      );
-
-      if (canOptimizeBasedOnPath) {
-        // Path-based optimization is possible, but ALSO check if current PATH parameters are defaults
-        // Query parameters should not block path-based optimization, only path parameters should
-        const hasNonDefaultPathParameters = connections.some((connection) => {
-          const resolvedValue = resolvedParams[connection.paramName];
-
-          // Only check path parameters, not query parameters
-          const isPathParameter = parsedPattern.segments.some(
-            (segment) =>
-              segment.type === "param" && segment.name === connection.paramName,
-          );
-
-          return isPathParameter && connection.isCustomValue(resolvedValue);
-        });
-
-        if (!hasNonDefaultPathParameters) {
-          // Child has no non-default path parameters - proceed with optimization
-          // Query parameters can be moved to the parent route
-          const result = tryDirectOptimization(
-            parsedPattern,
-            connections,
-            ancestorPatternObj,
-            resolvedParams,
-          );
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] tryUseAncestor: Path-based optimization result:`,
-              result,
-            );
-          }
-          return result;
-        }
-
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryUseAncestor: Path-based optimization blocked - child has non-default path parameters`,
-          );
-        }
-      }
-
-      // For other cases, check if current route's OWN parameters have non-default values
-      // Only check parameters that belong to this route, not inherited ones
-      const hasNonDefaultOwnParameters = connections.some((connection) => {
-        // Skip inherited connections - they shouldn't block optimization
-        if (connection.inherited) {
-          return false;
-        }
-        const resolvedValue = resolvedParams[connection.paramName];
-        return connection.isCustomValue(resolvedValue);
+      const url = buildCandidateUrl(ancestor, intended, {
+        dropMissing: true,
       });
-
-      if (hasNonDefaultOwnParameters) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryUseAncestor: Has non-default own parameters, skipping immediate parent optimization`,
-          );
-        }
-        return null;
+      if (!url || !verifyUrl(url, intended)) {
+        break;
       }
-
-      // All own parameters have default values - proceed with optimization
-      const result = tryDirectOptimization(
-        parsedPattern,
-        connections,
-        ancestorPatternObj,
-        resolvedParams,
+      debug$3(
+        `[${pattern}] ancestor url ${url} (via ${ancestor.originalPattern})`,
       );
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
-          result,
-        );
-      }
-      return result;
+      ancestorUrl = url;
+      ancestor = ancestor.parent;
     }
-
-    // For non-immediate parents, only allow optimization if all own parameters have default values
-    const hasNonDefaultOwnParameters = connections.some((connection) => {
-      // Skip inherited connections - they shouldn't block optimization
-      if (connection.inherited) {
-        return false;
-      }
-      const resolvedValue = resolvedParams[connection.paramName];
-      return connection.isCustomValue(resolvedValue);
+    if (ancestorUrl) {
+      return ancestorUrl;
+    }
+    const selfUrl = buildCandidateUrl(patternObject, intended, {
+      dropMissing: true,
     });
-
-    if (hasNonDefaultOwnParameters) {
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: Non-immediate parent with non-default own parameters, skipping`,
-        );
-      }
-      return null;
+    if (selfUrl && verifyUrl(selfUrl, intended)) {
+      return selfUrl;
     }
-
-    // This is not the immediate parent - only allow literal-only optimization
-    const hasParameters =
-      connections.length > 0 ||
-      parsedPattern.segments.some((seg) => seg.type === "param");
-
-    if (hasParameters) {
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: Non-immediate parent with parameters, skipping`,
-        );
-      }
-      return null;
-    }
-
-    // Pure literal route optimization
-    // Allow literal routes to optimize to parametric ancestors if literal segments match parameter defaults
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] tryUseAncestor: Trying optimization to ${ancestorPatternObj.originalPattern}`,
-      );
-    }
-
-    const result = tryDirectOptimization(
-      parsedPattern,
-      connections,
-      ancestorPatternObj,
-      resolvedParams,
-    );
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
-        result,
-      );
-    }
-    return result;
-  };
-
-  /**
-   * Helper: Check if current literal route can be optimized to target ancestor
-   */
-  const tryDirectOptimization = (
-    sourcePattern,
-    sourceConnections,
-    targetAncestor,
-    resolvedParams,
-  ) => {
-    const sourceLiterals = sourcePattern.segments
-      .filter((seg) => seg.type === "literal")
-      .map((seg) => seg.value);
-
-    const targetLiterals = targetAncestor.pattern.segments
-      .filter((seg) => seg.type === "literal")
-      .map((seg) => seg.value);
-
-    const targetParams = targetAncestor.pattern.segments.filter(
-      (seg) => seg.type === "param",
-    );
-
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] tryDirectOptimization: sourceLiterals:`,
-        sourceLiterals,
-      );
-      console.debug(
-        `[${pattern}] tryDirectOptimization: targetLiterals:`,
-        targetLiterals,
-      );
-      console.debug(
-        `[${pattern}] tryDirectOptimization: targetParams:`,
-        targetParams,
-      );
-    }
-
-    // Source must extend target's literal path
-    if (sourceLiterals.length <= targetLiterals.length) {
-      if (DEBUG$2) {
-        console.debug(`[${pattern}] tryDirectOptimization: Source too short`);
-      }
-      return null;
-    }
-
-    // Source must start with same literals as target
-    for (let i = 0; i < targetLiterals.length; i++) {
-      if (sourceLiterals[i] !== targetLiterals[i]) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Literal mismatch at ${i}`,
-          );
-        }
-        return null;
-      }
-    }
-
-    // For literal-only optimization: if both source and target have only literals AND no parameters,
-    // and source extends target, we can optimize directly
-    const sourceHasOnlyLiterals =
-      sourcePattern.segments.every((seg) => seg.type === "literal") &&
-      sourceConnections.length === 0;
-
-    const targetHasOnlyLiterals =
-      targetAncestor.pattern.segments.every((seg) => seg.type === "literal") &&
-      targetAncestor.connections.length === 0;
-
-    if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
-      // Two pure literal routes have no parametric relationship — nothing to optimize.
-      // /dashboard/section must never collapse to /dashboard.
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, no optimization possible`,
-        );
-      }
-      return null;
-    }
-
-    // For parametric optimization: remaining segments must match target's parameter defaults
-    const extraSegments = sourceLiterals.slice(targetLiterals.length);
-    if (extraSegments.length !== targetParams.length) {
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryDirectOptimization: Extra segments ${extraSegments.length} != target params ${targetParams.length}`,
-        );
-      }
-      return null;
-    }
-
-    for (let i = 0; i < extraSegments.length; i++) {
-      const segment = extraSegments[i];
-      const param = targetParams[i];
-      const connection = targetAncestor.connections.find(
-        (conn) => conn.paramName === param.name,
-      );
-      if (!connection || connection.getDefaultValue() !== segment) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Parameter default mismatch for ${param.name}`,
-          );
-        }
-        return null;
-      }
-    }
-
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
-      );
-      console.debug(
-        `[${pattern}] tryDirectOptimization: resolvedParams:`,
-        resolvedParams,
-      );
-    }
-
-    // Build ancestor URL with inherited parameters that don't conflict with optimization
-    const ancestorParams = {};
-
-    // First, add extra parameters from the original resolvedParams
-    // These are parameters that don't correspond to any pattern segments or query params
-    const sourcePatternParamNames = new Set(
-      sourceConnections.map((conn) => conn.paramName),
-    );
-    const sourceQueryParamNames = new Set(
-      sourcePattern.queryParams.map((qp) => qp.name),
-    );
-    const targetPatternParamNames = new Set(
-      targetAncestor.connections.map((conn) => conn.paramName),
-    );
-    const targetQueryParamNames = new Set(
-      targetAncestor.pattern.queryParams.map((qp) => qp.name),
-    );
-
-    for (const [paramName, value] of Object.entries(resolvedParams)) {
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryDirectOptimization: Considering param ${paramName}=${value}`,
-        );
-      }
-      // Include parameters that target pattern specifically needs
-      if (targetQueryParamNames.has(paramName)) {
-        // Only include if the value is not the default value
-        const connection =
-          targetAncestor.pathConnectionMap.get(paramName) ||
-          targetAncestor.queryConnectionMap.get(paramName);
-        if (connection && connection.getDefaultValue() !== value) {
-          ancestorParams[paramName] = value;
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
-            );
-          }
-        }
-      }
-      // Include source query parameters (these should be inherited during ancestor optimization)
-      else if (sourceQueryParamNames.has(paramName)) {
-        // Only include source parameters if they're not default values
-        // Default values should still be omitted from URLs to keep them clean
-        const connection = sourceConnections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (
-          connection &&
-          value !== undefined &&
-          connection.getDefaultValue() !== value
-        ) {
-          ancestorParams[paramName] = value;
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] tryDirectOptimization: Added source param ${paramName}=${value}`,
-            );
-          }
-        }
-      }
-      // Include extra parameters that are not part of either pattern (true extra parameters)
-      else if (
-        !sourcePatternParamNames.has(paramName) &&
-        !targetPatternParamNames.has(paramName)
-      ) {
-        ancestorParams[paramName] = value;
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Added extra param ${paramName}=${value}`,
-          );
-        }
-      }
-    }
-
-    // Also check target ancestor's own signal values for parameters not in resolvedParams
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] tryDirectOptimization: Target ancestor has ${targetAncestor.connections.length} connections`,
-      );
-      for (const conn of targetAncestor.connections) {
-        console.debug(
-          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${readSignalForUrlBuild(conn)}, isCustom=${conn.isCustomValue(readSignalForUrlBuild(conn))}`,
-        );
-      }
-    }
-
-    for (const connection of targetAncestor.connections) {
-      const { paramName } = connection;
-      if (paramName in ancestorParams) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Skipping ${paramName} - already in ancestorParams`,
-          );
-        }
-        continue;
-      }
-
-      // Only include if not already processed and has custom value (not default)
-      const signalValue = readSignalForUrlBuild(connection);
-      if (signalValue !== undefined) {
-        // Don't include path parameters that correspond to literal segments we're optimizing away
-        const targetParam = targetParams.find((p) => p.name === paramName);
-        const isPathParam = targetParam !== undefined; // Any param in segments is a path param
-        if (isPathParam) {
-          // Skip path parameters - we want them to use default values for optimization
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] tryDirectOptimization: Skipping path param ${paramName}=${signalValue} (will use default)`,
-            );
-          }
+    // deepest reachable descendant whose url round-trips, walking greedily
+    let current = patternObject;
+    let descendantUrl = null;
+    descend: while (true) {
+      for (const child of current.children) {
+        if (!reachableDescendants.has(child)) {
           continue;
         }
-
-        // For query parameters, only include custom values (not defaults)
-        if (connection.isCustomValue(signalValue)) {
-          ancestorParams[paramName] = signalValue;
-          if (DEBUG$2) {
-            console.debug(
-              `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
-            );
-          }
-        } else if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Skipping default value ${paramName}=${signalValue}`,
+        const url = buildCandidateUrl(child, intended);
+        if (url && verifyUrl(url, intended)) {
+          debug$3(
+            `[${pattern}] descendant url ${url} (via ${child.originalPattern})`,
           );
-        }
-      } else if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryDirectOptimization: Skipping ${paramName}=${signalValue} - undefined value`,
-        );
-      }
-    }
-
-    // Then, get all ancestors starting from the target ancestor's parent (skip the target itself)
-    let currentParent = targetAncestor.parent;
-
-    while (currentParent) {
-      for (const connection of currentParent.connections) {
-        const { paramName } = connection;
-        if (paramName in ancestorParams) {
-          continue;
-        }
-
-        // Only inherit custom values (not defaults) that we don't already have
-        const signalValue = readSignalForUrlBuild(connection);
-        if (
-          signalValue !== undefined &&
-          connection.isCustomValue(signalValue)
-        ) {
-          // Check if this parameter would be redundant with target ancestor's literal segments
-          const isRedundant = isParameterRedundantWithLiteralSegments(
-            targetAncestor.pattern,
-            currentParent.pattern,
-            paramName);
-
-          if (!isRedundant) {
-            ancestorParams[paramName] = signalValue;
-          }
+          descendantUrl = url;
+          current = child;
+          continue descend;
         }
       }
-
-      // Move up the parent chain
-      currentParent = currentParent.parent;
+      break;
     }
-
-    return buildUrlFromPattern(
-      targetAncestor.pattern,
-      ancestorParams,
-      targetAncestor.originalPattern,
-      targetAncestor,
-    );
-  };
-
-  /**
-   * Helper: Try to use a descendant route (simple compatibility check)
-   */
-  const tryUseDescendant = (
-    descendantPatternObj,
-    params,
-    parentResolvedParams,
-  ) => {
-    // Check basic compatibility
-    const compatibility = checkChildRouteCompatibility(
-      descendantPatternObj,
-      params,
-    );
-    if (!compatibility.isCompatible) {
-      return null;
+    if (descendantUrl) {
+      return descendantUrl;
     }
-
-    // Check if we should use this descendant
-    const shouldUse = shouldUseChildRoute(
-      descendantPatternObj,
-      params,
-      compatibility,
-      parentResolvedParams,
-    );
-    if (!shouldUse) {
-      return null;
-    }
-
-    // Build descendant URL using buildUrl (not buildMostPreciseUrl) to prevent recursion
-    return buildChildRouteUrl(
-      descendantPatternObj,
-      params,
-      parentResolvedParams,
-    );
-  };
-
-  /**
-   * Helper: Inherit query parameters from parent patterns
-   */
-  const inheritParentParameters = (finalParams) => {
-    let currentParent = patternObject.parent;
-
-    // Traverse up the parent chain to inherit parameters
-    while (currentParent) {
-      // Check parent's signal connections for non-default values to inherit
-      // Only inherit query (search) parameters, not path parameters
-      // Path parameters are structural and correspond to specific path segments
-      for (const parentConnection of currentParent.connections) {
-        if (parentConnection.paramType === "path") {
-          continue;
-        }
-        const { paramName } = parentConnection;
-        if (paramName in finalParams) {
-          continue; // Already have this parameter
-        }
-
-        // Only inherit if we don't have this param and parent has custom value (not default)
-        const parentSignalValue = readSignalForUrlBuild(parentConnection);
-        if (
-          parentSignalValue !== undefined &&
-          parentConnection.isCustomValue(parentSignalValue)
-        ) {
-          // Don't inherit if parameter corresponds to a literal in our path
-          const shouldInherit = !isParameterRedundantWithLiteralSegments(
-            parsedPattern,
-            currentParent.pattern,
-            paramName);
-
-          if (shouldInherit) {
-            finalParams[paramName] = parentSignalValue;
-          }
-        }
-      }
-      // Move to the next parent up the chain
-      currentParent = currentParent.parent;
-    }
-  };
-
-  /**
-   * Helper: Build URL for current route with filtered pattern
-   */
-  const buildCurrentRouteUrl = (finalParams) => {
-    if (!parsedPattern.segments) {
-      return "/";
-    }
-
-    // Filter out parameter segments that don't have values
-    const filteredPattern = {
-      ...parsedPattern,
-      segments: parsedPattern.segments.filter((segment) => {
-        if (segment.type === "param") {
-          return segment.name in finalParams;
-        }
-        return true; // Keep literal segments
-      }),
-    };
-
-    // Remove trailing slash if we filtered out segments
-    if (
-      filteredPattern.segments.length < parsedPattern.segments.length &&
-      parsedPattern.trailingSlash
-    ) {
-      filteredPattern.trailingSlash = false;
-    }
-
-    return buildUrlFromPattern(
-      filteredPattern,
-      finalParams,
-      pattern,
-      patternObject,
+    // no url round-trips (state not fully representable): this route's own
+    // url, dropping what it cannot encode
+    return (
+      buildCandidateUrl(patternObject, intended, {
+        dropMissing: true,
+        lenient: true,
+      }) || "/"
     );
   };
 
@@ -4821,10 +3661,8 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   // changes must not end the visit this param qualifies.
   const carryOverWeakParams = (currentUrl, params) => {
     let paramsWithWeak = params;
-    for (const [paramName, connection] of [
-      ...pathConnectionMap,
-      ...queryConnectionMap,
-    ]) {
+    for (const connection of connections) {
+      const { paramName } = connection;
       if (!connection.weak || paramName in paramsWithWeak) {
         continue;
       }
@@ -4871,20 +3709,18 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
   // Pattern object with unified data and methods
   const patternObject = {
-    // Pattern data properties (formerly patternData)
     urlPatternRaw: pattern,
     cleanPattern,
     connections,
     pathConnectionMap, // Separate map for path parameters
     queryConnectionMap, // Separate map for query parameters
     parsedPattern,
-    signalSet,
     children: [],
     parent: null,
+    familyRoot: null, // Topmost ancestor, computed during setupPatterns
     depth: 0, // Will be calculated after relationships are built
     descendantPathSignals: new Map(), // Precomputed during setupPatterns (Map<segmentIndex, conn[]>)
 
-    // Pattern methods (formerly patternObj methods)
     originalPattern: pattern,
     pattern: parsedPattern,
     applyOn,
@@ -4983,55 +3819,6 @@ const detectSignals = (routePattern) => {
   }
 
   return [updatedPattern, signalConnections];
-};
-
-/**
- * Helper: Check if parameter matches any literal in child pattern
- */
-const paramMatchesChildLiteral = (paramValue, childParsedPattern) => {
-  return childParsedPattern.segments.some(
-    (segment) => segment.type === "literal" && segment.value === paramValue,
-  );
-};
-
-/**
- * Helper: Check if a parent parameter can semantically reach a child route
- * This replaces the fragile position-based matching with semantic verification
- */
-const canParameterReachChildRoute = (
-  paramName,
-  paramValue,
-  parentPattern,
-  childPattern,
-) => {
-  // Find the parent parameter segment
-  const parentParamSegment = parentPattern.segments.find(
-    (segment) => segment.type === "param" && segment.name === paramName,
-  );
-
-  if (!parentParamSegment) {
-    return true; // Not a path parameter, no conflict
-  }
-
-  // Get parameter's logical path position (not array index)
-  const paramPathPosition = parentParamSegment.index;
-
-  // Find corresponding child segment at the same logical path position
-  const childSegmentAtSamePosition = childPattern.segments.find(
-    (segment) => segment.index === paramPathPosition,
-  );
-
-  if (!childSegmentAtSamePosition) {
-    return true; // Child doesn't extend to this position, no conflict
-  }
-
-  if (childSegmentAtSamePosition.type === "literal") {
-    // Child has a literal at this position - parent parameter must match exactly
-    return childSegmentAtSamePosition.value === paramValue;
-  }
-
-  // Child has parameter at same position - compatible
-  return true;
 };
 
 /**
@@ -5547,9 +4334,6 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
 };
 
 /**
- * Build query parameters respecting hierarchical order from ancestor patterns
- */
-/**
  * Build hierarchical query parameters from pattern hierarchy
  *
  * IMPORTANT: This function implements parameter inheritance - child routes inherit
@@ -5587,17 +4371,13 @@ const buildHierarchicalQueryParams = (
     }
   }
 
-  // DEBUG: Log what we found
-  if (DEBUG$2) {
-    // Force debug for now
-    console.debug(`Building params for ${originalPattern}`);
-    console.debug(`parsedPattern:`, parsedPattern.original);
-    console.debug(`params:`, params);
-    console.debug(
-      `ancestorPatterns:`,
-      ancestorPatterns.map((p) => p.urlPatternRaw),
-    );
-  }
+  debug$3(`Building params for ${originalPattern}`);
+  debug$3(`parsedPattern:`, parsedPattern.original);
+  debug$3(`params:`, params);
+  debug$3(
+    `ancestorPatterns:`,
+    ancestorPatterns.map((p) => p.urlPatternRaw),
+  );
 
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
@@ -5610,23 +4390,17 @@ const buildHierarchicalQueryParams = (
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
 
-        if (DEBUG$2) {
-          console.debug(
-            `Added ancestor param: ${paramName}=${params[paramName]}`,
-          );
-        }
+        debug$3(`Added ancestor param: ${paramName}=${params[paramName]}`);
       }
     }
   }
 
   // Step 2: Add query parameters from current pattern
   if (parsedPattern.queryParams) {
-    if (DEBUG$2) {
-      console.debug(
-        `Processing current pattern query params:`,
-        parsedPattern.queryParams.map((q) => q.name),
-      );
-    }
+    debug$3(
+      `Processing current pattern query params:`,
+      parsedPattern.queryParams.map((q) => q.name),
+    );
 
     for (const queryParam of parsedPattern.queryParams) {
       const paramName = queryParam.name;
@@ -5634,11 +4408,7 @@ const buildHierarchicalQueryParams = (
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
 
-        if (DEBUG$2) {
-          console.debug(
-            `Added current param: ${paramName}=${params[paramName]}`,
-          );
-        }
+        debug$3(`Added current param: ${paramName}=${params[paramName]}`);
       }
     }
   }
@@ -5843,43 +4613,6 @@ const isChildPattern = (childPattern, parentPattern) => {
 };
 
 /**
- * Check if a parameter is redundant because the child pattern already has it as a literal segment
- * E.g., parameter "section" is redundant for pattern "/admin/settings/:tab" because "settings" is literal
- */
-const isParameterRedundantWithLiteralSegments = (
-  childPattern,
-  parentPattern,
-  paramName,
-) => {
-  // Find which segment position corresponds to this parameter in the parent
-  let paramSegmentIndex = -1;
-  for (let i = 0; i < parentPattern.segments.length; i++) {
-    const segment = parentPattern.segments[i];
-    if (segment.type === "param" && segment.name === paramName) {
-      paramSegmentIndex = i;
-      break;
-    }
-  }
-
-  // If parameter not found in parent segments, it's not redundant with path
-  if (paramSegmentIndex === -1) {
-    return false;
-  }
-
-  // Check if child has a literal segment at the same position
-  if (childPattern.segments.length > paramSegmentIndex) {
-    const childSegment = childPattern.segments[paramSegmentIndex];
-    if (childSegment.type === "literal") {
-      // Child has a literal segment where parent has parameter
-      // This means the child is more specific and shouldn't inherit this parameter
-      return true; // Redundant - child already specifies this position with a literal
-    }
-  }
-
-  return false;
-};
-
-/**
  * Register all patterns at once and build their relationships
  */
 const setupRoutePatterns = (routePatterns) => {
@@ -5913,6 +4646,17 @@ const setupRoutePatterns = (routePatterns) => {
       }
       otherRoutePattern.children.push(routePattern);
     }
+  }
+  // Phase 2b: Compute family roots. Two patterns are in the same family when
+  // their parent chains meet — one is ancestor of the other, or they share a
+  // common ancestor. Each pattern has a single parent, so that is exactly:
+  // same topmost ancestor (familyRoot equality).
+  for (const routePattern of routePatternSet) {
+    let root = routePattern;
+    while (root.parent) {
+      root = root.parent;
+    }
+    routePattern.familyRoot = root;
   }
   // Phase 3: Inherit search parameter connections from ancestors
   // Search params are global and should be inherited by descendants regardless of path segments
@@ -5971,13 +4715,11 @@ const setupRoutePatterns = (routePatterns) => {
           routePattern.queryConnectionMap.set(paramName, inheritedConnection);
           routePattern.connections.push(inheritedConnection);
 
-          if (DEBUG$2) {
-            console.debug(
-              `[${routePattern.originalPattern}] Inherited search param "${paramName}" from ancestor [${ancestorRoutePattern.originalPattern}]`,
-            );
-          }
-        } else if (DEBUG$2) {
-          console.debug(
+          debug$3(
+            `[${routePattern.originalPattern}] Inherited search param "${paramName}" from ancestor [${ancestorRoutePattern.originalPattern}]`,
+          );
+        } else {
+          debug$3(
             `[${routePattern.originalPattern}] Skipped inheriting "${paramName}" - child uses default values, not truly more specific`,
           );
         }
@@ -5985,48 +4727,7 @@ const setupRoutePatterns = (routePatterns) => {
       ancestorRoutePattern = ancestorRoutePattern.parent;
     }
   }
-  // Phase 4: Collect all relevant signals for each pattern based on relationships
-  for (const routePattern of routePatternSet) {
-    const allRelevantSignals = new Set();
-
-    // Add own signals
-    for (const signal of routePattern.signalSet) {
-      allRelevantSignals.add(signal);
-    }
-
-    // Add signals from ancestors (they might be inherited)
-    let parentRoutePattern = routePattern.parent;
-    while (parentRoutePattern) {
-      for (const connection of parentRoutePattern.connections) {
-        allRelevantSignals.add(connection.signal);
-      }
-      // Move up the parent chain
-      parentRoutePattern = parentRoutePattern.parent;
-    }
-
-    // Add signals from descendants (they might be used for optimization)
-    const addDescendantSignals = (patternObj) => {
-      for (const childPattern of patternObj.children) {
-        // Add child's own signals
-        for (const connection of childPattern.connections) {
-          allRelevantSignals.add(connection.signal);
-        }
-        // Recursively add grandchildren signals
-        addDescendantSignals(childPattern);
-      }
-    };
-    addDescendantSignals(routePattern);
-
-    // Update the pattern's signalSet with all relevant signals
-    routePattern.signalSet = allRelevantSignals;
-
-    if (DEBUG$2 && allRelevantSignals.size > 0) {
-      console.debug(
-        `[${routePattern.urlPatternRaw}] Collected ${allRelevantSignals.size} relevant signals`,
-      );
-    }
-  }
-  // Phase 5: Precompute descendant path signals for each pattern (used by canReachLiteralValue)
+  // Phase 4: Precompute descendant path signals for each pattern (used by canReachLiteralValue)
   // Stored as a Map<segmentIndex, conn[]> for O(1) lookup by position.
   for (const routePattern of routePatternSet) {
     const descendantPathSignalsByIndex = new Map();
@@ -6054,7 +4755,7 @@ const setupRoutePatterns = (routePatterns) => {
     collectDescendantPathSignals(routePattern);
     routePattern.descendantPathSignals = descendantPathSignalsByIndex;
   }
-  // Phase 5b: Flag path params whose values are ALSO declared as literal routes
+  // Phase 4b: Flag path params whose values are ALSO declared as literal routes
   // ("/games/me/done" next to "/games/me/:section"). That declaration is the
   // only reliable statement that the param names pages rather than qualifying
   // one — read by shouldUseChildRoute to decide whether an ancestor url may
@@ -6105,13 +4806,11 @@ const setupRoutePatterns = (routePatterns) => {
       }
     }
   }
-  // Phase 6: Calculate depths for all patterns
+  // Phase 5: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
-  if (DEBUG$2) {
-    console.debug("Pattern registry updated");
-  }
+  debug$3("Pattern registry updated");
 };
 // Store the most specific parent (closest parent in hierarchy)
 const getPathSegmentCount = (pattern) => {
@@ -6430,14 +5129,11 @@ const route = (pattern, { searchParams } = {}) => {
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
   registerSetup(() => {
     const cleanupSignalUrlEffectSet = new Set();
-    const { pathConnectionMap, queryConnectionMap } = routePattern;
-    // important: keep this connectionMap after setup so that connectionMap correctly inherits parent pattern signals
-    const connectionMap = new Map([
-      ...pathConnectionMap,
-      ...queryConnectionMap,
-    ]);
-    for (const [paramName, connection] of connectionMap) {
-      const { signal: paramSignal, debug } = connection;
+    // important: read connections at setup time so it includes query connections
+    // inherited from ancestor patterns
+    const { connections } = routePattern;
+    for (const connection of connections) {
+      const { signal: paramSignal, debug, paramName } = connection;
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -6654,14 +5350,11 @@ This prevents cross-test pollution and ensures clean state.`,
           newMatching,
         } of routeMatchInfoSet) {
           const { routePattern } = routePrivateProperties;
-          const { pathConnectionMap, queryConnectionMap } = routePattern;
-          const connectionMap = new Map([
-            ...pathConnectionMap,
-            ...queryConnectionMap,
-          ]);
+          const { pathConnectionMap, queryConnectionMap, connections } =
+            routePattern;
 
-          for (const [paramName, connection] of connectionMap) {
-            const { signal: paramSignal, debug } = connection;
+          for (const connection of connections) {
+            const { signal: paramSignal, debug, paramName } = connection;
             const rawParams = route.rawParamsSignal.value;
             const urlParamValue = rawParams[paramName];
 
@@ -6675,66 +5368,17 @@ This prevents cross-test pollution and ensures clean state.`,
                   continue;
                 }
                 const otherRawParams = otherRoute.rawParamsSignal.value;
-                const otherRoutePrivateProperties =
-                  getRoutePrivateProperties(otherRoute);
 
                 // Check if this matching route extracts the parameter
                 if (paramName in otherRawParams) {
                   parameterExtractedByMatchingRoute = true;
                 }
 
-                // Check if this matching route is in the same family using parent-child relationships
-                const thisPatternObj = routePattern;
+                // Same family = same topmost ancestor
+                // (familyRoot, computed in setupRoutePatterns)
                 const otherPatternObj =
-                  otherRoutePrivateProperties.routePattern;
-
-                // Routes are in same family if they share a hierarchical relationship:
-                // 1. One is parent/ancestor of the other
-                // 2. They share a common parent/ancestor
-                let inSameFamily = false;
-
-                // Check if other route is ancestor of this route
-                let currentParent = thisPatternObj.parent;
-                while (currentParent) {
-                  if (currentParent === otherPatternObj) {
-                    inSameFamily = true;
-                    break;
-                  }
-                  currentParent = currentParent.parent;
-                }
-
-                // Check if this route is ancestor of other route
-                if (!inSameFamily) {
-                  currentParent = otherPatternObj.parent;
-                  while (currentParent) {
-                    if (currentParent === thisPatternObj) {
-                      inSameFamily = true;
-                      break;
-                    }
-                    currentParent = currentParent.parent;
-                  }
-                }
-
-                // Check if they share a common parent (siblings or cousins)
-                if (!inSameFamily) {
-                  const thisAncestors = new Set();
-                  currentParent = thisPatternObj.parent;
-                  while (currentParent) {
-                    thisAncestors.add(currentParent);
-                    currentParent = currentParent.parent;
-                  }
-
-                  currentParent = otherPatternObj.parent;
-                  while (currentParent) {
-                    if (thisAncestors.has(currentParent)) {
-                      inSameFamily = true;
-                      break;
-                    }
-                    currentParent = currentParent.parent;
-                  }
-                }
-
-                if (inSameFamily) {
+                  getRoutePrivateProperties(otherRoute).routePattern;
+                if (otherPatternObj.familyRoot === routePattern.familyRoot) {
                   matchingRouteInSameFamily = true;
                 }
               }
@@ -25013,6 +23657,22 @@ const useUIStateController = (
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const emptyUIState = resolveEmptyUIState(props, controlType);
 
+  // Live values controller methods read through the scope (`s.…`) — one list
+  // feeding both init and update: init so the values exist before any
+  // re-render, update so they follow the renders. A value listed in only one
+  // of the two goes stale on mount or across re-renders, silently.
+  const liveValues = () => ({
+    ref: props.ref,
+    id: props.id,
+    name: props.name,
+    props,
+    controlInfo,
+    syncDomState,
+    uiAction: props.uiAction,
+    uiActionInternal,
+    parentUIStateController,
+  });
+
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
     // Creates the controller and all long-lived objects. Captures first-render
@@ -25099,7 +23759,9 @@ const useUIStateController = (
           if (controller.facadeChild) {
             const child = controller.facadeChild;
             const childManaged = child.getManagedControls();
-            if (childManaged.length > 0) return childManaged;
+            if (childManaged.length > 0) {
+              return childManaged;
+            }
             return [child];
           }
           return [];
@@ -25221,7 +23883,9 @@ const useUIStateController = (
           // set immediatly (don't wait for preact re-render) so ui is in the right state for:
           // - side effect
           // - any "input" event that might be dispatched below
-          syncDomState(newUIState, e);
+          // Read through the scope: syncDomState closes over the render's props
+          // (ref, type, pad), so the mount-time one would write a stale element.
+          s.syncDomState(newUIState, e);
           controller.uiState = newUIState;
           ownUIStateSignal.value = newUIState;
           const controlProxyFor =
@@ -25242,7 +23906,9 @@ const useUIStateController = (
               );
               chainEvent(siblingUncheckEvent, e);
               for (const siblingController of siblings) {
-                if (siblingController === controller) continue;
+                if (siblingController === controller) {
+                  continue;
+                }
                 if (
                   siblingController.parentUIStateController !==
                   s.parentUIStateController
@@ -25454,10 +24120,8 @@ const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
-        onActionEnd: async (e) => {
+        onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
-          // wait for preact to re-render to update readonly as action end side effects are runned
-          // await new Promise((r) => requestAnimationFrame(r));
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -25493,20 +24157,10 @@ const useUIStateController = (
       });
       controller.rules = rules;
 
-      // Include all values that controller methods read from the scope so they
-      // are available immediately — even if no re-render happens before the
-      // first user interaction (update only runs on re-renders, not on mount).
       return {
         controller,
-        ref: props.ref,
-        id: props.id,
-        name: props.name,
-        props,
-        controlInfo,
-        uiAction: props.uiAction,
-        uiActionInternal,
-        parentUIStateController,
         parentUiStateSignalHolder,
+        ...liveValues(),
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -25567,16 +24221,7 @@ const useUIStateController = (
           }
         }
       }
-      return {
-        ref: props.ref,
-        id: props.id,
-        name: props.name,
-        props,
-        controlInfo,
-        uiAction: props.uiAction,
-        uiActionInternal,
-        parentUIStateController,
-      };
+      return liveValues();
     },
   );
   scope.parentUiStateSignalHolder.value =
@@ -25607,11 +24252,13 @@ const useUIStateController = (
       return undefined;
     }
 
-    debugUIState(`"${controlType}" registering into "${parent.controlType}"`);
+    debugUIState(
+      `"${controlType}" registering into "${parentController.controlType}"`,
+    );
     parentController.registerChild(controller);
     return () => {
       debugUIState(
-        `"${controlType}" unregistering from "${parent.controlType}"`,
+        `"${controlType}" unregistering from "${parentController.controlType}"`,
       );
       parentController.unregisterChild(controller);
     };
@@ -25620,42 +24267,8 @@ const useUIStateController = (
   return controller;
 };
 
-/**
- * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
- *
- * Children register themselves automatically on mount and unregister on unmount.
- * Whenever a child fires a UI action, the group re-aggregates all child states
- * via `aggregateChildStates` and reacts accordingly.
- *
- * **Three distinct methods — each with a clear responsibility**:
- *
- * - `setUIState(newUIState, e)` — called when a child UI action **changes** the aggregated value.
- *   Updates the group state, then calls `onUIAction(e)` for user-observable reactions
- *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
- *   can trigger the action pipeline (constraints → execute action).
- *
- * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
- *   Updates state and signal with no external reactions whatsoever.
- *
- * - `onUIAction(e)` — called when a child's UI action does **not** change the aggregated
- *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
- *   does not touch state, does not trigger the action pipeline.
- *
- * **Child UI action flow**:
- * 1. Child leaf fires `notifyParentAboutChildUIAction(e, { stateChanged })`.
- * 2. Group's `onChildUIAction` receives it.
- *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
- *    - If `stateChanged=false`: calls `onUIAction` → uiAction + command only.
- *
- * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
- * (e.g. ignoring buttons inside a selectable list).
- */
 const CANNOT_DERIVE = Symbol("cannot_derive");
 
-// Default aggregate/distribute implementations keyed by controlType or stateType.
-// Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
-// distributeChildUIState. If neither a default nor an explicit impl is found for a
-// group, creation throws so the caller knows it must supply them.
 // A child that groups other controls and was given no name of its own, holding
 // an object — the only shape that can be merged into the object around it.
 // A nameless LEAF (an input nobody named) is still a mistake and still warns.
@@ -25665,19 +24278,25 @@ const isNamelessGrouping = (child, uiState) =>
   typeof uiState === "object" &&
   !Array.isArray(uiState);
 
+const firstDefinedChildUIState = (children) => {
+  for (const child of children) {
+    const childUIState = child.uiState;
+    if (childUIState !== undefined) {
+      return childUIState;
+    }
+  }
+  return undefined;
+};
+
+// Default aggregate/distribute implementations keyed by controlType or stateType.
+// Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
+// distributeChildUIState. If neither a default nor an explicit impl is found for a
+// group, creation throws so the caller knows it must supply them.
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
       child.controlType === "input" && child.controlHostProps?.type === "radio",
-    aggregateChildStates: (children) => {
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          return childUIState;
-        }
-      }
-      return undefined;
-    },
+    aggregateChildStates: firstDefinedChildUIState,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected = childUIStateController.props.value === newUIState;
       if (childSelected) {
@@ -25734,15 +24353,7 @@ const GROUP_DEFAULTS = {
       }
       return true;
     },
-    aggregateChildStates: (children) => {
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          return childUIState;
-        }
-      }
-      return undefined;
-    },
+    aggregateChildStates: firstDefinedChildUIState,
     distributeChildUIState: (newUIState) => newUIState,
   },
   object: {
@@ -25811,6 +24422,36 @@ const GROUP_DEFAULTS = {
   },
 };
 
+/**
+ * Manages the aggregated UI state of a group of child controls (radio list, checkbox list, etc.).
+ *
+ * Children register themselves automatically on mount and unregister on unmount.
+ * Whenever a child fires a UI action, the group re-aggregates all child states
+ * via `aggregateChildStates` and reacts accordingly.
+ *
+ * **Three distinct methods — each with a clear responsibility**:
+ *
+ * - `setUIState(newUIState, e)` — called when a child UI action **changes** the aggregated value.
+ *   Updates the group state, then calls `onUIAction(e)` for user-observable reactions
+ *   (uiAction, command), then dispatches `navi_ui_state_change` so `control_hooks.jsx`
+ *   can trigger the action pipeline (constraints → execute action).
+ *
+ * - `syncInternalState(newUIState)` — called silently during mount/unmount/render-batch.
+ *   Updates state and signal with no external reactions whatsoever.
+ *
+ * - `onUIAction(e)` — called when a child's UI action does **not** change the aggregated
+ *   value (e.g. re-clicking an already-selected radio). Fires `uiAction` + `command` only;
+ *   does not touch state, does not trigger the action pipeline.
+ *
+ * **Child UI action flow**:
+ * 1. Child leaf fires `notifyParentAboutChildUIAction(e, { stateChanged })`.
+ * 2. Group's `onChildUIAction` receives it.
+ *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
+ *    - If `stateChanged=false`: calls `onUIAction` → uiAction + command only.
+ *
+ * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
+ * (e.g. ignoring buttons inside a selectable list).
+ */
 const useUIGroupStateController = (
   props,
   controlType,
@@ -25890,7 +24531,9 @@ const useUIGroupStateController = (
   pendingChangeRef.current = null;
 
   const isMonitoringChild = (childUIStateController) => {
-    if (childUIStateController.isProxy) return false;
+    if (childUIStateController.isProxy) {
+      return false;
+    }
     if (
       resolvedChildControlFilter &&
       !resolvedChildControlFilter(childUIStateController)
@@ -25900,11 +24543,38 @@ const useUIGroupStateController = (
     return true;
   };
   const shouldPropagateStateToChild = (childUIStateController) => {
-    if (!isMonitoringChild(childUIStateController)) return false;
-    if (childUIStateController.controlType === "button") return false;
-    if (childUIStateController.controlType === "link") return false;
+    if (!isMonitoringChild(childUIStateController)) {
+      return false;
+    }
+    if (childUIStateController.controlType === "button") {
+      return false;
+    }
+    if (childUIStateController.controlType === "link") {
+      return false;
+    }
     return true;
   };
+
+  // Live values controller methods read through the scope (`s.…`) — same
+  // contract as the leaf controller's liveValues above: one list feeding both
+  // init and update.
+  const liveValues = () => ({
+    ref,
+    parentUIStateController,
+    uiAction,
+    uiActionInternal,
+    id,
+    name,
+    value,
+    defaultValue,
+    hasValueProp,
+    hasDefaultValueProp,
+    // `props` is what writeBoundSignal reads to find the bound `signal`.
+    // Missing here, a group whose component never re-renders between mount
+    // and the first choice wrote nothing back into its signal — and said
+    // nothing about it: the list showed the choice, the signal stayed empty.
+    props,
+  });
 
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
@@ -25914,6 +24584,14 @@ const useUIGroupStateController = (
       );
       const [publishUIState, subscribeUIState] = createPubSub();
       const uiStateSignal = signal(fallbackState);
+
+      const aggregateGroupUIState = () => {
+        const aggChildState = resolvedAggregateChildStates(
+          childUIStateControllerArray,
+          fallbackState,
+        );
+        return aggChildState === undefined ? fallbackState : aggChildState;
+      };
 
       // onChange and applyState live inside init so they close over the stable
       // signals/pubsub without needing external refs.
@@ -25933,12 +24611,7 @@ const useUIGroupStateController = (
           };
           return;
         }
-        const aggChildState = resolvedAggregateChildStates(
-          childUIStateControllerArray,
-          fallbackState,
-        );
-        const groupUIState =
-          aggChildState === undefined ? fallbackState : aggChildState;
+        const groupUIState = aggregateGroupUIState();
         debugUIGroup(
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
@@ -25947,13 +24620,13 @@ const useUIGroupStateController = (
         if (notifyExternal === true) {
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
-          controller.syncInternalState(groupUIState, e);
+          controller.syncInternalState(groupUIState);
           s.parentUIStateController?.onChildUIAction(controller, e, {
             stateChanged: true,
             silent: true,
           });
         } else {
-          controller.syncInternalState(groupUIState, e);
+          controller.syncInternalState(groupUIState);
           writeBoundSignal(groupUIState);
         }
       };
@@ -26073,12 +24746,7 @@ const useUIGroupStateController = (
               propagateDownEvent,
             );
           }
-          const aggChildState = resolvedAggregateChildStates(
-            childUIStateControllerArray,
-            fallbackState,
-          );
-          const groupUIState =
-            aggChildState === undefined ? fallbackState : aggChildState;
+          const groupUIState = aggregateGroupUIState();
           if (e.type === "initial_state_push") {
             controller.syncInternalState(groupUIState);
             return;
@@ -26090,7 +24758,9 @@ const useUIGroupStateController = (
         },
         syncInternalState: (newUIState) => {
           const currentUIState = controller.uiState;
-          if (newUIState === currentUIState) return;
+          if (newUIState === currentUIState) {
+            return;
+          }
           controller.uiState = newUIState;
           uiStateSignal.value = newUIState;
           publishUIState(newUIState);
@@ -26108,7 +24778,9 @@ const useUIGroupStateController = (
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {
             const el = controller.ref.current;
-            if (el) triggerNaviCommand(el, controller.props.command, e);
+            if (el) {
+              triggerNaviCommand(el, controller.props.command, e);
+            }
           }
         },
         registerChild: (childUIStateController) => {
@@ -26159,7 +24831,9 @@ const useUIGroupStateController = (
             });
             return;
           }
-          if (!isMonitoringChild(childUIStateController)) return;
+          if (!isMonitoringChild(childUIStateController)) {
+            return;
+          }
           const childControlType = childUIStateController.controlType;
           debugUIGroup(
             `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
@@ -26181,7 +24855,9 @@ const useUIGroupStateController = (
             delegatedTo.unregisterChild(childUIStateController);
             return;
           }
-          if (!isMonitoringChild(childUIStateController)) return;
+          if (!isMonitoringChild(childUIStateController)) {
+            return;
+          }
           const childControlType = childUIStateController.controlType;
           const index = childUIStateControllerArray.indexOf(
             childUIStateController,
@@ -26194,7 +24870,7 @@ const useUIGroupStateController = (
           }
           childUIStateControllerArray.splice(index, 1);
           debugUIGroup(
-            `${controlType}.unregisterChild("${childControlType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+            `${controlType}.unregisterChild("${childControlType}") -> unregistered (remaining: ${childUIStateControllerArray.length})`,
           );
           onChange(new CustomEvent(`${childControlType}_unmount`), {
             notifyExternal: "silent",
@@ -26206,7 +24882,9 @@ const useUIGroupStateController = (
           });
           chainEvent(ev, e);
           for (const c of childUIStateControllerArray) {
-            if (shouldPropagateStateToChild(c)) c.resetUIState(ev);
+            if (shouldPropagateStateToChild(c)) {
+              c.resetUIState(ev);
+            }
           }
           onChange(e, { notifyExternal: true });
         },
@@ -26254,13 +24932,17 @@ const useUIGroupStateController = (
         },
         findChildById: (searchId) => {
           for (const c of childUIStateControllerArray) {
-            if (c.id === searchId) return c;
+            if (c.id === searchId) {
+              return c;
+            }
           }
           return null;
         },
         getChildControllers: () => childUIStateControllerArray,
         getManagedControls: () => {
-          if (!cascadeValidationToChildren) return [];
+          if (!cascadeValidationToChildren) {
+            return [];
+          }
           return childUIStateControllerArray.slice();
         },
         // Group children sit next to the group itself: a busy one really does
@@ -26278,20 +24960,10 @@ const useUIGroupStateController = (
       });
       controller.rules = rules;
 
-      // Include all values read by controller methods so they are immediately
-      // available, even if the user interacts before the first re-render.
       return {
         controller,
         _onChange: onChange,
-        ref,
-        parentUIStateController,
-        uiAction,
-        uiActionInternal,
-        // `props` is what writeBoundSignal reads to find the bound `signal`.
-        // Missing here, a group whose component never re-renders between mount
-        // and the first choice wrote nothing back into its signal — and said
-        // nothing about it: the list showed the choice, the signal stayed empty.
-        props,
+        ...liveValues(),
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -26308,10 +24980,7 @@ const useUIGroupStateController = (
       controller.defaultValue = defaultValue;
       controller.hasValueProp = hasValueProp;
       controller.hasDefaultValueProp = hasDefaultValueProp;
-      if (
-        hasValueProp &&
-        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
-      ) {
+      const placeChildrenFrom = (groupUIState) => {
         const propagateDownEvent = new CustomEvent(
           "propagate_down_set_ui_state",
           { detail: {} },
@@ -26319,11 +24988,17 @@ const useUIGroupStateController = (
         for (const childUIStateController of childUIStateControllerArray) {
           controller.placeChildUIState(
             childUIStateController,
-            value,
+            groupUIState,
             propagateDownEvent,
           );
         }
-        controller.syncInternalState(value);
+        controller.syncInternalState(groupUIState);
+      };
+      if (
+        hasValueProp &&
+        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
+      ) {
+        placeChildrenFrom(value);
       }
       if (
         boundSignal &&
@@ -26334,33 +25009,10 @@ const useUIGroupStateController = (
         // again, exactly as they were when they registered. Without this a
         // group would answer a write to its own signal by silently writing its
         // former value back over it on the next child interaction.
-        const propagateDownEvent = new CustomEvent(
-          "propagate_down_set_ui_state",
-          { detail: {} },
-        );
-        for (const childUIStateController of childUIStateControllerArray) {
-          controller.placeChildUIState(
-            childUIStateController,
-            defaultValue,
-            propagateDownEvent,
-          );
-        }
-        controller.syncInternalState(defaultValue);
+        placeChildrenFrom(defaultValue);
       }
 
-      return {
-        ref,
-        parentUIStateController,
-        uiAction,
-        uiActionInternal,
-        id,
-        name,
-        value,
-        defaultValue,
-        hasValueProp,
-        hasDefaultValueProp,
-        props,
-      };
+      return liveValues();
     },
   );
 
@@ -26371,6 +25023,9 @@ const useUIGroupStateController = (
       el.__uiStateController__ = controller;
     }
     return () => {
+      if (el && el.__uiStateController__ === controller) {
+        delete el.__uiStateController__;
+      }
       onUIStateControllerDestroyed(controller);
     };
   }, []);
@@ -26457,10 +25112,18 @@ const useUIFacadeStateController = (props, realUIStateController) => {
     // ── init: runs once on mount ───────────────────────────────────────────
     (s) => {
       const canRegisterAsFacadeChild = (childController) => {
-        if (childController.controlType === "button") return false;
-        if (childController.controlType === "link") return false;
-        if (childController.controlType === "facade") return false;
-        if (childController.isProxy) return false;
+        if (childController.controlType === "button") {
+          return false;
+        }
+        if (childController.controlType === "link") {
+          return false;
+        }
+        if (childController.controlType === "facade") {
+          return false;
+        }
+        if (childController.isProxy) {
+          return false;
+        }
         if (childController.allowNameless) {
           // A control saying it is not a field is not the one the picker talks
           // to: the search box above the list, the "select all" switch beside
@@ -26911,8 +25574,9 @@ const useControlProps = (props, {
   props.id = props.id || controlId || idDefault;
   const controlName = useContext(ControlNameContext);
   props.name = props.name || controlName;
+  const isCheckable = isCheckableInput(controlType, props.type);
   const toDomProps = newUIState => {
-    if (controlType === "input" && (props.type === "radio" || props.type === "checkbox")) {
+    if (isCheckable) {
       const domValue = toDomValue(props.value, {
         controlType,
         id: props.id,
@@ -27291,8 +25955,7 @@ const useControlProps = (props, {
         }
         return keyDownDefault(e);
       };
-      const isInputCheckable = controlType === "input" && (props.type === "radio" || props.type === "checkbox");
-      if (isInputCheckable) {
+      if (isCheckable) {
         const isRadio = props.type === "radio";
 
         // I've decided that enter on radio/checkbox would not submit form like browser does but
@@ -27307,7 +25970,6 @@ const useControlProps = (props, {
           keyDown: e => {
             if (e.key === "Enter") {
               const inputEl = ref.current;
-              const isRadio = props.type === "radio";
               const checked = inputEl.checked;
               const always = () => {
                 if (inputEl.form) {
@@ -27330,18 +25992,9 @@ const useControlProps = (props, {
                   always
                 };
               }
-              if (checked) {
-                return {
-                  name: "enter to uncheck checkbox",
-                  allowed: () => dispatchRequestSetUIState(inputEl, undefined, {
-                    event: e
-                  }),
-                  always
-                };
-              }
               return {
-                name: "enter to check checkbox",
-                allowed: () => dispatchRequestSetUIState(inputEl, uiStateController.value, {
+                name: checked ? "enter to uncheck checkbox" : "enter to check checkbox",
+                allowed: () => dispatchRequestSetUIState(inputEl, checked ? undefined : uiStateController.value, {
                   event: e
                 }),
                 always
@@ -27476,7 +26129,6 @@ const useControlProps = (props, {
       // Same for radio siblings: when a sibling check unchecks this radio
       // (radio_sibling_uncheck, internal event, no synthetic input), lastActionValueRef
       // keeps the stale value and blocks the user from re-checking this radio.
-      const isCheckable = controlType === "input" && (props.type === "radio" || props.type === "checkbox");
       if (!isCheckable) {
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction = lastActionValue !== NO_ACTION_YET && compareTwoJsValues(currentValue, lastActionValue);
@@ -27548,11 +26200,16 @@ const useControlProps = (props, {
     // a custom concept being combination of "input", "change" and may other events
     // this even if trigerred when value changes and can be controlled by actionDebounce and actionAfterChange
     const hasNaviChangeEventReaction = Boolean(eventReactionDefinitions?.naviChange || defaultEventReactionDefinitions?.naviChange);
+    // The input effect is installed once per element/options while the reaction
+    // closures (boundAction, custom reactions) are per-render: read through a
+    // ref so the effect always fires the current render's reaction.
+    const applyEventReactionRef = useRef();
+    applyEventReactionRef.current = applyEventReaction;
     const refCallback = useCallback(field => {
       if (!hasNaviChangeEventReaction || actionEvent === "custom") {
         return undefined;
       }
-      return addInputEffect(field, e => applyEventReaction("naviChange", e), {
+      return addInputEffect(field, e => applyEventReactionRef.current("naviChange", e), {
         waitForChange: actionAfterChange,
         debounce: actionDebounce,
         debugInteraction
@@ -27696,36 +26353,13 @@ const createControlInfo = (props, {
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      if (signal) {
-        if (Object.hasOwn(props, "defaultValue")) {
-          // resolveInputProps seeds defaultValue from a bound signal's default,
-          // so an input+signal is uncontrolled-with-default; the signal only
-          // receives write-backs (onUIAction).
-          hasStateProp = false;
-          // A signal holding something wins over the default: `defaultValue` is
-          // a suggestion of what to start from (and what a reset goes back to),
-          // not an answer — while the signal's value IS the answer, restored
-          // from the url or set by whoever owns it. Taking the default here
-          // would show a suggestion in place of the value on every reload.
-          stateInitial = signal.value !== undefined ? signal.value : props.defaultValue;
-          stateFromSignal = stateInitial;
-        } else {
-          // A plain bound signal with no default (e.g. Wheel): its live value
-          // seeds and controls the state.
-          hasStateProp = true;
-          value = signal.value;
-          stateInitial = value;
-        }
-      } else if (Object.hasOwn(props, "value")) {
-        hasStateProp = true;
-        value = props.value;
-        stateInitial = value;
-      } else if (Object.hasOwn(props, "defaultValue")) {
-        hasStateProp = false;
-        stateInitial = props.defaultValue;
-      } else {
-        hasStateProp = false;
-        stateInitial = undefined;
+      ({
+        hasStateProp,
+        stateInitial,
+        stateFromSignal
+      } = resolveValueState(props, controlType, signal));
+      if (hasStateProp) {
+        value = stateInitial;
       }
       readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
     }
@@ -27742,27 +26376,11 @@ const createControlInfo = (props, {
   } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    if (signal) {
-      if (Object.hasOwn(props, "defaultValue")) {
-        hasStateProp = false;
-        // The signal's value is the answer, defaultValue only the suggestion to
-        // start from.
-        stateInitial = signal.value !== undefined ? signal.value : props.defaultValue;
-        stateFromSignal = stateInitial;
-      } else {
-        hasStateProp = true;
-        stateInitial = signal.value;
-      }
-    } else if (Object.hasOwn(props, "value")) {
-      hasStateProp = true;
-      stateInitial = props.value;
-    } else if (Object.hasOwn(props, "defaultValue")) {
-      hasStateProp = false;
-      stateInitial = props.defaultValue;
-    } else {
-      hasStateProp = false;
-      stateInitial = undefined;
-    }
+    ({
+      hasStateProp,
+      stateInitial,
+      stateFromSignal
+    } = resolveValueState(props, controlType, signal));
     disabledSupported = true;
     // A native <select> has no readonly attribute. What says it is read-only is
     // aria-readonly plus a refused interaction — see the select reactions in
@@ -27797,6 +26415,52 @@ const createControlInfo = (props, {
     disabledSupported
   };
 };
+// Who says what a value-holding control is worth — a bound signal, a `value`,
+// a `defaultValue` — resolved the same way for every control holding one value
+// (text input, picker, select). The checkbox/radio branch has its own
+// resolution: `checked` speaks in booleans and translates to the value.
+const resolveValueState = (props, controlType, signal) => {
+  if (signal) {
+    if (Object.hasOwn(props, "defaultValue")) {
+      // A bound signal's own default is seeded into `defaultValue` (see
+      // resolveInputProps), so such a control is uncontrolled-with-default;
+      // the signal only receives write-backs (onUIAction).
+      // A signal holding something wins over the default: `defaultValue` is
+      // a suggestion of what to start from (and what a reset goes back to),
+      // not an answer — while the signal's value IS the answer, restored
+      // from the url or set by whoever owns it. Taking the default here
+      // would show a suggestion in place of the value on every reload.
+      const stateInitial = signal.value !== undefined ? signal.value : props.defaultValue;
+      return {
+        hasStateProp: false,
+        stateInitial,
+        stateFromSignal: stateInitial
+      };
+    }
+    // A plain bound signal with no default (e.g. Wheel): its live value
+    // seeds and controls the state.
+    return {
+      hasStateProp: true,
+      stateInitial: signal.value
+    };
+  }
+  if (Object.hasOwn(props, "value")) {
+    return {
+      hasStateProp: true,
+      stateInitial: props.value
+    };
+  }
+  if (Object.hasOwn(props, "defaultValue")) {
+    return {
+      hasStateProp: false,
+      stateInitial: props.defaultValue
+    };
+  }
+  return {
+    hasStateProp: false,
+    stateInitial: undefined
+  };
+};
 // color, radio, image, file etc do not support readonly
 const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set(["text", "date", "datetime-local", "email", "month", "number", "password", "search", "tel", "time", "url", "week"]);
 // Who, if anyone, is listening to what this control is worth: a handler of its
@@ -27815,6 +26479,7 @@ const useIsControlListenedTo = props => {
 };
 const useReadOnlyUncontrolled = (props, controlInfo) => {
   const listenedTo = useIsControlListenedTo(props);
+  useRef(false);
   if (!controlInfo.hasStateProp) {
     return false;
   }
@@ -27869,6 +26534,7 @@ const useControlgroupProps = (props, {
   // can't change. A form or a group around it IS someone listening — that is
   // what will send the value and hand a new one back.
   const listenedTo = useIsControlListenedTo(props);
+  useRef(false);
   const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;
   if (implicitReadOnly && !props.readOnly) {
     props.readOnly = true;
@@ -27902,9 +26568,9 @@ const useControlgroupProps = (props, {
   return [controlRootProps, {
     ...controlgroupProps,
     "name": undefined,
-    // useful to children, not the the group itself
+    // useful to children, not the group itself
     "required": undefined,
-    // useful to children, not the the group itself
+    // useful to children, not the group itself
     // How many items the group accepts, read by its controller and by the
     // children asking whether there is still room for them. Not an attribute
     // any element wears: a <fieldset maxlength> means nothing.
@@ -27917,29 +26583,6 @@ const useControlgroupProps = (props, {
   }, controlgroupChildrenWrapperProps];
 };
 
-/**
- * Like `useControlProps` but also establishes a 1:1 facade sync between the
- * picker's hidden input and the first child control inside the picker popup.
- *
- * Child → picker input: when the child's UI state changes, the picker input
- * is updated automatically (no `command="--navi-update"` needed on the child).
- *
- * Picker input → child: when the picker input is updated externally (e.g.
- * via `--navi-update` or `--navi-clear` from outside), the change is
- * propagated down to the child automatically.
- *
- * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
- * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
- * children — it resets field contexts and injects the facade controller:
- *
- * ```jsx
- * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
- * // …
- * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
- *   {children}
- * </ControlFacadeChildrenWrapper>
- * ```
- */
 /**
  * What a control holds, read from the control itself.
  *
@@ -27986,6 +26629,30 @@ const useControlUIState = (ref, uiStateInitial) => {
   }, [ref]);
   return uiState;
 };
+
+/**
+ * Like `useControlProps` but also establishes a 1:1 facade sync between the
+ * picker's hidden input and the first child control inside the picker popup.
+ *
+ * Child → picker input: when the child's UI state changes, the picker input
+ * is updated automatically (no `command="--navi-update"` needed on the child).
+ *
+ * Picker input → child: when the picker input is updated externally (e.g.
+ * via `--navi-update` or `--navi-clear` from outside), the change is
+ * propagated down to the child automatically.
+ *
+ * Returns a 3-tuple `[controlRootProps, controlHostProps, facadeChildrenProps]`.
+ * Use `ControlFacadeChildrenWrapper` with the third element to wrap the popup
+ * children — it resets field contexts and injects the facade controller:
+ *
+ * ```jsx
+ * const [controlRootProps, controlHostProps, facadeChildrenProps] = useControlFacadeProps(props, options);
+ * // …
+ * <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+ *   {children}
+ * </ControlFacadeChildrenWrapper>
+ * ```
+ */
 const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, {
     uiStateController
@@ -28012,21 +26679,9 @@ const useControlFacadeProps = (props, options) => {
 const ControlFacadeChildrenWrapper = ({
   children,
   facadeController
-}) => jsx(ParentUIStateControllerContext.Provider, {
-  value: facadeController,
-  children: jsx(MessagePropsRefContext.Provider, {
-    value: undefined,
-    children: jsx(ControlIdContext.Provider, {
-      value: undefined,
-      children: jsx(RequiredContext.Provider, {
-        value: undefined,
-        children: jsx(ControlNameContext.Provider, {
-          value: undefined,
-          children: children
-        })
-      })
-    })
-  })
+}) => jsx(ControlChildrenWrapper, {
+  uiStateController: facadeController,
+  children: children
 });
 const useInteractiveProps = (props, {
   uiStateController,
@@ -28173,7 +26828,7 @@ const useInteractiveProps = (props, {
     }, []);
   }
   {
-    const isCheckable = uiStateController.controlType === "input" && (props.type === "radio" || props.type === "checkbox");
+    const isCheckable = isCheckableInput(uiStateController.controlType, props.type);
     Object.assign(controlHostProps, {
       onnavi_clear_ui_state: e => {
         uiStateController.clearUIState(e);
@@ -28406,8 +27061,7 @@ const splitControlProps = props => {
     ref
   };
   const controlRootProps = {};
-  const propKeySet = new Set(Object.keys(props));
-  for (const key of propKeySet) {
+  for (const key of Object.keys(props)) {
     if (CONTROL_PROP_SET.has(key)) {
       if (CONTROL_ATTRIBUTE_SET.has(key)) {
         controlHostProps[key] = props[key];
@@ -28418,6 +27072,7 @@ const splitControlProps = props => {
   }
   return [controlRootProps, controlHostProps];
 };
+const isCheckableInput = (controlType, typeProp) => controlType === "input" && (typeProp === "radio" || typeProp === "checkbox");
 
 // The labels the DOM itself can hand over: a wrapping <label>, or a label[for]
 // pointing at a native form element. Everything else — a label[for] on a

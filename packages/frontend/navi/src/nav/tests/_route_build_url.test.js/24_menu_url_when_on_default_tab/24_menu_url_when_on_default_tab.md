@@ -5,7 +5,9 @@ const mapPanelSignal = stateSignal(undefined);
 const isochroneTabSignal = stateSignal("compare");
 const isochroneWalkSignal = stateSignal(false);
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/:tab=${isochroneTabSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
 const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
   searchParams: { walk: isochroneWalkSignal },
 });

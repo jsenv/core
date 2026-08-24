@@ -1,5 +1,6 @@
 # [route_build_url.test.js](../route_build_url.test.js)
 
+
 - [basic url building](0_basic_url_building/0_basic_url_building.md)
 - [url building with nested routes inheritance](1_url_building_with_nested_routes_inheritance/1_url_building_with_nested_routes_inheritance.md)
 - [url building with localStorage persistence](2_url_building_with_localstorage_persistence/2_url_building_with_localstorage_persistence.md)
@@ -9,7 +10,7 @@
 - [url generation with search parameters](6_url_generation_with_search_parameters/6_url_generation_with_search_parameters.md)
 - [url generation with localStorage persistence](7_url_generation_with_localstorage_persistence/7_url_generation_with_localstorage_persistence.md)
 - [url building with extra params](8_url_building_with_extra_params/8_url_building_with_extra_params.md)
-- [url building with geographic coordinates (city map scenario)](<9_url_building_with_geographic_coordinates_(city_map_scenario)/9_url_building_with_geographic_coordinates_(city_map_scenario).md>)
+- [url building with geographic coordinates (city map scenario)](9_url_building_with_geographic_coordinates_(city_map_scenario)/9_url_building_with_geographic_coordinates_(city_map_scenario).md)
 - [complex url building with multiple signals](10_complex_url_building_with_multiple_signals/10_complex_url_building_with_multiple_signals.md)
 - [buildMostPreciseUrl should find child signal values even with provided params](11_buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params/11_buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params.md)
 - [settings route should return /admin when all params are defaults](12_settings_route_should_return_admin_when_all_params_are_defaults/12_settings_route_should_return_admin_when_all_params_are_defaults.md)

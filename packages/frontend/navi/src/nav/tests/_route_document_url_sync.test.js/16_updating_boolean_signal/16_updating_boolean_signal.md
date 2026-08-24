@@ -31,8 +31,8 @@ try {
 ```js
 [
   "http://127.0.0.1/isochrone?walk",
-  "http://127.0.0.1/isochrone?walk&walk_minute=30",
-];
+  "http://127.0.0.1/isochrone?walk&walk_minute=30"
+]
 ```
 
 ---

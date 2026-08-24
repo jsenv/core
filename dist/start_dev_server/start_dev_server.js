@@ -7680,6 +7680,17 @@ const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
         // main is node-only code (node:url) that cannot be served to a browser.
         return null;
       }
+      const ownerPackageDirectoryUrl = packageDirectory.find(
+        reference.ownerUrlInfo.url,
+      );
+      if (ownerPackageDirectoryUrl === packageDirectoryUrl) {
+        // Import between two files of the same package: the owner was reached
+        // outside the package bundle (an HTML <script src> entry point, see
+        // above). Consolidation only applies to references crossing into a
+        // package from outside; redirecting an intra-package relative import
+        // to the package main would run the wrong module.
+        return null;
+      }
       // we make sure we target the bundle version of the package
       // otherwise we might execute some parts of the package code multiple times.
       // so we need to redirect the potential reference to non entry point to the package main entry point

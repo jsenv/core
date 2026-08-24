@@ -194,12 +194,43 @@ snapshotTests.prefConfigure({
   },
 });
 
+// Each mount lives on its own page with its own counters, so all eight are
+// walked at once and the fixed waits they are made of overlap instead of
+// adding up. The outcome is held behind a function: a walk that fails does so
+// inside the test that reads it, not as a rejection racing ahead of every
+// test.
+const walk = (name, options) => {
+  const promise = openAndComeBack(name, options).then(
+    (value) => ({ value }),
+    (error) => ({ error }),
+  );
+  return async () => {
+    const { value, error } = await promise;
+    if (error) {
+      throw error;
+    }
+    return value;
+  };
+};
+
 try {
+  // The rushed pair is not in this batch: a rushed back is a race against the
+  // single frame where rendering is held, and the load of six pages cooking
+  // and walking at once is enough to push `goBack` past that frame. It runs
+  // in the last test, on a machine this batch has left quiet.
+  const walks = {
+    plain: walk("plain"),
+    animated: walk("animated"),
+    plain_held: walk("plain", { search: "?at=item_400" }),
+    animated_held: walk("animated", { search: "?at=item_400" }),
+    plain_wm: walk("plain_wm"),
+    animated_wm: walk("animated_wm"),
+  };
   await snapshotTests(import.meta.url, ({ test }) => {
     test("a list revisited ten times, with and without a movement on the pair", async () => {
       return {
-        without_transition: await openAndComeBack("plain"),
-        with_transition: await openAndComeBack("animated"),
+        without_transition: await walks.plain(),
+        with_transition: await walks.animated(),
       };
     });
 
@@ -208,12 +239,8 @@ try {
     // hold and an ask can pass each other.
     test("a list held on a row named by the url, revisited ten times", async () => {
       return {
-        without_transition: await openAndComeBack("plain", {
-          search: "?at=item_400",
-        }),
-        with_transition: await openAndComeBack("animated", {
-          search: "?at=item_400",
-        }),
+        without_transition: await walks.plain_held(),
+        with_transition: await walks.animated_held(),
       };
     });
 
@@ -223,8 +250,8 @@ try {
     // window ever has to move — which exercises the other half of the run.
     test("a one-row list against the document scroller, revisited ten times", async () => {
       return {
-        without_transition: await openAndComeBack("plain_wm"),
-        with_transition: await openAndComeBack("animated_wm"),
+        without_transition: await walks.plain_wm(),
+        with_transition: await walks.animated_wm(),
       };
     });
 
@@ -241,14 +268,11 @@ try {
     // Waiting for the arriving page instead of for its address is the fix, and
     // the three tests above are what that looks like.
     test("back pressed before the page being opened has rendered", async () => {
-      return {
-        without_transition: await openAndComeBack("plain_wm", {
-          rushBack: true,
-        }),
-        with_transition: await openAndComeBack("animated_wm", {
-          rushBack: true,
-        }),
-      };
+      const [without_transition, with_transition] = await Promise.all([
+        openAndComeBack("plain_wm", { rushBack: true }),
+        openAndComeBack("animated_wm", { rushBack: true }),
+      ]);
+      return { without_transition, with_transition };
     });
   });
 } finally {

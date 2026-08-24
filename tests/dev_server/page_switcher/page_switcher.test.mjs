@@ -94,10 +94,11 @@ try {
   await page.keyboard.type("demo");
   await takeSnapshots("3_filtered");
 
-  // Enter on a file goes there, and the switcher is gone with it.
+  // Filtering puts the current row on the first match, ArrowDown moves to the
+  // next one; Enter on a file goes there, and the switcher is gone with it.
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await page.waitForURL(/first_demo\.html$/);
+  await page.waitForURL(/second_demo\.html$/);
   writeFileSync(
     new URL(`./4_after_enter.png`, snapshotsDirectoryUrl),
     await page.screenshot(),
