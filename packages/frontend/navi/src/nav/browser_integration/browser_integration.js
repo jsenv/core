@@ -175,6 +175,21 @@ export const stopLoad = (reason = "stopLoad() called") => {
   }
 };
 export const reload = browserIntegration.reload;
+/**
+ * Go back to the screen this document came from.
+ *
+ * Only ever within this document: at the bottom of the stack (a url opened
+ * cold — a shared link, a bookmark, a notification), the entry underneath
+ * belongs to whoever sent the reader here, and going back there would take
+ * them out of the app. Ask `canNavBackSignal`/`useCanNavBack()` to know which
+ * of the two cases the arrow is in.
+ *
+ * @param {object} [options]
+ * @param {string} [options.fallback]
+ *   Where to land when there is nothing of this document behind. It takes the
+ *   place of the current entry rather than stacking on it. Without it, a
+ *   navBack() with nowhere to go does nothing.
+ */
 export const navBack = browserIntegration.navBack;
 export const navForward = browserIntegration.navForward;
 export const isVisited = browserIntegration.isVisited;

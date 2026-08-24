@@ -39,6 +39,12 @@ import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
+import {
+  applyNavigationToNavDepth,
+  canNavBackSignal,
+  getNavDepth,
+  NAV_DEPTH_STATE_KEY,
+} from "./document_back_and_forward.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -122,6 +128,11 @@ export const setupBrowserIntegrationViaNavigation = ({
   // signal (superseded navigation, stop button) aborts the current one.
   let abortController = null;
   const runRouting = (url, { reason, navigationType, state, abortEvent }) => {
+    // Where the entry being reached stands in this document's own stack —
+    // decided before the state that carries it is built (see
+    // document_back_and_forward.js).
+    applyNavigationToNavDepth(navigationType, state);
+
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
       // Same reading as via_history.js: undefined inherits the current state,
@@ -131,6 +142,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       let effectiveState;
       const sharedState = {
         jsenv_visited_urls: Array.from(visitedUrlSet),
+        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
       };
       if (state === undefined) {
         effectiveState = { ...(getDocumentState() || {}), ...sharedState };
@@ -295,7 +307,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             isSameUrl &&
             (navigationType === "push" || navigationType === "replace")
           ) {
-            runStateOnly(state);
+            runStateOnly(navigationType, state);
             return;
           }
           const { allResult } = runRouting(url, {
@@ -319,9 +331,13 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
   });
 
-  const runStateOnly = (state) => {
+  const runStateOnly = (navigationType, state) => {
+    applyNavigationToNavDepth(navigationType, state);
     let effectiveState;
-    const sharedState = { jsenv_visited_urls: Array.from(visitedUrlSet) };
+    const sharedState = {
+      jsenv_visited_urls: Array.from(visitedUrlSet),
+      [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+    };
     if (state === undefined) {
       effectiveState = { ...(getDocumentState() || {}), ...sharedState };
     } else if (state === null) {
@@ -391,12 +407,22 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
   };
 
-  const navBack = () => {
-    // history.back() with nowhere to go is silent; navigation.back() throws.
-    // The silent reading is the contract.
-    if (navigation.canGoBack) {
+  const navBack = ({ fallback } = {}) => {
+    // canGoBack says there is an entry behind; what an app's back arrow
+    // promises is that the entry behind is one of ITS screens (see
+    // document_back_and_forward.js). navigation.back() throws with nowhere to
+    // go, so the two are asked together.
+    if (canNavBackSignal.peek() && navigation.canGoBack) {
       navigation.back();
+      return;
     }
+    if (fallback === undefined) {
+      return;
+    }
+    // Replace, not push: pushing the fallback would put the screen just left
+    // one press ahead, and the device's own back button would walk straight
+    // back into it — a loop with no way out of the app.
+    navTo(fallback, { replace: true });
   };
   const navForward = () => {
     if (navigation.canGoForward) {

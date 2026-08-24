@@ -11,6 +11,12 @@ import {
 } from "./scroll_restoration.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
+import {
+  applyNavigationToNavDepth,
+  canNavBackSignal,
+  getNavDepth,
+  NAV_DEPTH_STATE_KEY,
+} from "./document_back_and_forward.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -157,6 +163,11 @@ export const setupBrowserIntegrationViaHistory = ({
       state,
     } = options;
 
+    // Where the entry being reached stands in this document's own stack —
+    // decided before the state that carries it is built (see
+    // document_back_and_forward.js).
+    applyNavigationToNavDepth(navigationType, state);
+
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
       // undefined → inherit current state (link click, neutral navigation)
@@ -166,6 +177,7 @@ export const setupBrowserIntegrationViaHistory = ({
       let effectiveState;
       const sharedState = {
         jsenv_visited_urls: Array.from(visitedUrlSet),
+        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
       };
       if (state === undefined) {
         effectiveState = {
@@ -368,8 +380,18 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   };
 
-  const navBack = () => {
-    window.history.back();
+  const navBack = ({ fallback } = {}) => {
+    if (canNavBackSignal.peek()) {
+      window.history.back();
+      return;
+    }
+    if (fallback === undefined) {
+      return;
+    }
+    // Replace, not push: pushing the fallback would put the screen just left
+    // one press ahead, and the device's own back button would walk straight
+    // back into it — a loop with no way out of the app.
+    navTo(fallback, { replace: true });
   };
 
   const navForward = () => {

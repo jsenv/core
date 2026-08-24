@@ -97,6 +97,12 @@ export {
   stopLoad,
   useNavState,
 } from "./src/nav/browser_integration/browser_integration.js";
+export {
+  canNavBackSignal,
+  canNavForwardSignal,
+  useCanNavBack,
+  useCanNavForward,
+} from "./src/nav/browser_integration/document_back_and_forward.js";
 export { useDocumentState } from "./src/nav/browser_integration/document_state_signal.js";
 export {
   useDocumentResource,

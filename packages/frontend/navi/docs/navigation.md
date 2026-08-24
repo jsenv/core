@@ -260,9 +260,45 @@ The link stays a link — an address, a middle click, the keyboard, `aria-curren
 true })` and `route.redirectTo()`.
 
 A replaced entry inherits the state of the one it takes the place of (so does
-`route.redirectTo()`): **an entry's state does not say how it arrived**. An app
-keeping its own count of how deep it stands cannot read it back from
-`history.state` — it has to write it down as it navigates.
+`route.redirectTo()`): **an entry's state does not say how it arrived**. Only
+the navigation being applied says that, and navi is the one applying it — see
+the back arrow below, which is what that fact is usually needed for.
+
+## The back arrow: `navBack`
+
+An arrow drawn inside the app promises the screen the reader came from — never
+the page they were on before the app. Both cases are real for the same url: one
+descends into a profile from a list, or one opens it cold from a shared link, a
+bookmark, a notification. `history.back()` answers the first and, on the second,
+gives back the conversation the link came from.
+
+`window.history.length` cannot tell them apart — it counts the whole tab — and
+neither can an entry's state, for the reason just above. What answers is a count
+of how many entries of THIS document stand underneath, kept as the navigations
+are applied and written into each entry so it survives a reload mid-stack. navi
+keeps it: an app that kept its own would have to be told about every single
+`replace` it performs, and the one it forgets shows up only on a cold-opened
+screen after a precise gesture.
+
+```jsx
+const BackButton = () => {
+  const canNavBack = useCanNavBack();
+  ...
+};
+```
+
+`useCanNavBack()` (or `canNavBackSignal` outside a component) is reactive: the
+arrow appears and disappears as the stack moves, it is not decided at mount.
+
+```js
+navBack({ fallback: USER_ME_ROUTE.buildUrl() });
+```
+
+The `fallback` takes the place of the current entry rather than stacking on it:
+pushed, it would put the screen just left one press ahead, and the phone's own
+back button would walk straight back into it — a loop with no way out of the
+app. Without a `fallback`, a `navBack()` with nothing of ours behind does
+nothing.
 
 ## Tabs that travel: `RouteTravel`
 
