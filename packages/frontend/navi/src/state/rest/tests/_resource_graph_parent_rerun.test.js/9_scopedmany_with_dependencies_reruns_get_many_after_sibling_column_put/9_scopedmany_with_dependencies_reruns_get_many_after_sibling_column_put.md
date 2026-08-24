@@ -39,7 +39,8 @@ const TABLE_ROW = TABLE.scopedMany("rows", {
       const data = {};
       for (const col of table.columns) {
         const colName = col.column_name;
-        data[colName] = row.data[colName] ?? row.data[Object.keys(row.data)[0]];
+        data[colName] =
+          row.data[colName] ?? row.data[Object.keys(row.data)[0]];
       }
       return { row_id: row.row_id, data };
     });

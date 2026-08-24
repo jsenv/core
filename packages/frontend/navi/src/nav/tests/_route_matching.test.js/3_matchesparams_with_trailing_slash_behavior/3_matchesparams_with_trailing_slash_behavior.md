@@ -36,10 +36,12 @@ try {
     }),
 
     // For comparison - analytics route matching
-    analytics_matches_current_params: ADMIN_ANALYTICS_ROUTE.matchesParams({}),
-    analytics_matches_explicit_details: ADMIN_ANALYTICS_ROUTE.matchesParams({
-      tab: "details",
-    }),
+    analytics_matches_current_params: ADMIN_ANALYTICS_ROUTE.matchesParams(
+      {},
+    ),
+    analytics_matches_explicit_details: ADMIN_ANALYTICS_ROUTE.matchesParams(
+      { tab: "details" },
+    ),
 
     // Edge cases
     admin_matches_different_section: ADMIN_ROUTE.matchesParams({

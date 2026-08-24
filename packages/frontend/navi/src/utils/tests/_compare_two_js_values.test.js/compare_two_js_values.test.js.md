@@ -1,6 +1,7 @@
 # [compare_two_js_values.test.js](../compare_two_js_values.test.js)
 
-- [array comparison - ordered (default behavior)](<0_array_comparison_-_ordered_(default_behavior)/0_array_comparison_-_ordered_(default_behavior).md>)
+
+- [array comparison - ordered (default behavior)](0_array_comparison_-_ordered_(default_behavior)/0_array_comparison_-_ordered_(default_behavior).md)
 - [array comparison - ignoreArrayOrder option](1_array_comparison_-_ignorearrayorder_option/1_array_comparison_-_ignorearrayorder_option.md)
 - [nested arrays with ignoreArrayOrder](2_nested_arrays_with_ignorearrayorder/2_nested_arrays_with_ignorearrayorder.md)
 - [edge cases with ignoreArrayOrder](3_edge_cases_with_ignorearrayorder/3_edge_cases_with_ignorearrayorder.md)

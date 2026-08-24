@@ -67,7 +67,8 @@ try {
       are_compatible: tabSignal.value !== undefined, // Should be false
       issue:
         "/dashboard/:tab should not be selected when tabSignal.value = undefined",
-      correct_behavior: "Should stay on /dashboard/ with updated lon parameter",
+      correct_behavior:
+        "Should stay on /dashboard/ with updated lon parameter",
       dynamic_segment_note:
         "Unlike static segments, dynamic segments need actual parameter values",
     },

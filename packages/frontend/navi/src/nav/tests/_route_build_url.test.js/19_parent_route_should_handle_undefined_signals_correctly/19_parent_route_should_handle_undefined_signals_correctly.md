@@ -6,7 +6,9 @@ const isochroneTabSignal = stateSignal("compare");
 mapPanelSignal.value = "isochrone";
 const MAP_ROUTE = route(`/map/`);
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/:tab=${isochroneTabSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
 const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
 const { clearRoutes } = setupRoutes([
   MAP_ROUTE,

@@ -1,7 +1,8 @@
 # [interpolate_text.test.js](../interpolate_text.test.js)
 
+
 - [basic replacement](0_basic_replacement/0_basic_replacement.md)
-- [no replacements (null)](<1_no_replacements_(null)/1_no_replacements_(null).md>)
+- [no replacements (null)](1_no_replacements_(null)/1_no_replacements_(null).md)
 - [missing key falls back to placeholder](2_missing_key_falls_back_to_placeholder/2_missing_key_falls_back_to_placeholder.md)
 - [function value](3_function_value/3_function_value.md)
 - [dot-notation keys](4_dot-notation_keys/4_dot-notation_keys.md)

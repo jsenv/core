@@ -16,7 +16,10 @@ const HOME_ROUTE = route("/scope/", {
   searchParams: { table_opened: tableOpenedSignal },
 });
 const OTHER_ROUTE = route(`/scope/other`);
-const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, OTHER_ROUTE]);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  OTHER_ROUTE,
+]);
 try {
   updateRoutes(`${baseUrl}/scope/other`);
   tableOpenedSignal.value = true;

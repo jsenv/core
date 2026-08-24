@@ -25,7 +25,9 @@ try {
     navToCalls.length = 0;
     return {
       // types matter here, not only values
-      signal_value: levelsSignal.value.map((item) => `${typeof item}:${item}`),
+      signal_value: levelsSignal.value.map(
+        (item) => `${typeof item}:${item}`,
+      ),
       nav_calls: navCalls,
     };
   };

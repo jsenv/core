@@ -77,7 +77,9 @@ try {
   return {
     after_isochrone_nav: afterIsochroneNav,
     after_map_nav: afterMapNav,
-    bug_reproduced: navToCalls.some((url) => url.includes("/map/isochrone")),
+    bug_reproduced: navToCalls.some((url) =>
+      url.includes("/map/isochrone"),
+    ),
   };
 } finally {
   delete globalThis.window;

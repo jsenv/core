@@ -7,7 +7,11 @@ const order = ["third", "second", "first"];
 const sync = (cols, ids) => ordering.sync(cols, ids).map((col) => col.name);
 sync(columns, order);
 // rename "second" → "middle"
-const newColumns = [{ name: "first" }, { name: "middle" }, { name: "third" }];
+const newColumns = [
+  { name: "first" },
+  { name: "middle" },
+  { name: "third" },
+];
 return { result: sync(newColumns, order) };
 ```
 

@@ -3,7 +3,10 @@
 ```js
 const DASHBOARD_ROUTE = route("/dashboard");
 const DASHBOARD_SECTION_ROUTE = route("/dashboard/section");
-const { clearRoutes } = setupRoutes([DASHBOARD_ROUTE, DASHBOARD_SECTION_ROUTE]);
+const { clearRoutes } = setupRoutes([
+  DASHBOARD_ROUTE,
+  DASHBOARD_SECTION_ROUTE,
+]);
 try {
   return {
     dashboard_url: DASHBOARD_ROUTE.url,

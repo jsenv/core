@@ -14,7 +14,10 @@ const NESTED_ROUTE = route("/nested/", {
     leaf: leafSignal,
   },
 });
-const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, NESTED_ROUTE]);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  NESTED_ROUTE,
+]);
 const captureState = () => {
   return {
     root_signal: rootSignal.value,
