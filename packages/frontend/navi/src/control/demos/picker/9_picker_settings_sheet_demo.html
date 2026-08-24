@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker settings sheet demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      /* Le panneau visible est celui de l'onglet coché. */
+      .zone_panel {
+        display: none;
+      }
+      .zone_sheet:has(input[value="department"]:checked) .zone_panel_department,
+      .zone_sheet:has(input[value="city"]:checked) .zone_panel_city,
+      .zone_sheet:has(input[value="city"]:checked) .zone_panel_radius,
+      .zone_sheet:has(input[value="here"]:checked) .zone_panel_here,
+      .zone_sheet:has(input[value="here"]:checked) .zone_panel_radius {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        ControlGroup,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        Picker,
+        RadioGroup,
+        Select,
+        Text,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id} {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const zoneSignal = stateSignal("all", { id: "zone" });
+      const zoneInFormSignal = stateSignal("all", { id: "zone_in_form" });
+      const DEMO_SIGNALS = [zoneSignal, zoneInFormSignal];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Picker settings sheet"
+            previous={{ href: "./8_picker_wheel_demo.html", label: "Wheel" }}
+          />
+          <TableOfContents />
+          <NominalDemo />
+          <InFormDemo />
+        </Box>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <Box flex alignY="center" spacing="m">
+            <h2 style="margin: 0; flex: 1">Sommaire</h2>
+            <Button
+              onClick={() => {
+                for (const demoSignal of DEMO_SIGNALS) {
+                  demoSignal.value = "all";
+                }
+              }}
+            >
+              Tout réinitialiser
+            </Button>
+          </Box>
+          <DocumentToc />
+        </div>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const NominalDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="nominal">Cas nominal</Heading>
+            <p class="desc">
+              Quatre onglets, une réponse. Le résumé sous le picker est ce que
+              l'application a reçu.
+            </p>
+            <Box flex="y" spacing="m" alignX="start">
+              <Field vertical>
+                <Label>Où chercher</Label>
+                <ZonePicker
+                  signalHoldingCommitted={zoneSignal}
+                  onUIAction={(value) => {
+                    push("uiAction", value);
+                  }}
+                  onAction={(value) => {
+                    push("action", value);
+                  }}
+                />
+              </Field>
+              <Text size="s" color="#666">
+                zoneSignal : <code>{zoneSignal.value}</code>
+              </Text>
+            </Box>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Dans un formulaire ────────────────────────────────────────────────
+
+      const InFormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="in-form">Dans un formulaire</Heading>
+            <p class="desc">
+              Le picker répond pour lui-même : ce qu'il commet ne part pas avec
+              le formulaire autour, et laisse ce formulaire inchangé.
+            </p>
+            <Form
+              action={(value) => {
+                push("Form action", value);
+              }}
+            >
+              <Box flex="y" spacing="m" alignX="start">
+                <Field vertical>
+                  <Label>Titre</Label>
+                  <Input name="title" placeholder="Tournoi du samedi" />
+                </Field>
+                <Field vertical>
+                  <Label>Où chercher</Label>
+                  <ZonePicker
+                    allowNameless
+                    signalHoldingCommitted={zoneInFormSignal}
+                    onAction={(value) => {
+                      push("Picker action", value);
+                    }}
+                  />
+                </Field>
+                <Button command="--navi-send" />
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── La feuille de réglages ────────────────────────────────────────────
+
+      const ZonePicker = ({
+        signalHoldingCommitted,
+        onUIAction,
+        onAction,
+        ...rest
+      }) => {
+        const committed = signalHoldingCommitted.value;
+
+        return (
+          <Picker
+            mode="dialog"
+            // Le résumé lit ce qui est enregistré, pas ce qui est en train
+            // d'être essayé dans la dialog.
+            ui={<ZoneSummary zone={committed} />}
+            value={committed}
+            uiAction={onUIAction}
+            action={(value) => {
+              signalHoldingCommitted.value = value;
+              onAction?.(value);
+            }}
+            minWidth="220"
+            {...rest}
+          >
+            <ControlGroup
+              className="zone_sheet"
+              aggregateChildStates={aggregateZone}
+              distributeChildUIState={distributeZone}
+              flex="y"
+              spacing="m"
+              padding="m"
+              alignX="stretch"
+            >
+              <RadioGroup name="origin" flex spacing="s" defaultValue="all">
+                <ZoneTab value="all">Tous</ZoneTab>
+                <ZoneTab value="department">Département</ZoneTab>
+                <ZoneTab value="city">Ville</ZoneTab>
+                <ZoneTab value="here">Ma position</ZoneTab>
+              </RadioGroup>
+
+              <div class="zone_panel zone_panel_department">
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field vertical>
+                    <Label>Département</Label>
+                    <Select name="department" defaultValue="">
+                      <option value="">Choisir</option>
+                      <option value="06">06 — Alpes-Maritimes</option>
+                      <option value="13">13 — Bouches-du-Rhône</option>
+                      <option value="83">83 — Var</option>
+                    </Select>
+                  </Field>
+                  <Field as="label" flex alignY="center" spacing="s">
+                    <Input type="checkbox" name="periphery" value="around" />
+                    Départements limitrophes
+                  </Field>
+                </Box>
+              </div>
+
+              <div class="zone_panel zone_panel_city">
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field vertical>
+                    <Label>Ville</Label>
+                    <Input name="city" placeholder="Antibes" />
+                  </Field>
+                </Box>
+              </div>
+
+              <div class="zone_panel zone_panel_here">
+                <Box flex="y" spacing="s" alignX="start">
+                  <Field vertical>
+                    <Label>Commune détectée</Label>
+                    <Input name="here" readOnly signal={hereSignal} />
+                  </Field>
+                  <Button
+                    action={async () => {
+                      await new Promise((resolve) => {
+                        setTimeout(resolve, 800);
+                      });
+                      hereSignal.value = "Antibes (06)";
+                    }}
+                  >
+                    Utiliser ma position
+                  </Button>
+                </Box>
+              </div>
+
+              <div class="zone_panel zone_panel_radius">
+                <Field vertical>
+                  <Label>Rayon</Label>
+                  <Select name="radius" defaultValue="10">
+                    <option value="5">5 km</option>
+                    <option value="10">10 km</option>
+                    <option value="30">30 km</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <Box flex spacing="s" alignX="end">
+                <Button command="--navi-cancel" variant="discrete">
+                  Annuler
+                </Button>
+                <Button command="--navi-close">Voir les lieux</Button>
+              </Box>
+            </ControlGroup>
+          </Picker>
+        );
+      };
+
+      const ZoneTab = ({ value, children }) => (
+        <Field as="label" flex alignY="center" spacing="xs">
+          <Input type="radio" value={value} />
+          {children}
+        </Field>
+      );
+
+      const ZoneSummary = ({ zone }) => {
+        const [kind, first, second] = String(zone ?? "all").split("|");
+        if (kind === "department") {
+          return (
+            <Text>
+              {second === "around"
+                ? `${first} et limitrophes`
+                : `Département ${first}`}
+            </Text>
+          );
+        }
+        if (kind === "city" || kind === "here") {
+          return <Text>{`${first} · ${second} km`}</Text>;
+        }
+        return <Text>Tous les lieux</Text>;
+      };
+
+      const hereSignal = signal(undefined);
+
+      // Ce que la feuille vaut : une chaîne, celle qui est stockée. L'onglet
+      // coché dit quels champs comptent ; un onglet incomplet (une ville pas
+      // encore saisie) vaut "tous les lieux" plutôt que rien.
+      const aggregateZone = (children) => {
+        const held = {};
+        for (const child of children) {
+          if (child.name) {
+            held[child.name] = child.uiState;
+          }
+        }
+        const { origin, department, periphery, city, radius, here } = held;
+        if (origin === "department" && department) {
+          return periphery
+            ? `department|${department}|around`
+            : `department|${department}`;
+        }
+        if (origin === "city" && city) {
+          return `city|${city}|${radius}`;
+        }
+        if (origin === "here" && here) {
+          return `here|${here}|${radius}`;
+        }
+        return "all";
+      };
+
+      // Et la même chaîne redescendue dans les champs — à l'ouverture, et
+      // quand Échap remet celle qui était là. Rendre ce que l'enfant a déjà,
+      // c'est le laisser tranquille : le rayon reste sur ce qu'il montrait
+      // même quand la valeur ne parle pas de rayon.
+      const distributeZone = (zone, child) => {
+        const [kind, first, second] = String(zone ?? "all").split("|");
+        const { name } = child;
+        if (name === "origin") {
+          return kind;
+        }
+        if (name === "department") {
+          return kind === "department" ? first : child.uiState;
+        }
+        if (name === "periphery") {
+          return kind === "department" && second === "around"
+            ? "around"
+            : undefined;
+        }
+        if (name === "city") {
+          return kind === "city" ? first : child.uiState;
+        }
+        if (name === "here") {
+          return kind === "here" ? first : child.uiState;
+        }
+        if (name === "radius") {
+          return kind === "city" || kind === "here" ? second : child.uiState;
+        }
+        return child.uiState;
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
