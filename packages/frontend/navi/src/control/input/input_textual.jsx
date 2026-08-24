@@ -271,6 +271,13 @@ export const inputCss = /* css */ `
 
       .navi_button {
         font-size: inherit;
+        /* A <button> does not inherit the font on its own — same as the
+           <input> above — and what stands in a slot is measured on the line
+           box (Icon fillLine is 1lh): left on the browser's own font, the
+           clear cross would resolve 1lh against a font the field is not
+           written in, and the field would change height the moment the icon
+           is replaced by the button. */
+        font-family: inherit;
 
         /* A button in a slot (e.g. the clear cross) is drawn small but must
            not be small to hit: the spacing around it — the slot margins on the

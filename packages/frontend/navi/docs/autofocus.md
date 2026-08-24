@@ -9,6 +9,7 @@ decision.
 - [A popup that is read before it is filled](#a-popup-that-is-read-before-it-is-filled)
 - [The most precise wins](#the-most-precise-wins)
 - [On a touch device: the surface is what one arrives on](#on-a-touch-device-the-surface-is-what-one-arrives-on)
+  - [Opting a field back in](#opting-a-field-back-in)
 - [What a field says about itself](#what-a-field-says-about-itself)
 - [When the opening places nothing](#when-the-opening-places-nothing)
 
@@ -100,14 +101,33 @@ the terms checkbox, the submit button. Landing there scrolls the popup to it and
 the title is above the top edge again, keyboard or no keyboard. The cause
 changes, the user sees the same thing.
 
-Nothing to pass, and nothing to remember per call site. Whatever really is what
-the user came for still says so with its own `autoFocus`, which is where that
-decision belongs.
+Nothing to pass, and nothing to remember per call site.
+
+### Opting a field back in
+
+Some popups really are opened to type in: one comment box, one rename field.
+There, the field says so itself, and that beats the device — step 2 of the
+ladder comes before step 3 was ever skipped.
+
+```jsx
+<Dialog>
+  <Heading>Leave a comment</Heading>
+  <Textarea name="comment" autoFocus />
+</Dialog>
+```
+
+Worth saying out loud before writing it: a popup holding one field is not
+necessarily a popup opened to fill it — it is often opened to READ what the
+field holds, and raising the keyboard over it then costs the reading for nothing.
+The default answers that case; `autoFocus` on the field answers the other, and
+saying which is which is the caller's to make because nothing about the markup
+can tell them apart.
 
 ## What a field says about itself
 
-- `autoFocus` — "I am what the user came for". A picker's search box on a
-  desktop, the one field of a one-field popup.
+- `autoFocus` — "I am what the user came for". A picker's search box, the field
+  of a popup opened to type in it. It holds on a touch device too: it is how a
+  field opts back into a keyboard the surface would otherwise keep down.
 - `autoFocus="restore"` — "never on a fresh open, but bring me back". A field
   the user was typing in when a popup over it closed: reopening returns to it,
   opening for the first time does not raise a keyboard on it.
