@@ -159,14 +159,16 @@ export const markAutofocusRestoreOnClose = (
  *
  * @param {HTMLElement} containerEl
  * @param {object} [options]
- * @param {boolean} [options.avoidEditable]
- *   Keeps step 2 off anything the virtual keyboard comes up for. Step 1 is
- *   untouched: a field that says `autoFocus` still gets the keyboard, because
- *   asking for it is the one way to mean it (see open_controller.js, which
- *   turns this on for a surface docked on a small touch screen).
+ * @param {boolean} [options.skipFirstFocusable]
+ *   Drops step 2 — the focus then goes where something ASKED for it, or to the
+ *   last resort, which for a container is itself. For a surface that is read
+ *   before it is reached: the first focusable is wherever the content happens
+ *   to put it, so landing there scrolls whatever comes before it out of sight
+ *   (see open_controller.js, which turns this on wherever the keyboard is a
+ *   virtual one).
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-export const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
+export const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
   // Not while there is anything else: what takes the focus only for want of
   // anything better ("last-resort") and what only takes it back ("restore").
   // Neither is dropped, both are simply tried later — step 3 below for the
@@ -190,7 +192,17 @@ export const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
   // leads somewhere focusable. One inside a screen waiting its turn (an inert
   // slide) says where the focus goes WHEN it arrives there, not now — so it is
   // passed over here rather than treated as an answer that then fails silently.
-  for (const asked of containerEl.querySelectorAll(`[navi-autofocus]`)) {
+  //
+  // The container's own mark comes last among the asked, and querySelectorAll
+  // does not return it: a surface saying "the keyboard stops on me" is answered
+  // by anything inside it that named itself, the more precise answer winning.
+  const askedList = Array.from(
+    containerEl.querySelectorAll(`[navi-autofocus]`),
+  );
+  if (containerEl.matches?.(`[navi-autofocus]`)) {
+    askedList.push(containerEl);
+  }
+  for (const asked of askedList) {
     if (skip(asked)) {
       continue;
     }
@@ -203,13 +215,11 @@ export const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
       return { target: askedFocusable, reason: "navi-autofocus" };
     }
   }
-  const focusable = findFocusable(containerEl, {
-    exclude: avoidEditable
-      ? (element) => skip(element) || isEditableTarget(element)
-      : skip,
-  });
-  if (focusable) {
-    return { target: focusable, reason: "first focusable element" };
+  if (!skipFirstFocusable) {
+    const focusable = findFocusable(containerEl, { exclude: skip });
+    if (focusable) {
+      return { target: focusable, reason: "first focusable element" };
+    }
   }
   const lastResorts = Array.from(
     containerEl.querySelectorAll(`[navi-autofocus="last-resort"]`),
@@ -277,7 +287,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     transferFocus: (
       transferEvent,
       containerEl,
-      { getDelay, avoidEditable } = {},
+      { getDelay, skipFirstFocusable } = {},
     ) => {
       let target;
       let reason;
@@ -294,7 +304,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        const found = findFocusTarget(containerEl, { avoidEditable });
+        const found = findFocusTarget(containerEl, { skipFirstFocusable });
         if (found) {
           reason = found.reason;
           target = found.target;
@@ -311,14 +321,20 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       // appears inside it next (see claimUnplacedAutofocus). Both ways of
       // saying no count: finding nothing at all, and the fallback above, which
       // leaves the focus where it already was — outside.
-      if (
-        !target ||
-        !(containerEl === target || containerEl.contains(target))
-      ) {
+      const placedInside =
+        target && (containerEl === target || containerEl.contains(target));
+      let cancelRetry;
+      if (!placedInside) {
         containerEl.setAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE, "");
+        cancelRetry = retryWhenPlaceable(containerEl, {
+          skipFirstFocusable,
+          focusVisible,
+          debugFocus,
+          transferEvent,
+        });
       }
       if (!target) {
-        return undefined;
+        return cancelRetry;
       }
       // The modality speaks for the transfer, but an editable target outranks
       // it: it draws its ring on any focus (see isMatchingFocusVisible), so
@@ -329,19 +345,12 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
           transferEvent,
           `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
         );
-        target.focus({
-          preventScroll: true,
-          focusVisible: targetFocusVisible,
-        });
-        if (target.hasAttribute("navi-autofocus-select")) {
-          target.select();
-          target.scrollLeft = 0;
-        }
+        focusTransferTarget(target, targetFocusVisible);
       };
       const delay = getDelay?.(target) || 0;
       if (!delay) {
         giveFocus();
-        return undefined;
+        return cancelRetry;
       }
       debugFocus(
         transferEvent,
@@ -350,6 +359,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       const timeout = setTimeout(giveFocus, delay);
       return () => {
         clearTimeout(timeout);
+        cancelRetry?.();
       };
     },
 
@@ -367,6 +377,57 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       });
     },
   };
+};
+
+/**
+ * The second and last try at placing a focus the ladder had nowhere to put.
+ *
+ * A container can open on a moment where nothing in it — its own contents, and
+ * itself — can take the focus: content still being built, a screen not yet
+ * interactive. That moment is over almost immediately, and nothing else would
+ * ever come back to it: the opening is the one event there is, and it has
+ * passed. So the transfer keeps its promise one microtask later, still before
+ * the browser paints, and still before anything the user does.
+ *
+ * Whoever settled the debt in between wins — content arriving with an autofocus
+ * of its own claims it through use_auto_focus.js, and finding the mark gone is
+ * how this knows to stand down.
+ */
+const retryWhenPlaceable = (
+  containerEl,
+  { skipFirstFocusable, focusVisible, debugFocus, transferEvent },
+) => {
+  let cancelled = false;
+  queueMicrotask(() => {
+    if (cancelled || !containerEl.isConnected) {
+      return;
+    }
+    if (!claimUnplacedAutofocus(containerEl)) {
+      return;
+    }
+    const found = findFocusTarget(containerEl, { skipFirstFocusable });
+    if (!found) {
+      return;
+    }
+    const { target, reason } = found;
+    debugFocus(
+      transferEvent,
+      `Moving focus to ${getElementSignature(target)} on second try (reason: ${reason})`,
+    );
+    focusTransferTarget(target, focusVisible || isEditableTarget(target));
+  });
+  return () => {
+    cancelled = true;
+  };
+};
+
+const focusTransferTarget = (target, focusVisible) => {
+  target.focus({ preventScroll: true, focusVisible });
+  if (target.hasAttribute("navi-autofocus-select")) {
+    target.select();
+    // Keep the beginning of the text visible instead of scrolling to the end
+    target.scrollLeft = 0;
+  }
 };
 
 // Get the active element before we transfer focus in the popover/dialog

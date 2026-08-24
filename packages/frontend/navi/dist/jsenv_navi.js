@@ -2,8 +2,8 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
-export { coarsePointerSignal, disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
+export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
@@ -17134,6 +17134,12 @@ const TYPO_PROPS = {
   uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
   lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
   letterSpacing: PASS_THROUGH,
+  // How many lines before truncation, for anything that is not a `Text`.
+  // On a `Text`, `maxLines` is the prop to use and it does more than this
+  // mapping (block display, min-width, white-space per tag) — see
+  // docs/typography.md. `lineClamp` and `overflowEllipsis` below are the raw
+  // one-to-one CSS mappings, kept for an element that opts out of `Text` and
+  // still wants that exact CSS; `lineClamp: 1` is NOT single-line truncation.
   maxLines: (value) => {
     if (!value) {
       return null;
@@ -21128,6 +21134,12 @@ const shouldInjectSpacingBetween = (left, right) => {
 };
 
 /**
+ * The typography primitive: every string an app displays goes through it, or
+ * through something built on it (`Title`, `Paragraph`, `Caption`, `Link`, a
+ * control's label). It accepts every `Box` prop on top of the ones below.
+ * See `docs/typography.md` for the decisions behind it — truncating, rows made
+ * of an icon, a text and an icon, and where a line may break.
+ *
  * @type {import("ignore:preact").FunctionComponent<{
  *   children?: import("ignore:preact").ComponentChildren,
  *   as?: string,
@@ -21139,6 +21151,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   spacing?: string | number | import("ignore:preact").ComponentChildren,
  *   loading?: boolean,
  *   skeleton?: boolean,
+ *   attachLastChild?: boolean,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("ignore:preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -21150,9 +21163,14 @@ const shouldInjectSpacingBetween = (left, right) => {
  * }>}
  *
  * @param {number} [maxLines]
- *   Truncates overflowing text with an ellipsis. `maxLines={1}` produces a
- *   single-line truncation; `maxLines={n}` (n > 1) uses `-webkit-line-clamp`
- *   to allow up to n lines before clipping.
+ *   How many lines the text may take before it is truncated with an ellipsis.
+ *   `maxLines={1}` truncates on a single line; `maxLines={n}` (n > 1) clamps to
+ *   n lines. This is the only prop to use for that — `Box`'s `lineClamp` /
+ *   `overflowEllipsis` are raw CSS mappings meant for elements that are not a
+ *   `Text`, and `lineClamp={1}` is never the single-line truncation you want.
+ *   Truncation only happens if the element may become narrower than its
+ *   content: `maxLines` sets `min-width: 0` here, but each `Box` between this
+ *   one and the element that carries the width must set it too.
  *
  * @param {string|number} [spacing]
  *   Separator injected between child nodes. Accepts a size token (`"s"`, `"m"`, …),
@@ -21168,7 +21186,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [attachLastChild]
  *   Keeps the last child on the same line as the word before it — a trailing
  *   icon, a unit, an arrow. Without it the browser may break the line right
- *   before that child and leave it alone underneath.
+ *   before that child and leave it alone underneath, and no character can
+ *   prevent that break. For wrapping text; a child that must survive
+ *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
+ *   `Link` sets it on its own whenever it renders an end icon.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -21832,14 +21853,16 @@ const markAutofocusRestoreOnClose = (
  *
  * @param {HTMLElement} containerEl
  * @param {object} [options]
- * @param {boolean} [options.avoidEditable]
- *   Keeps step 2 off anything the virtual keyboard comes up for. Step 1 is
- *   untouched: a field that says `autoFocus` still gets the keyboard, because
- *   asking for it is the one way to mean it (see open_controller.js, which
- *   turns this on for a surface docked on a small touch screen).
+ * @param {boolean} [options.skipFirstFocusable]
+ *   Drops step 2 — the focus then goes where something ASKED for it, or to the
+ *   last resort, which for a container is itself. For a surface that is read
+ *   before it is reached: the first focusable is wherever the content happens
+ *   to put it, so landing there scrolls whatever comes before it out of sight
+ *   (see open_controller.js, which turns this on wherever the keyboard is a
+ *   virtual one).
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
+const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
   // Not while there is anything else: what takes the focus only for want of
   // anything better ("last-resort") and what only takes it back ("restore").
   // Neither is dropped, both are simply tried later — step 3 below for the
@@ -21863,7 +21886,17 @@ const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
   // leads somewhere focusable. One inside a screen waiting its turn (an inert
   // slide) says where the focus goes WHEN it arrives there, not now — so it is
   // passed over here rather than treated as an answer that then fails silently.
-  for (const asked of containerEl.querySelectorAll(`[navi-autofocus]`)) {
+  //
+  // The container's own mark comes last among the asked, and querySelectorAll
+  // does not return it: a surface saying "the keyboard stops on me" is answered
+  // by anything inside it that named itself, the more precise answer winning.
+  const askedList = Array.from(
+    containerEl.querySelectorAll(`[navi-autofocus]`),
+  );
+  if (containerEl.matches?.(`[navi-autofocus]`)) {
+    askedList.push(containerEl);
+  }
+  for (const asked of askedList) {
     if (skip(asked)) {
       continue;
     }
@@ -21876,13 +21909,11 @@ const findFocusTarget = (containerEl, { avoidEditable } = {}) => {
       return { target: askedFocusable, reason: "navi-autofocus" };
     }
   }
-  const focusable = findFocusable(containerEl, {
-    exclude: avoidEditable
-      ? (element) => skip(element) || isEditableTarget(element)
-      : skip,
-  });
-  if (focusable) {
-    return { target: focusable, reason: "first focusable element" };
+  if (!skipFirstFocusable) {
+    const focusable = findFocusable(containerEl, { exclude: skip });
+    if (focusable) {
+      return { target: focusable, reason: "first focusable element" };
+    }
   }
   const lastResorts = Array.from(
     containerEl.querySelectorAll(`[navi-autofocus="last-resort"]`),
@@ -21950,7 +21981,7 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     transferFocus: (
       transferEvent,
       containerEl,
-      { getDelay, avoidEditable } = {},
+      { getDelay, skipFirstFocusable } = {},
     ) => {
       let target;
       let reason;
@@ -21967,7 +21998,7 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        const found = findFocusTarget(containerEl, { avoidEditable });
+        const found = findFocusTarget(containerEl, { skipFirstFocusable });
         if (found) {
           reason = found.reason;
           target = found.target;
@@ -21984,14 +22015,20 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       // appears inside it next (see claimUnplacedAutofocus). Both ways of
       // saying no count: finding nothing at all, and the fallback above, which
       // leaves the focus where it already was — outside.
-      if (
-        !target ||
-        !(containerEl === target || containerEl.contains(target))
-      ) {
+      const placedInside =
+        target && (containerEl === target || containerEl.contains(target));
+      let cancelRetry;
+      if (!placedInside) {
         containerEl.setAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE, "");
+        cancelRetry = retryWhenPlaceable(containerEl, {
+          skipFirstFocusable,
+          focusVisible,
+          debugFocus,
+          transferEvent,
+        });
       }
       if (!target) {
-        return undefined;
+        return cancelRetry;
       }
       // The modality speaks for the transfer, but an editable target outranks
       // it: it draws its ring on any focus (see isMatchingFocusVisible), so
@@ -22002,19 +22039,12 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
           transferEvent,
           `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
         );
-        target.focus({
-          preventScroll: true,
-          focusVisible: targetFocusVisible,
-        });
-        if (target.hasAttribute("navi-autofocus-select")) {
-          target.select();
-          target.scrollLeft = 0;
-        }
+        focusTransferTarget(target, targetFocusVisible);
       };
       const delay = getDelay?.(target) || 0;
       if (!delay) {
         giveFocus();
-        return undefined;
+        return cancelRetry;
       }
       debugFocus(
         transferEvent,
@@ -22023,6 +22053,7 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       const timeout = setTimeout(giveFocus, delay);
       return () => {
         clearTimeout(timeout);
+        cancelRetry?.();
       };
     },
 
@@ -22040,6 +22071,57 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       });
     },
   };
+};
+
+/**
+ * The second and last try at placing a focus the ladder had nowhere to put.
+ *
+ * A container can open on a moment where nothing in it — its own contents, and
+ * itself — can take the focus: content still being built, a screen not yet
+ * interactive. That moment is over almost immediately, and nothing else would
+ * ever come back to it: the opening is the one event there is, and it has
+ * passed. So the transfer keeps its promise one microtask later, still before
+ * the browser paints, and still before anything the user does.
+ *
+ * Whoever settled the debt in between wins — content arriving with an autofocus
+ * of its own claims it through use_auto_focus.js, and finding the mark gone is
+ * how this knows to stand down.
+ */
+const retryWhenPlaceable = (
+  containerEl,
+  { skipFirstFocusable, focusVisible, debugFocus, transferEvent },
+) => {
+  let cancelled = false;
+  queueMicrotask(() => {
+    if (cancelled || !containerEl.isConnected) {
+      return;
+    }
+    if (!claimUnplacedAutofocus(containerEl)) {
+      return;
+    }
+    const found = findFocusTarget(containerEl, { skipFirstFocusable });
+    if (!found) {
+      return;
+    }
+    const { target, reason } = found;
+    debugFocus(
+      transferEvent,
+      `Moving focus to ${getElementSignature(target)} on second try (reason: ${reason})`,
+    );
+    focusTransferTarget(target, focusVisible || isEditableTarget(target));
+  });
+  return () => {
+    cancelled = true;
+  };
+};
+
+const focusTransferTarget = (target, focusVisible) => {
+  target.focus({ preventScroll: true, focusVisible });
+  if (target.hasAttribute("navi-autofocus-select")) {
+    target.select();
+    // Keep the beginning of the text visible instead of scrolling to the end
+    target.scrollLeft = 0;
+  }
 };
 
 // Get the active element before we transfer focus in the popover/dialog
@@ -29059,7 +29141,7 @@ const createOpenController = (
         requestOpenEvent,
         debugInteraction,
       );
-      controller.transferFocusOnOpen = (el, { avoidEditable } = {}) => {
+      controller.transferFocusOnOpen = (el) => {
         // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
         // e.detail.eventChain (built by chainEvent above) to recover the
         // element a mousedown/click landed on. `e` itself is usually the raw
@@ -29086,7 +29168,19 @@ const createOpenController = (
           findEvent(requestOpenEvent, isTouchDrivenEvent),
         );
         const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
-          avoidEditable,
+          // A popup is READ before it is reached wherever the keyboard is a
+          // virtual one. Landing on the first focusable there costs the top of
+          // the popup twice over: the browser scrolls that element into view,
+          // and a field raises a keyboard that takes a third of what is left —
+          // so the title and the sentence saying what this is about are gone
+          // before the popup has been looked at. Only something that ASKED for
+          // the focus is worth that, and asking is what `autoFocus` is.
+          //
+          // The device, not the opening (unlike the delay below): whether
+          // focusing raises a keyboard over the popup is true of the screen,
+          // and a popup opened by the page loading — no pointer in it at all —
+          // is precisely the one that must not be answered "no keyboard here".
+          skipFirstFocusable: coarsePointerSignal.value,
           getDelay: (target) =>
             openedByTouch && isEditableTarget(target)
               ? FOCUS_DELAY_ON_KEYBOARD_MS
@@ -30746,10 +30840,10 @@ const css$X = /* css */`
  *     focusable of its own.
  *   - `"restore"` — the dialog stays out of the opening focus chain unless it
  *     held focus when it closed.
- *   Docked on a small touch screen, the default already withdraws fields from
- *   the choice: a bottom sheet is read before it is typed in, so the keyboard
- *   goes to a field only when that field asks for it by name (`autoFocus` on
- *   the field, which outranks whatever the dialog says).
+ *   Wherever the keyboard is a virtual one (a touch device), the surface is
+ *   already what one arrives on: a popup is read before it is reached there, so
+ *   the focus only leaves it for something that asked by name (`autoFocus` on
+ *   that element, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
@@ -31446,16 +31540,7 @@ const useDialogProps = props => {
     // entrance to be over. Decided by transferFocusOnOpen, the only place that
     // knows WHICH element is about to be focused (open_controller.js and its
     // FOCUS_DELAY_ON_KEYBOARD_MS).
-    //
-    // Docked, the keyboard costs more than a wait: it takes a third of a phone
-    // screen from a dialog that starts at the bottom edge, pushing whatever
-    // comes before the field — the title, the sentence saying why it is asked
-    // for — above the top edge before the dialog has even been looked at. So a
-    // docked dialog is READ first: the transfer only reaches a field that asked
-    // for the keyboard by name (see findFocusTarget's `avoidEditable`).
-    const restoreFocus = openController.transferFocusOnOpen(dialogEl, {
-      avoidEditable: isDocked
-    });
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
 
     // isModal outside-click detection (see this file's top comment for why
     // this is a plain document-level listener rather than anything
@@ -32194,6 +32279,10 @@ const css$W = /* css */`
  *   - `false` — no open-time focus transfer at all: nothing inside the popover
  *     receives focus, whoever had the keyboard keeps it — the combobox case,
  *     where suggestions open under an input being typed in.
+ *   Wherever the keyboard is a virtual one (a touch device), the surface is
+ *   already what one arrives on: a popup is read before it is reached there, so
+ *   the focus only leaves it for something that asked by name (`autoFocus` on
+ *   that element, which outranks whatever the popover says).
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was
@@ -75069,5 +75158,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

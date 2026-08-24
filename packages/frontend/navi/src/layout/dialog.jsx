@@ -641,10 +641,10 @@ const css = /* css */ `
  *     focusable of its own.
  *   - `"restore"` — the dialog stays out of the opening focus chain unless it
  *     held focus when it closed.
- *   Docked on a small touch screen, the default already withdraws fields from
- *   the choice: a bottom sheet is read before it is typed in, so the keyboard
- *   goes to a field only when that field asks for it by name (`autoFocus` on
- *   the field, which outranks whatever the dialog says).
+ *   Wherever the keyboard is a virtual one (a touch device), the surface is
+ *   already what one arrives on: a popup is read before it is reached there, so
+ *   the focus only leaves it for something that asked by name (`autoFocus` on
+ *   that element, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
@@ -1368,16 +1368,7 @@ const useDialogProps = (props) => {
     // entrance to be over. Decided by transferFocusOnOpen, the only place that
     // knows WHICH element is about to be focused (open_controller.js and its
     // FOCUS_DELAY_ON_KEYBOARD_MS).
-    //
-    // Docked, the keyboard costs more than a wait: it takes a third of a phone
-    // screen from a dialog that starts at the bottom edge, pushing whatever
-    // comes before the field — the title, the sentence saying why it is asked
-    // for — above the top edge before the dialog has even been looked at. So a
-    // docked dialog is READ first: the transfer only reaches a field that asked
-    // for the keyboard by name (see findFocusTarget's `avoidEditable`).
-    const restoreFocus = openController.transferFocusOnOpen(dialogEl, {
-      avoidEditable: isDocked,
-    });
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
 
     // isModal outside-click detection (see this file's top comment for why
     // this is a plain document-level listener rather than anything

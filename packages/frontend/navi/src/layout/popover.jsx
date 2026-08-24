@@ -501,6 +501,10 @@ const css = /* css */ `
  *   - `false` — no open-time focus transfer at all: nothing inside the popover
  *     receives focus, whoever had the keyboard keeps it — the combobox case,
  *     where suggestions open under an input being typed in.
+ *   Wherever the keyboard is a virtual one (a touch device), the surface is
+ *   already what one arrives on: a popup is read before it is reached there, so
+ *   the focus only leaves it for something that asked by name (`autoFocus` on
+ *   that element, which outranks whatever the popover says).
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was

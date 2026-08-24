@@ -8,7 +8,7 @@ decision.
 - [The ladder](#the-ladder)
 - [A popup that is read before it is filled](#a-popup-that-is-read-before-it-is-filled)
 - [The most precise wins](#the-most-precise-wins)
-- [Docked on a small touch screen: fields are withdrawn](#docked-on-a-small-touch-screen-fields-are-withdrawn)
+- [On a touch device: the surface is what one arrives on](#on-a-touch-device-the-surface-is-what-one-arrives-on)
 - [What a field says about itself](#what-a-field-says-about-itself)
 - [When the opening places nothing](#when-the-opening-places-nothing)
 
@@ -34,7 +34,8 @@ Whoever hands out the focus — a popup opening, a slide arriving — tries thes
 in order, and stops at the first that leads somewhere focusable:
 
 1. the element that held the focus when this container was last closed;
-2. the first `autoFocus` — "put it here";
+2. the first `autoFocus` — "put it here". The container's own comes last here,
+   so a field naming itself wins over the surface around it;
 3. the first focusable element — what one came to do;
 4. the deepest `autoFocus="last-resort"`, the container itself included;
 5. nothing, and the caller decides what that means.
@@ -65,10 +66,11 @@ the opposite: "anything in here before me".
 
 ## The most precise wins
 
-`autoFocus` on a field beats `autoFocus` on the surface around it (step 2 above
-comes before step 4). The two can be stated together without a conflict to
-resolve: the surface says where the focus goes by default, a field that really
-is what the user came for says so itself.
+`autoFocus` on a field beats `autoFocus` on the surface around it: both are step
+2 of the ladder, and the container's own mark is tried last there. The two can
+be stated together without a conflict to resolve — the surface says where the
+focus goes by default, a field that really is what the user came for says so
+itself.
 
 ```jsx
 <Dialog autoFocus>
@@ -77,16 +79,29 @@ is what the user came for says so itself.
 </Dialog>
 ```
 
-## Docked on a small touch screen: fields are withdrawn
+## On a touch device: the surface is what one arrives on
 
-A `Dialog` with `dockedOnSmallTouchScreen` becomes a bottom sheet on a phone —
-the one shape the keyboard hurts most, since the sheet starts at the very edge
-the keyboard covers. There, step 3 of the ladder does not consider fields at
-all: rather than the first text input it finds, the opening falls through to
-what remains, usually the surface itself.
+Where the keyboard is a virtual one — anything answering `pointer: coarse` — a
+popup opening drops step 3 of the ladder entirely: the focus goes where
+something ASKED for it, and otherwise to the surface itself.
 
-Nothing to pass, and nothing to remember per call site. A field that wants the
-keyboard on a phone still says so with its own `autoFocus`, which is where that
+The condition is the device, not the popup's shape and not the gesture that
+opened it. A virtual keyboard is a fact about the screen: it costs a third of
+the height whichever popup raised it, and a popup opened by the page loading —
+no pointer in it at all — is exactly the one that must not be answered "no
+keyboard here". Docking only makes the cost more visible (a bottom sheet is
+short, so there is less room to lose before the title goes), it is not what
+creates it.
+
+Withdrawing only the FIELDS would not be enough either. The first focusable is
+wherever the content happens to put it — and in a popup that explains before it
+asks, what comes first is the explanation, so the first focusable is far down:
+the terms checkbox, the submit button. Landing there scrolls the popup to it and
+the title is above the top edge again, keyboard or no keyboard. The cause
+changes, the user sees the same thing.
+
+Nothing to pass, and nothing to remember per call site. Whatever really is what
+the user came for still says so with its own `autoFocus`, which is where that
 decision belongs.
 
 ## What a field says about itself
@@ -107,9 +122,15 @@ A popup can open on content that holds nothing focusable yet — content still
 being built, a screen not yet interactive. The ladder then comes back empty and
 the opening places no focus at all.
 
-What arrives a moment later is allowed to take it: an opening that placed
-nothing owes the focus to whatever appears next, and an `autoFocus` in that
-content is honored rather than deferring to a transfer that never happened.
+That debt is settled two ways, whichever comes first:
+
+- what arrives a moment later takes it — an `autoFocus` in content built during
+  the opening is honored, rather than deferring to a transfer that never
+  happened;
+- failing that, the ladder is walked once more, one microtask later, still
+  before the browser paints and long before the user can do anything. A surface
+  that says `autoFocus` about itself is placed by that second try.
+
 Without this, the same popup would land the focus in a different place — or
 nowhere — depending on whether it was opened by a click or by the page loading,
 which is the same popup behaving differently for no reason the user can see.

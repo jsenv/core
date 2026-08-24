@@ -13,6 +13,7 @@ import {
 } from "../utils/focus/focus_transfer.js";
 import { isEditableTarget } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { coarsePointerSignal } from "./responsive.js";
 
 // How long a popup waits before handing the focus to a field, when giving it
 // is what raises the on-screen keyboard.
@@ -256,7 +257,7 @@ export const createOpenController = (
         requestOpenEvent,
         debugInteraction,
       );
-      controller.transferFocusOnOpen = (el, { avoidEditable } = {}) => {
+      controller.transferFocusOnOpen = (el) => {
         // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
         // e.detail.eventChain (built by chainEvent above) to recover the
         // element a mousedown/click landed on. `e` itself is usually the raw
@@ -283,7 +284,19 @@ export const createOpenController = (
           findEvent(requestOpenEvent, isTouchDrivenEvent),
         );
         const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
-          avoidEditable,
+          // A popup is READ before it is reached wherever the keyboard is a
+          // virtual one. Landing on the first focusable there costs the top of
+          // the popup twice over: the browser scrolls that element into view,
+          // and a field raises a keyboard that takes a third of what is left —
+          // so the title and the sentence saying what this is about are gone
+          // before the popup has been looked at. Only something that ASKED for
+          // the focus is worth that, and asking is what `autoFocus` is.
+          //
+          // The device, not the opening (unlike the delay below): whether
+          // focusing raises a keyboard over the popup is true of the screen,
+          // and a popup opened by the page loading — no pointer in it at all —
+          // is precisely the one that must not be answered "no keyboard here".
+          skipFirstFocusable: coarsePointerSignal.value,
           getDelay: (target) =>
             openedByTouch && isEditableTarget(target)
               ? FOCUS_DELAY_ON_KEYBOARD_MS
