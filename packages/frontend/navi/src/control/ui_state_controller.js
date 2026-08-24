@@ -138,6 +138,22 @@ export const useUIStateController = (
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const emptyUIState = resolveEmptyUIState(props, controlType);
 
+  // Live values controller methods read through the scope (`s.…`) — one list
+  // feeding both init and update: init so the values exist before any
+  // re-render, update so they follow the renders. A value listed in only one
+  // of the two goes stale on mount or across re-renders, silently.
+  const liveValues = () => ({
+    ref: props.ref,
+    id: props.id,
+    name: props.name,
+    props,
+    controlInfo,
+    syncDomState,
+    uiAction: props.uiAction,
+    uiActionInternal,
+    parentUIStateController,
+  });
+
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
     // Creates the controller and all long-lived objects. Captures first-render
@@ -623,21 +639,10 @@ export const useUIStateController = (
       });
       controller.rules = rules;
 
-      // Include all values that controller methods read from the scope so they
-      // are available immediately — even if no re-render happens before the
-      // first user interaction (update only runs on re-renders, not on mount).
       return {
         controller,
-        ref: props.ref,
-        id: props.id,
-        name: props.name,
-        props,
-        controlInfo,
-        syncDomState,
-        uiAction: props.uiAction,
-        uiActionInternal,
-        parentUIStateController,
         parentUiStateSignalHolder,
+        ...liveValues(),
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -698,17 +703,7 @@ export const useUIStateController = (
           }
         }
       }
-      return {
-        ref: props.ref,
-        id: props.id,
-        name: props.name,
-        props,
-        controlInfo,
-        syncDomState,
-        uiAction: props.uiAction,
-        uiActionInternal,
-        parentUIStateController,
-      };
+      return liveValues();
     },
   );
   scope.parentUiStateSignalHolder.value =
@@ -1048,6 +1043,27 @@ export const useUIGroupStateController = (
     }
     return true;
   };
+
+  // Live values controller methods read through the scope (`s.…`) — same
+  // contract as the leaf controller's liveValues above: one list feeding both
+  // init and update.
+  const liveValues = () => ({
+    ref,
+    parentUIStateController,
+    uiAction,
+    uiActionInternal,
+    id,
+    name,
+    value,
+    defaultValue,
+    hasValueProp,
+    hasDefaultValueProp,
+    // `props` is what writeBoundSignal reads to find the bound `signal`.
+    // Missing here, a group whose component never re-renders between mount
+    // and the first choice wrote nothing back into its signal — and said
+    // nothing about it: the list showed the choice, the signal stayed empty.
+    props,
+  });
 
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
@@ -1434,20 +1450,10 @@ export const useUIGroupStateController = (
       });
       controller.rules = rules;
 
-      // Include all values read by controller methods so they are immediately
-      // available, even if the user interacts before the first re-render.
       return {
         controller,
         _onChange: onChange,
-        ref,
-        parentUIStateController,
-        uiAction,
-        uiActionInternal,
-        // `props` is what writeBoundSignal reads to find the bound `signal`.
-        // Missing here, a group whose component never re-renders between mount
-        // and the first choice wrote nothing back into its signal — and said
-        // nothing about it: the list showed the choice, the signal stayed empty.
-        props,
+        ...liveValues(),
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -1496,19 +1502,7 @@ export const useUIGroupStateController = (
         placeChildrenFrom(defaultValue);
       }
 
-      return {
-        ref,
-        parentUIStateController,
-        uiAction,
-        uiActionInternal,
-        id,
-        name,
-        value,
-        defaultValue,
-        hasValueProp,
-        hasDefaultValueProp,
-        props,
-      };
+      return liveValues();
     },
   );
 
