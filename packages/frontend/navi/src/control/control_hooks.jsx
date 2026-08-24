@@ -1037,40 +1037,13 @@ const createControlInfo = (props, { controlType }) => {
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      if (signal) {
-        // The signal is the source of truth: a `value` passed alongside is
-        // ignored, not merged (warnSignalCollision says so in dev).
-        warnSignalCollision(props, controlType, "value");
-        if (Object.hasOwn(props, "defaultValue")) {
-          // resolveInputProps seeds defaultValue from a bound signal's default,
-          // so an input+signal is uncontrolled-with-default; the signal only
-          // receives write-backs (onUIAction).
-          hasStateProp = false;
-          // A signal holding something wins over the default: `defaultValue` is
-          // a suggestion of what to start from (and what a reset goes back to),
-          // not an answer — while the signal's value IS the answer, restored
-          // from the url or set by whoever owns it. Taking the default here
-          // would show a suggestion in place of the value on every reload.
-          stateInitial =
-            signal.value !== undefined ? signal.value : props.defaultValue;
-          stateFromSignal = stateInitial;
-        } else {
-          // A plain bound signal with no default (e.g. Wheel): its live value
-          // seeds and controls the state.
-          hasStateProp = true;
-          value = signal.value;
-          stateInitial = value;
-        }
-      } else if (Object.hasOwn(props, "value")) {
-        hasStateProp = true;
-        value = props.value;
-        stateInitial = value;
-      } else if (Object.hasOwn(props, "defaultValue")) {
-        hasStateProp = false;
-        stateInitial = props.defaultValue;
-      } else {
-        hasStateProp = false;
-        stateInitial = undefined;
+      ({ hasStateProp, stateInitial, stateFromSignal } = resolveValueState(
+        props,
+        controlType,
+        signal,
+      ));
+      if (hasStateProp) {
+        value = stateInitial;
       }
 
       readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
@@ -1090,31 +1063,11 @@ const createControlInfo = (props, { controlType }) => {
   } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    if (signal) {
-      // Same rule as an input above: the signal is the source of truth, a
-      // `value` passed alongside is ignored.
-      warnSignalCollision(props, controlType, "value");
-      if (Object.hasOwn(props, "defaultValue")) {
-        hasStateProp = false;
-        // The signal's value is the answer, defaultValue only the suggestion to
-        // start from.
-        stateInitial =
-          signal.value !== undefined ? signal.value : props.defaultValue;
-        stateFromSignal = stateInitial;
-      } else {
-        hasStateProp = true;
-        stateInitial = signal.value;
-      }
-    } else if (Object.hasOwn(props, "value")) {
-      hasStateProp = true;
-      stateInitial = props.value;
-    } else if (Object.hasOwn(props, "defaultValue")) {
-      hasStateProp = false;
-      stateInitial = props.defaultValue;
-    } else {
-      hasStateProp = false;
-      stateInitial = undefined;
-    }
+    ({ hasStateProp, stateInitial, stateFromSignal } = resolveValueState(
+      props,
+      controlType,
+      signal,
+    ));
 
     disabledSupported = true;
     // A native <select> has no readonly attribute. What says it is read-only is
@@ -1153,6 +1106,44 @@ const createControlInfo = (props, { controlType }) => {
     readOnlySupported,
     disabledSupported,
   };
+};
+// Who says what a value-holding control is worth — a bound signal, a `value`,
+// a `defaultValue` — resolved the same way for every control holding one value
+// (text input, picker, select). The checkbox/radio branch has its own
+// resolution: `checked` speaks in booleans and translates to the value.
+const resolveValueState = (props, controlType, signal) => {
+  if (signal) {
+    // The signal is the source of truth: a `value` passed alongside is
+    // ignored, not merged (warnSignalCollision says so in dev).
+    warnSignalCollision(props, controlType, "value");
+    if (Object.hasOwn(props, "defaultValue")) {
+      // A bound signal's own default is seeded into `defaultValue` (see
+      // resolveInputProps), so such a control is uncontrolled-with-default;
+      // the signal only receives write-backs (onUIAction).
+      // A signal holding something wins over the default: `defaultValue` is
+      // a suggestion of what to start from (and what a reset goes back to),
+      // not an answer — while the signal's value IS the answer, restored
+      // from the url or set by whoever owns it. Taking the default here
+      // would show a suggestion in place of the value on every reload.
+      const stateInitial =
+        signal.value !== undefined ? signal.value : props.defaultValue;
+      return {
+        hasStateProp: false,
+        stateInitial,
+        stateFromSignal: stateInitial,
+      };
+    }
+    // A plain bound signal with no default (e.g. Wheel): its live value
+    // seeds and controls the state.
+    return { hasStateProp: true, stateInitial: signal.value };
+  }
+  if (Object.hasOwn(props, "value")) {
+    return { hasStateProp: true, stateInitial: props.value };
+  }
+  if (Object.hasOwn(props, "defaultValue")) {
+    return { hasStateProp: false, stateInitial: props.defaultValue };
+  }
+  return { hasStateProp: false, stateInitial: undefined };
 };
 // color, radio, image, file etc do not support readonly
 const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([
