@@ -22656,6 +22656,24 @@ const scrollTo = ({ x, y }) => {
 const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
 const [publishAfterRouting, observeAfterRouting] = createPubSub();
 
+/*
+ * A press aims at a place; it does not always go one step deeper. A row of tabs
+ * is a lateral move — the neighbour is one finger away — so the whole row should
+ * weigh one history entry: the arrow at the top and the phone's back button then
+ * leave by where the reader came in, and the swipe (which replaces already, see
+ * route_travel.jsx) and the press say the same thing.
+ *
+ * `<Link replace>` is that, and it travels as an attribute because the click
+ * handler sees the anchor, not the component that rendered it — the same mouth
+ * as what a link asks of a route transition.
+ */
+
+const LINK_REPLACE_ATTRIBUTE = "data-navi-replace";
+
+const linkAsksForReplace = (linkElement) => {
+  return linkElement.hasAttribute(LINK_REPLACE_ATTRIBUTE);
+};
+
 const setupBrowserIntegrationViaHistory = ({
   applyActions,
   applyRouting,
@@ -22936,7 +22954,9 @@ const setupBrowserIntegrationViaHistory = ({
       e.preventDefault();
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
-        navigationType: "push",
+        // A link that takes the place of the current entry instead of stacking
+        // on it says so on itself (see link_replace.js).
+        navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
         // Who started it. Announced with the navigation because a press
         // carries things the url does not: what a link asks of a route
         // transition is the first of them (see route_transition.jsx). Read by
@@ -44333,6 +44353,12 @@ Object.assign(PSEUDO_CLASSES, {
  *   the pair's movement and only turns it round, which is what the rare way
  *   round a pair usually needs. Said nowhere else, the relations answer as
  *   they always do.
+ * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
+ *   of the current history entry instead of stacking onto it: the link stays a
+ *   link (an address, a middle click, the keyboard, `aria-current`), only the
+ *   way there changes. What a row of tabs wants — the neighbour is a lateral
+ *   move, not a step deeper, so the whole row weighs one entry and the back
+ *   button leaves by where the reader came in.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
  *   click (navigation suppressed; `onClick` still runs).
  * @param {(event: MouseEvent) => void} [props.onClick]
@@ -44397,6 +44423,7 @@ const LinkPlain = props => {
     revealOnInteraction = false,
     hrefFallback = !anchor,
     routeTransition,
+    replace,
     children
   } = props;
   if (anchor && !props.id) {
@@ -44510,6 +44537,13 @@ const LinkPlain = props => {
   // a name; anything more travels as JSON, which is also how a plain <a>
   // writes it by hand.
   const routeTransitionRequest = routeTransition === undefined || routeTransition === null ? undefined : typeof routeTransition === "string" ? routeTransition : JSON.stringify(routeTransition);
+
+  // Which way this link goes to the place it aims at, worn as an attribute so
+  // that whoever answers the press reads it off the anchor (see
+  // link_replace.js, which owns the name and does the reading).
+  const replaceRequest = replace ? {
+    [LINK_REPLACE_ATTRIBUTE]: ""
+  } : null;
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
@@ -44561,7 +44595,9 @@ const LinkPlain = props => {
     endIcon: undefined,
     hrefFallback: undefined,
     routeTransition: undefined,
+    replace: undefined,
     "data-navi-route-transition-request": routeTransitionRequest,
+    ...replaceRequest,
     onClick: e => {
       onClick?.(e);
       if (slide) {
