@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Quitter une page par un lien dans une dialog</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .page {
+        padding: 16px;
+      }
+      .page_title {
+        margin: 0 0 12px;
+        font-size: 1.3rem;
+      }
+      .page_row {
+        margin-bottom: 8px;
+        padding: 14px 12px;
+        background: rgba(255, 255, 255, 0.75);
+        border-radius: 8px;
+      }
+      .dialog_box {
+        padding: 20px;
+      }
+      .bar_content {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        font-weight: 600;
+      }
+      .bar_content .navi_link {
+        flex: 1;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-safe-area></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import {
+        Button,
+        Dialog,
+        FixedBar,
+        Link,
+        Nav,
+        Route,
+        RouteTransitionArea,
+        defineRouteTransition,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const A_ROUTE = route("/a");
+      const B_ROUTE = route("/b");
+      setupRoutes([A_ROUTE, B_ROUTE]);
+
+      defineRouteTransition(A_ROUTE, B_ROUTE, "slide-x");
+
+      // Ouverte en quittant la page ET en y revenant: c'est le seul état où
+      // les deux moitiés du problème se voient.
+      const dialogOpenSignal = signal(true);
+
+      const APage = () => (
+        <div className="page" style={{ background: "#5b8dd9" }}>
+          <h1 className="page_title">Page A</h1>
+          <Button
+            onClick={() => {
+              dialogOpenSignal.value = true;
+            }}
+          >
+            Ouvrir la dialog
+          </Button>
+          <Dialog
+            expand
+            className="dialog_box"
+            open={dialogOpenSignal}
+            onClose={() => {
+              dialogOpenSignal.value = false;
+            }}
+          >
+            <p style={{ marginTop: 0 }}>Une dialog ouverte sur la page A.</p>
+            <Link route={B_ROUTE}>Aller page B →</Link>
+            <Button command="--navi-close">Fermer</Button>
+          </Dialog>
+          {Array.from({ length: 30 }, (_, index) => (
+            <div className="page_row" key={index}>
+              Page A — ligne {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const BPage = () => (
+        <div className="page" style={{ background: "#63b672" }}>
+          <h1 className="page_title">Page B</h1>
+          <Link route={A_ROUTE}>← Revenir page A</Link>
+          {Array.from({ length: 30 }, (_, index) => (
+            <div className="page_row" key={index}>
+              Page B — ligne {index + 1}
+            </div>
+          ))}
+        </div>
+      );
+
+      const AppIndex = () => {
+        useLayoutEffect(() => {
+          A_ROUTE.redirectTo();
+        }, []);
+        return null;
+      };
+
+      const App = () => (
+        <>
+          <RouteTransitionArea>
+            <Route>
+              <Route route={A_ROUTE} element={APage} />
+              <Route route={B_ROUTE} element={BPage} />
+              <Route fallback element={AppIndex} />
+            </Route>
+          </RouteTransitionArea>
+          <FixedBar area="bottom" height="64">
+            <Nav className="bar_content" expand currentIndicator>
+              <Link variant="tab" route={A_ROUTE} padding="m">
+                A
+              </Link>
+              <Link variant="tab" route={B_ROUTE} padding="m">
+                B
+              </Link>
+            </Nav>
+          </FixedBar>
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

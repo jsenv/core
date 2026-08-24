@@ -29849,6 +29849,43 @@ const popupCss = /* css */ `
       }
     }
   }
+
+  /* While the PAGES are the ones moving — a route transition, a route travel —
+     an open popup takes a picture of its own. The pictures of such a movement
+     are drawn in the top layer, above everything the document paints, and a
+     popup lives in the top layer too: uncaptured, it is simply covered for the
+     length of the movement, so it disappears the instant its page starts to
+     leave and lands abruptly when the arriving one settles. Captured, it is a
+     group beside the pages, painted over them where it stands, and the browser
+     fades it out with the page it belonged to or in with the page it comes
+     with.
+
+     An identity of its own (match-element), never a shared name: two popups on
+     either side of a navigation are two different popups, and what is wanted is
+     precisely that one goes and the other comes. A browser with no
+     match-element takes no name and the pictures cover the popup. */
+  @supports (view-transition-name: match-element) {
+    :root[data-navi-route-transition] .navi_popover[aria-expanded="true"],
+    :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"],
+    :root[data-navi-route-travel] .navi_popover[aria-expanded="true"],
+    :root[data-navi-route-travel] .navi_dialog[aria-expanded="true"] {
+      view-transition-name: match-element;
+      view-transition-class: navi_popup;
+    }
+  }
+
+  /* On the same clock as the pages: a popup going in a quarter of the time the
+     page it belongs to takes to leave is gone long before the page it was on. */
+  :root[data-navi-route-transition]::view-transition-group(.navi_popup),
+  :root[data-navi-route-transition]::view-transition-old(.navi_popup),
+  :root[data-navi-route-transition]::view-transition-new(.navi_popup) {
+    animation-duration: var(--navi-route-transition-duration, 300ms);
+  }
+  :root[data-navi-route-travel]::view-transition-group(.navi_popup),
+  :root[data-navi-route-travel]::view-transition-old(.navi_popup),
+  :root[data-navi-route-travel]::view-transition-new(.navi_popup) {
+    animation-duration: var(--navi-route-travel-duration, 300ms);
+  }
 `;
 
 /**
