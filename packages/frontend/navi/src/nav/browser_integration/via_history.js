@@ -14,6 +14,7 @@ import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
+import { linkAsksForReplace } from "./link_replace.js";
 
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
@@ -295,7 +296,9 @@ export const setupBrowserIntegrationViaHistory = ({
       e.preventDefault();
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
-        navigationType: "push",
+        // A link that takes the place of the current entry instead of stacking
+        // on it says so on itself (see link_replace.js).
+        navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
         // Who started it. Announced with the navigation because a press
         // carries things the url does not: what a link asks of a route
         // transition is the first of them (see route_transition.jsx). Read by

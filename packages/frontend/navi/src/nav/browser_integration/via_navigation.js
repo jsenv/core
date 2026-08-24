@@ -42,6 +42,7 @@ import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
+import { linkAsksForReplace } from "./link_replace.js";
 import {
   installScrollRestoration,
   restoreScrollPosition,
@@ -226,6 +227,25 @@ export const setupBrowserIntegrationViaNavigation = ({
     const url = event.destination.url;
     const navigationType = event.navigationType;
 
+    // A link that takes the place of the current entry rather than stacking on
+    // it (see link_replace.js). The browser has already decided this is a push
+    // and nothing can turn a live push into a replace, so the navigation is
+    // declined and re-asked as one — carrying by hand what such a call has no
+    // sourceElement to say: the element pressed, and with it what that element
+    // asks of a route transition (it wears it as an attribute).
+    if (
+      navigationType === "push" &&
+      event.sourceElement &&
+      linkAsksForReplace(event.sourceElement)
+    ) {
+      event.preventDefault();
+      navigation.navigate(url, {
+        history: "replace",
+        info: { element: event.sourceElement },
+      });
+      return;
+    }
+
     // A push to the entry next door is morally a traversal: taken as one, the
     // stack stays what the reader thinks it is and the page comes back where
     // they left it. Decided before anything commits — preventDefault is only
@@ -253,7 +273,8 @@ export const setupBrowserIntegrationViaNavigation = ({
       // it, and what it asks of a route transition (see route_transition.jsx).
       // Both are the same facts via_history.js announces; here the browser
       // hands them over — sourceElement for a press, info for a navTo() call.
-      element: event.sourceElement,
+      element:
+        event.sourceElement || (event.info ? event.info.element : undefined),
       routeTransition: event.info ? event.info.routeTransition : undefined,
     });
     const isSameUrl = url === window.location.href;

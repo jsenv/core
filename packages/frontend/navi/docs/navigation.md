@@ -243,6 +243,27 @@ gives it a `view-transition-name` of its own: the browser then moves it on the
 same clock as any transition playing — including a `RouteTravel` swipe, with no
 wiring between the two.
 
+A row of tabs is a lateral move: the neighbour is one finger away, and going
+there is not going one step deeper. `replace` says exactly that — the
+destination takes the place of the current history entry instead of stacking
+onto it, so the whole row weighs one entry and the back button (the arrow at the
+top, the phone's own) leaves by where the reader came in:
+
+```jsx
+<Link route={CANDIDATE_GAMES_ROUTE} variant="tab" replace>
+  Candidatures
+</Link>
+```
+
+The link stays a link — an address, a middle click, the keyboard, `aria-current`
+— only the way there changes. It is the same word as `navTo(url, { replace:
+true })` and `route.redirectTo()`.
+
+A replaced entry inherits the state of the one it takes the place of (so does
+`route.redirectTo()`): **an entry's state does not say how it arrived**. An app
+keeping its own count of how deep it stands cannot read it back from
+`history.state` — it has to write it down as it navigates.
+
 ## Tabs that travel: `RouteTravel`
 
 `<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes every change
@@ -276,9 +297,10 @@ place, not a step along the row, and it plays no movement. `axis="y"` lays the
 pages out as a column instead: forward is then the page rising and the next one
 coming up from below.
 
-A swipe **replaces** the current history entry (a gesture browses; a tab pressed
-aims at a place and pushes, which its `<Link>` already does). `onTravel` decides
-otherwise.
+A swipe **replaces** the current history entry, and a tab pressed says the same
+thing when its link asks for it (`<Link replace>`, see above) — the two gestures
+towards the same neighbour must not write two different histories. `onTravel`
+decides otherwise.
 
 Several `RouteTravel` boxes may live on one page — a section of the path and a
 search param of the root route are two rows of tabs, both live — and only the one

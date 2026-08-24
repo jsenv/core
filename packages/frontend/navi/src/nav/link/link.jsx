@@ -20,6 +20,7 @@ import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
+import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
 import { NavContext } from "./nav_context.js";
@@ -499,6 +500,12 @@ Object.assign(PSEUDO_CLASSES, {
  *   the pair's movement and only turns it round, which is what the rare way
  *   round a pair usually needs. Said nowhere else, the relations answer as
  *   they always do.
+ * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
+ *   of the current history entry instead of stacking onto it: the link stays a
+ *   link (an address, a middle click, the keyboard, `aria-current`), only the
+ *   way there changes. What a row of tabs wants — the neighbour is a lateral
+ *   move, not a step deeper, so the whole row weighs one entry and the back
+ *   button leaves by where the reader came in.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
  *   click (navigation suppressed; `onClick` still runs).
  * @param {(event: MouseEvent) => void} [props.onClick]
@@ -557,6 +564,7 @@ const LinkPlain = (props) => {
     revealOnInteraction = false,
     hrefFallback = !anchor,
     routeTransition,
+    replace,
 
     children,
   } = props;
@@ -682,6 +690,11 @@ const LinkPlain = (props) => {
         ? routeTransition
         : JSON.stringify(routeTransition);
 
+  // Which way this link goes to the place it aims at, worn as an attribute so
+  // that whoever answers the press reads it off the anchor (see
+  // link_replace.js, which owns the name and does the reading).
+  const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
+
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
@@ -739,7 +752,9 @@ const LinkPlain = (props) => {
       endIcon={undefined}
       hrefFallback={undefined}
       routeTransition={undefined}
+      replace={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
+      {...replaceRequest}
       onClick={(e) => {
         onClick?.(e);
         if (slide) {
