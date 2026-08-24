@@ -227,10 +227,7 @@
 
               <SlideContainer
                 id="zone_slides"
-                current={originSignal.value}
-                onCurrentChange={(area) => {
-                  originSignal.value = area;
-                }}
+                signal={originSignal}
                 minHeight="150"
               >
                 <Slide area="all">

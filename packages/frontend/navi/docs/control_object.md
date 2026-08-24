@@ -139,11 +139,7 @@ nothing until the user is done.
       <Link slide="city">Ville</Link>…
     </Nav>
     <Input type="hidden" name="origin" signal={originSignal} />
-    <SlideContainer
-      id="zone_slides"
-      current={originSignal.value}
-      onCurrentChange={(area) => (originSignal.value = area)}
-    >
+    <SlideContainer id="zone_slides" signal={originSignal}>
       <Slide area="city">
         <Input name="city" />
       </Slide>
@@ -164,7 +160,7 @@ value like the rest — a sheet handing back `{ city: "Antibes" }` without sayin
 which tab it was left on has not said what was chosen. A tab bar is a navigation
 (`<Nav slideContainer>` + `<Link slide>`), so nothing in it is a field: the
 current area reaches the value through an `<Input type="hidden">` bound to the
-signal the container's `current` follows. That is what a hidden field is for — a
+same signal as the container. That is what a hidden field is for — a
 piece of the answer with no control to be read from, here because the tabs are
 places rather than choices. A tab bar made of radios needs none: it is a field
 already, under its own name.

@@ -124,6 +124,10 @@ All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,
 that is a navi control goes through the same state controller, and the same
 `signal` prop.
 
+`SlideContainer` takes one too, though it is layout rather than a control: the
+area it shows is a piece of state like any other, and binding it is what lets
+something else read where the slides are — or move them by writing it.
+
 Inside a `List selectable` you can bind the list, or give each `List.Item` its
 own `selected` — but not expect the two to arbitrate. An item that declares
 `selected` is answering for itself, and the list's signal does not reposition

@@ -22656,6 +22656,69 @@ const scrollTo = ({ x, y }) => {
 const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
 const [publishAfterRouting, observeAfterRouting] = createPubSub();
 
+/**
+ * Is there an entry of THIS document behind the current one? And ahead of it?
+ *
+ * A back arrow drawn inside an app promises to give back the screen it came
+ * from — never the page the reader was on before the app. A url opened cold
+ * (a shared link, a bookmark, a notification) has someone else's page under
+ * it, and `window.history.length` cannot tell the two apart: it counts the
+ * whole tab.
+ *
+ * So the count is kept here, and written into the state of each entry as it is
+ * created, so it survives a reload in the middle of the stack. It cannot be
+ * read back from an entry alone: a replaced entry inherits the state of the
+ * one it takes the place of, so an entry's state does not say how it arrived.
+ * Only the navigation being applied says that, which is why the integrations
+ * (via_history.js, via_navigation.js) hand each navigation over here as they
+ * apply it — the one place no push and no replace can escape.
+ */
+
+
+const NAV_DEPTH_STATE_KEY = "jsenv_nav_depth";
+
+const canNavBackSignal = signal(false);
+const useCanNavBack = () => {
+  return canNavBackSignal.value;
+};
+
+const canNavForwardSignal = signal(false);
+const useCanNavForward = () => {
+  return canNavForwardSignal.value;
+};
+
+// How many entries of this document stand under the current one, and how high
+// the stack goes above it. Both are unknown for entries this document never
+// created (a fragment navigation makes its own, and the browser stores no
+// state on it): those leave the count as it is, which under-reports rather
+// than promising a screen that is not there.
+let navDepth = 0;
+let navDepthMax = 0;
+
+const getNavDepth = () => navDepth;
+
+const applyNavigationToNavDepth = (navigationType, state) => {
+  if (navigationType === "push") {
+    navDepth++;
+    // A push cuts whatever stood ahead.
+    navDepthMax = navDepth;
+  } else if (navigationType === "replace") ; else {
+    // load, reload, traverse: the entry itself says where it stands.
+    const depthInState =
+      state && typeof state[NAV_DEPTH_STATE_KEY] === "number"
+        ? state[NAV_DEPTH_STATE_KEY]
+        : undefined;
+    if (depthInState !== undefined) {
+      navDepth = depthInState;
+      if (navDepth > navDepthMax) {
+        navDepthMax = navDepth;
+      }
+    }
+  }
+  canNavBackSignal.value = navDepth > 0;
+  canNavForwardSignal.value = navDepth < navDepthMax;
+};
+
 /*
  * A press aims at a place; it does not always go one step deeper. A row of tabs
  * is a lateral move — the neighbour is one finger away — so the whole row should
@@ -22815,6 +22878,11 @@ const setupBrowserIntegrationViaHistory = ({
       state,
     } = options;
 
+    // Where the entry being reached stands in this document's own stack —
+    // decided before the state that carries it is built (see
+    // document_back_and_forward.js).
+    applyNavigationToNavDepth(navigationType, state);
+
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
       // undefined → inherit current state (link click, neutral navigation)
@@ -22824,6 +22892,7 @@ const setupBrowserIntegrationViaHistory = ({
       let effectiveState;
       const sharedState = {
         jsenv_visited_urls: Array.from(visitedUrlSet),
+        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
       };
       if (state === undefined) {
         effectiveState = {
@@ -23026,8 +23095,18 @@ const setupBrowserIntegrationViaHistory = ({
     });
   };
 
-  const navBack = () => {
-    window.history.back();
+  const navBack = ({ fallback } = {}) => {
+    if (canNavBackSignal.peek()) {
+      window.history.back();
+      return;
+    }
+    if (fallback === undefined) {
+      return;
+    }
+    // Replace, not push: pushing the fallback would put the screen just left
+    // one press ahead, and the device's own back button would walk straight
+    // back into it — a loop with no way out of the app.
+    navTo(fallback, { replace: true });
   };
 
   const navForward = () => {
@@ -23238,6 +23317,21 @@ const stopLoad = (reason = "stopLoad() called") => {
   }
 };
 const reload = browserIntegration.reload;
+/**
+ * Go back to the screen this document came from.
+ *
+ * Only ever within this document: at the bottom of the stack (a url opened
+ * cold — a shared link, a bookmark, a notification), the entry underneath
+ * belongs to whoever sent the reader here, and going back there would take
+ * them out of the app. Ask `canNavBackSignal`/`useCanNavBack()` to know which
+ * of the two cases the arrow is in.
+ *
+ * @param {object} [options]
+ * @param {string} [options.fallback]
+ *   Where to land when there is nothing of this document behind. It takes the
+ *   place of the current entry rather than stacking on it. Without it, a
+ *   navBack() with nowhere to go does nothing.
+ */
 const navBack = browserIntegration.navBack;
 const navForward = browserIntegration.navForward;
 const isVisited = browserIntegration.isVisited;
@@ -24928,6 +25022,20 @@ const useUIStateController = (
           })
         : ownUIStateSignal;
 
+      // The two-way half of a bound `signal` prop: setting it re-renders and
+      // re-syncs via state_prop_change, but with the same value → guarded as a
+      // no-op, so no loop. For a checkbox/radio the signal holds the boolean
+      // checked state.
+      const writeBoundSignal = (uiState) => {
+        const boundSignal = s.controlInfo?.signal;
+        if (!boundSignal) {
+          return;
+        }
+        boundSignal.value = s.controlInfo.signalHoldsChecked
+          ? uiState !== undefined
+          : uiState;
+      };
+
       const controller = {
         controlType,
         parentUIStateController,
@@ -24998,16 +25106,7 @@ const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
-          // Write the new state back into a bound signal (the two-way `signal`
-          // prop). Setting it re-renders and re-syncs via state_prop_change, but
-          // with the same value → guarded as a no-op, so no loop. For a
-          // checkbox/radio the signal holds the boolean checked state.
-          const boundSignal = s.controlInfo?.signal;
-          if (boundSignal) {
-            boundSignal.value = s.controlInfo.signalHoldsChecked
-              ? currentUIState !== undefined
-              : currentUIState;
-          }
+          writeBoundSignal(currentUIState);
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             debugUIState(`calling uiAction for ${controlType}`, currentUIState);
@@ -25167,6 +25266,11 @@ const useUIStateController = (
             }
           }
           if (isInternalEvent(e)) {
+            if (isPropagateDownEvent(e)) {
+              // A bound signal mirrors what the control holds, and what it
+              // holds just changed — see isPropagateDownEvent.
+              writeBoundSignal(newUIState);
+            }
             if (e.type === "facade_child_mount_sync") {
               const wasEmptyString =
                 currentUIState === "" && newUIState === undefined;
@@ -25827,12 +25931,12 @@ const useUIGroupStateController = (
       // makes from its own setUIState (see useUIStateController's boundSignal),
       // for a group whose value is its children's put together.
       //
-      // Called from both paths a user-driven change can take — applyState when
-      // the change is notified outward, syncInternalState when the group only
-      // brings itself up to date — because either one can be the user
-      // answering. The paths that are NOT the user (a value prop pushed down,
-      // the initial push, mount/unmount) are excluded at each call site rather
-      // than guessed at here.
+      // Called from every path where what the group holds really moves:
+      // applyState when the change is notified outward, syncInternalState when
+      // the group only brings itself up to date, and the value arriving from
+      // above (see isPropagateDownEvent). Which one it is gets decided at each
+      // call site rather than guessed at here — the initial push and the
+      // mount/unmount syncs leave the signal alone.
       const writeBoundSignal = (newUIState) => {
         const boundSignal = s.props?.signal;
         if (boundSignal) {
@@ -25935,6 +26039,9 @@ const useUIGroupStateController = (
             return;
           }
           applyState(groupUIState, e, { internalBehavior: true });
+          if (isPropagateDownEvent(e)) {
+            writeBoundSignal(groupUIState);
+          }
         },
         syncInternalState: (newUIState) => {
           const currentUIState = controller.uiState;
@@ -26535,6 +26642,27 @@ const INTERNAL_EVENT_SET = new Set([
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+
+/**
+ * A value handed DOWN to a control by whoever owns it: a picker filling its
+ * popup (on open, and again when Escape puts back what it held), a group
+ * placing its children, a reset cascading through them.
+ *
+ * Internal, so no reaction fires — nobody acted. But the control's state really
+ * did move, and a bound `signal` is that state's mirror rather than a reaction
+ * to it: leaving it behind makes the app and the control disagree about what is
+ * on screen, which is how a popup reopens on the tab the user cancelled out of.
+ * The way UP is deliberately not part of this: a picker's own signal is written
+ * when the picker commits, not while its popup is being played with.
+ */
+const PROPAGATE_DOWN_EVENT_SET = new Set([
+  "propagate_down_set_ui_state",
+  "propagate_down_reset_ui_state",
+  "propagate_down_clear_ui_state",
+]);
+const isPropagateDownEvent = (e) => {
+  return PROPAGATE_DOWN_EVENT_SET.has(e.type);
 };
 
 /**
@@ -52100,8 +52228,8 @@ const causeOfEvent = event => {
 const readArea = slideElement => slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
 /**
- * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
- * left to the container, which then answers the
+ * The slide shown can be driven from outside (a `signal`, or `current` +
+ * `onCurrentChange`) or left to the container, which then answers the
  * --navi-left/--navi-right/--navi-up/--navi-down commands sent from anything
  * inside it.
  *
@@ -52134,6 +52262,15 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   written is simply not there.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
  *   to keep it here and drive it by command.
+ * @param {import("@preact/signals").Signal<string>} [props.signal] - the same
+ *   thing said the way every navi control says it: the container shows the area
+ *   the signal holds, and writes into it the area it travels to. One binding
+ *   instead of `current` + `onCurrentChange`, and the state stays where the app
+ *   put it — which is what lets something else read where the slides are (a
+ *   field carrying the current tab into a form, see
+ *   docs/control_object.md#a-settings-sheet) or move them by writing it.
+ *   Excludes `current`; `onCurrentChange` still fires, for the `cause` and for
+ *   the right to refuse.
  * @param {string} [props.defaultCurrent] - which slide to open on, when the
  *   travel is left to the container. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -52205,6 +52342,7 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
 const SlideContainer = ({
   layout = "row",
   current: currentProp,
+  signal: currentSignal,
   defaultCurrent,
   onCurrentChange,
   commit = "now",
@@ -52303,7 +52441,8 @@ const SlideContainer = ({
   // draw in CSS alone, at the pace of the travel and under the finger, with
   // nothing measured per frame.
   const followerElementsRef = useRef([]);
-  const current = rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
+  const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
+  const current = rollingArea ?? provisionalArea ?? currentFromCaller ?? currentAreaState;
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
   const mapAxes = travelAxesOf(layout);
@@ -52338,11 +52477,11 @@ const SlideContainer = ({
     if (provisionalArea === null) {
       return;
     }
-    const heldOutside = currentProp ?? currentAreaState;
+    const heldOutside = currentFromCaller ?? currentAreaState;
     if (heldOutside === provisionalArea) {
       setProvisionalArea(null);
     }
-  }, [provisionalArea, currentProp, currentAreaState]);
+  }, [provisionalArea, currentFromCaller, currentAreaState]);
 
   // The travel is given back as soon as the picture it must not animate has
   // been painted: one frame with it off is all it takes.
@@ -52519,10 +52658,10 @@ const SlideContainer = ({
     const commitAtRest = commitAtRestRef.current;
     if (commitAtRest && commitAtRest.area === currentArea) {
       commitAtRestRef.current = null;
-      answerCurrentChange(onCurrentChange(commitAtRest.area, {
+      tellCurrentChange(commitAtRest.area, {
         cause: commitAtRest.cause,
         event: commitAtRest.event
-      }), commitAtRest.leftArea);
+      }, commitAtRest.leftArea);
     }
   };
 
@@ -52896,7 +53035,7 @@ const SlideContainer = ({
     }
     const leftArea = readArea(currentElement);
     setCurrentAreaState(area);
-    if (!onCurrentChange) {
+    if (!onCurrentChange && !currentSignal) {
       return true;
     }
     // What asked for this, read off the interaction rather than carried down
@@ -52920,11 +53059,24 @@ const SlideContainer = ({
       };
       return true;
     }
-    answerCurrentChange(onCurrentChange(area, {
+    tellCurrentChange(area, {
       cause,
       event
-    }), leftArea);
+    }, leftArea);
     return true;
+  };
+
+  // The caller learns where the container went: the bound signal is written and
+  // `onCurrentChange` is called, in that order, so a caller reading the signal
+  // from inside its own handler reads where it now is.
+  const tellCurrentChange = (area, detail, leftArea) => {
+    if (currentSignal) {
+      currentSignal.value = area;
+    }
+    if (!onCurrentChange) {
+      return;
+    }
+    answerCurrentChange(onCurrentChange(area, detail), leftArea);
   };
 
   // What a caller says back about a change it was told about: nothing, or a
@@ -52948,6 +53100,9 @@ const SlideContainer = ({
   const goBackToRefusedArea = leftArea => {
     setProvisionalArea(null);
     setCurrentAreaState(leftArea);
+    if (currentSignal) {
+      currentSignal.value = leftArea;
+    }
   };
 
   // The press kept during a roll, taken once the window rests and the travel is
@@ -75208,5 +75363,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeSpin, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

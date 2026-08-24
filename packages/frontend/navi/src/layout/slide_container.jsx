@@ -86,6 +86,7 @@ import {
   watchWheelTravel,
 } from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
+import { warnSignalCollision } from "../control/control_value.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
 import {
@@ -463,8 +464,8 @@ const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
 /**
- * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
- * left to the container, which then answers the
+ * The slide shown can be driven from outside (a `signal`, or `current` +
+ * `onCurrentChange`) or left to the container, which then answers the
  * --navi-left/--navi-right/--navi-up/--navi-down commands sent from anything
  * inside it.
  *
@@ -497,6 +498,15 @@ const readArea = (slideElement) =>
  *   written is simply not there.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
  *   to keep it here and drive it by command.
+ * @param {import("@preact/signals").Signal<string>} [props.signal] - the same
+ *   thing said the way every navi control says it: the container shows the area
+ *   the signal holds, and writes into it the area it travels to. One binding
+ *   instead of `current` + `onCurrentChange`, and the state stays where the app
+ *   put it — which is what lets something else read where the slides are (a
+ *   field carrying the current tab into a form, see
+ *   docs/control_object.md#a-settings-sheet) or move them by writing it.
+ *   Excludes `current`; `onCurrentChange` still fires, for the `cause` and for
+ *   the right to refuse.
  * @param {string} [props.defaultCurrent] - which slide to open on, when the
  *   travel is left to the container. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -568,6 +578,7 @@ const readArea = (slideElement) =>
 export const SlideContainer = ({
   layout = "row",
   current: currentProp,
+  signal: currentSignal,
   defaultCurrent,
   onCurrentChange,
   commit = "now",
@@ -666,8 +677,14 @@ export const SlideContainer = ({
   // draw in CSS alone, at the pace of the travel and under the finger, with
   // nothing measured per frame.
   const followerElementsRef = useRef([]);
+  // What the caller holds, however they hold it: a `current` they re-render
+  // themselves, or a `signal` this container also writes (see tellCurrentChange).
+  if (currentSignal && currentProp !== undefined) {
+    warnSignalCollision({ current: currentProp }, "slide_container", "current");
+  }
+  const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
   const current =
-    rollingArea ?? provisionalArea ?? currentProp ?? currentAreaState;
+    rollingArea ?? provisionalArea ?? currentFromCaller ?? currentAreaState;
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
   const mapAxes = travelAxesOf(layout);
@@ -705,11 +722,11 @@ export const SlideContainer = ({
     if (provisionalArea === null) {
       return;
     }
-    const heldOutside = currentProp ?? currentAreaState;
+    const heldOutside = currentFromCaller ?? currentAreaState;
     if (heldOutside === provisionalArea) {
       setProvisionalArea(null);
     }
-  }, [provisionalArea, currentProp, currentAreaState]);
+  }, [provisionalArea, currentFromCaller, currentAreaState]);
 
   // The travel is given back as soon as the picture it must not animate has
   // been painted: one frame with it off is all it takes.
@@ -889,11 +906,9 @@ export const SlideContainer = ({
     const commitAtRest = commitAtRestRef.current;
     if (commitAtRest && commitAtRest.area === currentArea) {
       commitAtRestRef.current = null;
-      answerCurrentChange(
-        onCurrentChange(commitAtRest.area, {
-          cause: commitAtRest.cause,
-          event: commitAtRest.event,
-        }),
+      tellCurrentChange(
+        commitAtRest.area,
+        { cause: commitAtRest.cause, event: commitAtRest.event },
         commitAtRest.leftArea,
       );
     }
@@ -1299,7 +1314,7 @@ export const SlideContainer = ({
     }
     const leftArea = readArea(currentElement);
     setCurrentAreaState(area);
-    if (!onCurrentChange) {
+    if (!onCurrentChange && !currentSignal) {
       return true;
     }
     // What asked for this, read off the interaction rather than carried down
@@ -1318,8 +1333,21 @@ export const SlideContainer = ({
       commitAtRestRef.current = { area, leftArea, cause, event };
       return true;
     }
-    answerCurrentChange(onCurrentChange(area, { cause, event }), leftArea);
+    tellCurrentChange(area, { cause, event }, leftArea);
     return true;
+  };
+
+  // The caller learns where the container went: the bound signal is written and
+  // `onCurrentChange` is called, in that order, so a caller reading the signal
+  // from inside its own handler reads where it now is.
+  const tellCurrentChange = (area, detail, leftArea) => {
+    if (currentSignal) {
+      currentSignal.value = area;
+    }
+    if (!onCurrentChange) {
+      return;
+    }
+    answerCurrentChange(onCurrentChange(area, detail), leftArea);
   };
 
   // What a caller says back about a change it was told about: nothing, or a
@@ -1343,6 +1371,9 @@ export const SlideContainer = ({
   const goBackToRefusedArea = (leftArea) => {
     setProvisionalArea(null);
     setCurrentAreaState(leftArea);
+    if (currentSignal) {
+      currentSignal.value = leftArea;
+    }
   };
 
   // The press kept during a roll, taken once the window rests and the travel is
