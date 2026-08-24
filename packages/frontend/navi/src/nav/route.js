@@ -338,14 +338,11 @@ export const route = (pattern, { searchParams } = {}) => {
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
   registerSetup(() => {
     const cleanupSignalUrlEffectSet = new Set();
-    const { pathConnectionMap, queryConnectionMap } = routePattern;
-    // important: keep this connectionMap after setup so that connectionMap correctly inherits parent pattern signals
-    const connectionMap = new Map([
-      ...pathConnectionMap,
-      ...queryConnectionMap,
-    ]);
-    for (const [paramName, connection] of connectionMap) {
-      const { signal: paramSignal, debug } = connection;
+    // important: read connections at setup time so it includes query connections
+    // inherited from ancestor patterns
+    const { connections } = routePattern;
+    for (const connection of connections) {
+      const { signal: paramSignal, debug, paramName } = connection;
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -564,14 +561,11 @@ This prevents cross-test pollution and ensures clean state.`,
           newMatching,
         } of routeMatchInfoSet) {
           const { routePattern } = routePrivateProperties;
-          const { pathConnectionMap, queryConnectionMap } = routePattern;
-          const connectionMap = new Map([
-            ...pathConnectionMap,
-            ...queryConnectionMap,
-          ]);
+          const { pathConnectionMap, queryConnectionMap, connections } =
+            routePattern;
 
-          for (const [paramName, connection] of connectionMap) {
-            const { signal: paramSignal, debug } = connection;
+          for (const connection of connections) {
+            const { signal: paramSignal, debug, paramName } = connection;
             const rawParams = route.rawParamsSignal.value;
             const urlParamValue = rawParams[paramName];
 
