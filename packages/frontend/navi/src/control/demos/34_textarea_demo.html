@@ -37,6 +37,16 @@
         color: #555;
         font-size: 13px;
       }
+      /* Ce que ça donnerait si le plancher mesuré du placeholder valait tout
+         le temps, et pas seulement tant que le placeholder est affiché.
+         Le sélecteur reprend les classes du composant pour passer devant sa
+         propre règle, plus spécifique d'une pseudo-classe. */
+      .demo-placeholder-floor .navi_input.navi_textarea .navi_control_input {
+        min-height: max(
+          calc(var(--textarea-min-rows, 1.5) * 1lh),
+          var(--x-textarea-placeholder-height, 0px)
+        );
+      }
     </style>
   </head>
   <body>
@@ -82,6 +92,9 @@
         </Box>
       );
 
+      const LONG_PLACEHOLDER =
+        "Décrivez votre problème en quelques phrases, en précisant ce que vous attendiez et ce qui s'est passé à la place…";
+
       const THREE_LINES = `La première ligne
 la deuxième
 et la troisième`;
@@ -100,6 +113,7 @@ et la troisième`;
           <BasicsDemo />
           <StatesDemo />
           <RowsDemo />
+          <LongPlaceholderDemo />
           <CharCountDemo />
           <ActionDemo />
           <FormDemo />
@@ -172,6 +186,33 @@ six`}
             </Variant>
             <Variant caption="resizable : la poignée verticale du navigateur">
               <Textarea resizable defaultValue={THREE_LINES} />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Placeholder long ──────────────────────────────────────────────────
+
+      const LongPlaceholderDemo = () => (
+        <div class="demo-section">
+          <Heading id="long-placeholder">Placeholder sur deux lignes</Heading>
+          <p class="desc">
+            Un placeholder qui va à la ligne ouvre une boîte de deux lignes, et
+            le premier caractère tapé la fait retomber à une ligne et demie :
+            l'espace n'était réservé qu'au texte d'invite. Taper puis tout
+            effacer dans chacun des champs ci-dessous pour comparer.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="tel quel : la boîte retombe au premier caractère">
+              <Textarea placeholder={LONG_PLACEHOLDER} />
+            </Variant>
+            <Variant caption="minRows={2} : le plancher est posé d'avance, plus de saut — mais il est deviné, pas mesuré">
+              <Textarea minRows={2} placeholder={LONG_PLACEHOLDER} />
+            </Variant>
+            <Variant caption="plancher = hauteur mesurée du placeholder, gardée même une fois rempli : plus de saut, et rien à deviner">
+              <div class="demo-placeholder-floor">
+                <Textarea placeholder={LONG_PLACEHOLDER} />
+              </div>
             </Variant>
           </Box>
         </div>
