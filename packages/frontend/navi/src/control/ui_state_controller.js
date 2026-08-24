@@ -863,6 +863,13 @@ const GROUP_DEFAULTS = {
             ? emptyUIState
             : child.uiState;
         if (!name) {
+          if (allowNameless) {
+            // A control that says it is not a field is not one, whatever it
+            // holds: a picker used as a door holds the shape its popup draws,
+            // and merging that in would put the popup's keys in the object as
+            // if the door had been a group.
+            continue;
+          }
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
           // cluster) without claiming a key of its own, so what it holds is
@@ -872,12 +879,10 @@ const GROUP_DEFAULTS = {
             Object.assign(groupValues, uiState);
             continue;
           }
-          if (!allowNameless) {
-            console.warn(
-              "A group child is missing a name property, its state won't be included in the group state",
-              child,
-            );
-          }
+          console.warn(
+            "A group child is missing a name property, its state won't be included in the group state",
+            child,
+          );
           continue;
         }
         groupValues[name] = uiState;
@@ -1009,6 +1014,14 @@ export const useUIGroupStateController = (
       : stateType === "object"
         ? EMPTY_OBJECT
         : undefined;
+  // A group told what it holds holds it from the start, before any child has
+  // registered to show it: what it was given is the answer, and the children
+  // are where that answer is shown (see stateGivenFromAbove).
+  const stateInitial = hasValueProp
+    ? value
+    : hasDefaultValueProp && defaultValue !== undefined
+      ? defaultValue
+      : fallbackState;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   // Tracks children rejected by the filter and delegated upward (bubble-up).
@@ -1072,14 +1085,35 @@ export const useUIGroupStateController = (
         `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
       );
       const [publishUIState, subscribeUIState] = createPubSub();
-      const uiStateSignal = signal(fallbackState);
+      const uiStateSignal = signal(stateInitial);
 
-      const aggregateGroupUIState = () => {
+      // What the group is worth right now, and what it keeps when there is
+      // nobody to ask: a list whose items have not arrived yet, a popup built
+      // at open, a group whose children are still mounting. Such a group has
+      // no opinion — its aggregate falls back to the empty of its type, and
+      // taking that for an answer is how a value handed to it evaporates on
+      // the way in, and how that emptiness then travels back up to whoever
+      // handed it (a picker showing its row as unanswered).
+      const aggregateGroupUIState = (whenNobodyCanAnswer) => {
+        const someChildCanAnswer = childUIStateControllerArray.some(
+          shouldPropagateStateToChild,
+        );
+        if (!someChildCanAnswer) {
+          return whenNobodyCanAnswer;
+        }
         const aggChildState = resolvedAggregateChildStates(
           childUIStateControllerArray,
           fallbackState,
         );
-        return aggChildState === undefined ? fallbackState : aggChildState;
+        if (aggChildState !== undefined) {
+          return aggChildState;
+        }
+        // A group with an aggregate of its own is the one who knows what its
+        // children add up to, `undefined` included — half a time is not a time,
+        // wheels nobody turned have settled nothing. Only the default shapes
+        // fall back to the empty of their type, where "no child says anything"
+        // and "the value is empty" are the same sentence.
+        return stateShapeIsTheDefaultOne ? fallbackState : undefined;
       };
 
       // onChange and applyState live inside init so they close over the stable
@@ -1100,13 +1134,26 @@ export const useUIGroupStateController = (
           };
           return;
         }
-        const groupUIState = aggregateGroupUIState();
+        const { controller } = s;
+        // A child mounting or unmounting is not somebody answering: while the
+        // children of a group are still arriving, their aggregate is a partial
+        // reading, and taking it for the truth is how the value the group was
+        // given gets destroyed one row at a time — the first row to register
+        // aggregates alone, the group drops to that, and every row after it is
+        // placed from what is left. A group that derived its own value has
+        // nothing to protect and aggregates as usual.
+        const groupUIState =
+          notifyExternal === "silent" && controller.stateGivenFromAbove
+            ? controller.uiState
+            : aggregateGroupUIState(controller.uiState);
         debugUIGroup(
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
         );
-        const { controller } = s;
         if (notifyExternal === true) {
+          // Somebody answered: what the group is worth is what its children say
+          // between them, from here on.
+          controller.stateGivenFromAbove = false;
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
@@ -1172,7 +1219,11 @@ export const useUIGroupStateController = (
         hasValueProp,
         hasDefaultValueProp,
         props,
-        uiState: fallbackState,
+        uiState: stateInitial,
+        // Whether what the group holds was HANDED to it (a parent distributing,
+        // a picker filling its popup, a value prop) rather than worked out from
+        // its children. What it protects is read in onChange.
+        stateGivenFromAbove: hasValueProp || hasDefaultValueProp,
         uiStateSignal,
         wantRequesterButtonState,
         ref,
@@ -1221,6 +1272,7 @@ export const useUIGroupStateController = (
             );
             return;
           }
+          controller.stateGivenFromAbove = true;
           const propagateEventType =
             e.type === "initial_state_push"
               ? "initial_state_push"
@@ -1236,9 +1288,10 @@ export const useUIGroupStateController = (
               propagateDownEvent,
             );
           }
-          const groupUIState = aggregateGroupUIState();
+          const groupUIState = aggregateGroupUIState(newUIState);
           if (e.type === "initial_state_push") {
             controller.syncInternalState(groupUIState);
+            writeBoundSignal(groupUIState);
             return;
           }
           applyState(groupUIState, e, { internalBehavior: true });
@@ -1290,15 +1343,28 @@ export const useUIGroupStateController = (
           debugUIGroup(
             `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
           );
-          if (controller.hasValueProp || controller.hasDefaultValueProp) {
+          const stateToPlaceChildFrom = controller.hasValueProp
+            ? controller.value
+            : controller.hasDefaultValueProp
+              ? controller.defaultValue
+              : // What the group HOLDS, for a child arriving after the value
+                // did: a list item loaded later, a row scrolled back into a
+                // virtualized list, a popup built at open. Two conditions, and
+                // both are about not overwriting an answer with a silence — the
+                // group must actually hold something, and the child must have
+                // nothing of its own to show (one arriving with its own default
+                // is answering, and the group is what its answers add up to).
+                uiStateHoldsNothing(controller.uiState) ||
+                  !uiStateHoldsNothing(childUIStateController.uiState)
+                ? undefined
+                : controller.uiState;
+          if (stateToPlaceChildFrom !== undefined) {
             const initialEvent = new CustomEvent("initial_state_push", {
               detail: {},
             });
             controller.placeChildUIState(
               childUIStateController,
-              controller.hasValueProp
-                ? controller.value
-                : controller.defaultValue,
+              stateToPlaceChildFrom,
               initialEvent,
             );
           }
@@ -1587,6 +1653,7 @@ const EMPTY_OBJECT = {};
  */
 export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
+  const namelessChildSetRef = useRef(new Set());
   const updatingRef = useRef(false);
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
@@ -1618,6 +1685,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           // A control saying it is not a field is not the one the picker talks
           // to: the search box above the list, the "select all" switch beside
           // it. It is there to help find the answer, not to be it.
+          namelessChildSetRef.current.add(childController);
           return false;
         }
         if (childController.props["navi-list"]) {
@@ -1640,6 +1708,10 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         }
         const child = firstChildControllerRef.current;
         if (!child) {
+          warnPopupHasNothingButNamelessControls(
+            props,
+            namelessChildSetRef.current,
+          );
           return;
         }
         updatingRef.current = true;
@@ -1796,6 +1868,33 @@ const describePicker = (props) =>
 // object as its own value and writes it wherever it is bound — a signal, the
 // url, which is where "[object Object]" comes from. Said out loud because
 // nothing else will: the push succeeds, the control just shows nonsense.
+/**
+ * `allowNameless` says two things at once, and inside a popup the second one
+ * bites: "I am not a field" also means "I am not what the picker talks to". Put
+ * on the ONE control a popup holds, it leaves the picker with nobody to fill —
+ * the popup opens blank on a value the picker is holding, and nothing is said.
+ */
+const namelessOnlyWarnedSet = new WeakSet();
+const warnPopupHasNothingButNamelessControls = (props, namelessChildSet) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  if (namelessChildSet.size === 0) {
+    return;
+  }
+  const [firstNamelessChild] = namelessChildSet;
+  if (namelessOnlyWarnedSet.has(firstNamelessChild)) {
+    return;
+  }
+  namelessOnlyWarnedSet.add(firstNamelessChild);
+  console.warn(
+    `[navi] the ${describePicker(props)} popup holds nothing but allowNameless controls, so the picker has nobody to fill and the popup opens blank. ` +
+      `Inside a popup, allowNameless also means "the picker does not talk to me" — it is for the search box BESIDE the answer, not for the answer itself. ` +
+      `Drop it from the control that IS the value.`,
+    firstNamelessChild,
+  );
+};
+
 const cannotHoldWarnedSet = new WeakSet();
 const warnIfChildCannotHold = (props, child, newUIState) => {
   if (!import.meta.dev) {
@@ -1907,8 +2006,8 @@ const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
 };
 
 /**
- * Both ends claim the same state: the group is placing a value on its children,
- * and one of them answers for itself. The child wins and the group never moves
+ * Both ends claim the same state: the group was handed a value to place on its
+ * children, and one of them answers for itself. The child wins and the group never moves
  * it — which on screen is a row that does not respond to being clicked, with
  * nothing said anywhere.
  *
@@ -1918,6 +2017,13 @@ const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
 const childAnswersForItselfWarnedSet = new WeakSet();
 const warnChildAnswersForItself = (groupController, child) => {
   if (!import.meta.dev) {
+    return;
+  }
+  if (!groupController.stateGivenFromAbove) {
+    // Nothing claims this child: a group with no value of its own is worth what
+    // its children say between them, and a child answering for itself is how
+    // that value gets built (a list whose rows carry `selected` and whose
+    // `action` writes them back). The conflict is with a group being PLACED.
     return;
   }
   const childProps = child.props;

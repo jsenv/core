@@ -203,36 +203,54 @@
 
       // ── Wheels ────────────────────────────────────────────────────────────
 
-      const WheelDemo = () => (
-        <div class="demo-section">
-          <Heading id="wheels">À la roue</Heading>
-          <p class="desc">
-            Une roue ne connaît que des heures qui existent, et les deux bornes
-            d'une plage se poussent en tournant.
-          </p>
-          <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="TimeWheel">
-              <TimeWheel defaultValue="07:00" />
-            </Variant>
-            <Variant caption="minuteStep={15}">
-              <TimeWheel defaultValue="07:00" minuteStep={15} />
-            </Variant>
-            <Variant caption="TimeRangeWheel minuteStep={15} minDuration={30}">
-              <TimeRangeWheel
-                defaultValue={{ start: "09:00", end: "10:00" }}
-                minuteStep={15}
-                minDuration={30}
-              />
-            </Variant>
-            <Variant caption="minDuration={0}">
-              <TimeRangeWheel
-                defaultValue={{ start: "09:00", end: "10:00" }}
-                minuteStep={15}
-              />
-            </Variant>
-          </Box>
-        </div>
-      );
+      const WheelDemo = () => {
+        const [spanValue, setSpanValue] = useState(undefined);
+        return (
+          <div class="demo-section">
+            <Heading id="wheels">À la roue</Heading>
+            <p class="desc">
+              Une roue ne connaît que des heures qui existent, et les deux
+              bornes d'une plage se poussent en tournant.
+            </p>
+            <Box flex="y" spacing="l" alignX="start">
+              <Variant caption="TimeWheel">
+                <TimeWheel defaultValue="07:00" />
+              </Variant>
+              <Variant caption="minuteStep={15}">
+                <TimeWheel defaultValue="07:00" minuteStep={15} />
+              </Variant>
+              <Variant caption="TimeRangeWheel minuteStep={15} minDuration={30}">
+                <TimeRangeWheel
+                  defaultValue={{ start: "09:00", end: "10:00" }}
+                  minuteStep={15}
+                  minDuration={30}
+                />
+              </Variant>
+              <Variant caption="minDuration={0}">
+                <TimeRangeWheel
+                  defaultValue={{ start: "09:00", end: "10:00" }}
+                  minuteStep={15}
+                />
+              </Variant>
+              <Variant caption='placeholder={{ start: "09:00", end: "18:00" }}'>
+                <Box flex="y" spacing="xs" alignX="start">
+                  <TimeRangeWheel
+                    name="span"
+                    placeholder={{ start: "09:00", end: "18:00" }}
+                    minuteStep={15}
+                    uiAction={(value) => setSpanValue(value)}
+                  />
+                  <Text size="s" color="#666">
+                    {spanValue === undefined
+                      ? "rien réglé"
+                      : JSON.stringify(spanValue)}
+                  </Text>
+                </Box>
+              </Variant>
+            </Box>
+          </div>
+        );
+      };
 
       // ── Validation ────────────────────────────────────────────────────────
 

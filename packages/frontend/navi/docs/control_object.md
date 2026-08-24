@@ -11,6 +11,7 @@ whose value is an object needs in its popup.
 - [`<Form>`: the shape, plus a send](#form-the-shape-plus-a-send)
 - [Naming, and what a nameless group does](#naming-and-what-a-nameless-group-does)
 - [A picker whose value is an object](#a-picker-whose-value-is-an-object)
+- [A group holds what it was given](#a-group-holds-what-it-was-given)
 - [One line, one key](#one-line-one-key)
 - [A settings sheet](#a-settings-sheet)
 - [`Group` is not `ControlGroup`](#group-is-not-controlgroup)
@@ -117,7 +118,9 @@ Two things to get right:
 - **A control that helps FIND the answer is not the answer.** A search box above
   a long list, a "select all" beside it: they are tools, and a tool says so with
   `allowNameless`. The picker then walks past it and talks to the list, which is
-  what a popup made of one choice and the means to reach it needs.
+  what a popup made of one choice and the means to reach it needs. Never put it
+  on the control that IS the value — the picker would have nobody left to fill,
+  and the popup would open blank on a value it holds (navi says so in dev).
 
 ```jsx
 <Picker name="place_ids" type="array">
@@ -127,6 +130,28 @@ Two things to get right:
   </List>
 </Picker>
 ```
+
+## A group holds what it was given
+
+A group's value looks like it is made of its children, and mostly it is — but
+the two are not the same thing, and the difference shows the moment the children
+are not all there yet:
+
+- a group **told** a value holds it whole, before any child has registered to
+  show it. A list whose items are still loading, a popup built at open, a row
+  scrolled out of a virtualized list — none of them make the value smaller;
+- **a child mounting or unmounting is not somebody answering.** While children
+  are arriving, their aggregate is a partial reading; a group takes it for its
+  own value only once it has derived that value itself (nobody handed it one),
+  or once a child really acts;
+- a child arriving **after** the value did is placed from what the group holds,
+  so it shows its part of it. A child arriving with something of its own to show
+  is answering, and keeps it.
+
+Together they are what makes the two-hop case work — the form fills the row, the
+row fills the control in its popup — whatever order the pieces turn up in. Get
+one of them wrong and the symptom is always the same: a value that was there
+before the popup opened, and empty after.
 
 ## One line, one key
 
