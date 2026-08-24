@@ -857,6 +857,11 @@ export const useControlProps = (
       eventReactionDefinitions?.naviChange ||
       defaultEventReactionDefinitions?.naviChange,
     );
+    // The input effect is installed once per element/options while the reaction
+    // closures (boundAction, custom reactions) are per-render: read through a
+    // ref so the effect always fires the current render's reaction.
+    const applyEventReactionRef = useRef();
+    applyEventReactionRef.current = applyEventReaction;
     const refCallback = useCallback(
       (field) => {
         if (!hasNaviChangeEventReaction || actionEvent === "custom") {
@@ -864,7 +869,7 @@ export const useControlProps = (
         }
         return addInputEffect(
           field,
-          (e) => applyEventReaction("naviChange", e),
+          (e) => applyEventReactionRef.current("naviChange", e),
           {
             waitForChange: actionAfterChange,
             debounce: actionDebounce,

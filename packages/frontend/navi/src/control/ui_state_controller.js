@@ -349,7 +349,9 @@ export const useUIStateController = (
           // set immediatly (don't wait for preact re-render) so ui is in the right state for:
           // - side effect
           // - any "input" event that might be dispatched below
-          syncDomState(newUIState, e);
+          // Read through the scope: syncDomState closes over the render's props
+          // (ref, type, pad), so the mount-time one would write a stale element.
+          s.syncDomState(newUIState, e);
           controller.uiState = newUIState;
           ownUIStateSignal.value = newUIState;
           const controlProxyFor =
@@ -631,6 +633,7 @@ export const useUIStateController = (
         name: props.name,
         props,
         controlInfo,
+        syncDomState,
         uiAction: props.uiAction,
         uiActionInternal,
         parentUIStateController,
@@ -701,6 +704,7 @@ export const useUIStateController = (
         name: props.name,
         props,
         controlInfo,
+        syncDomState,
         uiAction: props.uiAction,
         uiActionInternal,
         parentUIStateController,
@@ -1515,6 +1519,9 @@ export const useUIGroupStateController = (
       el.__uiStateController__ = controller;
     }
     return () => {
+      if (el && el.__uiStateController__ === controller) {
+        delete el.__uiStateController__;
+      }
       onUIStateControllerDestroyed(controller);
     };
   }, []);
