@@ -22179,7 +22179,14 @@ const getFocusedBeforeTransfer = (e) => {
  * @param {boolean|"last-resort"|"restore"} autoFocus
  *   When false the hook is a no-op. The other values say WHEN this element is
  *   the right place for the keyboard (the whole ladder lives in
- *   findFocusTarget, see focus_transfer.js):
+ *   findFocusTarget, see focus_transfer.js, and the decisions behind it in
+ *   docs/autofocus.md):
+ *   - `true` — "I am what the user came for". On a FIELD it asks for the
+ *     keyboard outright, on a touch device included, where a popup otherwise
+ *     keeps it down: the comment box of a popup opened to write a comment. On a
+ *     CONTAINER it says the opposite, since a surface takes no keyboard by
+ *     being focused — the popup that is read before it is filled, arriving at
+ *     the top of its own reading order.
  *   - `"last-resort"` — "not me, unless you have nothing else". Said by a
  *     focusable that is a poor place to arrive (a picker's search box, a
  *     panel's close button, a slide's chevron) and by a container about its own
@@ -49864,6 +49871,13 @@ const inputCss = /* css */`
 
       .navi_button {
         font-size: inherit;
+        /* A <button> does not inherit the font on its own — same as the
+           <input> above — and what stands in a slot is measured on the line
+           box (Icon fillLine is 1lh): left on the browser's own font, the
+           clear cross would resolve 1lh against a font the field is not
+           written in, and the field would change height the moment the icon
+           is replaced by the button. */
+        font-family: inherit;
 
         /* A button in a slot (e.g. the clear cross) is drawn small but must
            not be small to hit: the spacing around it — the slot margins on the

@@ -44,6 +44,17 @@
         font-weight: 500;
         white-space: nowrap;
       }
+
+      /* An application commonly gives its buttons a font of its own, in a rule
+         of its own — unlayered, so it beats navi's own @layer navi default.
+         The clear cross of a search input is such a button, and it takes turns
+         with the search icon in the same slot: both are sized on the line box
+         (Icon fillLine is 1lh), so a button left in another font measures a
+         different line and the input changes height the moment one replaces
+         the other. Reproduced here to catch that regression. */
+      .app_font_on_buttons .navi_button {
+        font-family: "Brush Script MT", cursive;
+      }
     </style>
   </head>
   <body>
@@ -392,6 +403,8 @@
         const [interactiveEmptySize, setInteractiveEmptySize] = useState(null);
         const [xxlEmptySize, setXxlEmptySize] = useState(null);
         const [xxlFilledSize, setXxlFilledSize] = useState(null);
+        const [appFontEmptySize, setAppFontEmptySize] = useState(null);
+        const [appFontFilledSize, setAppFontFilledSize] = useState(null);
 
         return (
           <div className="demo-section">
@@ -469,6 +482,37 @@
               <MeasureDelta
                 a={xxlEmptySize}
                 b={xxlFilledSize}
+                labelA="empty"
+                labelB="with value"
+              />
+            </fieldset>
+
+            <fieldset className="app_font_on_buttons">
+              <legend>
+                App font on buttons — empty above, with value below
+              </legend>
+              <p>
+                The buttons of this fieldset are given a font of their own, as
+                an application does. The clear cross must still be measured in
+                the font of the field it sits in, otherwise it does not make the
+                same line as the search icon it replaces and the input changes
+                height on the first keystroke.
+              </p>
+              <Box flex="y" spacing="s" alignX="start">
+                <Measured onMeasure={setAppFontEmptySize}>
+                  <Input type="search" placeholder="Hello" />
+                </Measured>
+                <Measured onMeasure={setAppFontFilledSize}>
+                  <Input
+                    type="search"
+                    defaultValue="Hello"
+                    placeholder="Hello"
+                  />
+                </Measured>
+              </Box>
+              <MeasureDelta
+                a={appFontEmptySize}
+                b={appFontFilledSize}
                 labelA="empty"
                 labelB="with value"
               />
