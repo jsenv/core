@@ -4,13 +4,19 @@
  * Two distinct facts, drawn separately — they usually agree, and everything
  * this component says comes from the moments they do not:
  *
- * - DONE (the blue fill): a step answered has its dot filled — that is the
- *   whole meaning of the fill, and it never says anything else: the first
- *   dot is NOT filled on arrival, it becomes so by being answered. The
- *   steps answered without a gap from the start are the PATH: a solid line
- *   joins them; past it the line is dashed — the road not walked yet. Steps
- *   answered out of order are filled dots standing alone, dashed segments
- *   around them: the holes, readable at a glance.
+ * - DONE and the PATH (the blue fill). The mental model, to keep in mind
+ *   when touching any of this: the circles are THINGS TO DO, and the path is
+ *   the progression along the linear walk from the first to the last — a
+ *   thing done is what lets the path advance. Answering a step fills its
+ *   dot AND the line onward, up to the NEXT dot: the invitation to go
+ *   there. If that next step is already done the path crosses it from
+ *   behind and carries on, and so forth — the fill covers the answered
+ *   prefix plus one segment of appetite. It stops at the edge of the first
+ *   dot not answered, which stays empty: the fill's one meaning is
+ *   "answered", and the first dot is NOT filled on arrival — it becomes so
+ *   by being answered. Past the fill the line is dashed, the road not
+ *   walked yet; steps answered out of order are filled dots standing alone,
+ *   dashed segments around them: the holes, readable at a glance.
  * - the POSITION (`current`): the step being looked at, marked by a halo
  *   around its dot and its label emphasized. It travels freely, so it can
  *   be AHEAD of the path or BEHIND it.
@@ -39,11 +45,8 @@
  * READ off the container rather than said by a prop — including mid-travel:
  * the container paints --slide-travel-progress on this element (it is a
  * follower, same mechanism as <Nav slideContainer>), so the halo rides the
- * drag under the finger, in CSS alone. The path then follows the position
- * too, clamped: never back below the steps answered, never onto a dot not
- * answered — dragging away from an answered step pulls the line along up to
- * the edge of the next dot, and lets it come back if nothing was answered
- * there.
+ * drag under the finger, in CSS alone. The path is not concerned: it moves
+ * on answers, never on movement.
  */
 
 import { createContext } from "preact";
@@ -125,10 +128,10 @@ const css = /* css */ `
   .navi_step_list_rail g[data-done] text {
     fill: var(--x-step-list-on-accent);
   }
-  /* The path: same drawing, filled, revealed up to the last step answered
-     without a gap. The clip is set inline (a width in px); transitioning it
-     is what makes an answered step SWEEP the line and its dot rather than
-     pop. */
+  /* The path: same drawing, filled, revealed up to the fill's edge — the
+     answered prefix plus its segment of appetite (see the top comment). The
+     clip is set inline (a width in px); transitioning it is what makes an
+     answered step SWEEP its dot and the line onward rather than pop. */
   .navi_step_list_rail_filled {
     transition: clip-path var(--x-step-list-duration) ease;
   }
@@ -169,40 +172,6 @@ const css = /* css */ `
   }
   .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
     transform: translateX(calc(var(--step-list-position) * 1px));
-    transition: none;
-  }
-  /* The path follows the position, clamped: never back below the steps
-     answered (--step-list-reached-x, past the last dot of the contiguous
-     run), never onto a dot not answered (--step-list-reachable-x stops at
-     the next dot's edge) — the line stretches under a drag, the dot it
-     heads for stays empty until answered.
-     What transitions is the RESULT (the clip-path), never the bounds one by
-     one: two bounds interpolating on their own around a still position make
-     the clamp follow one, stall on the position, then follow the other — an
-     emptying dot would pause halfway. One interpolated result cannot
-     stall. */
-  .navi_step_list[data-slide-container-follows] .navi_step_list_rail_filled {
-    clip-path: inset(
-      0
-        calc(
-          (
-              var(--step-list-w, 0) - clamp(
-                  var(--step-list-reached-x, 0),
-                  var(--step-list-position),
-                  var(--step-list-reachable-x, 0)
-                )
-            ) *
-            1px
-        )
-        0 0
-    );
-    transition: clip-path var(--x-step-list-duration) ease;
-  }
-  /* …except while a travel is playing (the container says so on this very
-     element): the position is then the pace — animated for an asked-for
-     travel, the finger itself for a drag — and a transition would lag it. */
-  .navi_step_list[data-slide-container-follows][data-slide-travel-toward]
-    .navi_step_list_rail_filled {
     transition: none;
   }
 
@@ -478,15 +447,18 @@ export const StepList = ({
     pathEndIndex = stepCount;
   }
   pathEndIndex -= 1;
-  // How far the fill goes at rest: past the last answered dot (radius plus
-  // stroke), or nowhere.
-  const fillX = pathEndIndex === -1 ? 0 : dotXs[pathEndIndex] + DOT_R + 3;
-  // How far a drag may pull the line (connected mode): up to the EDGE of the
-  // next dot — the line fills under the finger, the dot it heads for stays
-  // empty until answered.
-  const nextDotIndex = pathEndIndex + 1;
-  const stretchX =
-    nextDotIndex < stepCount ? dotXs[nextDotIndex] - DOT_R - LINE_GAP : fillX;
+  // How far the fill goes: nowhere while nothing is answered; past the last
+  // dot (radius plus stroke) when everything is; otherwise THROUGH the
+  // answered prefix and onward to the edge of the next dot — the segment of
+  // appetite (see the top comment), with the dot it points at left empty.
+  let fillX;
+  if (pathEndIndex === -1) {
+    fillX = 0;
+  } else if (pathEndIndex >= stepCount - 1) {
+    fillX = dotXs[stepCount - 1] + DOT_R + 3;
+  } else {
+    fillX = dotXs[pathEndIndex + 1] - DOT_R - LINE_GAP;
+  }
   const cy = RAIL_H / 2;
   const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
 
@@ -498,9 +470,7 @@ export const StepList = ({
           : "navi_step_list_rail"
       }
       style={
-        filled && !slideContainer
-          ? { clipPath: `inset(0 ${width - fillX}px 0 0)` }
-          : undefined
+        filled ? { clipPath: `inset(0 ${width - fillX}px 0 0)` } : undefined
       }
       width={width}
       height={RAIL_H}
@@ -545,13 +515,6 @@ export const StepList = ({
       style={{
         ...rest.style,
         ...(duration ? { "--step-list-duration": duration } : undefined),
-        ...(slideContainer
-          ? {
-              "--step-list-w": width,
-              "--step-list-reached-x": pathEndIndex === -1 ? 0 : fillX,
-              "--step-list-reachable-x": stretchX || 0,
-            }
-          : undefined),
       }}
     >
       <StepListContext.Provider value={registry}>
