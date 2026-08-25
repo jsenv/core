@@ -55,6 +55,10 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  * @param {string} [value] The time shown, as "HH:MM".
  * @param {number} [minuteStep=1] How many minutes apart the values on the
  *   minute wheel are — 15 for quarters of an hour.
+ * @param {{min?: number, max?: number}|number[]} [hours] Which hours the wheel
+ *   offers: `{ min: 7, max: 21 }` for a day that starts and ends somewhere, or
+ *   the list itself. All 24 by default. Rows nobody will ever land on are rows
+ *   in the way.
  * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
  *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
  *   past.
@@ -71,6 +75,7 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  */
 export const TimeWheel = ({
   minuteStep = 1,
+  hours,
   loop = true,
   placeholder,
   separator = naviI18n("time.hour_separator"),
@@ -89,17 +94,22 @@ export const TimeWheel = ({
     }
     return minuteList;
   }, [minuteStep]);
-  const { aggregateChildStates } = useAnswered(
+  const hourList = useMemo(
+    () => resolveHourList(hours),
+    [hours ? hours.min : undefined, hours ? hours.max : undefined, hours],
+  );
+  const { aggregateChildStates, distributeChildUIState } = useAnswered(
     placeholder,
     rest,
     aggregateTime,
+    distributeTime,
   );
   const placeholderParts = parseTimeParts(placeholder);
 
   return (
     <WheelGroup
       aggregateChildStates={aggregateChildStates}
-      distributeChildUIState={distributeTime}
+      distributeChildUIState={distributeChildUIState}
       {...rest}
     >
       <Wheel
@@ -111,7 +121,7 @@ export const TimeWheel = ({
         defaultValue={placeholderParts ? placeholderParts.hour : undefined}
         {...wheelProps}
       >
-        {HOURS.map((hour) => (
+        {hourList.map((hour) => (
           <Wheel.Item key={hour} value={hour} paddingX="s">
             {padTwo(hour)}
           </Wheel.Item>
@@ -161,6 +171,8 @@ export const TimeWheel = ({
  *   `null` for neither.
  * @param {number} [minuteStep=1] How many minutes apart the values on both
  *   minute wheels are.
+ * @param {{min?: number, max?: number}|number[]} [hours] Which hours both
+ *   wheels offer — see `TimeWheel`.
  * @param {number} [minDuration=0] How long the span must last at least, in
  *   minutes. Zero by default: a span of no length is a span all the same, only
  *   one that goes backwards is not. It is what the bounds keep between them as
@@ -178,6 +190,7 @@ export const TimeWheel = ({
  */
 export const TimeRangeWheel = ({
   minuteStep = 1,
+  hours,
   minDuration = 0,
   loop = true,
   placeholder,
@@ -194,11 +207,8 @@ export const TimeRangeWheel = ({
   const endRef = useRef(null);
   // One turn settles the whole span: a start somebody chose makes the end an
   // answer too, left where the placeholder put it.
-  const { answeredRef, aggregateChildStates } = useAnswered(
-    placeholder,
-    rest,
-    aggregateSpan,
-  );
+  const { answeredRef, aggregateChildStates, distributeChildUIState } =
+    useAnswered(placeholder, rest, aggregateSpan, distributeSpan);
 
   // What the pair does while it is being turned: the bound that just moved is
   // the one the user is holding, so it stays where it was put and the OTHER one
@@ -249,6 +259,7 @@ export const TimeRangeWheel = ({
       spacing="s"
       size={size}
       aggregateChildStates={aggregateChildStates}
+      distributeChildUIState={distributeChildUIState}
       {...rest}
     >
       <AnsweredContext.Provider value={answeredRef}>
@@ -258,6 +269,7 @@ export const TimeRangeWheel = ({
           ref={startRef}
           name="start"
           minuteStep={minuteStep}
+          hours={hours}
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.start : undefined}
@@ -270,6 +282,7 @@ export const TimeRangeWheel = ({
           ref={endRef}
           name="end"
           minuteStep={minuteStep}
+          hours={hours}
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.end : undefined}
@@ -312,7 +325,12 @@ export const TimeRangeWheel = ({
  */
 const AnsweredContext = createContext(null);
 
-const useAnswered = (placeholder, props, aggregateWhenAnswered) => {
+const useAnswered = (
+  placeholder,
+  props,
+  aggregateWhenAnswered,
+  distributeWhenAnswered,
+) => {
   const answeredFromPair = useContext(AnsweredContext);
   const ownAnsweredRef = useRef(false);
   const answeredRef = answeredFromPair || ownAnsweredRef;
@@ -324,26 +342,57 @@ const useAnswered = (placeholder, props, aggregateWhenAnswered) => {
   const gates = !answeredFromPair;
   const placeholderRef = useRef(placeholder);
   placeholderRef.current = placeholder;
-  const aggregateRef = useRef(null);
-  if (!aggregateRef.current) {
-    aggregateRef.current = (children) => {
-      const aggregated = aggregateWhenAnswered(children);
-      if (answeredRef.current) {
+  const scopeRef = useRef(null);
+  if (!scopeRef.current) {
+    scopeRef.current = {
+      aggregateChildStates: (children) => {
+        const aggregated = aggregateWhenAnswered(children);
+        if (answeredRef.current) {
+          return aggregated;
+        }
+        if (compareTwoJsValues(aggregated, placeholderRef.current)) {
+          return undefined;
+        }
+        // It moved: from here on this is an answer, and stays one even when it
+        // is turned back onto the placeholder — somebody chose that time.
+        answeredRef.current = true;
         return aggregated;
-      }
-      if (compareTwoJsValues(aggregated, placeholderRef.current)) {
-        return undefined;
-      }
-      // It moved: from here on this is an answer, and stays one even when it is
-      // turned back onto the placeholder — somebody chose that time.
-      answeredRef.current = true;
-      return aggregated;
+      },
+      distributeChildUIState: (groupState, child) => {
+        if (placeholderRef.current && holdsNothing(groupState)) {
+          // Being told there is no value is not a finger bringing a wheel back:
+          // it is a clear, or the app writing `undefined`. The wheels go back to
+          // showing the placeholder, and the pair is unanswered again — without
+          // this the wheels would empty (a wheel has no blank row) and what they
+          // still showed would climb straight back up as an answer.
+          answeredRef.current = false;
+          return distributeWhenAnswered(placeholderRef.current, child);
+        }
+        return distributeWhenAnswered(groupState, child);
+      },
     };
   }
   return {
     answeredRef,
-    aggregateChildStates: gates ? aggregateRef.current : aggregateWhenAnswered,
+    aggregateChildStates: gates
+      ? scopeRef.current.aggregateChildStates
+      : aggregateWhenAnswered,
+    distributeChildUIState: gates
+      ? scopeRef.current.distributeChildUIState
+      : distributeWhenAnswered,
   };
+};
+
+// Nothing at all: no value, an empty shape, or a shape whose every part is
+// itself nothing — which is what a cleared span looks like on the way down.
+const holdsNothing = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return true;
+  }
+  if (typeof value !== "object") {
+    return false;
+  }
+  return Object.values(value).every(holdsNothing);
 };
 
 const isAnswerGivenByProps = (props) =>
@@ -351,7 +400,26 @@ const isAnswerGivenByProps = (props) =>
   props.defaultValue !== undefined ||
   (props.signal && props.signal.value !== undefined);
 
-const HOURS = Array.from({ length: HOUR_COUNT }, (_, hour) => hour);
+// Which hours the wheel offers: all of them, a slice of the day, or a list
+// written by the caller. An app whose day ends at 21h has nothing to say about
+// 22h and 23h, and two rows nobody will ever land on are two rows in the way.
+const ALL_HOURS = Array.from({ length: HOUR_COUNT }, (_, hour) => hour);
+const resolveHourList = (hours) => {
+  if (hours === undefined) {
+    return ALL_HOURS;
+  }
+  if (Array.isArray(hours)) {
+    return hours;
+  }
+  const { min = 0, max = HOUR_COUNT - 1 } = hours;
+  const hourList = [];
+  let hour = min;
+  while (hour <= max) {
+    hourList.push(hour);
+    hour += 1;
+  }
+  return hourList;
+};
 
 const padTwo = (value) => String(value).padStart(2, "0");
 
@@ -364,6 +432,14 @@ const aggregateSpan = (childUIStateControllers) => {
     }
   }
   return span;
+};
+
+// The way back for a span: each time takes its own side.
+const distributeSpan = (groupState, childUIStateController) => {
+  if (!groupState) {
+    return undefined;
+  }
+  return groupState[childUIStateController.name];
 };
 
 // The two wheels as one value, "HH:MM".

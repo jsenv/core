@@ -1460,7 +1460,7 @@ const useInteractiveProps = (
     const controlLoading = useContext(LoadingContext);
     const parentActionRequester = useContext(ActionRequesterContext);
     const actionStatus = useActionStatus(boundAction);
-    const { disabled, required, readOnly, loading } = props;
+    const { disabled, required, readOnly, loading, optimistic } = props;
 
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
@@ -1486,14 +1486,22 @@ const useInteractiveProps = (
       loadingBase ||
       readOnlyFromParentMaxLengthGuard ||
       controlInfo.readOnlyUncontrolled;
-    const loadingResolved = loadingBase || actionStatus.loading;
-    const readOnlyResolved = readOnlyBase || actionStatus.loading;
+    // An optimistic control trusts its action to succeed: the state the user
+    // just set stays visible and interactive while the action runs — no
+    // loading, no readonly. On failure resetOnError rolls the state back and
+    // the error callout says why.
+    const actionLoading = optimistic ? false : actionStatus.loading;
+    const loadingResolved = loadingBase || actionLoading;
+    const readOnlyResolved = readOnlyBase || actionLoading;
     // Both halves of "busy" that do not come from the bound action, kept apart
     // from each other and from it: BUSY_CONSTRAINT answers each from its own
     // live source rather than from the rendered aria-busy, which conflates all
     // three and is a frame behind. See its own comment.
     uiStateController.loadingFromOwnProp = Boolean(loading);
     uiStateController.loadingFromParent = loadingFromParent;
+    // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
+    // its bound action runs (a new toggle replaces the run instead of waiting).
+    uiStateController.optimistic = Boolean(optimistic);
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
@@ -1663,6 +1671,7 @@ const useInteractiveProps = (
       resetOnCancel,
       resetOnAbort,
       resetOnError,
+      optimistic,
     } = props;
     Object.assign(controlHostProps, {
       onFocus: (e) => {
@@ -1719,14 +1728,85 @@ const useInteractiveProps = (
           // special case for the use case where form.requestSubmit is called
           e.detail.action = boundAction;
         }
+        // An optimistic control stays interactive while its action runs, so a
+        // second request can arrive mid-run. The server must receive them in
+        // order: the new request is queued (latest wins — the bound action
+        // reads the UI state signal at run time, so what goes out is always
+        // the current state) and goes out once the running one has truly
+        // settled (see onnavi_action_start). The running action is asked to
+        // abort — its outcome is already outdated — but aborting is only a
+        // resource optimization (a fetch wired to the action's signal gets
+        // cancelled): the server may have done the work anyway, and only the
+        // settlement says which. So even aborted, the underlying work is
+        // awaited before the queued request runs. See the abort section in
+        // docs/actions.md.
+        if (optimistic && uiStateController.actionInFlight) {
+          debugAction(e, `queueing action (one already in flight)`);
+          uiStateController.queuedActionAllowedEvent = e;
+          // The instance captured at navi_action_start, NOT boundAction:
+          // boundAction is a proxy following the UI state signal, and the UI
+          // state has already moved to the new value by now — the proxy would
+          // resolve to the instance for that new value, which is not the one
+          // running.
+          uiStateController.runningAction?.abort(
+            `superseded by a newer request on this control`,
+          );
+          return;
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
       onnavi_action_start: (e) => {
+        // The run this control currently waits on, identified by the
+        // navi_action_allowed event that launched it (unique per execution,
+        // carried by every navi_action_* event of that run).
+        uiStateController.pendingActionEvent = e.detail.event;
+        uiStateController.actionInFlight = true;
+        // The very instance this run uses, resolved now — while the UI state
+        // still holds the value the run was made for. detail.action may be a
+        // proxy following that state, and by the time anyone wants to abort
+        // this run (see the optimistic queue above), the state — and the
+        // proxy's resolution — will have moved on.
+        const runAction = e.detail.action;
+        uiStateController.runningAction =
+          runAction.getCurrentAction?.() ?? runAction;
+        // Fires when the run's underlying work has settled — even for an
+        // aborted run, whose promise is awaited to completion (see
+        // performRun in actions.js) — which is exactly what "the server is
+        // done with it" means, and therefore when the queued request may go.
+        e.detail.addSideEffect((outcome) => {
+          uiStateController.actionInFlight = false;
+          uiStateController.runningAction = null;
+          const queuedEvent = uiStateController.queuedActionAllowedEvent;
+          uiStateController.queuedActionAllowedEvent = null;
+          if (!queuedEvent) {
+            return;
+          }
+          if (outcome.error) {
+            // A failure abandons the queue: the UI is rolled back to the last
+            // known state (resetOnError above), and what was queued was built
+            // on top of the state that just failed.
+            return;
+          }
+          // A microtask later, not right here: this runs inside the batch()
+          // that settles the action (see watchActionCompletion for the same
+          // constraint).
+          queueMicrotask(() => {
+            executeAction(queuedEvent);
+          });
+        });
         onActionStart?.(e);
       },
       onnavi_action_abort: (e) => {
-        if (resetOnAbort) {
+        // Only an abort that leaves the control with nothing left to do may
+        // reset the UI state. An abort whose run was superseded — a queued
+        // request waits behind it (optimistic), or a newer run already
+        // started — must leave the state alone: it belongs to the newer
+        // request, resetting would throw away what the user just set.
+        const superseded =
+          Boolean(uiStateController.queuedActionAllowedEvent) ||
+          e.detail.event !== uiStateController.pendingActionEvent;
+        if (resetOnAbort && !superseded) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
         onActionAborted?.(e);

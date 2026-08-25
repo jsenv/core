@@ -144,6 +144,7 @@ export { triggerNaviCommand } from "./src/control/commands.js";
 // Details (in between navigation/interaction and fields)
 export { Details } from "./src/control/details/details.jsx";
 export { SummaryMarker } from "./src/control/details/summary_marker.jsx";
+export { Expandable } from "./src/control/expandable/expandable.jsx";
 
 // Form
 // Validation

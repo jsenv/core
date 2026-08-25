@@ -29,7 +29,15 @@
  * `action` is what a Form or a control takes: it returns a promise that settles
  * when the answer is given — with what it was handed (which becomes the new
  * state of the backend), or with an error. Pass `{ signal }` alongside and the
- * call leaves the frontier by itself when whoever made it gives up on it.
+ * call shows, on the frontier, that whoever made it gave up on it.
+ *
+ * A call the client aborts does not leave by itself: the cancellation request
+ * is drawn on the call, and the backend chooses — abandon it ("ok, nothing was
+ * done"), or answer/fail anyway ("already done; cancellations not honored").
+ * That is the truth about aborting a request: it only saves resources, and
+ * whether the work happened is known from the backend's answer alone — which
+ * is why the client keeps waiting for it (see the abort section in
+ * docs/actions.md).
  *
  * Not exported from the package: it is a demo's furniture, not an
  * application's.
@@ -140,6 +148,11 @@ const css = /* css */ `
     align-items: center;
     gap: 6px;
   }
+  /* The frontend's word, so it sits on the frontend's side of the call. */
+  .navi_fake_backend_cancel_requested {
+    color: #e65100;
+    font-style: italic;
+  }
   /* Upwards from the frontend, downwards from the backend: the same call, seen
      from the side that is speaking. */
   .navi_fake_backend_arrow {
@@ -232,19 +245,27 @@ const FakeBackendModeSelect = ({ mode, onChange }) => (
  * of "manuel" releases what is already waiting — otherwise a page left holding
  * a call would need one last press to get out of the mode it just left.
  */
-const useFakeBackendMode = (calls, { answer, fail }) => {
+const useFakeBackendMode = (calls, { answer, fail, abandon }) => {
   const [mode, setMode] = useState(readStoredMode);
   useEffect(() => {
     const automatic = FAKE_BACKEND_MODES[mode];
     if (!automatic || calls.length === 0) {
       return undefined;
     }
-    const timeouts = calls.map((call) =>
-      setTimeout(
-        () => (automatic.fails ? fail(call) : answer(call)),
-        automatic.delay,
-      ),
-    );
+    const timeouts = [];
+    for (const call of calls) {
+      // An automatic backend is a well-behaved one: it honors cancellations.
+      if (call.cancelRequested) {
+        abandon(call);
+        continue;
+      }
+      timeouts.push(
+        setTimeout(
+          () => (automatic.fails ? fail(call) : answer(call)),
+          automatic.delay,
+        ),
+      );
+    }
     return () => {
       for (const timeout of timeouts) {
         clearTimeout(timeout);
@@ -320,15 +341,18 @@ export const createFakeBackend = ({ value: valueInitial, persist } = {}) => {
     );
   };
   // A call can be given up on before it is answered — the frontend scrolled
-  // past what it went to fetch. It then leaves the frontier the way it would
-  // have left the network: dropped, with nobody waiting for it.
+  // past what it went to fetch, a newer request made this one moot. The call
+  // stays on the frontier, marked: only the backend knows whether the work
+  // was already done, so it is the one that decides — abandon (see below),
+  // or answer/fail anyway.
   const call = (label, produce, { received, signal: abortSignal } = {}) =>
     new Promise((resolve, reject) => {
       const call = { id: ++callId, label, received, produce, resolve, reject };
       if (abortSignal) {
         abortSignal.addEventListener("abort", () => {
-          leave(call);
-          reject(abortSignal.reason ?? new Error("aborted"));
+          call.cancelRequested = true;
+          call.cancelReason = abortSignal.reason;
+          callsSignal.value = [...callsSignal.value];
         });
       }
       callsSignal.value = [...callsSignal.value, call];
@@ -374,6 +398,15 @@ export const createFakeBackend = ({ value: valueInitial, persist } = {}) => {
             ? `${call.label}: le serveur a refusé`
             : "Le serveur a refusé l'enregistrement.",
         ),
+      );
+    },
+    // "Ok, nothing was done": the backend honors the cancellation request.
+    // Rejecting with the client's own abort reason is what lets the caller
+    // classify the rejection as an abort rather than a failure.
+    abandon: (call) => {
+      leave(call);
+      call.reject(
+        call.cancelReason ?? new DOMException("aborted", "AbortError"),
       );
     },
   };
@@ -455,11 +488,21 @@ export const FakeBackend = ({
               <button type="button" onClick={() => backend.fail(call)}>
                 échouer
               </button>
+              {call.cancelRequested ? (
+                <button type="button" onClick={() => backend.abandon(call)}>
+                  abandonner
+                </button>
+              ) : null}
             </span>
             {call.label ? (
               <span className="navi_fake_backend_call_label">{call.label}</span>
             ) : null}
             <span className="navi_fake_backend_sent">
+              {call.cancelRequested ? (
+                <span className="navi_fake_backend_cancel_requested">
+                  annulation demandée
+                </span>
+              ) : null}
               {call.received === undefined ? null : (
                 <Value value={call.received} />
               )}

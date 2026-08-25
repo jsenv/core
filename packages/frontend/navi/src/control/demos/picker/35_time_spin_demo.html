@@ -232,6 +232,13 @@
                   minuteStep={15}
                 />
               </Variant>
+              <Variant caption="hours={{ min: 7, max: 21 }}">
+                <TimeRangeWheel
+                  defaultValue={{ start: "09:00", end: "18:00" }}
+                  minuteStep={15}
+                  hours={{ min: 7, max: 21 }}
+                />
+              </Variant>
               <Variant caption='placeholder={{ start: "09:00", end: "18:00" }}'>
                 <Box flex="y" spacing="xs" alignX="start">
                   <TimeRangeWheel

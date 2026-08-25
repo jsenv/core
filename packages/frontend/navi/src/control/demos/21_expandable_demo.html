@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expandable demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 24px 0 8px;
+        color: #1a1a1a;
+        font-size: 1.05rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-box {
+        max-width: 520px;
+        padding: 14px 16px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .demo-row > .demo-box {
+        width: 240px;
+      }
+      .demo-caption {
+        margin: 0 0 6px;
+        color: #6c757d;
+        font-size: 0.85em;
+      }
+      .demo-content {
+        padding: 10px 12px;
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+      }
+      kbd {
+        padding: 1px 5px;
+        font-size: 0.85em;
+        background: #f1f3f6;
+        border: 1px solid #cfd6df;
+        border-radius: 4px;
+      }
+      .demo-badge-anchor {
+        position: relative;
+        display: inline-block;
+      }
+      .demo-badge {
+        position: absolute;
+        top: -14px;
+        right: -60px;
+        padding: 2px 8px;
+        color: white;
+        font-size: 0.8em;
+        background: #d81b60;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import {
+        FakeBackend,
+        createFakeBackend,
+      } from "../../internal/fake_backend.jsx";
+      import { Box, Button, Details, Expandable, Link } from "@jsenv/navi";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id} {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <Heading id="expandable">Expandable</Heading>
+          <p>
+            A UI part that reveals a content part. The <code>ui</code> prop is
+            the shorthand for the common shape; explicit parts (
+            <code>Expandable.UI</code> / <code>Expandable.Content</code>) free
+            the order and orientation. Content is built on first expansion and
+            kept afterwards.
+          </p>
+          <DocumentToc />
+        </div>
+      );
+
+      const NominalSection = () => (
+        <section className="demo-section">
+          <Heading id="nominal">Nominal case</Heading>
+          <div className="demo-box">
+            <Expandable ui="See more">
+              <div className="demo-content">
+                <p>Content shown when expanded.</p>
+              </div>
+            </Expandable>
+          </div>
+        </section>
+      );
+
+      const StatesSection = () => (
+        <section className="demo-section">
+          <Heading id="states">States</Heading>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">default (closed)</p>
+              <Expandable ui="Summary">
+                <div className="demo-content">Content</div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">defaultOpen</p>
+              <Expandable ui="Summary" defaultOpen>
+                <div className="demo-content">Content</div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">loading</p>
+              <Expandable ui="Summary" loading>
+                <div className="demo-content">Content</div>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const backend = createFakeBackend({
+        value: {
+          name: "Ada Lovelace",
+          email: "ada@example.com",
+          role: "Engineer",
+        },
+      });
+      const loadUserAction = async (_, { signal }) =>
+        backend.call("GET /user", () => backend.valueSignal.value, { signal });
+      const loadActivityAction = async (_, { signal }) =>
+        backend.call("GET /activity", () => ["signed in", "edited profile"], {
+          signal,
+        });
+
+      // Closing while the call is in flight gives up on it: the call stays on
+      // the frontier, marked, for the backend to abandon or answer anyway.
+      const ActionSection = () => (
+        <section className="demo-section">
+          <Heading id="action">Load on open</Heading>
+          <FakeBackend backend={backend}>
+            {() => (
+              <>
+                <Heading level={3} id="action-default">
+                  action, default branches
+                </Heading>
+                <div className="demo-box">
+                  <Expandable ui="User profile" action={loadUserAction}>
+                    {(user) => (
+                      <div className="demo-content">
+                        <p>
+                          {user.name} — {user.email} ({user.role})
+                        </p>
+                      </div>
+                    )}
+                  </Expandable>
+                </div>
+
+                <Heading level={3} id="action-branches">
+                  action, custom loading/error branches
+                </Heading>
+                <div className="demo-box">
+                  <Expandable ui="User activity" action={loadActivityAction}>
+                    {{
+                      loading: (action) => (
+                        <div className="demo-content">
+                          <span>Loading activity… </span>
+                          <Button onClick={() => action.abort()}>Abort</Button>
+                        </div>
+                      ),
+                      aborted: (action) => (
+                        <div className="demo-content">
+                          <span>Aborted. </span>
+                          <Button onClick={() => action.rerun()}>Retry</Button>
+                        </div>
+                      ),
+                      error: (error, _, action) => (
+                        <div className="demo-content">
+                          <span style="color: crimson">
+                            {String(error.message || error)}{" "}
+                          </span>
+                          <Button onClick={() => action.rerun()}>Retry</Button>
+                        </div>
+                      ),
+                      completed: (activity) => (
+                        <ul className="demo-content">
+                          {activity.map((entry) => (
+                            <li key={entry}>{entry}</li>
+                          ))}
+                        </ul>
+                      ),
+                    }}
+                  </Expandable>
+                </div>
+              </>
+            )}
+          </FakeBackend>
+        </section>
+      );
+
+      const MountClock = () => {
+        const [mountedAt] = useState(() => new Date().toLocaleTimeString());
+        return <span>content built at {mountedAt}</span>;
+      };
+
+      const MountSection = () => (
+        <section className="demo-section">
+          <Heading id="mount">Content mount</Heading>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">default: built on first expansion</p>
+              <Expandable ui="Summary" animation>
+                <div className="demo-content">
+                  <MountClock />
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">mountWhenClosed</p>
+              <Expandable ui="Summary" mountWhenClosed animation>
+                <div className="demo-content">
+                  <MountClock />
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">unmountWhenClosed</p>
+              <Expandable ui="Summary" unmountWhenClosed animation>
+                <div className="demo-content">
+                  <MountClock />
+                </div>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const openSignal = signal(false);
+      const SignalDemo = () => {
+        const isOpen = openSignal.value;
+        return (
+          <div className="demo-box">
+            <Box flex spacing="s" alignY="center" marginBottom="8px">
+              <Button
+                onClick={() => {
+                  openSignal.value = !openSignal.value;
+                }}
+              >
+                Toggle from outside
+              </Button>
+              <span>signal: {String(isOpen)}</span>
+            </Box>
+            <Expandable ui="Driven by a signal" signal={openSignal}>
+              <div className="demo-content">Content</div>
+            </Expandable>
+          </div>
+        );
+      };
+
+      const OpenPropDemo = () => {
+        const [open, setOpen] = useState(false);
+        return (
+          <div className="demo-box">
+            <Box flex spacing="s" alignY="center" marginBottom="8px">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={open}
+                  onChange={(e) => setOpen(e.target.checked)}
+                />{" "}
+                open
+              </label>
+            </Box>
+            <Expandable
+              ui="Driven by the open prop"
+              open={open}
+              onToggle={(e) => {
+                setOpen(e.newState === "open");
+              }}
+            >
+              <div className="demo-content">Content</div>
+            </Expandable>
+          </div>
+        );
+      };
+
+      const CommandDemo = () => {
+        const expandableId = useId();
+        return (
+          <div className="demo-box">
+            <Box marginBottom="8px">
+              <Button command="--navi-toggle" commandFor={expandableId}>
+                Toggle via command
+              </Button>
+            </Box>
+            <Expandable id={expandableId} ui="Driven by a command">
+              <div className="demo-content">Content</div>
+            </Expandable>
+          </div>
+        );
+      };
+
+      const DrivingSection = () => (
+        <section className="demo-section">
+          <Heading id="driving">Driving the state</Heading>
+          <Heading level={3} id="driving-signal">
+            signal
+          </Heading>
+          <SignalDemo />
+          <Heading level={3} id="driving-open">
+            open + onToggle
+          </Heading>
+          <OpenPropDemo />
+          <Heading level={3} id="driving-command">
+            --navi-toggle command
+          </Heading>
+          <CommandDemo />
+        </section>
+      );
+
+      const AnimationSection = () => (
+        <section className="demo-section">
+          <Heading id="animation">Animation</Heading>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">default (none)</p>
+              <Expandable ui="Summary">
+                <div className="demo-content">
+                  <p>Line one</p>
+                  <p>Line two</p>
+                  <p>Line three</p>
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">animation</p>
+              <Expandable ui="Summary" animation>
+                <div className="demo-content">
+                  <p>Line one</p>
+                  <p>Line two</p>
+                  <p>Line three</p>
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">
+                animation + --navi-expandable-animation-duration: 1s
+              </p>
+              <Expandable
+                ui="Summary"
+                animation
+                style={{ "--navi-expandable-animation-duration": "1s" }}
+              >
+                <div className="demo-content">
+                  <p>Line one</p>
+                  <p>Line two</p>
+                  <p>Line three</p>
+                </div>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const PartsSection = () => (
+        <section className="demo-section">
+          <Heading id="parts">Parts</Heading>
+          <p>
+            <code>Expandable.UI</code> and <code>Expandable.Content</code> given
+            explicitly; their order decides where the content goes.
+          </p>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">UI then Content (content below)</p>
+              <Expandable animation>
+                <Expandable.UI>See more</Expandable.UI>
+                <Expandable.Content>
+                  <div className="demo-content">Content below the UI.</div>
+                </Expandable.Content>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">Content then UI (content above)</p>
+              <Expandable animation>
+                <Expandable.Content>
+                  <div className="demo-content">Content above the UI.</div>
+                </Expandable.Content>
+                <Expandable.UI>See more</Expandable.UI>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const LayoutSection = () => (
+        <section className="demo-section">
+          <Heading id="layout">layout="column"</Heading>
+          <p>The parts sit side by side; the content expands horizontally.</p>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">content to the right</p>
+              <Expandable layout="column" animation ui="More">
+                <div className="demo-content">
+                  <p>Content beside the UI part.</p>
+                  <p>It expands to the right.</p>
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">
+                content to the left (Content then UI)
+              </p>
+              <Expandable layout="column" animation>
+                <Expandable.Content>
+                  <div className="demo-content">
+                    <p>Content beside the UI part.</p>
+                    <p>It expands to the left.</p>
+                  </div>
+                </Expandable.Content>
+                <Expandable.UI>More</Expandable.UI>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const AutoFocusSection = () => (
+        <section className="demo-section">
+          <Heading id="autofocus">autoFocus</Heading>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">default: focus stays on the marker</p>
+              <Expandable ui="Open me">
+                <div className="demo-content">
+                  <input type="text" placeholder="not focused on open" />
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">autoFocus</p>
+              <Expandable ui="Open me" autoFocus>
+                <div className="demo-content">
+                  <input type="text" placeholder="focused on open" />
+                </div>
+              </Expandable>
+            </div>
+          </div>
+        </section>
+      );
+
+      const ManyLines = ({ count = 30 }) =>
+        Array.from({ length: count }, (_, i) => (
+          <p key={i} style="margin: 4px 0">
+            Line {i + 1}
+          </p>
+        ));
+
+      const SizingSection = () => (
+        <section className="demo-section">
+          <Heading id="sizing">Sizing & scrollbars</Heading>
+          <Heading level={3} id="sizing-max-content-height">
+            maxContentHeight="160"
+          </Heading>
+          <div className="demo-box">
+            <Expandable ui="Long changelog" maxContentHeight="160">
+              <div className="demo-content">
+                <ManyLines />
+              </div>
+            </Expandable>
+          </div>
+          <Heading level={3} id="sizing-overflow">
+            content may overflow once settled
+          </Heading>
+          <p>
+            The badge hangs outside the content box: clipped while the expansion
+            moves, visible once it settles.
+          </p>
+          <div className="demo-box">
+            <Expandable ui="With a badge sticking out" animation>
+              <div className="demo-content">
+                <span className="demo-badge-anchor">
+                  A piece of content
+                  <span className="demo-badge">new!</span>
+                </span>
+              </div>
+            </Expandable>
+          </div>
+        </section>
+      );
+
+      const RichSummary = () => {
+        const [count, setCount] = useState(0);
+        return (
+          <div className="demo-box">
+            <Expandable
+              ui={
+                <>
+                  <strong style="flex: 1">Anything in the summary</strong>
+                  <Button
+                    onClick={() => {
+                      setCount(count + 1);
+                    }}
+                  >
+                    Clicked {count}
+                  </Button>
+                  <input
+                    type="text"
+                    placeholder="type here"
+                    style="width: 90px"
+                  />
+                </>
+              }
+            >
+              <div className="demo-content">
+                The button and the field above act on their own without
+                toggling.
+              </div>
+            </Expandable>
+          </div>
+        );
+      };
+
+      const SummarySection = () => (
+        <section className="demo-section">
+          <Heading id="summary">Summary allows any markup</Heading>
+          <RichSummary />
+          <Heading level={3} id="summary-function">
+            ui as a function of the state
+          </Heading>
+          <div className="demo-box">
+            <Expandable ui={({ open }) => (open ? "See less" : "See more")}>
+              <div className="demo-content">Content</div>
+            </Expandable>
+          </div>
+        </section>
+      );
+
+      const NestedSection = () => (
+        <section className="demo-section">
+          <Heading id="nested">Nested</Heading>
+          <div className="demo-box">
+            <Expandable ui="Documentation">
+              <div className="demo-content">
+                <Expandable ui="API reference">
+                  <div className="demo-content">
+                    <Expandable ui="Components">
+                      <div className="demo-content">Props, events, CSS.</div>
+                    </Expandable>
+                  </div>
+                </Expandable>
+                <Expandable ui="Examples">
+                  <div className="demo-content">Code examples.</div>
+                </Expandable>
+              </div>
+            </Expandable>
+          </div>
+        </section>
+      );
+
+      const KeyboardSection = () => (
+        <section className="demo-section">
+          <Heading id="keyboard">Keyboard</Heading>
+          <p>
+            On the marker: <kbd>→</kbd> opens then enters, <kbd>←</kbd> closes.
+            From inside the content, <kbd>←</kbd> comes back to the marker.
+          </p>
+          <div className="demo-box">
+            <Expandable ui="Try the arrow keys">
+              <div className="demo-content">
+                <Box flex spacing="s">
+                  <Button>First</Button>
+                  <Button>Second</Button>
+                </Box>
+              </div>
+            </Expandable>
+          </div>
+        </section>
+      );
+
+      const ComparisonSection = () => (
+        <section className="demo-section">
+          <Heading id="comparison">Next to Details</Heading>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">Expandable</p>
+              <Expandable ui="Summary text">
+                <div className="demo-content">
+                  <p>Content</p>
+                </div>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">Details</p>
+              <Details label="Summary text">
+                <div className="demo-content">
+                  <p>Content</p>
+                </div>
+              </Details>
+            </div>
+          </div>
+        </section>
+      );
+
+      const App = () => (
+        <>
+          <DemoHeader
+            title="Expandable demo"
+            previous={{ href: "./20_details_demo.html", label: "Details" }}
+          />
+          <TableOfContents />
+          <NominalSection />
+          <StatesSection />
+          <ActionSection />
+          <MountSection />
+          <DrivingSection />
+          <AnimationSection />
+          <PartsSection />
+          <LayoutSection />
+          <AutoFocusSection />
+          <SizingSection />
+          <SummarySection />
+          <NestedSection />
+          <KeyboardSection />
+          <ComparisonSection />
+        </>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

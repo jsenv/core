@@ -904,6 +904,18 @@ const GROUP_DEFAULTS = {
       if (isNamelessGrouping(child, child.uiState)) {
         return newUIState;
       }
+      if (
+        newUIState !== null &&
+        typeof newUIState === "object" &&
+        Object.keys(newUIState).length === 0
+      ) {
+        // An object with nothing in it is not a partial answer, it is the
+        // absence of one — a group being cleared — and every child empties. A
+        // partial object leaves the children it does not name alone, which is
+        // what CANNOT_DERIVE says below: a value that mentions `start` says
+        // nothing about `end`, an empty one says there is no answer at all.
+        return undefined;
+      }
       return CANNOT_DERIVE;
     },
   },
@@ -2070,14 +2082,15 @@ const warnChildAnswersForItself = (groupController, child) => {
     ? "a <List.Item> declares `selected`"
     : `a "${child.controlType}"${child.name ? ` name="${child.name}"` : ""} declares \`${statePropName}\``;
   const groupDescription = isSelectableList ? "the list" : `the "${groupType}"`;
-  // A prop SET to undefined is the same trap wearing a disguise, and the one
+  // A prop SET to undefined is the same claim wearing a disguise, and the one
   // that costs the most to find: `checked={bound ? undefined : checked}` reads
-  // like "no prop at all" and is not — the control calls itself controlled,
-  // holding nothing, forever. Naming it is the whole point of saying anything.
+  // like "no prop at all" and is not — the key being there is what makes the
+  // control controlled, so it holds nothing, for good. Naming it is the whole
+  // point of saying anything here.
   const advice =
     childProps[statePropName] === undefined
-      ? `\`${statePropName}\` is undefined here, which is NOT the same as not passing it: the key being present is what makes the control controlled. ` +
-        `Leave the prop out entirely — {...(bound ? {} : { ${statePropName} })} — or drop the group's value/signal.`
+      ? `\`${statePropName}\` is undefined here, which is NOT the same as not passing it: the key being present is what makes a control controlled, so this one holds nothing and keeps holding nothing. ` +
+        `Leave the prop out when the group is the one answering — {...(bound ? {} : { ${statePropName} })}.`
       : `Bind one end or the other, not both.`;
   console.warn(
     `[navi] ${childDescription} while ${groupDescription} around it is placed from a value — ${groupDescription} cannot move it, so clicking it changes nothing and what it shows never follows. ${advice}`,
@@ -2139,17 +2152,21 @@ const resolveClearedUIState = (controller) => {
   return "";
 };
 
-// What a control says when it has nothing to say: no value at all, or the empty
-// array/object a group falls back to while it has no child to aggregate.
+// What a control says when it has nothing to say: no value at all, the empty
+// array/object a group falls back to while it has no child to aggregate — or a
+// shape whose every part is itself nothing. That last one is what a group with
+// an aggregate of its own produces before its children have arrived
+// (`{ mode: undefined, levels: [] }` has two keys and says nothing), and
+// reading it as an answer is how a popup opening empties the row above it.
 const uiStateHoldsNothing = (uiState) => {
   if (uiState === undefined) {
     return true;
   }
   if (Array.isArray(uiState)) {
-    return uiState.length === 0;
+    return uiState.every(uiStateHoldsNothing);
   }
   if (uiState !== null && typeof uiState === "object") {
-    return Object.keys(uiState).length === 0;
+    return Object.values(uiState).every(uiStateHoldsNothing);
   }
   return false;
 };

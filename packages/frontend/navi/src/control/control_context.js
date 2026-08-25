@@ -94,6 +94,7 @@ export const CONTROL_PROP_SET = new Set([
   "resetOnCancel",
   "resetOnAbort",
   "resetOnError",
+  "optimistic",
 
   "charGuard",
   "maxLengthGuard",

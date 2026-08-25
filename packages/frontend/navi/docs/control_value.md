@@ -10,6 +10,7 @@ somewhere else in the app.
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
 - [Which controls take a `signal`](#which-controls-take-a-signal)
+- [The PROP is what controls, not its value](#the-prop-is-what-controls-not-its-value)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
 
@@ -159,6 +160,28 @@ own `selected` — but not expect the two to arbitrate. An item that declares
 `selected` is answering for itself, and the list's signal does not reposition
 it. On screen that reads as a list where clicking does nothing, so navi says it
 in dev the moment the two claims meet: bind one end or the other, not both.
+
+## The PROP is what controls, not its value
+
+`value` (and `checked`, and a row's `selected`) makes a control controlled by
+being **there**. Its value is a separate question: `value={undefined}` says "I
+hold this one, and right now it holds nothing" — the control shows nothing, and
+nothing else can fill it. That is a real state and it is the one asked for.
+
+The trap is the shorthand for an optional prop:
+
+```jsx
+// WRONG — the key is always there, so the control is always controlled,
+// and the group above it can never fill it
+<Input checked={bound ? undefined : checked} />
+
+// RIGHT — the prop is there only when you are the one answering
+<Input {...(bound ? {} : { checked })} />
+```
+
+Passing a prop the code knows will always be `undefined` is the same mistake
+written once instead of twice: leave it out. navi says so in dev when a group
+tries to place a child that has claimed itself this way.
 
 ## `value` and `signal` exclude each other
 

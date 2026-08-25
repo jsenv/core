@@ -217,6 +217,8 @@ const DetailsField = (props) => {
 //     }}
 const DetailsFieldContent = ({ children }) => {
   const action = useContext(ActionContext);
-
+  if (!action) {
+    return children;
+  }
   return <ActionRenderer action={action}>{children}</ActionRenderer>;
 };

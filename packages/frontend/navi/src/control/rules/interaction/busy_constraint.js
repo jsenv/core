@@ -44,7 +44,14 @@ const isControlBusy = (field) => {
     return true;
   }
   const { boundAction } = field;
-  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
+  // An optimistic control stays interactive while its bound action runs:
+  // a new interaction is queued behind the run (see the action queue in
+  // control_hooks.jsx) rather than refused.
+  if (
+    !field.optimistic &&
+    boundAction &&
+    boundAction.runningStateSignal.value === RUNNING
+  ) {
     return true;
   }
   if (field.loadingFromParent) {

@@ -162,7 +162,11 @@ consistency across the app, not from any single call site.
   the bounds of a span PUSH each other while they turn (`minDuration`) instead
   of being refused at send, and `placeholder` is a position shown without being
   an answer — for a span that is optional ("any time of day") on wheels that
-  have no blank row to land on. Read this before writing a time input, and
+  have no blank row to land on. A clear (or a value written as `undefined`) puts
+  such a pair back on its placeholder and back to answering nothing, so a row's
+  cross means what it says. `hours` bounds what the wheels offer
+  (`{ min: 7, max: 21 }`, or the list itself) — rows nobody can land on are rows
+  in the way. Read this before writing a time input, and
   before making a pair of wheels say "nothing set" by hand.
 - `docs/control_group.md` — `<Group>`: several controls reading as one framed
   object (one border per seam, radius on the outer corners only). Read it

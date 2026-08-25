@@ -49,7 +49,6 @@
         padding: 0 10px;
         color: #555;
         font-weight: 500;
-        white-space: nowrap;
       }
 
       .checkbox-group {
@@ -163,6 +162,7 @@
         createAction,
         Label,
       } from "@jsenv/navi";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -174,6 +174,7 @@
               <TableOfContents />
               <BasicStatesDemo />
               <InteractivityDemo />
+              <OptimisticDemo />
               <SizeDemo />
               <ColorDemo />
               <SwitchAppearanceDemo />
@@ -195,6 +196,9 @@
               </li>
               <li>
                 <a href="#interactivity">Interactivity (action &amp; form)</a>
+              </li>
+              <li>
+                <a href="#optimistic">Optimistic</a>
               </li>
               <li>
                 <a href="#sizes">Checkbox Sizes</a>
@@ -721,6 +725,92 @@
               </div>
             )}
           </fieldset>
+        );
+      };
+
+      const OptimisticCheckboxField = ({
+        value,
+        action,
+        cancellable,
+        ...props
+      }) => (
+        <Field as="label" flex spacing="s" alignY="center">
+          <Input
+            type="checkbox"
+            name="notifications"
+            checked={Boolean(value)}
+            action={(checked, { signal }) =>
+              action(Boolean(checked), cancellable ? { signal } : undefined)
+            }
+            {...props}
+          />
+          Notifications
+        </Field>
+      );
+
+      const OptimisticDemo = () => {
+        return (
+          <div class="demo-section" id="optimistic">
+            <h2>Optimistic</h2>
+
+            <fieldset>
+              <legend>Default — loading + read-only while the call runs</legend>
+              <FakeBackend value={false}>
+                {({ value, action }) => (
+                  <OptimisticCheckboxField value={value} action={action} />
+                )}
+              </FakeBackend>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                <code>optimistic</code> — re-clicks queue; failure reverts +
+                callout
+              </legend>
+              <FakeBackend value={false}>
+                {({ value, action }) => (
+                  <OptimisticCheckboxField
+                    value={value}
+                    action={action}
+                    optimistic
+                  />
+                )}
+              </FakeBackend>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                <code>optimistic</code> + <code>signal</code> — a re-click asks
+                the backend to cancel
+              </legend>
+              <FakeBackend value={false}>
+                {({ value, action }) => (
+                  <OptimisticCheckboxField
+                    value={value}
+                    action={action}
+                    cancellable
+                    optimistic
+                  />
+                )}
+              </FakeBackend>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                <code>optimistic</code> switch variant
+              </legend>
+              <FakeBackend value={false}>
+                {({ value, action }) => (
+                  <OptimisticCheckboxField
+                    value={value}
+                    action={action}
+                    variant="switch"
+                    optimistic
+                  />
+                )}
+              </FakeBackend>
+            </fieldset>
+          </div>
         );
       };
 

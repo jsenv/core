@@ -72,6 +72,16 @@ const userAction = getUser.bindParams({ id: userIdSignal });
 | `reset()`  | Aborts what is running and puts the action back to idle, data and all.   |
 | `abort()`  | Calls off the run in flight, keeping the data it had.                    |
 
+### Aborting saves resources, it does not undo
+
+`abort()` cancels what can still be cancelled — a `fetch` wired to the
+callback's `signal` — and nothing more. The server may have done the work
+before the cancellation reached it, or may not honor cancellations at all:
+whether the work happened is known from the run's settlement alone. For that
+reason a run's promise settles only when its callback settles, even after an
+abort, and anything sequenced behind a run — an optimistic control's queued
+request, for instance — waits for that settlement, never for the abort.
+
 ## Reading an action
 
 ```jsx
