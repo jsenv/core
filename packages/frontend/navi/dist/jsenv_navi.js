@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$14 = /* css */`
+const css$15 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -92,7 +92,7 @@ const css$14 = /* css */`
     }
   }
 `;
-import.meta.css = [css$14, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -361,7 +361,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$13 = /* css */`
+const css$14 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -379,7 +379,7 @@ const css$13 = /* css */`
     }
   }
 `;
-import.meta.css = [css$13, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
@@ -6403,7 +6403,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$12 = /* css */`
+const css$13 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6646,7 +6646,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -8012,12 +8012,20 @@ const isControlBusy = (field) => {
   // An optimistic control stays interactive while its bound action runs:
   // a new interaction is queued behind the run (see the action queue in
   // control_hooks.jsx) rather than refused.
-  if (
-    !field.optimistic &&
-    boundAction &&
-    boundAction.runningStateSignal.value === RUNNING
-  ) {
-    return true;
+  if (!field.optimistic && boundAction) {
+    // The INSTANCE the proxy resolves to right now, not the proxy's own
+    // signal: that one is a MIRROR, synced by an effect the settling batch
+    // defers — read mid-batch (a state echo carrying the user's event back
+    // down, an automatic follow-up), it still says RUNNING for an action
+    // that is already over, and the gate would refuse — callout included —
+    // for nothing. The resolved instance is the live truth: at that echo it
+    // is the instance that just settled, already COMPLETED. And it IS the
+    // running one whenever one runs — a non-optimistic control's state
+    // cannot move mid-run, this very gate blocks it.
+    const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
+    if (liveAction.runningStateSignal.value === RUNNING) {
+      return true;
+    }
   }
   if (field.loadingFromParent) {
     const parent = field.parentUIStateController;
@@ -8940,10 +8948,12 @@ const REQUIRED_CONSTRAINT = {
       };
     }
 
-    // checkbox_group controller: check aggregate uiState array
+    // checkbox_group controller: check aggregate uiState array. An empty
+    // selection aggregates to undefined, not to an empty array (see
+    // GROUP_DEFAULTS.checkbox_group) — both mean "nothing checked" here.
     if (controlType === "checkbox_group") {
       const uiState = field.uiState;
-      if (uiState.length > 0) {
+      if (uiState !== undefined && uiState.length > 0) {
         return null;
       }
       return {
@@ -18873,7 +18883,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$11 = /* css */`
+installImportMetaCssBuild(import.meta);const css$12 = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -18905,7 +18915,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$11, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$12, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19110,7 +19120,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$10 = /* css */`
+installImportMetaCssBuild(import.meta);const css$11 = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -19147,7 +19157,7 @@ installImportMetaCssBuild(import.meta);const css$10 = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$10, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -19437,7 +19447,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$$ = /* css */`
+const css$10 = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -19958,7 +19968,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$$, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -27333,18 +27343,31 @@ const useInteractiveProps = (props, {
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 
-        // For radio/checkbox: auto-trigger the parent group's action after the
-        // leaf action completes. The parent (radio_group/checkbox_group) has
-        // already aggregated the new state by now, so uiStateSignal is correct.
+        // Auto-trigger the parent group's action after the leaf action
+        // completes, for the groups that ARE one control made of parts: a
+        // radio or checkbox group, a wheel group (an hour wheel settling is
+        // the time settling). The parent has already aggregated the new
+        // state by now, so uiStateSignal is correct. One level only: the
+        // parent's own action end does not climb further unless that parent
+        // is itself such a group.
         const parentController = uiStateController.parentUIStateController;
-        if (parentController && (parentController.controlType === "radio_group" || parentController.controlType === "checkbox_group")) {
+        if (parentController && (parentController.controlType === "radio_group" || parentController.controlType === "checkbox_group" || parentController.controlType === "wheel_group")) {
           const parentEl = parentController.ref.current;
           if (parentEl) {
-            const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {
-              event: originalEvent,
+              event: e.detail.eventChain[0],
               name: "auto_group_action",
-              requester: e.detail.requester
+              requester: e.detail.requester,
+              // The interactivity gate is not re-asked: the user already
+              // interacted — with the child, whose gate said yes — and this
+              // follow-up is automatic. Asking again would also answer
+              // wrong: this event is dispatched inside the batch() that
+              // settles the child's action, where a bound action still
+              // READS as running (its state is mirrored through a signal
+              // effect the batch defers, see watchActionCompletion) — the
+              // busy constraint would refuse the group for an action that
+              // is already over. The validity gate still applies.
+              bypassInteractivity: true
             });
           }
         }
@@ -27406,7 +27429,7 @@ const getAssociatedLabels = element => {
   return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`
+installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -27837,7 +27860,7 @@ installImportMetaCssBuild(import.meta);const css$_ = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$_, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -29548,7 +29571,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$Z = /* css */`
+const css$_ = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -30132,7 +30155,7 @@ const css$Z = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -31124,7 +31147,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$Y = /* css */`
+const css$Z = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -31580,7 +31603,7 @@ const css$Y = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -32608,7 +32631,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$X = /* css */`
+const css$Y = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -32745,7 +32768,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$X, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -32829,7 +32852,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$W = /* css */`
+installImportMetaCssBuild(import.meta);const css$X = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -32854,7 +32877,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$W, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -38598,7 +38621,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$V = /* css */`
+const css$W = /* css */`
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -39027,7 +39050,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -39084,7 +39107,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const {
     type,
     duration
@@ -39120,7 +39143,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -39721,7 +39744,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$U = /* css */`
+const css$V = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -40111,7 +40134,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_travel.jsx"];
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being
@@ -42673,7 +42696,7 @@ const PhoneSvg = () => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$T = /* css */`
+const css$U = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -42708,7 +42731,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -42823,7 +42846,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$S = /* css */`
+installImportMetaCssBuild(import.meta);const css$T = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -42981,7 +43004,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -43143,7 +43166,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$R = /* css */`
+installImportMetaCssBuild(import.meta);const css$S = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -43605,7 +43628,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$R, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -43928,7 +43951,7 @@ installImportMetaCssBuild(import.meta);/**
  * https://dribbble.com/search/tabs
  */
 let navCount = 0;
-const css$Q = /* css */`
+const css$R = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -44211,7 +44234,7 @@ const Nav = ({
   slideContainer,
   ...props
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/nav/link/nav.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const navRef = props.ref;
@@ -44738,7 +44761,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$P = /* css */`
+const css$Q = /* css */`
   @layer navi {
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
@@ -45051,7 +45074,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -45538,7 +45561,7 @@ installImportMetaCssBuild(import.meta);/**
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
  */
-const css$O = /* css */`
+const css$P = /* css */`
   @layer navi {
     :root {
       --navi-fixed-bar-width: 56px;
@@ -45686,7 +45709,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Said with the width the border rule reads rather than with an attribute of
@@ -45780,7 +45803,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$N = /* css */ `
+const css$O = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -45804,7 +45827,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$N;
+    styleEl.textContent = css$O;
     document.head.appendChild(styleEl);
   }
 
@@ -45959,7 +45982,7 @@ const useFocusGroup = (
 };
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const css$M = /* css */`
+const css$N = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -46049,7 +46072,7 @@ const SummaryMarker = ({
   loading,
   openDirection = "down"
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   return jsx("span", {
     className: "navi_summary_marker",
@@ -46094,7 +46117,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`
+installImportMetaCssBuild(import.meta);const css$M = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -46140,7 +46163,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$L, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -46360,7 +46383,7 @@ installImportMetaCssBuild(import.meta);/**
  * UI when it comes first). Once settled open the clipping is released, so a
  * popover or focus ring inside is not cut at the edges.
  */
-const css$K = /* css */`
+const css$L = /* css */`
   .navi_expandable {
     position: relative;
     display: flex;
@@ -46586,7 +46609,7 @@ const useExpandableContext = partName => {
  *   and rebuilds it from scratch on every expansion.
  */
 const Expandable = props => {
-  import.meta.css = [css$K, "@jsenv/navi/src/control/expandable/expandable.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/expandable/expandable.jsx"];
   const {
     ref,
     ui,
@@ -47251,7 +47274,7 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$J = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 0; /* Useful to reserve space for outline */
@@ -47329,7 +47352,7 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -47371,7 +47394,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
+installImportMetaCssBuild(import.meta);const css$J = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-checkbox-border-radius);
@@ -47698,7 +47721,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -47820,7 +47843,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   @layer navi {
     .navi_label {
       --label-required-indicator-color: var(--navi-color-danger, #b42318);
@@ -47900,7 +47923,7 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -47935,7 +47958,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -47967,7 +47990,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const {
     children,
     // Marks the label when its control is required. Takes what to show, or
@@ -48129,7 +48152,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -48492,7 +48515,7 @@ const InputRadioHeadless = props => {
 };
 const VARIANT_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -48638,7 +48661,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -48893,7 +48916,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -51001,7 +51024,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$E = /* css */`
+const css$F = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -51050,7 +51073,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -51599,7 +51622,7 @@ installImportMetaCssBuild(import.meta);/**
  * meet are drawn once instead of twice, and only the outer corners stay
  * rounded. See docs/control_group.md.
  */
-const css$D = /* css */`
+const css$E = /* css */`
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
 
@@ -51715,7 +51738,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined
@@ -51881,7 +51904,7 @@ installImportMetaCssBuild(import.meta);/**
  * So: nothing scrollable between the cap and the slides (a shared [data-body]
  * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
-const css$C = /* css */`
+const css$D = /* css */`
   /* Where the picture stands relative to the slide that is current, in boxes
      (see paintTravelProgress). Declared, so that it is a NUMBER the browser can
      interpolate: the trait an indicator draws has to travel with the slides,
@@ -52375,7 +52398,7 @@ const SlideContainer = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$C, "@jsenv/navi/src/layout/slide_container.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/layout/slide_container.jsx"];
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
   // The box itself: it is what takes the keyboard when what is on screen holds
@@ -55220,7 +55243,7 @@ installImportMetaCssBuild(import.meta);/**
  * and only under its own `sizeFromAnchor`) pass through untouched via
  * `...rest` to whichever of Popover/Dialog actually renders.
  */
-const css$B = /* css */`
+const css$C = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -55337,7 +55360,7 @@ const css$B = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/layout/popup.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -55398,7 +55421,7 @@ const Popup = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -55526,7 +55549,7 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -56320,7 +56343,7 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -56398,7 +56421,7 @@ const Separator = ({
   style,
   ...props
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -56891,7 +56914,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -57103,7 +57126,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$y, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -57723,7 +57746,7 @@ const ListVirtualContext = createContext(null);
 // that returning a component of one's own — instead of a bare <List.Item> —
 // works the same way.
 const ListRowContext = createContext(null);
-const css$x = /* css */`
+const css$y = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -58422,7 +58445,7 @@ const css$x = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -62091,7 +62114,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -62203,7 +62226,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -62255,7 +62278,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -62280,7 +62303,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -62355,7 +62378,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -62386,7 +62409,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$u, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -62843,7 +62866,7 @@ const PickerFileUI = () => {
   return String(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -63232,7 +63255,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -63681,7 +63704,7 @@ installImportMetaCssBuild(import.meta);/**
  * refuse it on purpose, which is what keeps the focus where the travel happens
  * instead of moving it into a slide that is about to leave.
  */
-const css$s = /* css */`
+const css$t = /* css */`
   @layer navi {
     .navi_picker_spin {
       /* A picker one steps through is still a picker: what themes every picker
@@ -64150,7 +64173,7 @@ const Spin = ({
   nextLabel,
   ...rest
 }) => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
   // What the group around it says, when there is one: how big the whole thing
   // is written is said once, on the group, and every spin in it follows.
@@ -64686,7 +64709,7 @@ const renderValueDefault = value => String(value ?? "");
  * are passed on to the spins sitting in them.
  */
 const SpinGroup = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const {
     size
   } = props;
@@ -65199,7 +65222,7 @@ const TimeRangeSpin = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$r = /* css */`
+const css$s = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -65240,7 +65263,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -65289,7 +65312,7 @@ installImportMetaCssBuild(import.meta);/**
  * shared sheet is registered here too — a page may render a Textarea without
  * any Input.
  */
-const css$q = /* css */`
+const css$r = /* css */`
   .navi_input.navi_textarea {
     .navi_control_input {
       min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -65376,7 +65399,7 @@ const Textarea = ({
   width = "35ch",
   ...props
 }) => {
-  import.meta.css = [inputCss + css$q, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [inputCss + css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   usePlaceholderHeight(props.ref, props.placeholder);
@@ -65450,7 +65473,7 @@ const TextareaCharCount = ({
   maxLength,
   ...rest
 }) => {
-  import.meta.css = [css$q, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
   const resolvedValue = signal ? signal.value : value;
   const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
   return jsx(Box, {
@@ -65635,7 +65658,7 @@ const formatIntlUnit = (unit, {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
@@ -65702,7 +65725,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 const InputDuration = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/control/input/input_duration.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
@@ -66204,7 +66227,7 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
   .navi_radio_group {
     border-style: solid;
 
@@ -66224,7 +66247,7 @@ const RadioGroup = props => {
   return radioGroup;
 };
 const RadioGroupInterface = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/input/radio_group.jsx"];
   const {
     ref
   } = props;
@@ -66282,7 +66305,7 @@ installImportMetaCssBuild(import.meta);/**
  * control is drawn — the list it opens stays the platform's own, which is the
  * whole point of using a select.
  */
-const css$n = /* css */`
+const css$o = /* css */`
   .navi_input.navi_select {
     .navi_control_input {
       /* Room for the chevron, which sits over the padding rather than beside
@@ -66337,7 +66360,7 @@ const Select = ({
   multiple,
   ...props
 }) => {
-  import.meta.css = [inputCss + css$n, "@jsenv/navi/src/control/input/select.jsx"];
+  import.meta.css = [inputCss + css$o, "@jsenv/navi/src/control/input/select.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   seedDefaultValueFromSignal(props);
@@ -66405,7 +66428,7 @@ installImportMetaCssBuild(import.meta);/**
  * running: one loading outline around both, which is why each half is told
  * `loadingOutline={false}`.
  */
-const css$m = /* css */`
+const css$n = /* css */`
   /* Around the pair rather than in it: the outline is drawn against this
      element and follows its corners, and a Group counts its own children to
      know which corners to square — an outline among them would be one of the
@@ -66517,7 +66540,7 @@ const css$m = /* css */`
  * Anything else lands on the split button's own box.
  */
 const SplitButton = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/control/input/split_button.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/control/input/split_button.jsx"];
   const {
     options = [],
     value,
@@ -67168,7 +67191,7 @@ installImportMetaCssBuild(import.meta);/*
  * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
  * a [data-horizontal] variant.
  */
-const css$l = /* css */`
+const css$m = /* css */`
   .navi_wheel_container {
     /* Row size and emphasis band are read together: the band is what a value
        must cross to lose its emphasis, and the row is how far it has to travel
@@ -68290,7 +68313,7 @@ const useWheelKeyboard = ({
   }, [isHorizontal, interactive, isLoop]);
 };
 function WheelUI(props) {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/wheel/wheel.jsx"];
   const {
     ref,
     visibleCount = 3,
@@ -68691,6 +68714,16 @@ function WheelUI(props) {
     // uiAction; here we fire the action explicitly, once, on the settled value.
     const input = inputRef.current;
     if (input) {
+      // Said out loud too, OUTSIDE the action pipeline: the action above goes
+      // through the gates (validity included), and what listens to a settle
+      // may be exactly the thing that RESTORES validity — a range's other
+      // bound giving way (see TimeRangeWheel) cannot wait on a gate that
+      // refuses invalid values. Bubbles, so a group holding this wheel hears
+      // it without knowing where the wheel sits.
+      dispatchPublicCustomEvent(input, "navi_wheel_settle", {
+        value: trackedItemsRef.current[index].value,
+        event: settleEvent
+      });
       dispatchRequestAction(input, {
         event: settleEvent
       });
@@ -69199,7 +69232,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 const WheelGroup = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/wheel/wheel.jsx"];
   // WheelGroup IS a control group: it aggregates its named wheels ("hours",
   // "minutes"…) into one object value, so it can sit directly inside a Form or a
   // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
@@ -69230,7 +69263,11 @@ const WheelGroup = props => {
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
     allowCapture: true,
     wantRequesterButtonState: true,
-    controlType: "control_group",
+    // Its own type, not the generic "control_group": the group IS one
+    // control made of parts, and a wheel settling runs the group's own
+    // action — the way a radio checking runs its group's (the auto group
+    // action in control_hooks keys on this type).
+    controlType: "wheel_group",
     stateType: "object",
     cascadeValidationToChildren: true,
     aggregateChildStates: props.aggregateChildStates,
@@ -69365,7 +69402,7 @@ const WheelColon = props => {
 };
 Wheel.Colon = WheelColon;
 
-/**
+installImportMetaCssBuild(import.meta);/**
  * A time of day, and a span between two of them, set by turning rather than by
  * typing. A wheel only ever shows values that exist: there is no half-written
  * hour to bound and correct under the fingers, which is what a time typed digit
@@ -69375,11 +69412,33 @@ Wheel.Colon = WheelColon;
  * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
  * two of those and carries `{ start, end }`, with the rule such a pair always
  * has: the end comes after the start. Here that rule is lived rather than
- * checked — the bounds push each other while they turn, so what the wheels show
- * is always a span. The send-time constraint stays underneath for what pushing
- * cannot fix (a start so late the span no longer fits in the day).
+ * checked — a bound settling pushes the other out of its way, so what the
+ * wheels show at rest is always a span. The send-time constraint stays
+ * underneath for what pushing cannot fix (a start so late the span no longer
+ * fits in the day).
  */
+const css$l = /* css */`
+  /* The words around a span's wheels ("De", "à"): one line box, the height
+     of a wheel row (--wheel-item-height re-exposed, same value as
+     .navi_wheel_container), centered against the wheels by the group. The
+     box's strut — this element's own font — is what places the baseline,
+     exactly where a wheel row places its numbers'; and because the content
+     stays in inline flow, anything written INSIDE at another size still
+     sits on that same baseline. Two things this depends on: the label is a
+     <Text size={size}> so its em — and therefore this line-height — is the
+     SAME em as the wheel rows' (a label left at the control font under
+     bigger wheels computes a shorter row and its baseline drifts); and no
+     flex centering of the content (centering re-centers a smaller glyph,
+     baselines are not centers). */
+  .navi_time_range_label {
+    --wheel-item-height: round(1.8em, 1px);
 
+    color: var(--wheel-color, light-dark(#111, #eee));
+    line-height: var(--wheel-item-height);
+    white-space: nowrap;
+    user-select: none;
+  }
+`;
 const HOUR_COUNT = 24;
 const MINUTES_PER_HOUR = 60;
 const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
@@ -69538,6 +69597,7 @@ const TimeRangeWheel = ({
   endTimeProps,
   ...rest
 }) => {
+  import.meta.css = [css$l, "@jsenv/navi/src/control/wheel/wheel_time.jsx"];
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
@@ -69549,10 +69609,15 @@ const TimeRangeWheel = ({
     distributeChildUIState
   } = useAnswered(placeholder, rest, aggregateSpan, distributeSpan);
 
-  // What the pair does while it is being turned: the bound that just moved is
-  // the one the user is holding, so it stays where it was put and the OTHER one
-  // gives way. A refusal at the end of the gesture would leave the person to
-  // undo what they just did.
+  // What the pair does once a bound SETTLES: the one that was moved stays
+  // where it was put and the OTHER one gives way — a refusal at that point
+  // would leave the person to undo what they just did. Settles, not while it
+  // turns: a wheel under the finger holds a value nobody has chosen yet, and
+  // the other bound jumping around mid-gesture answers a question that was
+  // not asked. Wired on the wheel's settle EVENT (navi_wheel_settle), never
+  // on `action`: an action goes through the gates, validity included, and
+  // the moment this must run is precisely the moment the pair is INVALID —
+  // an action-gated push would be refused by the very thing it fixes.
   const keepBoundsApart = (movedSide, movedTime, e) => {
     const movedMinutes = minutesFromTime(movedTime);
     if (movedMinutes === null) {
@@ -69596,6 +69661,7 @@ const TimeRangeWheel = ({
       value: answeredRef,
       children: [startLabel === null ? null : jsx(Text, {
         size: size,
+        className: "navi_time_range_label",
         children: startLabel
       }), jsx(TimeWheel, {
         id: startId,
@@ -69605,12 +69671,20 @@ const TimeRangeWheel = ({
         hours: hours,
         loop: loop,
         size: size,
-        placeholder: placeholder ? placeholder.start : undefined,
-        uiAction: (value, e) => keepBoundsApart("start", value, e),
+        placeholder: placeholder ? placeholder.start : undefined
+        // e.detail.value is the settled WHEEL's own value (an hour, a
+        // minute) — half a time. What the pair compares is this bound's
+        // whole time, read off the element the listener sits on.
+        ,
+
+        onnavi_wheel_settle: e => {
+          keepBoundsApart("start", getUIStateFromElement(e.currentTarget), e);
+        },
         ...timeProps,
         ...startTimeProps
       }), endLabel === null ? null : jsx(Text, {
         size: size,
+        className: "navi_time_range_label",
         children: endLabel
       }), jsx(TimeWheel, {
         ref: endRef,
@@ -69620,11 +69694,14 @@ const TimeRangeWheel = ({
         loop: loop,
         size: size,
         placeholder: placeholder ? placeholder.end : undefined,
-        uiAction: (value, e) => keepBoundsApart("end", value, e)
+        onnavi_wheel_settle: e => {
+          keepBoundsApart("end", getUIStateFromElement(e.currentTarget), e);
+        }
         // Which time it comes after, and how much room there must be between
         // the two: said on the LATER of the two, so the answer is given where
         // the time one would have to move is (see time_range_constraint.js).
         ,
+
         "data-time-after": startId,
         "data-time-min-duration": minDuration,
         ...timeProps,
@@ -75257,17 +75334,33 @@ installImportMetaCssBuild(import.meta);/**
  * Two distinct facts, drawn separately — they usually agree, and everything
  * this component says comes from the moments they do not:
  *
- * - the PATH (`reached`): how far the steps are answered without a gap. A
- *   solid line runs from the first dot to the step it names, and those dots
- *   are filled; past it the line is dashed — the road not walked yet. It
- *   moves when a step is answered, not when one merely looks around.
+ * - DONE and the PATH (the blue fill). The mental model, to keep in mind
+ *   when touching any of this: the circles are THINGS TO DO, and the path is
+ *   the progression along the linear walk from the first to the last — a
+ *   thing done is what lets the path advance. Answering a step fills its
+ *   dot AND the line onward, up to the NEXT dot: the invitation to go
+ *   there. If that next step is already done the path crosses it from
+ *   behind and carries on, and so forth — the fill covers the answered
+ *   prefix plus one segment of appetite. It stops at the edge of the first
+ *   dot not answered, which stays empty: the fill's one meaning is
+ *   "answered", and the first dot is NOT filled on arrival — it becomes so
+ *   by being answered. Past the fill the line is dashed, the road not
+ *   walked yet; steps answered out of order are filled dots standing alone,
+ *   dashed segments around them: the holes, readable at a glance.
  * - the POSITION (`current`): the step being looked at, marked by a halo
- *   around its dot and its label emphasized. It travels freely, so it can be
- *   AHEAD of the path (browsing step 3 while step 1 still misses an answer)
- *   or BEHIND it (back on step 1 to change something already answered).
+ *   around its dot and its label emphasized. It travels freely, so it can
+ *   be AHEAD of the path or BEHIND it.
  *
  * Both move smoothly on change (a CSS transition each), so pressing a step
  * or answering one is seen travelling rather than jumping.
+ *
+ * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
+ * An Item renders nothing: it REGISTERS with the list as it renders (order
+ * of rendering is the order of the steps), and the list draws everything —
+ * which is what lets an Item come from anywhere: a .map(), a fragment, a
+ * component of your own wrapping it. One caveat comes with reading the
+ * children as they render: hand the list fresh Item vnodes on each render
+ * (the usual JSX), not a memoized array a bailout would keep from rendering.
  *
  * The dots are drawn in SVG, twice: a muted layer, and a filled layer
  * clipped at the path's edge — the clip is what makes the path's progress a
@@ -75277,28 +75370,21 @@ installImportMetaCssBuild(import.meta);/**
  * surface. Colors are CSS custom properties (see the css below), overridden
  * from outside for a dark band or a different accent.
  *
- * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>
- * — read off the vnodes (toChildArray, so a .map() or a fragment is fine; a
- * component of your own wrapping an Item is not seen). The Item renders its
- * label; everything positional is this component's business.
- *
  * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
  * pressing a step travels there (--navi-go-to-slide), and the position is
  * READ off the container rather than said by a prop — including mid-travel:
  * the container paints --slide-travel-progress on this element (it is a
  * follower, same mechanism as <Nav slideContainer>), so the halo rides the
- * drag under the finger, in CSS alone. The path then follows the position
- * too, clamped between `reached` (never retracts) and `reachable` (never
- * ahead of the answers): dragging towards a step whose way is earned fills
- * the line under the finger, dragging past the answers does not.
+ * drag under the finger, in CSS alone. The path is not concerned: it moves
+ * on answers, never on movement.
  */
 const css$2 = /* css */`
   .navi_step_list {
-    /* The knobs: accent is the path, muted is what the path has not
-       reached, on-accent writes on filled dots, and --step-list-path-line
-       exists apart from the accent for a dark band where the walked line
-       reads better plain white. Said from OUTSIDE (any ancestor — a dark
-       band, a themed app) on the plain names; resolved here through an
+    /* The knobs: one accent for everything filled — the dots and the line
+       share it, because the fill has ONE meaning (answered) and a meaning
+       does not change color. Muted is what is not answered, on-accent
+       writes on filled dots. Said from OUTSIDE (any ancestor — a dark band,
+       a themed app) on the plain names; resolved here through an
        indirection (--x-…, the way Button does), because a default written
        on the plain name on this very element would beat anything an
        ancestor says. */
@@ -75313,10 +75399,9 @@ const css$2 = /* css */`
       --step-list-current-color,
       light-dark(#1c2433, white)
     );
-    --x-step-list-path-line: var(
-      --step-list-path-line,
-      var(--x-step-list-accent)
-    );
+    /* How long a movement takes — the path sweeping, the halo sliding. One
+       number for all of them: they tell one story. */
+    --x-step-list-duration: var(--step-list-duration, 300ms);
 
     position: relative;
     display: block;
@@ -75354,14 +75439,26 @@ const css$2 = /* css */`
   .navi_step_list_rail g[data-current] text {
     fill: var(--x-step-list-current-color);
   }
-  /* The path: same drawing, filled, revealed up to the step it has come to.
-     The clip is set inline (a width in px); transitioning it is what makes
-     an answered step SWEEP the line and the next dot rather than pop. */
+  /* A step answered has its dot filled, wherever the path stands: answered
+     out of order it stands alone, a filled dot between dashed segments.
+     After the current rule on purpose: answered wins the drawing, the halo
+     says current. */
+  .navi_step_list_rail g[data-done] circle {
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
+  }
+  .navi_step_list_rail g[data-done] text {
+    fill: var(--x-step-list-on-accent);
+  }
+  /* The path: same drawing, filled, revealed up to the fill's edge — the
+     answered prefix plus its segment of appetite (see the top comment). The
+     clip is set inline (a width in px); transitioning it is what makes an
+     answered step SWEEP its dot and the line onward rather than pop. */
   .navi_step_list_rail_filled {
-    transition: clip-path 300ms ease;
+    transition: clip-path var(--x-step-list-duration) ease;
   }
   .navi_step_list_rail_filled line {
-    stroke: var(--x-step-list-path-line);
+    stroke: var(--x-step-list-accent);
     stroke-dasharray: none;
   }
   .navi_step_list_rail_filled circle {
@@ -75375,7 +75472,7 @@ const css$2 = /* css */`
      to dot (transform, transitioned) — the g moves, the circle inside is
      drawn at x=0. */
   .navi_step_list_marker {
-    transition: transform 300ms ease;
+    transition: transform var(--x-step-list-duration) ease;
   }
   .navi_step_list_marker circle {
     fill: none;
@@ -75387,8 +75484,7 @@ const css$2 = /* css */`
      container paints --slide-travel-progress here (this element follows it,
      see data-slide-container-follows) — an asked-for travel animates it, a
      finger drags it — and everything below is a calc() of that number, so
-     the halo and the path move per frame in CSS alone. The transitions are
-     off: they would chase a finger that is already the pace.
+     the halo and the path move per frame in CSS alone.
      Position, in dots-x px: where the picture is right now. */
   .navi_step_list[data-slide-container-follows] {
     --step-list-position: calc(
@@ -75400,36 +75496,11 @@ const css$2 = /* css */`
     transform: translateX(calc(var(--step-list-position) * 1px));
     transition: none;
   }
-  /* The path follows the position, clamped: never back below what was
-     earned (--step-list-reached-x), never ahead of what the answers allow
-     (--step-list-reachable-x). The +14 covers the dot it stands on (radius
-     plus stroke). */
-  .navi_step_list[data-slide-container-follows] .navi_step_list_rail_filled {
-    clip-path: inset(
-      0
-        calc(
-          (
-              var(--step-list-w, 0) -
-                (
-                  clamp(
-                      var(--step-list-reached-x, -9999),
-                      var(--step-list-position),
-                      var(--step-list-reachable-x, -9999)
-                    ) +
-                    14
-                )
-            ) *
-            1px
-        )
-        0 0
-    );
-    transition: none;
-  }
 
   /* One press target per step, covering the dot AND the label under it. The
      feedback is NOT the whole surface: a rectangle would say the whole band
      is a button, when the affordance is the dot — so hover and focus land on
-     a circle drawn over the dot (::before), plus the label brightening.
+     a circle drawn over the dot, plus the label brightening.
      --step-dot-x anchors both on the dot, wherever the dot sits in the slot:
      the first and last slots are asymmetric (cut at the container's edge,
      see the geometry in the component). */
@@ -75454,13 +75525,15 @@ const css$2 = /* css */`
     --button-color-readonly: var(--x-step-list-muted);
     /* The button's own focus ring, silenced: it would outline the whole
        press surface, and the ring this list draws is the one around the dot
-       (see the ::before rules below) — two rings read as a mistake. Width
-       rather than style, because the ::before sets its own style in full. */
+       (see below) — two rings read as a mistake. Width rather than style,
+       because the dot sets its own style in full. */
     --button-outline-width: 0px;
   }
   /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
-     cy 17). */
-  .navi_step_list_step::before {
+     cy 17). A real element rather than a ::before, because it is also what a
+     callout anchors to (data-callout-anchor needs a selector) — a message
+     about a step points at its CIRCLE, not at the press surface. */
+  .navi_step_list_dot {
     position: absolute;
     top: 17px;
     left: var(--step-dot-x);
@@ -75468,18 +75541,18 @@ const css$2 = /* css */`
     height: 30px;
     border-radius: 50%;
     translate: -50% -50%;
-    content: "";
+    pointer-events: none;
   }
-  .navi_step_list_step:hover::before,
-  .navi_step_list_step[data-hover]::before {
+  .navi_step_list_step:hover .navi_step_list_dot,
+  .navi_step_list_step[data-hover] .navi_step_list_dot {
     background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
   }
   .navi_step_list .navi_step_list_step:hover,
   .navi_step_list .navi_step_list_step[data-hover] {
     --button-color: var(--x-step-list-current-color);
   }
-  .navi_step_list_step:focus-visible::before,
-  .navi_step_list_step[data-focus-visible]::before {
+  .navi_step_list_step:focus-visible .navi_step_list_dot,
+  .navi_step_list_step[data-focus-visible] .navi_step_list_dot {
     outline-width: var(--navi-focus-outline-width);
     outline-style: solid;
     outline-color: var(--navi-focus-outline-color);
@@ -75507,28 +75580,24 @@ const EDGE_INSET = 30;
 // halo of a current dot not to sit on the line.
 const LINE_GAP = 5;
 
+// What the Items say to the list holding them (see Step): where to write
+// themselves down. Null outside any list — a Step alone renders nothing and
+// registers nowhere.
+const StepListContext = createContext(null);
+
 /**
  * @type {import("ignore:preact").FunctionComponent<{
  *   current?: string,
- *   reached?: string,
- *   reachable?: string,
  *   slideContainer?: string,
  *   travelByClick?: boolean,
  *   travelByKeyboard?: boolean,
+ *   duration?: string,
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
  *   halo, its label the emphasis. Omit for "nowhere" — a confirmation
  *   screen after the walk, say. With `slideContainer` the position is read
  *   off the container instead, and this prop is ignored.
- * @param {string} [reached] - the step the path has come to: the line is
- *   solid and the dots filled up to it, dashed past it. Omit for a path
- *   that has not started.
- * @param {string} [reachable] - how far the path MAY go (with
- *   `slideContainer` only): between `reached` and this step the path
- *   follows the position — a drag towards a step whose way is earned fills
- *   the line under the finger. Defaults to `reached`: the path then never
- *   moves with the position at all.
  * @param {string} [slideContainer] - id of a <SlideContainer> these steps
  *   are the slides of. Pressing a step travels there
  *   (--navi-go-to-slide), the halo follows the container — drags included —
@@ -75545,14 +75614,16 @@ const LINE_GAP = 5;
  *   CONTAINER — this element is a follower, so a press here already walks
  *   the slides, and the container's own `travelByKeyboard` is the one that
  *   says so. One owner per mode, or one arrow would do both.
+ * @param {string} [duration] - how long a movement takes (the path
+ *   sweeping, the halo sliding), any CSS duration. 300ms unless said —
+ *   here, or from outside via --step-list-duration.
  */
 const StepList = ({
   current,
-  reached,
-  reachable,
   slideContainer,
   travelByClick = true,
   travelByKeyboard = true,
+  duration,
   children,
   ...rest
 }) => {
@@ -75584,11 +75655,33 @@ const StepList = ({
     direction: "x"
   });
 
-  // The steps, read off the children: each <StepList.Item> vnode says which
-  // step it is (value) and is rendered as the label under its dot.
-  const stepVNodes = toChildArray(children).filter(child => child && child.props);
-  const stepCount = stepVNodes.length;
-  const valueOf = (vnode, index) => vnode.props.value ?? String(index);
+  // The roll call: every render of this list opens a fresh page, the Items
+  // rendering below write themselves on it (in rendering order, which is the
+  // order of the steps), and the layout effect reads the page back. What was
+  // read is STATE — the first render knows no steps, the effect's render
+  // draws them — and a change in what the Items say (a done toggled) flows
+  // the same way: fresh page, fresh read, redraw.
+  const registryRef = useRef(null);
+  if (!registryRef.current) {
+    registryRef.current = {
+      renderedSteps: []
+    };
+  }
+  const registry = registryRef.current;
+  registry.renderedSteps = [];
+  const [steps, setSteps] = useState([]);
+  useLayoutEffect(() => {
+    const collected = registry.renderedSteps;
+    // An empty page while steps are known: the children were most likely
+    // bailed out of rendering (memoized vnodes), not removed — keeping the
+    // known steps beats erasing the drawing (see the caveat in the top
+    // comment).
+    if (collected.length === 0 && steps.length > 0) {
+      return;
+    }
+    setSteps(previous => sameSteps(previous, collected) ? previous : [...collected]);
+  });
+  const stepCount = steps.length;
   const dotXs = [];
   if (width > 0 && stepCount > 0) {
     const span = width - EDGE_INSET * 2;
@@ -75598,7 +75691,7 @@ const StepList = ({
       index++;
     }
   }
-  const indexOf = value => stepVNodes.findIndex((vnode, index) => valueOf(vnode, index) === value);
+  const indexOf = value => steps.findIndex(step => step.value === value);
 
   // Where the slides are, read off the container: which slide is current,
   // and — while a travel or a drag is playing — which one the picture leans
@@ -75656,19 +75749,31 @@ const StepList = ({
   }, [slideContainer, width, stepCount]);
   const resolvedCurrent = slideContainer ? containerCurrent : current;
   const currentIndex = resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
-  const reachedIndex = reached === undefined ? -1 : indexOf(reached);
-  let reachableIndex = reachable === undefined ? -1 : indexOf(reachable);
-  if (reachableIndex < reachedIndex) {
-    reachableIndex = reachedIndex;
+  // The path, deduced from what the Items say: the steps answered without a
+  // gap from the start. -1 when the first step is not answered yet — there
+  // is no path then, only dots.
+  let pathEndIndex = steps.findIndex(step => !step.done);
+  if (pathEndIndex === -1) {
+    pathEndIndex = stepCount;
   }
-  // Covers the reached dot entirely (radius plus stroke), and nothing when
-  // the path has not started.
-  const fillX = reachedIndex === -1 ? 0 : dotXs[reachedIndex] + DOT_R + 3;
+  pathEndIndex -= 1;
+  // How far the fill goes: nowhere while nothing is answered; past the last
+  // dot (radius plus stroke) when everything is; otherwise THROUGH the
+  // answered prefix and onward to the edge of the next dot — the segment of
+  // appetite (see the top comment), with the dot it points at left empty.
+  let fillX;
+  if (pathEndIndex === -1) {
+    fillX = 0;
+  } else if (pathEndIndex >= stepCount - 1) {
+    fillX = dotXs[stepCount - 1] + DOT_R + 3;
+  } else {
+    fillX = dotXs[pathEndIndex + 1] - DOT_R - LINE_GAP;
+  }
   const cy = RAIL_H / 2;
   const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
   const renderRail = filled => jsx("svg", {
     className: filled ? "navi_step_list_rail navi_step_list_rail_filled" : "navi_step_list_rail",
-    style: filled && !slideContainer ? {
+    style: filled ? {
       clipPath: `inset(0 ${width - fillX}px 0 0)`
     } : undefined,
     width: width,
@@ -75676,9 +75781,10 @@ const StepList = ({
     viewBox: `0 0 ${width} ${RAIL_H}`,
     "aria-hidden": "true",
     children: dotXs.map((x, index) => jsxs("g", {
-      // Base layer only: a current dot the path covers keeps the filled
-      // colors (see the css).
+      // Base layer only: dots the path covers are drawn filled by the
+      // layer above anyway (see the css).
       "data-current": !filled && index === currentIndex ? "" : undefined,
+      "data-done": !filled && steps[index].done ? "" : undefined,
       children: [index > 0 ? jsx("line", {
         x1: dotXs[index - 1] + DOT_R + LINE_GAP,
         y1: cy,
@@ -75695,9 +75801,9 @@ const StepList = ({
         "text-anchor": "middle",
         children: index + 1
       })]
-    }, valueOf(stepVNodes[index], index)))
+    }, steps[index].value))
   });
-  return jsx(Box, {
+  return jsxs(Box, {
     ...rest,
     ref: rootRef,
     baseClassName: "navi_step_list",
@@ -75710,13 +75816,14 @@ const StepList = ({
     "data-slide-container-follows": slideContainer,
     style: {
       ...rest.style,
-      ...(slideContainer ? {
-        "--step-list-w": width,
-        "--step-list-reached-x": reachedIndex === -1 ? -9999 : dotXs[reachedIndex],
-        "--step-list-reachable-x": reachableIndex === -1 ? -9999 : dotXs[reachableIndex]
+      ...(duration ? {
+        "--step-list-duration": duration
       } : undefined)
     },
-    children: width > 0 && stepCount > 0 ? jsxs(Fragment$1, {
+    children: [jsx(StepListContext.Provider, {
+      value: registry,
+      children: children
+    }), width > 0 && stepCount > 0 ? jsxs(Fragment$1, {
       children: [renderRail(false), renderRail(true), currentIndex !== -1 && dotXs[currentIndex] !== undefined ? jsx("svg", {
         className: "navi_step_list_rail",
         width: width,
@@ -75738,15 +75845,7 @@ const StepList = ({
             r: RING_R
           })
         })
-      }) : null, stepVNodes.map((stepVNode, index) => {
-        const value = valueOf(stepVNode, index);
-        // Whatever else the Item was given reaches its button — a
-        // pseudoState held for a demo, an aria attribute.
-        const itemRest = {
-          ...stepVNode.props
-        };
-        delete itemRest.value;
-        delete itemRest.children;
+      }) : null, steps.map((step, index) => {
         // The slots tile the row, cut at the container's edges: the
         // first and the last cover only the inner half of the room an
         // interior slot gets, so pressing just outside the box presses
@@ -75762,8 +75861,8 @@ const StepList = ({
             "width": `${slotRight - slotLeft}px`,
             "--step-dot-x": `${dotXs[index] - slotLeft}px`
           },
-          children: jsx(Button, {
-            ...itemRest,
+          children: jsxs(Button, {
+            ...step.buttonProps,
             // bare, not discrete: what is drawn IS the dot and its
             // label — the hover wash a discrete button paints over its
             // whole surface is exactly what must not appear here (the
@@ -75776,38 +75875,105 @@ const StepList = ({
             // Towards the slides when connected, by name: the command
             // reaches the container wherever this list sits on the
             // page. What else a press should do is the Item's own
-            // onClick, which arrived through itemRest.
+            // onClick, which arrived through buttonProps.
             ,
 
-            command: slideContainer && travelByClick ? `--navi-go-to-slide:${value}` : undefined,
-            commandFor: slideContainer,
-            children: jsx("span", {
+            command: slideContainer && travelByClick ? `--navi-go-to-slide:${step.value}` : undefined,
+            commandFor: slideContainer
+            // A message about a step (a callout) points at its circle,
+            // above it: the label lives below.
+            ,
+
+            "data-callout-anchor": ".navi_step_list_dot",
+            "data-callout-position": "top",
+            children: [jsx("span", {
+              className: "navi_step_list_dot",
+              "aria-hidden": "true"
+            }), jsx("span", {
               className: "navi_step_list_label",
-              children: stepVNode
-            })
+              children: step.label
+            })]
           })
-        }, value);
+        }, step.value);
       })]
-    }) : null
+    }) : null]
   });
 };
 
+// The same steps saying the same things: nothing to redraw. The labels are
+// vnodes, fresh objects on every render — comparing them would always say
+// "changed", so they are left out: what they show changes through the state
+// it came from, which re-renders this list anyway.
+const sameSteps = (previousSteps, nextSteps) => {
+  if (previousSteps.length !== nextSteps.length) {
+    return false;
+  }
+  let index = 0;
+  while (index < previousSteps.length) {
+    const previous = previousSteps[index];
+    const next = nextSteps[index];
+    if (previous.value !== next.value || previous.done !== next.done) {
+      return false;
+    }
+    if (!sameShallow(previous.buttonProps, next.buttonProps)) {
+      return false;
+    }
+    index++;
+  }
+  return true;
+};
+const sameShallow = (previousObject, nextObject) => {
+  const previousKeys = Object.keys(previousObject);
+  const nextKeys = Object.keys(nextObject);
+  if (previousKeys.length !== nextKeys.length) {
+    return false;
+  }
+  for (const key of previousKeys) {
+    if (previousObject[key] !== nextObject[key]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 /**
- * One step of the walk: `value` names it (what `current`/`reached` say and
- * what a press reports), the children are its label. Rendered under its dot;
- * where the dot is, and what state it shows, is the StepList's business.
+ * One step of the walk: `value` names it (what `current` says and what a
+ * press reports), `done` says it is answered (its dot fills, and the path is
+ * deduced from the answered steps), the children are its label.
+ *
+ * It renders NOTHING: it registers with the list around it as it renders,
+ * and the list draws everything — the dot, the label, the button. Whatever
+ * else it carries (onClick, pseudoState, aria-*) lands on that button.
  *
  * It is both StepList.Item and an export of its own, the way Slide is to
  * SlideContainer.
  *
  * @type {import("ignore:preact").FunctionComponent<{
  *   value: string,
+ *   done?: boolean,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [done] - this step is answered: its dot is filled — the
+ *   fill's one meaning. Steps answered out of order are filled dots
+ *   standing alone, dashed segments around them.
  */
 const Step = ({
-  children
-}) => children;
+  value,
+  done,
+  children,
+  ...buttonProps
+}) => {
+  const registry = useContext(StepListContext);
+  if (registry) {
+    registry.renderedSteps.push({
+      value: value ?? String(registry.renderedSteps.length),
+      done: Boolean(done),
+      label: children,
+      buttonProps
+    });
+  }
+  return null;
+};
 StepList.Item = Step;
 
 installImportMetaCssBuild(import.meta);const css$1 = /* css */`
