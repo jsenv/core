@@ -45,19 +45,33 @@ import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
+import { useFocusGroup } from "../utils/focus/use_focus_group.js";
 
 const css = /* css */ `
   .navi_step_list {
-    /* The knobs, in one place: accent is the path, muted is what the path
-       has not reached, on-accent writes on filled dots. --step-list-path-line
+    /* The knobs: accent is the path, muted is what the path has not
+       reached, on-accent writes on filled dots, and --step-list-path-line
        exists apart from the accent for a dark band where the walked line
-       reads better plain white. */
-    --step-list-accent: #4f8ef7;
-    --step-list-on-accent: white;
-    --step-list-muted: light-dark(#8a93a8, #8b99b8);
-    --step-list-line: light-dark(#c9d0dd, rgba(255, 255, 255, 0.35));
-    --step-list-current-color: light-dark(#1c2433, white);
-    --step-list-path-line: var(--step-list-accent);
+       reads better plain white. Said from OUTSIDE (any ancestor — a dark
+       band, a themed app) on the plain names; resolved here through an
+       indirection (--x-…, the way Button does), because a default written
+       on the plain name on this very element would beat anything an
+       ancestor says. */
+    --x-step-list-accent: var(--step-list-accent, #4f8ef7);
+    --x-step-list-on-accent: var(--step-list-on-accent, white);
+    --x-step-list-muted: var(--step-list-muted, light-dark(#8a93a8, #8b99b8));
+    --x-step-list-line: var(
+      --step-list-line,
+      light-dark(#c9d0dd, rgba(255, 255, 255, 0.35))
+    );
+    --x-step-list-current-color: var(
+      --step-list-current-color,
+      light-dark(#1c2433, white)
+    );
+    --x-step-list-path-line: var(
+      --step-list-path-line,
+      var(--x-step-list-accent)
+    );
 
     position: relative;
     display: block;
@@ -71,29 +85,29 @@ const css = /* css */ `
   }
   /* The road not walked yet. */
   .navi_step_list_rail line {
-    stroke: var(--step-list-line);
+    stroke: var(--x-step-list-line);
     stroke-width: 2;
     stroke-dasharray: 4 5;
   }
   .navi_step_list_rail circle {
     fill: none;
-    stroke: var(--step-list-muted);
+    stroke: var(--x-step-list-muted);
     stroke-width: 1.5;
   }
   .navi_step_list_rail text {
     font-weight: 600;
     font-size: 12px;
-    fill: var(--step-list-muted);
+    fill: var(--x-step-list-muted);
   }
   /* The current dot says so in the drawing itself, not only by its halo: on
      a dark band a muted number under a faint ring reads as nothing. Said in
      the base layer only (see renderRail) — a current dot the path has
      covered keeps the filled colors. */
   .navi_step_list_rail g[data-current] circle {
-    stroke: var(--step-list-current-color);
+    stroke: var(--x-step-list-current-color);
   }
   .navi_step_list_rail g[data-current] text {
-    fill: var(--step-list-current-color);
+    fill: var(--x-step-list-current-color);
   }
   /* The path: same drawing, filled, revealed up to the step it has come to.
      The clip is set inline (a width in px); transitioning it is what makes
@@ -102,15 +116,15 @@ const css = /* css */ `
     transition: clip-path 300ms ease;
   }
   .navi_step_list_rail_filled line {
-    stroke: var(--step-list-path-line);
+    stroke: var(--x-step-list-path-line);
     stroke-dasharray: none;
   }
   .navi_step_list_rail_filled circle {
-    fill: var(--step-list-accent);
-    stroke: var(--step-list-accent);
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
   }
   .navi_step_list_rail_filled text {
-    fill: var(--step-list-on-accent);
+    fill: var(--x-step-list-on-accent);
   }
   /* The position: a halo around the dot being looked at. It slides from dot
      to dot (transform, transitioned) — the g moves, the circle inside is
@@ -120,7 +134,7 @@ const css = /* css */ `
   }
   .navi_step_list_marker circle {
     fill: none;
-    stroke: color-mix(in srgb, var(--step-list-accent) 65%, transparent);
+    stroke: color-mix(in srgb, var(--x-step-list-accent) 65%, transparent);
     stroke-width: 1.5;
   }
 
@@ -180,9 +194,9 @@ const css = /* css */ `
     box-sizing: border-box;
     height: 100%;
   }
-  /* Doubled selector: the discrete variant declares its own hover background
-     var, and navi's stylesheet is injected after this one — specificity is
-     what makes these values the ones read. */
+  /* Doubled selector: the button's own state formulas (a readonly color
+     mixed at the variant level) are declared in navi's stylesheet, injected
+     after this one — specificity is what makes these values the ones read. */
   .navi_step_list .navi_step_list_step {
     position: relative;
     display: block;
@@ -191,11 +205,8 @@ const css = /* css */ `
     padding: 0;
     font-size: 12px;
     outline: none;
-    --button-color: var(--step-list-muted);
-    --button-color-readonly: var(--step-list-muted);
-    --button-background-color: transparent;
-    --button-background-color-hover: transparent;
-    --button-background-color-readonly: transparent;
+    --button-color: var(--x-step-list-muted);
+    --button-color-readonly: var(--x-step-list-muted);
     /* The button's own focus ring, silenced: it would outline the whole
        press surface, and the ring this list draws is the one around the dot
        (see the ::before rules below) — two rings read as a mistake. Width
@@ -216,11 +227,11 @@ const css = /* css */ `
   }
   .navi_step_list_step:hover::before,
   .navi_step_list_step[data-hover]::before {
-    background: color-mix(in srgb, var(--step-list-accent) 15%, transparent);
+    background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
   }
   .navi_step_list .navi_step_list_step:hover,
   .navi_step_list .navi_step_list_step[data-hover] {
-    --button-color: var(--step-list-current-color);
+    --button-color: var(--x-step-list-current-color);
   }
   .navi_step_list_step:focus-visible::before,
   .navi_step_list_step[data-focus-visible]::before {
@@ -238,8 +249,8 @@ const css = /* css */ `
   }
   .navi_step_list .navi_step_list_step[data-current] {
     font-weight: 600;
-    --button-color: var(--step-list-current-color);
-    --button-color-readonly: var(--step-list-current-color);
+    --button-color: var(--x-step-list-current-color);
+    --button-color-readonly: var(--x-step-list-current-color);
   }
 `;
 
@@ -259,6 +270,7 @@ const LINE_GAP = 5;
  *   reachable?: string,
  *   slideContainer?: string,
  *   travelByClick?: boolean,
+ *   travelByKeyboard?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
@@ -283,6 +295,12 @@ const LINE_GAP = 5;
  *   there. Off, the steps are read-only — shown, not offered. To DO
  *   something on a press, say `onClick` on the Item itself: like every other
  *   prop an Item carries, it lands on that step's button.
+ * @param {boolean} [travelByKeyboard=true] - whether the arrow keys walk
+ *   from one step to the other (the focus moves, Enter presses). Only when
+ *   the list stands alone: connected to slides the arrows belong to the
+ *   CONTAINER — this element is a follower, so a press here already walks
+ *   the slides, and the container's own `travelByKeyboard` is the one that
+ *   says so. One owner per mode, or one arrow would do both.
  */
 export const StepList = ({
   current,
@@ -290,6 +308,7 @@ export const StepList = ({
   reachable,
   slideContainer,
   travelByClick = true,
+  travelByKeyboard = true,
   children,
   ...rest
 }) => {
@@ -311,6 +330,15 @@ export const StepList = ({
       observer.disconnect();
     };
   }, []);
+
+  // The arrows walk the steps — standing alone only: connected, this element
+  // follows the container, whose own keydown listener already walks the
+  // slides from here (and whose travelByKeyboard says whether to). A focus
+  // group on top of that would make one arrow do both.
+  useFocusGroup(rootRef, {
+    enabled: Boolean(travelByKeyboard) && !slideContainer,
+    direction: "x",
+  });
 
   // The steps, read off the children: each <StepList.Item> vnode says which
   // step it is (value) and is rendered as the label under its dot.
@@ -529,7 +557,11 @@ export const StepList = ({
               >
                 <Button
                   {...itemRest}
-                  variant="discrete"
+                  // bare, not discrete: what is drawn IS the dot and its
+                  // label — the hover wash a discrete button paints over its
+                  // whole surface is exactly what must not appear here (the
+                  // feedback is the circle over the dot, see the css).
+                  variant="bare"
                   className="navi_step_list_step"
                   aria-current={index === currentIndex ? "step" : undefined}
                   data-current={index === currentIndex ? "" : undefined}
