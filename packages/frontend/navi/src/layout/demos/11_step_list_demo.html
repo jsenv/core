@@ -68,17 +68,19 @@
 
       // Un tableau, pas un composant wrapper: les items sont lus sur les
       // enfants (toChildArray), qui ne voit pas à travers un composant.
-      const annonceStepItems = () => [
-        <StepList.Item key="dispo" value="dispo">
+      // `propsOf` pose des props supplémentaires sur un item (onClick,
+      // pseudoState…), qui atterrissent sur son bouton.
+      const annonceStepItems = (propsOf = () => undefined) => [
+        <StepList.Item key="dispo" value="dispo" {...propsOf("dispo")}>
           Dispo
         </StepList.Item>,
-        <StepList.Item key="club" value="club">
+        <StepList.Item key="club" value="club" {...propsOf("club")}>
           Club
         </StepList.Item>,
-        <StepList.Item key="place" value="place">
+        <StepList.Item key="place" value="place" {...propsOf("place")}>
           Place
         </StepList.Item>,
-        <StepList.Item key="recap" value="recap">
+        <StepList.Item key="recap" value="recap" {...propsOf("recap")}>
           Récap
         </StepList.Item>,
       ];
@@ -91,17 +93,16 @@
           <div className="demo-section">
             <h2 id="nominal">Cas nominal</h2>
             <p className="caption">
-              Presser une étape déplace <code>current</code> (le halo); le
-              chemin (<code>reached</code>) ne bouge que par les boutons.
+              Cliquer une étape déplace <code>current</code> (le halo, via
+              onClick sur chaque Item); le chemin (<code>reached</code>) ne
+              bouge que par les boutons.
             </p>
-            <StepList
-              current={current}
-              reached={reached}
-              onStepPress={(value) => {
-                setCurrent(value);
-              }}
-            >
-              {annonceStepItems()}
+            <StepList current={current} reached={reached}>
+              {annonceStepItems((value) => ({
+                onClick: () => {
+                  setCurrent(value);
+                },
+              }))}
             </StepList>
             <Box flex="x" spacing="s" marginTop="m">
               <Button
@@ -132,72 +133,70 @@
         </div>
       );
 
-      const noop = () => {};
-
       const StatesDemo = () => (
         <div className="demo-section">
           <h2 id="states">États</h2>
           <Case caption='Au départ — current="dispo" reached="dispo"'>
-            <StepList current="dispo" reached="dispo" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='Le chemin suit — current="club" reached="club"'>
-            <StepList current="club" reached="club" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='En avance sur le chemin — current="place" reached="dispo"'>
-            <StepList current="place" reached="dispo" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='En retard sur le chemin — current="dispo" reached="place"'>
-            <StepList current="dispo" reached="place" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='Au bout — current="recap" reached="recap"'>
-            <StepList current="recap" reached="recap" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='Terminé, on ne regarde plus — reached="recap", pas de current'>
-            <StepList reached="recap" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption='Chemin pas commencé — current="club", pas de reached'>
-            <StepList current="club" onStepPress={noop}>
-              {annonceStepItems()}
-            </StepList>
-          </Case>
-          <Case caption="Sans onStepPress — montré, pas offert">
-            <StepList current="club" reached="club">
+            <StepList current="dispo" reached="dispo">
               {annonceStepItems()}
             </StepList>
           </Case>
           <Case caption={'Survolée — pseudoState :hover sur "Place"'}>
-            <StepList current="dispo" reached="dispo" onStepPress={noop}>
-              <StepList.Item value="dispo">Dispo</StepList.Item>
-              <StepList.Item value="club">Club</StepList.Item>
-              <StepList.Item value="place" pseudoState={{ ":hover": true }}>
-                Place
-              </StepList.Item>
-              <StepList.Item value="recap">Récap</StepList.Item>
+            <StepList current="dispo" reached="dispo">
+              {annonceStepItems((value) =>
+                value === "place"
+                  ? { pseudoState: { ":hover": true } }
+                  : undefined,
+              )}
             </StepList>
           </Case>
-          <Case caption={'Au clavier — pseudoState :focus-visible sur "Club"'}>
-            <StepList current="dispo" reached="dispo" onStepPress={noop}>
-              <StepList.Item value="dispo">Dispo</StepList.Item>
-              <StepList.Item
-                value="club"
-                pseudoState={{ ":focus-visible": true }}
-              >
-                Club
-              </StepList.Item>
-              <StepList.Item value="place">Place</StepList.Item>
-              <StepList.Item value="recap">Récap</StepList.Item>
+          <Case caption="Au clavier — :focus-visible sur l'étape courante">
+            <StepList current="club" reached="club">
+              {annonceStepItems((value) =>
+                value === "club"
+                  ? { pseudoState: { ":focus-visible": true } }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
+          <Case caption="Au clavier — :focus-visible sur l'étape suivante">
+            <StepList current="club" reached="club">
+              {annonceStepItems((value) =>
+                value === "place"
+                  ? { pseudoState: { ":focus-visible": true } }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
+          <Case caption='Le chemin suit — current="club" reached="club"'>
+            <StepList current="club" reached="club">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='En avance sur le chemin — current="place" reached="dispo"'>
+            <StepList current="place" reached="dispo">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='En retard sur le chemin — current="dispo" reached="place"'>
+            <StepList current="dispo" reached="place">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Au bout — current="recap" reached="recap"'>
+            <StepList current="recap" reached="recap">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Terminé, on ne regarde plus — reached="recap", pas de current'>
+            <StepList reached="recap">{annonceStepItems()}</StepList>
+          </Case>
+          <Case caption='Chemin pas commencé — current="club", pas de reached'>
+            <StepList current="club">{annonceStepItems()}</StepList>
+          </Case>
+          <Case caption="travelByClick={false} — montré, pas offert">
+            <StepList current="club" reached="club" travelByClick={false}>
+              {annonceStepItems()}
             </StepList>
           </Case>
         </div>
@@ -214,17 +213,17 @@
         <div className="demo-section">
           <h2 id="count">Nombre d'étapes</h2>
           <Case caption="2 étapes">
-            <StepList current="step_1" reached="step_1" onStepPress={noop}>
+            <StepList current="step_1" reached="step_1">
               {stepItemsOf(2)}
             </StepList>
           </Case>
           <Case caption="3 étapes">
-            <StepList current="step_2" reached="step_2" onStepPress={noop}>
+            <StepList current="step_2" reached="step_2">
               {stepItemsOf(3)}
             </StepList>
           </Case>
           <Case caption="6 étapes">
-            <StepList current="step_4" reached="step_2" onStepPress={noop}>
+            <StepList current="step_4" reached="step_2">
               {stepItemsOf(6)}
             </StepList>
           </Case>
@@ -241,14 +240,14 @@
             <StepList
               current="club"
               reached="club"
-              onStepPress={noop}
+
               style={{ width: "280px" }}
             >
               {annonceStepItems()}
             </StepList>
           </Case>
           <Case caption="pleine largeur">
-            <StepList current="club" reached="club" onStepPress={noop}>
+            <StepList current="club" reached="club">
               {annonceStepItems()}
             </StepList>
           </Case>
@@ -352,7 +351,7 @@
             --step-list-path-line.
           </p>
           <div className="dark-band">
-            <StepList current="place" reached="dispo" onStepPress={noop}>
+            <StepList current="place" reached="dispo">
               {annonceStepItems()}
             </StepList>
           </div>

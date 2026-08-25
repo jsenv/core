@@ -196,6 +196,11 @@ const css = /* css */ `
     --button-background-color: transparent;
     --button-background-color-hover: transparent;
     --button-background-color-readonly: transparent;
+    /* The button's own focus ring, silenced: it would outline the whole
+       press surface, and the ring this list draws is the one around the dot
+       (see the ::before rules below) — two rings read as a mistake. Width
+       rather than style, because the ::before sets its own style in full. */
+    --button-outline-width: 0px;
   }
   /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
      cy 17). */
@@ -253,7 +258,7 @@ const LINE_GAP = 5;
  *   reached?: string,
  *   reachable?: string,
  *   slideContainer?: string,
- *   onStepPress?: (value: string, event: Event) => void,
+ *   travelByClick?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
@@ -274,16 +279,17 @@ const LINE_GAP = 5;
  *   and this element becomes a follower of the container
  *   (data-slide-container-follows), which is also what keeps the arrow keys
  *   working from here.
- * @param {(value: string, event: Event) => void} [onStepPress] - a step was
- *   pressed. Without it (and without `slideContainer`) the steps are
- *   read-only — shown, not offered.
+ * @param {boolean} [travelByClick=true] - whether pressing a step goes
+ *   there. Off, the steps are read-only — shown, not offered. To DO
+ *   something on a press, say `onClick` on the Item itself: like every other
+ *   prop an Item carries, it lands on that step's button.
  */
 export const StepList = ({
   current,
   reached,
   reachable,
   slideContainer,
-  onStepPress,
+  travelByClick = true,
   children,
   ...rest
 }) => {
@@ -527,21 +533,17 @@ export const StepList = ({
                   className="navi_step_list_step"
                   aria-current={index === currentIndex ? "step" : undefined}
                   data-current={index === currentIndex ? "" : undefined}
-                  readOnly={!onStepPress && !slideContainer}
+                  readOnly={!travelByClick}
                   // Towards the slides when connected, by name: the command
                   // reaches the container wherever this list sits on the
-                  // page.
+                  // page. What else a press should do is the Item's own
+                  // onClick, which arrived through itemRest.
                   command={
-                    slideContainer ? `--navi-go-to-slide:${value}` : undefined
-                  }
-                  commandFor={slideContainer}
-                  onClick={
-                    onStepPress
-                      ? (e) => {
-                          onStepPress(value, e);
-                        }
+                    slideContainer && travelByClick
+                      ? `--navi-go-to-slide:${value}`
                       : undefined
                   }
+                  commandFor={slideContainer}
                 >
                   <span className="navi_step_list_label">{stepVNode}</span>
                 </Button>
