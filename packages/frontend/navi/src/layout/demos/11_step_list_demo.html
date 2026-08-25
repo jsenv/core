@@ -170,6 +170,29 @@
               {annonceStepItems()}
             </StepList>
           </Case>
+          <Case caption={'Survolée — pseudoState :hover sur "Place"'}>
+            <StepList current="dispo" reached="dispo" onStepPress={noop}>
+              <StepList.Item value="dispo">Dispo</StepList.Item>
+              <StepList.Item value="club">Club</StepList.Item>
+              <StepList.Item value="place" pseudoState={{ ":hover": true }}>
+                Place
+              </StepList.Item>
+              <StepList.Item value="recap">Récap</StepList.Item>
+            </StepList>
+          </Case>
+          <Case caption={'Au clavier — pseudoState :focus-visible sur "Club"'}>
+            <StepList current="dispo" reached="dispo" onStepPress={noop}>
+              <StepList.Item value="dispo">Dispo</StepList.Item>
+              <StepList.Item
+                value="club"
+                pseudoState={{ ":focus-visible": true }}
+              >
+                Club
+              </StepList.Item>
+              <StepList.Item value="place">Place</StepList.Item>
+              <StepList.Item value="recap">Récap</StepList.Item>
+            </StepList>
+          </Case>
         </div>
       );
 

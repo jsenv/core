@@ -71,12 +71,17 @@
         font-size: 1.05rem;
         text-align: center;
       }
-      .wizard_cancel {
+      /* Le div est à moi, le Button vit dedans en flux normal (même raison
+         que .stepper_step_slot). */
+      .wizard_cancel_slot {
         position: absolute;
         top: 50%;
         right: 8px;
-        color: #b9c4dd;
         translate: 0 -50%;
+      }
+      .wizard_cancel {
+        --button-color: #b9c4dd;
+        --button-background-color-hover: rgba(255, 255, 255, 0.1);
       }
       .step_title {
         margin: 0;
@@ -85,13 +90,11 @@
 
       /* ── Le stepper ──────────────────────────────────────────────────────
          Deux calques SVG identiques: le gris dessous, le rempli dessus,
-         révélé par un clip-path dont le bord droit suit le voyage. La
-         position du bord est un calc() de --slide-travel-progress, que le
-         container anime sur cet élément (data-slide-container-follows) — le
-         trait et les cercles se remplissent donc au rythme exact des slides,
-         sans un render par frame. --stepper-x / --stepper-x-delta sont posés
-         par le Stepper à chaque changement de slide (même convention de
-         signe que l'indicateur de <Nav>). */
+         révélé par un clip-path dont le bord droit marque le CHEMIN — jusqu'où
+         les étapes sont remplies sans trou. Il avance quand une étape est
+         validée (la transition sur clip-path anime le trait et la pastille qui
+         se remplissent), pas quand on se déplace: la position, elle, est le
+         halo. */
       .stepper {
         position: relative;
         width: 348px;
@@ -121,28 +124,8 @@
         font-size: 12px;
         fill: #8b99b8;
       }
-      .stepper_rail polyline {
-        fill: none;
-        stroke: #8b99b8;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
       .stepper_rail_fill {
-        clip-path: inset(
-          0
-            calc(
-              (
-                  348 -
-                    (
-                      var(--stepper-x, 46) + var(--slide-travel-progress) *
-                        var(--stepper-x-delta, 0)
-                    )
-                ) *
-                1px
-            )
-            0 0
-        );
+        transition: clip-path 300ms ease;
       }
       .stepper_rail_fill line {
         stroke: white;
@@ -152,26 +135,36 @@
         fill: #4f8ef7;
         stroke: #4f8ef7;
       }
-      .stepper_rail_fill circle.stepper_ring {
-        fill: none;
-        stroke: rgba(122, 167, 248, 0.55);
-        stroke-width: 1.5;
-      }
       .stepper_rail_fill text {
         fill: white;
       }
-      .stepper_rail_fill polyline {
-        stroke: white;
+      /* La position: un halo autour de la pastille de la slide qu'on regarde
+         — qui peut être en avance sur le chemin. */
+      .stepper_marker {
+        position: absolute;
+        top: 12.5px;
+        box-sizing: border-box;
+        width: 29px;
+        height: 29px;
+        border: 1.5px solid rgba(122, 167, 248, 0.8);
+        border-radius: 50%;
+        transition: left 300ms ease;
+        pointer-events: none;
       }
-      .stepper_step {
+      /* Le div est à moi, le Button vit dedans en flux normal: sa structure
+         interne (qui change avec readOnly) n'a alors rien à casser. */
+      .stepper_step_slot {
         position: absolute;
         top: 0;
         display: flex;
+        box-sizing: border-box;
         width: 84px;
         height: 100%;
-        padding-bottom: 8px;
+        padding-bottom: 6px;
         align-items: flex-end;
         justify-content: center;
+      }
+      .stepper_step {
         font-size: 12px;
         --button-color: #8b99b8;
         --button-color-readonly: #8b99b8;
@@ -188,6 +181,14 @@
         padding: 0;
         font-weight: 600;
         font-size: 0.85rem;
+      }
+      /* Un jour coché se voit: le fond passe à l'accent. La variante bouton
+         de navi garde exprès ses couleurs de bouton quand elle est cochée —
+         ici c'est le fond qui dit la sélection, donc on le reprend. */
+      .phone .day_chip:has(:checked) {
+        color: white;
+        background: #4f8ef7;
+        border-color: #4f8ef7;
       }
       .annonce_list {
         display: flex;
@@ -222,16 +223,16 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+      import { useId, useState } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
         CheckboxGroup,
-        Field,
+        CloseSvg,
         Form,
+        Icon,
         Input,
-        Label,
         List,
         RadioGroup,
         Select,
@@ -239,8 +240,7 @@
         Slide,
         SlideContainer,
         Text,
-        Wheel,
-        WheelGroup,
+        TimeRangeWheel,
         useSearchText,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../../internal/demo_header.jsx";
@@ -251,21 +251,22 @@
 
       // ── Ce qu'une annonce dit ─────────────────────────────────────────────
       const DAYS = [
-        { key: "lun", short: "Lu", label: "Lundi" },
-        { key: "mar", short: "Ma", label: "Mardi" },
-        { key: "mer", short: "Me", label: "Mercredi" },
-        { key: "jeu", short: "Je", label: "Jeudi" },
-        { key: "ven", short: "Ve", label: "Vendredi" },
-        { key: "sam", short: "Sa", label: "Samedi" },
-        { key: "dim", short: "Di", label: "Dimanche" },
+        { key: "lun", initial: "L", short: "Lu", label: "Lundi" },
+        { key: "mar", initial: "M", short: "Ma", label: "Mardi" },
+        { key: "mer", initial: "M", short: "Me", label: "Mercredi" },
+        { key: "jeu", initial: "J", short: "Je", label: "Jeudi" },
+        { key: "ven", initial: "V", short: "Ve", label: "Vendredi" },
+        { key: "sam", initial: "S", short: "Sa", label: "Samedi" },
+        { key: "dim", initial: "D", short: "Di", label: "Dimanche" },
       ];
       const WEEK_KEYS = ["lun", "mar", "mer", "jeu", "ven"];
       const WEEKEND_KEYS = ["sam", "dim"];
       const dayShort = (key) => DAYS.find((day) => day.key === key)?.short;
 
-      const HOURS_DEBUT = Array.from({ length: 17 }, (unused, i) => 6 + i);
-      const HOURS_FIN = Array.from({ length: 17 }, (unused, i) => 7 + i);
-      const twoDigits = (value) => String(value).padStart(2, "0");
+      // "18:00" → "18h00", pour l'affichage.
+      const fmtHeure = (time) => (time ? time.replace(":", "h") : "");
+      const fmtHoraire = (horaire) =>
+        horaire ? `${fmtHeure(horaire.start)} – ${fmtHeure(horaire.end)}` : "";
 
       const CLUBS = [
         {
@@ -362,7 +363,7 @@
       ];
       const stepAnswered = (draft, area) => {
         if (area === "dispo") {
-          return Boolean(draft.jours?.length && draft.debut != null);
+          return Boolean(draft.jours?.length && draft.horaire);
         }
         if (area === "club") {
           return Boolean(draft.club);
@@ -372,11 +373,12 @@
         }
         return false;
       };
-      // Une étape s'atteint quand tout ce qui la précède est répondu: en
-      // création la frontière avance étape par étape, en modification tout a
-      // déjà une valeur et chaque étape s'ouvre directement.
-      const stepReachable = (draft, index) =>
-        STEPS.slice(0, index).every((step) => stepAnswered(draft, step.area));
+      // Le chemin: jusqu'où les étapes sont remplies sans trou. On peut se
+      // tenir plus loin (la navigation est libre), le chemin ne suit pas —
+      // il reste bloqué sur la première étape à qui il manque une info.
+      // "recap" n'est jamais "répondu", donc tout rempli met le chemin sur lui.
+      const pathFrontier = (draft) =>
+        STEPS.findIndex((step) => !stepAnswered(draft, step.area));
 
       // ── Le stepper ────────────────────────────────────────────────────────
       const RAIL_W = 348;
@@ -384,26 +386,11 @@
       const DOT_R = 11;
       const RING_R = 14.5;
       const DOT_X = [30, 126, 222, 318];
-      // Jusqu'où le calque rempli découvre pour être "sur" une étape: le
-      // centre du cercle plus le halo, pour que la pastille soit couverte en
-      // entier quand on s'y tient.
-      const AREA_RANKS = ["dispo", "club", "place", "recap", "done"];
-      const fillXOf = (area) => {
-        let rank = AREA_RANKS.indexOf(area);
-        if (rank === -1) {
-          rank = 0;
-        }
-        // L'écran de confirmation n'a pas de pastille: le remplissage reste
-        // sur la dernière.
-        if (rank > DOT_X.length - 1) {
-          rank = DOT_X.length - 1;
-        }
-        return DOT_X[rank] + RING_R + 2;
-      };
 
-      const StepperRail = ({ draft, filled }) => (
+      const StepperRail = ({ filled, style }) => (
         <svg
           className={filled ? "stepper_rail stepper_rail_fill" : "stepper_rail"}
+          style={style}
           width={RAIL_W}
           height={RAIL_H}
           viewBox={`0 0 ${RAIL_W} ${RAIL_H}`}
@@ -415,99 +402,65 @@
             x2={DOT_X[DOT_X.length - 1]}
             y2={RAIL_H / 2}
           />
-          {STEPS.map((step, index) => {
-            const cx = DOT_X[index];
-            const cy = RAIL_H / 2;
-            return (
-              <g key={step.area}>
-                {filled ? (
-                  <circle className="stepper_ring" cx={cx} cy={cy} r={RING_R} />
-                ) : null}
-                <circle cx={cx} cy={cy} r={DOT_R} />
-                {stepAnswered(draft, step.area) ? (
-                  <polyline
-                    points={`${cx - 4.5},${cy + 0.5} ${cx - 1.5},${cy + 3.5} ${cx + 5},${cy - 3.5}`}
-                  />
-                ) : (
-                  <text x={cx} y={cy} dy="0.36em" text-anchor="middle">
-                    {index + 1}
-                  </text>
-                )}
-              </g>
-            );
-          })}
+          {STEPS.map((step, index) => (
+            <g key={step.area}>
+              <circle cx={DOT_X[index]} cy={RAIL_H / 2} r={DOT_R} />
+              <text
+                x={DOT_X[index]}
+                y={RAIL_H / 2}
+                dy="0.36em"
+                text-anchor="middle"
+              >
+                {index + 1}
+              </text>
+            </g>
+          ))}
         </svg>
       );
 
+      // Deux choses distinctes, dessinées séparément:
+      // - le CHEMIN (calque rempli): jusqu'où les étapes sont remplies sans
+      //   trou. Il avance quand une étape est validée — la transition CSS sur
+      //   clip-path fait le mouvement — et pas quand on se déplace;
+      // - la POSITION (halo + label blanc): la slide qu'on regarde, qui peut
+      //   être en avance sur le chemin.
       const Stepper = ({ containerId, stepSignal, draft }) => {
-        const stepperRef = useRef();
         const currentArea = stepSignal.value;
-        // Où en est la marche, dit en pixels de rail: la position courante et,
-        // pendant un voyage, le delta vers la slide qu'on quitte — le CSS
-        // interpole entre les deux avec --slide-travel-progress, que le
-        // container anime sur cet élément. Écrit à la main depuis les
-        // attributs du container (même mécanique que l'indicateur de <Nav>):
-        // un render arriverait après le départ du mouvement.
-        useLayoutEffect(() => {
-          const containerElement = document.getElementById(containerId);
-          const stepperElement = stepperRef.current;
-          if (!containerElement || !stepperElement) {
-            return undefined;
-          }
-          const paint = () => {
-            const current = containerElement.getAttribute("data-slide-current");
-            const toward = containerElement.getAttribute(
-              "data-slide-travel-toward",
-            );
-            const x = fillXOf(current);
-            let delta = 0;
-            if (toward && toward !== current) {
-              // Le container compte +1 quand l'image penche sur une slide
-              // AVANT la courante, -1 après: le delta est signé pareil pour
-              // que progress × delta retombe exactement sur l'autre pastille.
-              const sign =
-                AREA_RANKS.indexOf(toward) > AREA_RANKS.indexOf(current)
-                  ? -1
-                  : 1;
-              delta = (fillXOf(toward) - x) * sign;
-            }
-            stepperElement.style.setProperty("--stepper-x", x);
-            stepperElement.style.setProperty("--stepper-x-delta", delta);
-          };
-          paint();
-          const observer = new MutationObserver(paint);
-          observer.observe(containerElement, {
-            attributes: true,
-            attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
-          });
-          return () => {
-            observer.disconnect();
-          };
-        }, [containerId]);
-
+        const currentIndex = STEPS.findIndex(
+          (step) => step.area === currentArea,
+        );
+        const frontierIndex = pathFrontier(draft);
+        const fillX = DOT_X[frontierIndex] + DOT_R + 3;
         return (
-          <div
-            ref={stepperRef}
-            className="stepper"
-            data-slide-container-follows={containerId}
-          >
-            <StepperRail draft={draft} />
-            <StepperRail draft={draft} filled />
+          <div className="stepper">
+            <StepperRail />
+            <StepperRail
+              filled
+              style={{ clipPath: `inset(0 ${RAIL_W - fillX}px 0 0)` }}
+            />
+            {currentIndex === -1 ? null : (
+              <div
+                className="stepper_marker"
+                style={{ left: `${DOT_X[currentIndex] - RING_R}px` }}
+              />
+            )}
             {STEPS.map((step, index) => (
-              <Button
+              <div
                 key={step.area}
-                variant="discrete"
-                className="stepper_step"
-                command={`--navi-go-to-slide:${step.area}`}
-                commandFor={containerId}
-                readOnly={
-                  !stepReachable(draft, index) || currentArea === "done"
-                }
-                data-current={step.area === currentArea ? "" : undefined}
+                className="stepper_step_slot"
                 style={{ left: `${DOT_X[index] - 42}px` }}
               >
-                {step.label}
-              </Button>
+                <Button
+                  variant="discrete"
+                  className="stepper_step"
+                  command={`--navi-go-to-slide:${step.area}`}
+                  commandFor={containerId}
+                  readOnly={currentArea === "done"}
+                  data-current={step.area === currentArea ? "" : undefined}
+                >
+                  {step.label}
+                </Button>
+              </div>
             ))}
           </div>
         );
@@ -535,15 +488,10 @@
       // simple submit. canSendWhileUnchanged: c'est l'envoi qui pose les
       // valeurs de l'étape dans le brouillon, y compris quand on garde les
       // valeurs proposées telles quelles.
-      const StepSlide = ({
-        area,
-        title,
-        locked,
-        first,
-        onValues,
-        children,
-      }) => (
-        <Slide id={area} overflow="auto" preventNavNext={locked}>
+      // Aucun verrou: la navigation entre étapes est libre, seul le CHEMIN du
+      // stepper dit ce qui est rempli.
+      const StepSlide = ({ area, title, first, onValues, children }) => (
+        <Slide id={area} overflow="auto">
           <Form action={onValues} canSendWhileUnchanged>
             <Box flex="y" spacing="l" padding="l">
               <h3 className="step_title">{title}</h3>
@@ -554,23 +502,15 @@
         </Slide>
       );
 
-      const DispoSlide = ({
-        draft,
-        patchDraft,
-        joursSignal,
-        debutSignal,
-        finSignal,
-      }) => (
+      const DispoSlide = ({ draft, patchDraft, joursSignal }) => (
         <StepSlide
           area="dispo"
-          title="Vos disponibilités"
-          locked={!stepAnswered(draft, "dispo")}
+          title="Quand êtes-vous disponible ?"
           first
           onValues={(values) => {
             patchDraft({
               jours: values.jours ? [].concat(values.jours) : [],
-              debut: values.debut,
-              fin: values.fin,
+              horaire: values.horaire,
             });
           }}
         >
@@ -580,17 +520,24 @@
               required
               signal={joursSignal}
               flex="x"
-              spacing="xs"
+              spacing="s"
+              borderWidth="0"
+              padding="0"
             >
-              <legend className="group_legend">Jours</legend>
               {DAYS.map((day) => (
                 <Input
                   key={day.key}
                   type="checkbox"
                   variant="button"
+                  className="day_chip"
                   value={day.key}
                   aria-label={day.label}
-                  icon={<span>{day.short}</span>}
+                  width="38"
+                  height="38"
+                  borderRadius="50%"
+                  alignX="center"
+                  alignY="center"
+                  icon={<span>{day.initial}</span>}
                 />
               ))}
             </CheckboxGroup>
@@ -613,57 +560,16 @@
               </Button>
             </Box>
           </Box>
-          <Box flex="y" spacing="s" alignX="start">
-            <Text className="group_legend">Horaires</Text>
-            <Box flex="x" spacing="l">
-              {/* Un créneau ne peut pas finir avant de commencer, et c'est la
-                  roue qu'on NE touche PAS qui s'adapte: uiAction ne se
-                  déclenche que sur une interaction, donc chacune pousse
-                  l'autre et aucune ne se recale sous le doigt. */}
-              <Field flex="y" alignX="center" spacing="xs">
-                <Label>Début</Label>
-                <WheelGroup frameBorder>
-                  <Wheel
-                    name="debut"
-                    type="integer"
-                    signal={debutSignal}
-                    uiAction={(hour) => {
-                      if (finSignal.value <= hour) {
-                        finSignal.value = hour + 1;
-                      }
-                    }}
-                  >
-                    {HOURS_DEBUT.map((hour) => (
-                      <Wheel.Item key={hour} value={hour} paddingX="s">
-                        {`${twoDigits(hour)}h`}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                </WheelGroup>
-              </Field>
-              <Field flex="y" alignX="center" spacing="xs">
-                <Label>Fin</Label>
-                <WheelGroup frameBorder>
-                  <Wheel
-                    name="fin"
-                    type="integer"
-                    signal={finSignal}
-                    uiAction={(hour) => {
-                      if (debutSignal.value >= hour) {
-                        debutSignal.value = hour - 1;
-                      }
-                    }}
-                  >
-                    {HOURS_FIN.map((hour) => (
-                      <Wheel.Item key={hour} value={hour} paddingX="s">
-                        {`${twoDigits(hour)}h`}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                </WheelGroup>
-              </Field>
-            </Box>
-          </Box>
+          {/* Les deux bornes se poussent l'une l'autre en tournant — la
+              roue qu'on tient reste où on la met, l'autre cède. */}
+          <TimeRangeWheel
+            name="horaire"
+            size="l"
+            defaultValue={draft.horaire ?? { start: "18:00", end: "20:00" }}
+            minuteStep={30}
+            hours={{ min: 6, max: 23 }}
+            minDuration={60}
+          />
         </StepSlide>
       );
 
@@ -683,13 +589,9 @@
         );
         const listId = useId();
         return (
-          <Slide
-            id="club"
-            overflow="auto"
-            preventNavNext={!stepAnswered(draft, "club")}
-          >
+          <Slide id="club" overflow="auto">
             <Box flex="y" spacing="m" padding="l">
-              <h3 className="step_title">Dans quel club ?</h3>
+              <h3 className="step_title">Où voulez-vous jouer ?</h3>
               {/* Hors du formulaire: filtrer n'est pas répondre, et Entrée
                   dans la recherche ne doit pas envoyer l'étape. */}
               <Box flex="x" spacing="s">
@@ -779,7 +681,6 @@
           <StepSlide
             area="place"
             title="Quelle place cherchez-vous ?"
-            locked={!stepAnswered(draft, "place")}
             onValues={(values) => {
               patchDraft({
                 niveaux: values.niveaux ? [].concat(values.niveaux) : [],
@@ -861,8 +762,7 @@
           editing
             ? {
                 jours: annonce.jours,
-                debut: annonce.debut,
-                fin: annonce.fin,
+                horaire: annonce.horaire,
                 club: annonce.club,
                 niveaux: annonce.niveaux,
                 cote: annonce.cote,
@@ -876,16 +776,13 @@
         // permet aux quick actions d'écrire dedans et au chip désactivé de
         // lire combien sont cochés.
         const joursSignal = useSignal(draft.jours ?? []);
-        const debutSignal = useSignal(draft.debut ?? 18);
-        const finSignal = useSignal(draft.fin ?? 20);
         const niveauxSignal = useSignal(draft.niveaux ?? []);
         const stepSignal = useSignal("dispo");
         const containerId = useId();
         const save = async () => {
           const values = {
             jours: draft.jours,
-            debut: draft.debut,
-            fin: draft.fin,
+            horaire: draft.horaire,
             club: draft.club,
             niveaux: draft.niveaux,
             cote: draft.cote,
@@ -911,13 +808,19 @@
                 <h2 className="wizard_title">
                   {editing ? "Modifier l'annonce" : "Créer une annonce"}
                 </h2>
-                <Button
-                  variant="discrete"
-                  className="wizard_cancel"
-                  onClick={onExit}
-                >
-                  Annuler
-                </Button>
+                <div className="wizard_cancel_slot">
+                  <Button
+                    variant="discrete"
+                    className="wizard_cancel"
+                    icon
+                    aria-label="Annuler"
+                    onClick={onExit}
+                  >
+                    <Icon>
+                      <CloseSvg />
+                    </Icon>
+                  </Button>
+                </div>
               </Box>
               <Stepper
                 containerId={containerId}
@@ -925,20 +828,17 @@
                 draft={draft}
               />
             </Box>
+            {/* Navigation libre: les flèches, le drag et le stepper vont où on
+                veut — le chemin du stepper, lui, ne bouge que sur validation. */}
             <SlideContainer
               id={containerId}
               signal={stepSignal}
-              travelByKeyboard={false}
-              travelByDrag={false}
-              travelByScroll={false}
               className="wizard_slides"
             >
               <DispoSlide
                 draft={draft}
                 patchDraft={patchDraft}
                 joursSignal={joursSignal}
-                debutSignal={debutSignal}
-                finSignal={finSignal}
               />
               <ClubSlide draft={draft} patchDraft={patchDraft} />
               <PlaceSlide
@@ -946,7 +846,10 @@
                 patchDraft={patchDraft}
                 niveauxSignal={niveauxSignal}
               />
-              <Slide id="recap" overflow="auto">
+              {/* preventNavNext: l'écran de confirmation ne s'atteint qu'en
+                  publiant — le --navi-done d'un envoi réussi lève le verrou
+                  lui-même, une flèche ou un drag non. */}
+              <Slide id="recap" overflow="auto" preventNavNext>
                 {/* Sans champ, ce formulaire n'est jamais "changé":
                     canSendWhileUnchanged pour que l'envoi parte quand même. */}
                 <Form action={save} canSendWhileUnchanged>
@@ -957,9 +860,7 @@
                         {(draft.jours || []).map(dayShort).join(", ")}
                       </RecapLine>
                       <RecapLine label="Horaires" area="dispo">
-                        {draft.debut != null
-                          ? `${twoDigits(draft.debut)}h – ${twoDigits(draft.fin)}h`
-                          : ""}
+                        {fmtHoraire(draft.horaire)}
                       </RecapLine>
                       <RecapLine label="Club" area="club">
                         {clubName(draft.club)}
@@ -975,7 +876,14 @@
                       <Button command="--navi-left" expandX>
                         Précédent
                       </Button>
-                      <Button type="submit" cta expandX>
+                      {/* Tant que le chemin n'a pas atteint le récap, il
+                          manque une réponse quelque part: rien à publier. */}
+                      <Button
+                        type="submit"
+                        cta
+                        expandX
+                        readOnly={pathFrontier(draft) !== STEPS.length - 1}
+                      >
                         {editing ? "Enregistrer" : "Publier l'annonce"}
                       </Button>
                     </Box>
@@ -1008,7 +916,7 @@
       const summarize = (annonce) =>
         [
           (annonce.jours || []).map(dayShort).join(", "),
-          `${twoDigits(annonce.debut)}h – ${twoDigits(annonce.fin)}h`,
+          fmtHoraire(annonce.horaire),
           (annonce.niveaux || []).map(niveauLabel).join(", "),
         ].join(" · ");
 

@@ -103,29 +103,71 @@ const css = /* css */ `
     stroke: color-mix(in srgb, var(--step-list-accent) 65%, transparent);
     stroke-width: 1.5;
   }
-  /* One press target per step, covering the dot AND the label under it: the
-     button is the slot's whole surface, with the label sitting at the
-     bottom of it. */
+  /* One press target per step, covering the dot AND the label under it. The
+     feedback is NOT the whole surface: a rectangle would say the whole band
+     is a button, when the affordance is the dot — so hover and focus land on
+     a circle drawn over the dot (::before), plus the label brightening.
+     --step-dot-x anchors both on the dot, wherever the dot sits in the slot:
+     the first and last slots are asymmetric (cut at the container's edge,
+     see the geometry in the component). */
   .navi_step_list_slot {
     position: absolute;
     top: 0;
-    display: flex;
     box-sizing: border-box;
     height: 100%;
   }
-  .navi_step_list_step {
-    display: flex;
+  /* Doubled selector: the discrete variant declares its own hover background
+     var, and navi's stylesheet is injected after this one — specificity is
+     what makes these values the ones read. */
+  .navi_step_list .navi_step_list_step {
+    position: relative;
+    display: block;
     width: 100%;
-    padding-bottom: 6px;
-    align-items: flex-end;
-    justify-content: center;
+    height: 100%;
+    padding: 0;
     font-size: 12px;
+    outline: none;
     --button-color: var(--step-list-muted);
     --button-color-readonly: var(--step-list-muted);
+    --button-background-color: transparent;
     --button-background-color-hover: transparent;
     --button-background-color-readonly: transparent;
   }
-  .navi_step_list_step[data-current] {
+  /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
+     cy 17). */
+  .navi_step_list_step::before {
+    position: absolute;
+    top: 17px;
+    left: var(--step-dot-x);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    translate: -50% -50%;
+    content: "";
+  }
+  .navi_step_list_step:hover::before,
+  .navi_step_list_step[data-hover]::before {
+    background: color-mix(in srgb, var(--step-list-accent) 15%, transparent);
+  }
+  .navi_step_list .navi_step_list_step:hover,
+  .navi_step_list .navi_step_list_step[data-hover] {
+    --button-color: var(--step-list-current-color);
+  }
+  .navi_step_list_step:focus-visible::before,
+  .navi_step_list_step[data-focus-visible]::before {
+    outline-width: var(--navi-focus-outline-width);
+    outline-style: solid;
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: 1px;
+  }
+  .navi_step_list_label {
+    position: absolute;
+    bottom: 6px;
+    left: var(--step-dot-x);
+    white-space: nowrap;
+    translate: -50% 0;
+  }
+  .navi_step_list .navi_step_list_step[data-current] {
     font-weight: 600;
     --button-color: var(--step-list-current-color);
     --button-color-readonly: var(--step-list-current-color);
@@ -276,16 +318,35 @@ export const StepList = ({
           ) : null}
           {stepVNodes.map((stepVNode, index) => {
             const value = valueOf(stepVNode, index);
+            // Whatever else the Item was given reaches its button — a
+            // pseudoState held for a demo, an aria attribute.
+            const itemRest = { ...stepVNode.props };
+            delete itemRest.value;
+            delete itemRest.children;
+            // The slots tile the row, cut at the container's edges: the
+            // first and the last cover only the inner half of the room an
+            // interior slot gets, so pressing just outside the box presses
+            // nothing.
+            const first = index === 0;
+            const last = index === stepCount - 1;
+            const slotLeft = first
+              ? dotXs[index] - EDGE_INSET
+              : dotXs[index] - slotWidth / 2;
+            const slotRight = last
+              ? dotXs[index] + EDGE_INSET
+              : dotXs[index] + slotWidth / 2;
             return (
               <div
                 key={value}
                 className="navi_step_list_slot"
                 style={{
-                  left: `${dotXs[index] - slotWidth / 2}px`,
-                  width: `${slotWidth}px`,
+                  "left": `${slotLeft}px`,
+                  "width": `${slotRight - slotLeft}px`,
+                  "--step-dot-x": `${dotXs[index] - slotLeft}px`,
                 }}
               >
                 <Button
+                  {...itemRest}
                   variant="discrete"
                   className="navi_step_list_step"
                   aria-current={index === currentIndex ? "step" : undefined}
@@ -299,7 +360,7 @@ export const StepList = ({
                       : undefined
                   }
                 >
-                  {stepVNode}
+                  <span className="navi_step_list_label">{stepVNode}</span>
                 </Button>
               </div>
             );
