@@ -35,6 +35,17 @@
       .case {
         margin-bottom: 20px;
       }
+      /* Le StepList et ses slides, une seule chose: un cadre commun, un
+         filet entre les deux. */
+      .integration_frame {
+        background: white;
+        border: 1px solid #d5dbe6;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .integration_frame > .navi_step_list {
+        border-bottom: 1px solid #e6eaf2;
+      }
       .dark-band {
         padding: 8px 16px;
         background: #26314a;
@@ -42,7 +53,6 @@
         --step-list-muted: #8b99b8;
         --step-list-line: rgba(255, 255, 255, 0.35);
         --step-list-current-color: white;
-        --step-list-path-line: white;
       }
     </style>
   </head>
@@ -303,43 +313,37 @@
                 lente (2s)
               </label>
             </Box>
-            <StepList slideContainer={containerId} duration={duration}>
-              {annonceStepItems((value) => ({
-                done: Boolean(answered[value]),
-              }))}
-            </StepList>
-            <SlideContainer
-              id={containerId}
-              duration={duration}
-              backgroundColor="white"
-              borderWidth="1"
-              borderStyle="solid"
-              borderColor="#d5dbe6"
-              borderRadius="8px"
-            >
-              {STEP_VALUES.map((value, index) => (
-                <Slide key={value} id={value} overflow="auto">
-                  <Box flex="y" spacing="s" padding="l" alignX="start">
-                    <Text bold>
-                      Étape {index + 1} — {STEP_LABELS[value]}
-                    </Text>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(answered[value])}
-                        onChange={(e) => {
-                          setAnswered((previous) => ({
-                            ...previous,
-                            [value]: e.target.checked,
-                          }));
-                        }}
-                      />{" "}
-                      étape remplie
-                    </label>
-                  </Box>
-                </Slide>
-              ))}
-            </SlideContainer>
+            <div className="integration_frame">
+              <StepList slideContainer={containerId} duration={duration}>
+                {annonceStepItems((value) => ({
+                  done: Boolean(answered[value]),
+                }))}
+              </StepList>
+              <SlideContainer id={containerId} duration={duration}>
+                {STEP_VALUES.map((value, index) => (
+                  <Slide key={value} id={value} overflow="auto">
+                    <Box flex="y" spacing="s" padding="l" alignX="start">
+                      <Text bold>
+                        Étape {index + 1} — {STEP_LABELS[value]}
+                      </Text>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(answered[value])}
+                          onChange={(e) => {
+                            setAnswered((previous) => ({
+                              ...previous,
+                              [value]: e.target.checked,
+                            }));
+                          }}
+                        />{" "}
+                        étape remplie
+                      </label>
+                    </Box>
+                  </Slide>
+                ))}
+              </SlideContainer>
+            </div>
           </div>
         );
       };
@@ -349,8 +353,7 @@
           <h2 id="dark">Sur fond sombre</h2>
           <p className="caption">
             Les couleurs sont des variables CSS, redites sur le bandeau:
-            --step-list-muted, --step-list-line, --step-list-current-color,
-            --step-list-path-line.
+            --step-list-muted, --step-list-line, --step-list-current-color.
           </p>
           <div className="dark-band">
             <StepList current="place">{annonceStepItems(doneUpTo(1))}</StepList>
