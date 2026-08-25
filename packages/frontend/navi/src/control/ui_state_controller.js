@@ -682,12 +682,25 @@ export const useUIStateController = (
       } = controlInfo;
       controller.value = value;
       controller.defaultValue = defaultValue;
+      // An optimistic control with work in flight keeps the user's intent on
+      // screen: an incoming external state is the echo of an intermediate
+      // commit (the first of two queued toggles landing), and the queued
+      // request about to go out was built on top of the UI state —
+      // overwriting it would both flash the superseded value and send it.
+      // `controller.state` is still taken below: it is the last known good
+      // state, the rollback target if the chain fails.
+      const optimisticWorkInFlight = Boolean(
+        props.optimistic &&
+        (controller.actionInFlight || controller.queuedActionAllowedEvent),
+      );
       if (hasStateProp) {
         controller.hasStateProp = true;
         const currentState = controller.state;
         if (!compareTwoJsValues(state, currentState)) {
           controller.state = state;
-          controller.setUIState(state, new CustomEvent("state_prop_change"));
+          if (!optimisticWorkInFlight) {
+            controller.setUIState(state, new CustomEvent("state_prop_change"));
+          }
         }
       } else {
         if (controller.hasStateProp) {
@@ -704,10 +717,12 @@ export const useUIStateController = (
           const currentState = controller.state;
           if (!compareTwoJsValues(stateFromSignal, currentState)) {
             controller.state = stateFromSignal;
-            controller.setUIState(
-              stateFromSignal,
-              new CustomEvent("state_prop_change"),
-            );
+            if (!optimisticWorkInFlight) {
+              controller.setUIState(
+                stateFromSignal,
+                new CustomEvent("state_prop_change"),
+              );
+            }
           }
         }
       }

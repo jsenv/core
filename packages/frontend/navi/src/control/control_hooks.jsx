@@ -1784,7 +1784,6 @@ const useInteractiveProps = (
           uiStateController.actionInFlight = false;
           uiStateController.runningAction = null;
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
-          uiStateController.queuedActionAllowedEvent = null;
           if (!queuedEvent) {
             return;
           }
@@ -1792,12 +1791,20 @@ const useInteractiveProps = (
             // A failure abandons the queue: the UI is rolled back to the last
             // known state (resetOnError above), and what was queued was built
             // on top of the state that just failed.
+            uiStateController.queuedActionAllowedEvent = null;
             return;
           }
           // A microtask later, not right here: this runs inside the batch()
           // that settles the action (see watchActionCompletion for the same
           // constraint).
           queueMicrotask(() => {
+            // Cleared here, right before the dispatch, never earlier: between
+            // the outcome and this microtask a render can slip in (the echo
+            // of what the settled run committed), and the external-state gate
+            // in ui_state_controller.js must still see work in flight or it
+            // would overwrite the UI state the queued request is about to
+            // send.
+            uiStateController.queuedActionAllowedEvent = null;
             executeAction(queuedEvent);
           });
         });

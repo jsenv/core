@@ -31,13 +31,14 @@
  * state of the backend), or with an error. Pass `{ signal }` alongside and the
  * call shows, on the frontier, that whoever made it gave up on it.
  *
- * A call the client aborts does not leave by itself: the cancellation request
- * is drawn on the call, and the backend chooses — abandon it ("ok, nothing was
- * done"), or answer/fail anyway ("already done; cancellations not honored").
- * That is the truth about aborting a request: it only saves resources, and
- * whether the work happened is known from the backend's answer alone — which
- * is why the client keeps waiting for it (see the abort section in
- * docs/actions.md).
+ * A call the client aborts does not leave by itself: a cancellation demand
+ * rises from the frontend, drawn under the call, and the backend decides —
+ * treat it ("annuler la requête": nothing was done, the request is aborted
+ * the way fetch would be), or ignore it ("ignorer": cancellations not
+ * honored, the request stays free to be answered or failed). That is the
+ * truth about aborting a request: it only saves resources, and whether the
+ * work happened is known from the backend's answer alone — which is why the
+ * client keeps waiting for it (see the abort section in docs/actions.md).
  *
  * Not exported from the package: it is a demo's furniture, not an
  * application's.
@@ -148,9 +149,19 @@ const css = /* css */ `
     align-items: center;
     gap: 6px;
   }
-  /* The frontend's word, so it sits on the frontend's side of the call. */
-  .navi_fake_backend_cancel_requested {
+  /* A call and, when the client gave up on it, the cancellation demand risen
+     under it: two crossings about the same request, kept together. */
+  .navi_fake_backend_exchange {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .navi_fake_backend_cancel_demand {
     color: #e65100;
+  }
+  /* The frontend's word, so it sits on the frontend's side of the call. */
+  .navi_fake_backend_cancel_demand_label {
     font-style: italic;
   }
   /* Upwards from the frontend, downwards from the backend: the same call, seen
@@ -245,7 +256,7 @@ const FakeBackendModeSelect = ({ mode, onChange }) => (
  * of "manuel" releases what is already waiting — otherwise a page left holding
  * a call would need one last press to get out of the mode it just left.
  */
-const useFakeBackendMode = (calls, { answer, fail, abandon }) => {
+const useFakeBackendMode = (calls, { answer, fail, cancel }) => {
   const [mode, setMode] = useState(readStoredMode);
   useEffect(() => {
     const automatic = FAKE_BACKEND_MODES[mode];
@@ -254,9 +265,10 @@ const useFakeBackendMode = (calls, { answer, fail, abandon }) => {
     }
     const timeouts = [];
     for (const call of calls) {
-      // An automatic backend is a well-behaved one: it honors cancellations.
-      if (call.cancelRequested) {
-        abandon(call);
+      // An automatic backend is a well-behaved one: it treats cancellation
+      // demands.
+      if (call.cancelRequested && !call.cancelIgnored) {
+        cancel(call);
         continue;
       }
       timeouts.push(
@@ -342,9 +354,9 @@ export const createFakeBackend = ({ value: valueInitial, persist } = {}) => {
   };
   // A call can be given up on before it is answered — the frontend scrolled
   // past what it went to fetch, a newer request made this one moot. The call
-  // stays on the frontier, marked: only the backend knows whether the work
-  // was already done, so it is the one that decides — abandon (see below),
-  // or answer/fail anyway.
+  // stays on the frontier with a cancellation demand under it: only the
+  // backend knows whether the work was already done, so it is the one that
+  // decides — treat the demand (cancel, see below) or ignore it.
   const call = (label, produce, { received, signal: abortSignal } = {}) =>
     new Promise((resolve, reject) => {
       const call = { id: ++callId, label, received, produce, resolve, reject };
@@ -400,14 +412,22 @@ export const createFakeBackend = ({ value: valueInitial, persist } = {}) => {
         ),
       );
     },
-    // "Ok, nothing was done": the backend honors the cancellation request.
-    // Rejecting with the client's own abort reason is what lets the caller
-    // classify the rejection as an abort rather than a failure.
-    abandon: (call) => {
+    // The backend treats the cancellation demand: nothing was done, the
+    // request is aborted. The rejection mirrors fetch(url, { signal })
+    // exactly: the promise rejects with the signal's reason, verbatim — a
+    // DOMException named "AbortError" when abort() was called without one
+    // (the platform fills it in). Rejecting with that same reason is also
+    // what lets the caller classify the rejection as an abort rather than a
+    // failure.
+    cancel: (call) => {
       leave(call);
-      call.reject(
-        call.cancelReason ?? new DOMException("aborted", "AbortError"),
-      );
+      call.reject(call.cancelReason);
+    },
+    // The backend ignores the cancellation demand: the request stays, free
+    // to be answered or failed.
+    ignoreCancel: (call) => {
+      call.cancelIgnored = true;
+      callsSignal.value = [...callsSignal.value];
     },
   };
   return backend;
@@ -478,38 +498,60 @@ export const FakeBackend = ({
         ) : null}
       </div>
       <div className="navi_fake_backend_frontier">
-        {calls.map((call) => (
-          <div key={call.id} className="navi_fake_backend_call">
-            <span className="navi_fake_backend_answer">
-              <span className="navi_fake_backend_arrow">↓</span>
-              <button type="button" onClick={() => backend.answer(call)}>
-                répondre
-              </button>
-              <button type="button" onClick={() => backend.fail(call)}>
-                échouer
-              </button>
-              {call.cancelRequested ? (
-                <button type="button" onClick={() => backend.abandon(call)}>
-                  abandonner
-                </button>
-              ) : null}
-            </span>
-            {call.label ? (
-              <span className="navi_fake_backend_call_label">{call.label}</span>
-            ) : null}
-            <span className="navi_fake_backend_sent">
-              {call.cancelRequested ? (
-                <span className="navi_fake_backend_cancel_requested">
-                  annulation demandée
+        {calls.map((call) => {
+          // The call keeps its own answers even while the demand waits:
+          // answering or failing it IS a way of ignoring the demand.
+          const cancelDemandPending =
+            call.cancelRequested && !call.cancelIgnored;
+          return (
+            <div key={call.id} className="navi_fake_backend_exchange">
+              <div className="navi_fake_backend_call">
+                <span className="navi_fake_backend_answer">
+                  <span className="navi_fake_backend_arrow">↓</span>
+                  <button type="button" onClick={() => backend.answer(call)}>
+                    répondre
+                  </button>
+                  <button type="button" onClick={() => backend.fail(call)}>
+                    échouer
+                  </button>
                 </span>
+                {call.label ? (
+                  <span className="navi_fake_backend_call_label">
+                    {call.label}
+                  </span>
+                ) : null}
+                <span className="navi_fake_backend_sent">
+                  {call.received === undefined ? null : (
+                    <Value value={call.received} />
+                  )}
+                  <span className="navi_fake_backend_arrow">↑</span>
+                </span>
+              </div>
+              {cancelDemandPending ? (
+                <div className="navi_fake_backend_call navi_fake_backend_cancel_demand">
+                  <span className="navi_fake_backend_answer">
+                    <span className="navi_fake_backend_arrow">↓</span>
+                    <button type="button" onClick={() => backend.cancel(call)}>
+                      annuler la requête
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => backend.ignoreCancel(call)}
+                    >
+                      ignorer
+                    </button>
+                  </span>
+                  <span className="navi_fake_backend_sent">
+                    <span className="navi_fake_backend_cancel_demand_label">
+                      demande d'annulation
+                    </span>
+                    <span className="navi_fake_backend_arrow">↑</span>
+                  </span>
+                </div>
               ) : null}
-              {call.received === undefined ? null : (
-                <Value value={call.received} />
-              )}
-              <span className="navi_fake_backend_arrow">↑</span>
-            </span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
       <div className="navi_fake_backend_body">
         <span className="navi_fake_backend_label">frontend</span>

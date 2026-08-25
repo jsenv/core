@@ -24208,12 +24208,25 @@ const useUIStateController = (
       } = controlInfo;
       controller.value = value;
       controller.defaultValue = defaultValue;
+      // An optimistic control with work in flight keeps the user's intent on
+      // screen: an incoming external state is the echo of an intermediate
+      // commit (the first of two queued toggles landing), and the queued
+      // request about to go out was built on top of the UI state —
+      // overwriting it would both flash the superseded value and send it.
+      // `controller.state` is still taken below: it is the last known good
+      // state, the rollback target if the chain fails.
+      const optimisticWorkInFlight = Boolean(
+        props.optimistic &&
+        (controller.actionInFlight || controller.queuedActionAllowedEvent),
+      );
       if (hasStateProp) {
         controller.hasStateProp = true;
         const currentState = controller.state;
         if (!compareTwoJsValues(state, currentState)) {
           controller.state = state;
-          controller.setUIState(state, new CustomEvent("state_prop_change"));
+          if (!optimisticWorkInFlight) {
+            controller.setUIState(state, new CustomEvent("state_prop_change"));
+          }
         }
       } else {
         if (controller.hasStateProp) {
@@ -24230,10 +24243,12 @@ const useUIStateController = (
           const currentState = controller.state;
           if (!compareTwoJsValues(stateFromSignal, currentState)) {
             controller.state = stateFromSignal;
-            controller.setUIState(
-              stateFromSignal,
-              new CustomEvent("state_prop_change"),
-            );
+            if (!optimisticWorkInFlight) {
+              controller.setUIState(
+                stateFromSignal,
+                new CustomEvent("state_prop_change"),
+              );
+            }
           }
         }
       }
@@ -27219,7 +27234,6 @@ const useInteractiveProps = (props, {
           uiStateController.actionInFlight = false;
           uiStateController.runningAction = null;
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
-          uiStateController.queuedActionAllowedEvent = null;
           if (!queuedEvent) {
             return;
           }
@@ -27227,12 +27241,20 @@ const useInteractiveProps = (props, {
             // A failure abandons the queue: the UI is rolled back to the last
             // known state (resetOnError above), and what was queued was built
             // on top of the state that just failed.
+            uiStateController.queuedActionAllowedEvent = null;
             return;
           }
           // A microtask later, not right here: this runs inside the batch()
           // that settles the action (see watchActionCompletion for the same
           // constraint).
           queueMicrotask(() => {
+            // Cleared here, right before the dispatch, never earlier: between
+            // the outcome and this microtask a render can slip in (the echo
+            // of what the settled run committed), and the external-state gate
+            // in ui_state_controller.js must still see work in flight or it
+            // would overwrite the UI state the queued request is about to
+            // send.
+            uiStateController.queuedActionAllowedEvent = null;
             executeAction(queuedEvent);
           });
         });

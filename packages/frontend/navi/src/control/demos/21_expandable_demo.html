@@ -215,8 +215,8 @@
           signal,
         });
 
-      // Closing while the call is in flight gives up on it: the call stays on
-      // the frontier, marked, for the backend to abandon or answer anyway.
+      // Closing while the call is in flight gives up on it: a cancellation
+      // demand rises under the call, for the backend to treat or ignore.
       const ActionSection = () => (
         <section className="demo-section">
           <Heading id="action">Load on open</Heading>
