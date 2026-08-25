@@ -177,6 +177,19 @@ it. It matters most inside a picker's popup, where nothing else would bring the
 value back down: a picker's value IS what the control in its popup holds, so the
 façade never echoes it back.
 
+Two things follow, and both are about the loop being closed:
+
+- **each view is sovereign over the half it shows**, and the aggregate has to
+  say which is which — who plays comes from the list, who sits where comes from
+  the seats. An aggregate that reads membership off the seats cannot express a
+  removal: the row keeps whoever is still seated, the tick comes back, and the
+  two views drift apart at the first gesture;
+- **one gesture is one write.** Moving somebody from one seat to another touches
+  two children, and the group re-places between them — after the first write the
+  rule sees a free seat and re-seats the person it was moving. Written together
+  (`batch(() => { … })` around the two signals) it is one change, and the move
+  lands where it was aimed.
+
 A group with an `aggregateChildStates` of its own is outside all of this: what
 it returns is taken as the truth, `undefined` included. That is the one way such
 a group says **"I have nothing to say yet"** — return `undefined` while the
