@@ -53,7 +53,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Button, StepList } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        Slide,
+        SlideContainer,
+        StepList,
+        Text,
+      } from "@jsenv/navi";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
@@ -248,6 +255,94 @@
         </div>
       );
 
+      const STEP_LABELS = {
+        dispo: "Disponibilités",
+        club: "Club",
+        place: "Place",
+        recap: "Récapitulatif",
+      };
+
+      // Connectés dans les deux sens: presser une étape voyage vers sa slide
+      // (--navi-go-to-slide), et la position est lue sur le container — drag
+      // compris. Le chemin suit la position, borné: jamais en deçà de ce qui
+      // est acquis (reached, un cliquet posé à l'arrivée), jamais au-delà de
+      // ce que les réponses permettent (reachable, la première étape non
+      // remplie).
+      const IntegrationDemo = () => {
+        const containerId = "step_list_slides";
+        const [answered, setAnswered] = useState({});
+        const firstUnanswered = STEP_VALUES.findIndex(
+          (value) => !answered[value],
+        );
+        const frontierIndex =
+          firstUnanswered === -1 ? STEP_VALUES.length - 1 : firstUnanswered;
+        const [ratchetIndex, setRatchetIndex] = useState(0);
+        const reachedIndex =
+          ratchetIndex < frontierIndex ? ratchetIndex : frontierIndex;
+        return (
+          <div className="demo-section">
+            <h2 id="integration">Intégration avec SlideContainer</h2>
+            <p className="caption">
+              Presser une étape voyage vers sa slide; draguer les slides déplace
+              le halo sous le doigt — et le chemin s'étire avec le drag jusqu'où
+              les réponses le permettent (cocher « étape remplie »).
+            </p>
+            <StepList
+              slideContainer={containerId}
+              reached={STEP_VALUES[reachedIndex]}
+              reachable={STEP_VALUES[frontierIndex]}
+            >
+              {annonceStepItems()}
+            </StepList>
+            <SlideContainer
+              id={containerId}
+              onCurrentChange={(area) => {
+                const areaIndex = STEP_VALUES.indexOf(area);
+                if (areaIndex === -1) {
+                  return;
+                }
+                // Le cliquet: arriver quelque part acquiert le chemin
+                // jusque-là (dans la limite des réponses), et repartir en
+                // arrière ne le rend pas.
+                setRatchetIndex((previous) => {
+                  const target =
+                    areaIndex < frontierIndex ? areaIndex : frontierIndex;
+                  return target > previous ? target : previous;
+                });
+              }}
+              backgroundColor="white"
+              borderWidth="1"
+              borderStyle="solid"
+              borderColor="#d5dbe6"
+              borderRadius="8px"
+            >
+              {STEP_VALUES.map((value, index) => (
+                <Slide key={value} id={value} overflow="auto">
+                  <Box flex="y" spacing="s" padding="l" alignX="start">
+                    <Text bold>
+                      Étape {index + 1} — {STEP_LABELS[value]}
+                    </Text>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(answered[value])}
+                        onChange={(e) => {
+                          setAnswered((previous) => ({
+                            ...previous,
+                            [value]: e.target.checked,
+                          }));
+                        }}
+                      />{" "}
+                      étape remplie
+                    </label>
+                  </Box>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </div>
+        );
+      };
+
       const DarkDemo = () => (
         <div className="demo-section">
           <h2 id="dark">Sur fond sombre</h2>
@@ -272,6 +367,7 @@
           </div>
           <NominalDemo />
           <StatesDemo />
+          <IntegrationDemo />
           <CountDemo />
           <WidthDemo />
           <DarkDemo />

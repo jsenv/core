@@ -28,6 +28,16 @@
  * — read off the vnodes (toChildArray, so a .map() or a fragment is fine; a
  * component of your own wrapping an Item is not seen). The Item renders its
  * label; everything positional is this component's business.
+ *
+ * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
+ * pressing a step travels there (--navi-go-to-slide), and the position is
+ * READ off the container rather than said by a prop — including mid-travel:
+ * the container paints --slide-travel-progress on this element (it is a
+ * follower, same mechanism as <Nav slideContainer>), so the halo rides the
+ * drag under the finger, in CSS alone. The path then follows the position
+ * too, clamped between `reached` (never retracts) and `reachable` (never
+ * ahead of the answers): dragging towards a step whose way is earned fills
+ * the line under the finger, dragging past the answers does not.
  */
 
 import { toChildArray } from "preact";
@@ -75,6 +85,16 @@ const css = /* css */ `
     font-size: 12px;
     fill: var(--step-list-muted);
   }
+  /* The current dot says so in the drawing itself, not only by its halo: on
+     a dark band a muted number under a faint ring reads as nothing. Said in
+     the base layer only (see renderRail) — a current dot the path has
+     covered keeps the filled colors. */
+  .navi_step_list_rail g[data-current] circle {
+    stroke: var(--step-list-current-color);
+  }
+  .navi_step_list_rail g[data-current] text {
+    fill: var(--step-list-current-color);
+  }
   /* The path: same drawing, filled, revealed up to the step it has come to.
      The clip is set inline (a width in px); transitioning it is what makes
      an answered step SWEEP the line and the next dot rather than pop. */
@@ -103,6 +123,50 @@ const css = /* css */ `
     stroke: color-mix(in srgb, var(--step-list-accent) 65%, transparent);
     stroke-width: 1.5;
   }
+
+  /* Connected to slides: the movement is not this component's anymore. The
+     container paints --slide-travel-progress here (this element follows it,
+     see data-slide-container-follows) — an asked-for travel animates it, a
+     finger drags it — and everything below is a calc() of that number, so
+     the halo and the path move per frame in CSS alone. The transitions are
+     off: they would chase a finger that is already the pace.
+     Position, in dots-x px: where the picture is right now. */
+  .navi_step_list[data-slide-container-follows] {
+    --step-list-position: calc(
+      var(--step-list-pos-x, 0) + var(--slide-travel-progress) *
+        var(--step-list-pos-dx, 0)
+    );
+  }
+  .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
+    transform: translateX(calc(var(--step-list-position) * 1px));
+    transition: none;
+  }
+  /* The path follows the position, clamped: never back below what was
+     earned (--step-list-reached-x), never ahead of what the answers allow
+     (--step-list-reachable-x). The +14 covers the dot it stands on (radius
+     plus stroke). */
+  .navi_step_list[data-slide-container-follows] .navi_step_list_rail_filled {
+    clip-path: inset(
+      0
+        calc(
+          (
+              var(--step-list-w, 0) -
+                (
+                  clamp(
+                      var(--step-list-reached-x, -9999),
+                      var(--step-list-position),
+                      var(--step-list-reachable-x, -9999)
+                    ) +
+                    14
+                )
+            ) *
+            1px
+        )
+        0 0
+    );
+    transition: none;
+  }
+
   /* One press target per step, covering the dot AND the label under it. The
      feedback is NOT the whole surface: a rectangle would say the whole band
      is a button, when the affordance is the dot — so hover and focus land on
@@ -187,21 +251,38 @@ const LINE_GAP = 5;
  * @type {import("preact").FunctionComponent<{
  *   current?: string,
  *   reached?: string,
+ *   reachable?: string,
+ *   slideContainer?: string,
  *   onStepPress?: (value: string, event: Event) => void,
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
  *   halo, its label the emphasis. Omit for "nowhere" — a confirmation
- *   screen after the walk, say.
+ *   screen after the walk, say. With `slideContainer` the position is read
+ *   off the container instead, and this prop is ignored.
  * @param {string} [reached] - the step the path has come to: the line is
  *   solid and the dots filled up to it, dashed past it. Omit for a path
  *   that has not started.
+ * @param {string} [reachable] - how far the path MAY go (with
+ *   `slideContainer` only): between `reached` and this step the path
+ *   follows the position — a drag towards a step whose way is earned fills
+ *   the line under the finger. Defaults to `reached`: the path then never
+ *   moves with the position at all.
+ * @param {string} [slideContainer] - id of a <SlideContainer> these steps
+ *   are the slides of. Pressing a step travels there
+ *   (--navi-go-to-slide), the halo follows the container — drags included —
+ *   and this element becomes a follower of the container
+ *   (data-slide-container-follows), which is also what keeps the arrow keys
+ *   working from here.
  * @param {(value: string, event: Event) => void} [onStepPress] - a step was
- *   pressed. Without it the steps are read-only — shown, not offered.
+ *   pressed. Without it (and without `slideContainer`) the steps are
+ *   read-only — shown, not offered.
  */
 export const StepList = ({
   current,
   reached,
+  reachable,
+  slideContainer,
   onStepPress,
   children,
   ...rest
@@ -247,8 +328,74 @@ export const StepList = ({
   }
   const indexOf = (value) =>
     stepVNodes.findIndex((vnode, index) => valueOf(vnode, index) === value);
-  const currentIndex = current === undefined ? -1 : indexOf(current);
+
+  // Where the slides are, read off the container: which slide is current,
+  // and — while a travel or a drag is playing — which one the picture leans
+  // towards. The current area re-renders this component (the emphasized
+  // label, the data-current dot); the in-between positions never do: they
+  // are written as numbers on this element and interpolated by the CSS
+  // above, at the pace of --slide-travel-progress.
+  const [containerCurrent, setContainerCurrent] = useState(undefined);
+  useLayoutEffect(() => {
+    if (!slideContainer || dotXs.length === 0) {
+      return undefined;
+    }
+    const containerElement = document.getElementById(slideContainer);
+    if (!containerElement) {
+      console.warn(
+        `<StepList slideContainer="${slideContainer}"> but no element with that id found`,
+      );
+      return undefined;
+    }
+    const rootElement = rootRef.current;
+    const read = () => {
+      const currentArea = containerElement.getAttribute("data-slide-current");
+      const towardArea = containerElement.getAttribute(
+        "data-slide-travel-toward",
+      );
+      setContainerCurrent(currentArea ?? undefined);
+      const currentIdx = currentArea === null ? -1 : indexOf(currentArea);
+      if (currentIdx === -1) {
+        // A slide no step names (a confirmation screen): the halo is not
+        // rendered, and the last position is left standing for the path.
+        return;
+      }
+      const x = dotXs[currentIdx];
+      let dx = 0;
+      if (towardArea && towardArea !== currentArea) {
+        const towardIdx = indexOf(towardArea);
+        if (towardIdx !== -1 && towardIdx !== currentIdx) {
+          // The container counts +1 when the picture leans on a slide BEFORE
+          // the current one, -1 after: the delta is signed the same way, so
+          // progress × delta lands exactly on the other dot.
+          const sign = towardIdx > currentIdx ? -1 : 1;
+          dx = (dotXs[towardIdx] - x) * sign;
+        }
+      }
+      rootElement.style.setProperty("--step-list-pos-x", x);
+      rootElement.style.setProperty("--step-list-pos-dx", dx);
+    };
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(containerElement, {
+      attributes: true,
+      attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
+    });
+    return () => {
+      observer.disconnect();
+    };
+    // width: the dots move when the room does, and the written positions are
+    // pixels of those dots.
+  }, [slideContainer, width, stepCount]);
+
+  const resolvedCurrent = slideContainer ? containerCurrent : current;
+  const currentIndex =
+    resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
   const reachedIndex = reached === undefined ? -1 : indexOf(reached);
+  let reachableIndex = reachable === undefined ? -1 : indexOf(reachable);
+  if (reachableIndex < reachedIndex) {
+    reachableIndex = reachedIndex;
+  }
   // Covers the reached dot entirely (radius plus stroke), and nothing when
   // the path has not started.
   const fillX = reachedIndex === -1 ? 0 : dotXs[reachedIndex] + DOT_R + 3;
@@ -263,7 +410,9 @@ export const StepList = ({
           : "navi_step_list_rail"
       }
       style={
-        filled ? { clipPath: `inset(0 ${width - fillX}px 0 0)` } : undefined
+        filled && !slideContainer
+          ? { clipPath: `inset(0 ${width - fillX}px 0 0)` }
+          : undefined
       }
       width={width}
       height={RAIL_H}
@@ -271,7 +420,12 @@ export const StepList = ({
       aria-hidden="true"
     >
       {dotXs.map((x, index) => (
-        <g key={valueOf(stepVNodes[index], index)}>
+        <g
+          key={valueOf(stepVNodes[index], index)}
+          // Base layer only: a current dot the path covers keeps the filled
+          // colors (see the css).
+          data-current={!filled && index === currentIndex ? "" : undefined}
+        >
           {index > 0 ? (
             <line
               x1={dotXs[index - 1] + DOT_R + LINE_GAP}
@@ -295,6 +449,22 @@ export const StepList = ({
       ref={rootRef}
       baseClassName="navi_step_list"
       data-step-list=""
+      // A follower of the container: the travel's progress is painted here
+      // for the CSS to draw with, and the arrow keys keep walking the slides
+      // from this element.
+      data-slide-container-follows={slideContainer}
+      style={{
+        ...rest.style,
+        ...(slideContainer
+          ? {
+              "--step-list-w": width,
+              "--step-list-reached-x":
+                reachedIndex === -1 ? -9999 : dotXs[reachedIndex],
+              "--step-list-reachable-x":
+                reachableIndex === -1 ? -9999 : dotXs[reachableIndex],
+            }
+          : undefined),
+      }}
     >
       {width > 0 && stepCount > 0 ? (
         <>
@@ -310,7 +480,13 @@ export const StepList = ({
             >
               <g
                 className="navi_step_list_marker"
-                style={{ transform: `translateX(${dotXs[currentIndex]}px)` }}
+                // Connected to slides, the position comes from the CSS calc
+                // above — an inline transform would override it.
+                style={
+                  slideContainer
+                    ? undefined
+                    : { transform: `translateX(${dotXs[currentIndex]}px)` }
+                }
               >
                 <circle cx="0" cy={cy} r={RING_R} />
               </g>
@@ -351,7 +527,14 @@ export const StepList = ({
                   className="navi_step_list_step"
                   aria-current={index === currentIndex ? "step" : undefined}
                   data-current={index === currentIndex ? "" : undefined}
-                  readOnly={!onStepPress}
+                  readOnly={!onStepPress && !slideContainer}
+                  // Towards the slides when connected, by name: the command
+                  // reaches the container wherever this list sits on the
+                  // page.
+                  command={
+                    slideContainer ? `--navi-go-to-slide:${value}` : undefined
+                  }
+                  commandFor={slideContainer}
                   onClick={
                     onStepPress
                       ? (e) => {
