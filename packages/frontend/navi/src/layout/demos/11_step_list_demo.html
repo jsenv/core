@@ -93,8 +93,8 @@
             <h2 id="nominal">Cas nominal</h2>
             <p className="caption">
               Cliquer une étape déplace <code>current</code> (le halo, via
-              onClick sur chaque Item). Le chemin se déduit des items{" "}
-              <code>done</code>: il se tient sur la première étape non remplie.
+              onClick sur chaque Item). Une étape <code>done</code> a sa
+              pastille pleine, et le chemin relie celles remplies d'affilée.
             </p>
             <StepList current={current}>
               {annonceStepItems((value) => ({
@@ -144,7 +144,7 @@
       const StatesDemo = () => (
         <div className="demo-section">
           <h2 id="states">États</h2>
-          <Case caption='Au départ — current="dispo", rien de rempli: le chemin se tient sur la première étape'>
+          <Case caption='Au départ — current="dispo", rien de rempli: aucune pastille pleine, le halo dit où on est'>
             <StepList current="dispo">{annonceStepItems()}</StepList>
           </Case>
           <Case caption={'Survolée — pseudoState :hover sur "Place"'}>

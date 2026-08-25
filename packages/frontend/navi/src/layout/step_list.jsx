@@ -4,18 +4,27 @@
  * Two distinct facts, drawn separately — they usually agree, and everything
  * this component says comes from the moments they do not:
  *
- * - the PATH: how far the steps are answered without a gap. Each Item says
- *   whether it is `done`, and the path is DEDUCED: it stands on the first
- *   step that is not — a solid line runs up to there and those dots are
- *   filled; past it the line is dashed, the road not walked yet. It moves
- *   when a step is answered, not when one merely looks around.
+ * - DONE (the blue fill): a step answered has its dot filled — that is the
+ *   whole meaning of the fill, and it never says anything else: the first
+ *   dot is NOT filled on arrival, it becomes so by being answered. The
+ *   steps answered without a gap from the start are the PATH: a solid line
+ *   joins them; past it the line is dashed — the road not walked yet. Steps
+ *   answered out of order are filled dots standing alone, dashed segments
+ *   around them: the holes, readable at a glance.
  * - the POSITION (`current`): the step being looked at, marked by a halo
- *   around its dot and its label emphasized. It travels freely, so it can be
- *   AHEAD of the path (browsing step 3 while step 1 still misses an answer)
- *   or BEHIND it (back on step 1 to change something already answered).
+ *   around its dot and its label emphasized. It travels freely, so it can
+ *   be AHEAD of the path or BEHIND it.
  *
  * Both move smoothly on change (a CSS transition each), so pressing a step
  * or answering one is seen travelling rather than jumping.
+ *
+ * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
+ * An Item renders nothing: it REGISTERS with the list as it renders (order
+ * of rendering is the order of the steps), and the list draws everything —
+ * which is what lets an Item come from anywhere: a .map(), a fragment, a
+ * component of your own wrapping it. One caveat comes with reading the
+ * children as they render: hand the list fresh Item vnodes on each render
+ * (the usual JSX), not a memoized array a bailout would keep from rendering.
  *
  * The dots are drawn in SVG, twice: a muted layer, and a filled layer
  * clipped at the path's edge — the clip is what makes the path's progress a
@@ -25,25 +34,20 @@
  * surface. Colors are CSS custom properties (see the css below), overridden
  * from outside for a dark band or a different accent.
  *
- * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>
- * — read off the vnodes (toChildArray, so a .map() or a fragment is fine; a
- * component of your own wrapping an Item is not seen). The Item renders its
- * label; everything positional is this component's business.
- *
  * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
  * pressing a step travels there (--navi-go-to-slide), and the position is
  * READ off the container rather than said by a prop — including mid-travel:
  * the container paints --slide-travel-progress on this element (it is a
  * follower, same mechanism as <Nav slideContainer>), so the halo rides the
  * drag under the finger, in CSS alone. The path then follows the position
- * too, clamped: never back below where one has already been (a ratchet,
- * held here), never ahead of the answers — dragging towards a step whose
- * way is earned fills the line under the finger, dragging past the answers
- * does not.
+ * too, clamped: never back below the steps answered, never onto a dot not
+ * answered — dragging away from an answered step pulls the line along up to
+ * the edge of the next dot, and lets it come back if nothing was answered
+ * there.
  */
 
-import { toChildArray } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
@@ -51,11 +55,11 @@ import { useFocusGroup } from "../utils/focus/use_focus_group.js";
 
 const css = /* css */ `
   .navi_step_list {
-    /* The knobs: accent is the path, muted is what the path has not
-       reached, on-accent writes on filled dots, and --step-list-path-line
-       exists apart from the accent for a dark band where the walked line
-       reads better plain white. Said from OUTSIDE (any ancestor — a dark
-       band, a themed app) on the plain names; resolved here through an
+    /* The knobs: one accent for everything filled — the dots and the line
+       share it, because the fill has ONE meaning (answered) and a meaning
+       does not change color. Muted is what is not answered, on-accent
+       writes on filled dots. Said from OUTSIDE (any ancestor — a dark band,
+       a themed app) on the plain names; resolved here through an
        indirection (--x-…, the way Button does), because a default written
        on the plain name on this very element would beat anything an
        ancestor says. */
@@ -69,10 +73,6 @@ const css = /* css */ `
     --x-step-list-current-color: var(
       --step-list-current-color,
       light-dark(#1c2433, white)
-    );
-    --x-step-list-path-line: var(
-      --step-list-path-line,
-      var(--x-step-list-accent)
     );
     /* How long a movement takes — the path sweeping, the halo sliding. One
        number for all of them: they tell one story. */
@@ -114,11 +114,10 @@ const css = /* css */ `
   .navi_step_list_rail g[data-current] text {
     fill: var(--x-step-list-current-color);
   }
-  /* A step answered fills its own dot, wherever the path stands: it is what
-     says "this one is valid" even before the path has come to it — steps
-     answered out of order leave HOLES, and the dashed segments between two
-     filled dots are what shows them. After the current rule on purpose: a
-     done dot keeps its fill even while looked at (the halo says current). */
+  /* A step answered has its dot filled, wherever the path stands: answered
+     out of order it stands alone, a filled dot between dashed segments.
+     After the current rule on purpose: answered wins the drawing, the halo
+     says current. */
   .navi_step_list_rail g[data-done] circle {
     fill: var(--x-step-list-accent);
     stroke: var(--x-step-list-accent);
@@ -126,14 +125,15 @@ const css = /* css */ `
   .navi_step_list_rail g[data-done] text {
     fill: var(--x-step-list-on-accent);
   }
-  /* The path: same drawing, filled, revealed up to the step it has come to.
-     The clip is set inline (a width in px); transitioning it is what makes
-     an answered step SWEEP the line and the next dot rather than pop. */
+  /* The path: same drawing, filled, revealed up to the last step answered
+     without a gap. The clip is set inline (a width in px); transitioning it
+     is what makes an answered step SWEEP the line and its dot rather than
+     pop. */
   .navi_step_list_rail_filled {
     transition: clip-path var(--x-step-list-duration) ease;
   }
   .navi_step_list_rail_filled line {
-    stroke: var(--x-step-list-path-line);
+    stroke: var(--x-step-list-accent);
     stroke-dasharray: none;
   }
   .navi_step_list_rail_filled circle {
@@ -155,11 +155,12 @@ const css = /* css */ `
     stroke-width: 1.5;
   }
 
-  /* The bounds of the path, in dots-x px. Declared, so that they are NUMBERS
-     the browser can interpolate: a step un-answered moves them, and the path
-     has to be seen coming back rather than jumping — the transition below is
-     on these very properties, which is what lets the clamp's bounds animate
-     while --slide-travel-progress (the drag) stays instantaneous. */
+  /* The bounds of the path, in px of this drawing. Declared, so that they
+     are NUMBERS the browser can interpolate: answering or un-answering a
+     step moves them, and the path has to be seen moving rather than jumping
+     — the transition below is on these very properties, which is what lets
+     the clamp's bounds animate while --slide-travel-progress (the drag)
+     stays instantaneous. */
   @property --step-list-reached-x {
     syntax: "<number>";
     inherits: true;
@@ -194,23 +195,20 @@ const css = /* css */ `
     transform: translateX(calc(var(--step-list-position) * 1px));
     transition: none;
   }
-  /* The path follows the position, clamped: never back below what was
-     earned (--step-list-reached-x), never ahead of what the answers allow
-     (--step-list-reachable-x). The +14 covers the dot it stands on (radius
-     plus stroke). */
+  /* The path follows the position, clamped: never back below the steps
+     answered (--step-list-reached-x, past the last dot of the contiguous
+     run), never onto a dot not answered (--step-list-reachable-x stops at
+     the next dot's edge) — the line stretches under a drag, the dot it
+     heads for stays empty until answered. */
   .navi_step_list[data-slide-container-follows] .navi_step_list_rail_filled {
     clip-path: inset(
       0
         calc(
           (
-              var(--step-list-w, 0) -
-                (
-                  clamp(
-                      var(--step-list-reached-x, -9999),
-                      var(--step-list-position),
-                      var(--step-list-reachable-x, -9999)
-                    ) +
-                    14
+              var(--step-list-w, 0) - clamp(
+                  var(--step-list-reached-x, -9999),
+                  var(--step-list-position),
+                  var(--step-list-reachable-x, -9999)
                 )
             ) *
             1px
@@ -223,7 +221,7 @@ const css = /* css */ `
   /* One press target per step, covering the dot AND the label under it. The
      feedback is NOT the whole surface: a rectangle would say the whole band
      is a button, when the affordance is the dot — so hover and focus land on
-     a circle drawn over the dot (::before), plus the label brightening.
+     a circle drawn over the dot, plus the label brightening.
      --step-dot-x anchors both on the dot, wherever the dot sits in the slot:
      the first and last slots are asymmetric (cut at the container's edge,
      see the geometry in the component). */
@@ -248,8 +246,8 @@ const css = /* css */ `
     --button-color-readonly: var(--x-step-list-muted);
     /* The button's own focus ring, silenced: it would outline the whole
        press surface, and the ring this list draws is the one around the dot
-       (see the ::before rules below) — two rings read as a mistake. Width
-       rather than style, because the ::before sets its own style in full. */
+       (see below) — two rings read as a mistake. Width rather than style,
+       because the dot sets its own style in full. */
     --button-outline-width: 0px;
   }
   /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
@@ -304,12 +302,18 @@ const EDGE_INSET = 30;
 // halo of a current dot not to sit on the line.
 const LINE_GAP = 5;
 
+// What the Items say to the list holding them (see Step): where to write
+// themselves down. Null outside any list — a Step alone renders nothing and
+// registers nowhere.
+const StepListContext = createContext(null);
+
 /**
  * @type {import("preact").FunctionComponent<{
  *   current?: string,
  *   slideContainer?: string,
  *   travelByClick?: boolean,
  *   travelByKeyboard?: boolean,
+ *   duration?: string,
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
@@ -326,15 +330,15 @@ const LINE_GAP = 5;
  *   there. Off, the steps are read-only — shown, not offered. To DO
  *   something on a press, say `onClick` on the Item itself: like every other
  *   prop an Item carries, it lands on that step's button.
- * @param {string} [duration] - how long a movement takes (the path
- *   sweeping, the halo sliding), any CSS duration. 300ms unless said —
- *   here, or from outside via --step-list-duration.
  * @param {boolean} [travelByKeyboard=true] - whether the arrow keys walk
  *   from one step to the other (the focus moves, Enter presses). Only when
  *   the list stands alone: connected to slides the arrows belong to the
  *   CONTAINER — this element is a follower, so a press here already walks
  *   the slides, and the container's own `travelByKeyboard` is the one that
  *   says so. One owner per mode, or one arrow would do both.
+ * @param {string} [duration] - how long a movement takes (the path
+ *   sweeping, the halo sliding), any CSS duration. 300ms unless said —
+ *   here, or from outside via --step-list-duration.
  */
 export const StepList = ({
   current,
@@ -373,13 +377,34 @@ export const StepList = ({
     direction: "x",
   });
 
-  // The steps, read off the children: each <StepList.Item> vnode says which
-  // step it is (value) and is rendered as the label under its dot.
-  const stepVNodes = toChildArray(children).filter(
-    (child) => child && child.props,
-  );
-  const stepCount = stepVNodes.length;
-  const valueOf = (vnode, index) => vnode.props.value ?? String(index);
+  // The roll call: every render of this list opens a fresh page, the Items
+  // rendering below write themselves on it (in rendering order, which is the
+  // order of the steps), and the layout effect reads the page back. What was
+  // read is STATE — the first render knows no steps, the effect's render
+  // draws them — and a change in what the Items say (a done toggled) flows
+  // the same way: fresh page, fresh read, redraw.
+  const registryRef = useRef(null);
+  if (!registryRef.current) {
+    registryRef.current = { renderedSteps: [] };
+  }
+  const registry = registryRef.current;
+  registry.renderedSteps = [];
+  const [steps, setSteps] = useState([]);
+  useLayoutEffect(() => {
+    const collected = registry.renderedSteps;
+    // An empty page while steps are known: the children were most likely
+    // bailed out of rendering (memoized vnodes), not removed — keeping the
+    // known steps beats erasing the drawing (see the caveat in the top
+    // comment).
+    if (collected.length === 0 && steps.length > 0) {
+      return;
+    }
+    setSteps((previous) =>
+      sameSteps(previous, collected) ? previous : [...collected],
+    );
+  });
+
+  const stepCount = steps.length;
   const dotXs = [];
   if (width > 0 && stepCount > 0) {
     const span = width - EDGE_INSET * 2;
@@ -393,8 +418,7 @@ export const StepList = ({
       index++;
     }
   }
-  const indexOf = (value) =>
-    stepVNodes.findIndex((vnode, index) => valueOf(vnode, index) === value);
+  const indexOf = (value) => steps.findIndex((step) => step.value === value);
 
   // Where the slides are, read off the container: which slide is current,
   // and — while a travel or a drag is playing — which one the picture leans
@@ -403,10 +427,6 @@ export const StepList = ({
   // are written as numbers on this element and interpolated by the CSS
   // above, at the pace of --slide-travel-progress.
   const [containerCurrent, setContainerCurrent] = useState(undefined);
-  const [ratchetIndex, setRatchetIndex] = useState(0);
-  // Read by the observer below, which outlives a render: the frontier it
-  // must compare against is the one of the render that just happened.
-  const frontierRef = useRef(0);
   useLayoutEffect(() => {
     if (!slideContainer || dotXs.length === 0) {
       return undefined;
@@ -431,12 +451,6 @@ export const StepList = ({
         // rendered, and the last position is left standing for the path.
         return;
       }
-      // Arriving somewhere earns the path up to there (within the answers).
-      setRatchetIndex((previous) => {
-        const target =
-          currentIdx < frontierRef.current ? currentIdx : frontierRef.current;
-        return target > previous ? target : previous;
-      });
       const x = dotXs[currentIdx];
       let dx = 0;
       if (towardArea && towardArea !== currentArea) {
@@ -468,23 +482,23 @@ export const StepList = ({
   const resolvedCurrent = slideContainer ? containerCurrent : current;
   const currentIndex =
     resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
-  // The path, deduced from what the Items say: it stands on the first step
-  // that is not done — the next thing to do — and on the last one when
-  // everything is.
-  let frontierIndex = stepVNodes.findIndex((vnode) => !vnode.props.done);
-  if (frontierIndex === -1) {
-    frontierIndex = stepCount - 1;
+  // The path, deduced from what the Items say: the steps answered without a
+  // gap from the start. -1 when the first step is not answered yet — there
+  // is no path then, only dots.
+  let pathEndIndex = steps.findIndex((step) => !step.done);
+  if (pathEndIndex === -1) {
+    pathEndIndex = stepCount;
   }
-  // Connected, the path also waits to be WALKED: it advances on arrival, not
-  // on the answer alone — which is what leaves a drag towards an earned step
-  // something to fill. The ratchet is where one has already been (never
-  // given back by going backwards), min'd with the frontier so un-answering
-  // a step pulls it back.
-  const floorIndex =
-    ratchetIndex < frontierIndex ? ratchetIndex : frontierIndex;
-  frontierRef.current = frontierIndex;
-  // Covers the dot it stands on entirely (radius plus stroke).
-  const fillX = frontierIndex === -1 ? 0 : dotXs[frontierIndex] + DOT_R + 3;
+  pathEndIndex -= 1;
+  // How far the fill goes at rest: past the last answered dot (radius plus
+  // stroke), or nowhere.
+  const fillX = pathEndIndex === -1 ? 0 : dotXs[pathEndIndex] + DOT_R + 3;
+  // How far a drag may pull the line (connected mode): up to the EDGE of the
+  // next dot — the line fills under the finger, the dot it heads for stays
+  // empty until answered.
+  const nextDotIndex = pathEndIndex + 1;
+  const stretchX =
+    nextDotIndex < stepCount ? dotXs[nextDotIndex] - DOT_R - LINE_GAP : fillX;
   const cy = RAIL_H / 2;
   const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
 
@@ -507,11 +521,11 @@ export const StepList = ({
     >
       {dotXs.map((x, index) => (
         <g
-          key={valueOf(stepVNodes[index], index)}
-          // Base layer only: a current dot the path covers keeps the filled
-          // colors (see the css), and a done dot IS the filled drawing.
+          key={steps[index].value}
+          // Base layer only: dots the path covers are drawn filled by the
+          // layer above anyway (see the css).
           data-current={!filled && index === currentIndex ? "" : undefined}
-          data-done={!filled && stepVNodes[index].props.done ? "" : undefined}
+          data-done={!filled && steps[index].done ? "" : undefined}
         >
           {index > 0 ? (
             <line
@@ -550,12 +564,15 @@ export const StepList = ({
               // positions, and a registered property given "undefined" would
               // fall back to its initial value THROUGH a transition — the
               // path would be seen sweeping in on mount.
-              "--step-list-reached-x": dotXs[floorIndex] ?? -9999,
-              "--step-list-reachable-x": dotXs[frontierIndex] ?? -9999,
+              "--step-list-reached-x": pathEndIndex === -1 ? 0 : fillX,
+              "--step-list-reachable-x": stretchX || 0,
             }
           : undefined),
       }}
     >
+      <StepListContext.Provider value={registry}>
+        {children}
+      </StepListContext.Provider>
       {width > 0 && stepCount > 0 ? (
         <>
           {renderRail(false)}
@@ -582,15 +599,7 @@ export const StepList = ({
               </g>
             </svg>
           ) : null}
-          {stepVNodes.map((stepVNode, index) => {
-            const value = valueOf(stepVNode, index);
-            // Whatever else the Item was given reaches its button — a
-            // pseudoState held for a demo, an aria attribute.
-            const itemRest = { ...stepVNode.props };
-            delete itemRest.value;
-            delete itemRest.children;
-            // Read by the rail (the filled dot), not by the button.
-            delete itemRest.done;
+          {steps.map((step, index) => {
             // The slots tile the row, cut at the container's edges: the
             // first and the last cover only the inner half of the room an
             // interior slot gets, so pressing just outside the box presses
@@ -605,7 +614,7 @@ export const StepList = ({
               : dotXs[index] + slotWidth / 2;
             return (
               <div
-                key={value}
+                key={step.value}
                 className="navi_step_list_slot"
                 style={{
                   "left": `${slotLeft}px`,
@@ -614,7 +623,7 @@ export const StepList = ({
                 }}
               >
                 <Button
-                  {...itemRest}
+                  {...step.buttonProps}
                   // bare, not discrete: what is drawn IS the dot and its
                   // label — the hover wash a discrete button paints over its
                   // whole surface is exactly what must not appear here (the
@@ -627,10 +636,10 @@ export const StepList = ({
                   // Towards the slides when connected, by name: the command
                   // reaches the container wherever this list sits on the
                   // page. What else a press should do is the Item's own
-                  // onClick, which arrived through itemRest.
+                  // onClick, which arrived through buttonProps.
                   command={
                     slideContainer && travelByClick
-                      ? `--navi-go-to-slide:${value}`
+                      ? `--navi-go-to-slide:${step.value}`
                       : undefined
                   }
                   commandFor={slideContainer}
@@ -640,7 +649,7 @@ export const StepList = ({
                   data-callout-position="top"
                 >
                   <span className="navi_step_list_dot" aria-hidden="true" />
-                  <span className="navi_step_list_label">{stepVNode}</span>
+                  <span className="navi_step_list_label">{step.label}</span>
                 </Button>
               </div>
             );
@@ -651,10 +660,51 @@ export const StepList = ({
   );
 };
 
+// The same steps saying the same things: nothing to redraw. The labels are
+// vnodes, fresh objects on every render — comparing them would always say
+// "changed", so they are left out: what they show changes through the state
+// it came from, which re-renders this list anyway.
+const sameSteps = (previousSteps, nextSteps) => {
+  if (previousSteps.length !== nextSteps.length) {
+    return false;
+  }
+  let index = 0;
+  while (index < previousSteps.length) {
+    const previous = previousSteps[index];
+    const next = nextSteps[index];
+    if (previous.value !== next.value || previous.done !== next.done) {
+      return false;
+    }
+    if (!sameShallow(previous.buttonProps, next.buttonProps)) {
+      return false;
+    }
+    index++;
+  }
+  return true;
+};
+
+const sameShallow = (previousObject, nextObject) => {
+  const previousKeys = Object.keys(previousObject);
+  const nextKeys = Object.keys(nextObject);
+  if (previousKeys.length !== nextKeys.length) {
+    return false;
+  }
+  for (const key of previousKeys) {
+    if (previousObject[key] !== nextObject[key]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 /**
- * One step of the walk: `value` names it (what `current`/`reached` say and
- * what a press reports), the children are its label. Rendered under its dot;
- * where the dot is, and what state it shows, is the StepList's business.
+ * One step of the walk: `value` names it (what `current` says and what a
+ * press reports), `done` says it is answered (its dot fills, and the path is
+ * deduced from the answered steps), the children are its label.
+ *
+ * It renders NOTHING: it registers with the list around it as it renders,
+ * and the list draws everything — the dot, the label, the button. Whatever
+ * else it carries (onClick, pseudoState, aria-*) lands on that button.
  *
  * It is both StepList.Item and an export of its own, the way Slide is to
  * SlideContainer.
@@ -664,10 +714,21 @@ export const StepList = ({
  *   done?: boolean,
  *   [key: string]: any,
  * }>}
- * @param {boolean} [done] - this step is answered: its dot is filled,
- *   wherever the path stands. Steps answered out of order leave holes —
- *   filled dots with dashed segments between them.
+ * @param {boolean} [done] - this step is answered: its dot is filled — the
+ *   fill's one meaning. Steps answered out of order are filled dots
+ *   standing alone, dashed segments around them.
  */
-export const Step = ({ children }) => children;
+export const Step = ({ value, done, children, ...buttonProps }) => {
+  const registry = useContext(StepListContext);
+  if (registry) {
+    registry.renderedSteps.push({
+      value: value ?? String(registry.renderedSteps.length),
+      done: Boolean(done),
+      label: children,
+      buttonProps,
+    });
+  }
+  return null;
+};
 
 StepList.Item = Step;
