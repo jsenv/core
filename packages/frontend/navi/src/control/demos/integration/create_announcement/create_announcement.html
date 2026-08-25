@@ -105,7 +105,6 @@
       .horaire_a {
         color: #8a94a6;
         font-weight: 400;
-        font-size: 0.75em;
       }
       .group_legend {
         padding: 0;
@@ -280,9 +279,9 @@
 
       // ── Les étapes ────────────────────────────────────────────────────────
       const STEPS = [
-        { area: "dispo", label: "Quand" },
+        { area: "dispo", label: "Dispo" },
         { area: "club", label: "Lieu" },
-        { area: "place", label: "Quoi" },
+        { area: "place", label: "Type" },
         { area: "recap", label: "Récap" },
       ];
       const stepAnswered = (draft, area) => {
@@ -339,10 +338,15 @@
         </Slide>
       );
 
-      const DispoSlide = ({ draft, patchDraft, joursSignal }) => (
+      const HORAIRE_SUGGESTIONS = [
+        { label: "matinée", horaire: { start: "09:00", end: "12:00" } },
+        { label: "midi", horaire: { start: "12:00", end: "14:00" } },
+        { label: "soirée", horaire: { start: "18:00", end: "21:00" } },
+      ];
+
+      const DispoSlide = ({ patchDraft, joursSignal, horaireSignal }) => (
         <StepSlide
           area="dispo"
-          title="Disponibilités"
           first
           onValues={(values) => {
             patchDraft({
@@ -412,12 +416,28 @@
                 size="l"
                 startLabel={<span className="horaire_a">de</span>}
                 endLabel={<span className="horaire_a">à</span>}
-                defaultValue={draft.horaire ?? { start: "18:00", end: "20:00" }}
+                signal={horaireSignal}
                 minuteStep={30}
                 hours={{ min: 6, max: 23 }}
                 minDuration={60}
                 timeProps={{ border: "none" }}
               />
+            </Box>
+            <Box flex="x" spacing="s" alignY="center" selfAlignX="center">
+              {HORAIRE_SUGGESTIONS.map((suggestion, index) => (
+                <>
+                  {index > 0 ? <Separator vertical /> : null}
+                  <Button
+                    key={suggestion.label}
+                    variant="discrete"
+                    onClick={() => {
+                      horaireSignal.value = suggestion.horaire;
+                    }}
+                  >
+                    {suggestion.label}
+                  </Button>
+                </>
+              ))}
             </Box>
           </Box>
         </StepSlide>
@@ -532,7 +552,7 @@
         return (
           <StepSlide
             area="place"
-            title="Type de partie"
+            title="Quel type de partie?"
             onValues={(values) => {
               patchDraft({
                 niveaux: values.niveaux ? [].concat(values.niveaux) : [],
@@ -598,7 +618,7 @@
         );
       };
 
-      const RecapLine = ({ label, area, children }) => (
+      const RecapLine = ({ label, area, filled, children }) => (
         <Box flex="x" alignY="center" spacing="s">
           <Box flex="y" expandX>
             <Text size="s" color="#666">
@@ -607,7 +627,7 @@
             <Text>{children}</Text>
           </Box>
           <Button variant="discrete" command={`--navi-go-to-slide:${area}`}>
-            modifier
+            {filled ? "modifier" : "À compléter"}
           </Button>
         </Box>
       );
@@ -634,6 +654,9 @@
         // permet aux quick actions d'écrire dedans et au chip désactivé de
         // lire combien sont cochés.
         const joursSignal = useSignal(draft.jours ?? []);
+        const horaireSignal = useSignal(
+          draft.horaire ?? { start: "12:00", end: "14:00" },
+        );
         const niveauxSignal = useSignal(draft.niveaux ?? []);
         const stepSignal = useSignal("dispo");
         const containerId = useId();
@@ -703,9 +726,9 @@
               className="wizard_slides"
             >
               <DispoSlide
-                draft={draft}
                 patchDraft={patchDraft}
                 joursSignal={joursSignal}
+                horaireSignal={horaireSignal}
               />
               <ClubSlide draft={draft} patchDraft={patchDraft} />
               <PlaceSlide
@@ -723,19 +746,39 @@
                   <Box flex="y" spacing="l" padding="l">
                     <h3 className="step_title">Récapitulatif</h3>
                     <Box flex="y" spacing="m">
-                      <RecapLine label="Jours" area="dispo">
+                      <RecapLine
+                        label="Jours"
+                        area="dispo"
+                        filled={Boolean(draft.jours?.length)}
+                      >
                         {(draft.jours || []).map(dayShort).join(", ")}
                       </RecapLine>
-                      <RecapLine label="Horaire" area="dispo">
+                      <RecapLine
+                        label="Horaire"
+                        area="dispo"
+                        filled={Boolean(draft.horaire)}
+                      >
                         {fmtHoraire(draft.horaire)}
                       </RecapLine>
-                      <RecapLine label="Lieux" area="club">
+                      <RecapLine
+                        label="Lieux"
+                        area="club"
+                        filled={Boolean(draft.clubs?.length)}
+                      >
                         {(draft.clubs || []).map(clubName).join(", ")}
                       </RecapLine>
-                      <RecapLine label="Niveau" area="place">
+                      <RecapLine
+                        label="Niveau"
+                        area="place"
+                        filled={Boolean(draft.niveaux?.length)}
+                      >
                         {(draft.niveaux || []).join(", ")}
                       </RecapLine>
-                      <RecapLine label="Côté" area="place">
+                      <RecapLine
+                        label="Côté"
+                        area="place"
+                        filled={Boolean(draft.cote)}
+                      >
                         {coteLabel(draft.cote)}
                       </RecapLine>
                     </Box>

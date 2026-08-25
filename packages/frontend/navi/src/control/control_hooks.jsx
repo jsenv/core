@@ -1856,11 +1856,20 @@ const useInteractiveProps = (
         ) {
           const parentEl = parentController.ref.current;
           if (parentEl) {
-            const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {
-              event: originalEvent,
+              event: e.detail.eventChain[0],
               name: "auto_group_action",
               requester: e.detail.requester,
+              // The interactivity gate is not re-asked: the user already
+              // interacted — with the child, whose gate said yes — and this
+              // follow-up is automatic. Asking again would also answer
+              // wrong: this event is dispatched inside the batch() that
+              // settles the child's action, where a bound action still
+              // READS as running (its state is mirrored through a signal
+              // effect the batch defers, see watchActionCompletion) — the
+              // busy constraint would refuse the group for an action that
+              // is already over. The validity gate still applies.
+              bypassInteractivity: true,
             });
           }
         }

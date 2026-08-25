@@ -33,6 +33,29 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { Wheel, WheelGroup } from "./wheel.jsx";
 
+const css = /* css */ `
+  /* The words around a span's wheels ("De", "à"): one line box, the height
+     of a wheel row (--wheel-item-height re-exposed, same value as
+     .navi_wheel_container), centered against the wheels by the group. The
+     box's strut — this element's own font — is what places the baseline,
+     exactly where a wheel row places its numbers'; and because the content
+     stays in inline flow, anything written INSIDE at another size still
+     sits on that same baseline. Two things this depends on: the label is a
+     <Text size={size}> so its em — and therefore this line-height — is the
+     SAME em as the wheel rows' (a label left at the control font under
+     bigger wheels computes a shorter row and its baseline drifts); and no
+     flex centering of the content (centering re-centers a smaller glyph,
+     baselines are not centers). */
+  .navi_time_range_label {
+    --wheel-item-height: round(1.8em, 1px);
+
+    color: var(--wheel-color, light-dark(#111, #eee));
+    line-height: var(--wheel-item-height);
+    white-space: nowrap;
+    user-select: none;
+  }
+`;
+
 const HOUR_COUNT = 24;
 const MINUTES_PER_HOUR = 60;
 const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
@@ -203,6 +226,7 @@ export const TimeRangeWheel = ({
   endTimeProps,
   ...rest
 }) => {
+  import.meta.css = css;
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
@@ -214,9 +238,12 @@ export const TimeRangeWheel = ({
   // What the pair does once a bound SETTLES: the one that was moved stays
   // where it was put and the OTHER one gives way — a refusal at that point
   // would leave the person to undo what they just did. Settles, not while it
-  // turns (this runs on `action`, never on `uiAction`): a wheel under the
-  // finger holds a value nobody has chosen yet, and the other bound jumping
-  // around mid-gesture answers a question that was not asked.
+  // turns: a wheel under the finger holds a value nobody has chosen yet, and
+  // the other bound jumping around mid-gesture answers a question that was
+  // not asked. Wired on the wheel's settle EVENT (navi_wheel_settle), never
+  // on `action`: an action goes through the gates, validity included, and
+  // the moment this must run is precisely the moment the pair is INVALID —
+  // an action-gated push would be refused by the very thing it fixes.
   const keepBoundsApart = (movedSide, movedTime, e) => {
     const movedMinutes = minutesFromTime(movedTime);
     if (movedMinutes === null) {
@@ -266,7 +293,11 @@ export const TimeRangeWheel = ({
       {...rest}
     >
       <AnsweredContext.Provider value={answeredRef}>
-        {startLabel === null ? null : <Text size={size}>{startLabel}</Text>}
+        {startLabel === null ? null : (
+          <Text size={size} className="navi_time_range_label">
+            {startLabel}
+          </Text>
+        )}
         <TimeWheel
           id={startId}
           ref={startRef}
@@ -276,11 +307,20 @@ export const TimeRangeWheel = ({
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.start : undefined}
-          action={(value, e) => keepBoundsApart("start", value, e)}
+          // e.detail.value is the settled WHEEL's own value (an hour, a
+          // minute) — half a time. What the pair compares is this bound's
+          // whole time, read off the element the listener sits on.
+          onnavi_wheel_settle={(e) => {
+            keepBoundsApart("start", getUIStateFromElement(e.currentTarget), e);
+          }}
           {...timeProps}
           {...startTimeProps}
         />
-        {endLabel === null ? null : <Text size={size}>{endLabel}</Text>}
+        {endLabel === null ? null : (
+          <Text size={size} className="navi_time_range_label">
+            {endLabel}
+          </Text>
+        )}
         <TimeWheel
           ref={endRef}
           name="end"
@@ -289,7 +329,9 @@ export const TimeRangeWheel = ({
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.end : undefined}
-          action={(value, e) => keepBoundsApart("end", value, e)}
+          onnavi_wheel_settle={(e) => {
+            keepBoundsApart("end", getUIStateFromElement(e.currentTarget), e);
+          }}
           // Which time it comes after, and how much room there must be between
           // the two: said on the LATER of the two, so the answer is given where
           // the time one would have to move is (see time_range_constraint.js).
