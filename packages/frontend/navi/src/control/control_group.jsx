@@ -46,6 +46,10 @@ import {
  *                seats where who sits down decides who moves, a row where the
  *                first answer changes what the others may show. A child the Map
  *                does not name is left where it is. Given both, this one wins.
+ *                It also closes the loop: the group holds ONE answer its
+ *                children are views of, so when one of them speaks the others
+ *                are placed again (the one that acted is left where the user
+ *                put it).
  */
 export const ControlGroup = (props) => {
   const defaultRef = useRef();

@@ -24679,7 +24679,7 @@ const useUIGroupStateController = (
 
       // onChange and applyState live inside init so they close over the stable
       // signals/pubsub without needing external refs.
-      const onChange = (e, { notifyExternal }) => {
+      const onChange = (e, { notifyExternal, actingChild }) => {
         if (groupIsRenderingRef.current) {
           // Held until the layout effect below, WITH what it asked for: a child
           // whose bound signal was written from the outside changes during the
@@ -24692,6 +24692,7 @@ const useUIGroupStateController = (
             e,
             notifyExternal:
               pendingChange?.notifyExternal === true ? true : notifyExternal,
+            actingChild,
           };
           return;
         }
@@ -24715,6 +24716,21 @@ const useUIGroupStateController = (
           // Somebody answered: what the group is worth is what its children say
           // between them, from here on.
           controller.stateGivenFromAbove = false;
+          if (resolvedDistributeChildStates) {
+            // A group answering for all its children at once holds ONE answer
+            // its children are views OF, rather than a value that IS what they
+            // said: a list saying who plays and four seats saying who sits
+            // where. One view speaking moves the answer, so the others have to
+            // show it again — the same rule as a child arriving after the value
+            // did, for a child that was there when the value moved without it.
+            // The one that just acted is left alone: it is where the user put
+            // it.
+            controller.placeChildrenUIState(
+              groupUIState,
+              new CustomEvent("propagate_down_set_ui_state", { detail: {} }),
+              { except: actingChild },
+            );
+          }
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
@@ -24795,7 +24811,7 @@ const useUIGroupStateController = (
         // place — see warnChildAnswersForItself.
         // One pass over every child, which is what a plural distribute needs:
         // it is asked once, sees the whole group, and answers for all of them.
-        placeChildrenUIState: (groupUIState, e) => {
+        placeChildrenUIState: (groupUIState, e, { except } = {}) => {
           if (!resolvedDistributeChildStates) {
             for (const childUIStateController of childUIStateControllerArray) {
               controller.placeChildUIState(
@@ -24817,6 +24833,9 @@ const useUIGroupStateController = (
             return;
           }
           for (const childUIStateController of monitoredChildren) {
+            if (childUIStateController === except) {
+              continue;
+            }
             if (!stateByChild.has(childUIStateController)) {
               // Not named by the answer: left where it is, the way
               // CANNOT_DERIVE leaves a child a per-child distribute says
@@ -25016,7 +25035,10 @@ const useUIGroupStateController = (
             )}`,
           );
           if (stateChanged) {
-            onChange(e, { notifyExternal: silent ? "silent" : true });
+            onChange(e, {
+              notifyExternal: silent ? "silent" : true,
+              actingChild: childUIStateController,
+            });
           } else {
             controller.onUIAction(e);
           }
@@ -25229,6 +25251,7 @@ const useUIGroupStateController = (
       chainEvent(batchedEvent, pendingChange.e);
       scope._onChange(batchedEvent, {
         notifyExternal: pendingChange.notifyExternal,
+        actingChild: pendingChange.actingChild,
       });
     }
   });

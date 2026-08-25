@@ -164,6 +164,19 @@ distributeChildStates: (groupValue, children) => new Map([[child, state], …])
 the mirror of `aggregateChildStates`, which already sees every child. A child
 the Map does not name is left where it is. Given both, the plural one wins.
 
+**It closes the loop, which the per-child one does not.** A group with a plural
+distribute holds ONE answer its children are views OF — a list saying who plays,
+four seats saying who sits where — rather than a value that IS what they said.
+So when one view speaks, the answer moves and **the other views are placed
+again**; the one that just acted is left where the user put it. Without that, a
+seat keeps showing somebody the list no longer holds, and nothing says so.
+
+This is the same rule as "a child arriving after the value did is placed from
+what the group holds", for a child that was there when the value moved without
+it. It matters most inside a picker's popup, where nothing else would bring the
+value back down: a picker's value IS what the control in its popup holds, so the
+façade never echoes it back.
+
 A group with an `aggregateChildStates` of its own is outside all of this: what
 it returns is taken as the truth, `undefined` included. That is the one way such
 a group says **"I have nothing to say yet"** — return `undefined` while the
