@@ -10,21 +10,23 @@
  *     </Expandable>
  *
  *   Content after UI expands below (the <details> shape), Content before UI
- *   expands above; `layout="column"` puts the parts side by side instead, the
- *   content then expanding horizontally. The common shape has a shorthand:
- *   `ui` prop + children as content.
- * - the UI part accepts any markup (buttons, links, fields) — only the small
- *   marker is a real <button>, carrying the aria for the whole row
- *   (aria-expanded/aria-controls, labelled by the UI part), so nested
- *   interactive content never ends up inside an interactive element.
+ *   expands above; `layout="column"` puts the parts side by side (sharing
+ *   their height), the content then expanding horizontally. The marker
+ *   chevron follows: it points right while closed and toward where the
+ *   content went while open (down, up, or left). The common shape has a
+ *   shorthand: `ui` prop + children as content.
+ * - the UI part is the focusable toggle itself (role button, Space/Enter,
+ *   arrow keys) and accepts any markup: controls inside it keep their own
+ *   behavior, the marker is purely decorative.
  *
  * What <details> gives for free is rebuilt here:
  * - a "toggle" event (a real ToggleEvent when the browser has it) dispatched on
  *   the root whenever the state actually changes — but never on mount, unlike
  *   the native one (see the workaround comment in details.jsx);
  * - `--navi-toggle`/`--navi-open`/`--navi-close` commands work against it: the
- *   root carries `aria-expanded` (what the command system reads) and answers
- *   the `navi_command`/`navi_request_open`/`navi_request_close` events.
+ *   root and the UI part carry `aria-expanded` (what the command system reads)
+ *   and answer the `navi_command`/`navi_request_open`/`navi_request_close`
+ *   events.
  *
  * Content is not built until the first expansion and stays built afterwards —
  * same policy, same prop names as popups (see popup_content_mount.js):
@@ -32,12 +34,15 @@
  * once the collapse settles (so a closing animation still plays on real
  * content).
  *
- * The expansion animates the content's grid track (0fr <-> 1fr — rows for the
- * stacked layout, columns for `layout="column"`) rather than `height`/`width`:
- * the open size is "auto" (content-sized), which a length transition cannot
- * interpolate to, while a fr track can. The content is clipped only while the
- * track moves; once settled open it overflows normally again, so a popover or
- * focus ring inside is not cut at the edges.
+ * The animation is a REVEAL, not a resize: the expandable's own footprint
+ * grows/shrinks progressively (the content's grid track interpolates
+ * 0fr <-> 1fr — rows for the stacked layout, columns for `layout="column"`),
+ * but the content inside is laid out at its final size for the whole movement
+ * (its animated dimension is frozen to the measured final value, see the
+ * [opened] effect) and the container simply uncovers it. Text never rewraps
+ * mid-animation. The content is revealed from its UI side (pinned against the
+ * UI when it comes first). Once settled open the clipping is released, so a
+ * popover or focus ring inside is not cut at the edges.
  */
 import {
   elementIsFocusable,
@@ -45,7 +50,7 @@ import {
   getKeyboardEventDefaultAction,
   stringifyStyle,
 } from "@jsenv/dom";
-import { createContext, toChildArray } from "preact";
+import { cloneElement, createContext, toChildArray } from "preact";
 import {
   useContext,
   useEffect,
@@ -80,27 +85,16 @@ const css = /* css */ `
       cursor: pointer;
       user-select: none;
 
-      /* The whole row shows the focus, like a native <summary>, even though
-         only the marker button actually holds it. */
-      &:has(> .navi_expandable_toggle:focus-visible) {
+      &:focus-visible {
         border-radius: 4px;
         outline: 2px solid AccentColor;
         outline-offset: 1px;
       }
 
-      > .navi_expandable_toggle {
+      > .navi_expandable_marker {
         display: flex;
-        padding: 0;
+        flex-shrink: 0;
         align-items: center;
-        color: inherit;
-        font: inherit;
-        background: none;
-        border: none;
-        cursor: pointer;
-
-        &:focus-visible {
-          outline: none;
-        }
       }
 
       > .navi_expandable_ui_label {
@@ -112,25 +106,44 @@ const css = /* css */ `
     }
 
     > .navi_expandable_content_container {
+      position: relative;
       display: grid;
       grid-template-rows: 0fr;
+      /* The clip lives here, on the moving box, because the content inside
+         keeps its final size during the animation (see the top comment) and
+         overflows the track on purpose. */
+      overflow: hidden;
 
-      > .navi_expandable_content {
+      /* The sizer is what lets the track actually collapse: min-height 0 on
+         an auto-sized item zeroes its min-content contribution. The frozen
+         content cannot play that role itself — a definite height makes the
+         contribution definite too, and the track then never goes below it. */
+      > .navi_expandable_content_sizer {
+        display: grid;
         min-height: 0;
-        overflow: hidden;
       }
     }
     &[aria-expanded="true"] > .navi_expandable_content_container {
       grid-template-rows: 1fr;
     }
+    /* Content before the UI: revealed against the UI side — the edge touching
+       the UI stays, the far edge is what gets uncovered (overflow alignment:
+       the oversized frozen content overflows the sizer on the far side). */
+    &[data-content-first]:not([data-layout="column"])
+      > .navi_expandable_content_container
+      > .navi_expandable_content_sizer {
+      align-content: end;
+    }
 
-    /* The parts sit side by side: the UI part becomes a vertical strip and
-       the content expands horizontally, on the columns track. */
+    /* The parts sit side by side, sharing their height: the UI part becomes a
+       vertical strip and the content expands horizontally, on the columns
+       track. */
     &[data-layout="column"] {
       flex-direction: row;
 
       > .navi_expandable_ui {
         flex-direction: column;
+        align-items: center;
 
         > .navi_expandable_ui_label {
           flex-direction: column;
@@ -140,7 +153,7 @@ const css = /* css */ `
         grid-template-columns: 0fr;
         grid-template-rows: none;
 
-        > .navi_expandable_content {
+        > .navi_expandable_content_sizer {
           min-width: 0;
           min-height: auto;
         }
@@ -148,6 +161,11 @@ const css = /* css */ `
       &[aria-expanded="true"] > .navi_expandable_content_container {
         grid-template-columns: 1fr;
         grid-template-rows: none;
+      }
+      &[data-content-first]
+        > .navi_expandable_content_container
+        > .navi_expandable_content_sizer {
+        justify-content: end;
       }
     }
 
@@ -166,12 +184,12 @@ const css = /* css */ `
        element inside the content can spill out — unless the content is given
        a max height, where the clipping IS the feature (it scrolls). */
     &[aria-expanded="true"][data-settled]:not([data-content-scrolls])
-      > .navi_expandable_content_container
-      > .navi_expandable_content {
+      > .navi_expandable_content_container {
       overflow: visible;
     }
     &[data-content-scrolls]
       > .navi_expandable_content_container
+      > .navi_expandable_content_sizer
       > .navi_expandable_content {
       max-height: var(--navi-expandable-max-content-height);
       overflow-y: auto;
@@ -229,17 +247,16 @@ const useExpandableContext = (partName) => {
  *   object (`{ loading, error, completed, ... }`) — see ActionRenderer.
  * @param loading - Shows the loading spinner on the marker regardless of
  *   `action`'s own loading state.
- * @param animation - Off by default. `true` plays the expand/collapse track
- *   transition; duration comes from `--navi-expandable-animation-duration`
- *   (0.3s).
+ * @param animation - Off by default. `true` plays the reveal transition;
+ *   duration comes from `--navi-expandable-animation-duration` (0.3s).
  * @param layout - `"row"` (default): the parts stack, the content expands
- *   vertically. `"column"`: the parts sit side by side, the content expands
- *   horizontally next to the UI part.
- * @param autoFocus - Off by default (the focus stays on the marker when
+ *   vertically. `"column"`: the parts sit side by side sharing their height,
+ *   the content expands horizontally next to the UI part.
+ * @param autoFocus - Off by default (the focus stays on the UI part when
  *   opening). `true` moves the focus into the content on open — the
  *   `[autofocus]` element if any, the first focusable otherwise. Whatever the
  *   setting, closing while the focus is inside the content hands it back to
- *   the marker (it would otherwise be lost to the closed, inert content).
+ *   the UI part (it would otherwise be lost to the closed, inert content).
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mountWhenClosed - Builds the content right away instead of on first
@@ -274,10 +291,9 @@ export const Expandable = (props) => {
   const defaultRef = useRef();
   const rootRef = ref || defaultRef;
   const uiRef = useRef();
-  const toggleButtonRef = useRef();
   const contentContainerRef = useRef();
   const contentId = useId();
-  const uiId = useId();
+  const isColumn = layout === "column";
 
   if (signal) {
     warnSignalCollision(props, "expandable", "open");
@@ -306,16 +322,43 @@ export const Expandable = (props) => {
   const [settled, setSettled] = useState(true);
 
   // Read before the close touches the DOM: flipping the content to inert can
-  // blur what it held, so by effect time the focus to hand back to the marker
+  // blur what it held, so by effect time the focus to hand back to the UI part
   // could already be gone.
   const focusedBeforeCloseRef = useRef(null);
-  // The pointer press that is about to toggle blurs the focused field before
-  // the click ever fires (pressing a non-focusable row moves the focus to
-  // body) — so what held the focus has to be remembered at pointerdown time.
+  // The pointer press that is about to toggle can blur the focused field
+  // before the click ever fires — so what held the focus has to be remembered
+  // at pointerdown time.
   const focusedAtPointerDownRef = useRef(null);
   const onUIPointerDown = () => {
     focusedAtPointerDownRef.current = document.activeElement;
   };
+
+  // The content keeps its final size while the track animates (see the top
+  // comment): its animated dimension is pinned to a measured pixel value, and
+  // released once the movement settles.
+  const freezeContentSize = () => {
+    const contentContainer = contentContainerRef.current;
+    const contentElement = contentContainer
+      ? contentContainer.firstElementChild.firstElementChild
+      : null;
+    if (!contentElement) {
+      return;
+    }
+    const rect = contentElement.getBoundingClientRect();
+    if (isColumn) {
+      contentElement.style.width = `${rect.width}px`;
+    } else {
+      contentElement.style.height = `${rect.height}px`;
+    }
+  };
+
+  // Where the last paint left the track, measured before the toggle commits:
+  // 0 when fully closed, partway when reopening during a collapse. Read here
+  // rather than in the effect — a layout read after the commit would also be
+  // the first style recalc of the open state, starting the track transition
+  // right there; once canceled (to measure the final size), a new transition
+  // to the same end value refuses to start and the reveal jumps.
+  const revealStartSizeRef = useRef(null);
 
   const toggleTo = (nextOpen) => {
     nextOpen = Boolean(nextOpen);
@@ -324,6 +367,12 @@ export const Expandable = (props) => {
     }
     openedRef.current = nextOpen;
     if (nextOpen) {
+      if (animation) {
+        const contentContainer = contentContainerRef.current;
+        revealStartSizeRef.current = contentContainer
+          ? contentContainer.getBoundingClientRect()
+          : null;
+      }
       setContentMounted(true);
     } else {
       const activeElement = document.activeElement;
@@ -331,6 +380,12 @@ export const Expandable = (props) => {
         !activeElement || activeElement === document.body
           ? focusedAtPointerDownRef.current
           : activeElement;
+      if (animation) {
+        // Now, while the content is still fully laid out — by effect time the
+        // track is already heading to 0 (the opening case measures in the
+        // effect instead, where the just-mounted content exists).
+        freezeContentSize();
+      }
     }
     focusedAtPointerDownRef.current = null;
     setOpened(nextOpen);
@@ -380,10 +435,9 @@ export const Expandable = (props) => {
   }, [openRequested]);
 
   // A state change: tell the world (the "toggle" event), move the focus, and
-  // follow the transition to know when the movement is over. Skipped on mount —
-  // nothing changed, so neither the event nor a transition exists (and a page
-  // must not have its focus stolen by an expandable that was simply already
-  // open).
+  // set up the reveal. Skipped on mount — nothing changed, so neither the
+  // event nor a transition exists (and a page must not have its focus stolen
+  // by an expandable that was simply already open).
   const isFirstOpenedRunRef = useRef(true);
   useLayoutEffect(() => {
     if (isFirstOpenedRunRef.current) {
@@ -407,13 +461,54 @@ export const Expandable = (props) => {
         contentContainerRef.current &&
         contentContainerRef.current.contains(focusedBeforeClose)
       ) {
-        toggleButtonRef.current.focus();
+        uiRef.current.focus();
       }
     }
     if (!animation) {
       return undefined;
     }
-    const cancel = whenTransitionSettles(contentContainerRef.current, () => {
+    const contentContainer = contentContainerRef.current;
+    const contentElement = contentContainer.firstElementChild.firstElementChild;
+    if (opened) {
+      // The reveal needs the content at its final size before the track
+      // starts moving, and the final size only exists in the open state —
+      // the reflow trick (see instructions.md, CSS section), with transitions
+      // suppressed BEFORE the first layout read: this effect runs pre-paint,
+      // so any earlier read would itself be the first recalc of the open
+      // state and would start the track transition (see revealStartSizeRef).
+      contentContainer.style.transitionProperty = "none";
+      const finalRect = contentElement.getBoundingClientRect();
+      if (isColumn) {
+        contentElement.style.width = `${finalRect.width}px`;
+      } else {
+        contentElement.style.height = `${finalRect.height}px`;
+      }
+      // Put the track back where the last paint left it and let the
+      // transition play from there. In fr — px does not interpolate with fr.
+      const startRect = revealStartSizeRef.current;
+      revealStartSizeRef.current = null;
+      const finalSize = isColumn ? finalRect.width : finalRect.height;
+      const startSize = startRect
+        ? isColumn
+          ? startRect.width
+          : startRect.height
+        : 0;
+      const startFr = finalSize > 0 ? startSize / finalSize : 0;
+      const trackProperty = isColumn
+        ? "gridTemplateColumns"
+        : "gridTemplateRows";
+      contentContainer.style[trackProperty] = `${startFr}fr`;
+      // That starting frame must be genuinely rendered to transition from it,
+      // and transitions re-enabled BEFORE the flip back to the open value —
+      // same order as popover.jsx's own reflow trick.
+      contentContainer.getBoundingClientRect();
+      contentContainer.style.transitionProperty = "";
+      contentContainer.style[trackProperty] = "";
+    }
+    // (closing froze the content in toggleTo, while it was still laid out)
+    const cancel = whenTransitionSettles(contentContainer, () => {
+      contentElement.style.width = "";
+      contentElement.style.height = "";
       setSettled(true);
     });
     return cancel;
@@ -454,7 +549,7 @@ export const Expandable = (props) => {
     }
     const { key } = keyboardEvent;
     if (key === openKeyShortcut) {
-      if (document.activeElement !== toggleButtonRef.current) {
+      if (document.activeElement !== uiRef.current) {
         return;
       }
       if (!openedRef.current) {
@@ -474,20 +569,20 @@ export const Expandable = (props) => {
       if (!openedRef.current) {
         return;
       }
-      const toggleButton = toggleButtonRef.current;
-      if (document.activeElement === toggleButton) {
+      const uiElement = uiRef.current;
+      if (document.activeElement === uiElement) {
         keyboardEvent.preventDefault();
         toggleTo(false);
       } else {
         keyboardEvent.preventDefault();
-        toggleButton.focus();
+        uiElement.focus();
       }
     }
   };
 
   const onUIClick = (clickEvent) => {
     // A navi control inside the UI part cancels the click it consumed (see
-    // click_to_expand.js — the root's aria-expanded is what it finds).
+    // click_to_expand.js — the UI part's own aria-expanded is what it finds).
     if (clickEvent.defaultPrevented) {
       return;
     }
@@ -496,7 +591,7 @@ export const Expandable = (props) => {
       const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
       if (
         interactiveElement &&
-        interactiveElement !== toggleButtonRef.current &&
+        interactiveElement !== uiRef.current &&
         uiRef.current.contains(interactiveElement)
       ) {
         return;
@@ -505,31 +600,63 @@ export const Expandable = (props) => {
     toggleTo(!openedRef.current);
   };
 
+  // Space/Enter on the UI part itself (role button) — a key pressed on a
+  // control inside it belongs to that control.
+  const onUIKeyDown = (keyboardEvent) => {
+    if (keyboardEvent.defaultPrevented) {
+      return;
+    }
+    if (keyboardEvent.target !== uiRef.current) {
+      return;
+    }
+    const { key } = keyboardEvent;
+    if (key === " " || key === "Enter") {
+      keyboardEvent.preventDefault();
+      toggleTo(!openedRef.current);
+    }
+  };
+
+  // Where the content went, so the marker can point at it while open (closed
+  // always points right): below by default, above when the content part comes
+  // first, beside for layout="column" (the chevron then points back toward
+  // the UI: left).
+  const childArray = toChildArray(children);
+  const firstPart = childArray.find(
+    (child) =>
+      child &&
+      (child.type === ExpandableUI || child.type === ExpandableContent),
+  );
+  const hasParts = Boolean(firstPart);
+  const contentFirst = hasParts && firstPart.type === ExpandableContent;
+  const openDirection = isColumn ? "left" : contentFirst ? "up" : "down";
+
   const expandableContextValue = {
     opened,
     loading: loading || (hasAction && actionLoading),
     contentMounted,
     hasAction,
     effectiveAction,
+    openDirection,
+    toggleTo,
     onUIClick,
     onUIPointerDown,
+    onUIKeyDown,
     uiRef,
-    toggleButtonRef,
     contentContainerRef,
     contentId,
-    uiId,
   };
 
   // Explicit parts win; the `ui` prop + children is the shorthand for the
-  // common shape (UI above, content below).
-  const childArray = toChildArray(children);
-  const hasParts = childArray.some(
-    (child) =>
-      child &&
-      (child.type === ExpandableUI || child.type === ExpandableContent),
-  );
+  // common shape (UI above, content below). Parts are cloned on every render:
+  // reference-stable children would be bailed out of the commit, leaving
+  // their context subscription to re-render them asynchronously — after the
+  // [opened] effect above, which measures the content they render.
   const body = hasParts ? (
-    children
+    childArray.map((child) =>
+      child && (child.type === ExpandableUI || child.type === ExpandableContent)
+        ? cloneElement(child)
+        : child,
+    )
   ) : (
     <>
       <ExpandableUI>{ui}</ExpandableUI>
@@ -542,7 +669,8 @@ export const Expandable = (props) => {
       ref={rootRef}
       baseClassName="navi_expandable"
       aria-expanded={opened ? "true" : "false"}
-      data-layout={layout === "column" ? "column" : undefined}
+      data-layout={isColumn ? "column" : undefined}
+      data-content-first={contentFirst ? "" : undefined}
       data-animation={animation ? "" : undefined}
       data-settled={settled ? "" : undefined}
       data-content-scrolls={maxContentHeight === undefined ? undefined : ""}
@@ -586,10 +714,12 @@ export const Expandable = (props) => {
 };
 
 /**
- * The always-visible part that reveals the content: the marker button plus
- * whatever it is given — any markup, a function of `{ open }` included. Its
- * position among the parts decides where the content goes (before the content:
- * content below/right; after it: content above/left).
+ * The always-visible part that reveals the content: the focusable toggle
+ * itself (role button — click, Space/Enter, arrow keys), holding the marker
+ * plus whatever it is given — any markup, a function of `{ open }` included.
+ * Controls inside it keep their own behavior and do not toggle. Its position
+ * among the parts decides where the content goes (before the content: content
+ * below/right; after it: content above/left).
  *
  * @type {import("preact").FunctionComponent<{
  *   children?: import("preact").ComponentChildren | ((state: { open: boolean }) => import("preact").ComponentChildren),
@@ -599,32 +729,51 @@ const ExpandableUI = ({ children, ...rest }) => {
   const {
     opened,
     loading,
+    openDirection,
+    toggleTo,
     onUIClick,
     onUIPointerDown,
+    onUIKeyDown,
     uiRef,
-    toggleButtonRef,
     contentId,
-    uiId,
   } = useExpandableContext("UI");
   return (
     <div
       ref={uiRef}
       className="navi_expandable_ui"
+      role="button"
+      tabIndex={0}
+      aria-expanded={opened}
+      aria-controls={contentId}
       onClick={onUIClick}
       onPointerDown={onUIPointerDown}
+      onKeyDown={onUIKeyDown}
+      // A command from a control inside the UI part resolves its target to
+      // the closest [aria-expanded] — this very element (see commands.js's
+      // resolveClosestExpandable) — so it answers the protocol too. Spread as
+      // an object: eslint's known-DOM-property check doesn't apply to navi's
+      // own custom events.
+      {...{
+        onnavi_command: (e) => {
+          onNaviCommand(e);
+        },
+        onnavi_request_open: () => {
+          toggleTo(true);
+        },
+        onnavi_request_close: () => {
+          toggleTo(false);
+        },
+      }}
       {...rest}
     >
-      <button
-        ref={toggleButtonRef}
-        type="button"
-        className="navi_expandable_toggle"
-        aria-expanded={opened}
-        aria-controls={contentId}
-        aria-labelledby={uiId}
-      >
-        <SummaryMarker open={opened} loading={loading} />
-      </button>
-      <div id={uiId} className="navi_expandable_ui_label">
+      <span className="navi_expandable_marker" aria-hidden="true">
+        <SummaryMarker
+          open={opened}
+          loading={loading}
+          openDirection={openDirection}
+        />
+      </span>
+      <div className="navi_expandable_ui_label">
         {typeof children === "function" ? children({ open: opened }) : children}
       </div>
     </div>
@@ -660,8 +809,10 @@ const ExpandableContent = ({ children, ...rest }) => {
       inert={opened ? undefined : true}
       {...rest}
     >
-      <div className="navi_expandable_content">
-        {contentMounted ? content : null}
+      <div className="navi_expandable_content_sizer">
+        <div className="navi_expandable_content">
+          {contentMounted ? content : null}
+        </div>
       </div>
     </div>
   );
@@ -671,8 +822,8 @@ Expandable.UI = ExpandableUI;
 Expandable.Content = ExpandableContent;
 
 // What a click inside the UI part must not toggle: it was aimed at the
-// control, not at the row. The marker button is the one exception, excluded at
-// the call site.
+// control, not at the row. The UI part itself matches [role='button'] and is
+// the one exception, excluded at the call site.
 const UI_INTERACTIVE_SELECTOR = [
   "a[href]",
   "button",

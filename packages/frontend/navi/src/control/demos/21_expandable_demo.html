@@ -104,6 +104,11 @@
         position: relative;
         display: inline-block;
       }
+      .demo-pinned {
+        display: flex;
+        height: 280px;
+        flex-direction: column;
+      }
       .demo-badge {
         position: absolute;
         top: -14px;
@@ -455,13 +460,20 @@
                 </Expandable.Content>
               </Expandable>
             </div>
-            <div className="demo-box">
-              <p className="demo-caption">Content then UI (content above)</p>
-              <Expandable animation>
+            <div className="demo-box demo-pinned">
+              <p className="demo-caption">
+                Content then UI: pinned at the bottom, the content is revealed
+                above and the UI never moves
+              </p>
+              <p style="color: #90a4ae">Page content above…</p>
+              <Expandable animation marginTop="auto">
                 <Expandable.Content>
-                  <div className="demo-content">Content above the UI.</div>
+                  <div className="demo-content">
+                    <p>Revealed above the UI.</p>
+                    <p>The place clicked stays put.</p>
+                  </div>
                 </Expandable.Content>
-                <Expandable.UI>See more</Expandable.UI>
+                <Expandable.UI>Details</Expandable.UI>
               </Expandable>
             </div>
           </div>
@@ -471,15 +483,25 @@
       const LayoutSection = () => (
         <section className="demo-section">
           <Heading id="layout">layout="column"</Heading>
-          <p>The parts sit side by side; the content expands horizontally.</p>
+          <p>
+            The parts sit side by side and share their height; the content
+            expands horizontally, already laid out at its final width — the text
+            below never rewraps while it is being revealed.
+          </p>
           <div className="demo-row">
             <div className="demo-box">
               <p className="demo-caption">content to the right</p>
-              <Expandable layout="column" animation ui="More">
-                <div className="demo-content">
-                  <p>Content beside the UI part.</p>
-                  <p>It expands to the right.</p>
-                </div>
+              <Expandable layout="column" animation>
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
+                <Expandable.Content>
+                  <div className="demo-content">
+                    A paragraph long enough to wrap on several lines at its
+                    final width, revealed progressively without ever changing
+                    shape.
+                  </div>
+                </Expandable.Content>
               </Expandable>
             </div>
             <div className="demo-box">
@@ -489,11 +511,14 @@
               <Expandable layout="column" animation>
                 <Expandable.Content>
                   <div className="demo-content">
-                    <p>Content beside the UI part.</p>
-                    <p>It expands to the left.</p>
+                    A paragraph long enough to wrap on several lines at its
+                    final width, revealed progressively without ever changing
+                    shape.
                   </div>
                 </Expandable.Content>
-                <Expandable.UI>More</Expandable.UI>
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
               </Expandable>
             </div>
           </div>
@@ -505,7 +530,9 @@
           <Heading id="autofocus">autoFocus</Heading>
           <div className="demo-row">
             <div className="demo-box">
-              <p className="demo-caption">default: focus stays on the marker</p>
+              <p className="demo-caption">
+                default: focus stays on the UI part
+              </p>
               <Expandable ui="Open me">
                 <div className="demo-content">
                   <input type="text" placeholder="not focused on open" />
@@ -637,8 +664,9 @@
         <section className="demo-section">
           <Heading id="keyboard">Keyboard</Heading>
           <p>
-            On the marker: <kbd>→</kbd> opens then enters, <kbd>←</kbd> closes.
-            From inside the content, <kbd>←</kbd> comes back to the marker.
+            The UI part is focusable: <kbd>Space</kbd>/<kbd>Enter</kbd> toggle,
+            <kbd>→</kbd> opens then enters, <kbd>←</kbd> closes. From inside the
+            content, <kbd>←</kbd> comes back to the UI part.
           </p>
           <div className="demo-box">
             <Expandable ui="Try the arrow keys">
