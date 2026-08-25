@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Créer une annonce</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 820px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .phone {
+        display: flex;
+        width: 380px;
+        height: 660px;
+        flex: none;
+        flex-direction: column;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        min-height: 0;
+        padding: 20px;
+        flex: 1;
+        flex-direction: column;
+        gap: 16px;
+        overflow: auto;
+      }
+      .page_title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      /* .phone n'est pas une Box navi: la place que la colonne donne aux
+         slides est dite ici plutôt que par expandY. */
+      .phone > .wizard_slides {
+        min-height: 0;
+        flex: 1 1 auto;
+      }
+      .wizard_head {
+        color: white;
+        background: #26314a;
+      }
+      .wizard_head_row {
+        position: relative;
+      }
+      .wizard_title {
+        margin: 0;
+        flex: 1;
+        font-size: 1.05rem;
+        text-align: center;
+      }
+      .wizard_cancel {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        color: #b9c4dd;
+        translate: 0 -50%;
+      }
+      .step_title {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      /* ── Le stepper ──────────────────────────────────────────────────────
+         Deux calques SVG identiques: le gris dessous, le rempli dessus,
+         révélé par un clip-path dont le bord droit suit le voyage. La
+         position du bord est un calc() de --slide-travel-progress, que le
+         container anime sur cet élément (data-slide-container-follows) — le
+         trait et les cercles se remplissent donc au rythme exact des slides,
+         sans un render par frame. --stepper-x / --stepper-x-delta sont posés
+         par le Stepper à chaque changement de slide (même convention de
+         signe que l'indicateur de <Nav>). */
+      .stepper {
+        position: relative;
+        width: 348px;
+        height: 76px;
+        margin: 0 auto;
+      }
+      .stepper_rail {
+        position: absolute;
+        top: 10px;
+        left: 0;
+        pointer-events: none;
+      }
+      /* Le chemin restant, en pointillés — le calque rempli le repasse en
+         trait plein. */
+      .stepper_rail line {
+        stroke: rgba(255, 255, 255, 0.35);
+        stroke-width: 2;
+        stroke-dasharray: 4 5;
+      }
+      .stepper_rail circle {
+        fill: #26314a;
+        stroke: #8b99b8;
+        stroke-width: 1.5;
+      }
+      .stepper_rail text {
+        font-weight: 600;
+        font-size: 12px;
+        fill: #8b99b8;
+      }
+      .stepper_rail polyline {
+        fill: none;
+        stroke: #8b99b8;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .stepper_rail_fill {
+        clip-path: inset(
+          0
+            calc(
+              (
+                  348 -
+                    (
+                      var(--stepper-x, 46) + var(--slide-travel-progress) *
+                        var(--stepper-x-delta, 0)
+                    )
+                ) *
+                1px
+            )
+            0 0
+        );
+      }
+      .stepper_rail_fill line {
+        stroke: white;
+        stroke-dasharray: none;
+      }
+      .stepper_rail_fill circle {
+        fill: #4f8ef7;
+        stroke: #4f8ef7;
+      }
+      .stepper_rail_fill circle.stepper_ring {
+        fill: none;
+        stroke: rgba(122, 167, 248, 0.55);
+        stroke-width: 1.5;
+      }
+      .stepper_rail_fill text {
+        fill: white;
+      }
+      .stepper_rail_fill polyline {
+        stroke: white;
+      }
+      .stepper_step {
+        position: absolute;
+        top: 0;
+        display: flex;
+        width: 84px;
+        height: 100%;
+        padding-bottom: 8px;
+        align-items: flex-end;
+        justify-content: center;
+        font-size: 12px;
+        --button-color: #8b99b8;
+        --button-color-readonly: #8b99b8;
+        --button-background-color-hover: transparent;
+        --button-background-color-readonly: transparent;
+      }
+      .stepper_step[data-current] {
+        font-weight: 600;
+        --button-color: white;
+        --button-color-readonly: white;
+      }
+
+      .group_legend {
+        padding: 0;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .annonce_list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .annonce_card {
+        display: flex;
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        background: #eceff1;
+        border-radius: 8px;
+      }
+      .done_check {
+        display: flex;
+        width: 48px;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+        background: #2e7d32;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        CheckboxGroup,
+        Field,
+        Form,
+        Input,
+        Label,
+        List,
+        RadioGroup,
+        Select,
+        SelectableInput,
+        Slide,
+        SlideContainer,
+        Text,
+        Wheel,
+        WheelGroup,
+        useSearchText,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../../internal/demo_header.jsx";
+      import {
+        FakeBackend,
+        createFakeBackend,
+      } from "../../../../internal/fake_backend.jsx";
+
+      // ── Ce qu'une annonce dit ─────────────────────────────────────────────
+      const DAYS = [
+        { key: "lun", short: "Lu", label: "Lundi" },
+        { key: "mar", short: "Ma", label: "Mardi" },
+        { key: "mer", short: "Me", label: "Mercredi" },
+        { key: "jeu", short: "Je", label: "Jeudi" },
+        { key: "ven", short: "Ve", label: "Vendredi" },
+        { key: "sam", short: "Sa", label: "Samedi" },
+        { key: "dim", short: "Di", label: "Dimanche" },
+      ];
+      const WEEK_KEYS = ["lun", "mar", "mer", "jeu", "ven"];
+      const WEEKEND_KEYS = ["sam", "dim"];
+      const dayShort = (key) => DAYS.find((day) => day.key === key)?.short;
+
+      const HOURS_DEBUT = Array.from({ length: 17 }, (unused, i) => 6 + i);
+      const HOURS_FIN = Array.from({ length: 17 }, (unused, i) => 7 + i);
+      const twoDigits = (value) => String(value).padStart(2, "0");
+
+      const CLUBS = [
+        {
+          id: "padel-club-toulouse",
+          name: "Padel Club Toulouse",
+          ville: "Toulouse",
+        },
+        {
+          id: "toulouse-padel-club",
+          name: "Toulouse Padel Club",
+          ville: "Toulouse",
+        },
+        { id: "padel-tolosa", name: "Padel Tolosa", ville: "Toulouse" },
+        { id: "urban-padel", name: "Urban Padel", ville: "Toulouse" },
+        {
+          id: "4padel-colomiers",
+          name: "4Padel Colomiers",
+          ville: "Colomiers",
+        },
+        { id: "padel-attitude", name: "Padel Attitude", ville: "Colomiers" },
+        { id: "esprit-padel", name: "Esprit Padel", ville: "Balma" },
+        {
+          id: "squash-padel-balma",
+          name: "Squash & Padel Balma",
+          ville: "Balma",
+        },
+        { id: "padel-factory", name: "Padel Factory", ville: "Blagnac" },
+        { id: "axess-padel", name: "Axess Padel", ville: "Blagnac" },
+      ];
+      const VILLES = [...new Set(CLUBS.map((club) => club.ville))];
+      const clubName = (id) => CLUBS.find((club) => club.id === id)?.name;
+
+      const NIVEAUX = [
+        { key: "debutant", label: "Débutant" },
+        { key: "perfectionnement", label: "Perfectionnement" },
+        { key: "intermediaire", label: "Intermédiaire" },
+        { key: "intermediaire_plus", label: "Intermédiaire +" },
+        { key: "avance", label: "Avancé" },
+        { key: "competition", label: "Compétition" },
+      ];
+      const NIVEAUX_MAX = 3;
+      const niveauLabel = (key) =>
+        NIVEAUX.find((niveau) => niveau.key === key)?.label;
+
+      const COTES = [
+        { key: "gauche", label: "À gauche" },
+        { key: "droite", label: "À droite" },
+        { key: "indifferent", label: "Peu importe" },
+      ];
+      const coteLabel = (key) => COTES.find((cote) => cote.key === key)?.label;
+
+      // ── Le backend ────────────────────────────────────────────────────────
+      // Rien n'y part avant la fin du parcours: les étapes écrivent un
+      // brouillon à l'écran, seul le récapitulatif envoie (POST ou PUT).
+      const backend = createFakeBackend({
+        value: [],
+        persist: "navi_demo_create_announcement",
+      });
+      const annonces = () => backend.valueSignal.value;
+      const nextAnnonceId = () => {
+        let biggest = 0;
+        for (const annonce of annonces()) {
+          const id = Number(annonce.id);
+          if (id > biggest) {
+            biggest = id;
+          }
+        }
+        return String(biggest + 1);
+      };
+      const writeAnnonce = (annonce) => {
+        const rest = annonces().filter(
+          (candidate) => candidate.id !== annonce.id,
+        );
+        backend.setValue([...rest, annonce]);
+        return annonce;
+      };
+      const api = {
+        create: (values) =>
+          backend.call("POST /annonces", () =>
+            writeAnnonce({ id: nextAnnonceId(), ...values }),
+          ),
+        update: (id, values) =>
+          backend.call(`PUT /annonces/${id}`, () =>
+            writeAnnonce({ id, ...values }),
+          ),
+      };
+
+      // ── Les étapes ────────────────────────────────────────────────────────
+      const STEPS = [
+        { area: "dispo", label: "Dispo" },
+        { area: "club", label: "Club" },
+        { area: "place", label: "Place" },
+        { area: "recap", label: "Récap" },
+      ];
+      const stepAnswered = (draft, area) => {
+        if (area === "dispo") {
+          return Boolean(draft.jours?.length && draft.debut != null);
+        }
+        if (area === "club") {
+          return Boolean(draft.club);
+        }
+        if (area === "place") {
+          return Boolean(draft.niveaux?.length && draft.cote);
+        }
+        return false;
+      };
+      // Une étape s'atteint quand tout ce qui la précède est répondu: en
+      // création la frontière avance étape par étape, en modification tout a
+      // déjà une valeur et chaque étape s'ouvre directement.
+      const stepReachable = (draft, index) =>
+        STEPS.slice(0, index).every((step) => stepAnswered(draft, step.area));
+
+      // ── Le stepper ────────────────────────────────────────────────────────
+      const RAIL_W = 348;
+      const RAIL_H = 34;
+      const DOT_R = 11;
+      const RING_R = 14.5;
+      const DOT_X = [30, 126, 222, 318];
+      // Jusqu'où le calque rempli découvre pour être "sur" une étape: le
+      // centre du cercle plus le halo, pour que la pastille soit couverte en
+      // entier quand on s'y tient.
+      const AREA_RANKS = ["dispo", "club", "place", "recap", "done"];
+      const fillXOf = (area) => {
+        let rank = AREA_RANKS.indexOf(area);
+        if (rank === -1) {
+          rank = 0;
+        }
+        // L'écran de confirmation n'a pas de pastille: le remplissage reste
+        // sur la dernière.
+        if (rank > DOT_X.length - 1) {
+          rank = DOT_X.length - 1;
+        }
+        return DOT_X[rank] + RING_R + 2;
+      };
+
+      const StepperRail = ({ draft, filled }) => (
+        <svg
+          className={filled ? "stepper_rail stepper_rail_fill" : "stepper_rail"}
+          width={RAIL_W}
+          height={RAIL_H}
+          viewBox={`0 0 ${RAIL_W} ${RAIL_H}`}
+          aria-hidden="true"
+        >
+          <line
+            x1={DOT_X[0]}
+            y1={RAIL_H / 2}
+            x2={DOT_X[DOT_X.length - 1]}
+            y2={RAIL_H / 2}
+          />
+          {STEPS.map((step, index) => {
+            const cx = DOT_X[index];
+            const cy = RAIL_H / 2;
+            return (
+              <g key={step.area}>
+                {filled ? (
+                  <circle className="stepper_ring" cx={cx} cy={cy} r={RING_R} />
+                ) : null}
+                <circle cx={cx} cy={cy} r={DOT_R} />
+                {stepAnswered(draft, step.area) ? (
+                  <polyline
+                    points={`${cx - 4.5},${cy + 0.5} ${cx - 1.5},${cy + 3.5} ${cx + 5},${cy - 3.5}`}
+                  />
+                ) : (
+                  <text x={cx} y={cy} dy="0.36em" text-anchor="middle">
+                    {index + 1}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      );
+
+      const Stepper = ({ containerId, stepSignal, draft }) => {
+        const stepperRef = useRef();
+        const currentArea = stepSignal.value;
+        // Où en est la marche, dit en pixels de rail: la position courante et,
+        // pendant un voyage, le delta vers la slide qu'on quitte — le CSS
+        // interpole entre les deux avec --slide-travel-progress, que le
+        // container anime sur cet élément. Écrit à la main depuis les
+        // attributs du container (même mécanique que l'indicateur de <Nav>):
+        // un render arriverait après le départ du mouvement.
+        useLayoutEffect(() => {
+          const containerElement = document.getElementById(containerId);
+          const stepperElement = stepperRef.current;
+          if (!containerElement || !stepperElement) {
+            return undefined;
+          }
+          const paint = () => {
+            const current = containerElement.getAttribute("data-slide-current");
+            const toward = containerElement.getAttribute(
+              "data-slide-travel-toward",
+            );
+            const x = fillXOf(current);
+            let delta = 0;
+            if (toward && toward !== current) {
+              // Le container compte +1 quand l'image penche sur une slide
+              // AVANT la courante, -1 après: le delta est signé pareil pour
+              // que progress × delta retombe exactement sur l'autre pastille.
+              const sign =
+                AREA_RANKS.indexOf(toward) > AREA_RANKS.indexOf(current)
+                  ? -1
+                  : 1;
+              delta = (fillXOf(toward) - x) * sign;
+            }
+            stepperElement.style.setProperty("--stepper-x", x);
+            stepperElement.style.setProperty("--stepper-x-delta", delta);
+          };
+          paint();
+          const observer = new MutationObserver(paint);
+          observer.observe(containerElement, {
+            attributes: true,
+            attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
+          });
+          return () => {
+            observer.disconnect();
+          };
+        }, [containerId]);
+
+        return (
+          <div
+            ref={stepperRef}
+            className="stepper"
+            data-slide-container-follows={containerId}
+          >
+            <StepperRail draft={draft} />
+            <StepperRail draft={draft} filled />
+            {STEPS.map((step, index) => (
+              <Button
+                key={step.area}
+                variant="discrete"
+                className="stepper_step"
+                command={`--navi-go-to-slide:${step.area}`}
+                commandFor={containerId}
+                readOnly={
+                  !stepReachable(draft, index) || currentArea === "done"
+                }
+                data-current={step.area === currentArea ? "" : undefined}
+                style={{ left: `${DOT_X[index] - 42}px` }}
+              >
+                {step.label}
+              </Button>
+            ))}
+          </div>
+        );
+      };
+
+      // ── Les slides ────────────────────────────────────────────────────────
+      const StepFooter = ({ first, submitLabel = "Suivant" }) => (
+        <Box flex="x" spacing="s">
+          <Button
+            command="--navi-left"
+            expandX
+            style={first ? { visibility: "hidden" } : undefined}
+            inert={first || undefined}
+          >
+            Précédent
+          </Button>
+          <Button type="submit" cta expandX>
+            {submitLabel}
+          </Button>
+        </Box>
+      );
+
+      // Une étape: un formulaire dans une slide. L'envoi qui aboutit dit
+      // "--navi-done" à la slide, qui avance d'elle-même — "Suivant" est un
+      // simple submit. canSendWhileUnchanged: c'est l'envoi qui pose les
+      // valeurs de l'étape dans le brouillon, y compris quand on garde les
+      // valeurs proposées telles quelles.
+      const StepSlide = ({
+        area,
+        title,
+        locked,
+        first,
+        onValues,
+        children,
+      }) => (
+        <Slide id={area} overflow="auto" preventNavNext={locked}>
+          <Form action={onValues} canSendWhileUnchanged>
+            <Box flex="y" spacing="l" padding="l">
+              <h3 className="step_title">{title}</h3>
+              {children}
+              <StepFooter first={first} />
+            </Box>
+          </Form>
+        </Slide>
+      );
+
+      const DispoSlide = ({
+        draft,
+        patchDraft,
+        joursSignal,
+        debutSignal,
+        finSignal,
+      }) => (
+        <StepSlide
+          area="dispo"
+          title="Vos disponibilités"
+          locked={!stepAnswered(draft, "dispo")}
+          first
+          onValues={(values) => {
+            patchDraft({
+              jours: values.jours ? [].concat(values.jours) : [],
+              debut: values.debut,
+              fin: values.fin,
+            });
+          }}
+        >
+          <Box flex="y" spacing="s" alignX="start">
+            <CheckboxGroup
+              name="jours"
+              required
+              signal={joursSignal}
+              flex="x"
+              spacing="xs"
+            >
+              <legend className="group_legend">Jours</legend>
+              {DAYS.map((day) => (
+                <Input
+                  key={day.key}
+                  type="checkbox"
+                  variant="button"
+                  value={day.key}
+                  aria-label={day.label}
+                  icon={<span>{day.short}</span>}
+                />
+              ))}
+            </CheckboxGroup>
+            <Box flex="x" spacing="xs">
+              <Button
+                variant="discrete"
+                onClick={() => {
+                  joursSignal.value = WEEK_KEYS;
+                }}
+              >
+                En semaine
+              </Button>
+              <Button
+                variant="discrete"
+                onClick={() => {
+                  joursSignal.value = WEEKEND_KEYS;
+                }}
+              >
+                Le weekend
+              </Button>
+            </Box>
+          </Box>
+          <Box flex="y" spacing="s" alignX="start">
+            <Text className="group_legend">Horaires</Text>
+            <Box flex="x" spacing="l">
+              {/* Un créneau ne peut pas finir avant de commencer, et c'est la
+                  roue qu'on NE touche PAS qui s'adapte: uiAction ne se
+                  déclenche que sur une interaction, donc chacune pousse
+                  l'autre et aucune ne se recale sous le doigt. */}
+              <Field flex="y" alignX="center" spacing="xs">
+                <Label>Début</Label>
+                <WheelGroup frameBorder>
+                  <Wheel
+                    name="debut"
+                    type="integer"
+                    signal={debutSignal}
+                    uiAction={(hour) => {
+                      if (finSignal.value <= hour) {
+                        finSignal.value = hour + 1;
+                      }
+                    }}
+                  >
+                    {HOURS_DEBUT.map((hour) => (
+                      <Wheel.Item key={hour} value={hour} paddingX="s">
+                        {`${twoDigits(hour)}h`}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </WheelGroup>
+              </Field>
+              <Field flex="y" alignX="center" spacing="xs">
+                <Label>Fin</Label>
+                <WheelGroup frameBorder>
+                  <Wheel
+                    name="fin"
+                    type="integer"
+                    signal={finSignal}
+                    uiAction={(hour) => {
+                      if (debutSignal.value >= hour) {
+                        debutSignal.value = hour - 1;
+                      }
+                    }}
+                  >
+                    {HOURS_FIN.map((hour) => (
+                      <Wheel.Item key={hour} value={hour} paddingX="s">
+                        {`${twoDigits(hour)}h`}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </WheelGroup>
+              </Field>
+            </Box>
+          </Box>
+        </StepSlide>
+      );
+
+      const ClubSlide = ({ draft, patchDraft }) => {
+        const [searchText, setSearchText] = useState("");
+        const [ville, setVille] = useState("");
+        const [clubId, setClubId] = useState(draft.club);
+        const clubsOfVille = ville
+          ? CLUBS.filter((club) => club.ville === ville)
+          : CLUBS;
+        const [matchingNames, getMatchInfo] = useSearchText(
+          searchText,
+          clubsOfVille.map((club) => club.name),
+        );
+        const clubs = clubsOfVille.filter((club) =>
+          matchingNames.includes(club.name),
+        );
+        const listId = useId();
+        return (
+          <Slide
+            id="club"
+            overflow="auto"
+            preventNavNext={!stepAnswered(draft, "club")}
+          >
+            <Box flex="y" spacing="m" padding="l">
+              <h3 className="step_title">Dans quel club ?</h3>
+              {/* Hors du formulaire: filtrer n'est pas répondre, et Entrée
+                  dans la recherche ne doit pas envoyer l'étape. */}
+              <Box flex="x" spacing="s">
+                <Select
+                  value={ville}
+                  action={(value) => {
+                    setVille(value);
+                  }}
+                >
+                  <option value="">Toutes les villes</option>
+                  {VILLES.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  type="search"
+                  placeholder="Rechercher un club"
+                  navi-list={listId}
+                  value={searchText}
+                  action={(value) => {
+                    setSearchText(value);
+                  }}
+                  expandX
+                />
+              </Box>
+              <Form
+                action={() => {
+                  patchDraft({ club: clubId });
+                }}
+                canSendWhileUnchanged
+                flex="y"
+                spacing="m"
+              >
+                <List
+                  selectable
+                  id={listId}
+                  name="club"
+                  required
+                  maxHeight="240"
+                  separator
+                  action={(value) => {
+                    setClubId(value ?? undefined);
+                  }}
+                  searchFallback={
+                    <Text color="#666" padding="m">
+                      Aucun club ne correspond.
+                    </Text>
+                  }
+                >
+                  {clubs.map((club, index) => (
+                    <List.Item
+                      selectable
+                      key={club.id}
+                      id={`club_${club.id}`}
+                      index={index}
+                      value={club.id}
+                      selected={clubId === club.id}
+                      matchInfo={getMatchInfo(club.name)}
+                      paddingX="m"
+                      paddingY="s"
+                      flex="x"
+                      spacing="s"
+                      alignY="center"
+                    >
+                      <SelectableInput />
+                      <Box flex="y">
+                        <Text>{club.name}</Text>
+                        <Text size="s" color="#8a94a6">
+                          {club.ville}
+                        </Text>
+                      </Box>
+                    </List.Item>
+                  ))}
+                </List>
+                <StepFooter />
+              </Form>
+            </Box>
+          </Slide>
+        );
+      };
+
+      const PlaceSlide = ({ draft, patchDraft, niveauxSignal }) => {
+        const niveauxSelected = niveauxSignal.value || [];
+        return (
+          <StepSlide
+            area="place"
+            title="Quelle place cherchez-vous ?"
+            locked={!stepAnswered(draft, "place")}
+            onValues={(values) => {
+              patchDraft({
+                niveaux: values.niveaux ? [].concat(values.niveaux) : [],
+                cote: values.cote,
+              });
+            }}
+          >
+            <CheckboxGroup
+              name="niveaux"
+              required
+              signal={niveauxSignal}
+              flex="x"
+              wrap
+              spacing="xs"
+            >
+              <legend className="group_legend">
+                Niveau ({NIVEAUX_MAX} max)
+              </legend>
+              {NIVEAUX.map((niveau) => {
+                const selected = niveauxSelected.includes(niveau.key);
+                return (
+                  <Input
+                    key={niveau.key}
+                    type="checkbox"
+                    variant="button"
+                    width="auto"
+                    value={niveau.key}
+                    readOnly={
+                      niveauxSelected.length >= NIVEAUX_MAX && !selected
+                    }
+                    icon={<span>{niveau.label}</span>}
+                  />
+                );
+              })}
+            </CheckboxGroup>
+            <RadioGroup
+              name="cote"
+              required
+              defaultValue={draft.cote}
+              flex="x"
+              wrap
+              spacing="xs"
+            >
+              <legend className="group_legend">Côté</legend>
+              {COTES.map((cote) => (
+                <Input
+                  key={cote.key}
+                  type="radio"
+                  variant="button"
+                  width="auto"
+                  value={cote.key}
+                  icon={<span>{cote.label}</span>}
+                />
+              ))}
+            </RadioGroup>
+          </StepSlide>
+        );
+      };
+
+      const RecapLine = ({ label, area, children }) => (
+        <Box flex="x" alignY="center" spacing="s">
+          <Box flex="y" expandX>
+            <Text size="s" color="#666">
+              {label}
+            </Text>
+            <Text>{children}</Text>
+          </Box>
+          <Button variant="discrete" command={`--navi-go-to-slide:${area}`}>
+            modifier
+          </Button>
+        </Box>
+      );
+
+      const Wizard = ({ annonce, onExit }) => {
+        const editing = Boolean(annonce);
+        // Le brouillon vit à l'écran: chaque étape y écrit à l'envoi de son
+        // formulaire, et rien ne part au backend avant le récapitulatif.
+        const [draft, setDraft] = useState(() =>
+          editing
+            ? {
+                jours: annonce.jours,
+                debut: annonce.debut,
+                fin: annonce.fin,
+                club: annonce.club,
+                niveaux: annonce.niveaux,
+                cote: annonce.cote,
+              }
+            : {},
+        );
+        const patchDraft = (patch) => {
+          setDraft((previous) => ({ ...previous, ...patch }));
+        };
+        // Les signaux tiennent ce que les contrôles montrent: c'est ce qui
+        // permet aux quick actions d'écrire dedans et au chip désactivé de
+        // lire combien sont cochés.
+        const joursSignal = useSignal(draft.jours ?? []);
+        const debutSignal = useSignal(draft.debut ?? 18);
+        const finSignal = useSignal(draft.fin ?? 20);
+        const niveauxSignal = useSignal(draft.niveaux ?? []);
+        const stepSignal = useSignal("dispo");
+        const containerId = useId();
+        const save = async () => {
+          const values = {
+            jours: draft.jours,
+            debut: draft.debut,
+            fin: draft.fin,
+            club: draft.club,
+            niveaux: draft.niveaux,
+            cote: draft.cote,
+          };
+          if (editing) {
+            await api.update(annonce.id, values);
+          } else {
+            await api.create(values);
+          }
+        };
+
+        return (
+          <>
+            <Box className="wizard_head" flex="y">
+              <Box
+                className="wizard_head_row"
+                flex="x"
+                alignY="center"
+                spacing="s"
+                paddingX="l"
+                paddingY="m"
+              >
+                <h2 className="wizard_title">
+                  {editing ? "Modifier l'annonce" : "Créer une annonce"}
+                </h2>
+                <Button
+                  variant="discrete"
+                  className="wizard_cancel"
+                  onClick={onExit}
+                >
+                  Annuler
+                </Button>
+              </Box>
+              <Stepper
+                containerId={containerId}
+                stepSignal={stepSignal}
+                draft={draft}
+              />
+            </Box>
+            <SlideContainer
+              id={containerId}
+              signal={stepSignal}
+              travelByKeyboard={false}
+              travelByDrag={false}
+              travelByScroll={false}
+              className="wizard_slides"
+            >
+              <DispoSlide
+                draft={draft}
+                patchDraft={patchDraft}
+                joursSignal={joursSignal}
+                debutSignal={debutSignal}
+                finSignal={finSignal}
+              />
+              <ClubSlide draft={draft} patchDraft={patchDraft} />
+              <PlaceSlide
+                draft={draft}
+                patchDraft={patchDraft}
+                niveauxSignal={niveauxSignal}
+              />
+              <Slide id="recap" overflow="auto">
+                {/* Sans champ, ce formulaire n'est jamais "changé":
+                    canSendWhileUnchanged pour que l'envoi parte quand même. */}
+                <Form action={save} canSendWhileUnchanged>
+                  <Box flex="y" spacing="l" padding="l">
+                    <h3 className="step_title">Récapitulatif</h3>
+                    <Box flex="y" spacing="m">
+                      <RecapLine label="Jours" area="dispo">
+                        {(draft.jours || []).map(dayShort).join(", ")}
+                      </RecapLine>
+                      <RecapLine label="Horaires" area="dispo">
+                        {draft.debut != null
+                          ? `${twoDigits(draft.debut)}h – ${twoDigits(draft.fin)}h`
+                          : ""}
+                      </RecapLine>
+                      <RecapLine label="Club" area="club">
+                        {clubName(draft.club)}
+                      </RecapLine>
+                      <RecapLine label="Place" area="place">
+                        {(draft.niveaux || []).map(niveauLabel).join(", ")}
+                        {draft.cote
+                          ? ` — ${coteLabel(draft.cote)?.toLowerCase()}`
+                          : ""}
+                      </RecapLine>
+                    </Box>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-left" expandX>
+                        Précédent
+                      </Button>
+                      <Button type="submit" cta expandX>
+                        {editing ? "Enregistrer" : "Publier l'annonce"}
+                      </Button>
+                    </Box>
+                  </Box>
+                </Form>
+              </Slide>
+              <Slide id="done" preventNavPrevious>
+                <Box
+                  flex="y"
+                  spacing="m"
+                  alignX="center"
+                  alignY="center"
+                  padding="l"
+                  expandY
+                >
+                  <span className="done_check">✓</span>
+                  <Text bold>
+                    {editing ? "Annonce modifiée" : "Annonce publiée"}
+                  </Text>
+                  <Button cta onClick={onExit}>
+                    Voir mes annonces
+                  </Button>
+                </Box>
+              </Slide>
+            </SlideContainer>
+          </>
+        );
+      };
+
+      const summarize = (annonce) =>
+        [
+          (annonce.jours || []).map(dayShort).join(", "),
+          `${twoDigits(annonce.debut)}h – ${twoDigits(annonce.fin)}h`,
+          (annonce.niveaux || []).map(niveauLabel).join(", "),
+        ].join(" · ");
+
+      const HomePage = ({ onCreate, onEdit }) => {
+        const list = annonces();
+        return (
+          <div className="page">
+            <h2 className="page_title">Mes annonces</h2>
+            {list.length === 0 ? (
+              <Text color="#666">Aucune annonce pour le moment.</Text>
+            ) : (
+              <div className="annonce_list">
+                {list.map((annonce) => (
+                  <div className="annonce_card" key={annonce.id}>
+                    <Text bold>{clubName(annonce.club)}</Text>
+                    <Text size="s" color="#555">
+                      {summarize(annonce)}
+                    </Text>
+                    <Button variant="discrete" onClick={() => onEdit(annonce)}>
+                      Modifier
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button cta onClick={onCreate}>
+              Créer une annonce
+            </Button>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [screen, setScreen] = useState({ name: "home" });
+        const goHome = () => setScreen({ name: "home" });
+        return (
+          <Box flex="y" spacing="l">
+            <DemoHeader title="Créer une annonce" />
+            <div className="demo-section">
+              <p className="caption">
+                Créer une annonce en plusieurs étapes, la publier, puis la
+                modifier.
+              </p>
+              <FakeBackend backend={backend}>
+                {() => (
+                  <div className="phone">
+                    {screen.name === "home" ? (
+                      <HomePage
+                        onCreate={() => setScreen({ name: "create" })}
+                        onEdit={(annonce) =>
+                          setScreen({ name: "edit", annonce })
+                        }
+                      />
+                    ) : (
+                      <Wizard
+                        key={screen.annonce?.id ?? "new"}
+                        annonce={screen.annonce}
+                        onExit={goHome}
+                      />
+                    )}
+                  </div>
+                )}
+              </FakeBackend>
+            </div>
+          </Box>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
