@@ -87,6 +87,11 @@
         margin: 0;
         font-size: 1rem;
       }
+      /* Les questions d'une diapo, à la taille des titres de diapo. */
+      .question_title {
+        font-weight: 600;
+        font-size: 1rem;
+      }
 
       /* Le StepList sur le bandeau sombre. */
       .wizard_head .navi_step_list {
@@ -356,7 +361,11 @@
           }}
         >
           <Box flex="y" spacing="s" alignX="center">
-            <Text className="group_legend" selfAlignX="start">
+            <Text
+              className="question_title"
+              selfAlignX="start"
+              marginBottom="xs"
+            >
               Quels jours êtes-vous disponible ?
             </Text>
             <CheckboxGroup
@@ -405,8 +414,14 @@
               </Button>
             </Box>
           </Box>
-          <Box flex="y" spacing="m" alignX="start" marginTop="s">
-            <Text className="group_legend">À quels horaires ?</Text>
+          <Box
+            flex="y"
+            spacing="m"
+            alignX="start"
+            marginTop="s"
+            marginBottom="s"
+          >
+            <Text className="question_title">À quels horaires ?</Text>
             {/* La borne qu'on tient n'est pas encore une réponse: l'autre ne
                 cède qu'au relâchement, quand la roue s'est posée. */}
             <Box flex="x" alignX="center" expandX>
