@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StepList Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #555;
+        font-size: 13px;
+      }
+      .case {
+        margin-bottom: 20px;
+      }
+      .dark-band {
+        padding: 8px 16px;
+        background: #26314a;
+        border-radius: 8px;
+        --step-list-muted: #8b99b8;
+        --step-list-line: rgba(255, 255, 255, 0.35);
+        --step-list-current-color: white;
+        --step-list-path-line: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Button, StepList } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const STEP_VALUES = ["dispo", "club", "place", "recap"];
+
+      // Un tableau, pas un composant wrapper: les items sont lus sur les
+      // enfants (toChildArray), qui ne voit pas à travers un composant.
+      const annonceStepItems = () => [
+        <StepList.Item key="dispo" value="dispo">
+          Dispo
+        </StepList.Item>,
+        <StepList.Item key="club" value="club">
+          Club
+        </StepList.Item>,
+        <StepList.Item key="place" value="place">
+          Place
+        </StepList.Item>,
+        <StepList.Item key="recap" value="recap">
+          Récap
+        </StepList.Item>,
+      ];
+
+      const NominalDemo = () => {
+        const [current, setCurrent] = useState("dispo");
+        const [reached, setReached] = useState("dispo");
+        const reachedRank = STEP_VALUES.indexOf(reached);
+        return (
+          <div className="demo-section">
+            <h2 id="nominal">Cas nominal</h2>
+            <p className="caption">
+              Presser une étape déplace <code>current</code> (le halo); le
+              chemin (<code>reached</code>) ne bouge que par les boutons.
+            </p>
+            <StepList
+              current={current}
+              reached={reached}
+              onStepPress={(value) => {
+                setCurrent(value);
+              }}
+            >
+              {annonceStepItems()}
+            </StepList>
+            <Box flex="x" spacing="s" marginTop="m">
+              <Button
+                readOnly={reachedRank <= 0}
+                onClick={() => {
+                  setReached(STEP_VALUES[reachedRank - 1]);
+                }}
+              >
+                Reculer le chemin
+              </Button>
+              <Button
+                readOnly={reachedRank >= STEP_VALUES.length - 1}
+                onClick={() => {
+                  setReached(STEP_VALUES[reachedRank + 1]);
+                }}
+              >
+                Avancer le chemin
+              </Button>
+            </Box>
+          </div>
+        );
+      };
+
+      const Case = ({ caption, children }) => (
+        <div className="case">
+          <p className="caption">{caption}</p>
+          {children}
+        </div>
+      );
+
+      const noop = () => {};
+
+      const StatesDemo = () => (
+        <div className="demo-section">
+          <h2 id="states">États</h2>
+          <Case caption='Au départ — current="dispo" reached="dispo"'>
+            <StepList current="dispo" reached="dispo" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Le chemin suit — current="club" reached="club"'>
+            <StepList current="club" reached="club" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='En avance sur le chemin — current="place" reached="dispo"'>
+            <StepList current="place" reached="dispo" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='En retard sur le chemin — current="dispo" reached="place"'>
+            <StepList current="dispo" reached="place" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Au bout — current="recap" reached="recap"'>
+            <StepList current="recap" reached="recap" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Terminé, on ne regarde plus — reached="recap", pas de current'>
+            <StepList reached="recap" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Chemin pas commencé — current="club", pas de reached'>
+            <StepList current="club" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption="Sans onStepPress — montré, pas offert">
+            <StepList current="club" reached="club">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+        </div>
+      );
+
+      const stepItemsOf = (count) =>
+        Array.from({ length: count }, (unused, index) => (
+          <StepList.Item key={index} value={`step_${index + 1}`}>
+            Étape {index + 1}
+          </StepList.Item>
+        ));
+
+      const CountDemo = () => (
+        <div className="demo-section">
+          <h2 id="count">Nombre d'étapes</h2>
+          <Case caption="2 étapes">
+            <StepList current="step_1" reached="step_1" onStepPress={noop}>
+              {stepItemsOf(2)}
+            </StepList>
+          </Case>
+          <Case caption="3 étapes">
+            <StepList current="step_2" reached="step_2" onStepPress={noop}>
+              {stepItemsOf(3)}
+            </StepList>
+          </Case>
+          <Case caption="6 étapes">
+            <StepList current="step_4" reached="step_2" onStepPress={noop}>
+              {stepItemsOf(6)}
+            </StepList>
+          </Case>
+        </div>
+      );
+
+      const WidthDemo = () => (
+        <div className="demo-section">
+          <h2 id="width">Largeur</h2>
+          <p className="caption">
+            Les pastilles se répartissent sur la largeur donnée.
+          </p>
+          <Case caption="width 280px">
+            <StepList
+              current="club"
+              reached="club"
+              onStepPress={noop}
+              style={{ width: "280px" }}
+            >
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption="pleine largeur">
+            <StepList current="club" reached="club" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+        </div>
+      );
+
+      const DarkDemo = () => (
+        <div className="demo-section">
+          <h2 id="dark">Sur fond sombre</h2>
+          <p className="caption">
+            Les couleurs sont des variables CSS, redites sur le bandeau:
+            --step-list-muted, --step-list-line, --step-list-current-color,
+            --step-list-path-line.
+          </p>
+          <div className="dark-band">
+            <StepList current="place" reached="dispo" onStepPress={noop}>
+              {annonceStepItems()}
+            </StepList>
+          </div>
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="StepList" />
+          <div className="demo-section">
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <CountDemo />
+          <WidthDemo />
+          <DarkDemo />
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

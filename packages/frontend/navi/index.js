@@ -291,6 +291,7 @@ export {
   SlideContainer,
   useSlideValue,
 } from "./src/layout/slide_container.jsx";
+export { Step, StepList } from "./src/layout/step_list.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 

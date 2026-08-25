@@ -24761,6 +24761,30 @@ const useUIGroupStateController = (
         }
       };
 
+      // What putting a value on a child comes down to, whichever way the group
+      // worked out that value (one child at a time, or all of them at once).
+      const placeOneChild = (childUIStateController, childNewState, e) => {
+        if (
+          childUIStateController.hasStateProp &&
+          !childUIStateController.props.signal
+        ) {
+          // A child bound to a signal is placed like any other: bound is not
+          // frozen, and the placement writes the signal, so both ends keep
+          // saying the same thing. Only a child controlled by a `value` /
+          // `checked` prop cannot be moved — its owner decides. Worth saying
+          // out loud only when the two disagree: a child already showing what
+          // the group would put there has lost nothing, and both being fed from
+          // the same value is a legitimate way to write a group.
+          if (
+            !compareTwoJsValues(childNewState, childUIStateController.uiState)
+          ) {
+            warnChildAnswersForItself(s.controller);
+          }
+          return;
+        }
+        childUIStateController.setUIState(childNewState, e);
+      };
+
       const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
         const { controller } = s;
         const currentUIState = controller.uiState;
@@ -24806,9 +24830,6 @@ const useUIGroupStateController = (
         ref,
         getPropFromState: (uiState) => uiState,
         distributeChildUIState: resolvedDistributeChildUIState,
-        // Where the group puts a value on ONE child: the only place that knows
-        // what each child gets, and the only one that sees a child it cannot
-        // place — see warnChildAnswersForItself.
         // One pass over every child, which is what a plural distribute needs:
         // it is asked once, sees the whole group, and answers for all of them.
         placeChildrenUIState: (groupUIState, e, { except } = {}) => {
@@ -24842,18 +24863,16 @@ const useUIGroupStateController = (
               // nothing about.
               continue;
             }
-            if (
-              childUIStateController.hasStateProp &&
-              !childUIStateController.props.signal
-            ) {
-              continue;
-            }
-            childUIStateController.setUIState(
+            placeOneChild(
+              childUIStateController,
               stateByChild.get(childUIStateController),
               e,
             );
           }
         },
+        // Where the group puts a value on ONE child: the only place that knows
+        // what each child gets, and the only one that sees a child it cannot
+        // place — see warnChildAnswersForItself.
         placeChildUIState: (childUIStateController, groupUIState, e) => {
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
@@ -24865,23 +24884,7 @@ const useUIGroupStateController = (
           if (childNewState === CANNOT_DERIVE) {
             return;
           }
-          if (
-            childUIStateController.hasStateProp &&
-            !childUIStateController.props.signal
-          ) {
-            // A child bound to a signal is placed like any other: bound is not
-            // frozen, and the placement writes the signal, so both ends keep
-            // saying the same thing. Only a child controlled by a `value` /
-            // `checked` prop cannot be moved — its owner decides. Worth saying
-            // out loud only when the two disagree: a child already showing what
-            // the group would put there has lost nothing, and both being fed
-            // from the same value is a legitimate way to write a group.
-            if (
-              !compareTwoJsValues(childNewState, childUIStateController.uiState)
-            ) ;
-            return;
-          }
-          childUIStateController.setUIState(childNewState, e);
+          placeOneChild(childUIStateController, childNewState, e);
         },
         setUIState: (newUIState, e) => {
           if (
@@ -25595,6 +25598,11 @@ const isPropagateDownEvent = (e) => {
 const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
   chainEvent(inputEvent, causeEvent);
   el.dispatchEvent(inputEvent);
+};
+const warnChildAnswersForItself = (groupController, child) => {
+  {
+    return;
+  }
 };
 
 /**

@@ -177,31 +177,67 @@ it. It matters most inside a picker's popup, where nothing else would bring the
 value back down: a picker's value IS what the control in its popup holds, so the
 façade never echoes it back.
 
-Two things follow, and both are about the loop being closed:
+Four things follow, and each of them was paid for twice before being written
+here:
 
-- **each view is sovereign over the half it shows**, and the aggregate has to
-  say which is which — who plays comes from the list, who sits where comes from
-  the seats. An aggregate that reads membership off the seats cannot express a
-  removal: the row keeps whoever is still seated, the tick comes back, and the
-  two views drift apart at the first gesture;
-- **one gesture is one write.** Moving somebody from one seat to another touches
-  two children, and the group re-places between them — after the first write the
-  rule sees a free seat and re-seats the person it was moving. Written together
-  (`batch(() => { … })` around the two signals) it is one change, and the move
-  lands where it was aimed.
+- **the group's value has to be the view that carries the MOST.** Four seats say
+  who plays AND who sits where; a list of who plays says half of that. Make the
+  seating the value and the list is derived from it (`value.filter(Boolean)`);
+  make the list the value and every gesture on a seat has to be guessed at. The
+  rule to apply: between two views of one answer, the value is the one the other
+  can be computed from;
+- **the Map must name EVERY child**, the derived view included. A child the Map
+  does not name is left where it is — which reads as "the list never fills";
+- **name the children you WANT, never exclude the one you don't.** A group holds
+  more than the views: a search box, a filter, whatever the popup needs. Reading
+  the seats as "every child except the list" collects those too, and the value
+  ends up with five slots for four seats. Finding them by name says what it
+  means;
+- **a gesture that moves two children must never leave the value in an
+  in-between.** Dragging somebody from one seat to another is one intention and
+  two writes, and the group aggregates between them: for one instant the person
+  is in the list and in no seat, which a value that IS the seating has no room
+  for. Measured, that instant costs the person — the aggregate drops them and
+  the distribute unticks them before the second write lands. Two ways out, and
+  the first is the one to prefer:
 
-A group with an `aggregateChildStates` of its own is outside all of this: what
-it returns is taken as the truth, `undefined` included. That is the one way such
-a group says **"I have nothing to say yet"** — return `undefined` while the
-children it needs are missing, and navi leaves the value alone instead of
-publishing an empty shape upward. A group written to always return its keys
-(`{ mode: undefined, levels: [] }`) is claiming an answer nobody gave, and that
-claim overwrites the row above it the moment the popup opens.
+  1. **write the group's value once.** `rowSignal.value = slots` with both seats
+     already moved: there is no in-between at all. Available when the row is
+     where the placement lives;
+  2. **write the destination first**, when the seats are the truth and must stay
+     separate signals. The person is somewhere at every observable moment (in
+     two seats for an instant, which the rule then resolves), instead of nowhere.
+     Source-first loses them — measured, and silently.
 
-Together they are what makes the two-hop case work — the form fills the row, the
-row fills the control in its popup — whatever order the pieces turn up in. Get
-one of them wrong and the symptom is always the same: a value that was there
-before the popup opened, and empty after.
+  Wrapping the two writes in a signal `batch()` does NOT help: the group
+  aggregates on each child's change, not on the render that follows.
+
+```jsx
+// the seats are found by name, never as "everything that is not the list"
+const seatChildren = (children) =>
+  SEAT_NAMES.map((name) => children.find((child) => child.name === name));
+
+// the value IS the seating; the list is a view of it
+<ControlGroup
+  aggregateChildStates={(children) => {…}}   // seats, minus who the list dropped, plus who it added
+  distributeChildStates={(slots, children) =>
+    new Map([
+      ...seats.map((seat, i) => [seat, slots[i]]),
+      [list, slots.filter(Boolean)],
+    ])
+  }
+>
+```
+
+```js
+// and a drag is one write
+const moveTo = (from, to) => {
+  const slots = [...rowSignal.value];
+  slots[to] = slots[from];
+  slots[from] = undefined;
+  rowSignal.value = slots;
+};
+```
 
 ## One line, one key
 
