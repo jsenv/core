@@ -194,6 +194,15 @@
           <Case caption='Chemin pas commencé — current="club", pas de reached'>
             <StepList current="club">{annonceStepItems()}</StepList>
           </Case>
+          <Case caption='Des trous — done sur "Dispo" et "Place", pas "Club": une étape remplie a sa pastille pleine même hors du chemin'>
+            <StepList current="club" reached="dispo">
+              {annonceStepItems((value) =>
+                value === "dispo" || value === "place"
+                  ? { done: true }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
           <Case caption="travelByClick={false} — montré, pas offert">
             <StepList current="club" reached="club" travelByClick={false}>
               {annonceStepItems()}
@@ -270,6 +279,8 @@
       const IntegrationDemo = () => {
         const containerId = "step_list_slides";
         const [answered, setAnswered] = useState({});
+        const [slow, setSlow] = useState(false);
+        const duration = slow ? "2s" : undefined;
         const firstUnanswered = STEP_VALUES.findIndex(
           (value) => !answered[value],
         );
@@ -287,15 +298,43 @@
               le halo sous le doigt — et le chemin s'étire avec le drag jusqu'où
               les réponses le permettent (cocher « étape remplie »).
             </p>
+            <Box flex="x" spacing="m" marginBottom="s">
+              <label>
+                <input
+                  type="radio"
+                  name="step_list_speed"
+                  checked={!slow}
+                  onChange={() => {
+                    setSlow(false);
+                  }}
+                />{" "}
+                vitesse normale
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="step_list_speed"
+                  checked={slow}
+                  onChange={() => {
+                    setSlow(true);
+                  }}
+                />{" "}
+                lente (2s)
+              </label>
+            </Box>
             <StepList
               slideContainer={containerId}
               reached={STEP_VALUES[reachedIndex]}
               reachable={STEP_VALUES[frontierIndex]}
+              duration={duration}
             >
-              {annonceStepItems()}
+              {annonceStepItems((value) => ({
+                done: Boolean(answered[value]),
+              }))}
             </StepList>
             <SlideContainer
               id={containerId}
+              duration={duration}
               onCurrentChange={(area) => {
                 const areaIndex = STEP_VALUES.indexOf(area);
                 if (areaIndex === -1) {

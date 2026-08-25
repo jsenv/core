@@ -72,6 +72,9 @@ const css = /* css */ `
       --step-list-path-line,
       var(--x-step-list-accent)
     );
+    /* How long a movement takes — the path sweeping, the halo sliding. One
+       number for all of them: they tell one story. */
+    --x-step-list-duration: var(--step-list-duration, 300ms);
 
     position: relative;
     display: block;
@@ -109,11 +112,23 @@ const css = /* css */ `
   .navi_step_list_rail g[data-current] text {
     fill: var(--x-step-list-current-color);
   }
+  /* A step answered fills its own dot, wherever the path stands: it is what
+     says "this one is valid" even before the path has come to it — steps
+     answered out of order leave HOLES, and the dashed segments between two
+     filled dots are what shows them. After the current rule on purpose: a
+     done dot keeps its fill even while looked at (the halo says current). */
+  .navi_step_list_rail g[data-done] circle {
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
+  }
+  .navi_step_list_rail g[data-done] text {
+    fill: var(--x-step-list-on-accent);
+  }
   /* The path: same drawing, filled, revealed up to the step it has come to.
      The clip is set inline (a width in px); transitioning it is what makes
      an answered step SWEEP the line and the next dot rather than pop. */
   .navi_step_list_rail_filled {
-    transition: clip-path 300ms ease;
+    transition: clip-path var(--x-step-list-duration) ease;
   }
   .navi_step_list_rail_filled line {
     stroke: var(--x-step-list-path-line);
@@ -130,7 +145,7 @@ const css = /* css */ `
      to dot (transform, transitioned) — the g moves, the circle inside is
      drawn at x=0. */
   .navi_step_list_marker {
-    transition: transform 300ms ease;
+    transition: transform var(--x-step-list-duration) ease;
   }
   .navi_step_list_marker circle {
     fill: none;
@@ -170,8 +185,8 @@ const css = /* css */ `
         var(--step-list-pos-dx, 0)
     );
     transition:
-      --step-list-reached-x 300ms ease,
-      --step-list-reachable-x 300ms ease;
+      --step-list-reached-x var(--x-step-list-duration) ease,
+      --step-list-reachable-x var(--x-step-list-duration) ease;
   }
   .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
     transform: translateX(calc(var(--step-list-position) * 1px));
@@ -317,6 +332,9 @@ const LINE_GAP = 5;
  *   there. Off, the steps are read-only — shown, not offered. To DO
  *   something on a press, say `onClick` on the Item itself: like every other
  *   prop an Item carries, it lands on that step's button.
+ * @param {string} [duration] - how long a movement takes (the path
+ *   sweeping, the halo sliding), any CSS duration. 300ms unless said —
+ *   here, or from outside via --step-list-duration.
  * @param {boolean} [travelByKeyboard=true] - whether the arrow keys walk
  *   from one step to the other (the focus moves, Enter presses). Only when
  *   the list stands alone: connected to slides the arrows belong to the
@@ -331,6 +349,7 @@ export const StepList = ({
   slideContainer,
   travelByClick = true,
   travelByKeyboard = true,
+  duration,
   children,
   ...rest
 }) => {
@@ -479,8 +498,9 @@ export const StepList = ({
         <g
           key={valueOf(stepVNodes[index], index)}
           // Base layer only: a current dot the path covers keeps the filled
-          // colors (see the css).
+          // colors (see the css), and a done dot IS the filled drawing.
           data-current={!filled && index === currentIndex ? "" : undefined}
+          data-done={!filled && stepVNodes[index].props.done ? "" : undefined}
         >
           {index > 0 ? (
             <line
@@ -511,6 +531,7 @@ export const StepList = ({
       data-slide-container-follows={slideContainer}
       style={{
         ...rest.style,
+        ...(duration ? { "--step-list-duration": duration } : undefined),
         ...(slideContainer
           ? {
               "--step-list-w": width,
@@ -561,6 +582,8 @@ export const StepList = ({
             const itemRest = { ...stepVNode.props };
             delete itemRest.value;
             delete itemRest.children;
+            // Read by the rail (the filled dot), not by the button.
+            delete itemRest.done;
             // The slots tile the row, cut at the container's edges: the
             // first and the last cover only the inner half of the room an
             // interior slot gets, so pressing just outside the box presses
@@ -626,8 +649,12 @@ export const StepList = ({
  *
  * @type {import("preact").FunctionComponent<{
  *   value: string,
+ *   done?: boolean,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [done] - this step is answered: its dot is filled,
+ *   wherever the path stands. Steps answered out of order leave holes —
+ *   filled dots with dashed segments between them.
  */
 export const Step = ({ children }) => children;
 
