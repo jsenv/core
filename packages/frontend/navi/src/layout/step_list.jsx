@@ -155,41 +155,17 @@ const css = /* css */ `
     stroke-width: 1.5;
   }
 
-  /* The bounds of the path, in px of this drawing. Declared, so that they
-     are NUMBERS the browser can interpolate: answering or un-answering a
-     step moves them, and the path has to be seen moving rather than jumping
-     — the transition below is on these very properties, which is what lets
-     the clamp's bounds animate while --slide-travel-progress (the drag)
-     stays instantaneous. */
-  @property --step-list-reached-x {
-    syntax: "<number>";
-    inherits: true;
-    initial-value: -9999;
-  }
-  @property --step-list-reachable-x {
-    syntax: "<number>";
-    inherits: true;
-    initial-value: -9999;
-  }
-
   /* Connected to slides: the movement is not this component's anymore. The
      container paints --slide-travel-progress here (this element follows it,
      see data-slide-container-follows) — an asked-for travel animates it, a
      finger drags it — and everything below is a calc() of that number, so
-     the halo and the path move per frame in CSS alone. The transitions on
-     the drawn properties are off: they would chase a finger that is already
-     the pace. What DOES transition are the path's bounds (see @property
-     above): answering or un-answering a step moves them, and that movement
-     has no finger to follow.
+     the halo and the path move per frame in CSS alone.
      Position, in dots-x px: where the picture is right now. */
   .navi_step_list[data-slide-container-follows] {
     --step-list-position: calc(
       var(--step-list-pos-x, 0) + var(--slide-travel-progress) *
         var(--step-list-pos-dx, 0)
     );
-    transition:
-      --step-list-reached-x var(--x-step-list-duration) ease,
-      --step-list-reachable-x var(--x-step-list-duration) ease;
   }
   .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
     transform: translateX(calc(var(--step-list-position) * 1px));
@@ -199,22 +175,34 @@ const css = /* css */ `
      answered (--step-list-reached-x, past the last dot of the contiguous
      run), never onto a dot not answered (--step-list-reachable-x stops at
      the next dot's edge) — the line stretches under a drag, the dot it
-     heads for stays empty until answered. */
+     heads for stays empty until answered.
+     What transitions is the RESULT (the clip-path), never the bounds one by
+     one: two bounds interpolating on their own around a still position make
+     the clamp follow one, stall on the position, then follow the other — an
+     emptying dot would pause halfway. One interpolated result cannot
+     stall. */
   .navi_step_list[data-slide-container-follows] .navi_step_list_rail_filled {
     clip-path: inset(
       0
         calc(
           (
               var(--step-list-w, 0) - clamp(
-                  var(--step-list-reached-x, -9999),
+                  var(--step-list-reached-x, 0),
                   var(--step-list-position),
-                  var(--step-list-reachable-x, -9999)
+                  var(--step-list-reachable-x, 0)
                 )
             ) *
             1px
         )
         0 0
     );
+    transition: clip-path var(--x-step-list-duration) ease;
+  }
+  /* …except while a travel is playing (the container says so on this very
+     element): the position is then the pace — animated for an asked-for
+     travel, the finger itself for a drag — and a transition would lag it. */
+  .navi_step_list[data-slide-container-follows][data-slide-travel-toward]
+    .navi_step_list_rail_filled {
     transition: none;
   }
 
@@ -560,10 +548,6 @@ export const StepList = ({
         ...(slideContainer
           ? {
               "--step-list-w": width,
-              // ?? -9999: before the first measure there are no dot
-              // positions, and a registered property given "undefined" would
-              // fall back to its initial value THROUGH a transition — the
-              // path would be seen sweeping in on mount.
               "--step-list-reached-x": pathEndIndex === -1 ? 0 : fillX,
               "--step-list-reachable-x": stretchX || 0,
             }
