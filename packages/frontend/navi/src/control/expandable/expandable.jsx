@@ -19,6 +19,15 @@
  *   arrow keys) and accepts any markup: controls inside it keep their own
  *   behavior, the marker is purely decorative.
  *
+ * Reach for it knowingly: expanding in-flow SHIFTS the layout — everything
+ * below (or beside) moves when it opens. A Popover, Dialog, Picker or Callout
+ * answers the same click on its own layer, moving nothing, which is usually
+ * the better UX: a layout that stays where it is reads and operates better —
+ * all the more on small screens, mobile first of all, where the shift can
+ * push most of the page away. Expandable is for content that genuinely
+ * belongs in the flow (a tree, a changelog, a settings group read top to
+ * bottom).
+ *
  * What <details> gives for free is rebuilt here:
  * - a "toggle" event (a real ToggleEvent when the browser has it) dispatched on
  *   the root whenever the state actually changes — but never on mount, unlike
