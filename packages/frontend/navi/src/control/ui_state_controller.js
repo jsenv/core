@@ -1198,6 +1198,16 @@ export const useUIGroupStateController = (
           // between them, from here on.
           controller.stateGivenFromAbove = false;
           if (resolvedDistributeChildStates) {
+            if (compareTwoJsValues(groupUIState, controller.uiState)) {
+              // The aggregate answered what the group already holds, which is
+              // how such a group says "not yet, ask me again". Some gestures
+              // cannot avoid an in-between — two people swapping seats means one
+              // leaves before the other arrives — and the aggregate is where
+              // that half-state is recognised. Placing the children from it
+              // would undo the half of the gesture that has already landed, and
+              // publishing it would hand a half-answer to the row above.
+              return;
+            }
             // A group answering for all its children at once holds ONE answer
             // its children are views OF, rather than a value that IS what they
             // said: a list saying who plays and four seats saying who sits

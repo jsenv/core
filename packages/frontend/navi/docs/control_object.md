@@ -177,7 +177,7 @@ it. It matters most inside a picker's popup, where nothing else would bring the
 value back down: a picker's value IS what the control in its popup holds, so the
 façade never echoes it back.
 
-Four things follow, and each of them was paid for twice before being written
+Five things follow, and each of them was paid for twice before being written
 here:
 
 - **the group's value has to be the view that carries the MOST.** Four seats say
@@ -211,6 +211,25 @@ here:
 
   Wrapping the two writes in a signal `batch()` does NOT help: the group
   aggregates on each child's change, not on the render that follows.
+
+- **and when the in-between cannot be avoided, the aggregate says so.** Two
+  people swapping seats means one leaves before the other arrives, whichever
+  order the writes take. What is avoidable is PUBLISHING that half-state: an
+  aggregate that returns **what the group already holds** says "not yet, ask me
+  again" — nothing is placed, nothing is handed to the row above, and the next
+  assembly publishes the whole answer. Returning `undefined` says the opposite
+  ("there is no answer"), and wipes the row.
+
+```js
+// "not yet": the moving person is picked and seated nowhere, and it is not
+// somebody who was just ticked — so this is a gesture in flight
+const midMove = picked.some(
+  (id) => !seatedNow.includes(id) && lastAnswer.includes(id),
+);
+if (midMove) {
+  return lastAnswer; // what the group already holds
+}
+```
 
 ```jsx
 // the seats are found by name, never as "everything that is not the list"
