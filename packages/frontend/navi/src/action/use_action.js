@@ -44,19 +44,27 @@ export const useAction = (action, paramsSignal) => {
 };
 
 const useBoundAction = (action, actionParamsSignal) => {
-  const actionRef = useRef();
+  // The cache gives an inline function a stable action identity across renders.
+  // That identity is only wanted while `action` stays the same kind
+  // (function to function); when the kind changes — none ↔ function ↔ action
+  // object — each branch clears the other kind's refs so the control picks up
+  // its new role instead of the action it was born with.
+  const noopActionRef = useRef();
+  const actionFromFunctionRef = useRef();
   const actionCallbackRef = useRef();
 
   if (!action) {
-    const existingAction = actionRef.current;
-    if (existingAction) {
-      return existingAction;
+    actionFromFunctionRef.current = undefined;
+    actionCallbackRef.current = undefined;
+    const existingNoopAction = noopActionRef.current;
+    if (existingNoopAction) {
+      return existingNoopAction;
     }
     const noopAction = createAction(() => {}, { params: undefined });
     const noopActionBound = actionParamsSignal
       ? noopAction.bindParams(actionParamsSignal)
       : noopAction;
-    actionRef.current = noopActionBound;
+    noopActionRef.current = noopActionBound;
     return noopActionBound;
   }
   const isFunction = typeof action === "function";
@@ -67,7 +75,7 @@ const useBoundAction = (action, actionParamsSignal) => {
   }
   if (isFunctionButNotAnActionFunction(action)) {
     actionCallbackRef.current = action;
-    const existingAction = actionRef.current;
+    const existingAction = actionFromFunctionRef.current;
     if (existingAction) {
       return existingAction;
     }
@@ -83,14 +91,16 @@ const useBoundAction = (action, actionParamsSignal) => {
       },
     );
     if (!actionParamsSignal) {
-      actionRef.current = actionFromFunction;
+      actionFromFunctionRef.current = actionFromFunction;
       return actionFromFunction;
     }
     const actionBoundToParams =
       actionFromFunction.bindParams(actionParamsSignal);
-    actionRef.current = actionBoundToParams;
+    actionFromFunctionRef.current = actionBoundToParams;
     return actionBoundToParams;
   }
+  actionFromFunctionRef.current = undefined;
+  actionCallbackRef.current = undefined;
   if (actionParamsSignal) {
     return action.bindParams(actionParamsSignal);
   }
