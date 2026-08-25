@@ -16,11 +16,11 @@
  *
  * Two decisions worth knowing before reading:
  *
- * - **navi places the target itself, every time.** Where the browser does
- *   answer a fragment it puts the element against the top edge, where it reads
- *   as the first thing on the page rather than as the one that was pointed at;
- *   the alignment below is applied after, so one rule holds whether the target
- *   was there all along or arrived late. A page with nothing to scroll simply
+ * - **navi places the target itself, every time.** The scroll the browser
+ *   would have done — target against the top edge, instantly — is applied
+ *   here, after layout, so one rule holds whether the target was there all
+ *   along or arrived late; `setUrlTargetOptions` lets an app pick another
+ *   alignment or a smooth behavior. A page with nothing to scroll simply
  *   does not move, which is the whole of the "the list already fits on screen"
  *   case — the transient mark alone then says which one was meant.
  *
@@ -64,8 +64,8 @@ const css = /* css */ `
 import.meta.css = css;
 
 let urlTargetOptions = {
-  block: "center",
-  behavior: "smooth",
+  block: "start",
+  behavior: "instant",
   markDuration: 2000,
   graceAfterIdle: 1000,
   maxWait: 10_000,
@@ -75,12 +75,12 @@ let urlTargetOptions = {
  * Adjusts how navi answers the element designated by the URL hash.
  *
  * @param {object} options
- * @param {"start"|"center"|"end"|"nearest"} [options.block="center"]
- *   Vertical alignment of the scroll. "center" by default: an element stuck to
- *   the top of the screen reads as the first one of the page rather than as the
- *   one that was pointed at.
- * @param {ScrollBehavior} [options.behavior="smooth"]
- *   Overridden with "instant" under `prefers-reduced-motion: reduce`.
+ * @param {"start"|"center"|"end"|"nearest"} [options.block="start"]
+ *   Vertical alignment of the scroll. "start" by default — the alignment the
+ *   browser itself uses when it answers a fragment.
+ * @param {ScrollBehavior} [options.behavior="instant"]
+ *   "instant" by default, like the browser. When set to "smooth", it is
+ *   overridden with "instant" under `prefers-reduced-motion: reduce`.
  * @param {number} [options.markDuration=2000]
  *   How long, in ms, the element carries `data-url-target`. Published to CSS as
  *   `--navi-url-target-duration`.

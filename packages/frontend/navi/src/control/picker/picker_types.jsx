@@ -7,6 +7,7 @@ import { Color } from "@jsenv/navi/src/text/color.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
+import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { PickerContext } from "./picker_context.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
 import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
@@ -79,7 +80,7 @@ const PickerObject = (props) => {
 export const PickerObjectUI = () => {
   const { value, placeholder } = useContext(PickerContext);
 
-  if (!value || Object.keys(value).length === 0) {
+  if (uiStateHoldsNothing(value)) {
     if (!placeholder) {
       return null;
     }
@@ -116,7 +117,7 @@ const PickerArray = (props) => {
 export const PickerArrayUI = () => {
   const { value, placeholder, maxLines } = useContext(PickerContext);
 
-  if (!value || value.length === 0) {
+  if (uiStateHoldsNothing(value)) {
     if (!placeholder) {
       return null;
     }

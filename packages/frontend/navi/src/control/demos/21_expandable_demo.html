@@ -105,9 +105,10 @@
         display: inline-block;
       }
       .demo-pinned {
-        display: flex;
-        height: 280px;
-        flex-direction: column;
+        position: relative;
+        /* room for the UI bar only — none is reserved for the content, its
+           reveal covers the text behind */
+        padding-bottom: 44px;
       }
       .demo-badge {
         position: absolute;
@@ -460,21 +461,46 @@
                 </Expandable.Content>
               </Expandable>
             </div>
-            <div className="demo-box demo-pinned">
+            <div className="demo-box">
               <p className="demo-caption">
-                Content then UI: pinned at the bottom, the content is revealed
-                above and the UI never moves
+                Content then UI, in flow: the UI and the text after it are
+                pushed down
               </p>
-              <p style="color: #90a4ae">Page content above…</p>
-              <Expandable animation marginTop="auto">
+              <p style="color: #90a4ae">Page content before the expandable.</p>
+              <Expandable animation>
                 <Expandable.Content>
                   <div className="demo-content">
                     <p>Revealed above the UI.</p>
-                    <p>The place clicked stays put.</p>
+                    <p>Two lines of content.</p>
                   </div>
                 </Expandable.Content>
                 <Expandable.UI>Details</Expandable.UI>
               </Expandable>
+              <p style="color: #90a4ae">Page content after the expandable.</p>
+            </div>
+            <div className="demo-box demo-pinned">
+              <p className="demo-caption">
+                Same text, absolutely positioned at the bottom: nothing is
+                pushed, the reveal covers the text — no space is reserved
+              </p>
+              <p style="color: #90a4ae">Page content before the expandable.</p>
+              <Expandable
+                animation
+                absolute
+                bottom="12"
+                left="12"
+                right="12"
+                backgroundColor="white"
+              >
+                <Expandable.Content>
+                  <div className="demo-content">
+                    <p>Revealed above the UI.</p>
+                    <p>Two lines of content.</p>
+                  </div>
+                </Expandable.Content>
+                <Expandable.UI>Details</Expandable.UI>
+              </Expandable>
+              <p style="color: #90a4ae">Page content after the expandable.</p>
             </div>
           </div>
         </section>
@@ -558,6 +584,15 @@
           </p>
         ));
 
+      const ColumnLines = () => (
+        <div className="demo-content">
+          <p>Line one</p>
+          <p>Line two</p>
+          <p>Line three</p>
+          <p>Line four</p>
+        </div>
+      );
+
       const SizingSection = () => (
         <section className="demo-section">
           <Heading id="sizing">Sizing & scrollbars</Heading>
@@ -587,6 +622,77 @@
                 </span>
               </div>
             </Expandable>
+          </div>
+
+          <Heading level={3} id="sizing-column">
+            layout="column": the UI height follows the content
+          </Heading>
+          <p>
+            The content is not built while closed, so a closed expandable is
+            only as tall as its UI; opening stretches the UI to the content's
+            height.
+          </p>
+          <div className="demo-row">
+            <div className="demo-box">
+              <p className="demo-caption">
+                default: closed the UI is small, open it is as tall as the
+                content
+              </p>
+              <Expandable layout="column" animation>
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
+                <Expandable.Content>
+                  <ColumnLines />
+                </Expandable.Content>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">
+                height="120": one stable height — the list overflows once
+                settled
+              </p>
+              <Expandable layout="column" animation height="120">
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
+                <Expandable.Content>
+                  <ColumnLines />
+                </Expandable.Content>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">
+                height="120" + maxContentHeight="120": the list scrolls inside
+              </p>
+              <Expandable
+                layout="column"
+                animation
+                height="120"
+                maxContentHeight="120"
+              >
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
+                <Expandable.Content>
+                  <ColumnLines />
+                </Expandable.Content>
+              </Expandable>
+            </div>
+            <div className="demo-box">
+              <p className="demo-caption">
+                mountWhenClosed: the closed content sizes the height — last
+                resort, the content may be expensive to render
+              </p>
+              <Expandable layout="column" animation mountWhenClosed>
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
+                <Expandable.Content>
+                  <ColumnLines />
+                </Expandable.Content>
+              </Expandable>
+            </div>
           </div>
         </section>
       );
@@ -714,14 +820,14 @@
           <TableOfContents />
           <NominalSection />
           <StatesSection />
-          <ActionSection />
           <MountSection />
-          <DrivingSection />
           <AnimationSection />
           <PartsSection />
           <LayoutSection />
-          <AutoFocusSection />
           <SizingSection />
+          <DrivingSection />
+          <ActionSection />
+          <AutoFocusSection />
           <SummarySection />
           <NestedSection />
           <KeyboardSection />

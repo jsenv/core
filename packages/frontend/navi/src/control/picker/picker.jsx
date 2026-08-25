@@ -876,7 +876,7 @@ const PickerFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  resolveInputProps(props);
+  resolveInputProps(props, { controlType: "picker" });
 
   return <Next {...props} />;
 };

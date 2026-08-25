@@ -95,7 +95,7 @@ export const seedDefaultValueFromSignal = (props) => {
   }
 };
 
-export const resolveInputProps = (props) => {
+export const resolveInputProps = (props, { controlType = "input" } = {}) => {
   // `signal` carries a bound state signal. It is left on `props` on purpose:
   // `createControlInfo` (control_hooks.jsx) reads it to seed the state and to
   // follow it, and `onUIAction` (ui_state_controller.js) writes user
@@ -112,8 +112,20 @@ export const resolveInputProps = (props) => {
         }
       }
       if (props.type === undefined && signalOptions.type !== undefined) {
-        props.type =
+        const typeFromSignal =
           VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+        // What a signal says is what its value IS; what a control's `type` says
+        // is what the control is. They usually agree — a date-typed signal wants
+        // a date field — but a boolean one maps to a checkbox, and a picker made
+        // into a checkbox is not a picker with a different look: it is another
+        // control, with no popup to open. A picker asked to hold a yes/no keeps
+        // its two rows and stays itself.
+        const wouldChangeWhatTheControlIs =
+          controlType === "picker" &&
+          (typeFromSignal === "checkbox" || typeFromSignal === "radio");
+        if (!wouldChangeWhatTheControlIs) {
+          props.type = typeFromSignal;
+        }
       }
     }
 

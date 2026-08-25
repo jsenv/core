@@ -1112,6 +1112,7 @@ export const SpinGroup = (props) => {
       cascadeValidationToChildren: true,
       aggregateChildStates: props.aggregateChildStates,
       distributeChildUIState: props.distributeChildUIState,
+      distributeChildStates: props.distributeChildStates,
     });
   const { children } = controlgroupProps;
   const { readOnly, disabled, loading } = childrenWrapperProps;
@@ -1124,6 +1125,7 @@ export const SpinGroup = (props) => {
       // not reach the DOM as unknown attributes.
       aggregateChildStates={undefined}
       distributeChildUIState={undefined}
+      distributeChildStates={undefined}
       baseClassName="navi_spin_group"
       pseudoClasses={SPIN_GROUP_PSEUDO_CLASSES}
       // What the frame and what sits between the spins are drawn from: the

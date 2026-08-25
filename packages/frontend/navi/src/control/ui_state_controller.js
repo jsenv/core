@@ -379,7 +379,15 @@ export const useUIStateController = (
           // Uses the in-memory registry instead of DOM queries so this works even
           // when sibling items are virtualized (not in the DOM).
           // Form scoping is preserved by comparing parentUIStateController references.
-          if (isRadio && newUIState && controller.name && !controlProxyFor) {
+          // Checked, not truthy: a radio holding `false` (two rows asking a
+          // yes/no) is as checked as one holding a name, and the row that was
+          // checked before has to let go all the same.
+          if (
+            isRadio &&
+            newUIState !== undefined &&
+            controller.name &&
+            !controlProxyFor
+          ) {
             const siblings = getRadioSiblings(controller);
             if (siblings) {
               const siblingUncheckEvent = new CustomEvent(
@@ -959,6 +967,7 @@ export const useUIGroupStateController = (
     childControlFilter,
     aggregateChildStates,
     distributeChildUIState,
+    distributeChildStates,
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture = false,
@@ -975,7 +984,7 @@ export const useUIGroupStateController = (
   // whatever IT says — a "HH:MM", an ISO duration — and the shape checks in
   // setUIState below are about the default shape, not about that one.
   const stateShapeIsTheDefaultOne =
-    !aggregateChildStates && !distributeChildUIState;
+    !aggregateChildStates && !distributeChildUIState && !distributeChildStates;
   const defaults = GROUP_DEFAULTS[controlType] ?? GROUP_DEFAULTS[stateType];
   const resolvedChildControlFilter =
     childControlFilter ?? defaults?.childControlFilter ?? null;
@@ -983,6 +992,12 @@ export const useUIGroupStateController = (
     aggregateChildStates ?? defaults?.aggregateChildStates;
   const resolvedDistributeChildUIState =
     distributeChildUIState ?? defaults?.distributeChildUIState;
+  // The plural half of the pair: `aggregateChildStates` already sees all the
+  // children at once, and a group whose value is not one key per child usually
+  // needs the same view on the way down — which of four seats each player takes
+  // cannot be decided one seat at a time. Given both, the plural one wins.
+  const resolvedDistributeChildStates =
+    distributeChildStates ?? defaults?.distributeChildStates;
   if (
     typeof resolvedAggregateChildStates !== "function" ||
     typeof resolvedDistributeChildUIState !== "function"
@@ -1244,6 +1259,48 @@ export const useUIGroupStateController = (
         // Where the group puts a value on ONE child: the only place that knows
         // what each child gets, and the only one that sees a child it cannot
         // place — see warnChildAnswersForItself.
+        // One pass over every child, which is what a plural distribute needs:
+        // it is asked once, sees the whole group, and answers for all of them.
+        placeChildrenUIState: (groupUIState, e) => {
+          if (!resolvedDistributeChildStates) {
+            for (const childUIStateController of childUIStateControllerArray) {
+              controller.placeChildUIState(
+                childUIStateController,
+                groupUIState,
+                e,
+              );
+            }
+            return;
+          }
+          const monitoredChildren = childUIStateControllerArray.filter(
+            shouldPropagateStateToChild,
+          );
+          const stateByChild = resolvedDistributeChildStates(
+            groupUIState,
+            monitoredChildren,
+          );
+          if (!stateByChild) {
+            return;
+          }
+          for (const childUIStateController of monitoredChildren) {
+            if (!stateByChild.has(childUIStateController)) {
+              // Not named by the answer: left where it is, the way
+              // CANNOT_DERIVE leaves a child a per-child distribute says
+              // nothing about.
+              continue;
+            }
+            if (
+              childUIStateController.hasStateProp &&
+              !childUIStateController.props.signal
+            ) {
+              continue;
+            }
+            childUIStateController.setUIState(
+              stateByChild.get(childUIStateController),
+              e,
+            );
+          }
+        },
         placeChildUIState: (childUIStateController, groupUIState, e) => {
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
@@ -1307,13 +1364,7 @@ export const useUIGroupStateController = (
             detail: {},
           });
           chainEvent(propagateDownEvent, e);
-          for (const childUIStateController of childUIStateControllerArray) {
-            controller.placeChildUIState(
-              childUIStateController,
-              newUIState,
-              propagateDownEvent,
-            );
-          }
+          controller.placeChildrenUIState(newUIState, propagateDownEvent);
           const groupUIState = aggregateGroupUIState(newUIState);
           if (e.type === "initial_state_push") {
             controller.syncInternalState(groupUIState);
@@ -1388,11 +1439,21 @@ export const useUIGroupStateController = (
             const initialEvent = new CustomEvent("initial_state_push", {
               detail: {},
             });
-            controller.placeChildUIState(
-              childUIStateController,
-              stateToPlaceChildFrom,
-              initialEvent,
-            );
+            if (resolvedDistributeChildStates) {
+              // A group answering for all its children at once has to be asked
+              // again now that there is one more: what each of them shows may
+              // depend on who else is there.
+              controller.placeChildrenUIState(
+                stateToPlaceChildFrom,
+                initialEvent,
+              );
+            } else {
+              controller.placeChildUIState(
+                childUIStateController,
+                stateToPlaceChildFrom,
+                initialEvent,
+              );
+            }
           }
           onChange(new CustomEvent(`${childControlType}_mount`), {
             notifyExternal: "silent",
@@ -1567,13 +1628,7 @@ export const useUIGroupStateController = (
           "propagate_down_set_ui_state",
           { detail: {} },
         );
-        for (const childUIStateController of childUIStateControllerArray) {
-          controller.placeChildUIState(
-            childUIStateController,
-            groupUIState,
-            propagateDownEvent,
-          );
-        }
+        controller.placeChildrenUIState(groupUIState, propagateDownEvent);
         controller.syncInternalState(groupUIState);
       };
       if (
@@ -1866,6 +1921,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       return {
         controller: facadeUIStateController,
         realUIStateController,
+        props,
       };
     },
     // ── update: runs every render after the first ─────────────────────────
@@ -1879,6 +1935,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
 
       return {
         realUIStateController,
+        props,
       };
     },
   );
@@ -2158,7 +2215,7 @@ const resolveClearedUIState = (controller) => {
 // an aggregate of its own produces before its children have arrived
 // (`{ mode: undefined, levels: [] }` has two keys and says nothing), and
 // reading it as an answer is how a popup opening empties the row above it.
-const uiStateHoldsNothing = (uiState) => {
+export const uiStateHoldsNothing = (uiState) => {
   if (uiState === undefined) {
     return true;
   }

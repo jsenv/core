@@ -11,6 +11,8 @@ somewhere else in the app.
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
 - [Which controls take a `signal`](#which-controls-take-a-signal)
 - [The PROP is what controls, not its value](#the-prop-is-what-controls-not-its-value)
+- [A yes/no shown as two rows](#a-yesno-shown-as-two-rows)
+- [Clearing, resetting, and what is shown meanwhile](#clearing-resetting-and-what-is-shown-meanwhile)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
 
@@ -182,6 +184,54 @@ The trap is the shorthand for an optional prop:
 Passing a prop the code knows will always be `undefined` is the same mistake
 written once instead of twice: leave it out. navi says so in dev when a group
 tries to place a child that has claimed itself this way.
+
+## A yes/no shown as two rows
+
+A checkbox is one way to ask a yes/no; two rows one can compare — "Publique, we
+propose it to players looking for this kind of game" against "Privée, it travels
+only by the link you send" — is another, and it is the same value:
+
+```jsx
+<Picker name="visibility" signal={isPublicSignal}>
+  <List selectable>
+    <List.Item value={true}>Publique …</List.Item>
+    <List.Item value={false}>Privée …</List.Item>
+  </List>
+</Picker>
+```
+
+Nothing translates: the row holds the boolean, the form carries the boolean.
+What cannot be done is give a row `undefined` to mean "no value" — `undefined`
+is what UNCHECKED means, here as in HTML, so such a row can never be ticked.
+A value the control can hold is a value one can see; "nothing chosen" is the
+absence of a row, not a row.
+
+## Clearing, resetting, and what is shown meanwhile
+
+Three things that look alike and are not:
+
+| gesture / prop            | what it does                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `--navi-clear`, the cross | the control holds its own empty — `""`, `[]`, `{}`, unchecked                       |
+| `--navi-reset`            | the control goes back to its `defaultValue`                                         |
+| `defaultValue`            | where it starts, and where a reset goes back to — a real value, sent like any other |
+| `placeholder`             | what is SHOWN while it holds nothing, and never a value                             |
+
+So a row whose cross means "back to the one from my profile" needs nothing of
+its own: clearing empties it, and `placeholder` is where that sentence is
+written.
+
+```jsx
+<Picker clearable placeholder="Celui de mon profil" signal={sideSignal} />
+```
+
+What the app then reads is `undefined` (or the empty of the row's type), which
+is what "nothing chosen here, use the usual answer" already means everywhere
+else — the same rule as an emptied signal falling back on its default.
+
+A control that cannot show emptiness — a pair of wheels has no blank row to land
+on — takes the same `placeholder` as a POSITION instead of a word (see
+`TimeWheel`): shown, and still not an answer.
 
 ## `value` and `signal` exclude each other
 

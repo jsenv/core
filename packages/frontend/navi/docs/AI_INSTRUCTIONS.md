@@ -144,6 +144,15 @@ consistency across the app, not from any single call site.
   `signal` carrying something is an answer). Read it before a screen that
   modifies an existing resource (`pristineKey`), and before reaching for
   `canSendWhileUnchanged` because a submit "does nothing".
+- `distributeChildStates` on a group — the way down asked once for ALL the
+  children, when they cannot be placed one at a time (four seats where who sits
+  down decides who moves). The mirror of `aggregateChildStates`; see
+  control_object.md. Read it before writing a `uiAction` whose only job is to
+  translate. Two neighbouring questions have answers already: a yes/no shown as
+  two rows needs no translation (`List.Item value={true}` beside
+  `value={false}` IS a boolean control), and a cross that means "back to the
+  usual answer" needs none either — clearing empties, and `placeholder` is
+  where that sentence is written (control_value.md).
 - `docs/control_object.md` — a value made of several controls: `<ControlGroup>`
   (the shape) vs `<Form>` (the shape plus a send), what a group's `name` does
   and what a nameless one merges, and what a `<Picker type="object">` needs in

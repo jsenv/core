@@ -152,6 +152,18 @@ are not all there yet:
   group holds. Only a child controlled by a `value`/`checked` prop is left
   alone: its owner decides.
 
+`distributeChildUIState` is asked child by child, which is fine while each child
+can be placed on its own. When it cannot — four seats where who sits down
+decides who moves, a row whose first answer changes what the others may show —
+`distributeChildStates` is the same way down asked ONCE for all of them:
+
+```js
+distributeChildStates: (groupValue, children) => new Map([[child, state], …])
+```
+
+the mirror of `aggregateChildStates`, which already sees every child. A child
+the Map does not name is left where it is. Given both, the plural one wins.
+
 A group with an `aggregateChildStates` of its own is outside all of this: what
 it returns is taken as the truth, `undefined` included. That is the one way such
 a group says **"I have nothing to say yet"** — return `undefined` while the

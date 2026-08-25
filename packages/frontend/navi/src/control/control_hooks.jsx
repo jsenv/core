@@ -1006,7 +1006,11 @@ const createControlInfo = (props, { controlType }) => {
     if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
       defaultStatePropName = "defaultChecked";
-      value = props.value || "on";
+      // "on" is what HTML sends for a checkbox given no value of its own — the
+      // default of an ABSENT prop, not of a falsy one: `value={false}` and
+      // `value={0}` are values, and two rows holding true and false are how a
+      // list asks a yes/no question.
+      value = props.value === undefined ? "on" : props.value;
       signalHoldsChecked = true;
       if (signal) {
         // The signal is the source of truth: a `checked` passed alongside is
@@ -1225,6 +1229,7 @@ export const useControlgroupProps = (
     childControlFilter,
     aggregateChildStates,
     distributeChildUIState,
+    distributeChildStates,
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture = false,
@@ -1238,6 +1243,7 @@ export const useControlgroupProps = (
     childControlFilter,
     aggregateChildStates,
     distributeChildUIState,
+    distributeChildStates,
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture,

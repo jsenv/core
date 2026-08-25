@@ -2192,6 +2192,7 @@ export const WheelGroup = (props) => {
       cascadeValidationToChildren: true,
       aggregateChildStates: props.aggregateChildStates,
       distributeChildUIState: props.distributeChildUIState,
+      distributeChildStates: props.distributeChildStates,
     });
   const { children } = controlgroupProps;
 
@@ -2251,6 +2252,7 @@ export const WheelGroup = (props) => {
       zoom={undefined}
       aggregateChildStates={undefined}
       distributeChildUIState={undefined}
+      distributeChildStates={undefined}
       baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}

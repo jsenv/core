@@ -185,12 +185,12 @@ the event that caused it, and `findEvent(event, type)` walks that chain back:
   clearable
   uiAction={(value, event) => {
     if (findEvent(event, "navi_clear_ui_state")) {
-      // the clear cross was pressed — for this row that means "back to the
-      // profile level", not "empty"
-      draft.level = profile.level;
+      // the cross was pressed — the row is empty because somebody emptied it,
+      // not because the last player left the list
+      askAgainLater();
       return;
     }
-    draft.level = value;
+    draft.players = value;
   }}
 />
 ```

@@ -160,6 +160,17 @@ export const PickerCustomResolver = (props) => {
   if (props.children === undefined) {
     return <PickerNative {...props} />;
   }
+  if (props.type === undefined) {
+    // A picker with a popup of its own holds whatever the control inside it
+    // holds — a boolean, a number, an id — and a field with no type is read
+    // back off the DOM, where every value is a string. "false" then matches no
+    // row, the popup empties, and that emptiness climbs back into the picker:
+    // a value survives its own round trip only while it is text. "navi_js" is
+    // how a field says its value is a JS one, kept beside the DOM (see
+    // controller_registry.js) — the same thing type="array"/"object" already
+    // say for their shapes.
+    return <PickerCustom {...props} type="navi_js" />;
+  }
   return <PickerCustom {...props} />;
 };
 

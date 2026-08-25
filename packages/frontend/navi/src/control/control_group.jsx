@@ -36,6 +36,16 @@ import {
  *                input_duration.jsx). `name` is unaffected: it still says under
  *                which key the group's value — whatever shape it now has —
  *                lands in the form around it.
+ *
+ *   distributeChildStates
+ *              — the same way down, asked ONCE for all the children at a time:
+ *                `(groupValue, children) => Map<child, state>`. The plural of
+ *                `distributeChildUIState`, and the mirror of
+ *                `aggregateChildStates`, which already sees every child. For a
+ *                group whose children cannot be placed one at a time — four
+ *                seats where who sits down decides who moves, a row where the
+ *                first answer changes what the others may show. A child the Map
+ *                does not name is left where it is. Given both, this one wins.
  */
 export const ControlGroup = (props) => {
   const defaultRef = useRef();
@@ -50,6 +60,7 @@ export const ControlGroup = (props) => {
       cascadeValidationToChildren: true,
       aggregateChildStates: props.aggregateChildStates,
       distributeChildUIState: props.distributeChildUIState,
+      distributeChildStates: props.distributeChildStates,
     });
   const { children } = controlgroupProps;
 
@@ -62,6 +73,7 @@ export const ControlGroup = (props) => {
       // don't reach the DOM as unknown attributes
       aggregateChildStates={undefined}
       distributeChildUIState={undefined}
+      distributeChildStates={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
     >
       <ControlgroupChildrenWrapper

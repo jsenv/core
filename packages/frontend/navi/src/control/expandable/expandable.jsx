@@ -120,8 +120,11 @@ const css = /* css */ `
       grid-template-rows: 0fr;
       /* The clip lives here, on the moving box, because the content inside
          keeps its final size during the animation (see the top comment) and
-         overflows the track on purpose. */
-      overflow: hidden;
+         overflows the track on purpose. One-sided (a clip-path with the free
+         sides pushed far out) rather than overflow: hidden: only the side
+         being revealed hides anything, so a badge sticking out of the other
+         sides is visible from the very first frame of the movement. */
+      clip-path: inset(-9999px -9999px 0 -9999px);
 
       /* The sizer is what lets the track actually collapse: min-height 0 on
          an auto-sized item zeroes its min-content contribution. The frozen
@@ -136,17 +139,27 @@ const css = /* css */ `
       grid-template-rows: 1fr;
     }
     /* Content before the UI: revealed against the UI side — the edge touching
-       the UI stays, the far edge is what gets uncovered (overflow alignment:
-       the oversized frozen content overflows the sizer on the far side). */
+       the UI stays, the far edge is what gets uncovered. Said at BOTH levels:
+       a transitioning fr resolves once for the container's own size and once
+       more inside it (the row is fraction² high), so the row must be glued to
+       the container's UI edge and the oversized frozen content to the row's —
+       anchoring only the inner one leaves the content following the drifting
+       fraction² row. */
     &[data-content-first]:not([data-layout="column"])
-      > .navi_expandable_content_container
-      > .navi_expandable_content_sizer {
+      > .navi_expandable_content_container {
       align-content: end;
+      clip-path: inset(0 -9999px -9999px -9999px);
+
+      > .navi_expandable_content_sizer {
+        align-content: end;
+      }
     }
 
     /* The parts sit side by side, sharing their height: the UI part becomes a
        vertical strip and the content expands horizontally, on the columns
-       track. */
+       track — the rows track collapses too, so a closed expandable is only as
+       tall as its UI (the content, unmounted or 0-wide, says nothing about
+       the height it will bring). */
     &[data-layout="column"] {
       flex-direction: row;
 
@@ -160,21 +173,33 @@ const css = /* css */ `
       }
       > .navi_expandable_content_container {
         grid-template-columns: 0fr;
-        grid-template-rows: none;
+        grid-template-rows: 0fr;
+        /* Both tracks reveal: clip the far side of each (right and bottom),
+           the UI side and the top stay free. */
+        clip-path: inset(-9999px 0 0 -9999px);
 
         > .navi_expandable_content_sizer {
           min-width: 0;
-          min-height: auto;
+          min-height: 0;
         }
       }
       &[aria-expanded="true"] > .navi_expandable_content_container {
         grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+      }
+      /* mountWhenClosed: the content is built and width-frozen while closed
+         (see the component), so it can size the height at all times — the
+         expandable then keeps one stable height and only the width reveals. */
+      &[data-closed-content-sized] > .navi_expandable_content_container {
         grid-template-rows: none;
       }
-      &[data-content-first]
-        > .navi_expandable_content_container
-        > .navi_expandable_content_sizer {
+      &[data-content-first] > .navi_expandable_content_container {
         justify-content: end;
+        clip-path: inset(-9999px -9999px 0 0);
+
+        > .navi_expandable_content_sizer {
+          justify-content: end;
+        }
       }
     }
 
@@ -189,12 +214,17 @@ const css = /* css */ `
         transition: none;
       }
     }
-    /* Settled open: stop clipping, so a popover, a focus ring or a dragged
-       element inside the content can spill out — unless the content is given
-       a max height, where the clipping IS the feature (it scrolls). */
-    &[aria-expanded="true"][data-settled]:not([data-content-scrolls])
+    /* Settled open: stop clipping entirely, so a popover, a focus ring or a
+       dragged element inside the content can spill out on any side. Settled
+       closed: clip every side — the collapsed box must show nothing, a
+       stick-out included. In between (any movement, opening or closing) the
+       one-sided clips above apply. */
+    &[aria-expanded="true"][data-settled] > .navi_expandable_content_container {
+      clip-path: none;
+    }
+    &:not([aria-expanded="true"])[data-settled]
       > .navi_expandable_content_container {
-      overflow: visible;
+      clip-path: inset(0 0 0 0);
     }
     &[data-content-scrolls]
       > .navi_expandable_content_container
@@ -269,7 +299,9 @@ const useExpandableContext = (partName) => {
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mountWhenClosed - Builds the content right away instead of on first
- *   expansion.
+ *   expansion. In layout="column" it also gives the closed expandable its
+ *   content's height (the content is kept laid out at its open width), so
+ *   opening only reveals the width instead of changing the height too.
  * @param unmountWhenClosed - Throws the content away once the collapse
  *   settles — after the closing animation, so it still plays on real content —
  *   and rebuilds it from scratch on every expansion.
@@ -303,6 +335,7 @@ export const Expandable = (props) => {
   const contentContainerRef = useRef();
   const contentId = useId();
   const isColumn = layout === "column";
+  const closedContentSized = Boolean(isColumn && mountWhenClosed);
 
   if (signal) {
     warnSignalCollision(props, "expandable", "open");
@@ -355,7 +388,10 @@ export const Expandable = (props) => {
     }
     const rect = contentElement.getBoundingClientRect();
     if (isColumn) {
+      // Both, not just the width: a max-height-capped content otherwise
+      // follows the collapsing rows track down instead of holding its size.
       contentElement.style.width = `${rect.width}px`;
+      contentElement.style.height = `${rect.height}px`;
     } else {
       contentElement.style.height = `${rect.height}px`;
     }
@@ -489,30 +525,43 @@ export const Expandable = (props) => {
       const finalRect = contentElement.getBoundingClientRect();
       if (isColumn) {
         contentElement.style.width = `${finalRect.width}px`;
+        contentElement.style.height = `${finalRect.height}px`;
       } else {
         contentElement.style.height = `${finalRect.height}px`;
       }
-      // Put the track back where the last paint left it and let the
+      // Put the tracks back where the last paint left them and let the
       // transition play from there. In fr — px does not interpolate with fr.
       const startRect = revealStartSizeRef.current;
       revealStartSizeRef.current = null;
-      const finalSize = isColumn ? finalRect.width : finalRect.height;
-      const startSize = startRect
-        ? isColumn
-          ? startRect.width
-          : startRect.height
-        : 0;
-      const startFr = finalSize > 0 ? startSize / finalSize : 0;
-      const trackProperty = isColumn
-        ? "gridTemplateColumns"
-        : "gridTemplateRows";
-      contentContainer.style[trackProperty] = `${startFr}fr`;
+      const startFrOf = (startSize, finalSize) =>
+        finalSize > 0 ? startSize / finalSize : 0;
+      if (isColumn) {
+        contentContainer.style.gridTemplateColumns = `${startFrOf(
+          startRect ? startRect.width : 0,
+          finalRect.width,
+        )}fr`;
+        if (!closedContentSized) {
+          // The height opens alongside the width (a closed column expandable
+          // is only as tall as its UI) — unless the closed content already
+          // sizes it, where only the width has anywhere to go.
+          contentContainer.style.gridTemplateRows = `${startFrOf(
+            startRect ? startRect.height : 0,
+            finalRect.height,
+          )}fr`;
+        }
+      } else {
+        contentContainer.style.gridTemplateRows = `${startFrOf(
+          startRect ? startRect.height : 0,
+          finalRect.height,
+        )}fr`;
+      }
       // That starting frame must be genuinely rendered to transition from it,
       // and transitions re-enabled BEFORE the flip back to the open value —
       // same order as popover.jsx's own reflow trick.
       contentContainer.getBoundingClientRect();
       contentContainer.style.transitionProperty = "";
-      contentContainer.style[trackProperty] = "";
+      contentContainer.style.gridTemplateColumns = "";
+      contentContainer.style.gridTemplateRows = "";
     }
     // (closing froze the content in toggleTo, while it was still laid out)
     const cancel = whenTransitionSettles(contentContainer, () => {
@@ -533,6 +582,30 @@ export const Expandable = (props) => {
       setContentMounted(true);
     }
   }, [mountWhenClosed]);
+
+  // closedContentSized (column + mountWhenClosed): the closed content sizes
+  // the height (see the CSS), which is only right if it lies at its OPEN
+  // width — at its natural closed width (a 0-wide track) it would wrap
+  // against nothing and stack word by word. So while closed, its width is
+  // frozen to a silently measured open width.
+  useLayoutEffect(() => {
+    if (!closedContentSized || opened || !settled || !contentMounted) {
+      return;
+    }
+    const contentContainer = contentContainerRef.current;
+    const contentElement = contentContainer.firstElementChild.firstElementChild;
+    contentContainer.style.transitionProperty = "none";
+    contentContainer.style.gridTemplateColumns = "1fr";
+    contentElement.style.width = "";
+    const openRect = contentElement.getBoundingClientRect();
+    contentElement.style.width = `${openRect.width}px`;
+    contentContainer.style.gridTemplateColumns = "";
+    // The closed frame must be committed while transitions are still off —
+    // re-enabled in the same recalc, the 1fr-to-0fr trip back from the silent
+    // measurement above would play as a second closing animation.
+    contentContainer.getBoundingClientRect();
+    contentContainer.style.transitionProperty = "";
+  }, [closedContentSized, opened, settled, contentMounted]);
 
   // Mounted already open: the content is visible, its data is due.
   useEffect(() => {
@@ -683,6 +756,7 @@ export const Expandable = (props) => {
       data-animation={animation ? "" : undefined}
       data-settled={settled ? "" : undefined}
       data-content-scrolls={maxContentHeight === undefined ? undefined : ""}
+      data-closed-content-sized={closedContentSized ? "" : undefined}
       {...rest}
       // The protocol every command target answers (see commands.js): a
       // `--navi-toggle`/`--navi-open`/`--navi-close` lands here as a
