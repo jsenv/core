@@ -1236,15 +1236,29 @@ export const useUIGroupStateController = (
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
           }
-          if (childUIStateController.hasStateProp) {
-            warnChildAnswersForItself(controller, childUIStateController);
-            return;
-          }
           const childNewState = resolvedDistributeChildUIState(
             groupUIState,
             childUIStateController,
           );
           if (childNewState === CANNOT_DERIVE) {
+            return;
+          }
+          if (
+            childUIStateController.hasStateProp &&
+            !childUIStateController.props.signal
+          ) {
+            // A child bound to a signal is placed like any other: bound is not
+            // frozen, and the placement writes the signal, so both ends keep
+            // saying the same thing. Only a child controlled by a `value` /
+            // `checked` prop cannot be moved — its owner decides. Worth saying
+            // out loud only when the two disagree: a child already showing what
+            // the group would put there has lost nothing, and both being fed
+            // from the same value is a legitimate way to write a group.
+            if (
+              !compareTwoJsValues(childNewState, childUIStateController.uiState)
+            ) {
+              warnChildAnswersForItself(controller, childUIStateController);
+            }
             return;
           }
           childUIStateController.setUIState(childNewState, e);
@@ -1988,6 +2002,11 @@ const PROPAGATE_DOWN_EVENT_SET = new Set([
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
+  // The FIRST value handed down is one too: a control placed as it registers
+  // (a group filling a child that just arrived, a picker filling its popup)
+  // holds it from that moment, and a signal that kept saying nothing would have
+  // the app and the screen disagree from the very first paint.
+  "initial_state_push",
 ]);
 const isPropagateDownEvent = (e) => {
   return PROPAGATE_DOWN_EVENT_SET.has(e.type);
@@ -2051,9 +2070,17 @@ const warnChildAnswersForItself = (groupController, child) => {
     ? "a <List.Item> declares `selected`"
     : `a "${child.controlType}"${child.name ? ` name="${child.name}"` : ""} declares \`${statePropName}\``;
   const groupDescription = isSelectableList ? "the list" : `the "${groupType}"`;
+  // A prop SET to undefined is the same trap wearing a disguise, and the one
+  // that costs the most to find: `checked={bound ? undefined : checked}` reads
+  // like "no prop at all" and is not — the control calls itself controlled,
+  // holding nothing, forever. Naming it is the whole point of saying anything.
+  const advice =
+    childProps[statePropName] === undefined
+      ? `\`${statePropName}\` is undefined here, which is NOT the same as not passing it: the key being present is what makes the control controlled. ` +
+        `Leave the prop out entirely — {...(bound ? {} : { ${statePropName} })} — or drop the group's value/signal.`
+      : `Bind one end or the other, not both.`;
   console.warn(
-    `[navi] ${childDescription} while ${groupDescription} around it is placed from a value — ${groupDescription} cannot move it, so clicking it changes nothing and what it shows never follows. ` +
-      `Bind one end or the other, not both.`,
+    `[navi] ${childDescription} while ${groupDescription} around it is placed from a value — ${groupDescription} cannot move it, so clicking it changes nothing and what it shows never follows. ${advice}`,
     child,
   );
 };

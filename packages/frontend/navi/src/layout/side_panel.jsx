@@ -174,6 +174,12 @@ const css = /* css */ `
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
  *   `Popup`'s own `open`.
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ *   state said the way every navi control says it: the panel opens and closes
+ *   to match the signal, and writes into it whenever it opens or closes on its
+ *   own (Escape, swipe, a --navi-close command) — one binding to both drive
+ *   the panel and know where it is. Forwarded as-is to `Popup`; excludes
+ *   `open` (see `Dialog`/`Popover`'s own `signal`).
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
  *   required at all for a purely command-driven panel (an `id` plus a
@@ -240,6 +246,7 @@ const css = /* css */ `
  */
 export const SidePanel = ({
   open,
+  signal,
   defaultOpen,
   onClose,
   children,
@@ -264,6 +271,7 @@ export const SidePanel = ({
     <Popup
       mode={mode}
       open={open}
+      signal={signal}
       defaultOpen={defaultOpen}
       onClose={onClose}
       layer={layer}

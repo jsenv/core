@@ -146,7 +146,19 @@ are not all there yet:
   or once a child really acts;
 - a child arriving **after** the value did is placed from what the group holds,
   so it shows its part of it. A child arriving with something of its own to show
-  is answering, and keeps it.
+  is answering, and keeps it. A child bound to a `signal` is placed like any
+  other — bound is not frozen — and the placement writes the signal, so an
+  `<Input type="hidden" signal>` carrying a piece of the answer shows what the
+  group holds. Only a child controlled by a `value`/`checked` prop is left
+  alone: its owner decides.
+
+A group with an `aggregateChildStates` of its own is outside all of this: what
+it returns is taken as the truth, `undefined` included. That is the one way such
+a group says **"I have nothing to say yet"** — return `undefined` while the
+children it needs are missing, and navi leaves the value alone instead of
+publishing an empty shape upward. A group written to always return its keys
+(`{ mode: undefined, levels: [] }`) is claiming an answer nobody gave, and that
+claim overwrites the row above it the moment the popup opens.
 
 Together they are what makes the two-hop case work — the form fills the row, the
 row fills the control in its popup — whatever order the pieces turn up in. Get

@@ -119,6 +119,9 @@ const css = /* css */ `
  *   to `--dialog-maxmax-height` (`data-expand-y`).
  * @param {boolean} [props.scrollCapture] - Forwarded as-is.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
+ *   Forwarded as-is: one binding to both drive the popup's open state and
+ *   know where it is (see `Dialog`/`Popover`'s own `signal`).
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.

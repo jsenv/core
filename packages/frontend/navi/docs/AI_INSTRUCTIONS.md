@@ -149,6 +149,21 @@ consistency across the app, not from any single call site.
   and what a nameless one merges, and what a `<Picker type="object">` needs in
   its popup (one group, not two controls). Read it before making one value out
   of several controls, and before putting anything in a picker popup.
+- A time of day, and a span between two of them, come as a pair of components
+  and the choice between them is about the GESTURE:
+  `TimeSpin`/`TimeRangeSpin` (`src/control/picker/preset/spin_time.jsx`) are
+  fields one types in, and `TimeWheel`/`TimeRangeWheel`
+  (`src/control/wheel/wheel_time.jsx`) are wheels one turns. Both carry a single
+  `"HH:MM"` (or `{ start, end }` for a span), so a form holds one field either
+  way. Prefer the wheels whenever a half-written value would be nonsense — a
+  time typed digit by digit goes through states that are not times ("1" on its
+  way to "18"), each of them bounded and corrected under the fingers, while a
+  wheel only ever shows values that exist. Two things only the wheels have:
+  the bounds of a span PUSH each other while they turn (`minDuration`) instead
+  of being refused at send, and `placeholder` is a position shown without being
+  an answer — for a span that is optional ("any time of day") on wheels that
+  have no blank row to land on. Read this before writing a time input, and
+  before making a pair of wheels say "nothing set" by hand.
 - `docs/control_group.md` — `<Group>`: several controls reading as one framed
   object (one border per seam, radius on the outer corners only). Read it
   before placing bordered controls against each other, and before writing

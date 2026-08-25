@@ -7,6 +7,7 @@ import {
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
+import { warnSignalCollision } from "../control/control_value.js";
 import {
   prepareFocusTransfer,
   markAutofocusRestoreOnClose,
@@ -219,6 +220,7 @@ export const createOpenController = (
     // Last: the close effects above are what starts the exit transition the
     // content must outlive (see popup_content_mount.js).
     controller.unmountContent?.();
+    controller.onOpenedChange?.(false);
   };
   const controller = {
     opened: false,
@@ -237,6 +239,11 @@ export const createOpenController = (
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
+    // Told whenever `opened` actually changes, whatever asked for it — an
+    // interaction, a command, a prop. What lets a `signal` prop reflect the
+    // popup's real state (see useOpenPropsEffectOnOpenController), called once
+    // the open/close has fully happened rather than mid-sequence.
+    onOpenedChange: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;
@@ -339,6 +346,7 @@ export const createOpenController = (
         openEffectReturnValue?.(closeEvent);
       };
       closeHandlers = openHandler(requestOpenEvent) || null;
+      controller.onOpenedChange?.(true);
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
@@ -467,10 +475,26 @@ const scheduleMountOpen = (run) => {
  * `requestOpen`/`requestClose` wrappers).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction" }} props
+ * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean> }} props
  */
 export const useOpenPropsEffectOnOpenController = (openController, props) => {
-  const { open, defaultOpen } = props;
+  const { signal, defaultOpen } = props;
+  if (signal) {
+    warnSignalCollision(props, "popup", "open");
+  }
+  // What the caller holds, however they hold it: an `open` they re-render
+  // themselves, or a `signal` this hook also writes (see onOpenedChange below).
+  // Reading .value during render is what subscribes the popup to it.
+  const open = signal ? signal.value : props.open;
+  // Assigned on every render, like openEffect, so it always closes over the
+  // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
+  // --navi-close command) writes what happened into the signal, so whoever
+  // holds it always reads where the popup is.
+  openController.onOpenedChange = signal
+    ? (opened) => {
+        signal.value = opened;
+      }
+    : null;
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -522,6 +546,12 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
         new CustomEvent("close_by_prop", { detail: {} }),
         { isCancel: true },
       );
+    }
+    if (signal) {
+      // The request can be refused (a busy form denying the close): the popup
+      // then stays where it was, and the signal is told so — otherwise it
+      // would keep saying "closed" about a popup still open.
+      signal.value = openController.opened;
     }
   }, [open]);
 };

@@ -24747,14 +24747,27 @@ const useUIGroupStateController = (
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
           }
-          if (childUIStateController.hasStateProp) {
-            return;
-          }
           const childNewState = resolvedDistributeChildUIState(
             groupUIState,
             childUIStateController,
           );
           if (childNewState === CANNOT_DERIVE) {
+            return;
+          }
+          if (
+            childUIStateController.hasStateProp &&
+            !childUIStateController.props.signal
+          ) {
+            // A child bound to a signal is placed like any other: bound is not
+            // frozen, and the placement writes the signal, so both ends keep
+            // saying the same thing. Only a child controlled by a `value` /
+            // `checked` prop cannot be moved — its owner decides. Worth saying
+            // out loud only when the two disagree: a child already showing what
+            // the group would put there has lost nothing, and both being fed
+            // from the same value is a legitimate way to write a group.
+            if (
+              !compareTwoJsValues(childNewState, childUIStateController.uiState)
+            ) ;
             return;
           }
           childUIStateController.setUIState(childNewState, e);
@@ -25447,6 +25460,11 @@ const PROPAGATE_DOWN_EVENT_SET = new Set([
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
   "propagate_down_clear_ui_state",
+  // The FIRST value handed down is one too: a control placed as it registers
+  // (a group filling a child that just arrived, a picker filling its popup)
+  // holds it from that moment, and a signal that kept saying nothing would have
+  // the app and the screen disagree from the very first paint.
+  "initial_state_push",
 ]);
 const isPropagateDownEvent = (e) => {
   return PROPAGATE_DOWN_EVENT_SET.has(e.type);
@@ -28092,6 +28110,7 @@ const createOpenController = (
     // Last: the close effects above are what starts the exit transition the
     // content must outlive (see popup_content_mount.js).
     controller.unmountContent?.();
+    controller.onOpenedChange?.(false);
   };
   const controller = {
     opened: false,
@@ -28110,6 +28129,11 @@ const createOpenController = (
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
+    // Told whenever `opened` actually changes, whatever asked for it — an
+    // interaction, a command, a prop. What lets a `signal` prop reflect the
+    // popup's real state (see useOpenPropsEffectOnOpenController), called once
+    // the open/close has fully happened rather than mid-sequence.
+    onOpenedChange: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
         return;
@@ -28212,6 +28236,7 @@ const createOpenController = (
         openEffectReturnValue?.(closeEvent);
       };
       closeHandlers = openHandler(requestOpenEvent) || null;
+      controller.onOpenedChange?.(true);
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
@@ -28340,10 +28365,23 @@ const scheduleMountOpen = (run) => {
  * `requestOpen`/`requestClose` wrappers).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction" }} props
+ * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean> }} props
  */
 const useOpenPropsEffectOnOpenController = (openController, props) => {
-  const { open, defaultOpen } = props;
+  const { signal, defaultOpen } = props;
+  // What the caller holds, however they hold it: an `open` they re-render
+  // themselves, or a `signal` this hook also writes (see onOpenedChange below).
+  // Reading .value during render is what subscribes the popup to it.
+  const open = signal ? signal.value : props.open;
+  // Assigned on every render, like openEffect, so it always closes over the
+  // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
+  // --navi-close command) writes what happened into the signal, so whoever
+  // holds it always reads where the popup is.
+  openController.onOpenedChange = signal
+    ? (opened) => {
+        signal.value = opened;
+      }
+    : null;
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -28395,6 +28433,12 @@ const useOpenPropsEffectOnOpenController = (openController, props) => {
         new CustomEvent("close_by_prop", { detail: {} }),
         { isCancel: true },
       );
+    }
+    if (signal) {
+      // The request can be refused (a busy form denying the close): the popup
+      // then stays where it was, and the signal is told so — otherwise it
+      // would keep saying "closed" about a popup still open.
+      signal.value = openController.opened;
     }
   }, [open]);
 };
@@ -29820,6 +29864,14 @@ const css$X = /* css */`
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ *   state said the way every navi control says it: the dialog opens and closes
+ *   to match the signal, and writes into it whenever it opens or closes on its
+ *   own (Escape, backdrop, a --navi-close command) — one binding to both drive
+ *   the dialog and know where it is, and the state stays where the app put it.
+ *   Excludes `open`; `onOpen`/`onClose` still fire. A signal holding `true` at
+ *   mount behaves like `defaultOpen`: the dialog was already open, no entrance
+ *   plays.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -29902,6 +29954,7 @@ const UncontrolledDialog = props => {
   return jsx(ControlledDialog, {
     ...props,
     open: undefined,
+    signal: undefined,
     defaultOpen: undefined,
     onClose: undefined,
     openController: openController,
@@ -31259,6 +31312,14 @@ const css$W = /* css */`
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the popover says).
  * @param {boolean} [props.open] - Controlled open state.
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ *   state said the way every navi control says it: the popover opens and closes
+ *   to match the signal, and writes into it whenever it opens or closes on its
+ *   own (Escape, light dismiss, a --navi-close command) — one binding to both
+ *   drive the popover and know where it is, and the state stays where the app
+ *   put it. Excludes `open`; `onOpen`/`onClose` still fire. A signal holding
+ *   `true` at mount behaves like `defaultOpen`: the popover was already open,
+ *   no entrance plays.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -31339,6 +31400,7 @@ const UncontrolledPopover = props => {
   return jsx(ControlledPopover, {
     ...props,
     open: undefined,
+    signal: undefined,
     defaultOpen: undefined,
     onClose: undefined,
     openController: openController,
@@ -54163,6 +54225,9 @@ const css$A = /* css */`
  *   to `--dialog-maxmax-height` (`data-expand-y`).
  * @param {boolean} [props.scrollCapture] - Forwarded as-is.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
+ *   Forwarded as-is: one binding to both drive the popup's open state and
+ *   know where it is (see `Dialog`/`Popover`'s own `signal`).
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
@@ -74247,6 +74312,12 @@ const css = /* css */`
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
  *   `Popup`'s own `open`.
+ * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ *   state said the way every navi control says it: the panel opens and closes
+ *   to match the signal, and writes into it whenever it opens or closes on its
+ *   own (Escape, swipe, a --navi-close command) — one binding to both drive
+ *   the panel and know where it is. Forwarded as-is to `Popup`; excludes
+ *   `open` (see `Dialog`/`Popover`'s own `signal`).
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
  *   required at all for a purely command-driven panel (an `id` plus a
@@ -74313,6 +74384,7 @@ const css = /* css */`
  */
 const SidePanel = ({
   open,
+  signal,
   defaultOpen,
   onClose,
   children,
@@ -74334,6 +74406,7 @@ const SidePanel = ({
   return jsx(Popup, {
     mode: mode,
     open: open,
+    signal: signal,
     defaultOpen: defaultOpen,
     onClose: onClose,
     layer: layer,
