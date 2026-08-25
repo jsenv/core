@@ -4,10 +4,11 @@
  * Two distinct facts, drawn separately — they usually agree, and everything
  * this component says comes from the moments they do not:
  *
- * - the PATH (`reached`): how far the steps are answered without a gap. A
- *   solid line runs from the first dot to the step it names, and those dots
- *   are filled; past it the line is dashed — the road not walked yet. It
- *   moves when a step is answered, not when one merely looks around.
+ * - the PATH: how far the steps are answered without a gap. Each Item says
+ *   whether it is `done`, and the path is DEDUCED: it stands on the first
+ *   step that is not — a solid line runs up to there and those dots are
+ *   filled; past it the line is dashed, the road not walked yet. It moves
+ *   when a step is answered, not when one merely looks around.
  * - the POSITION (`current`): the step being looked at, marked by a halo
  *   around its dot and its label emphasized. It travels freely, so it can be
  *   AHEAD of the path (browsing step 3 while step 1 still misses an answer)
@@ -35,9 +36,10 @@
  * the container paints --slide-travel-progress on this element (it is a
  * follower, same mechanism as <Nav slideContainer>), so the halo rides the
  * drag under the finger, in CSS alone. The path then follows the position
- * too, clamped between `reached` (never retracts) and `reachable` (never
- * ahead of the answers): dragging towards a step whose way is earned fills
- * the line under the finger, dragging past the answers does not.
+ * too, clamped: never back below where one has already been (a ratchet,
+ * held here), never ahead of the answers — dragging towards a step whose
+ * way is earned fills the line under the finger, dragging past the answers
+ * does not.
  */
 
 import { toChildArray } from "preact";
@@ -251,8 +253,10 @@ const css = /* css */ `
     --button-outline-width: 0px;
   }
   /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
-     cy 17). */
-  .navi_step_list_step::before {
+     cy 17). A real element rather than a ::before, because it is also what a
+     callout anchors to (data-callout-anchor needs a selector) — a message
+     about a step points at its CIRCLE, not at the press surface. */
+  .navi_step_list_dot {
     position: absolute;
     top: 17px;
     left: var(--step-dot-x);
@@ -260,18 +264,18 @@ const css = /* css */ `
     height: 30px;
     border-radius: 50%;
     translate: -50% -50%;
-    content: "";
+    pointer-events: none;
   }
-  .navi_step_list_step:hover::before,
-  .navi_step_list_step[data-hover]::before {
+  .navi_step_list_step:hover .navi_step_list_dot,
+  .navi_step_list_step[data-hover] .navi_step_list_dot {
     background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
   }
   .navi_step_list .navi_step_list_step:hover,
   .navi_step_list .navi_step_list_step[data-hover] {
     --button-color: var(--x-step-list-current-color);
   }
-  .navi_step_list_step:focus-visible::before,
-  .navi_step_list_step[data-focus-visible]::before {
+  .navi_step_list_step:focus-visible .navi_step_list_dot,
+  .navi_step_list_step[data-focus-visible] .navi_step_list_dot {
     outline-width: var(--navi-focus-outline-width);
     outline-style: solid;
     outline-color: var(--navi-focus-outline-color);
@@ -303,8 +307,6 @@ const LINE_GAP = 5;
 /**
  * @type {import("preact").FunctionComponent<{
  *   current?: string,
- *   reached?: string,
- *   reachable?: string,
  *   slideContainer?: string,
  *   travelByClick?: boolean,
  *   travelByKeyboard?: boolean,
@@ -314,14 +316,6 @@ const LINE_GAP = 5;
  *   halo, its label the emphasis. Omit for "nowhere" — a confirmation
  *   screen after the walk, say. With `slideContainer` the position is read
  *   off the container instead, and this prop is ignored.
- * @param {string} [reached] - the step the path has come to: the line is
- *   solid and the dots filled up to it, dashed past it. Omit for a path
- *   that has not started.
- * @param {string} [reachable] - how far the path MAY go (with
- *   `slideContainer` only): between `reached` and this step the path
- *   follows the position — a drag towards a step whose way is earned fills
- *   the line under the finger. Defaults to `reached`: the path then never
- *   moves with the position at all.
  * @param {string} [slideContainer] - id of a <SlideContainer> these steps
  *   are the slides of. Pressing a step travels there
  *   (--navi-go-to-slide), the halo follows the container — drags included —
@@ -344,8 +338,6 @@ const LINE_GAP = 5;
  */
 export const StepList = ({
   current,
-  reached,
-  reachable,
   slideContainer,
   travelByClick = true,
   travelByKeyboard = true,
@@ -411,6 +403,10 @@ export const StepList = ({
   // are written as numbers on this element and interpolated by the CSS
   // above, at the pace of --slide-travel-progress.
   const [containerCurrent, setContainerCurrent] = useState(undefined);
+  const [ratchetIndex, setRatchetIndex] = useState(0);
+  // Read by the observer below, which outlives a render: the frontier it
+  // must compare against is the one of the render that just happened.
+  const frontierRef = useRef(0);
   useLayoutEffect(() => {
     if (!slideContainer || dotXs.length === 0) {
       return undefined;
@@ -435,6 +431,12 @@ export const StepList = ({
         // rendered, and the last position is left standing for the path.
         return;
       }
+      // Arriving somewhere earns the path up to there (within the answers).
+      setRatchetIndex((previous) => {
+        const target =
+          currentIdx < frontierRef.current ? currentIdx : frontierRef.current;
+        return target > previous ? target : previous;
+      });
       const x = dotXs[currentIdx];
       let dx = 0;
       if (towardArea && towardArea !== currentArea) {
@@ -466,14 +468,23 @@ export const StepList = ({
   const resolvedCurrent = slideContainer ? containerCurrent : current;
   const currentIndex =
     resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
-  const reachedIndex = reached === undefined ? -1 : indexOf(reached);
-  let reachableIndex = reachable === undefined ? -1 : indexOf(reachable);
-  if (reachableIndex < reachedIndex) {
-    reachableIndex = reachedIndex;
+  // The path, deduced from what the Items say: it stands on the first step
+  // that is not done — the next thing to do — and on the last one when
+  // everything is.
+  let frontierIndex = stepVNodes.findIndex((vnode) => !vnode.props.done);
+  if (frontierIndex === -1) {
+    frontierIndex = stepCount - 1;
   }
-  // Covers the reached dot entirely (radius plus stroke), and nothing when
-  // the path has not started.
-  const fillX = reachedIndex === -1 ? 0 : dotXs[reachedIndex] + DOT_R + 3;
+  // Connected, the path also waits to be WALKED: it advances on arrival, not
+  // on the answer alone — which is what leaves a drag towards an earned step
+  // something to fill. The ratchet is where one has already been (never
+  // given back by going backwards), min'd with the frontier so un-answering
+  // a step pulls it back.
+  const floorIndex =
+    ratchetIndex < frontierIndex ? ratchetIndex : frontierIndex;
+  frontierRef.current = frontierIndex;
+  // Covers the dot it stands on entirely (radius plus stroke).
+  const fillX = frontierIndex === -1 ? 0 : dotXs[frontierIndex] + DOT_R + 3;
   const cy = RAIL_H / 2;
   const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
 
@@ -539,12 +550,8 @@ export const StepList = ({
               // positions, and a registered property given "undefined" would
               // fall back to its initial value THROUGH a transition — the
               // path would be seen sweeping in on mount.
-              "--step-list-reached-x":
-                reachedIndex === -1 ? -9999 : (dotXs[reachedIndex] ?? -9999),
-              "--step-list-reachable-x":
-                reachableIndex === -1
-                  ? -9999
-                  : (dotXs[reachableIndex] ?? -9999),
+              "--step-list-reached-x": dotXs[floorIndex] ?? -9999,
+              "--step-list-reachable-x": dotXs[frontierIndex] ?? -9999,
             }
           : undefined),
       }}
@@ -627,7 +634,12 @@ export const StepList = ({
                       : undefined
                   }
                   commandFor={slideContainer}
+                  // A message about a step (a callout) points at its circle,
+                  // above it: the label lives below.
+                  data-callout-anchor=".navi_step_list_dot"
+                  data-callout-position="top"
                 >
+                  <span className="navi_step_list_dot" aria-hidden="true" />
                   <span className="navi_step_list_label">{stepVNode}</span>
                 </Button>
               </div>
