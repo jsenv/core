@@ -2187,7 +2187,11 @@ export const WheelGroup = (props) => {
     useControlgroupProps(props, {
       allowCapture: true,
       wantRequesterButtonState: true,
-      controlType: "control_group",
+      // Its own type, not the generic "control_group": the group IS one
+      // control made of parts, and a wheel settling runs the group's own
+      // action — the way a radio checking runs its group's (the auto group
+      // action in control_hooks keys on this type).
+      controlType: "wheel_group",
       stateType: "object",
       cascadeValidationToChildren: true,
       aggregateChildStates: props.aggregateChildStates,

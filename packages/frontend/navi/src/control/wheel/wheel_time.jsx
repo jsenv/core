@@ -8,9 +8,10 @@
  * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
  * two of those and carries `{ start, end }`, with the rule such a pair always
  * has: the end comes after the start. Here that rule is lived rather than
- * checked — the bounds push each other while they turn, so what the wheels show
- * is always a span. The send-time constraint stays underneath for what pushing
- * cannot fix (a start so late the span no longer fits in the day).
+ * checked — a bound settling pushes the other out of its way, so what the
+ * wheels show at rest is always a span. The send-time constraint stays
+ * underneath for what pushing cannot fix (a start so late the span no longer
+ * fits in the day).
  */
 
 import { createContext } from "preact";
@@ -210,10 +211,12 @@ export const TimeRangeWheel = ({
   const { answeredRef, aggregateChildStates, distributeChildUIState } =
     useAnswered(placeholder, rest, aggregateSpan, distributeSpan);
 
-  // What the pair does while it is being turned: the bound that just moved is
-  // the one the user is holding, so it stays where it was put and the OTHER one
-  // gives way. A refusal at the end of the gesture would leave the person to
-  // undo what they just did.
+  // What the pair does once a bound SETTLES: the one that was moved stays
+  // where it was put and the OTHER one gives way — a refusal at that point
+  // would leave the person to undo what they just did. Settles, not while it
+  // turns (this runs on `action`, never on `uiAction`): a wheel under the
+  // finger holds a value nobody has chosen yet, and the other bound jumping
+  // around mid-gesture answers a question that was not asked.
   const keepBoundsApart = (movedSide, movedTime, e) => {
     const movedMinutes = minutesFromTime(movedTime);
     if (movedMinutes === null) {
@@ -273,7 +276,7 @@ export const TimeRangeWheel = ({
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.start : undefined}
-          uiAction={(value, e) => keepBoundsApart("start", value, e)}
+          action={(value, e) => keepBoundsApart("start", value, e)}
           {...timeProps}
           {...startTimeProps}
         />
@@ -286,7 +289,7 @@ export const TimeRangeWheel = ({
           loop={loop}
           size={size}
           placeholder={placeholder ? placeholder.end : undefined}
-          uiAction={(value, e) => keepBoundsApart("end", value, e)}
+          action={(value, e) => keepBoundsApart("end", value, e)}
           // Which time it comes after, and how much room there must be between
           // the two: said on the LATER of the two, so the answer is given where
           // the time one would have to move is (see time_range_constraint.js).

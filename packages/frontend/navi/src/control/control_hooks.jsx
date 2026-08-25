@@ -1840,14 +1840,19 @@ const useInteractiveProps = (
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 
-        // For radio/checkbox: auto-trigger the parent group's action after the
-        // leaf action completes. The parent (radio_group/checkbox_group) has
-        // already aggregated the new state by now, so uiStateSignal is correct.
+        // Auto-trigger the parent group's action after the leaf action
+        // completes, for the groups that ARE one control made of parts: a
+        // radio or checkbox group, a wheel group (an hour wheel settling is
+        // the time settling). The parent has already aggregated the new
+        // state by now, so uiStateSignal is correct. One level only: the
+        // parent's own action end does not climb further unless that parent
+        // is itself such a group.
         const parentController = uiStateController.parentUIStateController;
         if (
           parentController &&
           (parentController.controlType === "radio_group" ||
-            parentController.controlType === "checkbox_group")
+            parentController.controlType === "checkbox_group" ||
+            parentController.controlType === "wheel_group")
         ) {
           const parentEl = parentController.ref.current;
           if (parentEl) {

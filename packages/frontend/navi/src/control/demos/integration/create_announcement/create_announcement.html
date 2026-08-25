@@ -30,7 +30,7 @@
       .phone {
         display: flex;
         width: 380px;
-        height: 660px;
+        height: 670px;
         flex: none;
         flex-direction: column;
         background: white;
@@ -71,8 +71,8 @@
         font-size: 1.05rem;
         text-align: center;
       }
-      /* Le div est à moi, le Button vit dedans en flux normal (même raison
-         que .stepper_step_slot). */
+      /* Le div est à moi, le Button vit dedans en flux normal: sa structure
+         interne (qui change avec readOnly) n'a rien à casser. */
       .wizard_cancel_slot {
         position: absolute;
         top: 50%;
@@ -88,104 +88,35 @@
         font-size: 1rem;
       }
 
-      /* ── Le stepper ──────────────────────────────────────────────────────
-         Deux calques SVG identiques: le gris dessous, le rempli dessus,
-         révélé par un clip-path dont le bord droit marque le CHEMIN — jusqu'où
-         les étapes sont remplies sans trou. Il avance quand une étape est
-         validée (la transition sur clip-path anime le trait et la pastille qui
-         se remplissent), pas quand on se déplace: la position, elle, est le
-         halo. */
-      .stepper {
-        position: relative;
-        width: 348px;
-        height: 76px;
-        margin: 0 auto;
-      }
-      .stepper_rail {
-        position: absolute;
-        top: 10px;
-        left: 0;
-        pointer-events: none;
-      }
-      /* Le chemin restant, en pointillés — le calque rempli le repasse en
-         trait plein. */
-      .stepper_rail line {
-        stroke: rgba(255, 255, 255, 0.35);
-        stroke-width: 2;
-        stroke-dasharray: 4 5;
-      }
-      .stepper_rail circle {
-        fill: #26314a;
-        stroke: #8b99b8;
-        stroke-width: 1.5;
-      }
-      .stepper_rail text {
-        font-weight: 600;
-        font-size: 12px;
-        fill: #8b99b8;
-      }
-      .stepper_rail_fill {
-        transition: clip-path 300ms ease;
-      }
-      .stepper_rail_fill line {
-        stroke: white;
-        stroke-dasharray: none;
-      }
-      .stepper_rail_fill circle {
-        fill: #4f8ef7;
-        stroke: #4f8ef7;
-      }
-      .stepper_rail_fill text {
-        fill: white;
-      }
-      /* La position: un halo autour de la pastille de la slide qu'on regarde
-         — qui peut être en avance sur le chemin. */
-      .stepper_marker {
-        position: absolute;
-        top: 12.5px;
-        box-sizing: border-box;
-        width: 29px;
-        height: 29px;
-        border: 1.5px solid rgba(122, 167, 248, 0.8);
-        border-radius: 50%;
-        transition: left 300ms ease;
-        pointer-events: none;
-      }
-      /* Le div est à moi, le Button vit dedans en flux normal: sa structure
-         interne (qui change avec readOnly) n'a alors rien à casser. */
-      .stepper_step_slot {
-        position: absolute;
-        top: 0;
-        display: flex;
-        box-sizing: border-box;
-        width: 84px;
-        height: 100%;
-        padding-bottom: 6px;
-        align-items: flex-end;
-        justify-content: center;
-      }
-      .stepper_step {
-        font-size: 12px;
-        --button-color: #8b99b8;
-        --button-color-readonly: #8b99b8;
-        --button-background-color-hover: transparent;
-        --button-background-color-readonly: transparent;
-      }
-      .stepper_step[data-current] {
-        font-weight: 600;
-        --button-color: white;
-        --button-color-readonly: white;
+      /* Le StepList sur le bandeau sombre. */
+      .wizard_head .navi_step_list {
+        --step-list-muted: #8b99b8;
+        --step-list-line: rgba(255, 255, 255, 0.35);
+        --step-list-current-color: white;
+        margin-bottom: 4px;
       }
 
+      /* Dans la plage horaire, la typo s'efface devant les nombres: le "h"
+         des roues et le "à" entre les deux sont des liants, pas des valeurs. */
+      .horaire_range .navi_wheel_group_separator {
+        color: #8a94a6;
+        font-weight: 400;
+      }
+      .horaire_a {
+        color: #8a94a6;
+        font-weight: 400;
+        font-size: 0.75em;
+      }
       .group_legend {
         padding: 0;
         font-weight: 600;
         font-size: 0.85rem;
       }
-      /* Un jour coché se voit: le fond passe à l'accent. La variante bouton
-         de navi garde exprès ses couleurs de bouton quand elle est cochée —
-         ici c'est le fond qui dit la sélection, donc on le reprend. */
-      .phone .day_chip:has(:checked) {
+      /* Une pastille cochée (jour, niveau) se voit: le fond passe à
+         l'accent. La variante bouton de navi garde exprès ses couleurs de
+         bouton quand elle est cochée — ici c'est le fond qui dit la
+         sélection, donc on le reprend. */
+      .phone .round_chip:has(:checked) {
         color: white;
         background: #4f8ef7;
         border-color: #4f8ef7;
@@ -237,8 +168,10 @@
         RadioGroup,
         Select,
         SelectableInput,
+        Separator,
         Slide,
         SlideContainer,
+        StepList,
         Text,
         TimeRangeWheel,
         useSearchText,
@@ -299,17 +232,8 @@
       const VILLES = [...new Set(CLUBS.map((club) => club.ville))];
       const clubName = (id) => CLUBS.find((club) => club.id === id)?.name;
 
-      const NIVEAUX = [
-        { key: "debutant", label: "Débutant" },
-        { key: "perfectionnement", label: "Perfectionnement" },
-        { key: "intermediaire", label: "Intermédiaire" },
-        { key: "intermediaire_plus", label: "Intermédiaire +" },
-        { key: "avance", label: "Avancé" },
-        { key: "competition", label: "Compétition" },
-      ];
+      const NIVEAUX = ["1", "2", "3", "4", "5", "6", "7", "8"];
       const NIVEAUX_MAX = 3;
-      const niveauLabel = (key) =>
-        NIVEAUX.find((niveau) => niveau.key === key)?.label;
 
       const COTES = [
         { key: "gauche", label: "À gauche" },
@@ -356,9 +280,9 @@
 
       // ── Les étapes ────────────────────────────────────────────────────────
       const STEPS = [
-        { area: "dispo", label: "Dispo" },
-        { area: "club", label: "Club" },
-        { area: "place", label: "Place" },
+        { area: "dispo", label: "Quand" },
+        { area: "club", label: "Lieu" },
+        { area: "place", label: "Quoi" },
         { area: "recap", label: "Récap" },
       ];
       const stepAnswered = (draft, area) => {
@@ -366,105 +290,18 @@
           return Boolean(draft.jours?.length && draft.horaire);
         }
         if (area === "club") {
-          return Boolean(draft.club);
+          return Boolean(draft.clubs?.length);
         }
         if (area === "place") {
           return Boolean(draft.niveaux?.length && draft.cote);
         }
         return false;
       };
-      // Le chemin: jusqu'où les étapes sont remplies sans trou. On peut se
-      // tenir plus loin (la navigation est libre), le chemin ne suit pas —
-      // il reste bloqué sur la première étape à qui il manque une info.
-      // "recap" n'est jamais "répondu", donc tout rempli met le chemin sur lui.
+      // La première étape à qui il manque une info — ce qui retient "Publier"
+      // tant que tout n'est pas rempli. Le dessin du chemin, lui, est
+      // l'affaire du StepList (déduit des items done).
       const pathFrontier = (draft) =>
         STEPS.findIndex((step) => !stepAnswered(draft, step.area));
-
-      // ── Le stepper ────────────────────────────────────────────────────────
-      const RAIL_W = 348;
-      const RAIL_H = 34;
-      const DOT_R = 11;
-      const RING_R = 14.5;
-      const DOT_X = [30, 126, 222, 318];
-
-      const StepperRail = ({ filled, style }) => (
-        <svg
-          className={filled ? "stepper_rail stepper_rail_fill" : "stepper_rail"}
-          style={style}
-          width={RAIL_W}
-          height={RAIL_H}
-          viewBox={`0 0 ${RAIL_W} ${RAIL_H}`}
-          aria-hidden="true"
-        >
-          <line
-            x1={DOT_X[0]}
-            y1={RAIL_H / 2}
-            x2={DOT_X[DOT_X.length - 1]}
-            y2={RAIL_H / 2}
-          />
-          {STEPS.map((step, index) => (
-            <g key={step.area}>
-              <circle cx={DOT_X[index]} cy={RAIL_H / 2} r={DOT_R} />
-              <text
-                x={DOT_X[index]}
-                y={RAIL_H / 2}
-                dy="0.36em"
-                text-anchor="middle"
-              >
-                {index + 1}
-              </text>
-            </g>
-          ))}
-        </svg>
-      );
-
-      // Deux choses distinctes, dessinées séparément:
-      // - le CHEMIN (calque rempli): jusqu'où les étapes sont remplies sans
-      //   trou. Il avance quand une étape est validée — la transition CSS sur
-      //   clip-path fait le mouvement — et pas quand on se déplace;
-      // - la POSITION (halo + label blanc): la slide qu'on regarde, qui peut
-      //   être en avance sur le chemin.
-      const Stepper = ({ containerId, stepSignal, draft }) => {
-        const currentArea = stepSignal.value;
-        const currentIndex = STEPS.findIndex(
-          (step) => step.area === currentArea,
-        );
-        const frontierIndex = pathFrontier(draft);
-        const fillX = DOT_X[frontierIndex] + DOT_R + 3;
-        return (
-          <div className="stepper">
-            <StepperRail />
-            <StepperRail
-              filled
-              style={{ clipPath: `inset(0 ${RAIL_W - fillX}px 0 0)` }}
-            />
-            {currentIndex === -1 ? null : (
-              <div
-                className="stepper_marker"
-                style={{ left: `${DOT_X[currentIndex] - RING_R}px` }}
-              />
-            )}
-            {STEPS.map((step, index) => (
-              <div
-                key={step.area}
-                className="stepper_step_slot"
-                style={{ left: `${DOT_X[index] - 42}px` }}
-              >
-                <Button
-                  variant="discrete"
-                  className="stepper_step"
-                  command={`--navi-go-to-slide:${step.area}`}
-                  commandFor={containerId}
-                  readOnly={currentArea === "done"}
-                  data-current={step.area === currentArea ? "" : undefined}
-                >
-                  {step.label}
-                </Button>
-              </div>
-            ))}
-          </div>
-        );
-      };
 
       // ── Les slides ────────────────────────────────────────────────────────
       const StepFooter = ({ first, submitLabel = "Suivant" }) => (
@@ -489,7 +326,7 @@
       // valeurs de l'étape dans le brouillon, y compris quand on garde les
       // valeurs proposées telles quelles.
       // Aucun verrou: la navigation entre étapes est libre, seul le CHEMIN du
-      // stepper dit ce qui est rempli.
+      // StepList dit ce qui est rempli.
       const StepSlide = ({ area, title, first, onValues, children }) => (
         <Slide id={area} overflow="auto">
           <Form action={onValues} canSendWhileUnchanged>
@@ -505,7 +342,7 @@
       const DispoSlide = ({ draft, patchDraft, joursSignal }) => (
         <StepSlide
           area="dispo"
-          title="Quand êtes-vous disponible ?"
+          title="Disponibilités"
           first
           onValues={(values) => {
             patchDraft({
@@ -514,7 +351,10 @@
             });
           }}
         >
-          <Box flex="y" spacing="s" alignX="start">
+          <Box flex="y" spacing="s" alignX="center">
+            <Text className="group_legend" selfAlignX="start">
+              Quels jours êtes-vous disponible ?
+            </Text>
             <CheckboxGroup
               name="jours"
               required
@@ -529,7 +369,7 @@
                   key={day.key}
                   type="checkbox"
                   variant="button"
-                  className="day_chip"
+                  className="round_chip"
                   value={day.key}
                   aria-label={day.label}
                   width="38"
@@ -541,7 +381,7 @@
                 />
               ))}
             </CheckboxGroup>
-            <Box flex="x" spacing="xs">
+            <Box flex="x" spacing="s" alignY="center">
               <Button
                 variant="discrete"
                 onClick={() => {
@@ -550,6 +390,7 @@
               >
                 En semaine
               </Button>
+              <Separator vertical />
               <Button
                 variant="discrete"
                 onClick={() => {
@@ -560,23 +401,32 @@
               </Button>
             </Box>
           </Box>
-          {/* Les deux bornes se poussent l'une l'autre en tournant — la
-              roue qu'on tient reste où on la met, l'autre cède. */}
-          <TimeRangeWheel
-            name="horaire"
-            size="l"
-            defaultValue={draft.horaire ?? { start: "18:00", end: "20:00" }}
-            minuteStep={30}
-            hours={{ min: 6, max: 23 }}
-            minDuration={60}
-          />
+          <Box flex="y" spacing="m" alignX="start" marginTop="s">
+            <Text className="group_legend">À quels horaires ?</Text>
+            {/* La borne qu'on tient n'est pas encore une réponse: l'autre ne
+                cède qu'au relâchement, quand la roue s'est posée. */}
+            <Box flex="x" alignX="center" expandX>
+              <TimeRangeWheel
+                className="horaire_range"
+                name="horaire"
+                size="l"
+                startLabel={<span className="horaire_a">de</span>}
+                endLabel={<span className="horaire_a">à</span>}
+                defaultValue={draft.horaire ?? { start: "18:00", end: "20:00" }}
+                minuteStep={30}
+                hours={{ min: 6, max: 23 }}
+                minDuration={60}
+                timeProps={{ border: "none" }}
+              />
+            </Box>
+          </Box>
         </StepSlide>
       );
 
       const ClubSlide = ({ draft, patchDraft }) => {
         const [searchText, setSearchText] = useState("");
         const [ville, setVille] = useState("");
-        const [clubId, setClubId] = useState(draft.club);
+        const [clubIds, setClubIds] = useState(draft.clubs ?? []);
         const clubsOfVille = ville
           ? CLUBS.filter((club) => club.ville === ville)
           : CLUBS;
@@ -621,7 +471,7 @@
               </Box>
               <Form
                 action={() => {
-                  patchDraft({ club: clubId });
+                  patchDraft({ clubs: clubIds });
                 }}
                 canSendWhileUnchanged
                 flex="y"
@@ -629,13 +479,15 @@
               >
                 <List
                   selectable
+                  multiple
+                  maxLengthGuard={5}
                   id={listId}
-                  name="club"
+                  name="clubs"
                   required
                   maxHeight="240"
                   separator
                   action={(value) => {
-                    setClubId(value ?? undefined);
+                    setClubIds(value ? [].concat(value) : []);
                   }}
                   searchFallback={
                     <Text color="#666" padding="m">
@@ -650,7 +502,7 @@
                       id={`club_${club.id}`}
                       index={index}
                       value={club.id}
-                      selected={clubId === club.id}
+                      selected={clubIds.includes(club.id)}
                       matchInfo={getMatchInfo(club.name)}
                       paddingX="m"
                       paddingY="s"
@@ -680,7 +532,7 @@
         return (
           <StepSlide
             area="place"
-            title="Quelle place cherchez-vous ?"
+            title="Type de partie"
             onValues={(values) => {
               patchDraft({
                 niveaux: values.niveaux ? [].concat(values.niveaux) : [],
@@ -700,18 +552,24 @@
                 Niveau ({NIVEAUX_MAX} max)
               </legend>
               {NIVEAUX.map((niveau) => {
-                const selected = niveauxSelected.includes(niveau.key);
+                const selected = niveauxSelected.includes(niveau);
                 return (
                   <Input
-                    key={niveau.key}
+                    key={niveau}
                     type="checkbox"
                     variant="button"
-                    width="auto"
-                    value={niveau.key}
+                    className="round_chip"
+                    value={niveau}
+                    aria-label={`Niveau ${niveau}`}
+                    width="38"
+                    height="38"
+                    borderRadius="50%"
+                    alignX="center"
+                    alignY="center"
                     readOnly={
                       niveauxSelected.length >= NIVEAUX_MAX && !selected
                     }
-                    icon={<span>{niveau.label}</span>}
+                    icon={<span>{niveau}</span>}
                   />
                 );
               })}
@@ -763,7 +621,7 @@
             ? {
                 jours: annonce.jours,
                 horaire: annonce.horaire,
-                club: annonce.club,
+                clubs: annonce.clubs,
                 niveaux: annonce.niveaux,
                 cote: annonce.cote,
               }
@@ -783,7 +641,7 @@
           const values = {
             jours: draft.jours,
             horaire: draft.horaire,
-            club: draft.club,
+            clubs: draft.clubs,
             niveaux: draft.niveaux,
             cote: draft.cote,
           };
@@ -822,14 +680,23 @@
                   </Button>
                 </div>
               </Box>
-              <Stepper
-                containerId={containerId}
-                stepSignal={stepSignal}
-                draft={draft}
-              />
+              <StepList
+                slideContainer={containerId}
+                travelByClick={stepSignal.value !== "done"}
+              >
+                {STEPS.map((step) => (
+                  <StepList.Item
+                    key={step.area}
+                    value={step.area}
+                    done={stepAnswered(draft, step.area)}
+                  >
+                    {step.label}
+                  </StepList.Item>
+                ))}
+              </StepList>
             </Box>
-            {/* Navigation libre: les flèches, le drag et le stepper vont où on
-                veut — le chemin du stepper, lui, ne bouge que sur validation. */}
+            {/* Navigation libre: les flèches, le drag et le StepList vont où
+                on veut — le chemin, lui, ne bouge que sur validation. */}
             <SlideContainer
               id={containerId}
               signal={stepSignal}
@@ -859,17 +726,17 @@
                       <RecapLine label="Jours" area="dispo">
                         {(draft.jours || []).map(dayShort).join(", ")}
                       </RecapLine>
-                      <RecapLine label="Horaires" area="dispo">
+                      <RecapLine label="Horaire" area="dispo">
                         {fmtHoraire(draft.horaire)}
                       </RecapLine>
-                      <RecapLine label="Club" area="club">
-                        {clubName(draft.club)}
+                      <RecapLine label="Lieux" area="club">
+                        {(draft.clubs || []).map(clubName).join(", ")}
                       </RecapLine>
-                      <RecapLine label="Place" area="place">
-                        {(draft.niveaux || []).map(niveauLabel).join(", ")}
-                        {draft.cote
-                          ? ` — ${coteLabel(draft.cote)?.toLowerCase()}`
-                          : ""}
+                      <RecapLine label="Niveau" area="place">
+                        {(draft.niveaux || []).join(", ")}
+                      </RecapLine>
+                      <RecapLine label="Côté" area="place">
+                        {coteLabel(draft.cote)}
                       </RecapLine>
                     </Box>
                     <Box flex="x" spacing="s">
@@ -917,7 +784,7 @@
         [
           (annonce.jours || []).map(dayShort).join(", "),
           fmtHoraire(annonce.horaire),
-          (annonce.niveaux || []).map(niveauLabel).join(", "),
+          `Niveau ${(annonce.niveaux || []).join(", ")}`,
         ].join(" · ");
 
       const HomePage = ({ onCreate, onEdit }) => {
@@ -931,7 +798,9 @@
               <div className="annonce_list">
                 {list.map((annonce) => (
                   <div className="annonce_card" key={annonce.id}>
-                    <Text bold>{clubName(annonce.club)}</Text>
+                    <Text bold>
+                      {(annonce.clubs || []).map(clubName).join(", ")}
+                    </Text>
                     <Text size="s" color="#555">
                       {summarize(annonce)}
                     </Text>
