@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, stringifyStyle as stringifyStyle$1, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$12 = /* css */`
+const css$13 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -92,7 +92,7 @@ const css$12 = /* css */`
     }
   }
 `;
-import.meta.css = [css$12, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$13, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -361,7 +361,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$11 = /* css */`
+const css$12 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -379,7 +379,7 @@ const css$11 = /* css */`
     }
   }
 `;
-import.meta.css = [css$11, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$12, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "center",
   behavior: "smooth",
@@ -6403,7 +6403,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$10 = /* css */`
+const css$11 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6646,7 +6646,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$10, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$11, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -8009,7 +8009,14 @@ const isControlBusy = (field) => {
     return true;
   }
   const { boundAction } = field;
-  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
+  // An optimistic control stays interactive while its bound action runs:
+  // a new interaction is queued behind the run (see the action queue in
+  // control_hooks.jsx) rather than refused.
+  if (
+    !field.optimistic &&
+    boundAction &&
+    boundAction.runningStateSignal.value === RUNNING
+  ) {
     return true;
   }
   if (field.loadingFromParent) {
@@ -18866,7 +18873,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$$ = /* css */`
+installImportMetaCssBuild(import.meta);const css$10 = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -18898,7 +18905,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19103,7 +19110,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`
+installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -19140,7 +19147,7 @@ installImportMetaCssBuild(import.meta);const css$_ = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -19430,7 +19437,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$Z = /* css */`
+const css$_ = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -19951,7 +19958,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -23198,6 +23205,7 @@ const CONTROL_PROP_SET = new Set([
   "resetOnCancel",
   "resetOnAbort",
   "resetOnError",
+  "optimistic",
 
   "charGuard",
   "maxLengthGuard",
@@ -24422,6 +24430,18 @@ const GROUP_DEFAULTS = {
       if (isNamelessGrouping(child, child.uiState)) {
         return newUIState;
       }
+      if (
+        newUIState !== null &&
+        typeof newUIState === "object" &&
+        Object.keys(newUIState).length === 0
+      ) {
+        // An object with nothing in it is not a partial answer, it is the
+        // absence of one — a group being cleared — and every child empties. A
+        // partial object leaves the children it does not name alone, which is
+        // what CANNOT_DERIVE says below: a value that mentions `start` says
+        // nothing about `end`, an empty one says there is no answer at all.
+        return undefined;
+      }
       return CANNOT_DERIVE;
     },
   },
@@ -25536,17 +25556,21 @@ const resolveClearedUIState = (controller) => {
   return "";
 };
 
-// What a control says when it has nothing to say: no value at all, or the empty
-// array/object a group falls back to while it has no child to aggregate.
+// What a control says when it has nothing to say: no value at all, the empty
+// array/object a group falls back to while it has no child to aggregate — or a
+// shape whose every part is itself nothing. That last one is what a group with
+// an aggregate of its own produces before its children have arrived
+// (`{ mode: undefined, levels: [] }` has two keys and says nothing), and
+// reading it as an answer is how a popup opening empties the row above it.
 const uiStateHoldsNothing = (uiState) => {
   if (uiState === undefined) {
     return true;
   }
   if (Array.isArray(uiState)) {
-    return uiState.length === 0;
+    return uiState.every(uiStateHoldsNothing);
   }
   if (uiState !== null && typeof uiState === "object") {
-    return Object.keys(uiState).length === 0;
+    return Object.values(uiState).every(uiStateHoldsNothing);
   }
   return false;
 };
@@ -26832,7 +26856,8 @@ const useInteractiveProps = (props, {
       disabled,
       required,
       readOnly,
-      loading
+      loading,
+      optimistic
     } = props;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
@@ -26847,14 +26872,22 @@ const useInteractiveProps = (props, {
     // but cannot be taken.
     const readOnlyFromParentMaxLengthGuard = Boolean(uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(uiStateController));
     const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || controlInfo.readOnlyUncontrolled;
-    const loadingResolved = loadingBase || actionStatus.loading;
-    const readOnlyResolved = readOnlyBase || actionStatus.loading;
+    // An optimistic control trusts its action to succeed: the state the user
+    // just set stays visible and interactive while the action runs — no
+    // loading, no readonly. On failure resetOnError rolls the state back and
+    // the error callout says why.
+    const actionLoading = optimistic ? false : actionStatus.loading;
+    const loadingResolved = loadingBase || actionLoading;
+    const readOnlyResolved = readOnlyBase || actionLoading;
     // Both halves of "busy" that do not come from the bound action, kept apart
     // from each other and from it: BUSY_CONSTRAINT answers each from its own
     // live source rather than from the rendered aria-busy, which conflates all
     // three and is a frame behind. See its own comment.
     uiStateController.loadingFromOwnProp = Boolean(loading);
     uiStateController.loadingFromParent = loadingFromParent;
+    // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
+    // its bound action runs (a new toggle replaces the run instead of waiting).
+    uiStateController.optimistic = Boolean(optimistic);
     Object.assign(controlHostProps, {
       "required": requiredResolved,
       "aria-busy": loadingResolved ? "true" : "false",
@@ -27020,7 +27053,8 @@ const useInteractiveProps = (props, {
       onActionEnd,
       resetOnCancel,
       resetOnAbort,
-      resetOnError
+      resetOnError,
+      optimistic
     } = props;
     Object.assign(controlHostProps, {
       onFocus: e => {
@@ -27075,14 +27109,80 @@ const useInteractiveProps = (props, {
           // special case for the use case where form.requestSubmit is called
           e.detail.action = boundAction;
         }
+        // An optimistic control stays interactive while its action runs, so a
+        // second request can arrive mid-run. The server must receive them in
+        // order: the new request is queued (latest wins — the bound action
+        // reads the UI state signal at run time, so what goes out is always
+        // the current state) and goes out once the running one has truly
+        // settled (see onnavi_action_start). The running action is asked to
+        // abort — its outcome is already outdated — but aborting is only a
+        // resource optimization (a fetch wired to the action's signal gets
+        // cancelled): the server may have done the work anyway, and only the
+        // settlement says which. So even aborted, the underlying work is
+        // awaited before the queued request runs. See the abort section in
+        // docs/actions.md.
+        if (optimistic && uiStateController.actionInFlight) {
+          debugAction(e, `queueing action (one already in flight)`);
+          uiStateController.queuedActionAllowedEvent = e;
+          // The instance captured at navi_action_start, NOT boundAction:
+          // boundAction is a proxy following the UI state signal, and the UI
+          // state has already moved to the new value by now — the proxy would
+          // resolve to the instance for that new value, which is not the one
+          // running.
+          uiStateController.runningAction?.abort(`superseded by a newer request on this control`);
+          return;
+        }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
         executeAction(e);
       },
       onnavi_action_start: e => {
+        // The run this control currently waits on, identified by the
+        // navi_action_allowed event that launched it (unique per execution,
+        // carried by every navi_action_* event of that run).
+        uiStateController.pendingActionEvent = e.detail.event;
+        uiStateController.actionInFlight = true;
+        // The very instance this run uses, resolved now — while the UI state
+        // still holds the value the run was made for. detail.action may be a
+        // proxy following that state, and by the time anyone wants to abort
+        // this run (see the optimistic queue above), the state — and the
+        // proxy's resolution — will have moved on.
+        const runAction = e.detail.action;
+        uiStateController.runningAction = runAction.getCurrentAction?.() ?? runAction;
+        // Fires when the run's underlying work has settled — even for an
+        // aborted run, whose promise is awaited to completion (see
+        // performRun in actions.js) — which is exactly what "the server is
+        // done with it" means, and therefore when the queued request may go.
+        e.detail.addSideEffect(outcome => {
+          uiStateController.actionInFlight = false;
+          uiStateController.runningAction = null;
+          const queuedEvent = uiStateController.queuedActionAllowedEvent;
+          uiStateController.queuedActionAllowedEvent = null;
+          if (!queuedEvent) {
+            return;
+          }
+          if (outcome.error) {
+            // A failure abandons the queue: the UI is rolled back to the last
+            // known state (resetOnError above), and what was queued was built
+            // on top of the state that just failed.
+            return;
+          }
+          // A microtask later, not right here: this runs inside the batch()
+          // that settles the action (see watchActionCompletion for the same
+          // constraint).
+          queueMicrotask(() => {
+            executeAction(queuedEvent);
+          });
+        });
         onActionStart?.(e);
       },
       onnavi_action_abort: e => {
-        if (resetOnAbort) {
+        // Only an abort that leaves the control with nothing left to do may
+        // reset the UI state. An abort whose run was superseded — a queued
+        // request waits behind it (optimistic), or a newer run already
+        // started — must leave the state alone: it belongs to the newer
+        // request, resetting would throw away what the user just set.
+        const superseded = Boolean(uiStateController.queuedActionAllowedEvent) || e.detail.event !== uiStateController.pendingActionEvent;
+        if (resetOnAbort && !superseded) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
         onActionAborted?.(e);
@@ -27180,7 +27280,7 @@ const getAssociatedLabels = element => {
   return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$Y = /* css */`
+installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -27611,7 +27711,7 @@ installImportMetaCssBuild(import.meta);const css$Y = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -29322,7 +29422,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$X = /* css */`
+const css$Y = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -29906,7 +30006,7 @@ const css$X = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -30898,7 +30998,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$W = /* css */`
+const css$X = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -31354,7 +31454,7 @@ const css$W = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$W, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -32382,7 +32482,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$V = /* css */`
+const css$W = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -32519,7 +32619,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -32603,7 +32703,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$U = /* css */`
+installImportMetaCssBuild(import.meta);const css$V = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -32628,7 +32728,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -38372,7 +38472,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$T = /* css */`
+const css$U = /* css */`
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -38801,7 +38901,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -38858,7 +38958,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const {
     type,
     duration
@@ -38894,7 +38994,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -39495,7 +39595,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$S = /* css */`
+const css$T = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -39885,7 +39985,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_travel.jsx"];
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being
@@ -42447,7 +42547,7 @@ const PhoneSvg = () => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$R = /* css */`
+const css$S = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -42482,7 +42582,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -42597,7 +42697,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
+installImportMetaCssBuild(import.meta);const css$R = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -42755,7 +42855,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -42917,7 +43017,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$P = /* css */`
+installImportMetaCssBuild(import.meta);const css$Q = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -43379,7 +43479,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$P, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -43702,7 +43802,7 @@ installImportMetaCssBuild(import.meta);/**
  * https://dribbble.com/search/tabs
  */
 let navCount = 0;
-const css$O = /* css */`
+const css$P = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -43985,7 +44085,7 @@ const Nav = ({
   slideContainer,
   ...props
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/nav/link/nav.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const navRef = props.ref;
@@ -44512,7 +44612,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$N = /* css */`
+const css$O = /* css */`
   @layer navi {
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
@@ -44825,7 +44925,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$N, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -45312,7 +45412,7 @@ installImportMetaCssBuild(import.meta);/**
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
  */
-const css$M = /* css */`
+const css$N = /* css */`
   @layer navi {
     :root {
       --navi-fixed-bar-width: 56px;
@@ -45460,7 +45560,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Said with the width the border rule reads rather than with an attribute of
@@ -45554,7 +45654,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$L = /* css */ `
+const css$M = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -45578,7 +45678,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$L;
+    styleEl.textContent = css$M;
     document.head.appendChild(styleEl);
   }
 
@@ -45734,7 +45834,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$K = /* css */`
+const css$L = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -45819,7 +45919,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$K, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -45873,7 +45973,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$J = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -45919,7 +46019,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -46075,10 +46175,645 @@ const DetailsFieldContent = ({
   children
 }) => {
   const action = useContext(ActionContext);
+  if (!action) {
+    return children;
+  }
   return jsx(ActionRenderer, {
     action: action,
     children: children
   });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Expandable: an in-flow disclosure — a UI part that reveals a content part.
+ * It covers the same ground as <Details> with structural differences:
+ *
+ * - the two parts are explicit and free to order/orient:
+ *
+ *     <Expandable>
+ *       <Expandable.UI>See more</Expandable.UI>
+ *       <Expandable.Content>…</Expandable.Content>
+ *     </Expandable>
+ *
+ *   Content after UI expands below (the <details> shape), Content before UI
+ *   expands above; `layout="column"` puts the parts side by side instead, the
+ *   content then expanding horizontally. The common shape has a shorthand:
+ *   `ui` prop + children as content.
+ * - the UI part accepts any markup (buttons, links, fields) — only the small
+ *   marker is a real <button>, carrying the aria for the whole row
+ *   (aria-expanded/aria-controls, labelled by the UI part), so nested
+ *   interactive content never ends up inside an interactive element.
+ *
+ * What <details> gives for free is rebuilt here:
+ * - a "toggle" event (a real ToggleEvent when the browser has it) dispatched on
+ *   the root whenever the state actually changes — but never on mount, unlike
+ *   the native one (see the workaround comment in details.jsx);
+ * - `--navi-toggle`/`--navi-open`/`--navi-close` commands work against it: the
+ *   root carries `aria-expanded` (what the command system reads) and answers
+ *   the `navi_command`/`navi_request_open`/`navi_request_close` events.
+ *
+ * Content is not built until the first expansion and stays built afterwards —
+ * same policy, same prop names as popups (see popup_content_mount.js):
+ * `mountWhenClosed` builds it right away, `unmountWhenClosed` throws it away
+ * once the collapse settles (so a closing animation still plays on real
+ * content).
+ *
+ * The expansion animates the content's grid track (0fr <-> 1fr — rows for the
+ * stacked layout, columns for `layout="column"`) rather than `height`/`width`:
+ * the open size is "auto" (content-sized), which a length transition cannot
+ * interpolate to, while a fr track can. The content is clipped only while the
+ * track moves; once settled open it overflows normally again, so a popover or
+ * focus ring inside is not cut at the edges.
+ */
+const css$J = /* css */`
+  .navi_expandable {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+
+    > .navi_expandable_ui {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.2em;
+      cursor: pointer;
+      user-select: none;
+
+      /* The whole row shows the focus, like a native <summary>, even though
+         only the marker button actually holds it. */
+      &:has(> .navi_expandable_toggle:focus-visible) {
+        border-radius: 4px;
+        outline: 2px solid AccentColor;
+        outline-offset: 1px;
+      }
+
+      > .navi_expandable_toggle {
+        display: flex;
+        padding: 0;
+        align-items: center;
+        color: inherit;
+        font: inherit;
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        &:focus-visible {
+          outline: none;
+        }
+      }
+
+      > .navi_expandable_ui_label {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 0.2em;
+      }
+    }
+
+    > .navi_expandable_content_container {
+      display: grid;
+      grid-template-rows: 0fr;
+
+      > .navi_expandable_content {
+        min-height: 0;
+        overflow: hidden;
+      }
+    }
+    &[aria-expanded="true"] > .navi_expandable_content_container {
+      grid-template-rows: 1fr;
+    }
+
+    /* The parts sit side by side: the UI part becomes a vertical strip and
+       the content expands horizontally, on the columns track. */
+    &[data-layout="column"] {
+      flex-direction: row;
+
+      > .navi_expandable_ui {
+        flex-direction: column;
+
+        > .navi_expandable_ui_label {
+          flex-direction: column;
+        }
+      }
+      > .navi_expandable_content_container {
+        grid-template-columns: 0fr;
+        grid-template-rows: none;
+
+        > .navi_expandable_content {
+          min-width: 0;
+          min-height: auto;
+        }
+      }
+      &[aria-expanded="true"] > .navi_expandable_content_container {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+      }
+    }
+
+    &[data-animation] > .navi_expandable_content_container {
+      transition:
+        grid-template-rows var(--navi-expandable-animation-duration, 0.3s) ease,
+        grid-template-columns var(--navi-expandable-animation-duration, 0.3s)
+          ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      &[data-animation] > .navi_expandable_content_container {
+        transition: none;
+      }
+    }
+    /* Settled open: stop clipping, so a popover, a focus ring or a dragged
+       element inside the content can spill out — unless the content is given
+       a max height, where the clipping IS the feature (it scrolls). */
+    &[aria-expanded="true"][data-settled]:not([data-content-scrolls])
+      > .navi_expandable_content_container
+      > .navi_expandable_content {
+      overflow: visible;
+    }
+    &[data-content-scrolls]
+      > .navi_expandable_content_container
+      > .navi_expandable_content {
+      max-height: var(--navi-expandable-max-content-height);
+      overflow-y: auto;
+    }
+  }
+`;
+const ExpandableContext = createContext(null);
+const useExpandableContext = partName => {
+  const expandableContext = useContext(ExpandableContext);
+  if (!expandableContext) {
+    throw new Error(`<Expandable.${partName}> must be used inside <Expandable>`);
+  }
+  return expandableContext;
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   ui?: import("ignore:preact").ComponentChildren | ((state: { open: boolean }) => import("ignore:preact").ComponentChildren),
+ *   open?: boolean,
+ *   defaultOpen?: boolean,
+ *   signal?: import("@preact/signals").Signal<boolean>,
+ *   onToggle?: (event: Event) => void,
+ *   action?: Function,
+ *   loading?: boolean,
+ *   animation?: boolean,
+ *   layout?: "row" | "column",
+ *   autoFocus?: boolean,
+ *   maxContentHeight?: string | number,
+ *   mountWhenClosed?: boolean,
+ *   unmountWhenClosed?: boolean,
+ *   arrowKeyShortcuts?: boolean,
+ *   openKeyShortcut?: string,
+ *   closeKeyShortcut?: string,
+ * }>}
+ * @param ui - Shorthand for the common shape: renders `<Expandable.UI>{ui}</Expandable.UI>`
+ *   above the content (children). Any markup is allowed (buttons, links,
+ *   fields inside it keep their own behavior and do not toggle the
+ *   expandable). A function receives `{ open }` to render differently per
+ *   state. For other orders/orientations, pass `<Expandable.UI>` and
+ *   `<Expandable.Content>` as children instead.
+ * @param open - Drives the state from outside: the expandable opens/closes to
+ *   match every change of this prop, but user interaction can still toggle it
+ *   in between (same semantics as Dialog/Popover's own `open`).
+ * @param defaultOpen - Uncontrolled, mount-only initial state.
+ * @param signal - Two-way binding: the expandable follows the signal and
+ *   writes back into it whenever it toggles on its own. Excludes `open`.
+ * @param onToggle - Listens the "toggle" event dispatched on the root (a
+ *   ToggleEvent with newState/oldState where supported). Fires on every actual
+ *   state change, never on mount.
+ * @param action - Ran when the expandable opens, aborted when it closes.
+ *   Content children may then be a function `(data) => ui` or a branches
+ *   object (`{ loading, error, completed, ... }`) — see ActionRenderer.
+ * @param loading - Shows the loading spinner on the marker regardless of
+ *   `action`'s own loading state.
+ * @param animation - Off by default. `true` plays the expand/collapse track
+ *   transition; duration comes from `--navi-expandable-animation-duration`
+ *   (0.3s).
+ * @param layout - `"row"` (default): the parts stack, the content expands
+ *   vertically. `"column"`: the parts sit side by side, the content expands
+ *   horizontally next to the UI part.
+ * @param autoFocus - Off by default (the focus stays on the marker when
+ *   opening). `true` moves the focus into the content on open — the
+ *   `[autofocus]` element if any, the first focusable otherwise. Whatever the
+ *   setting, closing while the focus is inside the content hands it back to
+ *   the marker (it would otherwise be lost to the closed, inert content).
+ * @param maxContentHeight - Caps the content height; taller content scrolls
+ *   inside the expandable instead of growing it.
+ * @param mountWhenClosed - Builds the content right away instead of on first
+ *   expansion.
+ * @param unmountWhenClosed - Throws the content away once the collapse
+ *   settles — after the closing animation, so it still plays on real content —
+ *   and rebuilds it from scratch on every expansion.
+ */
+const Expandable = props => {
+  import.meta.css = [css$J, "@jsenv/navi/src/control/expandable/expandable.jsx"];
+  const {
+    ref,
+    ui,
+    open,
+    defaultOpen,
+    signal,
+    action,
+    loading,
+    animation = false,
+    layout,
+    autoFocus,
+    maxContentHeight,
+    mountWhenClosed,
+    unmountWhenClosed,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const rootRef = ref || defaultRef;
+  const uiRef = useRef();
+  const toggleButtonRef = useRef();
+  const contentContainerRef = useRef();
+  const contentId = useId();
+  const uiId = useId();
+  // Reading .value during render is what subscribes the expandable to it.
+  const openRequested = signal ? signal.value : open;
+  const [opened, setOpened] = useState(() => Boolean(openRequested === undefined ? defaultOpen : openRequested));
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
+  const hasAction = Boolean(action);
+  const effectiveAction = useAction(action);
+  const {
+    loading: actionLoading
+  } = useActionStatus(effectiveAction);
+  const [contentMounted, setContentMounted] = useState(() => Boolean(mountWhenClosed) || opened);
+  // Same exclusion as popup_content_mount.js: content that must exist while
+  // closed cannot also be thrown away on close.
+  const effectiveUnmountWhenClosed = unmountWhenClosed && !mountWhenClosed;
+
+  // Fully open and no longer moving — what allows overflow to become visible
+  // (see the CSS) and what unmountWhenClosed waits for before emptying.
+  const [settled, setSettled] = useState(true);
+
+  // Read before the close touches the DOM: flipping the content to inert can
+  // blur what it held, so by effect time the focus to hand back to the marker
+  // could already be gone.
+  const focusedBeforeCloseRef = useRef(null);
+  // The pointer press that is about to toggle blurs the focused field before
+  // the click ever fires (pressing a non-focusable row moves the focus to
+  // body) — so what held the focus has to be remembered at pointerdown time.
+  const focusedAtPointerDownRef = useRef(null);
+  const onUIPointerDown = () => {
+    focusedAtPointerDownRef.current = document.activeElement;
+  };
+  const toggleTo = nextOpen => {
+    nextOpen = Boolean(nextOpen);
+    if (nextOpen === openedRef.current) {
+      return;
+    }
+    openedRef.current = nextOpen;
+    if (nextOpen) {
+      setContentMounted(true);
+    } else {
+      const activeElement = document.activeElement;
+      focusedBeforeCloseRef.current = !activeElement || activeElement === document.body ? focusedAtPointerDownRef.current : activeElement;
+    }
+    focusedAtPointerDownRef.current = null;
+    setOpened(nextOpen);
+    // Flipped here, before the closing/opening commit, so effects of that very
+    // commit already see the movement as started — unmountWhenClosed must not
+    // read a stale "settled" and empty the content under a closing animation.
+    setSettled(!animation);
+    if (signal) {
+      signal.value = nextOpen;
+    }
+    if (hasAction) {
+      if (nextOpen) {
+        effectiveAction.run();
+      } else {
+        effectiveAction.abort();
+      }
+    }
+  };
+  const findFirstFocusableInContent = () => {
+    const contentContainer = contentContainerRef.current;
+    if (!contentContainer) {
+      return null;
+    }
+    const autofocusElement = contentContainer.querySelector("[autofocus]");
+    if (autofocusElement) {
+      return autofocusElement;
+    }
+    return findAfter(contentContainer, elementIsFocusable, {
+      root: contentContainer
+    });
+  };
+
+  // Follow `open`/`signal` changes after mount (the initial value is already
+  // in the state above). A self-initiated toggle that wrote the signal lands
+  // here too and no-ops, since the state already matches.
+  const isFirstOpenRequestedRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstOpenRequestedRunRef.current) {
+      isFirstOpenRequestedRunRef.current = false;
+      return;
+    }
+    if (openRequested === undefined) {
+      return;
+    }
+    toggleTo(openRequested);
+  }, [openRequested]);
+
+  // A state change: tell the world (the "toggle" event), move the focus, and
+  // follow the transition to know when the movement is over. Skipped on mount —
+  // nothing changed, so neither the event nor a transition exists (and a page
+  // must not have its focus stolen by an expandable that was simply already
+  // open).
+  const isFirstOpenedRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstOpenedRunRef.current) {
+      isFirstOpenedRunRef.current = false;
+      return undefined;
+    }
+    const root = rootRef.current;
+    root.dispatchEvent(createToggleEvent(opened));
+    if (opened) {
+      if (autoFocus) {
+        const firstFocusableElement = findFirstFocusableInContent();
+        if (firstFocusableElement) {
+          firstFocusableElement.focus();
+        }
+      }
+    } else {
+      const focusedBeforeClose = focusedBeforeCloseRef.current;
+      focusedBeforeCloseRef.current = null;
+      if (focusedBeforeClose && contentContainerRef.current && contentContainerRef.current.contains(focusedBeforeClose)) {
+        toggleButtonRef.current.focus();
+      }
+    }
+    if (!animation) {
+      return undefined;
+    }
+    const cancel = whenTransitionSettles(contentContainerRef.current, () => {
+      setSettled(true);
+    });
+    return cancel;
+  }, [opened]);
+  useLayoutEffect(() => {
+    if (settled && !opened && effectiveUnmountWhenClosed) {
+      setContentMounted(false);
+    }
+  }, [settled, opened, effectiveUnmountWhenClosed]);
+  useLayoutEffect(() => {
+    if (mountWhenClosed) {
+      setContentMounted(true);
+    }
+  }, [mountWhenClosed]);
+
+  // Mounted already open: the content is visible, its data is due.
+  useEffect(() => {
+    if (openedRef.current && hasAction) {
+      effectiveAction.run();
+    }
+  }, []);
+  const onRootKeyDown = keyboardEvent => {
+    if (!arrowKeyShortcuts) {
+      return;
+    }
+    // A nested expandable (deeper, so heard first) already answered this key.
+    if (keyboardEvent.defaultPrevented) {
+      return;
+    }
+    // Leave the key to whatever native use its target has for it (moving the
+    // caret in a field, changing a slider) — only a press with nothing else
+    // to do drives the expandable.
+    const defaultAction = getKeyboardEventDefaultAction(keyboardEvent);
+    if (defaultAction && defaultAction !== "scroll") {
+      return;
+    }
+    const {
+      key
+    } = keyboardEvent;
+    if (key === openKeyShortcut) {
+      if (document.activeElement !== toggleButtonRef.current) {
+        return;
+      }
+      if (!openedRef.current) {
+        keyboardEvent.preventDefault();
+        toggleTo(true);
+        return;
+      }
+      const firstFocusableElementInContent = findFirstFocusableInContent();
+      if (!firstFocusableElementInContent) {
+        return;
+      }
+      keyboardEvent.preventDefault();
+      firstFocusableElementInContent.focus();
+      return;
+    }
+    if (key === closeKeyShortcut) {
+      if (!openedRef.current) {
+        return;
+      }
+      const toggleButton = toggleButtonRef.current;
+      if (document.activeElement === toggleButton) {
+        keyboardEvent.preventDefault();
+        toggleTo(false);
+      } else {
+        keyboardEvent.preventDefault();
+        toggleButton.focus();
+      }
+    }
+  };
+  const onUIClick = clickEvent => {
+    // A navi control inside the UI part cancels the click it consumed (see
+    // click_to_expand.js — the root's aria-expanded is what it finds).
+    if (clickEvent.defaultPrevented) {
+      return;
+    }
+    const {
+      target
+    } = clickEvent;
+    if (target.nodeType === 1) {
+      const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
+      if (interactiveElement && interactiveElement !== toggleButtonRef.current && uiRef.current.contains(interactiveElement)) {
+        return;
+      }
+    }
+    toggleTo(!openedRef.current);
+  };
+  const expandableContextValue = {
+    opened,
+    loading: loading || hasAction && actionLoading,
+    contentMounted,
+    hasAction,
+    effectiveAction,
+    onUIClick,
+    onUIPointerDown,
+    uiRef,
+    toggleButtonRef,
+    contentContainerRef,
+    contentId,
+    uiId
+  };
+
+  // Explicit parts win; the `ui` prop + children is the shorthand for the
+  // common shape (UI above, content below).
+  const childArray = toChildArray(children);
+  const hasParts = childArray.some(child => child && (child.type === ExpandableUI || child.type === ExpandableContent));
+  const body = hasParts ? children : jsxs(Fragment$1, {
+    children: [jsx(ExpandableUI, {
+      children: ui
+    }), jsx(ExpandableContent, {
+      children: children
+    })]
+  });
+  return jsx(Box, {
+    ref: rootRef,
+    baseClassName: "navi_expandable",
+    "aria-expanded": opened ? "true" : "false",
+    "data-layout": layout === "column" ? "column" : undefined,
+    "data-animation": animation ? "" : undefined,
+    "data-settled": settled ? "" : undefined,
+    "data-content-scrolls": maxContentHeight === undefined ? undefined : "",
+    ...rest,
+    // The protocol every command target answers (see commands.js): a
+    // `--navi-toggle`/`--navi-open`/`--navi-close` lands here as a
+    // navi_command whose implementation dispatches the request events below.
+    onnavi_command: e => {
+      rest.onnavi_command?.(e);
+      onNaviCommand(e);
+    },
+    onnavi_request_open: e => {
+      rest.onnavi_request_open?.(e);
+      toggleTo(true);
+    },
+    onnavi_request_close: e => {
+      rest.onnavi_request_close?.(e);
+      toggleTo(false);
+    },
+    onKeyDown: e => {
+      rest.onKeyDown?.(e);
+      onRootKeyDown(e);
+    },
+    style: maxContentHeight === undefined ? rest.style : {
+      "--navi-expandable-max-content-height": stringifyStyle$1(maxContentHeight, "maxHeight"),
+      ...rest.style
+    },
+    children: jsx(ExpandableContext.Provider, {
+      value: expandableContextValue,
+      children: body
+    })
+  });
+};
+
+/**
+ * The always-visible part that reveals the content: the marker button plus
+ * whatever it is given — any markup, a function of `{ open }` included. Its
+ * position among the parts decides where the content goes (before the content:
+ * content below/right; after it: content above/left).
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   children?: import("ignore:preact").ComponentChildren | ((state: { open: boolean }) => import("ignore:preact").ComponentChildren),
+ * }>}
+ */
+const ExpandableUI = ({
+  children,
+  ...rest
+}) => {
+  const {
+    opened,
+    loading,
+    onUIClick,
+    onUIPointerDown,
+    uiRef,
+    toggleButtonRef,
+    contentId,
+    uiId
+  } = useExpandableContext("UI");
+  return jsxs("div", {
+    ref: uiRef,
+    className: "navi_expandable_ui",
+    onClick: onUIClick,
+    onPointerDown: onUIPointerDown,
+    ...rest,
+    children: [jsx("button", {
+      ref: toggleButtonRef,
+      type: "button",
+      className: "navi_expandable_toggle",
+      "aria-expanded": opened,
+      "aria-controls": contentId,
+      "aria-labelledby": uiId,
+      children: jsx(SummaryMarker, {
+        open: opened,
+        loading: loading
+      })
+    }), jsx("div", {
+      id: uiId,
+      className: "navi_expandable_ui_label",
+      children: typeof children === "function" ? children({
+        open: opened
+      }) : children
+    })]
+  });
+};
+
+/**
+ * The revealed part. With an `action` on the Expandable, children may be a
+ * function `(data) => ui` or a branches object — see ActionRenderer.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{}>}
+ */
+const ExpandableContent = ({
+  children,
+  ...rest
+}) => {
+  const {
+    opened,
+    contentMounted,
+    hasAction,
+    effectiveAction,
+    contentContainerRef,
+    contentId
+  } = useExpandableContext("Content");
+  let content = children;
+  if (hasAction) {
+    content = jsx(ActionRenderer, {
+      action: effectiveAction,
+      children: children
+    });
+  }
+  return jsx("div", {
+    ref: contentContainerRef,
+    id: contentId,
+    className: "navi_expandable_content_container",
+    inert: opened ? undefined : true,
+    ...rest,
+    children: jsx("div", {
+      className: "navi_expandable_content",
+      children: contentMounted ? content : null
+    })
+  });
+};
+Expandable.UI = ExpandableUI;
+Expandable.Content = ExpandableContent;
+
+// What a click inside the UI part must not toggle: it was aimed at the
+// control, not at the row. The marker button is the one exception, excluded at
+// the call site.
+const UI_INTERACTIVE_SELECTOR = ["a[href]", "button", "input", "select", "textarea", "label", "[role='button']", "[contenteditable='']", "[contenteditable='true']", "audio[controls]", "video[controls]"].join(", ");
+const createToggleEvent = open => {
+  const newState = open ? "open" : "closed";
+  const oldState = open ? "closed" : "open";
+  if (typeof window.ToggleEvent === "function") {
+    return new window.ToggleEvent("toggle", {
+      newState,
+      oldState
+    });
+  }
+  const toggleEvent = new CustomEvent("toggle");
+  toggleEvent.newState = newState;
+  toggleEvent.oldState = oldState;
+  return toggleEvent;
 };
 
 const DEFAULT_VALIDITY_STATE = { valid: true };
@@ -68295,6 +69030,10 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  * @param {string} [value] The time shown, as "HH:MM".
  * @param {number} [minuteStep=1] How many minutes apart the values on the
  *   minute wheel are — 15 for quarters of an hour.
+ * @param {{min?: number, max?: number}|number[]} [hours] Which hours the wheel
+ *   offers: `{ min: 7, max: 21 }` for a day that starts and ends somewhere, or
+ *   the list itself. All 24 by default. Rows nobody will ever land on are rows
+ *   in the way.
  * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
  *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
  *   past.
@@ -68311,6 +69050,7 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  */
 const TimeWheel = ({
   minuteStep = 1,
+  hours,
   loop = true,
   placeholder,
   separator = naviI18n("time.hour_separator"),
@@ -68329,13 +69069,15 @@ const TimeWheel = ({
     }
     return minuteList;
   }, [minuteStep]);
+  const hourList = useMemo(() => resolveHourList(hours), [hours ? hours.min : undefined, hours ? hours.max : undefined, hours]);
   const {
-    aggregateChildStates
-  } = useAnswered(placeholder, rest, aggregateTime);
+    aggregateChildStates,
+    distributeChildUIState
+  } = useAnswered(placeholder, rest, aggregateTime, distributeTime);
   const placeholderParts = parseTimeParts(placeholder);
   return jsxs(WheelGroup, {
     aggregateChildStates: aggregateChildStates,
-    distributeChildUIState: distributeTime,
+    distributeChildUIState: distributeChildUIState,
     ...rest,
     children: [jsx(Wheel, {
       name: "hour",
@@ -68345,7 +69087,7 @@ const TimeWheel = ({
       "aria-label": hourLabel,
       defaultValue: placeholderParts ? placeholderParts.hour : undefined,
       ...wheelProps,
-      children: HOURS.map(hour => jsx(Wheel.Item, {
+      children: hourList.map(hour => jsx(Wheel.Item, {
         value: hour,
         paddingX: "s",
         children: padTwo(hour)
@@ -68392,6 +69134,8 @@ const TimeWheel = ({
  *   `null` for neither.
  * @param {number} [minuteStep=1] How many minutes apart the values on both
  *   minute wheels are.
+ * @param {{min?: number, max?: number}|number[]} [hours] Which hours both
+ *   wheels offer — see `TimeWheel`.
  * @param {number} [minDuration=0] How long the span must last at least, in
  *   minutes. Zero by default: a span of no length is a span all the same, only
  *   one that goes backwards is not. It is what the bounds keep between them as
@@ -68409,6 +69153,7 @@ const TimeWheel = ({
  */
 const TimeRangeWheel = ({
   minuteStep = 1,
+  hours,
   minDuration = 0,
   loop = true,
   placeholder,
@@ -68427,8 +69172,9 @@ const TimeRangeWheel = ({
   // answer too, left where the placeholder put it.
   const {
     answeredRef,
-    aggregateChildStates
-  } = useAnswered(placeholder, rest, aggregateSpan);
+    aggregateChildStates,
+    distributeChildUIState
+  } = useAnswered(placeholder, rest, aggregateSpan, distributeSpan);
 
   // What the pair does while it is being turned: the bound that just moved is
   // the one the user is holding, so it stays where it was put and the OTHER one
@@ -68471,6 +69217,7 @@ const TimeRangeWheel = ({
     spacing: "s",
     size: size,
     aggregateChildStates: aggregateChildStates,
+    distributeChildUIState: distributeChildUIState,
     ...rest,
     children: jsxs(AnsweredContext.Provider, {
       value: answeredRef,
@@ -68482,6 +69229,7 @@ const TimeRangeWheel = ({
         ref: startRef,
         name: "start",
         minuteStep: minuteStep,
+        hours: hours,
         loop: loop,
         size: size,
         placeholder: placeholder ? placeholder.start : undefined,
@@ -68495,6 +69243,7 @@ const TimeRangeWheel = ({
         ref: endRef,
         name: "end",
         minuteStep: minuteStep,
+        hours: hours,
         loop: loop,
         size: size,
         placeholder: placeholder ? placeholder.end : undefined,
@@ -68536,7 +69285,7 @@ const TimeRangeWheel = ({
  * compare its own placeholder against.
  */
 const AnsweredContext = createContext(null);
-const useAnswered = (placeholder, props, aggregateWhenAnswered) => {
+const useAnswered = (placeholder, props, aggregateWhenAnswered, distributeWhenAnswered) => {
   const answeredFromPair = useContext(AnsweredContext);
   const ownAnsweredRef = useRef(false);
   const answeredRef = answeredFromPair || ownAnsweredRef;
@@ -68548,31 +69297,81 @@ const useAnswered = (placeholder, props, aggregateWhenAnswered) => {
   const gates = !answeredFromPair;
   const placeholderRef = useRef(placeholder);
   placeholderRef.current = placeholder;
-  const aggregateRef = useRef(null);
-  if (!aggregateRef.current) {
-    aggregateRef.current = children => {
-      const aggregated = aggregateWhenAnswered(children);
-      if (answeredRef.current) {
+  const scopeRef = useRef(null);
+  if (!scopeRef.current) {
+    scopeRef.current = {
+      aggregateChildStates: children => {
+        const aggregated = aggregateWhenAnswered(children);
+        if (answeredRef.current) {
+          return aggregated;
+        }
+        if (compareTwoJsValues(aggregated, placeholderRef.current)) {
+          return undefined;
+        }
+        // It moved: from here on this is an answer, and stays one even when it
+        // is turned back onto the placeholder — somebody chose that time.
+        answeredRef.current = true;
         return aggregated;
+      },
+      distributeChildUIState: (groupState, child) => {
+        if (placeholderRef.current && holdsNothing(groupState)) {
+          // Being told there is no value is not a finger bringing a wheel back:
+          // it is a clear, or the app writing `undefined`. The wheels go back to
+          // showing the placeholder, and the pair is unanswered again — without
+          // this the wheels would empty (a wheel has no blank row) and what they
+          // still showed would climb straight back up as an answer.
+          answeredRef.current = false;
+          return distributeWhenAnswered(placeholderRef.current, child);
+        }
+        return distributeWhenAnswered(groupState, child);
       }
-      if (compareTwoJsValues(aggregated, placeholderRef.current)) {
-        return undefined;
-      }
-      // It moved: from here on this is an answer, and stays one even when it is
-      // turned back onto the placeholder — somebody chose that time.
-      answeredRef.current = true;
-      return aggregated;
     };
   }
   return {
     answeredRef,
-    aggregateChildStates: gates ? aggregateRef.current : aggregateWhenAnswered
+    aggregateChildStates: gates ? scopeRef.current.aggregateChildStates : aggregateWhenAnswered,
+    distributeChildUIState: gates ? scopeRef.current.distributeChildUIState : distributeWhenAnswered
   };
 };
+
+// Nothing at all: no value, an empty shape, or a shape whose every part is
+// itself nothing — which is what a cleared span looks like on the way down.
+const holdsNothing = value => {
+  if (value === undefined || value === null || value === "") {
+    return true;
+  }
+  if (typeof value !== "object") {
+    return false;
+  }
+  return Object.values(value).every(holdsNothing);
+};
 const isAnswerGivenByProps = props => props.value !== undefined || props.defaultValue !== undefined || props.signal && props.signal.value !== undefined;
-const HOURS = Array.from({
+
+// Which hours the wheel offers: all of them, a slice of the day, or a list
+// written by the caller. An app whose day ends at 21h has nothing to say about
+// 22h and 23h, and two rows nobody will ever land on are two rows in the way.
+const ALL_HOURS = Array.from({
   length: HOUR_COUNT
 }, (_, hour) => hour);
+const resolveHourList = hours => {
+  if (hours === undefined) {
+    return ALL_HOURS;
+  }
+  if (Array.isArray(hours)) {
+    return hours;
+  }
+  const {
+    min = 0,
+    max = HOUR_COUNT - 1
+  } = hours;
+  const hourList = [];
+  let hour = min;
+  while (hour <= max) {
+    hourList.push(hour);
+    hour += 1;
+  }
+  return hourList;
+};
 const padTwo = value => String(value).padStart(2, "0");
 
 // The two times as one span, { start, end } — the shape a pair carries.
@@ -68584,6 +69383,14 @@ const aggregateSpan = childUIStateControllers => {
     }
   }
   return span;
+};
+
+// The way back for a span: each time takes its own side.
+const distributeSpan = (groupState, childUIStateController) => {
+  if (!groupState) {
+    return undefined;
+  }
+  return groupState[childUIStateController.name];
 };
 
 // The two wheels as one value, "HH:MM".
@@ -74645,5 +75452,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
