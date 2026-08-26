@@ -573,27 +573,28 @@ const ListItemSelectable = (props) => {
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
   // Whose reason it is that this row cannot be taken. Read-only reaching it
-  // from above is the LIST's: the whole selection is frozen, and saying "this
-  // option is not available" of each row in turn describes a list where each
-  // row happens to be unavailable for its own reasons — a different situation,
-  // which goes on being said that way. Busy is not frozen either: a list
-  // waiting on something says nothing about what will be possible once it is
-  // done, so the row keeps its own words for that.
+  // from above is the LIST's, and what is settled is then the whole answer —
+  // said as the selection where several things are taken, as the choice where
+  // one thing is. Said of each row in turn, "this option is not available"
+  // describes something else entirely: a list where each row happens to be
+  // unavailable for its own reasons, which goes on being said that way. Busy
+  // is not settled either: a list waiting on something says nothing about what
+  // will be possible once it is done, so the row keeps its own words.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
   const loadingFromAbove = useContext(LoadingContext);
-  const selectionIsFrozen = Boolean(readOnlyFromAbove) && !loadingFromAbove;
+  const answerIsSettled = Boolean(readOnlyFromAbove) && !loadingFromAbove;
+  const readOnlyMessageKey = answerIsSettled
+    ? multiple
+      ? `constraint.readonly.selection`
+      : `constraint.readonly.choice`
+    : `constraint.readonly.option`;
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] =
     useCheckableProps({
-      readOnlyMessage: naviI18n(
-        selectionIsFrozen
-          ? `constraint.readonly.selection`
-          : `constraint.readonly.option`,
-        props,
-      ),
+      readOnlyMessage: naviI18n(readOnlyMessageKey, props),
       ...rest,
       ref: inputRef,
       id: inputId,
