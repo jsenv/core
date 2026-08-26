@@ -565,23 +565,25 @@ when that is really the case.
 
 #### On something you draw yourself
 
-`ownTarget` is a `Box` prop, so an affordance does not have to become a control
-to claim its press — a pastille positioned in a card's corner by its own class
-stays exactly what it was drawn as:
+`ownTarget` is a `Box` prop too, so an affordance does not have to become a
+control to claim its press — a pastille positioned in a card's corner by its own
+class stays exactly what it was drawn as:
 
 ```jsx
-<Box as="button" ownTarget="always" className="court_side" onClick={explain}>
+<Box as="button" ownTarget className="court_side" onClick={explain}>
 ```
 
-All the prop does is write one attribute, `data-own-target`, whose value is the
-mode. That attribute is the claim: it is what the controls above read, and what
-the gesture readers read (`data-drag-handle`, `data-drag-ignore` and friends are
-the same vocabulary). Writing it by hand on an element navi does not render
-works and is the last resort — a typo there is silent, whereas the prop is
-spelled once.
+On a box the prop does exactly one thing: it writes `data-own-target`. That
+attribute is the claim — it is what the controls above read, and what the
+gesture readers read (`data-drag-handle`, `data-drag-ignore` and friends are the
+same vocabulary). Writing it by hand on an element navi does not render works
+and is the last resort: a typo there is silent, whereas the prop is spelled
+once.
 
-A box is not a control and has no gate of its own, so `"refuse"` means nothing
-on one (navi says so in dev); say it on the control the box is made of.
+The modes above are the other half, and they belong to controls: they are about
+a gate, a callout and a control's own read-only, none of which a box has. A box
+claims the press and nothing more; put the affordance on a control when what it
+does about a held zone matters.
 
 #### navi steps back; a plain `onClick` does not
 

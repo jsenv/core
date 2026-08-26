@@ -55,7 +55,7 @@ return results;
   "with_null_undefined": true,
   "with_nan": true,
   "objects_different_order": false,
-  "with_functions": false
+  "with_functions": true
 }
 ```
 

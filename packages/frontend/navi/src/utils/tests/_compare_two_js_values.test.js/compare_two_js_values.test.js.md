@@ -7,6 +7,7 @@
 - [edge cases with ignoreArrayOrder](3_edge_cases_with_ignorearrayorder/3_edge_cases_with_ignorearrayorder.md)
 - [performance case - identical arrays](4_performance_case_-_identical_arrays/4_performance_case_-_identical_arrays.md)
 - [comparison without ignoreArrayOrder vs with ignoreArrayOrder](5_comparison_without_ignorearrayorder_vs_with_ignorearrayorder/5_comparison_without_ignorearrayorder_vs_with_ignorearrayorder.md)
+- [functions and keyless objects compare by reference](6_functions_and_keyless_objects_compare_by_reference/6_functions_and_keyless_objects_compare_by_reference.md)
 
 ---
 

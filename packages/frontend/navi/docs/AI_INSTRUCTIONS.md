@@ -220,9 +220,9 @@ consistency across the app, not from any single call site.
   It also holds `ownTarget`, for an affordance an application draws inside a
   zone that belongs to another control — a chip's cross, an eye, a diskette:
   the three modes and the question that picks one (does it write to the control
-  it sits in?), saying it on a `Box` so an affordance keeps its own drawing
-  instead of becoming a control, and what `ownTarget` does NOT stop (a plain
-  `onClick` on an ancestor).
+  it sits in?), the `Box` form that claims the press and nothing more (so an
+  affordance keeps its own drawing instead of becoming a control), and what
+  `ownTarget` does NOT stop (a plain `onClick` on an ancestor).
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi — and before stopping the propagation of

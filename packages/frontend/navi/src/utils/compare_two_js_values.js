@@ -7,8 +7,11 @@
  * Beyond recursive object/array comparison it covers the edge cases `===` gets
  * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
  * cycles don't loop (a seen-set guards circular refs), and same-type is required
- * before descending. Cheap paths run first: reference equality, then the identity
- * short-circuit below, then array length before element-by-element.
+ * before descending. Functions, and objects with nothing enumerable to compare
+ * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
+ * them says whether two are "the same". Cheap paths run first: reference
+ * equality, then the identity short-circuit below, then array length before
+ * element-by-element.
  *
  * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
  * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
@@ -68,6 +71,11 @@ export const compareTwoJsValues = (
     const aType = typeof a;
     const bType = typeof b;
     if (aType !== bType) {
+      return false;
+    }
+    if (aType === "function") {
+      // Not the same function (reference equality came first), and nothing in
+      // a function says whether two of them do the same thing.
       return false;
     }
     const aIsPrimitive =
@@ -145,23 +153,23 @@ export const compareTwoJsValues = (
       return true;
     }
     // Date objects must be compared by time value, not by enumerable keys (which are empty)
-    date_compare: {
-      const aIsDate = a instanceof Date;
-      const bIsDate = b instanceof Date;
-      if (aIsDate !== bIsDate) {
-        return false;
-      }
-      if (aIsDate && bIsDate) {
-        const aTime = a.getTime();
-        const bTime = b.getTime();
-        if (aTime !== bTime) {
-          return false;
-        }
-      }
+    const aIsDate = a instanceof Date;
+    const bIsDate = b instanceof Date;
+    if (aIsDate !== bIsDate) {
+      return false;
+    }
+    if (aIsDate) {
+      return a.getTime() === b.getTime();
     }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    if (aKeys.length === 0 && (!isPlainObject(a) || !isPlainObject(b))) {
+      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
+      // apart, so they are the same one or they are not — and they are not,
+      // reference equality came first.
       return false;
     }
     if (lightKeySet) {
@@ -199,4 +207,9 @@ export const compareTwoJsValues = (
     : compare;
 
   return compare(rootA, rootB);
+};
+
+const isPlainObject = (value) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };
