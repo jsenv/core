@@ -305,4 +305,25 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
     return results;
   });
+
+  test("cycle guard holds only while a pair is being compared", () => {
+    const results = {};
+    const o = { a: 1 };
+    const o2 = { a: 1 };
+    results.same_object_met_twice = compareTwoJsValues(
+      { x: o, y: o },
+      { x: o2, y: o2 },
+    );
+    results.unordered_equal_objects = compareTwoJsValues(
+      [{ a: 1 }, { a: 1 }, { b: 2 }],
+      [{ b: 2 }, { a: 1 }, { a: 1 }],
+      { ignoreArrayOrder: true },
+    );
+    const cyclicA = { name: "a" };
+    cyclicA.self = cyclicA;
+    const cyclicB = { name: "a" };
+    cyclicB.self = cyclicB;
+    results.cycles_do_not_loop = compareTwoJsValues(cyclicA, cyclicB);
+    return results;
+  });
 });

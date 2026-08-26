@@ -6,7 +6,8 @@
  *
  * Beyond recursive object/array comparison it covers the edge cases `===` gets
  * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
- * cycles don't loop (a seen-set guards circular refs), and same-type is required
+ * cycles don't loop (a set of the pairs being compared guards circular refs),
+ * and same-type is required
  * before descending. Functions, and objects with nothing enumerable to compare
  * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
  * them says whether two are "the same". Cheap paths run first: reference
@@ -88,14 +89,22 @@ export const compareTwoJsValues = (
     if (aIsPrimitive && bIsPrimitive) {
       return a === b;
     }
-    if (seenSet.has(a)) {
+    // Back on something still being compared: a cycle. No loop, and no answer
+    // either — equal by a route that never ends is not equal.
+    if (seenSet.has(a) || seenSet.has(b)) {
       return false;
     }
-    if (seenSet.has(b)) {
-      return false;
-    }
+    // Held only while a and b are being compared, not for the rest of the
+    // walk: the same object is rightly met again elsewhere — in an unordered
+    // array every element of a is tried against every element of b.
     seenSet.add(a);
     seenSet.add(b);
+    const result = compareComposite(a, b);
+    seenSet.delete(a);
+    seenSet.delete(b);
+    return result;
+  };
+  const compareComposite = (a, b) => {
     const aIsArray = Array.isArray(a);
     const bIsArray = Array.isArray(b);
     if (aIsArray !== bIsArray) {

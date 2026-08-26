@@ -54,7 +54,7 @@ return results;
   "single_element_different": false,
   "with_null_undefined": true,
   "with_nan": true,
-  "objects_different_order": false,
+  "objects_different_order": true,
   "with_functions": true
 }
 ```

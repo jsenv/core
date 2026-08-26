@@ -73,6 +73,12 @@ export const CONTROL_PROP_SET = new Set([
   // own_target.js.
   "ownTarget",
 
+  // What the command is about, when that is not what the control holds — the
+  // JS-valued form of the `command-value` attribute. A button opening a popup
+  // ON something says it here and keeps its own value free for what comes back
+  // (see --navi-open / --navi-done in commands.js).
+  "commandValue",
+
   "autoFocus",
   "autoFocusVisible",
   "autoFocusSelect",

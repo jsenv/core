@@ -60,10 +60,10 @@ return results;
 
 ```js
 {
-  "nested_arrays_outer_order": false,
+  "nested_arrays_outer_order": true,
   "nested_arrays_inner_order": true,
-  "nested_with_objects": false,
-  "nested_objects_inner_arrays": false
+  "nested_with_objects": true,
+  "nested_objects_inner_arrays": true
 }
 ```
 

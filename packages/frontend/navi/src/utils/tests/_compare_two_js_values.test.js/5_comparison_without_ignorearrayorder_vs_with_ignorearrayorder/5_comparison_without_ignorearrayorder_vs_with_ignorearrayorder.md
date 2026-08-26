@@ -60,7 +60,7 @@ return results;
   },
   "complex_nested": {
     "without_option": false,
-    "with_ignore_array_order": false
+    "with_ignore_array_order": true
   }
 }
 ```
