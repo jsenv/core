@@ -27,7 +27,8 @@
             <Link href="#colored">2. Colored badges</Link>
             <Link href="#shrinkwrap">3. Shrink wrap</Link>
             <Link href="#maxrows">4. Max rows</Link>
-            <Link href="#spacing">5. Custom spacing</Link>
+            <Link href="#max">5. Max badges</Link>
+            <Link href="#spacing">6. Custom spacing</Link>
           </Box>
         </Box>
       );
@@ -173,7 +174,7 @@
           <Box flex="y" spacing="m" alignX="start">
             <Text bold>maxRows={1}</Text>
             <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList maxLines={1}>
+              <BadgeList maxRows={1}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -187,7 +188,7 @@
 
             <Text bold>maxRows={2}</Text>
             <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList maxLines={2}>
+              <BadgeList maxRows={2}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -205,7 +206,7 @@
 
             <Text bold>maxRows={3}</Text>
             <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList maxLines={3}>
+              <BadgeList maxRows={3}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -237,7 +238,7 @@
                 maxWidth: "600px",
               }}
             >
-              <BadgeList maxLines={2}>
+              <BadgeList maxRows={2}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -252,6 +253,62 @@
                 <Badge>C++</Badge>
               </BadgeList>
             </Box>
+          </Box>
+        </Box>
+      );
+
+      const MaxSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#max" />
+            Max badges
+          </Title>
+          <Paragraph>
+            Use <code>max</code> to cap how many badges are rendered; the rest
+            become a single "+N more" badge. <code>fallback</code> is rendered
+            when there is no badge at all.
+          </Paragraph>
+          <Box flex="y" spacing="m" alignX="start">
+            <Text bold>max={3}</Text>
+            <BadgeList max={3}>
+              <Badge>HTML</Badge>
+              <Badge>CSS</Badge>
+              <Badge>JavaScript</Badge>
+              <Badge>TypeScript</Badge>
+              <Badge>React</Badge>
+            </BadgeList>
+
+            <Text bold>max={3} with exactly 3 badges</Text>
+            <BadgeList max={3}>
+              <Badge>HTML</Badge>
+              <Badge>CSS</Badge>
+              <Badge>JavaScript</Badge>
+            </BadgeList>
+
+            <Text bold>max={3} with 2 badges (nothing to hide)</Text>
+            <BadgeList max={3}>
+              <Badge>HTML</Badge>
+              <Badge>CSS</Badge>
+            </BadgeList>
+
+            <Text bold>
+              max={2} combined with maxRows={1}
+            </Text>
+            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+              <BadgeList max={6} maxRows={1}>
+                <Badge>HTML</Badge>
+                <Badge>CSS</Badge>
+                <Badge>JavaScript</Badge>
+                <Badge>TypeScript</Badge>
+                <Badge>React</Badge>
+                <Badge>Vue</Badge>
+                <Badge>Node.js</Badge>
+                <Badge>Python</Badge>
+              </BadgeList>
+            </Box>
+
+            <Text bold>no badge at all</Text>
+            <BadgeList fallback={<Text>No skill yet</Text>}>{[]}</BadgeList>
           </Box>
         </Box>
       );
@@ -283,6 +340,7 @@
           <ColoredSection />
           <WrappingSection />
           <MaxRowsSection />
+          <MaxSection />
           <SpacingSection />
         </Box>
       );

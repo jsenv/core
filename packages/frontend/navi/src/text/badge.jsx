@@ -1,9 +1,10 @@
-import { useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useControlProps } from "../control/control_hooks.jsx";
 import { useOwnTargetHidden } from "../control/own_target.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { BadgeListContext } from "./badge_list_context.js";
 import { Text } from "./text.jsx";
 
 const css = /* css */ `
@@ -119,7 +120,22 @@ const css = /* css */ `
   }
 `;
 
-export const Badge = ({ children, className, ...props }) => {
+export const Badge = (props) => {
+  const badgeList = useContext(BadgeListContext);
+  const slotStateRef = useRef();
+  if (badgeList) {
+    // Inside a BadgeList the badge doesn't render itself unconditionally: it
+    // takes a slot and stays out of the DOM when the list has none left, which
+    // is how the list caps what it shows. See badge_list_context.js.
+    const slotState = slotStateRef.current || (slotStateRef.current = {});
+    if (!badgeList.claimSlot(slotState)) {
+      return null;
+    }
+  }
+  return <BadgeUI {...props} />;
+};
+
+export const BadgeUI = ({ children, className, ...props }) => {
   import.meta.css = css;
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
