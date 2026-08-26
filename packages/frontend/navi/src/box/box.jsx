@@ -59,6 +59,10 @@ import {
   resolveInteractions,
   useInteractionsEffect,
 } from "../control/interaction/interactions.js";
+import {
+  OWN_TARGET_ATTRIBUTE,
+  useOwnTargetHidden,
+} from "../control/own_target.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
@@ -375,6 +379,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   childPropSet?: Set<string>,
  *   preventInitialTransition?: boolean,
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
+ *   ownTarget?: boolean | "always",
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -428,8 +433,24 @@ export const Box = (props) => {
     // card, a block of text — and reach the control it belongs to (which is what
     // carries the action, and what knows it is disabled) by looking for it.
     interactions,
+    // A press landing here is aimed AT this box, not at whatever it sits in — a
+    // cross an application draws in a card's corner, a badge on a row that
+    // travels. Read here rather than only on controls so it can be said on
+    // anything navi renders, without the element having to become one; all it
+    // does is write the attribute everyone else reads (see own_target.js).
+    ownTarget,
     ...rest
   } = props;
+  const ownTargetHidden = useOwnTargetHidden(props);
+  if (ownTarget) {
+    rest[OWN_TARGET_ATTRIBUTE] = typeof ownTarget === "string" ? ownTarget : "";
+    if (import.meta.dev && ownTarget === "refuse") {
+      console.warn(
+        `<Box ownTarget="refuse"> — refusing takes a gate, which a box does not have. Say it on the control this box is made of, or use "always" (never refuses) or the plain form (goes when the zone is held).`,
+        props,
+      );
+    }
+  }
   let as = asProp;
 
   // A box that scrolls is what gives header/footer/body their meaning, and
@@ -972,6 +993,13 @@ export const Box = (props) => {
   }
 
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
+
+  // After the hooks, never before: what is hidden here comes and goes with the
+  // zone around it, and a component that skipped half its hooks on the way out
+  // could not come back.
+  if (ownTargetHidden) {
+    return null;
+  }
 
   return (
     <TagName

@@ -10,8 +10,9 @@ for, and nothing is set up for a case that cannot happen:
 - **`shrinkWrap`** — a hidden clone of the list is laid out to find the widest
   wrapped row, and the list is narrowed to it so the last row isn't ragged.
   Opt-in outside a `Picker` (a picker draws a border around the list, so the
-  ragged edge shows; elsewhere the work would often go unseen), and skipped
-  whenever `maxLines` is in play.
+  ragged edge shows; elsewhere the work would often go unseen). With `maxLines`
+  the rows are read first, at the full width, and the list is narrowed once the
+  surplus is gone — in place, no clone.
 - **`maxLines`** — every badge is laid out once, hidden; where the rows fell is
   read; the list is rendered again with the badges that fit and a `+N more`
   badge for the rest. Both renders land in the same frame. A width change of

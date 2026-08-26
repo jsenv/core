@@ -133,7 +133,8 @@ const useBadgeRegistry = (children, enabled) => {
  * not the same in each. Nothing is set up for a case that cannot happen: a
  * plain list is one element holding its children as-is — no registry, no
  * effect —, a capped one collects its badges but measures nothing, and only
- * shrinkWrap ever builds the measurement ghost.
+ * shrinkWrap on its own builds the measurement ghost: under maxLines the list
+ * is measured in place, once the rows are known.
  *
  * @param {import("preact").ComponentChildren} [fallback]
  *   Rendered in place of the badges when there is none. Without it an empty
@@ -148,8 +149,9 @@ const useBadgeRegistry = (children, enabled) => {
  *   Narrows the list down to its widest row so the last row isn't ragged.
  *   Defaults to true inside a <Picker> — the trigger draws a border around the
  *   list, so the ragged edge shows — and false elsewhere, where the work would
- *   often go unseen: opt in where an edge is visible. Ignored when maxLines is
- *   in play, which needs the full width to know where the rows fall.
+ *   often go unseen: opt in where an edge is visible. Composes with maxLines:
+ *   the rows are read at the full width first, and the list is narrowed once
+ *   the surplus is gone.
  * @param {number} [max]
  *   Caps how many badges are rendered; the surplus becomes a "+N" badge, which
  *   takes one of the max slots.
@@ -169,9 +171,13 @@ export const BadgeList = (props) => {
   const { shrinkWrap = maxLinesFromAbove !== undefined } = props;
 
   if (maxLinesResolved !== undefined) {
-    // shrinkWrap is dropped on purpose: it narrows the list down to its widest
-    // row, which would re-wrap the badges under the cap just measured.
-    return <BadgeListMaxLines {...props} maxLines={maxLinesResolved} />;
+    return (
+      <BadgeListMaxLines
+        {...props}
+        maxLines={maxLinesResolved}
+        shrinkWrap={shrinkWrap}
+      />
+    );
   }
   if (shrinkWrap) {
     return <BadgeListShrinkWrap {...props} />;
@@ -291,6 +297,7 @@ const BadgeListMaxLines = ({
   children,
   max,
   maxLines,
+  shrinkWrap,
   ...boxProps
 }) => {
   const registry = useBadgeRegistry(children, true);
@@ -309,8 +316,29 @@ const BadgeListMaxLines = ({
   // out of the cap and nothing has to be watched.
   const watchesResize = fit !== null && fit.count > 1;
 
+  // The list's own width. While the rows are being read the list takes all the
+  // room it is given — a width kept from an earlier shrink wrap would fold the
+  // badges under it. Once the surplus is gone, shrinkWrap narrows the list to
+  // its widest row, measured where the badges stand: nothing is painted before
+  // the effect below has run, so no clone is needed.
+  useLayoutEffect(() => {
+    const visibleEl = visibleRef.current;
+    if (!visibleEl) {
+      return;
+    }
+    visibleEl.style.width = "";
+    if (fit === null || !shrinkWrap) {
+      return;
+    }
+    const widestRowWidth = measureWidestChildRow(visibleEl);
+    if (widestRowWidth !== null) {
+      visibleEl.style.width = `${Math.ceil(widestRowWidth)}px`;
+    }
+  }, [fit, shrinkWrap]);
+
   // Runs after every render, which is when the badges have registered and the
-  // DOM holds whatever this render asked for.
+  // DOM holds whatever this render asked for, at the width the effect above
+  // gave it.
   useLayoutEffect(() => {
     const visibleEl = visibleRef.current;
     if (!visibleEl) {
@@ -346,7 +374,8 @@ const BadgeListMaxLines = ({
       // And not every width change either. Nothing guarantees an ancestor whose
       // width does not follow its content (a column with align-items: start
       // sizes every row to what is inside it), so rendering every badge widens
-      // what is being watched and dropping the surplus narrows it right back.
+      // what is being watched and dropping the surplus — then shrink wrapping
+      // what is left — narrows it right back.
       // Those two widths are this list talking to itself; measuring again on
       // them never ends. Any other width is the room around it changing.
       const width = outerParent.getBoundingClientRect().width;

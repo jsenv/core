@@ -563,18 +563,25 @@ about a value the affordance does not write, so answering "read-only" to a
 gesture that was never going to write anything says nothing true. Use it only
 when that is really the case.
 
-#### On an element you draw yourself
+#### On something you draw yourself
 
-The claim is one attribute, and nothing is asked of the element carrying it —
-`ownTarget` is only the prop that writes it on a navi control:
+`ownTarget` is a `Box` prop, so an affordance does not have to become a control
+to claim its press — a pastille positioned in a card's corner by its own class
+stays exactly what it was drawn as:
 
 ```jsx
-<button class="court_side" data-own-target="always" onClick={explain}>
+<Box as="button" ownTarget="always" className="court_side" onClick={explain}>
 ```
 
-That is what the controls above read, and what the gesture readers read
-(`data-drag-handle`, `data-drag-ignore` and friends are the same vocabulary). An
-application keeps its own drawing and gets the press ownership all the same.
+All the prop does is write one attribute, `data-own-target`, whose value is the
+mode. That attribute is the claim: it is what the controls above read, and what
+the gesture readers read (`data-drag-handle`, `data-drag-ignore` and friends are
+the same vocabulary). Writing it by hand on an element navi does not render
+works and is the last resort — a typo there is silent, whereas the prop is
+spelled once.
+
+A box is not a control and has no gate of its own, so `"refuse"` means nothing
+on one (navi says so in dev); say it on the control the box is made of.
 
 #### navi steps back; a plain `onClick` does not
 

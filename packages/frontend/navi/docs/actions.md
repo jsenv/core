@@ -168,6 +168,37 @@ To merely REMEMBER the value rather than send it, neither is the answer: bind a
 signal and drop the callback entirely — see
 [control_value.md](./control_value.md).
 
+## When the press is neither: an `onClick` that is right
+
+A press that runs work is an `action`; one that reports a value is a `uiAction`;
+one that asks something of a control near it is a `command` (a value proposed is
+`--navi-update`, see
+[control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)).
+Reaching for a plain `onClick` usually means one of those three was missed.
+
+One press is none of them: **opening something and handing it a continuation**.
+A shared dialog opened from several rows — "save this guest" — is told which row
+it was opened for, and told what to do once it succeeds, and the second half is
+a closure. Commands carry values through the DOM; they do not carry closures,
+and inventing a way for them to would be worse than the handler:
+
+```jsx
+// ✓ the popup is opened WITH something, and told what to do after
+<Button ownTarget="always" onClick={() => promptGuestSave({ name, onCreated })}>
+```
+
+`ownTarget` is what makes this safe rather than a hole: an own target's
+`onClick` runs from inside its own interaction gate, not from the DOM (see
+[interactions.md](./interactions.md#an-affordance-inside-somebody-elses-box-owntarget)).
+Everywhere else the objection stands — an `onClick` writing a signal is not
+gated, and fires on a read-only control.
+
+The half that IS expressible should still be expressed: `--navi-open` carries a
+value to the popup (`<Button command="--navi-open" commandFor="x" value={…}>`,
+read in the popup's `onOpen`), and the popup receives the element that asked. So
+a press that only has to say WHICH is a command; only the continuation keeps a
+handler.
+
 ## `uiAction` mirrors the state, it does not report a gesture
 
 `uiAction` fires whenever the control's state changes, whoever changed it. The
