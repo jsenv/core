@@ -109,7 +109,6 @@ const PickerArray = (props) => {
 
   return (
     <Next
-      maxLines="3"
       ui={<PickerArrayUI />}
       {...props}
       type="navi_js"

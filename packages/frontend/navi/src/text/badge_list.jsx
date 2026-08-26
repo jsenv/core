@@ -177,22 +177,21 @@ export const BadgeList = (props) => {
 
 // Nothing to measure, cap, or count: the badges render themselves — no
 // registry, no context, no effect, one element.
-const BadgeListPlain = (props) => {
+const BadgeListPlain = ({ children, ...boxProps }) => {
   return (
-    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...props}>
-      {props.children}
+    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...boxProps}>
+      {children}
     </Box>
   );
 };
 
 // max/fallback need the badge count, so the badges are collected — but nothing
 // is measured and no DOM is watched.
-const BadgeListCounted = (props) => {
-  const { fallback, children, max } = props;
+const BadgeListCounted = ({ fallback, children, max, ...boxProps }) => {
   const registry = useBadgeRegistry(children, true);
 
   return (
-    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...props}>
+    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...boxProps}>
       <BadgeListChildren registry={registry} max={max} fallback={fallback}>
         {children}
       </BadgeListChildren>
@@ -200,8 +199,7 @@ const BadgeListCounted = (props) => {
   );
 };
 
-const BadgeListShrinkWrap = (props) => {
-  const { fallback, children, max } = props;
+const BadgeListShrinkWrap = ({ fallback, children, max, ...restProps }) => {
   const registry = useBadgeRegistry(
     children,
     max !== undefined || fallback !== undefined,
@@ -260,7 +258,7 @@ const BadgeListShrinkWrap = (props) => {
     };
   }, [children]);
 
-  const boxProps = { ...BADGE_LIST_PROPS, ...props };
+  const boxProps = { ...BADGE_LIST_PROPS, ...restProps };
   return (
     // inline flex, not a plain block: the wrapper must sit on the line the way
     // the list itself would, otherwise the list lands a pixel low in some
@@ -283,8 +281,13 @@ const BadgeListShrinkWrap = (props) => {
   );
 };
 
-const BadgeListMaxLines = (props) => {
-  const { fallback, children, max, maxLines } = props;
+const BadgeListMaxLines = ({
+  fallback,
+  children,
+  max,
+  maxLines,
+  ...boxProps
+}) => {
   const registry = useBadgeRegistry(children, true);
   const visibleRef = useRef();
 
@@ -363,7 +366,7 @@ const BadgeListMaxLines = (props) => {
     <Box
       baseClassName="navi_badge_list"
       {...BADGE_LIST_PROPS}
-      {...props}
+      {...boxProps}
       ref={visibleRef}
       navi-badge-list-measuring={measuring ? "" : undefined}
     >

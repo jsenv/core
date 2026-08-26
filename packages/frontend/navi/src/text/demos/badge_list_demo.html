@@ -26,7 +26,7 @@
             <Link href="#default">1. Default badges</Link>
             <Link href="#colored">2. Colored badges</Link>
             <Link href="#shrinkwrap">3. Shrink wrap</Link>
-            <Link href="#maxrows">4. Max rows</Link>
+            <Link href="#maxlines">4. Max lines</Link>
             <Link href="#max">5. Max badges</Link>
             <Link href="#spacing">6. Custom spacing</Link>
           </Box>
@@ -93,11 +93,9 @@
             element boundary.
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
-            <Text bold>
-              <code>shrinkWrap</code> — snaps to longest line
-            </Text>
+            <Text bold>Default — blank space on the right</Text>
             <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList shrinkWrap>
+              <BadgeList>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -108,9 +106,11 @@
               </BadgeList>
             </Box>
 
-            <Text bold>Default — blank space on the right</Text>
+            <Text bold>
+              <code>shrinkWrap</code> — snaps to longest line
+            </Text>
             <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList>
+              <BadgeList shrinkWrap>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -162,11 +162,11 @@
         </Box>
       );
 
-      const MaxRowsSection = () => (
+      const MaxLinesSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <Link anchor href="#maxrows" />
-            Max rows
+            <Link anchor href="#maxlines" />
+            Max lines
           </Title>
           <Paragraph>
             Use <code>maxLines</code> to cap how many rows of badges are
@@ -382,7 +382,7 @@
           <DefaultSection />
           <ColoredSection />
           <WrappingSection />
-          <MaxRowsSection />
+          <MaxLinesSection />
           <MaxSection />
           <SpacingSection />
         </Box>

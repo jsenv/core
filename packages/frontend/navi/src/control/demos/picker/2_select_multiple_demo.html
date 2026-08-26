@@ -151,15 +151,6 @@
         ]);
         const selectedArray = selectedSignal.value;
 
-        const selectedSignalMr1 = useSignal([
-          "Apple",
-          "Banana",
-          "Cherry",
-          "Date",
-          "Elderberry",
-        ]);
-        const selectedArrayMr1 = selectedSignalMr1.value;
-
         const selectedSignalMr2 = useSignal([
           "Apple",
           "Banana",
@@ -207,42 +198,6 @@
                         index={i}
                         value={opt}
                         selected={selectedArray.includes(opt)}
-                        padding="s"
-                        spacing="s"
-                      >
-                        {opt}
-                      </List.Item>
-                    ))}
-                  </List>
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Fruits <code style="font-weight:normal">(maxLines=1)</code>
-                </Label>
-                <Picker
-                  type="array"
-                  name="multiselect_text_maxrows1"
-                  placeholder="Select fruits, a very long placeholder to trigger multiline behavior"
-                  value={selectedArrayMr1}
-                  uiAction={(v) => {
-                    selectedSignalMr1.value = v;
-                  }}
-                  action={(v) => {
-                    selectedSignalMr1.value = v;
-                  }}
-                  maxWidth="150"
-                  maxLines={1}
-                >
-                  <List selectable multiple command="--navi-update">
-                    {FRUIT_OPTIONS.map((opt, i) => (
-                      <List.Item
-                        selectable
-                        key={opt}
-                        id={`${opt}_chip_mr1`}
-                        index={i}
-                        value={opt}
-                        selected={selectedArrayMr1.includes(opt)}
                         padding="s"
                         spacing="s"
                       >
@@ -306,7 +261,7 @@
         ]);
         const selectedArray = selectedSignal.value;
 
-        const selectedSignalMr1 = useSignal([
+        const selectedSignalMr2 = useSignal([
           "HTML",
           "CSS",
           "JavaScript",
@@ -314,7 +269,7 @@
           "React",
           "Vue",
         ]);
-        const selectedArrayMr1 = selectedSignalMr1.value;
+        const selectedArrayMr2 = selectedSignalMr2.value;
 
         const chipsFallback = (
           <Badge
@@ -394,32 +349,32 @@
               </Field>
               <Field vertical>
                 <Label>
-                  Skills <code style="font-weight:normal">(maxLines=1)</code>
+                  Skills <code style="font-weight:normal">(maxLines=2)</code>
                 </Label>
                 <Picker
                   type="array"
-                  name="multiselect_chips_simple_mr1"
-                  value={selectedArrayMr1}
+                  name="multiselect_chips_simple_mr2"
+                  value={selectedArrayMr2}
                   ui={
                     <BadgeList fallback={chipsFallback}>
-                      {selectedArrayMr1.map((opt) => (
+                      {selectedArrayMr2.map((opt) => (
                         <Badge key={opt}>{opt}</Badge>
                       ))}
                     </BadgeList>
                   }
                   uiAction={(v) => {
-                    selectedSignalMr1.value = v;
+                    selectedSignalMr2.value = v;
                   }}
                   action={(v) => {
-                    selectedSignalMr1.value = v;
+                    selectedSignalMr2.value = v;
                   }}
                   maxWidth="150"
-                  maxLines={1}
+                  maxLines={2}
                 >
                   <List
                     selectable
                     multiple
-                    id="skills_list_simple_mr1"
+                    id="skills_list_simple_mr2"
                     command="--navi-update"
                     style="min-width: 180px"
                   >
@@ -427,10 +382,10 @@
                       <List.Item
                         selectable
                         key={opt}
-                        id={`simple_mr1_${opt}`}
+                        id={`simple_mr2_${opt}`}
                         index={i}
                         value={opt}
-                        selected={selectedArrayMr1.includes(opt)}
+                        selected={selectedArrayMr2.includes(opt)}
                         padding="s"
                         spacing="s"
                       >
@@ -518,27 +473,32 @@
         );
       };
 
-      const ChipsWithDeleteMaxLines1 = () => {
-        const selectedSignalMr1 = useSignal([
+      const ChipsWithDeleteMaxLines2 = () => {
+        const selectedSignalMr2 = useSignal([
           "HTML",
           "CSS",
           "JavaScript",
           "TypeScript",
+          "React",
+          "Vue",
+          "Node.js",
+          "Python",
         ]);
-        const selectedArrayMr1 = selectedSignalMr1.value;
+        const selectedArrayMr2 = selectedSignalMr2.value;
 
         return (
           <Field vertical>
             <Label>
-              Skills <code style="font-weight:normal">(maxLines=1)</code>
+              Skills <code style="font-weight:normal">(maxLines=2)</code>
             </Label>
             <Picker
               type="array"
-              name="multiselect_chips_delete_mr1"
-              value={selectedArrayMr1}
+              name="multiselect_chips_delete_mr2"
+              value={selectedArrayMr2}
+              maxLines={2}
               ui={
                 <BadgeList>
-                  {selectedArrayMr1.map((opt) => (
+                  {selectedArrayMr2.map((opt) => (
                     <Picker.Chip key={opt} value={opt}>
                       <Text>{opt}</Text>
                     </Picker.Chip>
@@ -546,10 +506,10 @@
                 </BadgeList>
               }
               uiAction={(v) => {
-                selectedSignalMr1.value = v;
+                selectedSignalMr2.value = v;
               }}
               action={(v) => {
-                selectedSignalMr1.value = v;
+                selectedSignalMr2.value = v;
               }}
               maxWidth="200"
             >
@@ -563,10 +523,10 @@
                   <List.Item
                     selectable
                     key={opt}
-                    id={`mr1_${opt}`}
+                    id={`mr2_${opt}`}
                     index={i}
                     value={opt}
-                    selected={selectedArrayMr1.includes(opt)}
+                    selected={selectedArrayMr2.includes(opt)}
                     padding="s"
                     spacing="s"
                   >
@@ -648,7 +608,7 @@
             </p>
             <Box flex="y" spacing="m">
               <ChipsWithDeleteDefault />
-              <ChipsWithDeleteMaxLines1 />
+              <ChipsWithDeleteMaxLines2 />
               <ChipsWithDeleteReadOnly />
             </Box>
           </div>
