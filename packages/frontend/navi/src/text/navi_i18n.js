@@ -387,6 +387,10 @@ naviI18n.addAll({
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
   },
+  "constraint.readonly.selection": {
+    fr: "La sélection ne peut plus être modifiée.",
+    en: "This selection cannot be changed.",
+  },
   "constraint.readonly.item": {
     fr: "Cet élément n'est pas disponible.",
     en: "This item is not available.",
