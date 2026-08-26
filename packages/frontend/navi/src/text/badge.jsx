@@ -122,15 +122,14 @@ const css = /* css */ `
 
 export const Badge = (props) => {
   const badgeList = useContext(BadgeListContext);
-  const slotStateRef = useRef();
+  const entryStateRef = useRef();
   if (badgeList) {
-    // Inside a BadgeList the badge doesn't render itself unconditionally: it
-    // takes a slot and stays out of the DOM when the list has none left, which
-    // is how the list caps what it shows. See badge_list_context.js.
-    const slotState = slotStateRef.current || (slotStateRef.current = {});
-    if (!badgeList.claimSlot(slotState)) {
-      return null;
-    }
+    // Inside a BadgeList the badge renders nothing: it hands itself over and
+    // the list renders it, which is how the list gets to see them all before
+    // deciding how many it shows. See badge_list_context.js.
+    const entryState = entryStateRef.current || (entryStateRef.current = {});
+    badgeList.register(entryState, props);
+    return null;
   }
   return <BadgeUI {...props} />;
 };

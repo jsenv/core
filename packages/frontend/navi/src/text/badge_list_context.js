@@ -1,37 +1,35 @@
 import { createContext } from "preact";
 
 // Put around its children by BadgeList so a Badge below knows it is inside one.
-// A badge then no longer decides on its own that it renders: it takes a slot
-// from the list as it renders — badges render in tree order, so the slots come
-// out in source order — and the list caps how many it hands out, turning the
-// rest into a single "+N" badge. This is what lets the list count and cap its
-// badges without walking the children vnodes.
+// A badge then renders nothing at all: it hands its props to the list and the
+// list renders it. Badges register in tree order, so by the time the list gets
+// to its own content it holds them all, in source order, and knows how many
+// there are before deciding what to show — without ever walking children
+// vnodes, and without rendering a badge it then has to take back.
 export const BadgeListContext = createContext(null);
 
-export const createBadgeSlotRegistry = () => {
+export const createBadgeRegistry = () => {
   let pass = 0;
-  let count = 0;
-  let limit = Infinity;
+  let entries = [];
 
   return {
     // Called by BadgeList at the top of every render, before the badges below
-    // take their slots again.
-    startPass: (passLimit) => {
+    // register again.
+    startPass: () => {
       pass++;
-      count = 0;
-      limit = passLimit;
+      entries = [];
     },
-    // slotState is the badge's own memory. A badge that re-renders on its own
-    // (a signal it reads changed) must not be counted twice, so within a pass
-    // it keeps the slot it already took.
-    claimSlot: (slotState) => {
-      if (slotState.pass !== pass) {
-        slotState.pass = pass;
-        slotState.index = count;
-        count++;
+    // entryState is the badge's own memory. A badge that re-renders on its own
+    // must update its entry, not append a second one.
+    register: (entryState, props) => {
+      if (entryState.pass === pass) {
+        entries[entryState.index] = props;
+        return;
       }
-      return slotState.index < limit;
+      entryState.pass = pass;
+      entryState.index = entries.length;
+      entries.push(props);
     },
-    getCount: () => count,
+    getEntries: () => entries,
   };
 };

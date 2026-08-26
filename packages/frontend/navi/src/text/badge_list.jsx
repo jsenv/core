@@ -4,10 +4,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { stringifySpacingStyle } from "../box/box_style_util.js";
 import { BadgeUI } from "./badge.jsx";
-import {
-  BadgeListContext,
-  createBadgeSlotRegistry,
-} from "./badge_list_context.js";
+import { BadgeListContext, createBadgeRegistry } from "./badge_list_context.js";
 import { naviI18n } from "./navi_i18n.js";
 
 const css = /* css */ `
@@ -120,18 +117,15 @@ export const BadgeList = ({
     };
   }, [shrinkWrapEnabled, children]);
 
-  // The badges below report themselves as they render instead of being counted
+  // The badges below hand themselves over as they render instead of being read
   // upfront from the children vnodes: see badge_list_context.js. It only holds
   // because BadgeList keeps no state of its own, so it never re-renders alone —
   // it re-renders with its parent, which hands it fresh children vnodes and
-  // makes every badge below run again. A badge re-rendering on its own is fine
-  // (the registry keeps the slot it already gave it).
+  // makes every badge below run again.
   const registryRef = useRef();
   const registry =
-    registryRef.current || (registryRef.current = createBadgeSlotRegistry());
-  // One slot is always kept for the "+N" badge, so a list of exactly `max`
-  // badges shows `max - 1` of them and "+1 more" — still `max` things on screen.
-  registry.startPass(max === undefined ? Infinity : max - 1);
+    registryRef.current || (registryRef.current = createBadgeRegistry());
+  registry.startPass();
 
   const spacing = props.spacing === undefined ? "xs" : props.spacing;
   const sharedProps = {
@@ -153,7 +147,7 @@ export const BadgeList = ({
   }
 
   return (
-    <Box relative>
+    <Box relative inline flex>
       {/* Measurement ghost: populated by cloning the visible element's DOM
           nodes in the layout effect above — not rendered by React — so the
           children's components are never instantiated twice. */}
@@ -166,28 +160,40 @@ export const BadgeList = ({
       />
       {/* Visible element */}
       <Box baseClassName="navi_badge_list" {...sharedProps} ref={visibleRef}>
+        {/* Registers the badges, renders nothing */}
         <BadgeListContext.Provider value={registry}>
           {children}
         </BadgeListContext.Provider>
-        {/* Renders after the badges above — that is what lets it know how many
-            there were. Uses BadgeUI so it doesn't take a slot of its own. */}
-        <BadgeListTail registry={registry} fallback={fallback} max={max} />
+        {/* Renders them, after they all registered */}
+        <BadgeListContent registry={registry} fallback={fallback} max={max} />
       </Box>
     </Box>
   );
 };
 
-const BadgeListTail = ({ registry, fallback, max }) => {
-  const count = registry.getCount();
+const BadgeListContent = ({ registry, fallback, max }) => {
+  const entries = registry.getEntries();
+  const count = entries.length;
   if (count === 0) {
     return fallback;
   }
-  if (max === undefined || count <= max - 1) {
-    return null;
-  }
+  // The "+N" badge stands among the badges, so it takes one of the max slots
+  // when there is a surplus to name. A list of exactly `max` badges has nothing
+  // to name and keeps all of them.
+  const hasMore = max !== undefined && count > max;
+  const shownEntries = hasMore ? entries.slice(0, max - 1) : entries;
   return (
-    <BadgeUI className="navi_badge_more">
-      {naviI18n("badge_list.more", { count: count - (max - 1) })}
-    </BadgeUI>
+    <>
+      {shownEntries.map((badgeProps, index) => (
+        // Keyed by position: a badge's own key went to the registering vnode
+        // above and doesn't reach here, and badges keep no state worth moving.
+        <BadgeUI key={index} {...badgeProps} />
+      ))}
+      {hasMore && (
+        <BadgeUI className="navi_badge_more">
+          {naviI18n("badge_list.more", { count: count - (max - 1) })}
+        </BadgeUI>
+      )}
+    </>
   );
 };
