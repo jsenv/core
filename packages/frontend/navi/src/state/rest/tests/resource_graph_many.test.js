@@ -46,4 +46,113 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { dataAfterGetMany, dataAfterPut };
   });
+
+  test(".many() links game to players via GET_MANY", async () => {
+    const USER = resource("user", {
+      PATCH: async ({ id, name }) => ({ id, name }),
+    });
+    const GAME = resource("game", {
+      POST: async ({ name }) => ({ id: 1, name }),
+    });
+    const GAME_PLAYERS = GAME.many("players", USER, {
+      GET_MANY: async ({ id }) => ({
+        id,
+        players: [
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+        ],
+      }),
+    });
+    const capturePlayers = () => [...GAME.store.arraySignal.value[0].players];
+
+    await GAME.POST({ name: "chess" });
+    const playersBeforeLoad = capturePlayers();
+
+    await GAME_PLAYERS.GET_MANY({ id: 1 });
+    const playersAfterLoad = capturePlayers();
+    const userStore = USER.store.arraySignal.value;
+
+    // players are entries of the shared user store: updating the user propagates
+    await USER.PATCH({ id: 2, name: "Bob Updated" });
+    const playersAfterUserPatch = capturePlayers();
+
+    return {
+      playersBeforeLoad,
+      playersAfterLoad,
+      userStore,
+      playersAfterUserPatch,
+    };
+  });
+
+  test(".many() DELETE removes one child from the relationship only", async () => {
+    const USER = resource("user");
+    const GAME = resource("game", {
+      POST: async ({ name }) => ({ id: 1, name }),
+    });
+    const GAME_PLAYERS = GAME.many("players", USER, {
+      GET_MANY: async ({ id }) => ({
+        id,
+        players: [
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+        ],
+      }),
+      DELETE: async ({ id, userId }) => [id, userId],
+    });
+    const capturePlayers = () => [...GAME.store.arraySignal.value[0].players];
+
+    await GAME.POST({ name: "chess" });
+    await GAME_PLAYERS.GET_MANY({ id: 1 });
+    const playersBeforeDelete = capturePlayers();
+
+    const deleteResult = await GAME_PLAYERS.DELETE({ id: 1, userId: 2 });
+    const playersAfterDelete = capturePlayers();
+    // the user itself is not deleted, only the relationship
+    const userStoreAfterDelete = USER.store.arraySignal.value;
+
+    return {
+      playersBeforeDelete,
+      deleteResult,
+      playersAfterDelete,
+      userStoreAfterDelete,
+    };
+  });
+
+  test(".many() DELETE_MANY removes several children from the relationship only", async () => {
+    const USER = resource("user");
+    const GAME = resource("game", {
+      POST: async ({ name }) => ({ id: 1, name }),
+    });
+    const GAME_PLAYERS = GAME.many("players", USER, {
+      GET_MANY: async ({ id }) => ({
+        id,
+        players: [
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+          { id: 3, name: "Charlie" },
+        ],
+      }),
+      DELETE_MANY: async ({ id, userIds }) => [id, userIds],
+    });
+    const capturePlayers = () => [...GAME.store.arraySignal.value[0].players];
+
+    await GAME.POST({ name: "chess" });
+    await GAME_PLAYERS.GET_MANY({ id: 1 });
+    const playersBeforeDelete = capturePlayers();
+
+    const deleteManyResult = await GAME_PLAYERS.DELETE_MANY({
+      id: 1,
+      userIds: [1, 3],
+    });
+    const playersAfterDelete = capturePlayers();
+    // users themselves are not deleted, only the relationship
+    const userStoreAfterDelete = USER.store.arraySignal.value;
+
+    return {
+      playersBeforeDelete,
+      deleteManyResult,
+      playersAfterDelete,
+      userStoreAfterDelete,
+    };
+  });
 });
