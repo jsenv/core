@@ -89,7 +89,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { useRef } from "preact/hooks";
+      import { useLayoutEffect, useRef, useState } from "preact/hooks";
       import {
         Box,
         Field,
@@ -137,6 +137,7 @@
           <TextDisplay />
           <ChipsSimpleDisplay />
           <ChipsWithDeleteDisplay />
+          <EmptyHeightDisplay />
         </Box>
       );
 
@@ -614,6 +615,376 @@
           </div>
         );
       };
+
+      // ── 4. Empty picker: the BadgeList fallback ───────────────────────────
+
+      const formatPx = (value) => {
+        const rounded = Math.round(value * 100) / 100;
+        return `${rounded}px`;
+      };
+
+      const MEASURE_COLOR = "#d6336c";
+      const MEASURE_GAP = 8;
+      const MEASURE_TICK = 10;
+
+      // Wraps a single element and draws dotted rulers with its exact rendered
+      // width and height, so two states can be compared pixel per pixel.
+      // Same helper as the search input demo (07_input_search_demo.html), plus
+      // `innerSelector`: a descendant measured along, for the part of the
+      // element that actually holds the content — here the picker's value
+      // slot, whose changes the picker box can hide.
+      const Measured = ({ onMeasure, innerSelector, children }) => {
+        const wrapperRef = useRef(null);
+        const [size, setSize] = useState(null);
+
+        useLayoutEffect(() => {
+          const wrapper = wrapperRef.current;
+          const element = wrapper.firstElementChild;
+          if (!element) {
+            return undefined;
+          }
+          const inner = innerSelector
+            ? element.querySelector(innerSelector)
+            : null;
+          const observer = new ResizeObserver(() => {
+            const rect = element.getBoundingClientRect();
+            const nextSize = {
+              width: rect.width,
+              height: rect.height,
+              innerHeight: inner ? inner.getBoundingClientRect().height : null,
+            };
+            setSize((currentSize) => {
+              if (
+                currentSize &&
+                currentSize.width === nextSize.width &&
+                currentSize.height === nextSize.height &&
+                currentSize.innerHeight === nextSize.innerHeight
+              ) {
+                return currentSize;
+              }
+              return nextSize;
+            });
+          });
+          observer.observe(element);
+          if (inner) {
+            observer.observe(inner);
+          }
+          return () => {
+            observer.disconnect();
+          };
+        }, []);
+
+        useLayoutEffect(() => {
+          if (size && onMeasure) {
+            onMeasure(size);
+          }
+        }, [size, onMeasure]);
+
+        const tickStyle = {
+          position: "absolute",
+          background: "none",
+          borderColor: MEASURE_COLOR,
+          borderStyle: "dotted",
+          borderWidth: 0,
+        };
+        const labelStyle = {
+          position: "absolute",
+          fontSize: "11px",
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          color: MEASURE_COLOR,
+          background: "#fff",
+          padding: "0 3px",
+          whiteSpace: "nowrap",
+          lineHeight: "14px",
+        };
+
+        return (
+          <div
+            style={{
+              position: "relative",
+              // inline-flex, not inline-block: an inline-block wraps its child
+              // in a line box, whose strut adds descender room under the
+              // child — the wrapper ends up a few pixels taller than what it
+              // holds, and the rulers drawn on it miss the picker's edges. A
+              // flex container has no line box: it hugs its item exactly.
+              display: "inline-flex",
+              marginBottom: `${MEASURE_GAP + MEASURE_TICK + 16}px`,
+              marginRight: "120px",
+            }}
+          >
+            <div ref={wrapperRef} style={{ display: "inline-flex" }}>
+              {children}
+            </div>
+            {size && (
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                }}
+              >
+                {/* width ruler, below the element */}
+                <div
+                  style={{
+                    ...tickStyle,
+                    left: 0,
+                    top: `${-MEASURE_TICK}px`,
+                    height: `calc(100% + ${MEASURE_GAP + MEASURE_TICK * 2}px)`,
+                    borderLeftWidth: "1px",
+                  }}
+                />
+                <div
+                  style={{
+                    ...tickStyle,
+                    left: "100%",
+                    top: `${-MEASURE_TICK}px`,
+                    height: `calc(100% + ${MEASURE_GAP + MEASURE_TICK * 2}px)`,
+                    borderLeftWidth: "1px",
+                  }}
+                />
+                <div
+                  style={{
+                    ...tickStyle,
+                    left: 0,
+                    width: "100%",
+                    top: `calc(100% + ${MEASURE_GAP + MEASURE_TICK}px)`,
+                    borderTopWidth: "1px",
+                  }}
+                />
+                <div
+                  style={{
+                    ...labelStyle,
+                    left: "50%",
+                    top: `calc(100% + ${MEASURE_GAP + MEASURE_TICK}px)`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  w {formatPx(size.width)}
+                </div>
+
+                {/* height ruler, on the right of the element */}
+                <div
+                  style={{
+                    ...tickStyle,
+                    top: 0,
+                    left: `${-MEASURE_TICK}px`,
+                    width: `calc(100% + ${MEASURE_GAP + MEASURE_TICK * 2}px)`,
+                    borderTopWidth: "1px",
+                  }}
+                />
+                <div
+                  style={{
+                    ...tickStyle,
+                    top: "100%",
+                    left: `${-MEASURE_TICK}px`,
+                    width: `calc(100% + ${MEASURE_GAP + MEASURE_TICK * 2}px)`,
+                    borderTopWidth: "1px",
+                  }}
+                />
+                <div
+                  style={{
+                    ...tickStyle,
+                    top: 0,
+                    height: "100%",
+                    left: `calc(100% + ${MEASURE_GAP + MEASURE_TICK}px)`,
+                    borderLeftWidth: "1px",
+                  }}
+                />
+                {/* Anchored to the right of the ruler line, not centered on
+                    it: two lines of text would otherwise sit half over the
+                    element. */}
+                <div
+                  style={{
+                    ...labelStyle,
+                    top: "50%",
+                    left: `calc(100% + ${MEASURE_GAP + MEASURE_TICK + 6}px)`,
+                    transform: "translateY(-50%)",
+                  }}
+                >
+                  h {formatPx(size.height)}
+                  {size.innerHeight !== null && (
+                    <>
+                      <br />
+                      value {formatPx(size.innerHeight)}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Reads the two measurements and tells whether both states match — the
+      // box, and the value slot inside it when one was measured.
+      const MeasureDelta = ({ a, b, labelA, labelB }) => {
+        if (!a || !b) {
+          return null;
+        }
+        const round = (n) => Math.round(n * 100) / 100;
+        const signed = (n) => `${n > 0 ? "+" : ""}${n}px`;
+        const widthDelta = round(b.width - a.width);
+        const heightDelta = round(b.height - a.height);
+        const hasInner = a.innerHeight !== null && b.innerHeight !== null;
+        const innerDelta = hasInner ? round(b.innerHeight - a.innerHeight) : 0;
+        const pixelPerfect =
+          widthDelta === 0 && heightDelta === 0 && innerDelta === 0;
+        return (
+          <div
+            style={{
+              marginTop: "8px",
+              fontSize: "12px",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              color: pixelPerfect ? "#2b8a3e" : "#c92a2a",
+            }}
+          >
+            {labelB} − {labelA}: Δw {signed(widthDelta)} · Δh{" "}
+            {signed(heightDelta)}
+            {hasInner ? ` · Δh value slot ${signed(innerDelta)}` : ""}{" "}
+            {pixelPerfect ? "✓ same size" : "✗ mismatch"}
+          </div>
+        );
+      };
+
+      // One picker drawn from an array, with what it is given as chips. What
+      // the list falls back on when empty is the whole point of the section.
+      const ChipsPicker = ({ name, selected, fallback }) => (
+        <Picker
+          type="array"
+          name={name}
+          value={selected}
+          placeholder="Select skills…"
+          ui={
+            <BadgeList fallback={fallback}>
+              {selected.map((opt) => (
+                <Badge key={opt}>{opt}</Badge>
+              ))}
+            </BadgeList>
+          }
+          action={() => {}}
+          width="200"
+        >
+          <List selectable multiple command="--navi-update">
+            {SKILL_OPTIONS.slice(0, 4).map((opt, i) => (
+              <List.Item
+                selectable
+                key={opt}
+                id={`${name}_${opt}`}
+                index={i}
+                value={opt}
+                selected={selected.includes(opt)}
+                padding="s"
+                spacing="s"
+              >
+                {opt}
+              </List.Item>
+            ))}
+          </List>
+        </Picker>
+      );
+
+      // Empty above, with a value below, both measured — box and value slot.
+      const EmptyVersusFilled = ({ id, fallback }) => {
+        const [emptySize, setEmptySize] = useState(null);
+        const [filledSize, setFilledSize] = useState(null);
+        return (
+          <>
+            <Box flex="y" spacing="s" alignX="start">
+              <Measured
+                onMeasure={setEmptySize}
+                innerSelector=".navi_picker_value"
+              >
+                <ChipsPicker
+                  name={`${id}_empty`}
+                  selected={[]}
+                  fallback={fallback}
+                />
+              </Measured>
+              <Measured
+                onMeasure={setFilledSize}
+                innerSelector=".navi_picker_value"
+              >
+                <ChipsPicker
+                  name={`${id}_filled`}
+                  selected={["HTML", "CSS"]}
+                  fallback={fallback}
+                />
+              </Measured>
+            </Box>
+            <MeasureDelta
+              a={emptySize}
+              b={filledSize}
+              labelA="empty"
+              labelB="with value"
+            />
+          </>
+        );
+      };
+
+      const EmptyHeightDisplay = () => (
+        <div class="demo-section">
+          <h2>4. Empty picker — the BadgeList fallback</h2>
+          <p>
+            A picker drawn from chips must look the same empty as it does with a
+            value: as tall, and saying something. Empty above, with a value
+            below, with dotted rulers giving the exact rendered size of the
+            picker box and of its value slot (the part holding the chips), so
+            the two states can be compared pixel per pixel.
+          </p>
+
+          <fieldset>
+            <legend>No fallback — nothing in the value slot</legend>
+            <p>
+              An empty <code>BadgeList</code> renders nothing, and the picker's
+              own <code>placeholder</code> is not drawn either: a picker given a{" "}
+              <code>ui</code> draws that and only that. The value slot collapses
+              to its borders; the box is still held one line tall by the
+              picker's own line, so it does not move here — but the picker is
+              blank, and a host sized by what the list holds (a list row, a
+              table cell) jumps.
+            </p>
+            <EmptyVersusFilled id="empty_height_none" />
+          </fieldset>
+
+          <fieldset>
+            <legend>Fallback as plain text — a line, not a badge</legend>
+            <p>
+              <code>fallback="Select skills…"</code> says something, but a line
+              of text is set by the picker's font and line-height where a badge
+              is set by its own padding and smaller font: the two are not the
+              same height, and the slot moves between the two states.
+            </p>
+            <EmptyVersusFilled
+              id="empty_height_text"
+              fallback="Select skills…"
+            />
+          </fieldset>
+
+          <fieldset>
+            <legend>
+              Fallback as a transparent badge — same size, says it
+            </legend>
+            <p>
+              A <code>Badge</code> with no background and the placeholder color
+              takes the exact room a badge takes and says what the picker is
+              for: the empty list is as tall as a filled one and the value slot
+              never moves.
+            </p>
+            <EmptyVersusFilled
+              id="empty_height_badge"
+              fallback={
+                <Badge
+                  background="transparent"
+                  color="var(--picker-placeholder-color)"
+                >
+                  Select skills…
+                </Badge>
+              }
+            />
+          </fieldset>
+        </div>
+      );
 
       render(
         <NaviDebug debugAction debugInteraction debugPopup>

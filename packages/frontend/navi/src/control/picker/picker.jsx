@@ -1058,6 +1058,7 @@ const PickerFirstResolver = (props) => {
  *   defaultValue?: any,
  *   name?: string,
  *   placeholder?: import("preact").ComponentChildren,
+ *   ui?: import("preact").ComponentChildren | "default",
  *   required?: boolean,
  *   min?: Date | string | number,
  *   max?: Date | string | number,
@@ -1103,6 +1104,13 @@ const PickerFirstResolver = (props) => {
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {import("preact").ComponentChildren | "default"} [ui] What the
+ *   trigger draws in place of the value's default rendering (a date, a list
+ *   joined by commas…) — and then all it draws: `placeholder` is not shown
+ *   next to it. A `ui` must therefore say on its own that the picker is empty,
+ *   and take the same room empty as it does filled. A <BadgeList> gets both
+ *   from its `fallback` — a transparent <Badge> holding the placeholder text,
+ *   see docs/badge_list.md. `"default"` draws nothing in the slot at all.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.

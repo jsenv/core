@@ -186,6 +186,10 @@ const css = /* css */ `
       var(--x-popover-max-height)
     );
     max-height: var(--x-popover-max-height);
+    /* A new surface writes in its own ink, not in its container's — see
+       --navi-popup-color. The UA only resets color on a [popover] element,
+       and the local renderer is a plain div. */
+    color: var(--navi-popup-color);
     background-color: var(--popover-background-color);
     border-width: var(--popover-border-width);
     border-style: solid;

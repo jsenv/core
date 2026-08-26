@@ -245,6 +245,10 @@ const css = /* css */ `
     padding: 0;
     flex-direction: column;
 
+    /* A new surface writes in its own ink, not in its container's — see
+       --navi-popup-color. Declared here rather than left to the UA's own
+       dialog { color: CanvasText } so the ink is themed along with the paper. */
+    color: var(--navi-popup-color);
     background-color: var(--dialog-background-color);
     border-width: var(--dialog-border-width);
     border-style: solid;

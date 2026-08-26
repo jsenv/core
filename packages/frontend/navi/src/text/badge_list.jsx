@@ -136,7 +136,14 @@ const useBadgeRegistry = (children, enabled) => {
  * shrinkWrap ever builds the measurement ghost.
  *
  * @param {import("preact").ComponentChildren} [fallback]
- *   Rendered in place of the badges when there is none.
+ *   Rendered in place of the badges when there is none. Without it an empty
+ *   list renders nothing at all, and whatever is sized by the list — a row, a
+ *   cell, a picker's value slot — collapses. Give it the height of a badge: a
+ *   <Badge> with no background and the placeholder color, not plain text — a
+ *   line of text is set by the host's font and line-height, a badge by its own
+ *   padding and smaller font, and the two do not match. In a <Picker> this is
+ *   also the only placeholder the user gets: a picker given a `ui` does not
+ *   draw its own. See docs/badge_list.md.
  * @param {boolean} [shrinkWrap]
  *   Narrows the list down to its widest row so the last row isn't ragged.
  *   Defaults to true inside a <Picker> — the trigger draws a border around the

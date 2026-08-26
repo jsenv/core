@@ -118,6 +118,10 @@ const css = /* css */ `
          the surface token so one override themes fields, layouts and popups
          together. Still its own token, so popups alone can be re-papered. */
       --navi-popup-background-color: var(--navi-surface-color);
+      /* The ink written on that paper. A popup declares both on itself (see
+         dialog.jsx / popover.jsx): it is a new surface, so it does not write
+         in whatever the container it was declared in writes in. */
+      --navi-popup-color: var(--navi-surface-text-color);
       --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
       /* backdropVariant="discrete": the popup still catches every outside
          click, it just stops announcing that it did. For an affordance one
@@ -163,6 +167,9 @@ const css = /* css */ `
          Fields use it whenever they need a solid background (their default
          background, a transparent field being edited, …). */
       --navi-surface-color: light-dark(#ffffff, #1c1c1e);
+      /* What is written on that paper. The browser's own text color rather
+         than a literal, so it follows color-scheme the way the paper does. */
+      --navi-surface-text-color: CanvasText;
       /* The line that separates two regions of one surface — a scrolling area's
          header from what scrolls under it, for instance. Not a border: the
          separation belongs to the layout, not to the box that draws it. */
@@ -195,16 +202,35 @@ const css = /* css */ `
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
-      /* Color keywords — mix currentColor toward transparent or black.
-         secondary: supporting text, captions, less important labels
-         emphasis:  reinforce meaning, make content stand out more
-         discrete:  unobtrusive elements that shouldn't compete for attention
-         hint:      barely-there color, watermarks, ghost placeholders */
-      --navi-color-primary: black;
+      /* Color keywords.
+           primary:   the ink of the paper, at full strength. An absolute
+                      rather than currentColor: it is what brings a run back
+                      to plain text inside a muted one (a value in a secondary
+                      label). Themed through --navi-surface-text-color.
+           secondary: supporting text, captions, less important labels
+           emphasis:  reinforce meaning, make content stand out more
+           discrete:  unobtrusive elements that shouldn't compete for attention
+           hint:      barely-there color, watermarks, ghost placeholders
+         The last four mix currentColor toward transparent or black, so they
+         follow whatever ink a container writes in: a dark card sets color and
+         nothing else. Theme tokens, like everything on :root — a container
+         that overrides one for ITS paper is heard by every popup opened from
+         it too, a popup having no way to tell a theme from a paper. */
+      --navi-color-primary: var(--navi-surface-text-color);
       --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+    }
+
+    /* A popup is a new paper (see --navi-popup-color): primary is the ink it
+       writes in, not the ink of the container it was opened from. On the
+       element itself, so it beats a container's own override whatever the
+       layer; an app that wants a popup to keep its container's ink says so on
+       the popup, unlayered, and wins in turn. */
+    .navi_popover,
+    .navi_dialog {
+      --navi-color-primary: var(--navi-popup-color);
     }
   }
 
