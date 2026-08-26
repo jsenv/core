@@ -810,6 +810,7 @@ export const useControlProps = (
       }
       const {
         name,
+        intent,
         bypassInteractivity = false,
         allowed,
         prevented,
@@ -819,6 +820,7 @@ export const useControlProps = (
       return dispatchRequestInteraction(control, {
         event: e,
         name,
+        intent,
         bypassInteractivity,
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
@@ -984,6 +986,7 @@ const createControlInfo = (props, { controlType }) => {
   let defaultStatePropName;
   let stateInitial;
   let readOnlySupported = false;
+  let readOnlyOpens = false;
   let disabledSupported = false;
   let hasStateProp;
   let value;
@@ -1080,6 +1083,17 @@ const createControlInfo = (props, { controlType }) => {
     readOnlySupported =
       controlType === "picker" &&
       INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
+    // A picker's popup is content of its own — a plan with one tile ringed, a
+    // wheel stopped on a time, a list showing what was chosen — so read-only
+    // does not close it: it opens, and everything in it is held read-only in
+    // turn (see the ReadOnlyContext in picker.jsx). Two pickers this is not
+    // true of: one with no popup of its own, which opens the browser's and
+    // cannot hold that read-only (see PickerNative), and one whose caller says
+    // its popup is a form with nothing to read (openWhileReadOnly={false}).
+    readOnlyOpens =
+      controlType === "picker" &&
+      props.children !== undefined &&
+      props.openWhileReadOnly !== false;
   }
 
   // The suggestion the control starts on, as opposed to what it holds — what a
@@ -1108,6 +1122,7 @@ const createControlInfo = (props, { controlType }) => {
     stateFromSignal,
 
     readOnlySupported,
+    readOnlyOpens,
     disabledSupported,
   };
 };
@@ -1499,6 +1514,10 @@ const useInteractiveProps = (
     const actionLoading = optimistic ? false : actionStatus.loading;
     const loadingResolved = loadingBase || actionLoading;
     const readOnlyResolved = readOnlyBase || actionLoading;
+    // Read-only, and what this control opens still opens: reading what is in
+    // there changes nothing. Read by READONLY_CONSTRAINT, which lets an
+    // interaction that only reads through on it.
+    uiStateController.readOnlyOpens = Boolean(controlInfo.readOnlyOpens);
     // Both halves of "busy" that do not come from the bound action, kept apart
     // from each other and from it: BUSY_CONSTRAINT answers each from its own
     // live source rather than from the rendered aria-busy, which conflates all

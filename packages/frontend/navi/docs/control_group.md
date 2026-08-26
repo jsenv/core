@@ -118,7 +118,7 @@ opened it. `Popover` and `Dialog` stop it too, at their own root: nothing a
 popup holds is at a seam.
 
 Reference: `.navi_button_content` in `button_ui.jsx` (a button reads then
-stops), `.navi_picker_right_slot`, `.navi_input_slot`, `.navi_popover`,
+stops), `.navi_picker_box`, `.navi_input_slot`, `.navi_popover`,
 `.navi_dialog`.
 
 A control that declares its radius on an inner element instead is invisible to

@@ -102,7 +102,27 @@ const css = /* css */ `
     border-width: var(--border-width);
     border-style: solid;
     border-color: var(--x-border-color);
-    border-radius: var(--border-radius);
+    /* Squared from the outside, corner by corner: a checkbox in a group can
+       arrive wrapped (in a label, in a row carrying a state), and the ask then
+       travels down as inherited custom properties rather than as a radius
+       landing on this element. Each corner falls back to the checkbox's own
+       radius when nothing asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--border-radius)
+    );
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);

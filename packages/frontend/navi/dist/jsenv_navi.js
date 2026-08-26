@@ -49,6 +49,16 @@ const css$15 = /* css */`
       --navi-z-index-control-hovered: 1;
       --navi-z-index-control-focused: 2;
 
+      /* A control the user is not on and yet still has to paint in front: one
+         holding something open (a picker showing its list, an expandable
+         header). Its border keeps the color the open state gives it, while
+         hover and focus have both moved on — into the popup, or onto whatever
+         the pointer travelled to next — so neither of the two values above is
+         there to raise it, and the neighbour painted after it cuts the very
+         border that says what is open. Above both: the member holding the
+         popup open outranks a member merely hovered or focused. */
+      --navi-z-index-control-expanded: 3;
+
       /* Kept stuck while something scrolls under it: a list header, the head
          and foot of a side panel, a table's sticky cells, the header and
          footer of any scrolling Box. Above raised controls — a control
@@ -9977,12 +9987,24 @@ const formatDateIso = (iso, inputType) => {
 const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const readOnly = Boolean(
       field.controlHostProps.readOnly ||
       field.controlHostProps["aria-readonly"] === "true",
     );
     if (!readOnly) {
+      return null;
+    }
+
+    // Read-only, and what it opens still opens: a picker's answer often lives
+    // in a shape only its popup draws — a plan with one tile ringed, a wheel
+    // stopped on a time — and refusing to open leaves that shape unreadable.
+    // Opening reads and nothing more, so it goes through; everything that would
+    // write is refused below, and the popup content is handed the same
+    // read-only state so each control in there refuses on its own terms. Which
+    // controls say so, and when, is theirs to answer (see createControlInfo's
+    // readOnlyOpens).
+    if (intent === "read" && field.readOnlyOpens) {
       return null;
     }
 
@@ -10050,6 +10072,8 @@ const readOnlyMessage = (field) => {
  *   → "navi_request_interaction" event
  *   → onRequestInteraction
  *       → check disabled / read-only / busy (via controller.controlInteraction)
+ *         against the interaction's `intent` ("write" by default, "read" for one
+ *         that only shows what is already there — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()
  *       → if allowed  → allowed()
  *         → (in allowed callback) setUIState(value)
@@ -10083,10 +10107,10 @@ const createControlInteraction = (
   // The title this rule put on the element, if any (see checkInteractivity).
   let titleWritten = null;
 
-  const checkInteractivity = ({ event } = {}) => {
+  const checkInteractivity = ({ event, intent = "write" } = {}) => {
     interactionFailedConstraintInfo = null;
     for (const constraint of INTERACTION_CONSTRAINT_SET) {
-      const checkResult = constraint.check(controller);
+      const checkResult = constraint.check(controller, { intent });
       if (!checkResult) {
         continue;
       }
@@ -10113,7 +10137,7 @@ const createControlInteraction = (
         if (!mci) {
           continue;
         }
-        const canInteract = mci.checkInteractivity({ event });
+        const canInteract = mci.checkInteractivity({ event, intent });
         if (canInteract) {
           continue;
         }
@@ -10127,8 +10151,14 @@ const createControlInteraction = (
     }
 
     // Keep title attribute in sync for accessibility.
+    // Only off a check that asked the general question: a title is read
+    // whenever a pointer rests on the element, so it says what is true of the
+    // control as a whole. A check made for an interaction that only reads (a
+    // read-only picker asked to open its popup) answers about that one
+    // interaction — writing the title from it would take away the "read-only"
+    // the first time someone opened the popup.
     const titleLess = !controller.controlHostProps?.title;
-    if (titleLess) {
+    if (intent === "write" && titleLess) {
       const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
@@ -10234,6 +10264,12 @@ const onRequestInteraction = (
   const {
     event,
     name,
+    // What this interaction would do to the control: write it, or only read it.
+    // Everything writes unless it says otherwise — an interaction that merely
+    // shows what is already there (opening a picker's popup, closing it again)
+    // says "read", and that is what a control held read-only can still let
+    // through (see READONLY_CONSTRAINT).
+    intent = "write",
     bypassInteractivity = false,
     prevented,
     allowed,
@@ -10264,7 +10300,7 @@ const onRequestInteraction = (
   if (controller && !bypassInteractivity) {
     const ci = controller?.rules.interaction;
     if (ci) {
-      const canInteract = ci.checkInteractivity({ event });
+      const canInteract = ci.checkInteractivity({ event, intent });
       if (!canInteract) {
         const failedInfo =
           ci.interactionFailedConstraintInfo ??
@@ -26705,6 +26741,7 @@ const useControlProps = (props, {
       }
       const {
         name,
+        intent,
         bypassInteractivity = false,
         allowed,
         prevented,
@@ -26714,6 +26751,7 @@ const useControlProps = (props, {
       return dispatchRequestInteraction(control, {
         event: e,
         name,
+        intent,
         bypassInteractivity,
         prevented: () => {
           debugInteraction(e, `interaction not allowed`);
@@ -26853,6 +26891,7 @@ const createControlInfo = (props, {
   let defaultStatePropName;
   let stateInitial;
   let readOnlySupported = false;
+  let readOnlyOpens = false;
   let disabledSupported = false;
   let hasStateProp;
   let value;
@@ -26939,6 +26978,14 @@ const createControlInfo = (props, {
     // aria-readonly plus a refused interaction — see the select reactions in
     // getDefaultEventReactionDefinitions.
     readOnlySupported = controlType === "picker" && INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
+    // A picker's popup is content of its own — a plan with one tile ringed, a
+    // wheel stopped on a time, a list showing what was chosen — so read-only
+    // does not close it: it opens, and everything in it is held read-only in
+    // turn (see the ReadOnlyContext in picker.jsx). Two pickers this is not
+    // true of: one with no popup of its own, which opens the browser's and
+    // cannot hold that read-only (see PickerNative), and one whose caller says
+    // its popup is a form with nothing to read (openWhileReadOnly={false}).
+    readOnlyOpens = controlType === "picker" && props.children !== undefined && props.openWhileReadOnly !== false;
   }
 
   // The suggestion the control starts on, as opposed to what it holds — what a
@@ -26965,6 +27012,7 @@ const createControlInfo = (props, {
     signalHoldsChecked,
     stateFromSignal,
     readOnlySupported,
+    readOnlyOpens,
     disabledSupported
   };
 };
@@ -27315,6 +27363,10 @@ const useInteractiveProps = (props, {
     const actionLoading = optimistic ? false : actionStatus.loading;
     const loadingResolved = loadingBase || actionLoading;
     const readOnlyResolved = readOnlyBase || actionLoading;
+    // Read-only, and what this control opens still opens: reading what is in
+    // there changes nothing. Read by READONLY_CONSTRAINT, which lets an
+    // interaction that only reads through on it.
+    uiStateController.readOnlyOpens = Boolean(controlInfo.readOnlyOpens);
     // Both halves of "busy" that do not come from the bound action, kept apart
     // from each other and from it: BUSY_CONSTRAINT answers each from its own
     // live source rather than from the rendered aria-busy, which conflates all
@@ -47678,7 +47730,27 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
     border-width: var(--border-width);
     border-style: solid;
     border-color: var(--x-border-color);
-    border-radius: var(--border-radius);
+    /* Squared from the outside, corner by corner: a checkbox in a group can
+       arrive wrapped (in a label, in a row carrying a state), and the ask then
+       travels down as inherited custom properties rather than as a radius
+       landing on this element. Each corner falls back to the checkbox's own
+       radius when nothing asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--border-radius)
+    );
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
@@ -48644,7 +48716,26 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
       border-width: var(--button-border-width);
       border-style: solid;
       border-color: var(--x-border-color);
-      border-radius: var(--button-border-radius);
+      /* Squared from the outside, corner by corner: a row of these is the
+         segmented control a Group is for, and one of them can arrive wrapped
+         (in a tooltip, in a label) — so the ask travels down as inherited
+         custom properties rather than as a radius landing on this element. */
+      border-top-left-radius: var(
+        --x-corner-top-left-radius,
+        var(--button-border-radius)
+      );
+      border-top-right-radius: var(
+        --x-corner-top-right-radius,
+        var(--button-border-radius)
+      );
+      border-bottom-right-radius: var(
+        --x-corner-bottom-right-radius,
+        var(--button-border-radius)
+      );
+      border-bottom-left-radius: var(
+        --x-corner-bottom-left-radius,
+        var(--button-border-radius)
+      );
 
       .navi_icon,
       img {
@@ -48953,6 +49044,28 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
     --x-thumb-color: var(--thumb-color);
     --x-thumb-border: none;
     --x-thumb-cursor: var(--thumb-cursor);
+    /* Squared from the outside, corner by corner — resolved here once because
+       what draws the frame is not this element but the three layers stacked
+       below it (background, track, fill), which cannot take it by inherit the
+       way a control with a single frame does. A range can arrive wrapped, so
+       the ask travels down as inherited custom properties; each corner falls
+       back to the track's own radius when nothing asks for anything. */
+    --x-range-corner-top-left: var(
+      --x-corner-top-left-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-top-right: var(
+      --x-corner-top-right-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-bottom-right: var(
+      --x-corner-bottom-right-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-bottom-left: var(
+      --x-corner-bottom-left-radius,
+      var(--border-radius)
+    );
 
     position: relative;
     box-sizing: border-box;
@@ -48961,10 +49074,26 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
     margin: 2px;
     flex-direction: row;
     align-items: center;
-    /* Just for the outline, the real border radius of the range is fixed */
     font-size: var(--font-size);
     font-family: var(--font-family);
-    border-radius: var(--outline-border-radius);
+    /* The ring around the whole control, which follows the claim too: a range
+       squared along a seam must not keep a rounded ring over it. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--outline-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--outline-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--outline-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--outline-border-radius)
+    );
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
@@ -49005,7 +49134,10 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
       border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
     }
     .navi_input_range_track {
       position: absolute;
@@ -49015,7 +49147,10 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
       border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-track-border-color);
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
     }
     .navi_input_range_fill {
       position: absolute;
@@ -49023,7 +49158,10 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
       height: var(--height);
       background: var(--x-fill-color);
       background-clip: content-box;
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
       clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
     }
     .navi_input_range_thumb {
@@ -50095,7 +50233,27 @@ const inputCss = /* css */`
     border-width: var(--border-width);
     border-style: solid;
     border-color: var(--x-border-color);
-    border-radius: var(--border-radius);
+    /* Squared from the outside, corner by corner: an input is not always the
+       member a Group joins — it can arrive wrapped (in a Box carrying a state,
+       in a tooltip) — so the ask travels down as inherited custom properties
+       rather than as a radius landing on this element. Each corner falls back
+       to the input's own radius when nothing asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--border-radius)
+    );
     outline-width: var(--outline-width);
     outline-color: var(--outline-color);
     outline-offset: var(--outline-offset);
@@ -51836,7 +51994,7 @@ const css$E = /* css */`
        positioned element to mean anything, hence position: relative.
        Deliberately not paired with isolation: isolate — a stacking context
        here would also trap the popup of a picker held in the group, which
-       counts on its own band reaching the whole page. What keeps these two
+       counts on its own band reaching the whole page. What keeps these
        values from escaping is instead that everything they could reach is a
        band above them (see navi_z_indexes.js). */
     > *:hover,
@@ -51855,6 +52013,25 @@ const css$E = /* css */`
     > *:has([data-focus-visible]) {
       position: relative;
       z-index: var(--navi-z-index-control-focused);
+    }
+    /* The member holding something open. Neither of the two above covers it:
+       the click that opened the popup gives no focus ring, the focus itself
+       left for the popup's content, and the pointer is free to travel to a
+       neighbour — yet the member keeps the border color its open state gives
+       it, and that border is exactly what the neighbour painted after it
+       slices. Read as a state, not as a pseudo-class: :active only lasts as
+       long as the button is held down, and while it is held :hover is true
+       anyway, so it would add nothing here.
+
+       :has, for the same reason as focus-visible above — the group member can
+       be an enrobage around the control that expands — and reaching a popup
+       held inline (a Popover with layer="local" renders inside its member)
+       costs nothing: that popup only reads expanded while its own member is,
+       which is the member this raises. */
+    > *[aria-expanded="true"],
+    > *:has([aria-expanded="true"]) {
+      position: relative;
+      z-index: var(--navi-z-index-control-expanded);
     }
 
     /* Horizontal (default): Cumulative margin for border overlap */
@@ -55783,6 +55960,14 @@ const PickerNative = props => {
       dispatchRequestInteraction(pickerInput, {
         event: e,
         name: "navi_request_open to show native picker",
+        // No "read" intent here, unlike a picker holding a popup of its own
+        // (see PickerCustom): the browser's picker cannot be held read-only,
+        // whichever way its type falls. Where `readonly` applies (date, time,
+        // month, number…) the input is not mutable and showPicker() refuses
+        // it — there is nothing to open. Where it does not (color, file) the
+        // browser opens all the same and writes whatever is chosen straight
+        // into the input, which is read-only in name only. So a read-only
+        // native picker says why instead, on the trigger.
         prevented: () => {
           e.preventDefault();
         },
@@ -55973,14 +56158,20 @@ const PickerCustom = props => {
             // already what it is, and this only re-runs the same reaction.
             const inputEl = getPickerInput(ref.current);
             const valueAtClose = getUIStateFromElement(inputEl);
-            if (valueAtOpen === undefined && compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            const controller = inputEl?.__uiStateController__;
+            if (controller?.controlHostProps.readOnly) {
+              // Opened only to be read: what it shows stays the suggestion it
+              // was. A look is not an answer, and the signal behind it is not
+              // written by one.
+              debugPopup(closeEvent, `picker is read-only -> nothing to commit`);
+            } else if (valueAtOpen === undefined && compareTwoJsValues(valueAtClose, valueAtOpen)) {
               // Same third case onRequestClose steps around: nothing held,
               // nothing shown, nothing picked. There is no suggestion here to
               // turn into an answer.
               debugPopup(closeEvent, `picker showed nothing -> nothing to commit`);
             } else {
               debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
-              commitUIStateAsAnswer(inputEl?.__uiStateController__, closeEvent);
+              commitUIStateAsAnswer(controller, closeEvent);
             }
           }
           leaveExpanded({
@@ -56069,6 +56260,13 @@ const PickerCustom = props => {
         requestInteraction({
           event: e,
           name: "navi_request_open_event",
+          // Showing what the picker already holds, in the shape only the popup
+          // draws it in — nothing of the value is written on the way in, nor on
+          // the way out. Every interaction below says the same, which is what
+          // lets a read-only picker be opened and read while everything that
+          // would write it (paste, cut, the clear cross) stays refused. See
+          // READONLY_CONSTRAINT.
+          intent: "read",
           allowed: () => {
             requestOpen(e);
           }
@@ -56077,6 +56275,7 @@ const PickerCustom = props => {
       onnavi_request_close: e => {
         requestInteraction({
           event: e,
+          intent: "read",
           allowed: () => {
             requestClose(e, {
               isCancel: e.detail.isCancel
@@ -56095,6 +56294,7 @@ const PickerCustom = props => {
         "a-z": e => {
           return {
             name: "letter key to open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
             }
@@ -56103,6 +56303,7 @@ const PickerCustom = props => {
         "0-9": e => {
           return {
             name: "numeric key to open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
             }
@@ -56111,6 +56312,7 @@ const PickerCustom = props => {
         "arrowdown": e => {
           return {
             name: "arrow_down_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
@@ -56120,6 +56322,7 @@ const PickerCustom = props => {
         "arrowup": e => {
           return {
             name: "arrow_up_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
@@ -56129,6 +56332,7 @@ const PickerCustom = props => {
         "space": e => {
           return {
             name: "space_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent scroll
@@ -56143,6 +56347,7 @@ const PickerCustom = props => {
           }
           return {
             name: "enter_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent form submission
@@ -56156,6 +56361,7 @@ const PickerCustom = props => {
           const isCancel = escapeEffect === "cancel";
           return {
             name: isCancel ? "escape_to_cancel" : "escape_to_close",
+            intent: "read",
             allowed: () => {
               requestClose(e, {
                 isCancel
@@ -56187,6 +56393,7 @@ const PickerCustom = props => {
               // choice being taken from anyone.
               return {
                 name: "mousedown to close picker",
+                intent: "read",
                 allowed: () => requestClose(e, {
                   isCancel: true
                 })
@@ -56197,6 +56404,7 @@ const PickerCustom = props => {
             }
             return {
               name: "mousedown to open picker",
+              intent: "read",
               allowed: () => {
                 debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
                 requestOpen(e);
@@ -56214,6 +56422,7 @@ const PickerCustom = props => {
             // above), this is where the picker opens for real.
             return {
               name: e.detail === 0 ? "click (keyboard or progammatic) to open picker" : "click to open picker",
+              intent: "read",
               prevented: () => {
                 e.preventDefault();
               },
@@ -63178,10 +63387,39 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
     /* The frame is drawn by the box, but its radius is declared here, on the
        control root, like every other navi control does — so anything styling
        the picker from the outside (a Group squaring the corners it joins) has
-       one element to talk to, and the box follows. */
-    border-radius: var(--picker-border-radius);
+       one element to talk to, and the box follows.
+       Corner by corner rather than as the shorthand: a picker is not always
+       the member a Group joins — it can arrive wrapped (in a Box carrying a
+       state, in a link, in a tooltip), and the ask then travels down as
+       inherited custom properties instead of landing on this element as a
+       radius. Each corner falls back to the picker's own radius when nothing
+       asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--picker-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--picker-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--picker-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--picker-border-radius)
+    );
 
     .navi_picker_box {
+      /* The ask stops here: this element is the picker's frame, so nothing it
+         holds is at the seam — the chevron and the clear cross in the slot, a
+         button in a custom UI. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       position: relative;
       display: inline-flex;
       box-sizing: border-box;
@@ -63233,14 +63471,6 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
       }
     }
     .navi_picker_right_slot {
-      /* A corner claimed from the outside (see group.jsx) is the frame's, and
-         what lives in here is not the frame — a button in a slot, the content
-         of a popup — so the ask stops at this boundary. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
       display: inline-flex;
       height: 1em;
       height: 1lh;
@@ -63335,6 +63565,15 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
     }
 
     .navi_picker_content {
+      /* The other side of the frame: what a picker holds here is what its
+         popup shows, and a popup is never at a seam. Popover and Dialog stop
+         the ask at their own root too — this covers content that reaches the
+         popup through neither. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       display: contents;
       text-align: initial; /* Don't inherit picker text align */
     }
@@ -63351,6 +63590,12 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
       --x-picker-color: var(--picker-color-readonly);
       --x-picker-icon-color: var(--picker-icon-color-readonly);
       --x-picker-cursor: default;
+    }
+    /* Read-only and still opening, so it still says so under the pointer.
+       Before the disabled block below on purpose: a disabled picker opens
+       nothing, read-only or not. */
+    &[data-readonly-opens] {
+      --x-picker-cursor: pointer;
     }
     /* Focus */
     &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
@@ -63480,6 +63725,7 @@ const PickerButton = props => {
     // untouched (see the --navi-clear command).
     clearConfirm,
     clearConfirmPopupContent,
+    readOnly,
     error
   } = props;
   const isSingleLine = maxLines === 1;
@@ -63497,6 +63743,19 @@ const PickerButton = props => {
     children
   } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  // The same chain useControlProps resolves (own prop first, then what the
+  // group above says), for the two things it does not carry: the popup content,
+  // which is read-only along with the picker, and the cursor, which stays a
+  // pointer on a picker that still opens.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const readOnlyResolved = readOnly || readOnlyFromAbove;
+  // Read off the controller rather than worked out again: what makes a
+  // read-only picker open is settled once, where the gate reads it (see
+  // createControlInfo's readOnlyOpens). Needed here for the cursor.
+  const readOnlyOpens = Boolean(readOnlyResolved) && uiStateController.readOnlyOpens;
+  // Whether anything can still be changed — read by the clear cross below,
+  // clearing being a modification like any other.
+  const interactive = !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
   return jsxs(Box, {
     as: "div",
@@ -63515,6 +63774,7 @@ const PickerButton = props => {
     "navi-picker": "",
     "navi-single-line": isSingleLine ? "" : undefined,
     "navi-ui-custom": ui === "default" ? undefined : "",
+    "data-readonly-opens": readOnlyOpens ? "" : undefined,
     "data-popup-width-fit-content": popupWidthFitContent ? "" : undefined,
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
@@ -63525,6 +63785,7 @@ const PickerButton = props => {
     rightSlot: undefined,
     clearConfirm: undefined,
     clearConfirmPopupContent: undefined,
+    openWhileReadOnly: undefined,
     ui: undefined,
     maxLines: undefined,
     popupWidthFitContent: undefined,
@@ -63643,7 +63904,7 @@ const PickerButton = props => {
           value: undefined,
           children: jsx(ControlNameContext.Provider, {
             value: undefined,
-            children: clearable && value !== undefined && value !== "" ? jsx(Button, {
+            children: clearable && interactive && value !== undefined && value !== "" ? jsx(Button, {
               command: "--navi-clear",
               commandFor: inputProps.id
               // The question, asked before the clear rather than by the
@@ -63696,9 +63957,12 @@ const PickerButton = props => {
       })]
     }), jsx(ControlFacadeChildrenWrapper, {
       ...facadeChildrenProps,
-      children: jsx("div", {
-        className: "navi_picker_content",
-        children: children
+      children: jsx(ReadOnlyContext.Provider, {
+        value: readOnlyResolved,
+        children: jsx("div", {
+          className: "navi_picker_content",
+          children: children
+        })
       })
     })]
   });
@@ -63957,7 +64221,27 @@ const css$t = /* css */`
        of one's own still wins — an inline style beats a stylesheet. */
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+    /* Squared from the outside, corner by corner: a spin is not always the
+       member a Group joins — it can arrive wrapped — so the ask travels down
+       as inherited custom properties rather than as a radius landing on this
+       element. The chevrons take these corners back by inherit (see below), so
+       they follow. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--navi-control-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--navi-control-border-radius)
+    );
     outline-width: var(--navi-focus-outline-width);
     /* Just outside the border, never on it: the ring belongs to the whole
        control — the two chevrons included, since pressing one lands the
@@ -64014,6 +64298,13 @@ const css$t = /* css */`
      opens its calendar. Around the whole control it would open under a chevron;
      around the value it opens under the value one pressed. */
   .navi_picker_spin_middle {
+    /* The ask stops here: the frame is the spin's box, and the picker or the
+       field standing in the middle of it is behind that frame, not at a seam. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     position: relative;
     display: flex;
     min-width: 0;
@@ -64191,7 +64482,26 @@ const css$t = /* css */`
     font-family: var(--navi-control-font-family);
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+    /* Squared from the outside, corner by corner (see .navi_picker_spin
+       above): the group is the member a Group joins, and it can arrive
+       wrapped. The spins inside give their radius up and take the corners of
+       this one back through inherit, so they follow. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--navi-control-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--navi-control-border-radius)
+    );
     outline-width: var(--navi-focus-outline-width);
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;

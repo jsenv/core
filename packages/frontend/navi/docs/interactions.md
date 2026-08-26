@@ -105,6 +105,20 @@ interaction happened, and nothing runs. A `Box` with no control anywhere near it
 still answers a callback; only `"request_action"` has nothing to ask, and says so
 in dev.
 
+The one thing the gate weighs besides the control's state is what the
+interaction would do to it. Everything writes unless it says otherwise; an
+interaction that only shows what is already there declares `intent: "read"`, and
+a control held read-only lets that one through. That is how a read-only
+`<Picker>` still opens: the popup is where its answer is really drawn, so it
+opens and everything inside it is held read-only in turn. Disabled and busy go
+on refusing either way — one is out of service, the other is mid-operation, and
+neither has anything to show.
+
+Which controls let a read through is theirs to say, not the caller's: a picker
+with no popup of its own opens the browser's, which cannot be held read-only, so
+that one refuses. `openWhileReadOnly={false}` is how a caller says the popup is
+a form with nothing to read.
+
 ## What a swipe draws, and what it leaves to you
 
 navi makes the element follow the finger — there is nothing to decide about

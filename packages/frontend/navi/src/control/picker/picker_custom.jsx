@@ -198,6 +198,14 @@ const PickerNative = (props) => {
         dispatchRequestInteraction(pickerInput, {
           event: e,
           name: "navi_request_open to show native picker",
+          // No "read" intent here, unlike a picker holding a popup of its own
+          // (see PickerCustom): the browser's picker cannot be held read-only,
+          // whichever way its type falls. Where `readonly` applies (date, time,
+          // month, number…) the input is not mutable and showPicker() refuses
+          // it — there is nothing to open. Where it does not (color, file) the
+          // browser opens all the same and writes whatever is chosen straight
+          // into the input, which is read-only in name only. So a read-only
+          // native picker says why instead, on the trigger.
           prevented: () => {
             e.preventDefault();
           },
@@ -408,7 +416,16 @@ const PickerCustom = (props) => {
             // already what it is, and this only re-runs the same reaction.
             const inputEl = getPickerInput(ref.current);
             const valueAtClose = getUIStateFromElement(inputEl);
-            if (
+            const controller = inputEl?.__uiStateController__;
+            if (controller?.controlHostProps.readOnly) {
+              // Opened only to be read: what it shows stays the suggestion it
+              // was. A look is not an answer, and the signal behind it is not
+              // written by one.
+              debugPopup(
+                closeEvent,
+                `picker is read-only -> nothing to commit`,
+              );
+            } else if (
               valueAtOpen === undefined &&
               compareTwoJsValues(valueAtClose, valueAtOpen)
             ) {
@@ -424,7 +441,7 @@ const PickerCustom = (props) => {
                 closeEvent,
                 `picker defined a suggestion -> commit it`,
               );
-              commitUIStateAsAnswer(inputEl?.__uiStateController__, closeEvent);
+              commitUIStateAsAnswer(controller, closeEvent);
             }
           }
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
@@ -509,6 +526,13 @@ const PickerCustom = (props) => {
         requestInteraction({
           event: e,
           name: "navi_request_open_event",
+          // Showing what the picker already holds, in the shape only the popup
+          // draws it in — nothing of the value is written on the way in, nor on
+          // the way out. Every interaction below says the same, which is what
+          // lets a read-only picker be opened and read while everything that
+          // would write it (paste, cut, the clear cross) stays refused. See
+          // READONLY_CONSTRAINT.
+          intent: "read",
           allowed: () => {
             requestOpen(e);
           },
@@ -517,6 +541,7 @@ const PickerCustom = (props) => {
       onnavi_request_close: (e) => {
         requestInteraction({
           event: e,
+          intent: "read",
           allowed: () => {
             requestClose(e, { isCancel: e.detail.isCancel });
           },
@@ -535,6 +560,7 @@ const PickerCustom = (props) => {
         "a-z": (e) => {
           return {
             name: "letter key to open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
             },
@@ -543,6 +569,7 @@ const PickerCustom = (props) => {
         "0-9": (e) => {
           return {
             name: "numeric key to open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
             },
@@ -551,6 +578,7 @@ const PickerCustom = (props) => {
         "arrowdown": (e) => {
           return {
             name: "arrow_down_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
@@ -560,6 +588,7 @@ const PickerCustom = (props) => {
         "arrowup": (e) => {
           return {
             name: "arrow_up_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent container scroll
@@ -569,6 +598,7 @@ const PickerCustom = (props) => {
         "space": (e) => {
           return {
             name: "space_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent scroll
@@ -583,6 +613,7 @@ const PickerCustom = (props) => {
           }
           return {
             name: "enter_to_open",
+            intent: "read",
             allowed: () => {
               requestOpen(e);
               e.preventDefault(); // prevent form submission
@@ -596,6 +627,7 @@ const PickerCustom = (props) => {
           const isCancel = escapeEffect === "cancel";
           return {
             name: isCancel ? "escape_to_cancel" : "escape_to_close",
+            intent: "read",
             allowed: () => {
               requestClose(e, { isCancel });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
@@ -626,6 +658,7 @@ const PickerCustom = (props) => {
               // choice being taken from anyone.
               return {
                 name: "mousedown to close picker",
+                intent: "read",
                 allowed: () => requestClose(e, { isCancel: true }),
               };
             }
@@ -634,6 +667,7 @@ const PickerCustom = (props) => {
             }
             return {
               name: "mousedown to open picker",
+              intent: "read",
               allowed: () => {
                 debugFocus(
                   e,
@@ -657,6 +691,7 @@ const PickerCustom = (props) => {
                 e.detail === 0
                   ? "click (keyboard or progammatic) to open picker"
                   : "click to open picker",
+              intent: "read",
               prevented: () => {
                 e.preventDefault();
               },

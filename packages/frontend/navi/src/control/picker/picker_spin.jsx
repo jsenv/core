@@ -131,7 +131,27 @@ const css = /* css */ `
        of one's own still wins — an inline style beats a stylesheet. */
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+    /* Squared from the outside, corner by corner: a spin is not always the
+       member a Group joins — it can arrive wrapped — so the ask travels down
+       as inherited custom properties rather than as a radius landing on this
+       element. The chevrons take these corners back by inherit (see below), so
+       they follow. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--navi-control-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--navi-control-border-radius)
+    );
     outline-width: var(--navi-focus-outline-width);
     /* Just outside the border, never on it: the ring belongs to the whole
        control — the two chevrons included, since pressing one lands the
@@ -188,6 +208,13 @@ const css = /* css */ `
      opens its calendar. Around the whole control it would open under a chevron;
      around the value it opens under the value one pressed. */
   .navi_picker_spin_middle {
+    /* The ask stops here: the frame is the spin's box, and the picker or the
+       field standing in the middle of it is behind that frame, not at a seam. */
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+
     position: relative;
     display: flex;
     min-width: 0;
@@ -365,7 +392,26 @@ const css = /* css */ `
     font-family: var(--navi-control-font-family);
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+    /* Squared from the outside, corner by corner (see .navi_picker_spin
+       above): the group is the member a Group joins, and it can arrive
+       wrapped. The spins inside give their radius up and take the corners of
+       this one back through inherit, so they follow. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--navi-control-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--navi-control-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--navi-control-border-radius)
+    );
     outline-width: var(--navi-focus-outline-width);
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;

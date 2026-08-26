@@ -5,12 +5,24 @@ import { MAX_LENGTH_CONSTRAINT } from "../validation/standard_constraints.js";
 export const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const readOnly = Boolean(
       field.controlHostProps.readOnly ||
       field.controlHostProps["aria-readonly"] === "true",
     );
     if (!readOnly) {
+      return null;
+    }
+
+    // Read-only, and what it opens still opens: a picker's answer often lives
+    // in a shape only its popup draws — a plan with one tile ringed, a wheel
+    // stopped on a time — and refusing to open leaves that shape unreadable.
+    // Opening reads and nothing more, so it goes through; everything that would
+    // write is refused below, and the popup content is handed the same
+    // read-only state so each control in there refuses on its own terms. Which
+    // controls say so, and when, is theirs to answer (see createControlInfo's
+    // readOnlyOpens).
+    if (intent === "read" && field.readOnlyOpens) {
       return null;
     }
 

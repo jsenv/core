@@ -109,6 +109,28 @@ const css = /* css */ `
     --x-thumb-color: var(--thumb-color);
     --x-thumb-border: none;
     --x-thumb-cursor: var(--thumb-cursor);
+    /* Squared from the outside, corner by corner — resolved here once because
+       what draws the frame is not this element but the three layers stacked
+       below it (background, track, fill), which cannot take it by inherit the
+       way a control with a single frame does. A range can arrive wrapped, so
+       the ask travels down as inherited custom properties; each corner falls
+       back to the track's own radius when nothing asks for anything. */
+    --x-range-corner-top-left: var(
+      --x-corner-top-left-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-top-right: var(
+      --x-corner-top-right-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-bottom-right: var(
+      --x-corner-bottom-right-radius,
+      var(--border-radius)
+    );
+    --x-range-corner-bottom-left: var(
+      --x-corner-bottom-left-radius,
+      var(--border-radius)
+    );
 
     position: relative;
     box-sizing: border-box;
@@ -117,10 +139,26 @@ const css = /* css */ `
     margin: 2px;
     flex-direction: row;
     align-items: center;
-    /* Just for the outline, the real border radius of the range is fixed */
     font-size: var(--font-size);
     font-family: var(--font-family);
-    border-radius: var(--outline-border-radius);
+    /* The ring around the whole control, which follows the claim too: a range
+       squared along a seam must not keep a rounded ring over it. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--outline-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--outline-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--outline-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--outline-border-radius)
+    );
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
@@ -161,7 +199,10 @@ const css = /* css */ `
       border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-border-color);
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
     }
     .navi_input_range_track {
       position: absolute;
@@ -171,7 +212,10 @@ const css = /* css */ `
       border-width: var(--border-width);
       border-style: solid;
       border-color: var(--x-track-border-color);
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
     }
     .navi_input_range_fill {
       position: absolute;
@@ -179,7 +223,10 @@ const css = /* css */ `
       height: var(--height);
       background: var(--x-fill-color);
       background-clip: content-box;
-      border-radius: var(--border-radius);
+      border-top-left-radius: var(--x-range-corner-top-left);
+      border-top-right-radius: var(--x-range-corner-top-right);
+      border-bottom-right-radius: var(--x-range-corner-bottom-right);
+      border-bottom-left-radius: var(--x-range-corner-bottom-left);
       clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
     }
     .navi_input_range_thumb {

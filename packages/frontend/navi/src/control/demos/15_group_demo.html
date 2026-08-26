@@ -24,6 +24,7 @@
         Separator,
         Label,
         Text,
+        NumberSpin,
       } from "@jsenv/navi";
 
       const BasicBoxesDemo = () => {
@@ -530,10 +531,152 @@
         );
       };
 
+      /* The other form of the ask: the member is a plain <Box> and the control
+         that carries the frame is inside it. Nothing lands on the control as a
+         radius here — only the --x-corner-*-radius claims travel down — so a
+         control that declares its radius without reading them stays round in
+         the middle of the group. Every row below must read as one frame. */
+      const WrappedMembersDemo = () => {
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 4: Members arriving wrapped</h2>
+            <Box spacing="l">
+              <Box>
+                <h3>Pickers inside a plain Box (vertical)</h3>
+                <Box width="420">
+                  <Group row>
+                    <Picker
+                      name="wrapped_picker_bare"
+                      type="date"
+                      defaultValue="2026-01-15"
+                      expandX
+                    />
+                    <Box flex="y">
+                      <Picker name="wrapped_picker_boxed" type="time" expandX />
+                    </Box>
+                    <Box flex="y">
+                      <Box flex="y">
+                        <Picker
+                          name="wrapped_picker_boxed_deep"
+                          type="color"
+                          defaultValue="#4f81e0"
+                          expandX
+                        />
+                      </Box>
+                    </Box>
+                    <Picker
+                      name="wrapped_picker_bare_last"
+                      type="date"
+                      defaultValue="2026-02-20"
+                      expandX
+                    />
+                  </Group>
+                </Box>
+              </Box>
+
+              <Box>
+                <h3>Input, Select and Button inside a plain Box</h3>
+                <Group>
+                  <Box>
+                    <Button>Today</Button>
+                  </Box>
+                  <Box>
+                    <Input placeholder="Note" />
+                  </Box>
+                  <Box>
+                    <Select name="wrapped_select">
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
+                    </Select>
+                  </Box>
+                  <Input placeholder="Bare" />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Spins inside a plain Box</h3>
+                <Group>
+                  <Box>
+                    <NumberSpin
+                      name="wrapped_spin_first"
+                      max={23}
+                      defaultValue={7}
+                    />
+                  </Box>
+                  <Box>
+                    <NumberSpin
+                      name="wrapped_spin_last"
+                      max={59}
+                      defaultValue={30}
+                    />
+                  </Box>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Checkbox and range inside a plain Box</h3>
+                <Box spacing="s">
+                  <Group>
+                    <Box>
+                      <Input type="checkbox" />
+                    </Box>
+                    <Box>
+                      <Input type="checkbox" defaultChecked />
+                    </Box>
+                  </Group>
+                  <Group>
+                    <Box>
+                      <Input type="range" defaultValue={30} />
+                    </Box>
+                    <Box>
+                      <Input type="range" defaultValue={70} />
+                    </Box>
+                  </Group>
+                </Box>
+              </Box>
+
+              <Box>
+                <h3>Custom radius, wrapped</h3>
+                <Group>
+                  <Box>
+                    <Picker
+                      name="wrapped_radius_first"
+                      type="date"
+                      borderRadius="12px"
+                      defaultValue="2026-01-15"
+                    />
+                  </Box>
+                  <Box>
+                    <Picker
+                      name="wrapped_radius_last"
+                      type="time"
+                      borderRadius="12px"
+                    />
+                  </Box>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Alone in the group, wrapped — keeps all four corners</h3>
+                <Group>
+                  <Box>
+                    <Picker
+                      name="wrapped_only_child"
+                      type="date"
+                      defaultValue="2026-01-15"
+                    />
+                  </Box>
+                </Group>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const BorderlessDemo = () => {
         return (
           <Box background="white" padding="l" borderRadius="m">
-            <h2>Part 4: Borderless Groups</h2>
+            <h2>Part 5: Borderless Groups</h2>
             <Box spacing="l">
               <h3>Checkbox Items - No Borders</h3>
               <Box background="orange" padding="l" width="200">
@@ -593,7 +736,7 @@
 
         return (
           <Box background="white" padding="l" borderRadius="m">
-            <h2>Part 5: Interactive Group Demo</h2>
+            <h2>Part 6: Interactive Group Demo</h2>
             <Box spacing="l">
               <Box column spacing="m">
                 <Button onClick={addBlock}>Add Block</Button>
@@ -669,7 +812,7 @@
       const OverlapDemo = () => {
         return (
           <Box background="white" padding="l" borderRadius="m">
-            <h2>Part 6: Overlap Order</h2>
+            <h2>Part 7: Overlap Order</h2>
             <Box spacing="l">
               <Box>
                 <h3>Focus ring held on the middle member</h3>
@@ -762,6 +905,7 @@
             <BasicBoxesDemo />
             <InputElementsDemo />
             <PickerElementsDemo />
+            <WrappedMembersDemo />
             <BorderlessDemo />
             <InteractiveDemo />
             <OverlapDemo />

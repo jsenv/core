@@ -13,7 +13,11 @@ import {
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
-import { ControlIdContext, ControlNameContext } from "../control_context.js";
+import {
+  ControlIdContext,
+  ControlNameContext,
+  ReadOnlyContext,
+} from "../control_context.js";
 import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
@@ -174,10 +178,39 @@ const css = /* css */ `
     /* The frame is drawn by the box, but its radius is declared here, on the
        control root, like every other navi control does — so anything styling
        the picker from the outside (a Group squaring the corners it joins) has
-       one element to talk to, and the box follows. */
-    border-radius: var(--picker-border-radius);
+       one element to talk to, and the box follows.
+       Corner by corner rather than as the shorthand: a picker is not always
+       the member a Group joins — it can arrive wrapped (in a Box carrying a
+       state, in a link, in a tooltip), and the ask then travels down as
+       inherited custom properties instead of landing on this element as a
+       radius. Each corner falls back to the picker's own radius when nothing
+       asks for anything. */
+    border-top-left-radius: var(
+      --x-corner-top-left-radius,
+      var(--picker-border-radius)
+    );
+    border-top-right-radius: var(
+      --x-corner-top-right-radius,
+      var(--picker-border-radius)
+    );
+    border-bottom-right-radius: var(
+      --x-corner-bottom-right-radius,
+      var(--picker-border-radius)
+    );
+    border-bottom-left-radius: var(
+      --x-corner-bottom-left-radius,
+      var(--picker-border-radius)
+    );
 
     .navi_picker_box {
+      /* The ask stops here: this element is the picker's frame, so nothing it
+         holds is at the seam — the chevron and the clear cross in the slot, a
+         button in a custom UI. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       position: relative;
       display: inline-flex;
       box-sizing: border-box;
@@ -229,14 +262,6 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
-      /* A corner claimed from the outside (see group.jsx) is the frame's, and
-         what lives in here is not the frame — a button in a slot, the content
-         of a popup — so the ask stops at this boundary. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
       display: inline-flex;
       height: 1em;
       height: 1lh;
@@ -331,6 +356,15 @@ const css = /* css */ `
     }
 
     .navi_picker_content {
+      /* The other side of the frame: what a picker holds here is what its
+         popup shows, and a popup is never at a seam. Popover and Dialog stop
+         the ask at their own root too — this covers content that reaches the
+         popup through neither. */
+      --x-corner-top-left-radius: initial;
+      --x-corner-top-right-radius: initial;
+      --x-corner-bottom-right-radius: initial;
+      --x-corner-bottom-left-radius: initial;
+
       display: contents;
       text-align: initial; /* Don't inherit picker text align */
     }
@@ -347,6 +381,12 @@ const css = /* css */ `
       --x-picker-color: var(--picker-color-readonly);
       --x-picker-icon-color: var(--picker-icon-color-readonly);
       --x-picker-cursor: default;
+    }
+    /* Read-only and still opening, so it still says so under the pointer.
+       Before the disabled block below on purpose: a disabled picker opens
+       nothing, read-only or not. */
+    &[data-readonly-opens] {
+      --x-picker-cursor: pointer;
     }
     /* Focus */
     &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
@@ -478,6 +518,7 @@ const PickerButton = (props) => {
     // untouched (see the --navi-clear command).
     clearConfirm,
     clearConfirmPopupContent,
+    readOnly,
     error,
   } = props;
   const isSingleLine = maxLines === 1;
@@ -496,6 +537,21 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { basePseudoState, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  // The same chain useControlProps resolves (own prop first, then what the
+  // group above says), for the two things it does not carry: the popup content,
+  // which is read-only along with the picker, and the cursor, which stays a
+  // pointer on a picker that still opens.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const readOnlyResolved = readOnly || readOnlyFromAbove;
+  // Read off the controller rather than worked out again: what makes a
+  // read-only picker open is settled once, where the gate reads it (see
+  // createControlInfo's readOnlyOpens). Needed here for the cursor.
+  const readOnlyOpens =
+    Boolean(readOnlyResolved) && uiStateController.readOnlyOpens;
+  // Whether anything can still be changed — read by the clear cross below,
+  // clearing being a modification like any other.
+  const interactive =
+    !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
 
   return (
@@ -514,6 +570,7 @@ const PickerButton = (props) => {
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
       navi-ui-custom={ui === "default" ? undefined : ""}
+      data-readonly-opens={readOnlyOpens ? "" : undefined}
       data-popup-width-fit-content={popupWidthFitContent ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
@@ -524,6 +581,7 @@ const PickerButton = (props) => {
       rightSlot={undefined}
       clearConfirm={undefined}
       clearConfirmPopupContent={undefined}
+      openWhileReadOnly={undefined}
       ui={undefined}
       maxLines={undefined}
       popupWidthFitContent={undefined}
@@ -657,7 +715,15 @@ const PickerButton = (props) => {
                 gone — takes the picker's own entry with it. */}
             <ControlIdContext.Provider value={undefined}>
               <ControlNameContext.Provider value={undefined}>
-                {clearable && value !== undefined && value !== "" ? (
+                {/* Clearing is a modification: nothing to offer on a picker
+                    whose value cannot be changed. The cross is a control of its
+                    own, so the interaction gate finds IT rather than the picker
+                    and would let the press through — the tap aimed where the
+                    chevron sits would empty a field nothing else can touch. */}
+                {clearable &&
+                interactive &&
+                value !== undefined &&
+                value !== "" ? (
                   <Button
                     command="--navi-clear"
                     commandFor={inputProps.id}
@@ -709,7 +775,14 @@ const PickerButton = (props) => {
         )}
       </span>
       <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
-        <div className="navi_picker_content">{children}</div>
+        {/* Read-only crosses into the popup: what the picker really holds is
+            drawn in there, by controls of their own, and each of them refuses
+            in its own words once told. Said from the read-only state alone,
+            never from the busy one — an action running for a moment is not the
+            same thing as a value nobody may change. */}
+        <ReadOnlyContext.Provider value={readOnlyResolved}>
+          <div className="navi_picker_content">{children}</div>
+        </ReadOnlyContext.Provider>
       </ControlFacadeChildrenWrapper>
     </Box>
   );
@@ -900,6 +973,7 @@ const PickerFirstResolver = (props) => {
  *   step?: string | number,
  *   disabled?: boolean,
  *   readOnly?: boolean,
+ *   openWhileReadOnly?: boolean,
  *   error?: boolean | string,
  *   uiAction?: (value: any, event: Event) => void,
  *   action?: (value: any, event: Event) => void,
@@ -938,6 +1012,22 @@ const PickerFirstResolver = (props) => {
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
+ *   still opens, so what is in the popup can be read: everything in there is
+ *   held read-only in turn, each control greying out and saying why on its own.
+ *   Which is the point of opening it at all: a picker's answer often exists
+ *   only in the shape the popup draws (a plan with one tile ringed, a wheel
+ *   stopped on a time), and the trigger's one line is a summary of it, not the
+ *   whole of it. The clear cross goes, closing commits nothing, and a `value`
+ *   the popup would otherwise have confirmed stays a suggestion.
+ *   A picker with no `children` opens the browser's own picker instead, and
+ *   that one cannot be held read-only — so it goes on refusing (see
+ *   PickerNative).
+ * @param {boolean} [openWhileReadOnly=true] Pass false to make `readOnly`
+ *   refuse the open as well, for a popup with nothing to read: a form of
+ *   controls to fill in, a menu of gestures. Opening then only shows what is
+ *   refused, so the picker says why on the trigger instead — where the
+ *   interaction happened.
  * @param {boolean|string} [error] Something went wrong around this picker (its
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.

@@ -15,6 +15,8 @@
  *   → "navi_request_interaction" event
  *   → onRequestInteraction
  *       → check disabled / read-only / busy (via controller.controlInteraction)
+ *         against the interaction's `intent` ("write" by default, "read" for one
+ *         that only shows what is already there — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()
  *       → if allowed  → allowed()
  *         → (in allowed callback) setUIState(value)
@@ -57,10 +59,10 @@ export const createControlInteraction = (
   // The title this rule put on the element, if any (see checkInteractivity).
   let titleWritten = null;
 
-  const checkInteractivity = ({ event } = {}) => {
+  const checkInteractivity = ({ event, intent = "write" } = {}) => {
     interactionFailedConstraintInfo = null;
     for (const constraint of INTERACTION_CONSTRAINT_SET) {
-      const checkResult = constraint.check(controller);
+      const checkResult = constraint.check(controller, { intent });
       if (!checkResult) {
         continue;
       }
@@ -87,7 +89,7 @@ export const createControlInteraction = (
         if (!mci) {
           continue;
         }
-        const canInteract = mci.checkInteractivity({ event });
+        const canInteract = mci.checkInteractivity({ event, intent });
         if (canInteract) {
           continue;
         }
@@ -101,8 +103,14 @@ export const createControlInteraction = (
     }
 
     // Keep title attribute in sync for accessibility.
+    // Only off a check that asked the general question: a title is read
+    // whenever a pointer rests on the element, so it says what is true of the
+    // control as a whole. A check made for an interaction that only reads (a
+    // read-only picker asked to open its popup) answers about that one
+    // interaction — writing the title from it would take away the "read-only"
+    // the first time someone opened the popup.
     const titleLess = !controller.controlHostProps?.title;
-    if (titleLess) {
+    if (intent === "write" && titleLess) {
       const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
@@ -208,6 +216,12 @@ export const onRequestInteraction = (
   const {
     event,
     name,
+    // What this interaction would do to the control: write it, or only read it.
+    // Everything writes unless it says otherwise — an interaction that merely
+    // shows what is already there (opening a picker's popup, closing it again)
+    // says "read", and that is what a control held read-only can still let
+    // through (see READONLY_CONSTRAINT).
+    intent = "write",
     bypassInteractivity = false,
     prevented,
     allowed,
@@ -238,7 +252,7 @@ export const onRequestInteraction = (
   if (controller && !bypassInteractivity) {
     const ci = controller?.rules.interaction;
     if (ci) {
-      const canInteract = ci.checkInteractivity({ event });
+      const canInteract = ci.checkInteractivity({ event, intent });
       if (!canInteract) {
         const failedInfo =
           ci.interactionFailedConstraintInfo ??

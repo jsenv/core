@@ -309,7 +309,26 @@ const css = /* css */ `
       border-width: var(--button-border-width);
       border-style: solid;
       border-color: var(--x-border-color);
-      border-radius: var(--button-border-radius);
+      /* Squared from the outside, corner by corner: a row of these is the
+         segmented control a Group is for, and one of them can arrive wrapped
+         (in a tooltip, in a label) — so the ask travels down as inherited
+         custom properties rather than as a radius landing on this element. */
+      border-top-left-radius: var(
+        --x-corner-top-left-radius,
+        var(--button-border-radius)
+      );
+      border-top-right-radius: var(
+        --x-corner-top-right-radius,
+        var(--button-border-radius)
+      );
+      border-bottom-right-radius: var(
+        --x-corner-bottom-right-radius,
+        var(--button-border-radius)
+      );
+      border-bottom-left-radius: var(
+        --x-corner-bottom-left-radius,
+        var(--button-border-radius)
+      );
 
       .navi_icon,
       img {
