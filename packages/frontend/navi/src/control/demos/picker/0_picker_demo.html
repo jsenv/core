@@ -90,6 +90,8 @@
       import { render } from "preact";
       import { useEffect, useRef, useState } from "preact/hooks";
       import {
+        Badge,
+        BadgeList,
         Box,
         Button,
         Field,
@@ -121,9 +123,10 @@
             <Chapter id="dimensions" title="Dimensions — size & overflow">
               <FontSizeDemo />
               <WidthDemo />
+              <PopupWidthDemo />
               <OverflowDemo />
               <MaxLinesDemo />
-              <PopupWidthDemo />
+              <BeyondMaxLinesDemo />
             </Chapter>
             <Chapter id="icon" title="Picker icon">
               <PickerIconDemo />
@@ -216,14 +219,19 @@
                   <Link href="#dim-width">Width adapts to value</Link>
                 </li>
                 <li>
-                  <Link href="#dim-overflow">Single-line overflow</Link>
-                </li>
-                <li>
-                  <Link href="#dim-maxlines">Multi-line with maxLines</Link>
-                </li>
-                <li>
                   <Link href="#dim-popup-width">
                     Popup width follows the trigger
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#dim-overflow">One line by default</Link>
+                </li>
+                <li>
+                  <Link href="#dim-maxlines">More lines with maxLines</Link>
+                </li>
+                <li>
+                  <Link href="#dim-beyond-maxlines">
+                    Past maxLines — everything overflows
                   </Link>
                 </li>
               </ol>
@@ -352,6 +360,33 @@
       const LONG_WORD = "Supercalifragilisticexpialidocious";
       const VERY_LONG_TEXT =
         "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
+
+      // Overflow demos below run the same four values through the same picker
+      // width, once on one line and once on two.
+      const LONG_SELECTION = [
+        "Apple",
+        "Banana",
+        "Lemon",
+        "Cherry",
+        "Elderberry",
+      ];
+      // Past two lines: a word that cannot be broken at all, a sentence several
+      // times over, and a selection long enough that no row count would hold it.
+      const LONGER_WORD = "Pneumonoultramicroscopicsilicovolcanoconiosis";
+      const LONGER_SELECTION = [
+        "Apple",
+        "Banana",
+        "Lemon",
+        "Cherry",
+        "Elderberry",
+        "Blackcurrant",
+        "Watermelon",
+        "Pomegranate",
+        "Passion fruit",
+        "Clementine",
+        "Gooseberry",
+        "Persimmon",
+      ];
 
       const BasicPickerContent = () => (
         <div style={{ padding: "16px" }}>
@@ -550,84 +585,140 @@
         </Subsection>
       );
 
+      // The same four values, laid out the same way, so what changes between
+      // the subsections below is only how many lines the picker is given.
+      const OverflowCases = ({
+        idPrefix,
+        maxLines,
+        word,
+        sentence,
+        selection,
+      }) => (
+        <Box flex="y" spacing="m">
+          <Field vertical>
+            <Label>A long word</Label>
+            <Picker
+              name={`${idPrefix}_word`}
+              value={word}
+              action={() => {}}
+              maxWidth="200"
+              maxLines={maxLines}
+            >
+              <BasicPickerContent />
+            </Picker>
+          </Field>
+          <Field vertical>
+            <Label>A long sentence</Label>
+            <Picker
+              name={`${idPrefix}_sentence`}
+              value={sentence}
+              action={() => {}}
+              maxWidth="200"
+              maxLines={maxLines}
+            >
+              <BasicPickerContent />
+            </Picker>
+          </Field>
+          <Field vertical>
+            <Label>A long selection</Label>
+            <Picker
+              name={`${idPrefix}_selection`}
+              value={selection.join(", ")}
+              action={() => {}}
+              maxWidth="200"
+              maxLines={maxLines}
+            >
+              <BasicPickerContent />
+            </Picker>
+          </Field>
+          <Field vertical>
+            <Label>
+              A long selection{" "}
+              <code style={{ fontWeight: "normal" }}>
+                (rendered by a BadgeList)
+              </code>
+            </Label>
+            <Picker
+              name={`${idPrefix}_badges`}
+              value={selection.join(", ")}
+              action={() => {}}
+              maxWidth="200"
+              maxLines={maxLines}
+              ui={
+                <BadgeList>
+                  {selection.map((item) => (
+                    <Badge key={item}>{item}</Badge>
+                  ))}
+                </BadgeList>
+              }
+            >
+              <BasicPickerContent />
+            </Picker>
+          </Field>
+        </Box>
+      );
+
       const OverflowDemo = () => (
-        <Subsection id="dim-overflow" title="Single-line overflow">
-          <Box flex="y" spacing="m">
-            <Field vertical>
-              <Label>Long sentence</Label>
-              <Picker
-                name="dim_sentence"
-                value={LONG_SENTENCE}
-                action={() => {}}
-                maxWidth="200"
-              >
-                <BasicPickerContent />
-              </Picker>
-            </Field>
-            <Field vertical>
-              <Label>Long word</Label>
-              <Picker
-                name="dim_word"
-                value={LONG_WORD}
-                action={() => {}}
-                maxWidth="200"
-              >
-                <BasicPickerContent />
-              </Picker>
-            </Field>
-          </Box>
+        <Subsection id="dim-overflow" title="One line by default">
+          <p>
+            A picker shows its value on a single line: whatever does not fit is
+            cut off with an ellipsis. That is <code>maxLines={1}</code>, the
+            default — the four values below are all too wide for the trigger.
+          </p>
+          <p>
+            The last one is the odd one: a <code>BadgeList</code> wraps flex
+            rows, which CSS line-clamp cannot see. The picker hands its{" "}
+            <code>maxLines</code> down instead, and the list renders the badges
+            that fit plus a <code>+N more</code> badge for the rest.
+          </p>
+          <OverflowCases
+            idPrefix="dim_overflow"
+            word={LONG_WORD}
+            sentence={LONG_SENTENCE}
+            selection={LONG_SELECTION}
+          />
         </Subsection>
       );
 
       const MaxLinesDemo = () => (
-        <Subsection id="dim-maxlines" title="Multi-line with maxLines">
-          <Box flex="y" spacing="m">
-            <Field vertical>
-              <Label>
-                Long sentence{" "}
-                <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-              </Label>
-              <Picker
-                name="dim_sentence_maxrows"
-                value={LONG_SENTENCE}
-                action={() => {}}
-                maxWidth="200"
-                maxLines={3}
-              >
-                <BasicPickerContent />
-              </Picker>
-            </Field>
-            <Field vertical>
-              <Label>
-                Long word{" "}
-                <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-              </Label>
-              <Picker
-                name="dim_word_maxrows"
-                value={LONG_WORD}
-                action={() => {}}
-                maxWidth="200"
-                maxLines={3}
-              >
-                <BasicPickerContent />
-              </Picker>
-            </Field>
-            <Field vertical>
-              <Label>
-                Exceeds maxLines{" "}
-                <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
-              </Label>
-              <Picker
-                name="dim_clamp_maxrows"
-                value={VERY_LONG_TEXT}
-                action={() => {}}
-                maxWidth="200"
-                maxLines={3}
-              >
-                <BasicPickerContent />
-              </Picker>
-            </Field>
-          </Box>
+        <Subsection id="dim-maxlines" title="More lines with maxLines">
+          <p>
+            <code>maxLines</code> set to anything but 1 lets the value wrap and
+            clamps it at that many lines. The same four values, given two lines,
+            now fit.
+          </p>
+          <p>
+            Except the first: a word has nowhere to break, so no number of lines
+            makes it fit — it stays truncated.
+          </p>
+          <OverflowCases
+            idPrefix="dim_maxlines"
+            maxLines={2}
+            word={LONG_WORD}
+            sentence={LONG_SENTENCE}
+            selection={LONG_SELECTION}
+          />
+        </Subsection>
+      );
+
+      const BeyondMaxLinesDemo = () => (
+        <Subsection
+          id="dim-beyond-maxlines"
+          title="Past maxLines — everything overflows"
+        >
+          <p>
+            Still two lines, but values too long for them. Text ends on an
+            ellipsis; the <code>BadgeList</code> ends on the{" "}
+            <code>+N more</code> badge, which is the same idea said with a
+            badge.
+          </p>
+          <OverflowCases
+            idPrefix="dim_beyond"
+            maxLines={2}
+            word={LONGER_WORD}
+            sentence={VERY_LONG_TEXT}
+            selection={LONGER_SELECTION}
+          />
         </Subsection>
       );
 

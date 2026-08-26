@@ -11,6 +11,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
@@ -264,8 +265,20 @@ const css = /* css */ `
         color: var(--picker-placeholder-color);
       }
 
+      /* A <BadgeList> caps its own rows: it renders the badges that fit and a
+         "+N" badge for the rest, reading the number from MaxLinesContext right
+         below. The picker must then not clamp on top of it — line-clamp turns
+         the value into a -webkit-box and single-line truncation into a
+         nowrap block, either of which takes the badge list out of the
+         inline-flex layout it needs. maxLines writes those as inline styles on
+         the element, hence !important. */
       &:has(.navi_badge_list) {
-        display: inline-flex;
+        display: inline-flex !important;
+        -webkit-line-clamp: none !important;
+        overflow: visible !important;
+        -webkit-box-orient: horizontal !important;
+        text-overflow: clip !important;
+        white-space: normal !important;
       }
 
       /* The façade is transparent to the pointer — a press on what it draws
@@ -741,7 +754,11 @@ const PickerButton = (props) => {
                 <PickerContext.Provider
                   value={{ value, placeholder, maxLines }}
                 >
-                  {ui === undefined ? <PickerDefaultUI /> : ui}
+                  {/* For what the picker cannot clamp itself: a <BadgeList>
+                      wraps flex rows, which line-clamp never sees. */}
+                  <MaxLinesContext.Provider value={maxLines}>
+                    {ui === undefined ? <PickerDefaultUI /> : ui}
+                  </MaxLinesContext.Provider>
                 </PickerContext.Provider>
               </PickerOwnContent>
             </Text>

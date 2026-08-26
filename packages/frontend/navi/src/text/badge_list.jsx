@@ -1,9 +1,10 @@
 import { measureWidestChildRow } from "@jsenv/dom";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { BadgeUI } from "./badge.jsx";
 import { BadgeListContext, createBadgeRegistry } from "./badge_list_context.js";
+import { MaxLinesContext } from "./max_lines_context.js";
 import { naviI18n } from "./navi_i18n.js";
 
 const css = /* css */ `
@@ -19,7 +20,7 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    /* maxRows renders every badge for one layout, reads where the rows fell,
+    /* maxLines renders every badge for one layout, reads where the rows fell,
        then renders again with only what fits. The in-between is hidden rather
        than clipped: the badges that don't make it must leave the DOM, not sit
        there cut in half. Both renders land in the same frame (the second one
@@ -57,8 +58,8 @@ const groupRectsByRow = (elements) => {
 };
 
 // Reads a list that currently holds every badge plus the "+N" badge and tells
-// how many badges fit in maxRows rows.
-const measureRowFit = (listEl, maxRows) => {
+// how many badges fit in maxLines rows.
+const measureRowFit = (listEl, maxLines) => {
   const elements = Array.from(listEl.children);
   if (elements.length < 2) {
     return elements.length;
@@ -69,7 +70,7 @@ const measureRowFit = (listEl, maxRows) => {
   const moreRect = elements[elements.length - 1].getBoundingClientRect();
   const badgeElements = elements.slice(0, -1);
   const rows = groupRectsByRow(badgeElements);
-  if (rows.length <= maxRows) {
+  if (rows.length <= maxLines) {
     return badgeElements.length;
   }
 
@@ -83,8 +84,8 @@ const measureRowFit = (listEl, maxRows) => {
   // The "+N" badge lands right after the last kept badge, so it eats into the
   // last visible row: drop badges from that row until it fits. Emptying that
   // row entirely is a valid outcome — the badge then wraps onto it and takes it
-  // for itself, which is still within maxRows.
-  const rowsKept = rows.slice(0, maxRows);
+  // for itself, which is still within maxLines.
+  const rowsKept = rows.slice(0, maxLines);
   const lastRow = rowsKept[rowsKept.length - 1];
   let lastRowCount = lastRow.length;
   while (
@@ -104,15 +105,21 @@ export const BadgeList = ({
   children,
   shrinkWrap = true,
   max,
-  maxRows,
+  maxLines,
   ...props
 }) => {
   import.meta.css = css;
   const measureRef = useRef();
   const visibleRef = useRef();
-  // maxRows needs the list to be as wide as the room it was given; shrinkWrap
+  // A badge list is often what a <Picker> displays as its value. The picker
+  // clamps that value with its own maxLines, which cannot reach flex rows, so
+  // it hands the number over instead — see max_lines_context.js.
+  const maxLinesFromAbove = useContext(MaxLinesContext);
+  const maxLinesResolved =
+    maxLines === undefined ? maxLinesFromAbove : maxLines;
+  // maxLines needs the list to be as wide as the room it was given; shrinkWrap
   // narrows it down to its widest row, which would re-wrap the badges under it.
-  const shrinkWrapEnabled = shrinkWrap && !maxRows;
+  const shrinkWrapEnabled = shrinkWrap && !maxLinesResolved;
 
   // The badges below hand themselves over as they render instead of being read
   // upfront from the children vnodes: see badge_list_context.js.
@@ -125,11 +132,11 @@ export const BadgeList = ({
   registry.startPass(previousChildrenRef.current !== children);
   previousChildrenRef.current = children;
 
-  // How many badges fit in maxRows rows. null means "not measured yet": the
+  // How many badges fit in maxLinesResolved rows. null means "not measured yet": the
   // list then renders all of them, hidden, for the layout effect to read.
   const [rowFit, setRowFit] = useState(null);
   const measuredRef = useRef({ count: -1, width: -1 });
-  const measuring = maxRows !== undefined && rowFit === null;
+  const measuring = maxLinesResolved !== undefined && rowFit === null;
 
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
@@ -179,7 +186,7 @@ export const BadgeList = ({
   // DOM holds whatever this render asked for.
   useLayoutEffect(() => {
     const visibleEl = visibleRef.current;
-    if (maxRows === undefined || !visibleEl) {
+    if (maxLinesResolved === undefined || !visibleEl) {
       return;
     }
     const count = registry.getEntries().length;
@@ -191,7 +198,7 @@ export const BadgeList = ({
         count,
         width: visibleEl.getBoundingClientRect().width,
       };
-      setRowFit(measureRowFit(visibleEl, maxRows));
+      setRowFit(measureRowFit(visibleEl, maxLinesResolved));
       return;
     }
     if (measuredRef.current.count !== count) {
@@ -203,7 +210,7 @@ export const BadgeList = ({
   useLayoutEffect(() => {
     const visibleEl = visibleRef.current;
     const outerParent = visibleEl?.parentElement?.parentElement;
-    if (maxRows === undefined || !outerParent) {
+    if (maxLinesResolved === undefined || !outerParent) {
       return undefined;
     }
     let rafId;
@@ -227,7 +234,7 @@ export const BadgeList = ({
       observer.disconnect();
       window.removeEventListener("resize", remeasure);
     };
-  }, [maxRows]);
+  }, [maxLinesResolved]);
 
   const sharedProps = {
     inline: true,

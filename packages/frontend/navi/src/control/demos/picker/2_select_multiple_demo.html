@@ -333,13 +333,16 @@
               anywhere on the picker opens the dropdown where items can be
               toggled.
             </p>
-            <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
-              <strong>maxLines not supported with chips.</strong> Chips are flex
-              items with spacing, not plain text — CSS <code>line-clamp</code>{" "}
-              does not apply, and detecting which chips overflow and where they
-              break across rows requires expensive DOM measurement on every
-              render. This complexity is not worth it; use <code>max</code> on{" "}
-              <code>BadgeList</code> to cap the number of visible chips instead.
+            <p style="color: #0f5132; background: #d1e7dd; border: 1px solid #badbcc; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
+              <strong>maxLines works with chips.</strong> Chips are flex items
+              with spacing, not plain text, so CSS <code>line-clamp</code> never
+              sees the rows they wrap onto. The picker hands its{" "}
+              <code>maxLines</code> to the <code>BadgeList</code> instead (and
+              turns its own clamp off): the list measures where the rows fall
+              and renders only the chips that fit, plus a <code>+N more</code>{" "}
+              chip for the rest. Nothing to set on the <code>BadgeList</code>{" "}
+              itself — <code>max</code> is still there to cap the count rather
+              than the rows.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -398,7 +401,7 @@
                   name="multiselect_chips_simple_mr1"
                   value={selectedArrayMr1}
                   ui={
-                    <BadgeList maxRows={1} fallback={chipsFallback}>
+                    <BadgeList fallback={chipsFallback}>
                       {selectedArrayMr1.map((opt) => (
                         <Badge key={opt}>{opt}</Badge>
                       ))}
@@ -534,7 +537,7 @@
               name="multiselect_chips_delete_mr1"
               value={selectedArrayMr1}
               ui={
-                <BadgeList maxRows={1}>
+                <BadgeList>
                   {selectedArrayMr1.map((opt) => (
                     <Picker.Chip key={opt} value={opt}>
                       <Text>{opt}</Text>
@@ -638,10 +641,10 @@
               removing the chip, which can surprise users who expect the whole
               chip to be the delete target.
             </p>
-            <p style="color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
-              <strong>maxLines not supported with chips.</strong> Same reason as
-              section 2 — use <code>max</code> on <code>BadgeList</code>
-              instead.
+            <p style="color: #0f5132; background: #d1e7dd; border: 1px solid #badbcc; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px">
+              <strong>maxLines works with chips.</strong> Same mechanism as
+              section 2: the picker hands its <code>maxLines</code> down and the{" "}
+              <code>BadgeList</code> caps its own rows.
             </p>
             <Box flex="y" spacing="m">
               <ChipsWithDeleteDefault />

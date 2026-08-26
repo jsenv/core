@@ -168,11 +168,11 @@
             Max rows
           </Title>
           <Paragraph>
-            Use <code>maxRows</code> to cap how many rows of badges are visible.
-            The list is clipped after the specified number of rows.
+            Use <code>maxLines</code> to cap how many rows of badges are
+            visible. The list is clipped after the specified number of rows.
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
-            <Text bold>maxRows={1}</Text>
+            <Text bold>maxLines={1}</Text>
             <Box
               maxWidth="300px"
               border="2px dotted #aaa"
@@ -180,7 +180,7 @@
               inline
               flex
             >
-              <BadgeList maxRows={1}>
+              <BadgeList maxLines={1}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -200,7 +200,7 @@
               </BadgeList>
             </Box>
 
-            <Text bold>maxRows={2}</Text>
+            <Text bold>maxLines={2}</Text>
             <Box
               maxWidth="300px"
               border="2px dotted #aaa"
@@ -208,7 +208,7 @@
               inline
               flex
             >
-              <BadgeList maxRows={2}>
+              <BadgeList maxLines={2}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -228,7 +228,7 @@
               </BadgeList>
             </Box>
 
-            <Text bold>maxRows={3}</Text>
+            <Text bold>maxLines={3}</Text>
             <Box
               maxWidth="300px"
               border="2px dotted #aaa"
@@ -236,7 +236,7 @@
               inline
               flex
             >
-              <BadgeList maxRows={3}>
+              <BadgeList maxLines={3}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -270,7 +270,7 @@
                 maxWidth: "600px",
               }}
             >
-              <BadgeList maxRows={2}>
+              <BadgeList maxLines={2}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -328,7 +328,7 @@
             </BadgeList>
 
             <Text bold>
-              max={2} combined with maxRows={1}
+              max={2} combined with maxLines={1}
             </Text>
             <Box
               maxWidth="300px"
@@ -337,7 +337,7 @@
               inline
               flex
             >
-              <BadgeList max={2} maxRows={1}>
+              <BadgeList max={2} maxLines={1}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
