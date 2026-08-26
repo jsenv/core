@@ -6,6 +6,7 @@ somewhere else in the app.
 
 - [The three answers](#the-three-answers)
 - [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
+- [A button that proposes a value is `--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
@@ -68,19 +69,63 @@ Both halves are worth knowing about, because each replaces a habit:
 The follow goes all the way up: a bound control that lives inside a group — two
 wheels in a `WheelGroup`, a field in a `ControlGroup` — makes that group
 re-aggregate when its signal is written, and the form above sees the new value.
-A shortcut that pushes the controls from the outside is an answer like any
-other: the wheels roll, and the submit lights up.
+A value pushed in from anywhere is an answer like any other: the wheels roll,
+and the submit lights up. Which is why a **button** offering such a value is not
+a hand-written signal write — see the next section.
+
+## A button that proposes a value is `--navi-update`
+
+A shortcut beside a control — "Tous niveaux" / "Aucun niveau" next to a list of
+levels, "1h / 1h30 / 2h" next to a pair of wheels, a suggestion under a field —
+is a value being offered to that control. It is not an action, and it is not a
+signal to write by hand:
 
 ```jsx
+<ControlGroup id="duration">
+  <TimeWheel name="duration" signal={durationSignal} />
+</ControlGroup>
+
 <Button
-  onClick={() => {
-    hoursSignal.value = 2;
-    minutesSignal.value = 0;
-  }}
+  command="--navi-update"
+  commandFor="duration"
+  value={{ hours: 1, minutes: 30 }}
 >
-  2h
+  1h30
 </Button>
 ```
+
+- the **value** is the button's own `value`, whatever shape it has — a string, an
+  array of levels, an object of two wheels;
+- the **target** is `commandFor`, naming the control's id — left out, the nearest
+  control around the button is used, which is what a button placed inside the
+  control it proposes to wants;
+- and the press goes through the same gate as every other interaction, so a
+  read-only, disabled or busy control **refuses it and says why**.
+
+That last point is the whole reason, and the counter-example is what everybody
+writes first:
+
+```jsx
+// ✗ not gated — plain DOM. On a read-only sheet the button greys out and fires
+//   all the same, rewriting a value nobody is allowed to change.
+<Button
+  onClick={() => {
+    durationSignal.value = { hours: 1, minutes: 30 };
+  }}
+>
+  1h30
+</Button>
+```
+
+Writing a signal from an `onClick` is only right where nothing is being proposed
+to a control: moving something else on screen, seeding state before anything is
+drawn.
+
+The id goes **on the control**, and a group is one — `ControlGroup`, `Form`,
+`WheelGroup`, `List selectable`. Put it on a layout box around the control and
+the command finds an element that holds no value; navi says so in dev rather
+than letting the press do nothing at all. An id that matches nothing is a dev
+warning too, naming the id it looked for.
 
 ## `signal` + `defaultValue`: the answer and where it starts
 

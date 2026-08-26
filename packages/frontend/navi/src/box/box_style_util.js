@@ -426,6 +426,26 @@ const POSITION_PROPS = {
     return { transform: `skew(${value})` };
   },
 };
+const singleLineEllipsisStyles = () => {
+  return {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    overflowWrap: "normal",
+  };
+};
+// The lines beyond the clamp are still laid out, so the clip edge decides
+// whether the top of the first hidden one is visible: "overflow: hidden" clips
+// at the padding box and lets it show inside the block-end padding. Clipping at
+// the content box instead ends the element right after its last visible line.
+const lineClampStyles = (value) => {
+  return {
+    "overflow": "clip",
+    "overflowClipMargin": "content-box",
+    "display": "-webkit-box",
+    "-webkit-box-orient": "vertical",
+    "-webkit-line-clamp": value,
+  };
+};
 const TYPO_PROPS = {
   font: applyOnCSSProp("fontFamily"),
   fontFamily: PASS_THROUGH,
@@ -463,39 +483,21 @@ const TYPO_PROPS = {
       return null;
     }
     if (value === 1 || value === "1") {
-      return {
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        overflowWrap: "normal",
-      };
+      return singleLineEllipsisStyles();
     }
-    return {
-      "overflow": "hidden",
-      "display": "-webkit-box",
-      "-webkit-box-orient": "vertical",
-      "-webkit-line-clamp": value,
-    };
+    return lineClampStyles(value);
   },
   overflowEllipsis: (value) => {
     if (!value) {
       return null;
     }
-    return {
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      overflowWrap: "normal",
-    };
+    return singleLineEllipsisStyles();
   },
   lineClamp: (value) => {
     if (!value) {
       return null;
     }
-    return {
-      "overflow": "hidden",
-      "display": "-webkit-box",
-      "-webkit-box-orient": "vertical",
-      "-webkit-line-clamp": value,
-    };
+    return lineClampStyles(value);
   },
   textAlign: PASS_THROUGH,
   textBox: PASS_THROUGH,
@@ -541,6 +543,7 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  overflowClipMargin: PASS_THROUGH,
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
   scrollbarWidth: PASS_THROUGH,

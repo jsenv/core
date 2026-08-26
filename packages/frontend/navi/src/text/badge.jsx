@@ -1,6 +1,7 @@
 import { useRef } from "preact/hooks";
 
 import { useControlProps } from "../control/control_hooks.jsx";
+import { useOwnTargetHidden } from "../control/own_target.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
@@ -63,6 +64,11 @@ const css = /* css */ `
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
+    /* Cuts the font's half-leading above the first line and below the last one,
+       down to cap-height/baseline: the padding becomes the only vertical space
+       and the text is exactly centered. Space between wrapped lines is left
+       untouched, unlike a line-height tweak. */
+    text-box: trim-both cap alphabetic;
     background: var(--x-background);
     background-color: var(--x-background-color);
     border-radius: 1em;
@@ -125,6 +131,11 @@ export const Badge = ({ children, className, ...props }) => {
       className={withPropsClassName("navi_badge", className)}
       bold
       maxLines={1}
+      // The text-box trim ends the content box at the baseline, and a clamped
+      // badge is clipped there: descenders of the last visible line would be
+      // cut. Halfway to the next line's cap top keeps them, still above any
+      // ink from the line the clamp hides.
+      overflowClipMargin="content-box calc((1lh - 1cap) / 2)"
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing={<span></span>}
@@ -151,6 +162,14 @@ const BadgeStyleCSSVars = {
 };
 
 const BadgeButton = (props) => {
+  const ownTargetHidden = useOwnTargetHidden(props);
+
+  if (ownTargetHidden) {
+    return null;
+  }
+  return <BadgeButtonUI {...props} />;
+};
+const BadgeButtonUI = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {

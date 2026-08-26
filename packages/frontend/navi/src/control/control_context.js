@@ -69,6 +69,10 @@ export const CONTROL_PROP_SET = new Set([
   "basePseudoState",
   "constraints",
 
+  // A real target inside a zone that belongs to another control — see
+  // own_target.js.
+  "ownTarget",
+
   "autoFocus",
   "autoFocusVisible",
   "autoFocusSelect",

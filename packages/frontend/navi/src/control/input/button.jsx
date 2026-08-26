@@ -7,6 +7,7 @@ import {
 import { useConfirmParams } from "../../action/confirm.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
+import { useOwnTargetHidden } from "../own_target.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -14,6 +15,8 @@ const ButtonFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+
+  const ownTargetHidden = useOwnTargetHidden(props);
 
   // Attached to the element rather than kept as a prop: the action a button
   // requests is not always run by the button (a submit button hands the send to
@@ -24,6 +27,9 @@ const ButtonFirstResolver = (props) => {
     content: props.confirmPopupContent,
   });
 
+  if (ownTargetHidden) {
+    return null;
+  }
   return <Next {...props} />;
 };
 
@@ -119,6 +125,20 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
   }),
 };
 
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   ownTarget?: boolean | "refuse",
+ *   [key: string]: any,
+ * }>}
+ * @param {boolean|"refuse"} [ownTarget] A real target inside a zone that belongs
+ *   to another control — a chip's cross on a picker's façade, an eye on a
+ *   pressable row, a diskette inside a slide that travels. The press is this
+ *   button's alone (no travel starts, no popup opens, nothing above answers) and
+ *   its `onClick` waits for its own interaction gate instead of firing from the
+ *   DOM. Where the zone around it is read-only, disabled or busy the button
+ *   goes; `"refuse"` keeps it on screen refusing with a callout, for an
+ *   affordance whose presence is information in itself.
+ */
 export const Button = createComponentResolver([
   ButtonFirstResolver,
   ButtonRouteResolver,

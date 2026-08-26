@@ -533,12 +533,23 @@ places and a `toss` wherever it was thrown (`xy`). `data-drag-delay`,
 
 ### A control inside something draggable
 
-`data-drag-ignore` says the press there is none of the gesture's business: the
-element under it never starts a drag, and keeps both its cursor and its text
-selection. That is what a button living inside a carried piece needs — a cross
-that removes it, a menu — otherwise the piece is picked up from the button like
-from anywhere else. A click of its own usually has to stop there too, or the
-piece reads it as its own click.
+`ownTarget` on the control says it: a chip's cross inside a carried piece, an
+eye on a row that travels, a diskette on a picker's façade. The press belongs to
+that control alone — no gesture starts under it, and nothing above it answers
+the mousedown or the click. It also follows the interactivity of the zone around
+it: read-only, disabled or busy, the affordance goes rather than greys (pass
+`ownTarget="refuse"` for one whose presence is information in itself), and its
+`onClick` waits for its own gate instead of firing from the DOM.
+
+```jsx
+<Badge.Button ownTarget onClick={() => remove(id)}>
+  ×
+</Badge.Button>
+```
+
+`data-drag-ignore` says the same thing to the gesture alone, for something that
+is not a control: the press there is none of the gesture's business, and the
+element keeps both its cursor and its text selection.
 
 ### What says a thing can be picked up
 

@@ -84,6 +84,10 @@ naviI18n.addAll({
     en: "More actions",
     fr: "Autres actions",
   },
+  "button.remove": {
+    en: "Remove",
+    fr: "Retirer",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()

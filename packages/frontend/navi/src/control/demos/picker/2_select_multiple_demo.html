@@ -466,25 +466,9 @@
                 ) : (
                   <BadgeList>
                     {selectedArray.map((opt) => (
-                      <Badge key={opt} inline flex>
+                      <Picker.Chip key={opt} value={opt}>
                         <Text>{opt}</Text>
-                        <Badge.Button
-                          id={`remove_${opt}`}
-                          command="--navi-unselect"
-                          commandFor="skills_list_delete"
-                          value={opt}
-                          actionOnMouseDown
-                          aria-label={`Remove ${opt}`}
-                          onMouseDown={(e) => {
-                            e.stopPropagation();
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          ×
-                        </Badge.Button>
-                      </Badge>
+                      </Picker.Chip>
                     ))}
                   </BadgeList>
                 )
@@ -501,7 +485,6 @@
                 selectable
                 ref={listRef}
                 multiple
-                id="skills_list_delete"
                 command="--navi-update"
                 style="min-width: 180px"
               >
@@ -546,21 +529,9 @@
               ui={
                 <BadgeList>
                   {selectedArrayMr1.map((opt) => (
-                    <Badge key={opt} inline flex>
+                    <Picker.Chip key={opt} value={opt}>
                       <Text>{opt}</Text>
-                      <Badge.Button
-                        id={`remove_mr1_${opt}`}
-                        command="--navi-unselect"
-                        commandFor="skills_list_delete_mr1"
-                        value={opt}
-                        actionOnMouseDown
-                        aria-label={`Remove ${opt}`}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        ×
-                      </Badge.Button>
-                    </Badge>
+                    </Picker.Chip>
                   ))}
                 </BadgeList>
               }
@@ -576,7 +547,6 @@
               <List
                 selectable
                 multiple
-                id="skills_list_delete_mr1"
                 command="--navi-update"
                 style="min-width: 180px"
               >
@@ -588,6 +558,56 @@
                     index={i}
                     value={opt}
                     selected={selectedArrayMr1.includes(opt)}
+                    padding="s"
+                    spacing="s"
+                  >
+                    {opt}
+                  </List.Item>
+                ))}
+              </List>
+            </Picker>
+          </Field>
+        );
+      };
+
+      const ChipsWithDeleteReadOnly = () => {
+        const selectedArray = ["HTML", "CSS", "JavaScript"];
+
+        return (
+          <Field vertical>
+            <Label>
+              Skills <code style="font-weight:normal">(readOnly)</code>
+            </Label>
+            <Picker
+              type="array"
+              name="multiselect_chips_delete_readonly"
+              readOnly
+              value={selectedArray}
+              ui={
+                <BadgeList>
+                  {selectedArray.map((opt) => (
+                    <Picker.Chip key={opt} value={opt}>
+                      <Text>{opt}</Text>
+                    </Picker.Chip>
+                  ))}
+                </BadgeList>
+              }
+              maxWidth="200"
+            >
+              <List
+                selectable
+                multiple
+                command="--navi-update"
+                style="min-width: 180px"
+              >
+                {SKILL_OPTIONS.map((opt, i) => (
+                  <List.Item
+                    selectable
+                    key={opt}
+                    id={`readonly_${opt}`}
+                    index={i}
+                    value={opt}
+                    selected={selectedArray.includes(opt)}
                     padding="s"
                     spacing="s"
                   >
@@ -620,6 +640,7 @@
             <Box flex="y" spacing="m">
               <ChipsWithDeleteDefault />
               <ChipsWithDeleteMaxLines1 />
+              <ChipsWithDeleteReadOnly />
             </Box>
           </div>
         );

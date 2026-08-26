@@ -51,6 +51,7 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
+import { OWN_TARGET_ATTRIBUTE } from "./own_target.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -797,7 +798,21 @@ export const useControlProps = (
       return dispatched;
     };
 
-    const applyEventReaction = (eventName, e) => {
+    // What the caller wrote runs from inside the gate when this control is an
+    // own target: a plain `onClick` is DOM, and it would fire from a cross drawn
+    // greyed by the read-only control the affordance sits in (see own_target.js).
+    const callerHandlerIsGated = Boolean(props.ownTarget);
+    const gateCallerHandler = (handler, e) => {
+      if (!handler) {
+        return undefined;
+      }
+      if (callerHandlerIsGated) {
+        return handler;
+      }
+      handler(e);
+      return undefined;
+    };
+    const applyEventReaction = (eventName, e, callerHandler) => {
       const defaultEventReactionDefinition =
         defaultEventReactionDefinitions?.[eventName];
       const customEventReactionDefinition =
@@ -806,6 +821,9 @@ export const useControlProps = (
         customEventReactionDefinition?.(e) ??
         defaultEventReactionDefinition?.(e);
       if (!reaction) {
+        // No reaction means no gate: there is nothing here that could refuse the
+        // caller's handler, so withholding it would only lose it.
+        callerHandler?.(e);
         return false;
       }
       const {
@@ -830,19 +848,22 @@ export const useControlProps = (
           prevented?.();
         },
         allowed: () => {
+          callerHandler?.(e);
           allowed?.();
         },
         always,
       });
     };
     const onMouseDown = (e) => {
-      props.onMouseDown?.(e);
-      applyEventReaction("mouseDown", e);
+      applyEventReaction(
+        "mouseDown",
+        e,
+        gateCallerHandler(props.onMouseDown, e),
+      );
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
-      props.onClick?.(e);
-      applyEventReaction("click", e);
+      applyEventReaction("click", e, gateCallerHandler(props.onClick, e));
       transferFocusToTarget(e);
     };
     const onKeyDown = (e) => {
@@ -1449,6 +1470,15 @@ const useInteractiveProps = (
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
+  if (props.ownTarget) {
+    // "This press is mine" said in the DOM, because that is where it is read
+    // from the outside: by the controls above (see own_target.js), and by the
+    // two gesture readers below — the one that travels a box and the one that
+    // carries a piece, each with its own way of being told to keep out.
+    controlRootProps[OWN_TARGET_ATTRIBUTE] = "";
+    controlRootProps["data-no-drag-travel"] = "";
+    controlRootProps["data-drag-ignore"] = "";
+  }
   const { "navi-control-proxy-for": naviProxyFor } = props;
   controlHostProps["navi-control-proxy-for"] = naviProxyFor;
   controlHostProps["navi-control-host"] = controlInfo.controlType;

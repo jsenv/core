@@ -1,9 +1,12 @@
 import { useContext } from "preact/hooks";
 
+import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Badge } from "@jsenv/navi/src/text/badge.jsx";
 import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
+import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
@@ -129,6 +132,52 @@ export const PickerArrayUI = () => {
         return <span key={item}>{item}</span>;
       })}
     </Text>
+  );
+};
+
+/**
+ * One value the picker holds, drawn as a chip with a cross that takes it back
+ * out. Sits wherever the application draws what was picked — on the picker's
+ * façade (`ui`) or inside its popup — and both behave the same.
+ *
+ * The cross asks with `--navi-unselect` rather than writing a new list, and it
+ * asks the picker — which holds what was picked, and hands it down to whatever
+ * draws it in the popup. Nothing to name: the picker is the nearest control
+ * around the chip. `commandFor` is for a chip that stands outside the picker it
+ * speaks for.
+ *
+ * The cross is an own target (see own_target.js), so the press belongs to it
+ * and not to the picker underneath, and it goes when the picker turns read-only
+ * — a row being read still says what was picked, it just no longer offers to
+ * unpick it.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   value: any,
+ *   commandFor?: string,
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {any} value The value this chip stands for — one entry of what the
+ *   picker holds, and what `--navi-unselect` carries.
+ * @param {string} [commandFor] The id of the picker to take the value out of,
+ *   when the chip does not sit inside it.
+ */
+export const PickerChip = ({ value, commandFor, children, ...rest }) => {
+  return (
+    <Badge inline flex {...rest}>
+      {children}
+      <Badge.Button
+        ownTarget
+        command="--navi-unselect"
+        commandFor={commandFor}
+        value={value}
+        aria-label={naviI18n("button.remove")}
+      >
+        <Icon lineOverflow="allow">
+          <CloseSvg />
+        </Icon>
+      </Badge.Button>
+    </Badge>
   );
 };
 

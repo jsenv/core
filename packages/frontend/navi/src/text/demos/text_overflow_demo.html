@@ -92,6 +92,12 @@
               <MaxLinesSection />
             </section>
             <section>
+              <h2 id="s-inline-span-clamp">
+                Inline spans (padding + background)
+              </h2>
+              <InlineSpanClampSection />
+            </section>
+            <section>
               <h2 id="s-text-align">Text Align</h2>
               <TextAlignSection />
             </section>
@@ -155,6 +161,11 @@
               </li>
               <li>
                 <a href="#s-line-clamp">Line Clamp (maxLines &gt; 1)</a>
+              </li>
+              <li>
+                <a href="#s-inline-span-clamp">
+                  Inline spans (padding + background)
+                </a>
               </li>
               <li>
                 <a href="#s-text-align">Text Align</a>
@@ -750,6 +761,51 @@
                   Ut enim ad minim veniam, quis nostrud exercitation ullamco
                   laboris nisi ut aliquip ex ea commodo consequat. Duis aute
                   irure dolor in reprehenderit in voluptate velit esse cillum.
+                </Text>
+              </div>
+            ))}
+          </Box>
+        );
+      };
+
+      const InlineSpanClampSection = () => {
+        const inlineSpanStyle = {
+          display: "inline",
+          padding: "2px 6px",
+          background: "#c8e6c9",
+          borderRadius: "3px",
+        };
+        const otherInlineSpanStyle = {
+          ...inlineSpanStyle,
+          background: "#ffe0b2",
+        };
+        return (
+          <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+            {[1, 2].map((n) => (
+              <div
+                key={n}
+                style={{
+                  width: "260px",
+                  border: "1px solid #ccc",
+                  padding: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  }}
+                >
+                  maxLines={n} + inline spans
+                </div>
+                <Text maxLines={n}>
+                  Lorem ipsum <span style={inlineSpanStyle}>badge inline</span>{" "}
+                  dolor sit amet, consectetur{" "}
+                  <span style={otherInlineSpanStyle}>
+                    un second span inline plutot long
+                  </span>{" "}
+                  adipiscing elit sed do eiusmod tempor incididunt ut labore.
                 </Text>
               </div>
             ))}

@@ -169,6 +169,24 @@ const resolveClosestSendTarget = (expandable, controlWithAction) => {
     : expandable;
 };
 
+// An id that names something that is not a control — a layout box, a label, a
+// wrapper the component never put it on. The command resolves, the update is
+// sent, and nobody answers: the press appears to do nothing at all, which is the
+// hardest possible thing to go looking for.
+const warnOnTargetHoldingNoState = (command, source, target) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const controlHost = findControlHost(target) || target;
+  if (controlHost.__uiStateController__) {
+    return;
+  }
+  console.warn(
+    `"${command}" found its target but that target holds no value: put the id on the control itself (a field, or the group/form around several of them).`,
+    { source, target },
+  );
+};
+
 const resolveCommandValue = (source, event) => {
   if (
     // event.detail can be a number for some native events
@@ -263,6 +281,7 @@ registerNaviCommand("--navi-update", (source, event) => {
   if (!target) {
     return undefined;
   }
+  warnOnTargetHoldingNoState("--navi-update", source, target);
   return {
     target,
     implementation: () => {

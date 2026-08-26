@@ -126,8 +126,12 @@ consistency across the app, not from any single call site.
 - `docs/control_value.md` — who holds a control's value: nobody, a bound
   `signal` (two-way, in both directions), or you (`value`/`checked`). What
   `signal` + `defaultValue` says, what a signal holds for each kind of control,
-  and why `value` and `signal` cannot both be passed. Read it before wiring a
-  control's value by hand with `value` + `uiAction`.
+  and why `value` and `signal` cannot both be passed. It also holds the answer
+  to "a shortcut button beside a control" — `--navi-update`, gated like every
+  interaction, against an `onClick` writing the signal, which is not and fires
+  on a read-only control. Read it before wiring a
+  control's value by hand with `value` + `uiAction`, and before writing a button
+  that proposes a value.
 - `docs/create_and_edit.md` — the loop almost every app has: a screen that
   creates a resource, the page of what was created, a screen that edits it. The
   routes and why several match at once, one form for two modes, filling the edit
@@ -203,9 +207,12 @@ consistency across the app, not from any single call site.
   of navi's own.
 - `docs/interactions.md` — the `interactions` prop: making a component answer a
   swipe, a held press, a shortcut, and registering a gesture navi does not have.
+  It also holds `ownTarget`, for an affordance an application draws inside a
+  zone that belongs to another control — a chip's cross, an eye, a diskette.
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
-  cannot be got right from outside navi.
+  cannot be got right from outside navi — and before stopping the propagation of
+  a pointerdown/mousedown/click to keep a popup from opening.
 - `docs/drag_to_travel.md` — a pointer pushing a whole screen aside
   (`SlideContainer`, `RouteTravel`) and a popup pushed back towards its edge:
   what the gesture is, and above all who owns a press several boxes want — a
