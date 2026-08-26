@@ -1160,7 +1160,7 @@ export const useUIGroupStateController = (
 
       // onChange and applyState live inside init so they close over the stable
       // signals/pubsub without needing external refs.
-      const onChange = (e, { notifyExternal }) => {
+      const onChange = (e, { notifyExternal, actingChild }) => {
         if (groupIsRenderingRef.current) {
           // Held until the layout effect below, WITH what it asked for: a child
           // whose bound signal was written from the outside changes during the
@@ -1173,6 +1173,7 @@ export const useUIGroupStateController = (
             e,
             notifyExternal:
               pendingChange?.notifyExternal === true ? true : notifyExternal,
+            actingChild,
           };
           return;
         }
@@ -1196,6 +1197,31 @@ export const useUIGroupStateController = (
           // Somebody answered: what the group is worth is what its children say
           // between them, from here on.
           controller.stateGivenFromAbove = false;
+          if (resolvedDistributeChildStates) {
+            if (compareTwoJsValues(groupUIState, controller.uiState)) {
+              // The aggregate answered what the group already holds, which is
+              // how such a group says "not yet, ask me again". Some gestures
+              // cannot avoid an in-between — two people swapping seats means one
+              // leaves before the other arrives — and the aggregate is where
+              // that half-state is recognised. Placing the children from it
+              // would undo the half of the gesture that has already landed, and
+              // publishing it would hand a half-answer to the row above.
+              return;
+            }
+            // A group answering for all its children at once holds ONE answer
+            // its children are views OF, rather than a value that IS what they
+            // said: a list saying who plays and four seats saying who sits
+            // where. One view speaking moves the answer, so the others have to
+            // show it again — the same rule as a child arriving after the value
+            // did, for a child that was there when the value moved without it.
+            // The one that just acted is left alone: it is where the user put
+            // it.
+            controller.placeChildrenUIState(
+              groupUIState,
+              new CustomEvent("propagate_down_set_ui_state", { detail: {} }),
+              { except: actingChild },
+            );
+          }
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
@@ -1224,6 +1250,30 @@ export const useUIGroupStateController = (
         if (boundSignal) {
           boundSignal.value = newUIState;
         }
+      };
+
+      // What putting a value on a child comes down to, whichever way the group
+      // worked out that value (one child at a time, or all of them at once).
+      const placeOneChild = (childUIStateController, childNewState, e) => {
+        if (
+          childUIStateController.hasStateProp &&
+          !childUIStateController.props.signal
+        ) {
+          // A child bound to a signal is placed like any other: bound is not
+          // frozen, and the placement writes the signal, so both ends keep
+          // saying the same thing. Only a child controlled by a `value` /
+          // `checked` prop cannot be moved — its owner decides. Worth saying
+          // out loud only when the two disagree: a child already showing what
+          // the group would put there has lost nothing, and both being fed from
+          // the same value is a legitimate way to write a group.
+          if (
+            !compareTwoJsValues(childNewState, childUIStateController.uiState)
+          ) {
+            warnChildAnswersForItself(s.controller, childUIStateController);
+          }
+          return;
+        }
+        childUIStateController.setUIState(childNewState, e);
       };
 
       const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
@@ -1271,12 +1321,9 @@ export const useUIGroupStateController = (
         ref,
         getPropFromState: (uiState) => uiState,
         distributeChildUIState: resolvedDistributeChildUIState,
-        // Where the group puts a value on ONE child: the only place that knows
-        // what each child gets, and the only one that sees a child it cannot
-        // place — see warnChildAnswersForItself.
         // One pass over every child, which is what a plural distribute needs:
         // it is asked once, sees the whole group, and answers for all of them.
-        placeChildrenUIState: (groupUIState, e) => {
+        placeChildrenUIState: (groupUIState, e, { except } = {}) => {
           if (!resolvedDistributeChildStates) {
             for (const childUIStateController of childUIStateControllerArray) {
               controller.placeChildUIState(
@@ -1298,24 +1345,25 @@ export const useUIGroupStateController = (
             return;
           }
           for (const childUIStateController of monitoredChildren) {
+            if (childUIStateController === except) {
+              continue;
+            }
             if (!stateByChild.has(childUIStateController)) {
               // Not named by the answer: left where it is, the way
               // CANNOT_DERIVE leaves a child a per-child distribute says
               // nothing about.
               continue;
             }
-            if (
-              childUIStateController.hasStateProp &&
-              !childUIStateController.props.signal
-            ) {
-              continue;
-            }
-            childUIStateController.setUIState(
+            placeOneChild(
+              childUIStateController,
               stateByChild.get(childUIStateController),
               e,
             );
           }
         },
+        // Where the group puts a value on ONE child: the only place that knows
+        // what each child gets, and the only one that sees a child it cannot
+        // place — see warnChildAnswersForItself.
         placeChildUIState: (childUIStateController, groupUIState, e) => {
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
@@ -1327,25 +1375,7 @@ export const useUIGroupStateController = (
           if (childNewState === CANNOT_DERIVE) {
             return;
           }
-          if (
-            childUIStateController.hasStateProp &&
-            !childUIStateController.props.signal
-          ) {
-            // A child bound to a signal is placed like any other: bound is not
-            // frozen, and the placement writes the signal, so both ends keep
-            // saying the same thing. Only a child controlled by a `value` /
-            // `checked` prop cannot be moved — its owner decides. Worth saying
-            // out loud only when the two disagree: a child already showing what
-            // the group would put there has lost nothing, and both being fed
-            // from the same value is a legitimate way to write a group.
-            if (
-              !compareTwoJsValues(childNewState, childUIStateController.uiState)
-            ) {
-              warnChildAnswersForItself(controller, childUIStateController);
-            }
-            return;
-          }
-          childUIStateController.setUIState(childNewState, e);
+          placeOneChild(childUIStateController, childNewState, e);
         },
         setUIState: (newUIState, e) => {
           if (
@@ -1499,7 +1529,10 @@ export const useUIGroupStateController = (
             )}`,
           );
           if (stateChanged) {
-            onChange(e, { notifyExternal: silent ? "silent" : true });
+            onChange(e, {
+              notifyExternal: silent ? "silent" : true,
+              actingChild: childUIStateController,
+            });
           } else {
             controller.onUIAction(e);
           }
@@ -1712,6 +1745,7 @@ export const useUIGroupStateController = (
       chainEvent(batchedEvent, pendingChange.e);
       scope._onChange(batchedEvent, {
         notifyExternal: pendingChange.notifyExternal,
+        actingChild: pendingChange.actingChild,
       });
     }
   });

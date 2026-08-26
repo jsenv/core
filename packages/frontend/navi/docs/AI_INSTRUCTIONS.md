@@ -146,8 +146,9 @@ consistency across the app, not from any single call site.
   `canSendWhileUnchanged` because a submit "does nothing".
 - `distributeChildStates` on a group — the way down asked once for ALL the
   children, when they cannot be placed one at a time (four seats where who sits
-  down decides who moves). The mirror of `aggregateChildStates`; see
-  control_object.md. Read it before writing a `uiAction` whose only job is to
+  down decides who moves), and asked again whenever one of them speaks, so the
+  other views of the same answer follow. The mirror of `aggregateChildStates`;
+  see control_object.md. Read it before writing a `uiAction` whose only job is to
   translate. Two neighbouring questions have answers already: a yes/no shown as
   two rows needs no translation (`List.Item value={true}` beside
   `value={false}` IS a boolean control), and a cross that means "back to the

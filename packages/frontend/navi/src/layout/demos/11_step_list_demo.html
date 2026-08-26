@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StepList Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #555;
+        font-size: 13px;
+      }
+      .case {
+        margin-bottom: 20px;
+      }
+      /* Le StepList et ses slides, une seule chose: un cadre commun, un
+         filet entre les deux. */
+      .integration_frame {
+        background: white;
+        border: 1px solid #d5dbe6;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .integration_frame > .navi_step_list {
+        border-bottom: 1px solid #e6eaf2;
+      }
+      .dark-band {
+        padding: 8px 16px;
+        background: #26314a;
+        border-radius: 8px;
+        --step-list-muted: #8b99b8;
+        --step-list-line: rgba(255, 255, 255, 0.35);
+        --step-list-current-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Slide,
+        SlideContainer,
+        StepList,
+        Text,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const STEP_VALUES = ["dispo", "club", "place", "recap"];
+
+      // Un tableau, pas un composant wrapper: les items sont lus sur les
+      // enfants (toChildArray), qui ne voit pas à travers un composant.
+      // `propsOf` pose des props supplémentaires sur un item (onClick,
+      // pseudoState…), qui atterrissent sur son bouton.
+      const annonceStepItems = (propsOf = () => undefined) => [
+        <StepList.Item key="dispo" value="dispo" {...propsOf("dispo")}>
+          Dispo
+        </StepList.Item>,
+        <StepList.Item key="club" value="club" {...propsOf("club")}>
+          Club
+        </StepList.Item>,
+        <StepList.Item key="place" value="place" {...propsOf("place")}>
+          Place
+        </StepList.Item>,
+        <StepList.Item key="recap" value="recap" {...propsOf("recap")}>
+          Récap
+        </StepList.Item>,
+      ];
+
+      const NominalDemo = () => {
+        const [current, setCurrent] = useState("dispo");
+        const [doneCount, setDoneCount] = useState(0);
+        return (
+          <div className="demo-section">
+            <h2 id="nominal">Cas nominal</h2>
+            <p className="caption">
+              Cliquer une étape déplace <code>current</code> (le halo, via
+              onClick sur chaque Item). Une étape <code>done</code> a sa
+              pastille pleine, et le chemin relie celles remplies d'affilée.
+            </p>
+            <StepList current={current}>
+              {annonceStepItems((value) => ({
+                done: STEP_VALUES.indexOf(value) < doneCount,
+                onClick: () => {
+                  setCurrent(value);
+                },
+              }))}
+            </StepList>
+            <Box flex="x" spacing="s" marginTop="m">
+              <Button
+                readOnly={doneCount <= 0}
+                onClick={() => {
+                  setDoneCount(doneCount - 1);
+                }}
+              >
+                Dé-remplir la dernière étape
+              </Button>
+              <Button
+                readOnly={doneCount >= STEP_VALUES.length}
+                onClick={() => {
+                  setDoneCount(doneCount + 1);
+                }}
+              >
+                Remplir l'étape suivante
+              </Button>
+            </Box>
+          </div>
+        );
+      };
+
+      // done sur les n premières étapes.
+      const doneUpTo =
+        (n, extraPropsOf = () => undefined) =>
+        (value) => ({
+          ...(STEP_VALUES.indexOf(value) < n ? { done: true } : undefined),
+          ...extraPropsOf(value),
+        });
+
+      const Case = ({ caption, children }) => (
+        <div className="case">
+          <p className="caption">{caption}</p>
+          {children}
+        </div>
+      );
+
+      const StatesDemo = () => (
+        <div className="demo-section">
+          <h2 id="states">États</h2>
+          <Case caption='Au départ — current="dispo", rien de rempli: aucune pastille pleine, le halo dit où on est'>
+            <StepList current="dispo">{annonceStepItems()}</StepList>
+          </Case>
+          <Case caption={'Survolée — pseudoState :hover sur "Place"'}>
+            <StepList current="dispo">
+              {annonceStepItems((value) =>
+                value === "place"
+                  ? { pseudoState: { ":hover": true } }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
+          <Case caption="Au clavier — :focus-visible sur l'étape courante">
+            <StepList current="club">
+              {annonceStepItems(
+                doneUpTo(1, (value) =>
+                  value === "club"
+                    ? { pseudoState: { ":focus-visible": true } }
+                    : undefined,
+                ),
+              )}
+            </StepList>
+          </Case>
+          <Case caption="Au clavier — :focus-visible sur l'étape suivante">
+            <StepList current="club">
+              {annonceStepItems(
+                doneUpTo(1, (value) =>
+                  value === "place"
+                    ? { pseudoState: { ":focus-visible": true } }
+                    : undefined,
+                ),
+              )}
+            </StepList>
+          </Case>
+          <Case caption='Le chemin suit — current="club", "Dispo" done'>
+            <StepList current="club">{annonceStepItems(doneUpTo(1))}</StepList>
+          </Case>
+          <Case caption='En avance sur le chemin — current="place", rien de rempli'>
+            <StepList current="place">{annonceStepItems()}</StepList>
+          </Case>
+          <Case caption='En retard sur le chemin — current="dispo", "Dispo" et "Club" done'>
+            <StepList current="dispo">{annonceStepItems(doneUpTo(2))}</StepList>
+          </Case>
+          <Case caption='Au bout — current="recap", tout done sauf le récap'>
+            <StepList current="recap">{annonceStepItems(doneUpTo(3))}</StepList>
+          </Case>
+          <Case caption="Terminé, on ne regarde plus — tout done, pas de current">
+            <StepList>{annonceStepItems(doneUpTo(4))}</StepList>
+          </Case>
+          <Case caption='Des trous — done sur "Dispo" et "Place", pas "Club": une étape remplie a sa pastille pleine même hors du chemin'>
+            <StepList current="club">
+              {annonceStepItems((value) =>
+                value === "dispo" || value === "place"
+                  ? { done: true }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
+          <Case caption="travelByClick={false} — montré, pas offert">
+            <StepList current="club" travelByClick={false}>
+              {annonceStepItems(doneUpTo(1))}
+            </StepList>
+          </Case>
+        </div>
+      );
+
+      const stepItemsOf = (count, doneCount = 0) =>
+        Array.from({ length: count }, (unused, index) => (
+          <StepList.Item
+            key={index}
+            value={`step_${index + 1}`}
+            done={index < doneCount}
+          >
+            Étape {index + 1}
+          </StepList.Item>
+        ));
+
+      const CountDemo = () => (
+        <div className="demo-section">
+          <h2 id="count">Nombre d'étapes</h2>
+          <Case caption="2 étapes">
+            <StepList current="step_1">{stepItemsOf(2)}</StepList>
+          </Case>
+          <Case caption="3 étapes">
+            <StepList current="step_2">{stepItemsOf(3, 1)}</StepList>
+          </Case>
+          <Case caption="6 étapes">
+            <StepList current="step_4">{stepItemsOf(6, 2)}</StepList>
+          </Case>
+        </div>
+      );
+
+      const WidthDemo = () => (
+        <div className="demo-section">
+          <h2 id="width">Largeur</h2>
+          <p className="caption">
+            Les pastilles se répartissent sur la largeur donnée.
+          </p>
+          <Case caption="width 280px">
+            <StepList current="club" style={{ width: "280px" }}>
+              {annonceStepItems(doneUpTo(1))}
+            </StepList>
+          </Case>
+          <Case caption="pleine largeur">
+            <StepList current="club">{annonceStepItems(doneUpTo(1))}</StepList>
+          </Case>
+        </div>
+      );
+
+      const STEP_LABELS = {
+        dispo: "Disponibilités",
+        club: "Club",
+        place: "Place",
+        recap: "Récapitulatif",
+      };
+
+      // Connectés dans les deux sens: presser une étape voyage vers sa slide
+      // (--navi-go-to-slide), et la position est lue sur le container — drag
+      // compris. Le reste se déduit des items `done`: le chemin, sa frontière,
+      // et le cliquet (le chemin avance à l'arrivée) sont l'affaire du
+      // StepList.
+      const IntegrationDemo = () => {
+        const containerId = "step_list_slides";
+        const [answered, setAnswered] = useState({});
+        const [slow, setSlow] = useState(false);
+        const duration = slow ? "2s" : undefined;
+        return (
+          <div className="demo-section">
+            <h2 id="integrations">Intégrations</h2>
+            <h3 id="integration-slide-container">SlideContainer</h3>
+            <p className="caption">
+              Presser une étape voyage vers sa slide; draguer les slides déplace
+              le halo sous le doigt. Cocher « étape remplie » remplit sa
+              pastille et tend la ligne vers l'étape suivante.
+            </p>
+            <Box flex="x" spacing="m" marginBottom="s">
+              <label>
+                <input
+                  type="radio"
+                  name="step_list_speed"
+                  checked={!slow}
+                  onChange={() => {
+                    setSlow(false);
+                  }}
+                />{" "}
+                vitesse normale
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="step_list_speed"
+                  checked={slow}
+                  onChange={() => {
+                    setSlow(true);
+                  }}
+                />{" "}
+                lente (2s)
+              </label>
+            </Box>
+            <div className="integration_frame">
+              <StepList slideContainer={containerId} duration={duration}>
+                {annonceStepItems((value) => ({
+                  done: Boolean(answered[value]),
+                }))}
+              </StepList>
+              <SlideContainer id={containerId} duration={duration}>
+                {STEP_VALUES.map((value, index) => (
+                  <Slide key={value} id={value} overflow="auto">
+                    <Box flex="y" spacing="s" padding="l" alignX="start">
+                      <Text bold>
+                        Étape {index + 1} — {STEP_LABELS[value]}
+                      </Text>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(answered[value])}
+                          onChange={(e) => {
+                            setAnswered((previous) => ({
+                              ...previous,
+                              [value]: e.target.checked,
+                            }));
+                          }}
+                        />{" "}
+                        étape remplie
+                      </label>
+                    </Box>
+                  </Slide>
+                ))}
+              </SlideContainer>
+            </div>
+          </div>
+        );
+      };
+
+      const DarkDemo = () => (
+        <div className="demo-section">
+          <h2 id="dark">Sur fond sombre</h2>
+          <p className="caption">
+            Les couleurs sont des variables CSS, redites sur le bandeau:
+            --step-list-muted, --step-list-line, --step-list-current-color.
+          </p>
+          <div className="dark-band">
+            <StepList current="place">{annonceStepItems(doneUpTo(1))}</StepList>
+          </div>
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="StepList" />
+          <div className="demo-section">
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <CountDemo />
+          <WidthDemo />
+          <DarkDemo />
+          <IntegrationDemo />
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

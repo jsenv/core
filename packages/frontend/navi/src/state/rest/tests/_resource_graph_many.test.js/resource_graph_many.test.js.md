@@ -3,6 +3,9 @@
 
 - [GET_MANY dataSignal updates when an item in the list is updated](0_get_many_datasignal_updates_when_an_item_in_the_list_is_updated/0_get_many_datasignal_updates_when_an_item_in_the_list_is_updated.md)
 - [GET_MANY dataSignal tracks id rename after PUT](1_get_many_datasignal_tracks_id_rename_after_put/1_get_many_datasignal_tracks_id_rename_after_put.md)
+- [.many() links game to players via GET_MANY](2__many()_links_game_to_players_via_get_many/2__many()_links_game_to_players_via_get_many.md)
+- [.many() DELETE removes one child from the relationship only](3__many()_delete_removes_one_child_from_the_relationship_only/3__many()_delete_removes_one_child_from_the_relationship_only.md)
+- [.many() DELETE_MANY removes several children from the relationship only](4__many()_delete_many_removes_several_children_from_the_relationship_only/4__many()_delete_many_removes_several_children_from_the_relationship_only.md)
 
 ---
 

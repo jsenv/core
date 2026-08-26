@@ -1840,22 +1840,36 @@ const useInteractiveProps = (
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 
-        // For radio/checkbox: auto-trigger the parent group's action after the
-        // leaf action completes. The parent (radio_group/checkbox_group) has
-        // already aggregated the new state by now, so uiStateSignal is correct.
+        // Auto-trigger the parent group's action after the leaf action
+        // completes, for the groups that ARE one control made of parts: a
+        // radio or checkbox group, a wheel group (an hour wheel settling is
+        // the time settling). The parent has already aggregated the new
+        // state by now, so uiStateSignal is correct. One level only: the
+        // parent's own action end does not climb further unless that parent
+        // is itself such a group.
         const parentController = uiStateController.parentUIStateController;
         if (
           parentController &&
           (parentController.controlType === "radio_group" ||
-            parentController.controlType === "checkbox_group")
+            parentController.controlType === "checkbox_group" ||
+            parentController.controlType === "wheel_group")
         ) {
           const parentEl = parentController.ref.current;
           if (parentEl) {
-            const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {
-              event: originalEvent,
+              event: e.detail.eventChain[0],
               name: "auto_group_action",
               requester: e.detail.requester,
+              // The interactivity gate is not re-asked: the user already
+              // interacted — with the child, whose gate said yes — and this
+              // follow-up is automatic. Asking again would also answer
+              // wrong: this event is dispatched inside the batch() that
+              // settles the child's action, where a bound action still
+              // READS as running (its state is mirrored through a signal
+              // effect the batch defers, see watchActionCompletion) — the
+              // busy constraint would refuse the group for an action that
+              // is already over. The validity gate still applies.
+              bypassInteractivity: true,
             });
           }
         }

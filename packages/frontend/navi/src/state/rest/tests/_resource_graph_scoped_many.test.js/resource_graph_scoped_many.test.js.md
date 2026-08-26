@@ -4,6 +4,9 @@
 - [internalMany columns GET_MANY, POST and PATCH](0_internalmany_columns_get_many__post_and_patch/0_internalmany_columns_get_many__post_and_patch.md)
 - [GET_MANY data contains row objects not [ownerId, idArray]](1_get_many_data_contains_row_objects_not_[ownerid__idarray]/1_get_many_data_contains_row_objects_not_[ownerid__idarray].md)
 - [internalMany columns id rename via PUT](2_internalmany_columns_id_rename_via_put/2_internalmany_columns_id_rename_via_put.md)
+- [internalMany columns DELETE_MANY](3_internalmany_columns_delete_many/3_internalmany_columns_delete_many.md)
+- [rows fetched by tablename before the table is loaded](4_rows_fetched_by_tablename_before_the_table_is_loaded/4_rows_fetched_by_tablename_before_the_table_is_loaded.md)
+- [chained .one() on scopedMany child items](5_chained__one()_on_scopedmany_child_items/5_chained__one()_on_scopedmany_child_items.md)
 
 ---
 

@@ -47,12 +47,20 @@ const isControlBusy = (field) => {
   // An optimistic control stays interactive while its bound action runs:
   // a new interaction is queued behind the run (see the action queue in
   // control_hooks.jsx) rather than refused.
-  if (
-    !field.optimistic &&
-    boundAction &&
-    boundAction.runningStateSignal.value === RUNNING
-  ) {
-    return true;
+  if (!field.optimistic && boundAction) {
+    // The INSTANCE the proxy resolves to right now, not the proxy's own
+    // signal: that one is a MIRROR, synced by an effect the settling batch
+    // defers — read mid-batch (a state echo carrying the user's event back
+    // down, an automatic follow-up), it still says RUNNING for an action
+    // that is already over, and the gate would refuse — callout included —
+    // for nothing. The resolved instance is the live truth: at that echo it
+    // is the instance that just settled, already COMPLETED. And it IS the
+    // running one whenever one runs — a non-optimistic control's state
+    // cannot move mid-run, this very gate blocks it.
+    const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
+    if (liveAction.runningStateSignal.value === RUNNING) {
+      return true;
+    }
   }
   if (field.loadingFromParent) {
     const parent = field.parentUIStateController;

@@ -164,18 +164,99 @@ distributeChildStates: (groupValue, children) => new Map([[child, state], …])
 the mirror of `aggregateChildStates`, which already sees every child. A child
 the Map does not name is left where it is. Given both, the plural one wins.
 
-A group with an `aggregateChildStates` of its own is outside all of this: what
-it returns is taken as the truth, `undefined` included. That is the one way such
-a group says **"I have nothing to say yet"** — return `undefined` while the
-children it needs are missing, and navi leaves the value alone instead of
-publishing an empty shape upward. A group written to always return its keys
-(`{ mode: undefined, levels: [] }`) is claiming an answer nobody gave, and that
-claim overwrites the row above it the moment the popup opens.
+**It closes the loop, which the per-child one does not.** A group with a plural
+distribute holds ONE answer its children are views OF — a list saying who plays,
+four seats saying who sits where — rather than a value that IS what they said.
+So when one view speaks, the answer moves and **the other views are placed
+again**; the one that just acted is left where the user put it. Without that, a
+seat keeps showing somebody the list no longer holds, and nothing says so.
 
-Together they are what makes the two-hop case work — the form fills the row, the
-row fills the control in its popup — whatever order the pieces turn up in. Get
-one of them wrong and the symptom is always the same: a value that was there
-before the popup opened, and empty after.
+This is the same rule as "a child arriving after the value did is placed from
+what the group holds", for a child that was there when the value moved without
+it. It matters most inside a picker's popup, where nothing else would bring the
+value back down: a picker's value IS what the control in its popup holds, so the
+façade never echoes it back.
+
+Five things follow, and each of them was paid for twice before being written
+here:
+
+- **the group's value has to be the view that carries the MOST.** Four seats say
+  who plays AND who sits where; a list of who plays says half of that. Make the
+  seating the value and the list is derived from it (`value.filter(Boolean)`);
+  make the list the value and every gesture on a seat has to be guessed at. The
+  rule to apply: between two views of one answer, the value is the one the other
+  can be computed from;
+- **the Map must name EVERY child**, the derived view included. A child the Map
+  does not name is left where it is — which reads as "the list never fills";
+- **name the children you WANT, never exclude the one you don't.** A group holds
+  more than the views: a search box, a filter, whatever the popup needs. Reading
+  the seats as "every child except the list" collects those too, and the value
+  ends up with five slots for four seats. Finding them by name says what it
+  means;
+- **a gesture that moves two children must never leave the value in an
+  in-between.** Dragging somebody from one seat to another is one intention and
+  two writes, and the group aggregates between them: for one instant the person
+  is in the list and in no seat, which a value that IS the seating has no room
+  for. Measured, that instant costs the person — the aggregate drops them and
+  the distribute unticks them before the second write lands. Two ways out, and
+  the first is the one to prefer:
+
+  1. **write the group's value once.** `rowSignal.value = slots` with both seats
+     already moved: there is no in-between at all. Available when the row is
+     where the placement lives;
+  2. **write the destination first**, when the seats are the truth and must stay
+     separate signals. The person is somewhere at every observable moment (in
+     two seats for an instant, which the rule then resolves), instead of nowhere.
+     Source-first loses them — measured, and silently.
+
+  Wrapping the two writes in a signal `batch()` does NOT help: the group
+  aggregates on each child's change, not on the render that follows.
+
+- **and when the in-between cannot be avoided, the aggregate says so.** Two
+  people swapping seats means one leaves before the other arrives, whichever
+  order the writes take. What is avoidable is PUBLISHING that half-state: an
+  aggregate that returns **what the group already holds** says "not yet, ask me
+  again" — nothing is placed, nothing is handed to the row above, and the next
+  assembly publishes the whole answer. Returning `undefined` says the opposite
+  ("there is no answer"), and wipes the row.
+
+```js
+// "not yet": the moving person is picked and seated nowhere, and it is not
+// somebody who was just ticked — so this is a gesture in flight
+const midMove = picked.some(
+  (id) => !seatedNow.includes(id) && lastAnswer.includes(id),
+);
+if (midMove) {
+  return lastAnswer; // what the group already holds
+}
+```
+
+```jsx
+// the seats are found by name, never as "everything that is not the list"
+const seatChildren = (children) =>
+  SEAT_NAMES.map((name) => children.find((child) => child.name === name));
+
+// the value IS the seating; the list is a view of it
+<ControlGroup
+  aggregateChildStates={(children) => {…}}   // seats, minus who the list dropped, plus who it added
+  distributeChildStates={(slots, children) =>
+    new Map([
+      ...seats.map((seat, i) => [seat, slots[i]]),
+      [list, slots.filter(Boolean)],
+    ])
+  }
+>
+```
+
+```js
+// and a drag is one write
+const moveTo = (from, to) => {
+  const slots = [...rowSignal.value];
+  slots[to] = slots[from];
+  slots[from] = undefined;
+  rowSignal.value = slots;
+};
+```
 
 ## One line, one key
 

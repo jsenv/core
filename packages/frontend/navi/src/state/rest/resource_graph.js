@@ -24,6 +24,19 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  * parent/child relations. Each method carries its own JSDoc — read those, and
  * docs/resource.md for how to choose between them.
  *
+ * How the file is organized:
+ * - `resource()` sets up the shared store then delegates to `createResource`.
+ * - `createResource` builds the "stateFacade" (the object users interact
+ *   with): one action per REST callback plus the relationship methods. Each
+ *   relationship method calls `createResource` again for the child, injecting
+ *   its own `createRestAction` — the strategy deciding how an action result is
+ *   applied to the store(s). This recursion is what makes relationship
+ *   resources chainable (`USER.one(...).one(...)`).
+ * - Relationships make item properties reactive: `addItemSetup` registers a
+ *   callback that defines a getter/setter on each item. The setter upserts
+ *   plain values into the child store, the getter reads a computed signal, so
+ *   `item.child = {...}` and `item.child` always go through the store.
+ *
  * Naming conventions used throughout this file:
  * - verb:            one of GET / POST / PUT / PATCH / DELETE
  * - restCallbackKey: one of GET / GET_MANY / GET_RANGE / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
@@ -31,10 +44,12 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  * - restCallback:    the user-provided callback function associated with a restCallbackKey
  * - restCallbacks:   object mapping { [restCallbackKey]: restCallback }
  * - isMany:          true when the action operates on a collection (restCallbackKey ends with _MANY)
+ * - declarationSite: "file:line:column" of the user code that declared the
+ *                    callbacks, shown in invalid-result errors
  */
 
 let DEBUG = false;
-const debug = (args) => {
+const debug = (...args) => {
   if (!DEBUG) {
     return;
   }
@@ -100,6 +115,7 @@ export const resource = (
     DELETE_MANY,
   } = {},
 ) => {
+  const declarationSite = getDeclarationSite();
   if (idKey === undefined) {
     idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
   }
@@ -148,6 +164,7 @@ export const resource = (
   const createRestActionForRoot = createRestActionFactoryForRoot(name, {
     idKey,
     store,
+    declarationSite,
   });
   return createResource(name, {
     idKey,
@@ -186,11 +203,8 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
-  } = {},
+  },
 ) => {
-  if (idKey === undefined) {
-    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
-  }
   const params = paramScope.params;
   const stateFacade = {
     // public
@@ -211,7 +225,6 @@ const createResource = (
     store,
     addItemSetup,
   };
-  const lifecycleCtx = { onComplete: null };
 
   resourceLifecycleManager.registerResource(stateFacade, {
     rerunOn,
@@ -219,7 +232,7 @@ const createResource = (
     dependencies,
     uniqueKeys,
   });
-  lifecycleCtx.onComplete = (actionCompleted) => {
+  const onActionComplete = (actionCompleted) => {
     resourceLifecycleManager.onActionComplete(actionCompleted, {
       resourceScope: stateFacade,
     });
@@ -256,6 +269,7 @@ const createResource = (
     paramsToInject,
     { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
@@ -266,6 +280,7 @@ const createResource = (
     const createRestActionWithParams = createRestActionFactoryForRoot(name, {
       idKey,
       store,
+      declarationSite,
     });
     return createResource(name, {
       idKey,
@@ -318,40 +333,37 @@ const createResource = (
       DELETE,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     const childName = `${name}.${propertyName}`;
+    const childIdKey = childResource.idKey;
+    const childStore = childResource.store;
     addItemSetup((item) => {
-      const childIdKeyForSetup = childResource.idKey;
       const childItemIdSignal = signal();
       const updateChildItemId = (value) => {
         const currentChildItemId = childItemIdSignal.peek();
+        let childItemProps;
         if (isProps(value)) {
-          const childItem = childResource.store.upsert(value);
-          const childItemId = childItem[childIdKeyForSetup];
-          if (currentChildItemId === childItemId) {
+          childItemProps = value;
+        } else if (primitiveCanBeId(value)) {
+          childItemProps = { [childIdKey]: value };
+        } else {
+          if (currentChildItemId === undefined) {
             return false;
           }
-          childItemIdSignal.value = childItemId;
+          childItemIdSignal.value = undefined;
           return true;
         }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKeyForSetup]: value };
-          const childItem = childResource.store.upsert(childItemProps);
-          const childItemId = childItem[childIdKeyForSetup];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (currentChildItemId === undefined) {
+        const childItem = childStore.upsert(childItemProps);
+        const childItemId = childItem[childIdKey];
+        if (currentChildItemId === childItemId) {
           return false;
         }
-        childItemIdSignal.value = undefined;
+        childItemIdSignal.value = childItemId;
         return true;
       };
       updateChildItemId(item[propertyName]);
       const childItemSignal = computed(() =>
-        childResource.store.select(childItemIdSignal.value),
+        childStore.select(childItemIdSignal.value),
       );
       const childItemFacadeSignal = computed(() => {
         const childItem = childItemSignal.value;
@@ -382,9 +394,7 @@ const createResource = (
       );
     });
 
-    const childIdKey = childResource.idKey;
-    const childStore = childResource.store;
-    const createRestActionForOne = (verb, callback, { lifecycleCtx }) => {
+    const createRestActionForOne = (verb, callback, { onActionComplete }) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemId) => {
@@ -396,33 +406,18 @@ const createResource = (
               });
               return childItemId;
             }
-          : // callback must return object with the following format:
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: {
-            //     [childIdKey]: 456, ...childProps
-            //   }
-            // }
-            // the following could happen too if there is no relationship
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: null
-            // }
+          : // GET/PUT contract (see .one() JSDoc): the parent object with the
+            // relationship nested inside, or null for no relationship.
             (result) => {
               const item = store.upsert(result);
               const childItem = item[propertyName];
-              const childItemId = childItem ? childItem[childIdKey] : undefined;
-              return childItemId;
+              return childItem ? childItem[childIdKey] : undefined;
             };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}`;
-
-      const actionAffectingOneItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: {
           verb,
           isMany: false,
@@ -430,35 +425,30 @@ const createResource = (
         },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "DELETE") {
             if (!isProps(result) && !primitiveCanBeId(result)) {
-              throw new TypeError(
-                `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an object (that will be used to drop "${name}" resource)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!isProps(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-   ${originalActionName} source location: ${locationInfo}`,
+          } else if (!isProps(result)) {
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to upsert "${name}" resource)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingOneItem;
     };
 
     return createResource(childName, {
-      idKey: childResource.idKey,
+      idKey: childIdKey,
       restCallbacks: {
         GET,
         PUT,
@@ -515,49 +505,21 @@ ${originalActionName} source location: ${locationInfo}`,
       DELETE_MANY,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     const childStore = childResource.store;
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
       const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) return;
-          childItemIdArraySignal.value = [];
-          return;
-        }
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childResource.store.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childResource.store.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
+      const updateChildItemIdArray = createChildIdArrayUpdater(
+        childStore,
+        childIdKey,
+        childItemIdArraySignal,
+      );
       updateChildItemIdArray(item[propertyName]);
       const childItemArraySignal = computed(() => {
         const idArray = childItemIdArraySignal.value;
-        const arr = childResource.store.selectAll(idArray);
+        const arr = childStore.selectAll(idArray);
         Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
           value: childItemArraySignal,
           writable: false,
@@ -570,11 +532,7 @@ ${originalActionName} source location: ${locationInfo}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      syncIdArrayOnRename(
-        childResource.store,
-        childIdKey,
-        childItemIdArraySignal,
-      );
+      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         debug(
@@ -585,14 +543,22 @@ ${originalActionName} source location: ${locationInfo}`,
     const createRestActionForMany = (
       verb,
       callback,
-      { isMany, lifecycleCtx },
+      { isMany, onActionComplete },
     ) => {
       if (!isMany) {
-        return createRestActionAffectingOneItem(verb, callback, lifecycleCtx);
+        return createRestActionAffectingOneItem(verb, callback, {
+          onActionComplete,
+        });
       }
-      return createRestActionAffectingManyItems(verb, callback, lifecycleCtx);
+      return createRestActionAffectingManyItems(verb, callback, {
+        onActionComplete,
+      });
     };
-    const createRestActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
+    const createRestActionAffectingOneItem = (
+      verb,
+      callback,
+      { onActionComplete },
+    ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? ([itemId, childItemId]) => {
@@ -601,8 +567,7 @@ ${originalActionName} source location: ${locationInfo}`,
               const childItemArrayWithoutThisOne = [];
               let found = false;
               for (const childItemCandidate of childItemArray) {
-                const childItemCandidateId = childItemCandidate[childIdKey];
-                if (childItemCandidateId === childItemId) {
+                if (childItemCandidate[childIdKey] === childItemId) {
                   found = true;
                 } else {
                   childItemArrayWithoutThisOne.push(childItemCandidate);
@@ -617,162 +582,127 @@ ${originalActionName} source location: ${locationInfo}`,
               return childItemId;
             }
           : (childData) => {
+              // an array is [property, value, props], used to rename the child id
               const childItem = Array.isArray(childData)
                 ? childStore.upsert(...childData)
                 : childStore.upsert(childData);
-              const childItemId = childItem[childIdKey];
-              return childItemId;
+              return childItem[childIdKey];
             };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}`;
-
-      const actionAffectingOneItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "DELETE") {
             if (!Array.isArray(result) || result.length !== 2) {
-              throw new TypeError(
-                `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an array [itemId, childItemId] (that will be used to remove relationship)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!isProps(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          } else if (!isProps(result)) {
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to upsert child item)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingOneItem;
     };
     const createRestActionAffectingManyItems = (
       verb,
       callback,
-      lifecycleCtx,
+      { onActionComplete },
     ) => {
       const applyResultToValue =
         verb === "GET"
           ? (result) => {
-              // callback must return object with the following format:
-              // {
-              //   [idKey]: 123,
-              //   [propertyName]: [
-              //      { [childIdKey]: 456, ...childProps },
-              //      { [childIdKey]: 789, ...childProps },
-              //      ...
-              //   ]
-              // }
-              // the array can be empty
+              // GET_MANY contract (see .many() JSDoc): the parent object with
+              // the child array nested inside; the array replaces the relationship.
               const item = store.upsert(result);
               const childItemArray = item[propertyName];
-              const childItemIdArray = childItemArray.map(
-                (childItem) => childItem[childIdKey],
-              );
-              return childItemIdArray;
+              return childItemArray.map((childItem) => childItem[childIdKey]);
             }
           : verb === "DELETE"
             ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
                 const item = store.select(itemIdOrMutableId);
                 const childItemArray = item[propertyName];
-                const deletedChildItemIdArray = [];
-                const childItemArrayWithoutThoose = [];
-                let someFound = false;
-                const deletedChildItemArray = childStore.select(
-                  childItemIdOrMutableIdArray,
+                const deletedChildItemSet = new Set(
+                  childStore.selectAll(childItemIdOrMutableIdArray),
                 );
+                const deletedChildItemIdArray = [];
+                const childItemArrayWithoutThose = [];
                 for (const childItemCandidate of childItemArray) {
-                  if (deletedChildItemArray.includes(childItemCandidate)) {
-                    someFound = true;
+                  if (deletedChildItemSet.has(childItemCandidate)) {
                     deletedChildItemIdArray.push(
                       childItemCandidate[childIdKey],
                     );
                   } else {
-                    childItemArrayWithoutThoose.push(childItemCandidate);
+                    childItemArrayWithoutThose.push(childItemCandidate);
                   }
                 }
-                if (someFound) {
+                if (deletedChildItemIdArray.length > 0) {
                   store.upsert({
                     [idKey]: item[idKey],
-                    [propertyName]: childItemArrayWithoutThoose,
+                    [propertyName]: childItemArrayWithoutThose,
                   });
                 }
                 return deletedChildItemIdArray;
               }
             : (childDataArray) => {
                 const childItemArray = childStore.upsert(childDataArray);
-                const childItemIdArray = childItemArray.map(
-                  (childItem) => childItem[childIdKey],
-                );
-                return childItemIdArray;
+                return childItemArray.map((childItem) => childItem[childIdKey]);
               };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}[many]`;
-
-      const actionAffectingManyItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}[many]`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
         dataDefault: [],
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "GET") {
             if (!isProps(result)) {
-              throw new TypeError(
-                `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an object (that will be used to upsert "${name}" resource with many relationships)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (verb === "DELETE") {
+          } else if (verb === "DELETE") {
             if (
               !Array.isArray(result) ||
               result.length !== 2 ||
               !Array.isArray(result[1])
             ) {
-              throw new TypeError(
-                `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an array [itemId, childItemIdArray] (that will be used to remove relationships)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!Array.isArray(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          } else if (!Array.isArray(result)) {
+            throwInvalidResult(
+              action.name,
+              `an array of objects (that will be used to upsert child items)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemIdArray) =>
           childStore.selectAll(childItemIdArray),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingManyItem;
     };
 
     return createResource(childName, {
@@ -837,26 +767,20 @@ ${originalActionName} source location: ${locationInfo}`,
   ) => {
     const childName = `${name}.${propertyName}`;
 
-    // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each per-scope child item object when it is first created.
-    const childItemSetupCallbackSet = new Set();
-    const childAddItemSetup = (callback) =>
-      childItemSetupCallbackSet.add(callback);
-    const scopedItemMap = new Map(); // ownerId → stable child item object
-    const scopedSignalMap = new Map(); // ownerId → signal<childItem | null>
+    // Callbacks added by chained .one()/.many() on the child resource,
+    // applied to each per-owner child object when it is first created.
+    const childSetupCallbackSet = new Set();
+    const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
+    const applyPropsMap = new Map(); // ownerId → applyProps(props | null)
     addItemSetup((ownerItem) => {
       const ownerId = ownerItem[idKey];
-      // Create a stable child item — mutated in place via applyProps.
-      // Reactive getters/setters from chained .one() etc. are defined on this object now
-      // so they survive across multiple prop updates.
+      // A stable child object, mutated in place: reactive getters/setters from
+      // chained .one() etc. are defined on it once and survive prop updates.
       const childItem = {};
-      for (const childSetup of childItemSetupCallbackSet) {
+      for (const childSetup of childSetupCallbackSet) {
         childSetup(childItem);
       }
-      scopedItemMap.set(ownerId, childItem);
       const childSignal = signal(null);
-      scopedSignalMap.set(ownerId, childSignal);
-
       const applyProps = (props) => {
         if (!props) {
           childSignal.value = null;
@@ -870,6 +794,7 @@ ${originalActionName} source location: ${locationInfo}`,
           childSignal.value = childItem; // first activation: null → childItem
         }
       };
+      applyPropsMap.set(ownerId, applyProps);
 
       applyProps(ownerItem[propertyName]);
 
@@ -878,9 +803,13 @@ ${originalActionName} source location: ${locationInfo}`,
         set: applyProps,
       });
     });
-    const createRestActionForScopedOne = (verb, callback, { lifecycleCtx }) => {
+    const createRestActionForScopedOne = (
+      verb,
+      callback,
+      { onActionComplete },
+    ) => {
       const childActionName = `${childName}.${verb}`;
-      const restAction = createAction(callback, {
+      return createAction(callback, {
         name: childActionName,
         meta: { verb, isMany: false, paramScope },
         resultToValue: (result) => {
@@ -897,33 +826,20 @@ ${originalActionName} source location: ${locationInfo}`,
             uniqueKeys,
             childActionName,
           );
-          const childItem = scopedItemMap.get(ownerId);
-          if (!childItem) {
+          const applyProps = applyPropsMap.get(ownerId);
+          if (!applyProps) {
             throw new Error(
               `${childActionName}: no item found for scope id "${ownerId}"`,
             );
           }
-          const childSignal = scopedSignalMap.get(ownerId);
-          if (props) {
-            for (const [key, value] of Object.entries(props)) {
-              childItem[key] = value;
-            }
-            if (childSignal.peek() !== childItem) {
-              childSignal.value = childItem;
-            }
-          } else {
-            childSignal.value = null;
-          }
+          applyProps(props);
           return [ownerId, props];
         },
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return restAction;
     };
 
-    const childResource = createResource(childName, {
+    return createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
         GET,
@@ -939,7 +855,6 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedOneRerunOn ?? rerunOn,
       dependencies: scopedOneDependencies ?? dependencies,
     });
-    return childResource;
   };
 
   /**
@@ -993,108 +908,76 @@ ${originalActionName} source location: ${locationInfo}`,
   ) => {
     const childName = `${name}.${propertyName}`;
 
-    // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each child item when it is created in a per-scope store.
+    // Callbacks added by chained .one()/.many() on the child resource,
+    // applied to each child item created in a per-owner store.
     const childSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
-    const scopedStoreMap = new Map(); // ownerId → childStore
-    const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+    // ownerKey (id or any uniqueKey value) → { childStore, idArraySignal }
+    // One owner can be registered under several keys, all pointing to the same scope.
+    const scopeMap = new Map();
+    const createScope = (ownerKey) => {
+      const childStore = arraySignalStore([], childIdKey, {
+        name: `${childName}#${ownerKey} store`,
+        createItem: (props) => {
+          const childItem = {};
+          Object.assign(childItem, props);
+          for (const childSetup of childSetupCallbackSet) {
+            childSetup(childItem);
+          }
+          return childItem;
+        },
+      });
+      const scope = { childStore, idArraySignal: signal([]) };
+      scopeMap.set(ownerKey, scope);
+      return scope;
+    };
     addItemSetup((item) => {
       const ownerId = item[idKey];
 
-      // Reuse an existing scoped store if one was already created via a uniqueKey
-      // (e.g. rows were fetched by tablename before the full table was loaded).
-      let childStore = scopedStoreMap.get(ownerId);
-      let childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
-      if (!childStore) {
+      // Reuse an existing scope if one was already created under a uniqueKey
+      // value (e.g. rows were fetched by tablename before the full table was loaded).
+      let scope = scopeMap.get(ownerId);
+      if (!scope) {
         for (const uniqueKey of uniqueKeys) {
           const uniqueKeyValue = item[uniqueKey];
-          if (uniqueKeyValue !== undefined) {
-            const existing = scopedStoreMap.get(uniqueKeyValue);
-            if (existing) {
-              childStore = existing;
-              childItemIdArraySignal =
-                scopedIdArraySignalMap.get(uniqueKeyValue);
-              break;
-            }
+          if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
+            scope = scopeMap.get(uniqueKeyValue);
+            break;
           }
         }
       }
-      if (!childStore) {
-        childStore = arraySignalStore([], childIdKey, {
-          name: `${childName}#${ownerId} store`,
-          createItem: (props) => {
-            const childItem = {};
-            Object.assign(childItem, props);
-            for (const childSetup of childSetupCallbackSet) {
-              childSetup(childItem);
-            }
-            return childItem;
-          },
-        });
-        childItemIdArraySignal = signal([]);
+      if (!scope) {
+        scope = createScope(ownerId);
       }
-      scopedStoreMap.set(ownerId, childStore);
-      // Also register by each uniqueKey value so that resolveOwnerId works
-      // when a callback returns { [uniqueKey]: value } before the full item is loaded.
+      // Register the scope under the id and every uniqueKey value so that
+      // resolveOwnerId can address it whichever key a callback returns.
+      scopeMap.set(ownerId, scope);
       for (const uniqueKey of uniqueKeys) {
         const uniqueKeyValue = item[uniqueKey];
         if (uniqueKeyValue !== undefined) {
-          scopedStoreMap.set(uniqueKeyValue, childStore);
+          scopeMap.set(uniqueKeyValue, scope);
         }
       }
 
-      scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
-      for (const uniqueKey of uniqueKeys) {
-        const uniqueKeyValue = item[uniqueKey];
-        if (uniqueKeyValue !== undefined) {
-          scopedIdArraySignalMap.set(uniqueKeyValue, childItemIdArraySignal);
-        }
+      const { childStore, idArraySignal } = scope;
+      const updateChildItemIdArray = createChildIdArrayUpdater(
+        childStore,
+        childIdKey,
+        idArraySignal,
+      );
+      // The parent may not carry the property at all (e.g. created by a POST
+      // that does not embed it): leave the collection of a reused scope
+      // untouched — children may have been fetched by uniqueKey before the
+      // parent was loaded. Only an explicit value replaces the collection.
+      if (item[propertyName] !== undefined) {
+        updateChildItemIdArray(item[propertyName]);
       }
-
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) return;
-          childItemIdArraySignal.value = [];
-          return;
-        }
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childStore.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childStore.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-
-      updateChildItemIdArray(item[propertyName]);
 
       // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
+      syncIdArrayOnRename(childStore, childIdKey, idArraySignal);
 
       const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childStore.selectAll(childItemIdArray);
+        const childItemArray = childStore.selectAll(idArraySignal.value);
         Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
           value: childItemArraySignal,
           writable: false,
@@ -1112,13 +995,10 @@ ${originalActionName} source location: ${locationInfo}`,
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, lifecycleCtx },
+      { isMany, onActionComplete },
     ) => {
-      if (!callback) {
-        return undefined;
-      }
       const childActionName = `${childName}.${verb}`;
-      const childAction = createAction(callback, {
+      return createAction(callback, {
         name: childActionName,
         meta: { verb, isMany, paramScope },
         resultToValue: (result) => {
@@ -1135,48 +1015,33 @@ ${originalActionName} source location: ${locationInfo}`,
             uniqueKeys,
             childActionName,
           );
-          let childStore = scopedStoreMap.get(ownerId);
-          if (!childStore) {
-            // Owner not yet in store — lazily create scoped store so actions can run
-            // before the parent item has been fully loaded (e.g. rows fetched before table).
-            childStore = arraySignalStore([], childIdKey, {
-              name: `${childName}#${ownerId} store`,
-              createItem: (props) => {
-                const childItem = {};
-                Object.assign(childItem, props);
-                for (const childSetup of childSetupCallbackSet) {
-                  childSetup(childItem);
-                }
-                return childItem;
-              },
-            });
-            scopedStoreMap.set(ownerId, childStore);
-            const newIdArraySignal = signal([]);
-            scopedIdArraySignalMap.set(ownerId, newIdArraySignal);
-          }
-          const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
+          // Owner not in store yet: create the scope so actions can run before
+          // the parent item has been loaded (e.g. rows fetched before their table).
+          const scope = scopeMap.get(ownerId) || createScope(ownerId);
+          const { childStore, idArraySignal } = scope;
 
           if (verb === "DELETE") {
             if (isMany) {
               const idArray = childStore.drop(rest[0]);
               const toRemoveSet = new Set(idArray);
-              childItemIdArraySignal.value = childItemIdArraySignal
+              idArraySignal.value = idArraySignal
                 .peek()
                 .filter((id) => !toRemoveSet.has(id));
               return [ownerId, idArray];
             }
             const childId = childStore.drop(rest[0]);
-            childItemIdArraySignal.value = childItemIdArraySignal
+            idArraySignal.value = idArraySignal
               .peek()
               .filter((id) => id !== childId);
             return [ownerId, childId];
           }
 
           if (isMany) {
-            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items,
+            // and it replaces the whole collection.
             const itemArray = childStore.upsert(rest[0]);
-            const idArray = itemArray.map((i) => i[childIdKey]);
-            childItemIdArraySignal.value = idArray;
+            const idArray = itemArray.map((childItem) => childItem[childIdKey]);
+            idArraySignal.value = idArray;
             return [ownerId, idArray];
           }
 
@@ -1188,25 +1053,23 @@ ${originalActionName} source location: ${locationInfo}`,
           return [ownerId, childItem[childIdKey]];
         },
         valueToData: (value) => {
-          if (!value) return isMany ? [] : undefined;
+          if (!value) {
+            return isMany ? [] : undefined;
+          }
           const [ownerId, idOrIdArray] = value;
-          const childStore = scopedStoreMap.get(ownerId);
-          if (!childStore) return isMany ? [] : undefined;
-          if (isMany) return childStore.selectAll(idOrIdArray);
-          return childStore.select(idOrIdArray);
+          const scope = scopeMap.get(ownerId);
+          if (!scope) {
+            return isMany ? [] : undefined;
+          }
+          if (isMany) {
+            return scope.childStore.selectAll(idOrIdArray);
+          }
+          return scope.childStore.select(idOrIdArray);
         },
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return childAction;
     };
 
-    // When a child (scopedMany) item is mutated via POST, the parent GET must
-    // re-fetch because the parent embeds the child array and we cannot know the
-    // new ordering without asking the backend again.
-    // (scopedOne does NOT need this: the mutation result contains the updated
-    // item directly, so no parent re-fetch is necessary.)
     const childResource = createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
@@ -1228,19 +1091,23 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedManyRerunOn ?? rerunOn,
       dependencies: scopedManyDependencies ?? dependencies,
     });
-    // Register: when childResource fires, rerun parent (stateFacade) GETs.
+    // When a scoped child collection is mutated (POST etc.), the parent GET must
+    // re-fetch: the parent embeds the child array and only the backend knows the
+    // new ordering. (scopedOne does not need this: the mutation result contains
+    // the updated object directly.)
     resourceLifecycleManager.addDependency(
       childResource,
       stateFacade,
       propertyName,
     );
-    childResource.getChildStore = (ownerKey) => scopedStoreMap.get(ownerKey);
+    childResource.getChildStore = (ownerKey) =>
+      scopeMap.get(ownerKey)?.childStore;
     return childResource;
   };
 
-  // expose rest actions on the stateFacade
+  // expose one action (or range reader) per provided rest callback
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
-    if (restCallback === undefined) {
+    if (!restCallback) {
       continue;
     }
     if (restCallbackKey === "GET_RANGE") {
@@ -1262,25 +1129,16 @@ ${originalActionName} source location: ${locationInfo}`,
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    const restAction = createRestAction(verb, restCallback, {
+    let restAction = createRestAction(verb, restCallback, {
       isMany,
-      lifecycleCtx,
+      onActionComplete,
       paramScope,
     });
-    if (!restAction) {
-      console.error("no action returned (here to see when it happens)");
-      continue;
-    }
-    let actionToRegister;
     if (params) {
-      const restActionBound = restAction.bindParams(params);
-      stateFacade[restCallbackKey] = restActionBound;
-      actionToRegister = restActionBound;
-    } else {
-      stateFacade[restCallbackKey] = restAction;
-      actionToRegister = restAction;
+      restAction = restAction.bindParams(params);
     }
-    resourceLifecycleManager.registerAction(stateFacade, actionToRegister);
+    stateFacade[restCallbackKey] = restAction;
+    resourceLifecycleManager.registerAction(stateFacade, restAction);
   }
 
   return stateFacade;
@@ -1291,76 +1149,64 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
+    declarationSite,
   },
 ) => {
   const createActionForRoot = (
     verb,
     restCallback,
-    { isMany, lifecycleCtx, paramScope },
+    { isMany, onActionComplete, paramScope },
   ) => {
     if (!isMany) {
       return createActionAffectingOneItem(verb, restCallback, {
-        lifecycleCtx,
+        onActionComplete,
         paramScope,
       });
     }
     return createActionAffectingManyItems(verb, restCallback, {
-      lifecycleCtx,
+      onActionComplete,
       paramScope,
     });
   };
   const createActionAffectingOneItem = (
     verb,
     callback,
-    { lifecycleCtx, paramScope },
+    { onActionComplete, paramScope },
   ) => {
     const applyResultToValue =
       verb === "DELETE"
-        ? (itemIdOrItemProps) => {
-            const itemId = store.drop(itemIdOrItemProps);
-            return itemId;
-          }
+        ? (itemIdOrItemProps) => store.drop(itemIdOrItemProps)
         : (result) => {
-            let item;
-            if (Array.isArray(result)) {
-              // the callback is returning something like [property, value, props]
-              // this is to support a case like:
-              // store.upsert("name", "currentName", { name: "newName" })
-              // where we want to update the idKey of an item
-              item = store.upsert(...result);
-            } else {
-              item = store.upsert(result);
-            }
-            const itemId = item[idKey];
-            return itemId;
+            // An array result is [property, value, props] — used to rename the
+            // idKey of an item: store.upsert("name", "currentName", { name: "newName" })
+            const item = Array.isArray(result)
+              ? store.upsert(...result)
+              : store.upsert(result);
+            return item[idKey];
           };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${verb}`;
-    const actionAffectingOneItem = createAction(callback, {
+    const throwInvalidResult = createInvalidResultThrower(
+      `${name}.${verb}`,
+      declarationSite,
+    );
+    return createAction(callback, {
       name: `${name}.${verb}`,
       meta: { verb, isMany: false, paramScope },
       resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
         if (verb === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to drop "${name}" resource)`,
+              result,
             );
           }
           return applyResultToValue(result);
         }
         if (!isProps(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          throwInvalidResult(
+            action.name,
+            `an object (that will be used to upsert "${name}" resource)`,
+            result,
           );
         }
         // Track which top-level properties the GET response contained so that
@@ -1371,40 +1217,30 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
-      completeSideEffect: (actionCompleted) => {
-        lifecycleCtx.onComplete(actionCompleted);
-      },
+      completeSideEffect: onActionComplete,
     });
-    return actionAffectingOneItem;
   };
   const createActionAffectingManyItems = (
     verb,
     callback,
-    { lifecycleCtx, paramScope },
+    { onActionComplete, paramScope },
   ) => {
     const applyResultToValue =
       verb === "DELETE"
-        ? (idOrMutableIdArray) => {
-            const idArray = store.drop(idOrMutableIdArray);
-            return idArray;
-          }
+        ? (idOrMutableIdArray) => store.drop(idOrMutableIdArray)
         : (dataArray) => {
             const itemArray = store.upsert(dataArray);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
+            return itemArray.map((item) => item[idKey]);
           };
 
-    const actionAffectingManyItems = createAction(callback, {
+    return createAction(callback, {
       meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
-      valueToData: (idArray) => {
-        const items = store.selectAll(idArray);
-        return items;
-      },
+      valueToData: (idArray) => store.selectAll(idArray),
       completeSideEffect: (actionCompleted) => {
-        lifecycleCtx.onComplete(actionCompleted);
+        onActionComplete(actionCompleted);
         if (
           verb === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0
@@ -1418,10 +1254,68 @@ ${originalActionName} source location: ${locationInfo}`,
         return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
       },
     });
-    return actionAffectingManyItems;
   };
 
   return createActionForRoot;
+};
+
+// Captures the "file:line:column" of the user code that invoked the public
+// function (resource(), .one(), .many(), withParams, …), so invalid-result
+// errors can point at where the callbacks were declared, not at this file.
+// Must be called directly from the public function: the stack offset accounts
+// for exactly two frames (getCallerInfo → getDeclarationSite → public fn → user code).
+const getDeclarationSite = () => {
+  const callerInfo = getCallerInfo(null, 1);
+  if (callerInfo.file && callerInfo.line && callerInfo.column) {
+    return `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`;
+  }
+  return callerInfo.raw || "unknown location";
+};
+
+const createInvalidResultThrower = (originalActionName, declarationSite) => {
+  return (actionLabel, expected, result) => {
+    throw new TypeError(
+      `${actionLabel} must return ${expected}, received ${result}.
+${originalActionName} source location: ${declarationSite}`,
+    );
+  };
+};
+
+// Shared by .many() and .scopedMany(): converts a raw relationship value (an
+// array of child props/ids, or anything else meaning "empty") into an array of
+// child ids, upserting each entry into the child store. The id array signal is
+// only touched when the resulting ids actually differ.
+const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
+  return (valueArray) => {
+    const currentIdArray = idArraySignal.peek();
+    if (!Array.isArray(valueArray)) {
+      if (currentIdArray.length > 0) {
+        idArraySignal.value = [];
+      }
+      return;
+    }
+    const idArray = [];
+    let modified = false;
+    for (const value of valueArray) {
+      let childItemProps;
+      if (isProps(value)) {
+        childItemProps = value;
+      } else if (primitiveCanBeId(value)) {
+        childItemProps = { [childIdKey]: value };
+      } else {
+        continue;
+      }
+      const childItem = childStore.upsert(childItemProps);
+      const childItemId = childItem[childIdKey];
+      if (currentIdArray[idArray.length] !== childItemId) {
+        modified = true;
+      }
+      idArray.push(childItemId);
+    }
+    if (modified || currentIdArray.length !== idArray.length) {
+      idArraySignal.value = idArray;
+    }
+  };
 };
 
 const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
@@ -1483,7 +1377,7 @@ const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {
       return item[idKey];
     }
     throw new TypeError(
-      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}). 
+      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}).
 Return a primitive id or a single-property object whose key is the idKey or a uniqueKey.`,
     );
   }
@@ -1492,7 +1386,7 @@ Return a primitive id or a single-property object whose key is the idKey or a un
   if (idKey in rawOwnerId) {
     const resolvedId = rawOwnerId[idKey];
     console.warn(
-      `${actionName}: the first element of the returned array is an object with multiple properties. 
+      `${actionName}: the first element of the returned array is an object with multiple properties.
 Only "${idKey}" is needed. Consider returning a primitive id or { ${idKey}: value } instead.`,
     );
     return resolvedId;
@@ -1504,8 +1398,10 @@ Received an object with keys: ${keys.join(", ")}.`,
   );
 };
 
-/** so that when a tracked property changes
- * on an item the corresponding signal is updated automatically.
+/**
+ * Keeps external signals in sync with properties of the resource's store items:
+ * when a tracked property changes on an item, the corresponding signal is
+ * updated automatically.
  *
  * Since signals are typically connected to route parameters via the route template
  * syntax, this keeps the URL in sync when a store item's mutable key is renamed.

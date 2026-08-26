@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$13 = /* css */`
+const css$15 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -92,7 +92,7 @@ const css$13 = /* css */`
     }
   }
 `;
-import.meta.css = [css$13, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -361,7 +361,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$12 = /* css */`
+const css$14 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -379,7 +379,7 @@ const css$12 = /* css */`
     }
   }
 `;
-import.meta.css = [css$12, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
@@ -6403,7 +6403,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$11 = /* css */`
+const css$13 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6646,7 +6646,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$11, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -8012,12 +8012,20 @@ const isControlBusy = (field) => {
   // An optimistic control stays interactive while its bound action runs:
   // a new interaction is queued behind the run (see the action queue in
   // control_hooks.jsx) rather than refused.
-  if (
-    !field.optimistic &&
-    boundAction &&
-    boundAction.runningStateSignal.value === RUNNING
-  ) {
-    return true;
+  if (!field.optimistic && boundAction) {
+    // The INSTANCE the proxy resolves to right now, not the proxy's own
+    // signal: that one is a MIRROR, synced by an effect the settling batch
+    // defers — read mid-batch (a state echo carrying the user's event back
+    // down, an automatic follow-up), it still says RUNNING for an action
+    // that is already over, and the gate would refuse — callout included —
+    // for nothing. The resolved instance is the live truth: at that echo it
+    // is the instance that just settled, already COMPLETED. And it IS the
+    // running one whenever one runs — a non-optimistic control's state
+    // cannot move mid-run, this very gate blocks it.
+    const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
+    if (liveAction.runningStateSignal.value === RUNNING) {
+      return true;
+    }
   }
   if (field.loadingFromParent) {
     const parent = field.parentUIStateController;
@@ -8940,10 +8948,12 @@ const REQUIRED_CONSTRAINT = {
       };
     }
 
-    // checkbox_group controller: check aggregate uiState array
+    // checkbox_group controller: check aggregate uiState array. An empty
+    // selection aggregates to undefined, not to an empty array (see
+    // GROUP_DEFAULTS.checkbox_group) — both mean "nothing checked" here.
     if (controlType === "checkbox_group") {
       const uiState = field.uiState;
-      if (uiState.length > 0) {
+      if (uiState !== undefined && uiState.length > 0) {
         return null;
       }
       return {
@@ -11928,6 +11938,39 @@ const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
 
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
+/*
+ * Actions: async callbacks wrapped in reactive state.
+ *
+ * An action owns a set of signals (params, runningState, error, value, data)
+ * and moves through IDLE → RUNNING → COMPLETED / FAILED / ABORTED (see
+ * action_run_states.js). `createAction(callback)` returns the root action;
+ * `.bindParams(params)` derives child actions (one per params value, cached),
+ * and binding a signal (or an object containing signals) returns an action
+ * *proxy* that retargets itself to the right child action as the signal
+ * changes (see createActionProxyFromSignal).
+ *
+ * How things run: prerun/run/rerun/reset never execute the action directly —
+ * they go through `dispatchActions`, which the navigation integration can
+ * replace via `setActionDispatcher` so that every action update participates
+ * in the browser navigation lifecycle (abort signals, navigation events).
+ * The default dispatcher calls `updateActions`, the single entry point that
+ * resolves priorities between the four operation sets (reset > rerun > run >
+ * prerun) and performs them.
+ *
+ * Memory design (the surprising part): nothing here keeps actions alive.
+ * Child actions are held through ephemerons (createJsValueWeakMap) so a child
+ * and its params are garbage-collected together, running actions live in
+ * iterable *weak* sets, and property/signal mirroring uses weakEffect. Two
+ * consequences to be aware of:
+ * - an action can exist in several places only if everyone shares the same
+ *   instance (the caches above are what makes lookups return it);
+ * - prerun actions may have no other reference yet, so
+ *   prerunProtectionRegistry pins them for a few minutes.
+ *
+ * An action run never throws: failures land in errorSignal and are reported
+ * once, by one rule, in action_error_report.js (see the comment in onRunError).
+ */
+
 let DEBUG$1 = false;
 const enableDebugActions = () => {
   DEBUG$1 = true;
@@ -11966,7 +12009,7 @@ const getActionDispatcher = () => dispatchActions;
 const rerunActions = async (actionSet, options) => {
   return dispatchActions({
     rerunSet: actionSet,
-    reason: "rerunActions was calle",
+    reason: "rerunActions was called",
     ...options,
   });
 };
@@ -11985,7 +12028,7 @@ const rerunActions = async (actionSet, options) => {
  */
 const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
-  const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+  const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes
 
   const unprotect = (action) => {
     const protection = protectedActionMap.get(action);
@@ -11999,7 +12042,7 @@ const prerunProtectionRegistry = (() => {
 
   return {
     protect(action) {
-      // Si déjà protégée, étendre la protection
+      // already protected: extend the protection
       if (protectedActionMap.has(action)) {
         const existing = protectedActionMap.get(action);
         clearTimeout(existing.timeoutId);
@@ -12019,29 +12062,11 @@ const prerunProtectionRegistry = (() => {
     },
 
     unprotect,
-
-    isProtected(action) {
-      return protectedActionMap.has(action);
-    },
-
-    // Pour debugging
-    getProtectedActions() {
-      return Array.from(protectedActionMap.keys());
-    },
-
-    // Nettoyage manuel si nécessaire
-    clear() {
-      for (const [, protection] of protectedActionMap) {
-        clearTimeout(protection.timeoutId);
-      }
-      protectedActionMap.clear();
-    },
   };
 })();
 
 const formatActionSet = (actionSet, prefix = "") => {
-  let message = "";
-  message += `${prefix}`;
+  let message = prefix;
   for (const action of actionSet) {
     message += "\n";
     message += prefixFirstAndIndentRemainingLines(String(action), {
@@ -12376,7 +12401,6 @@ ${lines.join("\n")}`);
 };
 
 const NO_PARAMS = { __no_params__: true };
-const initialParamsDefault = NO_PARAMS;
 const mergeActionParams = (currentParams, newParams) => {
   if (currentParams === NO_PARAMS) {
     return newParams;
@@ -12424,7 +12448,7 @@ const createAction = (callback, rootOptions = {}) => {
     } = options;
     if (!Object.hasOwn(options, "params")) {
       // even undefined should be respected it's only when not provided at all we use default
-      params = initialParamsDefault;
+      params = NO_PARAMS;
     }
     if (value === undefined && data !== undefined) {
       value = data;
@@ -12437,11 +12461,7 @@ const createAction = (callback, rootOptions = {}) => {
     const errorSignal = signal(error);
     const valueSignal = signal(valueInitial);
     const dataSignal = valueToData
-      ? computed(() => {
-          const value = valueSignal.value;
-          const data = valueToData(value);
-          return data;
-        })
+      ? computed(() => valueToData(valueSignal.value))
       : valueSignal;
 
     const prerun = (options) => {
@@ -12474,7 +12494,7 @@ const createAction = (callback, rootOptions = {}) => {
       return dispatchSingleAction(action, "reset", options);
     };
     const abort = (reason) => {
-      if (runningState !== RUNNING) {
+      if (runningStateSignal.peek() !== RUNNING) {
         return false;
       }
       const actionAbort = actionAbortMap.get(action);
@@ -12500,7 +12520,7 @@ const createAction = (callback, rootOptions = {}) => {
      */
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
-      // ✅ CAS 1: Signal direct -> proxy
+      // Case 1: a signal → proxy that retargets as the signal changes
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
@@ -12514,7 +12534,7 @@ const createAction = (callback, rootOptions = {}) => {
         );
       }
 
-      // ✅ CAS 2: Objet -> vérifier s'il contient des signals
+      // Case 2: a plain object → child action, or proxy when it contains signals
       if (isPlainObject$1(newParamsOrSignal)) {
         const staticParams = {};
         const signalMap = new Map();
@@ -12535,7 +12555,7 @@ const createAction = (callback, rootOptions = {}) => {
         }
 
         if (signalMap.size === 0) {
-          // Pas de signals, merge statique normal
+          // no signals: plain static merge
           if (
             params === null ||
             typeof params !== "object" ||
@@ -12553,24 +12573,27 @@ const createAction = (callback, rootOptions = {}) => {
           });
         }
 
-        // Combiner avec les params existants pour les valeurs statiques
-        const paramsSignal = computed(() => {
-          const params = {};
+        const combinedParamsSignal = computed(() => {
+          const combinedParams = {};
           for (const key of keyArray) {
             const signalForThisKey = signalMap.get(key);
             if (signalForThisKey) {
               // eslint-disable-next-line signals/no-conditional-value-read
-              params[key] = signalForThisKey.value;
+              combinedParams[key] = signalForThisKey.value;
             } else {
-              params[key] = staticParams[key];
+              combinedParams[key] = staticParams[key];
             }
           }
-          return params;
+          return combinedParams;
         });
-        return createActionProxyFromSignal(action, paramsSignal, options);
+        return createActionProxyFromSignal(
+          action,
+          combinedParamsSignal,
+          options,
+        );
       }
 
-      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
+      // Case 3: a primitive or non-plain object (DOM event, …) → child action
       return createChildAction({
         params: newParamsOrSignal,
         ...options,
@@ -12603,7 +12626,6 @@ const createAction = (callback, rootOptions = {}) => {
       return childAction;
     };
 
-    // ✅ Implement matchAllSelfOrDescendant
     const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
       const matches = [];
 
@@ -12638,32 +12660,31 @@ const createAction = (callback, rootOptions = {}) => {
       generateActionCallSource(name, params),
     );
 
-    {
-      // Create the action as a function that can be called directly
-      action = function actionFunction(...args) {
-        if (args.length === 0) {
-          return action.rerun();
-        }
-        const boundAction = bindParams(...args);
-        return boundAction.rerun();
-      };
-      Object.defineProperty(action, "name", {
-        configurable: true,
-        get() {
-          return actionNameSignal.value;
-        },
-      });
-      Object.defineProperty(action, "callSource", {
-        configurable: true,
-        get() {
-          return actionCallSourceSignal.value;
-        },
-        set(v) {
-          actionCallSourceSignal.value = v;
-        },
-      });
-      actionWeakMap.set(action, action);
-    }
+    // The action is a callable: `ACTION(params)` is `ACTION.bindParams(params).rerun()`
+    action = function actionFunction(...args) {
+      if (args.length === 0) {
+        return action.rerun();
+      }
+      const boundAction = bindParams(...args);
+      return boundAction.rerun();
+    };
+    Object.defineProperty(action, "name", {
+      configurable: true,
+      get() {
+        return actionNameSignal.value;
+      },
+    });
+    Object.defineProperty(action, "callSource", {
+      configurable: true,
+      get() {
+        return actionCallSourceSignal.value;
+      },
+      set(v) {
+        actionCallSourceSignal.value = v;
+      },
+    });
+    // makes createAction(anAction) return the action itself
+    actionWeakMap.set(action, action);
 
     // Assign all the action properties and methods to the function
     Object.assign(action, {
@@ -12685,7 +12706,7 @@ const createAction = (callback, rootOptions = {}) => {
       reset,
       abort,
       bindParams,
-      matchAllSelfOrDescendant, // ✅ Add the new method
+      matchAllSelfOrDescendant,
       replaceParams: (newParams) => {
         const currentParams = paramsSignal.value;
         const nextParams = mergeActionParams(currentParams, newParams);
@@ -12713,7 +12734,7 @@ const createAction = (callback, rootOptions = {}) => {
       toString: () => action.callSource,
       meta,
       debug: (...args) => {
-        if (!meta.debug || DEBUG$1) {
+        if (!meta.debug && !DEBUG$1) {
           return;
         }
         console.debug(...args);
@@ -12728,7 +12749,8 @@ const createAction = (callback, rootOptions = {}) => {
     });
     Object.preventExtensions(action);
 
-    // Effects pour synchroniser les propriétés
+    // Mirror signals into plain properties (action.error, action.data, …)
+    // so non-reactive code can read them without subscribing.
     {
       weakEffect([action], (actionRef) => {
         isPrerun = isPrerunSignal.value;
@@ -12754,7 +12776,6 @@ const createAction = (callback, rootOptions = {}) => {
       });
     }
 
-    // Propriétés privées
     {
       const ui = {
         renderLoaded: null,
@@ -13033,8 +13054,8 @@ const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.inheritData - When true, each new target action starts fresh with no inherited state.
- *   By default (false), the proxy carries over the previous target's value and error into the new action.
+ * @param {boolean} options.inheritData - When false, each new target action starts fresh with no inherited state.
+ *   By default (true), the proxy carries over the previous target's value and error into the new action.
  *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
  *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
  *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
@@ -13128,6 +13149,7 @@ const createActionProxyFromSignal = (
       currentAction = actionTarget;
       currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
     }
+
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
       : null;
@@ -13153,25 +13175,22 @@ const createActionProxyFromSignal = (
 
   const nameSignal = signal(action.name);
   const callSourceSignal = signal(`[Proxy] ${action.callSource}`);
-  let actionProxy;
-  {
-    actionProxy = function actionProxyFunction() {
-      return actionProxy.rerun();
-    };
-    Object.defineProperty(actionProxy, "name", {
-      configurable: true,
-      get() {
-        return nameSignal.value;
-      },
-    });
-    Object.defineProperty(actionProxy, "callSource", {
-      configurable: true,
-      get() {
-        return callSourceSignal.value;
-      },
-    });
-    actionWeakMap.set(actionProxy, actionProxy);
-  }
+  const actionProxy = function actionProxyFunction() {
+    return actionProxy.rerun();
+  };
+  Object.defineProperty(actionProxy, "name", {
+    configurable: true,
+    get() {
+      return nameSignal.value;
+    },
+  });
+  Object.defineProperty(actionProxy, "callSource", {
+    configurable: true,
+    get() {
+      return callSourceSignal.value;
+    },
+  });
+  actionWeakMap.set(actionProxy, actionProxy);
 
   // Create our own signal for params that we control completely
   const proxyParamsSignal = signal(paramsSignal.value);
@@ -13374,11 +13393,6 @@ const isPlainObject$1 = (obj) => {
   );
 };
 
-const COMPLETED_ACTION = createAction(() => undefined, {
-  name: "ACTION.COMPLETED",
-});
-getActionPrivateProperties(COMPLETED_ACTION).performRun({});
-
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
 const useActionBoundToOneParam = (action, paramsSignal) => {
@@ -13400,19 +13414,27 @@ const useAction = (action, paramsSignal) => {
 };
 
 const useBoundAction = (action, actionParamsSignal) => {
-  const actionRef = useRef();
+  // The cache gives an inline function a stable action identity across renders.
+  // That identity is only wanted while `action` stays the same kind
+  // (function to function); when the kind changes — none ↔ function ↔ action
+  // object — each branch clears the other kind's refs so the control picks up
+  // its new role instead of the action it was born with.
+  const noopActionRef = useRef();
+  const actionFromFunctionRef = useRef();
   const actionCallbackRef = useRef();
 
   if (!action) {
-    const existingAction = actionRef.current;
-    if (existingAction) {
-      return existingAction;
+    actionFromFunctionRef.current = undefined;
+    actionCallbackRef.current = undefined;
+    const existingNoopAction = noopActionRef.current;
+    if (existingNoopAction) {
+      return existingNoopAction;
     }
     const noopAction = createAction(() => {}, { params: undefined });
     const noopActionBound = actionParamsSignal
       ? noopAction.bindParams(actionParamsSignal)
       : noopAction;
-    actionRef.current = noopActionBound;
+    noopActionRef.current = noopActionBound;
     return noopActionBound;
   }
   const isFunction = typeof action === "function";
@@ -13423,7 +13445,7 @@ const useBoundAction = (action, actionParamsSignal) => {
   }
   if (isFunctionButNotAnActionFunction(action)) {
     actionCallbackRef.current = action;
-    const existingAction = actionRef.current;
+    const existingAction = actionFromFunctionRef.current;
     if (existingAction) {
       return existingAction;
     }
@@ -13439,14 +13461,16 @@ const useBoundAction = (action, actionParamsSignal) => {
       },
     );
     if (!actionParamsSignal) {
-      actionRef.current = actionFromFunction;
+      actionFromFunctionRef.current = actionFromFunction;
       return actionFromFunction;
     }
     const actionBoundToParams =
       actionFromFunction.bindParams(actionParamsSignal);
-    actionRef.current = actionBoundToParams;
+    actionFromFunctionRef.current = actionBoundToParams;
     return actionBoundToParams;
   }
+  actionFromFunctionRef.current = undefined;
+  actionCallbackRef.current = undefined;
   if (actionParamsSignal) {
     return action.bindParams(actionParamsSignal);
   }
@@ -18873,7 +18897,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$10 = /* css */`
+installImportMetaCssBuild(import.meta);const css$12 = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -18905,7 +18929,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$10, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$12, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19110,7 +19134,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$$ = /* css */`
+installImportMetaCssBuild(import.meta);const css$11 = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -19147,7 +19171,7 @@ installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -19437,7 +19461,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$_ = /* css */`
+const css$10 = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -19958,7 +19982,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$_, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -24679,7 +24703,7 @@ const useUIGroupStateController = (
 
       // onChange and applyState live inside init so they close over the stable
       // signals/pubsub without needing external refs.
-      const onChange = (e, { notifyExternal }) => {
+      const onChange = (e, { notifyExternal, actingChild }) => {
         if (groupIsRenderingRef.current) {
           // Held until the layout effect below, WITH what it asked for: a child
           // whose bound signal was written from the outside changes during the
@@ -24692,6 +24716,7 @@ const useUIGroupStateController = (
             e,
             notifyExternal:
               pendingChange?.notifyExternal === true ? true : notifyExternal,
+            actingChild,
           };
           return;
         }
@@ -24715,6 +24740,31 @@ const useUIGroupStateController = (
           // Somebody answered: what the group is worth is what its children say
           // between them, from here on.
           controller.stateGivenFromAbove = false;
+          if (resolvedDistributeChildStates) {
+            if (compareTwoJsValues(groupUIState, controller.uiState)) {
+              // The aggregate answered what the group already holds, which is
+              // how such a group says "not yet, ask me again". Some gestures
+              // cannot avoid an in-between — two people swapping seats means one
+              // leaves before the other arrives — and the aggregate is where
+              // that half-state is recognised. Placing the children from it
+              // would undo the half of the gesture that has already landed, and
+              // publishing it would hand a half-answer to the row above.
+              return;
+            }
+            // A group answering for all its children at once holds ONE answer
+            // its children are views OF, rather than a value that IS what they
+            // said: a list saying who plays and four seats saying who sits
+            // where. One view speaking moves the answer, so the others have to
+            // show it again — the same rule as a child arriving after the value
+            // did, for a child that was there when the value moved without it.
+            // The one that just acted is left alone: it is where the user put
+            // it.
+            controller.placeChildrenUIState(
+              groupUIState,
+              new CustomEvent("propagate_down_set_ui_state", { detail: {} }),
+              { except: actingChild },
+            );
+          }
           applyState(groupUIState, e);
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
@@ -24743,6 +24793,30 @@ const useUIGroupStateController = (
         if (boundSignal) {
           boundSignal.value = newUIState;
         }
+      };
+
+      // What putting a value on a child comes down to, whichever way the group
+      // worked out that value (one child at a time, or all of them at once).
+      const placeOneChild = (childUIStateController, childNewState, e) => {
+        if (
+          childUIStateController.hasStateProp &&
+          !childUIStateController.props.signal
+        ) {
+          // A child bound to a signal is placed like any other: bound is not
+          // frozen, and the placement writes the signal, so both ends keep
+          // saying the same thing. Only a child controlled by a `value` /
+          // `checked` prop cannot be moved — its owner decides. Worth saying
+          // out loud only when the two disagree: a child already showing what
+          // the group would put there has lost nothing, and both being fed from
+          // the same value is a legitimate way to write a group.
+          if (
+            !compareTwoJsValues(childNewState, childUIStateController.uiState)
+          ) {
+            warnChildAnswersForItself(s.controller);
+          }
+          return;
+        }
+        childUIStateController.setUIState(childNewState, e);
       };
 
       const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
@@ -24790,12 +24864,9 @@ const useUIGroupStateController = (
         ref,
         getPropFromState: (uiState) => uiState,
         distributeChildUIState: resolvedDistributeChildUIState,
-        // Where the group puts a value on ONE child: the only place that knows
-        // what each child gets, and the only one that sees a child it cannot
-        // place — see warnChildAnswersForItself.
         // One pass over every child, which is what a plural distribute needs:
         // it is asked once, sees the whole group, and answers for all of them.
-        placeChildrenUIState: (groupUIState, e) => {
+        placeChildrenUIState: (groupUIState, e, { except } = {}) => {
           if (!resolvedDistributeChildStates) {
             for (const childUIStateController of childUIStateControllerArray) {
               controller.placeChildUIState(
@@ -24817,24 +24888,25 @@ const useUIGroupStateController = (
             return;
           }
           for (const childUIStateController of monitoredChildren) {
+            if (childUIStateController === except) {
+              continue;
+            }
             if (!stateByChild.has(childUIStateController)) {
               // Not named by the answer: left where it is, the way
               // CANNOT_DERIVE leaves a child a per-child distribute says
               // nothing about.
               continue;
             }
-            if (
-              childUIStateController.hasStateProp &&
-              !childUIStateController.props.signal
-            ) {
-              continue;
-            }
-            childUIStateController.setUIState(
+            placeOneChild(
+              childUIStateController,
               stateByChild.get(childUIStateController),
               e,
             );
           }
         },
+        // Where the group puts a value on ONE child: the only place that knows
+        // what each child gets, and the only one that sees a child it cannot
+        // place — see warnChildAnswersForItself.
         placeChildUIState: (childUIStateController, groupUIState, e) => {
           if (!shouldPropagateStateToChild(childUIStateController)) {
             return;
@@ -24846,23 +24918,7 @@ const useUIGroupStateController = (
           if (childNewState === CANNOT_DERIVE) {
             return;
           }
-          if (
-            childUIStateController.hasStateProp &&
-            !childUIStateController.props.signal
-          ) {
-            // A child bound to a signal is placed like any other: bound is not
-            // frozen, and the placement writes the signal, so both ends keep
-            // saying the same thing. Only a child controlled by a `value` /
-            // `checked` prop cannot be moved — its owner decides. Worth saying
-            // out loud only when the two disagree: a child already showing what
-            // the group would put there has lost nothing, and both being fed
-            // from the same value is a legitimate way to write a group.
-            if (
-              !compareTwoJsValues(childNewState, childUIStateController.uiState)
-            ) ;
-            return;
-          }
-          childUIStateController.setUIState(childNewState, e);
+          placeOneChild(childUIStateController, childNewState, e);
         },
         setUIState: (newUIState, e) => {
           if (
@@ -25016,7 +25072,10 @@ const useUIGroupStateController = (
             )}`,
           );
           if (stateChanged) {
-            onChange(e, { notifyExternal: silent ? "silent" : true });
+            onChange(e, {
+              notifyExternal: silent ? "silent" : true,
+              actingChild: childUIStateController,
+            });
           } else {
             controller.onUIAction(e);
           }
@@ -25229,6 +25288,7 @@ const useUIGroupStateController = (
       chainEvent(batchedEvent, pendingChange.e);
       scope._onChange(batchedEvent, {
         notifyExternal: pendingChange.notifyExternal,
+        actingChild: pendingChange.actingChild,
       });
     }
   });
@@ -25572,6 +25632,11 @@ const isPropagateDownEvent = (e) => {
 const dispatchSyntheticInput = (el, inputEvent, causeEvent) => {
   chainEvent(inputEvent, causeEvent);
   el.dispatchEvent(inputEvent);
+};
+const warnChildAnswersForItself = (groupController, child) => {
+  {
+    return;
+  }
 };
 
 /**
@@ -27292,18 +27357,31 @@ const useInteractiveProps = (props, {
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 
-        // For radio/checkbox: auto-trigger the parent group's action after the
-        // leaf action completes. The parent (radio_group/checkbox_group) has
-        // already aggregated the new state by now, so uiStateSignal is correct.
+        // Auto-trigger the parent group's action after the leaf action
+        // completes, for the groups that ARE one control made of parts: a
+        // radio or checkbox group, a wheel group (an hour wheel settling is
+        // the time settling). The parent has already aggregated the new
+        // state by now, so uiStateSignal is correct. One level only: the
+        // parent's own action end does not climb further unless that parent
+        // is itself such a group.
         const parentController = uiStateController.parentUIStateController;
-        if (parentController && (parentController.controlType === "radio_group" || parentController.controlType === "checkbox_group")) {
+        if (parentController && (parentController.controlType === "radio_group" || parentController.controlType === "checkbox_group" || parentController.controlType === "wheel_group")) {
           const parentEl = parentController.ref.current;
           if (parentEl) {
-            const originalEvent = e.detail.eventChain[0];
             dispatchRequestAction(parentEl, {
-              event: originalEvent,
+              event: e.detail.eventChain[0],
               name: "auto_group_action",
-              requester: e.detail.requester
+              requester: e.detail.requester,
+              // The interactivity gate is not re-asked: the user already
+              // interacted — with the child, whose gate said yes — and this
+              // follow-up is automatic. Asking again would also answer
+              // wrong: this event is dispatched inside the batch() that
+              // settles the child's action, where a bound action still
+              // READS as running (its state is mirrored through a signal
+              // effect the batch defers, see watchActionCompletion) — the
+              // busy constraint would refuse the group for an action that
+              // is already over. The validity gate still applies.
+              bypassInteractivity: true
             });
           }
         }
@@ -27365,7 +27443,7 @@ const getAssociatedLabels = element => {
   return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$Z = /* css */`
+installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -27796,7 +27874,7 @@ installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -29507,7 +29585,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$Y = /* css */`
+const css$_ = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -30091,7 +30169,7 @@ const css$Y = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -31083,7 +31161,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$X = /* css */`
+const css$Z = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -31539,7 +31617,7 @@ const css$X = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -32567,7 +32645,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$W = /* css */`
+const css$Y = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -32704,7 +32782,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$W, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -32788,7 +32866,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$V = /* css */`
+installImportMetaCssBuild(import.meta);const css$X = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -32813,7 +32891,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -34538,7 +34616,7 @@ const describeRangeAsked = (rangeParams) => {
 };
 
 const resourceLifecycleManager = createResourceLifecycleManager();
-const debug$2 = (args) => {
+const debug$2 = (...args) => {
   {
     return;
   }
@@ -34603,6 +34681,7 @@ const resource = (
     DELETE_MANY,
   } = {},
 ) => {
+  const declarationSite = getDeclarationSite();
   if (idKey === undefined) {
     idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
   }
@@ -34651,6 +34730,7 @@ const resource = (
   const createRestActionForRoot = createRestActionFactoryForRoot(name, {
     idKey,
     store,
+    declarationSite,
   });
   return createResource(name, {
     idKey,
@@ -34689,11 +34769,8 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
-  } = {},
+  },
 ) => {
-  if (idKey === undefined) {
-    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
-  }
   const params = paramScope.params;
   const stateFacade = {
     // public
@@ -34714,7 +34791,6 @@ const createResource = (
     store,
     addItemSetup,
   };
-  const lifecycleCtx = { onComplete: null };
 
   resourceLifecycleManager.registerResource(stateFacade, {
     rerunOn,
@@ -34722,7 +34798,7 @@ const createResource = (
     dependencies,
     uniqueKeys,
   });
-  lifecycleCtx.onComplete = (actionCompleted) => {
+  const onActionComplete = (actionCompleted) => {
     resourceLifecycleManager.onActionComplete(actionCompleted, {
       resourceScope: stateFacade,
     });
@@ -34759,6 +34835,7 @@ const createResource = (
     paramsToInject,
     { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
@@ -34769,6 +34846,7 @@ const createResource = (
     const createRestActionWithParams = createRestActionFactoryForRoot(name, {
       idKey,
       store,
+      declarationSite,
     });
     return createResource(name, {
       idKey,
@@ -34821,40 +34899,37 @@ const createResource = (
       DELETE,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     const childName = `${name}.${propertyName}`;
+    const childIdKey = childResource.idKey;
+    const childStore = childResource.store;
     addItemSetup((item) => {
-      const childIdKeyForSetup = childResource.idKey;
       const childItemIdSignal = signal();
       const updateChildItemId = (value) => {
         const currentChildItemId = childItemIdSignal.peek();
+        let childItemProps;
         if (isProps(value)) {
-          const childItem = childResource.store.upsert(value);
-          const childItemId = childItem[childIdKeyForSetup];
-          if (currentChildItemId === childItemId) {
+          childItemProps = value;
+        } else if (primitiveCanBeId(value)) {
+          childItemProps = { [childIdKey]: value };
+        } else {
+          if (currentChildItemId === undefined) {
             return false;
           }
-          childItemIdSignal.value = childItemId;
+          childItemIdSignal.value = undefined;
           return true;
         }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKeyForSetup]: value };
-          const childItem = childResource.store.upsert(childItemProps);
-          const childItemId = childItem[childIdKeyForSetup];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (currentChildItemId === undefined) {
+        const childItem = childStore.upsert(childItemProps);
+        const childItemId = childItem[childIdKey];
+        if (currentChildItemId === childItemId) {
           return false;
         }
-        childItemIdSignal.value = undefined;
+        childItemIdSignal.value = childItemId;
         return true;
       };
       updateChildItemId(item[propertyName]);
       const childItemSignal = computed(() =>
-        childResource.store.select(childItemIdSignal.value),
+        childStore.select(childItemIdSignal.value),
       );
       const childItemFacadeSignal = computed(() => {
         const childItem = childItemSignal.value;
@@ -34885,9 +34960,7 @@ const createResource = (
       );
     });
 
-    const childIdKey = childResource.idKey;
-    const childStore = childResource.store;
-    const createRestActionForOne = (verb, callback, { lifecycleCtx }) => {
+    const createRestActionForOne = (verb, callback, { onActionComplete }) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemId) => {
@@ -34899,33 +34972,18 @@ const createResource = (
               });
               return childItemId;
             }
-          : // callback must return object with the following format:
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: {
-            //     [childIdKey]: 456, ...childProps
-            //   }
-            // }
-            // the following could happen too if there is no relationship
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: null
-            // }
+          : // GET/PUT contract (see .one() JSDoc): the parent object with the
+            // relationship nested inside, or null for no relationship.
             (result) => {
               const item = store.upsert(result);
               const childItem = item[propertyName];
-              const childItemId = childItem ? childItem[childIdKey] : undefined;
-              return childItemId;
+              return childItem ? childItem[childIdKey] : undefined;
             };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}`;
-
-      const actionAffectingOneItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: {
           verb,
           isMany: false,
@@ -34933,35 +34991,30 @@ const createResource = (
         },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "DELETE") {
             if (!isProps(result) && !primitiveCanBeId(result)) {
-              throw new TypeError(
-                `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an object (that will be used to drop "${name}" resource)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!isProps(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-   ${originalActionName} source location: ${locationInfo}`,
+          } else if (!isProps(result)) {
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to upsert "${name}" resource)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingOneItem;
     };
 
     return createResource(childName, {
-      idKey: childResource.idKey,
+      idKey: childIdKey,
       restCallbacks: {
         GET,
         PUT,
@@ -35018,49 +35071,21 @@ ${originalActionName} source location: ${locationInfo}`,
       DELETE_MANY,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
     const childStore = childResource.store;
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
       const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) return;
-          childItemIdArraySignal.value = [];
-          return;
-        }
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childResource.store.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childResource.store.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
+      const updateChildItemIdArray = createChildIdArrayUpdater(
+        childStore,
+        childIdKey,
+        childItemIdArraySignal,
+      );
       updateChildItemIdArray(item[propertyName]);
       const childItemArraySignal = computed(() => {
         const idArray = childItemIdArraySignal.value;
-        const arr = childResource.store.selectAll(idArray);
+        const arr = childStore.selectAll(idArray);
         Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
           value: childItemArraySignal,
           writable: false,
@@ -35073,23 +35098,27 @@ ${originalActionName} source location: ${locationInfo}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      syncIdArrayOnRename(
-        childResource.store,
-        childIdKey,
-        childItemIdArraySignal,
-      );
+      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
     });
     const createRestActionForMany = (
       verb,
       callback,
-      { isMany, lifecycleCtx },
+      { isMany, onActionComplete },
     ) => {
       if (!isMany) {
-        return createRestActionAffectingOneItem(verb, callback, lifecycleCtx);
+        return createRestActionAffectingOneItem(verb, callback, {
+          onActionComplete,
+        });
       }
-      return createRestActionAffectingManyItems(verb, callback, lifecycleCtx);
+      return createRestActionAffectingManyItems(verb, callback, {
+        onActionComplete,
+      });
     };
-    const createRestActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
+    const createRestActionAffectingOneItem = (
+      verb,
+      callback,
+      { onActionComplete },
+    ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? ([itemId, childItemId]) => {
@@ -35098,8 +35127,7 @@ ${originalActionName} source location: ${locationInfo}`,
               const childItemArrayWithoutThisOne = [];
               let found = false;
               for (const childItemCandidate of childItemArray) {
-                const childItemCandidateId = childItemCandidate[childIdKey];
-                if (childItemCandidateId === childItemId) {
+                if (childItemCandidate[childIdKey] === childItemId) {
                   found = true;
                 } else {
                   childItemArrayWithoutThisOne.push(childItemCandidate);
@@ -35114,162 +35142,127 @@ ${originalActionName} source location: ${locationInfo}`,
               return childItemId;
             }
           : (childData) => {
+              // an array is [property, value, props], used to rename the child id
               const childItem = Array.isArray(childData)
                 ? childStore.upsert(...childData)
                 : childStore.upsert(childData);
-              const childItemId = childItem[childIdKey];
-              return childItemId;
+              return childItem[childIdKey];
             };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}`;
-
-      const actionAffectingOneItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "DELETE") {
             if (!Array.isArray(result) || result.length !== 2) {
-              throw new TypeError(
-                `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an array [itemId, childItemId] (that will be used to remove relationship)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!isProps(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          } else if (!isProps(result)) {
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to upsert child item)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingOneItem;
     };
     const createRestActionAffectingManyItems = (
       verb,
       callback,
-      lifecycleCtx,
+      { onActionComplete },
     ) => {
       const applyResultToValue =
         verb === "GET"
           ? (result) => {
-              // callback must return object with the following format:
-              // {
-              //   [idKey]: 123,
-              //   [propertyName]: [
-              //      { [childIdKey]: 456, ...childProps },
-              //      { [childIdKey]: 789, ...childProps },
-              //      ...
-              //   ]
-              // }
-              // the array can be empty
+              // GET_MANY contract (see .many() JSDoc): the parent object with
+              // the child array nested inside; the array replaces the relationship.
               const item = store.upsert(result);
               const childItemArray = item[propertyName];
-              const childItemIdArray = childItemArray.map(
-                (childItem) => childItem[childIdKey],
-              );
-              return childItemIdArray;
+              return childItemArray.map((childItem) => childItem[childIdKey]);
             }
           : verb === "DELETE"
             ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
                 const item = store.select(itemIdOrMutableId);
                 const childItemArray = item[propertyName];
-                const deletedChildItemIdArray = [];
-                const childItemArrayWithoutThoose = [];
-                let someFound = false;
-                const deletedChildItemArray = childStore.select(
-                  childItemIdOrMutableIdArray,
+                const deletedChildItemSet = new Set(
+                  childStore.selectAll(childItemIdOrMutableIdArray),
                 );
+                const deletedChildItemIdArray = [];
+                const childItemArrayWithoutThose = [];
                 for (const childItemCandidate of childItemArray) {
-                  if (deletedChildItemArray.includes(childItemCandidate)) {
-                    someFound = true;
+                  if (deletedChildItemSet.has(childItemCandidate)) {
                     deletedChildItemIdArray.push(
                       childItemCandidate[childIdKey],
                     );
                   } else {
-                    childItemArrayWithoutThoose.push(childItemCandidate);
+                    childItemArrayWithoutThose.push(childItemCandidate);
                   }
                 }
-                if (someFound) {
+                if (deletedChildItemIdArray.length > 0) {
                   store.upsert({
                     [idKey]: item[idKey],
-                    [propertyName]: childItemArrayWithoutThoose,
+                    [propertyName]: childItemArrayWithoutThose,
                   });
                 }
                 return deletedChildItemIdArray;
               }
             : (childDataArray) => {
                 const childItemArray = childStore.upsert(childDataArray);
-                const childItemIdArray = childItemArray.map(
-                  (childItem) => childItem[childIdKey],
-                );
-                return childItemIdArray;
+                return childItemArray.map((childItem) => childItem[childIdKey]);
               };
-
-      const callerInfo = getCallerInfo(null, 2);
-      const locationInfo =
-        callerInfo.file && callerInfo.line && callerInfo.column
-          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-          : callerInfo.raw || "unknown location";
-      const originalActionName = `${name}.${verb}[many]`;
-
-      const actionAffectingManyItem = createAction(callback, {
+      const throwInvalidResult = createInvalidResultThrower(
+        `${name}.${verb}[many]`,
+        declarationSite,
+      );
+      return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
         dataDefault: [],
         resultToValue: (result, action) => {
-          const actionLabel = action.name;
-
           if (verb === "GET") {
             if (!isProps(result)) {
-              throw new TypeError(
-                `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an object (that will be used to upsert "${name}" resource with many relationships)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (verb === "DELETE") {
+          } else if (verb === "DELETE") {
             if (
               !Array.isArray(result) ||
               result.length !== 2 ||
               !Array.isArray(result[1])
             ) {
-              throw new TypeError(
-                `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+              throwInvalidResult(
+                action.name,
+                `an array [itemId, childItemIdArray] (that will be used to remove relationships)`,
+                result,
               );
             }
-            return applyResultToValue(result);
-          }
-          if (!Array.isArray(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          } else if (!Array.isArray(result)) {
+            throwInvalidResult(
+              action.name,
+              `an array of objects (that will be used to upsert child items)`,
+              result,
             );
           }
           return applyResultToValue(result);
         },
         valueToData: (childItemIdArray) =>
           childStore.selectAll(childItemIdArray),
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return actionAffectingManyItem;
     };
 
     return createResource(childName, {
@@ -35334,26 +35327,20 @@ ${originalActionName} source location: ${locationInfo}`,
   ) => {
     const childName = `${name}.${propertyName}`;
 
-    // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each per-scope child item object when it is first created.
-    const childItemSetupCallbackSet = new Set();
-    const childAddItemSetup = (callback) =>
-      childItemSetupCallbackSet.add(callback);
-    const scopedItemMap = new Map(); // ownerId → stable child item object
-    const scopedSignalMap = new Map(); // ownerId → signal<childItem | null>
+    // Callbacks added by chained .one()/.many() on the child resource,
+    // applied to each per-owner child object when it is first created.
+    const childSetupCallbackSet = new Set();
+    const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
+    const applyPropsMap = new Map(); // ownerId → applyProps(props | null)
     addItemSetup((ownerItem) => {
       const ownerId = ownerItem[idKey];
-      // Create a stable child item — mutated in place via applyProps.
-      // Reactive getters/setters from chained .one() etc. are defined on this object now
-      // so they survive across multiple prop updates.
+      // A stable child object, mutated in place: reactive getters/setters from
+      // chained .one() etc. are defined on it once and survive prop updates.
       const childItem = {};
-      for (const childSetup of childItemSetupCallbackSet) {
+      for (const childSetup of childSetupCallbackSet) {
         childSetup(childItem);
       }
-      scopedItemMap.set(ownerId, childItem);
       const childSignal = signal(null);
-      scopedSignalMap.set(ownerId, childSignal);
-
       const applyProps = (props) => {
         if (!props) {
           childSignal.value = null;
@@ -35367,6 +35354,7 @@ ${originalActionName} source location: ${locationInfo}`,
           childSignal.value = childItem; // first activation: null → childItem
         }
       };
+      applyPropsMap.set(ownerId, applyProps);
 
       applyProps(ownerItem[propertyName]);
 
@@ -35375,9 +35363,13 @@ ${originalActionName} source location: ${locationInfo}`,
         set: applyProps,
       });
     });
-    const createRestActionForScopedOne = (verb, callback, { lifecycleCtx }) => {
+    const createRestActionForScopedOne = (
+      verb,
+      callback,
+      { onActionComplete },
+    ) => {
       const childActionName = `${childName}.${verb}`;
-      const restAction = createAction(callback, {
+      return createAction(callback, {
         name: childActionName,
         meta: { verb, isMany: false, paramScope },
         resultToValue: (result) => {
@@ -35394,33 +35386,20 @@ ${originalActionName} source location: ${locationInfo}`,
             uniqueKeys,
             childActionName,
           );
-          const childItem = scopedItemMap.get(ownerId);
-          if (!childItem) {
+          const applyProps = applyPropsMap.get(ownerId);
+          if (!applyProps) {
             throw new Error(
               `${childActionName}: no item found for scope id "${ownerId}"`,
             );
           }
-          const childSignal = scopedSignalMap.get(ownerId);
-          if (props) {
-            for (const [key, value] of Object.entries(props)) {
-              childItem[key] = value;
-            }
-            if (childSignal.peek() !== childItem) {
-              childSignal.value = childItem;
-            }
-          } else {
-            childSignal.value = null;
-          }
+          applyProps(props);
           return [ownerId, props];
         },
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return restAction;
     };
 
-    const childResource = createResource(childName, {
+    return createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
         GET,
@@ -35436,7 +35415,6 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedOneRerunOn ?? rerunOn,
       dependencies: scopedOneDependencies ?? dependencies,
     });
-    return childResource;
   };
 
   /**
@@ -35490,108 +35468,76 @@ ${originalActionName} source location: ${locationInfo}`,
   ) => {
     const childName = `${name}.${propertyName}`;
 
-    // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each child item when it is created in a per-scope store.
+    // Callbacks added by chained .one()/.many() on the child resource,
+    // applied to each child item created in a per-owner store.
     const childSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
-    const scopedStoreMap = new Map(); // ownerId → childStore
-    const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+    // ownerKey (id or any uniqueKey value) → { childStore, idArraySignal }
+    // One owner can be registered under several keys, all pointing to the same scope.
+    const scopeMap = new Map();
+    const createScope = (ownerKey) => {
+      const childStore = arraySignalStore([], childIdKey, {
+        name: `${childName}#${ownerKey} store`,
+        createItem: (props) => {
+          const childItem = {};
+          Object.assign(childItem, props);
+          for (const childSetup of childSetupCallbackSet) {
+            childSetup(childItem);
+          }
+          return childItem;
+        },
+      });
+      const scope = { childStore, idArraySignal: signal([]) };
+      scopeMap.set(ownerKey, scope);
+      return scope;
+    };
     addItemSetup((item) => {
       const ownerId = item[idKey];
 
-      // Reuse an existing scoped store if one was already created via a uniqueKey
-      // (e.g. rows were fetched by tablename before the full table was loaded).
-      let childStore = scopedStoreMap.get(ownerId);
-      let childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
-      if (!childStore) {
+      // Reuse an existing scope if one was already created under a uniqueKey
+      // value (e.g. rows were fetched by tablename before the full table was loaded).
+      let scope = scopeMap.get(ownerId);
+      if (!scope) {
         for (const uniqueKey of uniqueKeys) {
           const uniqueKeyValue = item[uniqueKey];
-          if (uniqueKeyValue !== undefined) {
-            const existing = scopedStoreMap.get(uniqueKeyValue);
-            if (existing) {
-              childStore = existing;
-              childItemIdArraySignal =
-                scopedIdArraySignalMap.get(uniqueKeyValue);
-              break;
-            }
+          if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
+            scope = scopeMap.get(uniqueKeyValue);
+            break;
           }
         }
       }
-      if (!childStore) {
-        childStore = arraySignalStore([], childIdKey, {
-          name: `${childName}#${ownerId} store`,
-          createItem: (props) => {
-            const childItem = {};
-            Object.assign(childItem, props);
-            for (const childSetup of childSetupCallbackSet) {
-              childSetup(childItem);
-            }
-            return childItem;
-          },
-        });
-        childItemIdArraySignal = signal([]);
+      if (!scope) {
+        scope = createScope(ownerId);
       }
-      scopedStoreMap.set(ownerId, childStore);
-      // Also register by each uniqueKey value so that resolveOwnerId works
-      // when a callback returns { [uniqueKey]: value } before the full item is loaded.
+      // Register the scope under the id and every uniqueKey value so that
+      // resolveOwnerId can address it whichever key a callback returns.
+      scopeMap.set(ownerId, scope);
       for (const uniqueKey of uniqueKeys) {
         const uniqueKeyValue = item[uniqueKey];
         if (uniqueKeyValue !== undefined) {
-          scopedStoreMap.set(uniqueKeyValue, childStore);
+          scopeMap.set(uniqueKeyValue, scope);
         }
       }
 
-      scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
-      for (const uniqueKey of uniqueKeys) {
-        const uniqueKeyValue = item[uniqueKey];
-        if (uniqueKeyValue !== undefined) {
-          scopedIdArraySignalMap.set(uniqueKeyValue, childItemIdArraySignal);
-        }
+      const { childStore, idArraySignal } = scope;
+      const updateChildItemIdArray = createChildIdArrayUpdater(
+        childStore,
+        childIdKey,
+        idArraySignal,
+      );
+      // The parent may not carry the property at all (e.g. created by a POST
+      // that does not embed it): leave the collection of a reused scope
+      // untouched — children may have been fetched by uniqueKey before the
+      // parent was loaded. Only an explicit value replaces the collection.
+      if (item[propertyName] !== undefined) {
+        updateChildItemIdArray(item[propertyName]);
       }
-
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) return;
-          childItemIdArraySignal.value = [];
-          return;
-        }
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childStore.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childStore.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-
-      updateChildItemIdArray(item[propertyName]);
 
       // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
+      syncIdArrayOnRename(childStore, childIdKey, idArraySignal);
 
       const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childStore.selectAll(childItemIdArray);
+        const childItemArray = childStore.selectAll(idArraySignal.value);
         Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
           value: childItemArraySignal,
           writable: false,
@@ -35609,13 +35555,10 @@ ${originalActionName} source location: ${locationInfo}`,
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, lifecycleCtx },
+      { isMany, onActionComplete },
     ) => {
-      if (!callback) {
-        return undefined;
-      }
       const childActionName = `${childName}.${verb}`;
-      const childAction = createAction(callback, {
+      return createAction(callback, {
         name: childActionName,
         meta: { verb, isMany, paramScope },
         resultToValue: (result) => {
@@ -35632,48 +35575,33 @@ ${originalActionName} source location: ${locationInfo}`,
             uniqueKeys,
             childActionName,
           );
-          let childStore = scopedStoreMap.get(ownerId);
-          if (!childStore) {
-            // Owner not yet in store — lazily create scoped store so actions can run
-            // before the parent item has been fully loaded (e.g. rows fetched before table).
-            childStore = arraySignalStore([], childIdKey, {
-              name: `${childName}#${ownerId} store`,
-              createItem: (props) => {
-                const childItem = {};
-                Object.assign(childItem, props);
-                for (const childSetup of childSetupCallbackSet) {
-                  childSetup(childItem);
-                }
-                return childItem;
-              },
-            });
-            scopedStoreMap.set(ownerId, childStore);
-            const newIdArraySignal = signal([]);
-            scopedIdArraySignalMap.set(ownerId, newIdArraySignal);
-          }
-          const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
+          // Owner not in store yet: create the scope so actions can run before
+          // the parent item has been loaded (e.g. rows fetched before their table).
+          const scope = scopeMap.get(ownerId) || createScope(ownerId);
+          const { childStore, idArraySignal } = scope;
 
           if (verb === "DELETE") {
             if (isMany) {
               const idArray = childStore.drop(rest[0]);
               const toRemoveSet = new Set(idArray);
-              childItemIdArraySignal.value = childItemIdArraySignal
+              idArraySignal.value = idArraySignal
                 .peek()
                 .filter((id) => !toRemoveSet.has(id));
               return [ownerId, idArray];
             }
             const childId = childStore.drop(rest[0]);
-            childItemIdArraySignal.value = childItemIdArraySignal
+            idArraySignal.value = idArraySignal
               .peek()
               .filter((id) => id !== childId);
             return [ownerId, childId];
           }
 
           if (isMany) {
-            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items,
+            // and it replaces the whole collection.
             const itemArray = childStore.upsert(rest[0]);
-            const idArray = itemArray.map((i) => i[childIdKey]);
-            childItemIdArraySignal.value = idArray;
+            const idArray = itemArray.map((childItem) => childItem[childIdKey]);
+            idArraySignal.value = idArray;
             return [ownerId, idArray];
           }
 
@@ -35685,25 +35613,23 @@ ${originalActionName} source location: ${locationInfo}`,
           return [ownerId, childItem[childIdKey]];
         },
         valueToData: (value) => {
-          if (!value) return isMany ? [] : undefined;
+          if (!value) {
+            return isMany ? [] : undefined;
+          }
           const [ownerId, idOrIdArray] = value;
-          const childStore = scopedStoreMap.get(ownerId);
-          if (!childStore) return isMany ? [] : undefined;
-          if (isMany) return childStore.selectAll(idOrIdArray);
-          return childStore.select(idOrIdArray);
+          const scope = scopeMap.get(ownerId);
+          if (!scope) {
+            return isMany ? [] : undefined;
+          }
+          if (isMany) {
+            return scope.childStore.selectAll(idOrIdArray);
+          }
+          return scope.childStore.select(idOrIdArray);
         },
-        completeSideEffect: (actionCompleted) => {
-          lifecycleCtx.onComplete(actionCompleted);
-        },
+        completeSideEffect: onActionComplete,
       });
-      return childAction;
     };
 
-    // When a child (scopedMany) item is mutated via POST, the parent GET must
-    // re-fetch because the parent embeds the child array and we cannot know the
-    // new ordering without asking the backend again.
-    // (scopedOne does NOT need this: the mutation result contains the updated
-    // item directly, so no parent re-fetch is necessary.)
     const childResource = createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
@@ -35725,19 +35651,23 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedManyRerunOn ?? rerunOn,
       dependencies: scopedManyDependencies ?? dependencies,
     });
-    // Register: when childResource fires, rerun parent (stateFacade) GETs.
+    // When a scoped child collection is mutated (POST etc.), the parent GET must
+    // re-fetch: the parent embeds the child array and only the backend knows the
+    // new ordering. (scopedOne does not need this: the mutation result contains
+    // the updated object directly.)
     resourceLifecycleManager.addDependency(
       childResource,
       stateFacade,
       propertyName,
     );
-    childResource.getChildStore = (ownerKey) => scopedStoreMap.get(ownerKey);
+    childResource.getChildStore = (ownerKey) =>
+      scopeMap.get(ownerKey)?.childStore;
     return childResource;
   };
 
-  // expose rest actions on the stateFacade
+  // expose one action (or range reader) per provided rest callback
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
-    if (restCallback === undefined) {
+    if (!restCallback) {
       continue;
     }
     if (restCallbackKey === "GET_RANGE") {
@@ -35759,25 +35689,16 @@ ${originalActionName} source location: ${locationInfo}`,
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    const restAction = createRestAction(verb, restCallback, {
+    let restAction = createRestAction(verb, restCallback, {
       isMany,
-      lifecycleCtx,
+      onActionComplete,
       paramScope,
     });
-    if (!restAction) {
-      console.error("no action returned (here to see when it happens)");
-      continue;
-    }
-    let actionToRegister;
     if (params) {
-      const restActionBound = restAction.bindParams(params);
-      stateFacade[restCallbackKey] = restActionBound;
-      actionToRegister = restActionBound;
-    } else {
-      stateFacade[restCallbackKey] = restAction;
-      actionToRegister = restAction;
+      restAction = restAction.bindParams(params);
     }
-    resourceLifecycleManager.registerAction(stateFacade, actionToRegister);
+    stateFacade[restCallbackKey] = restAction;
+    resourceLifecycleManager.registerAction(stateFacade, restAction);
   }
 
   return stateFacade;
@@ -35788,76 +35709,64 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
+    declarationSite,
   },
 ) => {
   const createActionForRoot = (
     verb,
     restCallback,
-    { isMany, lifecycleCtx, paramScope },
+    { isMany, onActionComplete, paramScope },
   ) => {
     if (!isMany) {
       return createActionAffectingOneItem(verb, restCallback, {
-        lifecycleCtx,
+        onActionComplete,
         paramScope,
       });
     }
     return createActionAffectingManyItems(verb, restCallback, {
-      lifecycleCtx,
+      onActionComplete,
       paramScope,
     });
   };
   const createActionAffectingOneItem = (
     verb,
     callback,
-    { lifecycleCtx, paramScope },
+    { onActionComplete, paramScope },
   ) => {
     const applyResultToValue =
       verb === "DELETE"
-        ? (itemIdOrItemProps) => {
-            const itemId = store.drop(itemIdOrItemProps);
-            return itemId;
-          }
+        ? (itemIdOrItemProps) => store.drop(itemIdOrItemProps)
         : (result) => {
-            let item;
-            if (Array.isArray(result)) {
-              // the callback is returning something like [property, value, props]
-              // this is to support a case like:
-              // store.upsert("name", "currentName", { name: "newName" })
-              // where we want to update the idKey of an item
-              item = store.upsert(...result);
-            } else {
-              item = store.upsert(result);
-            }
-            const itemId = item[idKey];
-            return itemId;
+            // An array result is [property, value, props] — used to rename the
+            // idKey of an item: store.upsert("name", "currentName", { name: "newName" })
+            const item = Array.isArray(result)
+              ? store.upsert(...result)
+              : store.upsert(result);
+            return item[idKey];
           };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${verb}`;
-    const actionAffectingOneItem = createAction(callback, {
+    const throwInvalidResult = createInvalidResultThrower(
+      `${name}.${verb}`,
+      declarationSite,
+    );
+    return createAction(callback, {
       name: `${name}.${verb}`,
       meta: { verb, isMany: false, paramScope },
       resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
         if (verb === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+            throwInvalidResult(
+              action.name,
+              `an object (that will be used to drop "${name}" resource)`,
+              result,
             );
           }
           return applyResultToValue(result);
         }
         if (!isProps(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-${originalActionName} source location: ${locationInfo}`,
+          throwInvalidResult(
+            action.name,
+            `an object (that will be used to upsert "${name}" resource)`,
+            result,
           );
         }
         // Track which top-level properties the GET response contained so that
@@ -35868,40 +35777,30 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
-      completeSideEffect: (actionCompleted) => {
-        lifecycleCtx.onComplete(actionCompleted);
-      },
+      completeSideEffect: onActionComplete,
     });
-    return actionAffectingOneItem;
   };
   const createActionAffectingManyItems = (
     verb,
     callback,
-    { lifecycleCtx, paramScope },
+    { onActionComplete, paramScope },
   ) => {
     const applyResultToValue =
       verb === "DELETE"
-        ? (idOrMutableIdArray) => {
-            const idArray = store.drop(idOrMutableIdArray);
-            return idArray;
-          }
+        ? (idOrMutableIdArray) => store.drop(idOrMutableIdArray)
         : (dataArray) => {
             const itemArray = store.upsert(dataArray);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
+            return itemArray.map((item) => item[idKey]);
           };
 
-    const actionAffectingManyItems = createAction(callback, {
+    return createAction(callback, {
       meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
-      valueToData: (idArray) => {
-        const items = store.selectAll(idArray);
-        return items;
-      },
+      valueToData: (idArray) => store.selectAll(idArray),
       completeSideEffect: (actionCompleted) => {
-        lifecycleCtx.onComplete(actionCompleted);
+        onActionComplete(actionCompleted);
         if (
           verb === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0
@@ -35915,10 +35814,68 @@ ${originalActionName} source location: ${locationInfo}`,
         return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
       },
     });
-    return actionAffectingManyItems;
   };
 
   return createActionForRoot;
+};
+
+// Captures the "file:line:column" of the user code that invoked the public
+// function (resource(), .one(), .many(), withParams, …), so invalid-result
+// errors can point at where the callbacks were declared, not at this file.
+// Must be called directly from the public function: the stack offset accounts
+// for exactly two frames (getCallerInfo → getDeclarationSite → public fn → user code).
+const getDeclarationSite = () => {
+  const callerInfo = getCallerInfo(null, 1);
+  if (callerInfo.file && callerInfo.line && callerInfo.column) {
+    return `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`;
+  }
+  return callerInfo.raw || "unknown location";
+};
+
+const createInvalidResultThrower = (originalActionName, declarationSite) => {
+  return (actionLabel, expected, result) => {
+    throw new TypeError(
+      `${actionLabel} must return ${expected}, received ${result}.
+${originalActionName} source location: ${declarationSite}`,
+    );
+  };
+};
+
+// Shared by .many() and .scopedMany(): converts a raw relationship value (an
+// array of child props/ids, or anything else meaning "empty") into an array of
+// child ids, upserting each entry into the child store. The id array signal is
+// only touched when the resulting ids actually differ.
+const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
+  return (valueArray) => {
+    const currentIdArray = idArraySignal.peek();
+    if (!Array.isArray(valueArray)) {
+      if (currentIdArray.length > 0) {
+        idArraySignal.value = [];
+      }
+      return;
+    }
+    const idArray = [];
+    let modified = false;
+    for (const value of valueArray) {
+      let childItemProps;
+      if (isProps(value)) {
+        childItemProps = value;
+      } else if (primitiveCanBeId(value)) {
+        childItemProps = { [childIdKey]: value };
+      } else {
+        continue;
+      }
+      const childItem = childStore.upsert(childItemProps);
+      const childItemId = childItem[childIdKey];
+      if (currentIdArray[idArray.length] !== childItemId) {
+        modified = true;
+      }
+      idArray.push(childItemId);
+    }
+    if (modified || currentIdArray.length !== idArray.length) {
+      idArraySignal.value = idArray;
+    }
+  };
 };
 
 const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
@@ -35980,7 +35937,7 @@ const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {
       return item[idKey];
     }
     throw new TypeError(
-      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}). 
+      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}).
 Return a primitive id or a single-property object whose key is the idKey or a uniqueKey.`,
     );
   }
@@ -35989,7 +35946,7 @@ Return a primitive id or a single-property object whose key is the idKey or a un
   if (idKey in rawOwnerId) {
     const resolvedId = rawOwnerId[idKey];
     console.warn(
-      `${actionName}: the first element of the returned array is an object with multiple properties. 
+      `${actionName}: the first element of the returned array is an object with multiple properties.
 Only "${idKey}" is needed. Consider returning a primitive id or { ${idKey}: value } instead.`,
     );
     return resolvedId;
@@ -36001,8 +35958,10 @@ Received an object with keys: ${keys.join(", ")}.`,
   );
 };
 
-/** so that when a tracked property changes
- * on an item the corresponding signal is updated automatically.
+/**
+ * Keeps external signals in sync with properties of the resource's store items:
+ * when a tracked property changes on an item, the corresponding signal is
+ * updated automatically.
  *
  * Since signals are typically connected to route parameters via the route template
  * syntax, this keeps the URL in sync when a store item's mutable key is renamed.
@@ -38557,7 +38516,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$U = /* css */`
+const css$W = /* css */`
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -38986,7 +38945,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -39043,7 +39002,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const {
     type,
     duration
@@ -39079,7 +39038,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -39680,7 +39639,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$T = /* css */`
+const css$V = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -40070,7 +40029,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_travel.jsx"];
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being
@@ -42632,7 +42591,7 @@ const PhoneSvg = () => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$S = /* css */`
+const css$U = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -42667,7 +42626,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -42782,7 +42741,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$R = /* css */`
+installImportMetaCssBuild(import.meta);const css$T = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -42940,7 +42899,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -43102,7 +43061,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
+installImportMetaCssBuild(import.meta);const css$S = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -43564,7 +43523,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -43887,7 +43846,7 @@ installImportMetaCssBuild(import.meta);/**
  * https://dribbble.com/search/tabs
  */
 let navCount = 0;
-const css$P = /* css */`
+const css$R = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -44170,7 +44129,7 @@ const Nav = ({
   slideContainer,
   ...props
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/nav/link/nav.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const navRef = props.ref;
@@ -44697,7 +44656,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$O = /* css */`
+const css$Q = /* css */`
   @layer navi {
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
@@ -45010,7 +44969,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -45497,7 +45456,7 @@ installImportMetaCssBuild(import.meta);/**
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
  */
-const css$N = /* css */`
+const css$P = /* css */`
   @layer navi {
     :root {
       --navi-fixed-bar-width: 56px;
@@ -45645,7 +45604,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$N, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Said with the width the border rule reads rather than with an attribute of
@@ -45739,7 +45698,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$M = /* css */ `
+const css$O = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -45763,7 +45722,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$M;
+    styleEl.textContent = css$O;
     document.head.appendChild(styleEl);
   }
 
@@ -45918,7 +45877,7 @@ const useFocusGroup = (
 };
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const css$L = /* css */`
+const css$N = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -46008,7 +45967,7 @@ const SummaryMarker = ({
   loading,
   openDirection = "down"
 }) => {
-  import.meta.css = [css$L, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   return jsx("span", {
     className: "navi_summary_marker",
@@ -46053,7 +46012,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$K = /* css */`
+installImportMetaCssBuild(import.meta);const css$M = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -46099,7 +46058,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$K, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -46319,7 +46278,7 @@ installImportMetaCssBuild(import.meta);/**
  * UI when it comes first). Once settled open the clipping is released, so a
  * popover or focus ring inside is not cut at the edges.
  */
-const css$J = /* css */`
+const css$L = /* css */`
   .navi_expandable {
     position: relative;
     display: flex;
@@ -46545,7 +46504,7 @@ const useExpandableContext = partName => {
  *   and rebuilds it from scratch on every expansion.
  */
 const Expandable = props => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/expandable/expandable.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/expandable/expandable.jsx"];
   const {
     ref,
     ui,
@@ -47210,7 +47169,7 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 0; /* Useful to reserve space for outline */
@@ -47288,7 +47247,7 @@ installImportMetaCssBuild(import.meta);const css$I = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -47330,7 +47289,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$J = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-checkbox-border-radius);
@@ -47657,7 +47616,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -47779,7 +47738,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   @layer navi {
     .navi_label {
       --label-required-indicator-color: var(--navi-color-danger, #b42318);
@@ -47859,7 +47818,7 @@ installImportMetaCssBuild(import.meta);const css$G = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -47894,7 +47853,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -47926,7 +47885,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/field.jsx"];
   const {
     children,
     // Marks the label when its control is required. Takes what to show, or
@@ -48088,7 +48047,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -48451,7 +48410,7 @@ const InputRadioHeadless = props => {
 };
 const VARIANT_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -48597,7 +48556,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$E = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -48852,7 +48811,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -50960,7 +50919,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$D = /* css */`
+const css$F = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -51009,7 +50968,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -51558,7 +51517,7 @@ installImportMetaCssBuild(import.meta);/**
  * meet are drawn once instead of twice, and only the outer corners stay
  * rounded. See docs/control_group.md.
  */
-const css$C = /* css */`
+const css$E = /* css */`
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
 
@@ -51674,7 +51633,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined
@@ -51840,7 +51799,7 @@ installImportMetaCssBuild(import.meta);/**
  * So: nothing scrollable between the cap and the slides (a shared [data-body]
  * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
-const css$B = /* css */`
+const css$D = /* css */`
   /* Where the picture stands relative to the slide that is current, in boxes
      (see paintTravelProgress). Declared, so that it is a NUMBER the browser can
      interpolate: the trait an indicator draws has to travel with the slides,
@@ -52334,7 +52293,7 @@ const SlideContainer = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$B, "@jsenv/navi/src/layout/slide_container.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/layout/slide_container.jsx"];
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
   // The box itself: it is what takes the keyboard when what is on screen holds
@@ -55179,7 +55138,7 @@ installImportMetaCssBuild(import.meta);/**
  * and only under its own `sizeFromAnchor`) pass through untouched via
  * `...rest` to whichever of Popover/Dialog actually renders.
  */
-const css$A = /* css */`
+const css$C = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -55296,7 +55255,7 @@ const css$A = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/layout/popup.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -55357,7 +55316,7 @@ const Popup = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -55485,7 +55444,7 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -56279,7 +56238,7 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -56357,7 +56316,7 @@ const Separator = ({
   style,
   ...props
 }) => {
-  import.meta.css = [css$y, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -56850,7 +56809,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -57062,7 +57021,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$x, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -57682,7 +57641,7 @@ const ListVirtualContext = createContext(null);
 // that returning a component of one's own — instead of a bare <List.Item> —
 // works the same way.
 const ListRowContext = createContext(null);
-const css$w = /* css */`
+const css$y = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -58381,7 +58340,7 @@ const css$w = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -62050,7 +62009,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -62162,7 +62121,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -62214,7 +62173,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -62239,7 +62198,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$u, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -62314,7 +62273,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -62345,7 +62304,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -62802,7 +62761,7 @@ const PickerFileUI = () => {
   return String(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -63191,7 +63150,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -63640,7 +63599,7 @@ installImportMetaCssBuild(import.meta);/**
  * refuse it on purpose, which is what keeps the focus where the travel happens
  * instead of moving it into a slide that is about to leave.
  */
-const css$r = /* css */`
+const css$t = /* css */`
   @layer navi {
     .navi_picker_spin {
       /* A picker one steps through is still a picker: what themes every picker
@@ -64109,7 +64068,7 @@ const Spin = ({
   nextLabel,
   ...rest
 }) => {
-  import.meta.css = [css$r, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
   // What the group around it says, when there is one: how big the whole thing
   // is written is said once, on the group, and every spin in it follows.
@@ -64645,7 +64604,7 @@ const renderValueDefault = value => String(value ?? "");
  * are passed on to the spins sitting in them.
  */
 const SpinGroup = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const {
     size
   } = props;
@@ -65158,7 +65117,7 @@ const TimeRangeSpin = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$q = /* css */`
+const css$s = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -65199,7 +65158,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -65248,7 +65207,7 @@ installImportMetaCssBuild(import.meta);/**
  * shared sheet is registered here too — a page may render a Textarea without
  * any Input.
  */
-const css$p = /* css */`
+const css$r = /* css */`
   .navi_input.navi_textarea {
     .navi_control_input {
       min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -65335,7 +65294,7 @@ const Textarea = ({
   width = "35ch",
   ...props
 }) => {
-  import.meta.css = [inputCss + css$p, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [inputCss + css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   usePlaceholderHeight(props.ref, props.placeholder);
@@ -65409,7 +65368,7 @@ const TextareaCharCount = ({
   maxLength,
   ...rest
 }) => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/input/textarea.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
   const resolvedValue = signal ? signal.value : value;
   const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
   return jsx(Box, {
@@ -65594,7 +65553,7 @@ const formatIntlUnit = (unit, {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
@@ -65661,7 +65620,7 @@ installImportMetaCssBuild(import.meta);const css$o = /* css */`
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 const InputDuration = props => {
-  import.meta.css = [css$o, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/control/input/input_duration.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
@@ -66163,7 +66122,7 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
   .navi_radio_group {
     border-style: solid;
 
@@ -66183,7 +66142,7 @@ const RadioGroup = props => {
   return radioGroup;
 };
 const RadioGroupInterface = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/input/radio_group.jsx"];
   const {
     ref
   } = props;
@@ -66241,7 +66200,7 @@ installImportMetaCssBuild(import.meta);/**
  * control is drawn — the list it opens stays the platform's own, which is the
  * whole point of using a select.
  */
-const css$m = /* css */`
+const css$o = /* css */`
   .navi_input.navi_select {
     .navi_control_input {
       /* Room for the chevron, which sits over the padding rather than beside
@@ -66296,7 +66255,7 @@ const Select = ({
   multiple,
   ...props
 }) => {
-  import.meta.css = [inputCss + css$m, "@jsenv/navi/src/control/input/select.jsx"];
+  import.meta.css = [inputCss + css$o, "@jsenv/navi/src/control/input/select.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   seedDefaultValueFromSignal(props);
@@ -66364,7 +66323,7 @@ installImportMetaCssBuild(import.meta);/**
  * running: one loading outline around both, which is why each half is told
  * `loadingOutline={false}`.
  */
-const css$l = /* css */`
+const css$n = /* css */`
   /* Around the pair rather than in it: the outline is drawn against this
      element and follows its corners, and a Group counts its own children to
      know which corners to square — an outline among them would be one of the
@@ -66476,7 +66435,7 @@ const css$l = /* css */`
  * Anything else lands on the split button's own box.
  */
 const SplitButton = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/input/split_button.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/control/input/split_button.jsx"];
   const {
     options = [],
     value,
@@ -67127,7 +67086,7 @@ installImportMetaCssBuild(import.meta);/*
  * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
  * a [data-horizontal] variant.
  */
-const css$k = /* css */`
+const css$m = /* css */`
   .navi_wheel_container {
     /* Row size and emphasis band are read together: the band is what a value
        must cross to lose its emphasis, and the row is how far it has to travel
@@ -68249,7 +68208,7 @@ const useWheelKeyboard = ({
   }, [isHorizontal, interactive, isLoop]);
 };
 function WheelUI(props) {
-  import.meta.css = [css$k, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/wheel/wheel.jsx"];
   const {
     ref,
     visibleCount = 3,
@@ -68650,6 +68609,16 @@ function WheelUI(props) {
     // uiAction; here we fire the action explicitly, once, on the settled value.
     const input = inputRef.current;
     if (input) {
+      // Said out loud too, OUTSIDE the action pipeline: the action above goes
+      // through the gates (validity included), and what listens to a settle
+      // may be exactly the thing that RESTORES validity — a range's other
+      // bound giving way (see TimeRangeWheel) cannot wait on a gate that
+      // refuses invalid values. Bubbles, so a group holding this wheel hears
+      // it without knowing where the wheel sits.
+      dispatchPublicCustomEvent(input, "navi_wheel_settle", {
+        value: trackedItemsRef.current[index].value,
+        event: settleEvent
+      });
       dispatchRequestAction(input, {
         event: settleEvent
       });
@@ -69158,7 +69127,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 const WheelGroup = props => {
-  import.meta.css = [css$k, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/control/wheel/wheel.jsx"];
   // WheelGroup IS a control group: it aggregates its named wheels ("hours",
   // "minutes"…) into one object value, so it can sit directly inside a Form or a
   // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
@@ -69189,7 +69158,11 @@ const WheelGroup = props => {
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
     allowCapture: true,
     wantRequesterButtonState: true,
-    controlType: "control_group",
+    // Its own type, not the generic "control_group": the group IS one
+    // control made of parts, and a wheel settling runs the group's own
+    // action — the way a radio checking runs its group's (the auto group
+    // action in control_hooks keys on this type).
+    controlType: "wheel_group",
     stateType: "object",
     cascadeValidationToChildren: true,
     aggregateChildStates: props.aggregateChildStates,
@@ -69324,7 +69297,7 @@ const WheelColon = props => {
 };
 Wheel.Colon = WheelColon;
 
-/**
+installImportMetaCssBuild(import.meta);/**
  * A time of day, and a span between two of them, set by turning rather than by
  * typing. A wheel only ever shows values that exist: there is no half-written
  * hour to bound and correct under the fingers, which is what a time typed digit
@@ -69334,11 +69307,33 @@ Wheel.Colon = WheelColon;
  * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
  * two of those and carries `{ start, end }`, with the rule such a pair always
  * has: the end comes after the start. Here that rule is lived rather than
- * checked — the bounds push each other while they turn, so what the wheels show
- * is always a span. The send-time constraint stays underneath for what pushing
- * cannot fix (a start so late the span no longer fits in the day).
+ * checked — a bound settling pushes the other out of its way, so what the
+ * wheels show at rest is always a span. The send-time constraint stays
+ * underneath for what pushing cannot fix (a start so late the span no longer
+ * fits in the day).
  */
+const css$l = /* css */`
+  /* The words around a span's wheels ("De", "à"): one line box, the height
+     of a wheel row (--wheel-item-height re-exposed, same value as
+     .navi_wheel_container), centered against the wheels by the group. The
+     box's strut — this element's own font — is what places the baseline,
+     exactly where a wheel row places its numbers'; and because the content
+     stays in inline flow, anything written INSIDE at another size still
+     sits on that same baseline. Two things this depends on: the label is a
+     <Text size={size}> so its em — and therefore this line-height — is the
+     SAME em as the wheel rows' (a label left at the control font under
+     bigger wheels computes a shorter row and its baseline drifts); and no
+     flex centering of the content (centering re-centers a smaller glyph,
+     baselines are not centers). */
+  .navi_time_range_label {
+    --wheel-item-height: round(1.8em, 1px);
 
+    color: var(--wheel-color, light-dark(#111, #eee));
+    line-height: var(--wheel-item-height);
+    white-space: nowrap;
+    user-select: none;
+  }
+`;
 const HOUR_COUNT = 24;
 const MINUTES_PER_HOUR = 60;
 const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
@@ -69497,6 +69492,7 @@ const TimeRangeWheel = ({
   endTimeProps,
   ...rest
 }) => {
+  import.meta.css = [css$l, "@jsenv/navi/src/control/wheel/wheel_time.jsx"];
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
@@ -69508,10 +69504,15 @@ const TimeRangeWheel = ({
     distributeChildUIState
   } = useAnswered(placeholder, rest, aggregateSpan, distributeSpan);
 
-  // What the pair does while it is being turned: the bound that just moved is
-  // the one the user is holding, so it stays where it was put and the OTHER one
-  // gives way. A refusal at the end of the gesture would leave the person to
-  // undo what they just did.
+  // What the pair does once a bound SETTLES: the one that was moved stays
+  // where it was put and the OTHER one gives way — a refusal at that point
+  // would leave the person to undo what they just did. Settles, not while it
+  // turns: a wheel under the finger holds a value nobody has chosen yet, and
+  // the other bound jumping around mid-gesture answers a question that was
+  // not asked. Wired on the wheel's settle EVENT (navi_wheel_settle), never
+  // on `action`: an action goes through the gates, validity included, and
+  // the moment this must run is precisely the moment the pair is INVALID —
+  // an action-gated push would be refused by the very thing it fixes.
   const keepBoundsApart = (movedSide, movedTime, e) => {
     const movedMinutes = minutesFromTime(movedTime);
     if (movedMinutes === null) {
@@ -69555,6 +69556,7 @@ const TimeRangeWheel = ({
       value: answeredRef,
       children: [startLabel === null ? null : jsx(Text, {
         size: size,
+        className: "navi_time_range_label",
         children: startLabel
       }), jsx(TimeWheel, {
         id: startId,
@@ -69564,12 +69566,20 @@ const TimeRangeWheel = ({
         hours: hours,
         loop: loop,
         size: size,
-        placeholder: placeholder ? placeholder.start : undefined,
-        uiAction: (value, e) => keepBoundsApart("start", value, e),
+        placeholder: placeholder ? placeholder.start : undefined
+        // e.detail.value is the settled WHEEL's own value (an hour, a
+        // minute) — half a time. What the pair compares is this bound's
+        // whole time, read off the element the listener sits on.
+        ,
+
+        onnavi_wheel_settle: e => {
+          keepBoundsApart("start", getUIStateFromElement(e.currentTarget), e);
+        },
         ...timeProps,
         ...startTimeProps
       }), endLabel === null ? null : jsx(Text, {
         size: size,
+        className: "navi_time_range_label",
         children: endLabel
       }), jsx(TimeWheel, {
         ref: endRef,
@@ -69579,11 +69589,14 @@ const TimeRangeWheel = ({
         loop: loop,
         size: size,
         placeholder: placeholder ? placeholder.end : undefined,
-        uiAction: (value, e) => keepBoundsApart("end", value, e)
+        onnavi_wheel_settle: e => {
+          keepBoundsApart("end", getUIStateFromElement(e.currentTarget), e);
+        }
         // Which time it comes after, and how much room there must be between
         // the two: said on the LATER of the two, so the answer is given where
         // the time one would have to move is (see time_range_constraint.js).
         ,
+
         "data-time-after": startId,
         "data-time-min-duration": minDuration,
         ...timeProps,
@@ -70023,7 +70036,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$k = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -70178,7 +70191,7 @@ const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$j, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
+  import.meta.css = [css$k, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -70476,7 +70489,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$i = /* css */`
+const css$j = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -70636,7 +70649,7 @@ const css$i = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -71107,7 +71120,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$i = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -71209,7 +71222,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$h, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -71680,7 +71693,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$g = /* css */`
+const css$h = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -71923,7 +71936,7 @@ const css$g = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$g, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -72152,7 +72165,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$f = /* css */ `
+const css$g = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -72355,7 +72368,7 @@ const css$f = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`
+installImportMetaCssBuild(import.meta);const css$f = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -72366,7 +72379,7 @@ installImportMetaCssBuild(import.meta);const css$e = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$e, "@jsenv/navi/src/control/table/table_ui.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/control/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -72472,7 +72485,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$f, "@jsenv/navi/src/control/table/table.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/control/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -73300,7 +73313,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -73338,7 +73351,7 @@ installImportMetaCssBuild(import.meta);const css$d = /* css */`
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
-  import.meta.css = [css$d, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
   return jsx("div", {
     className: "navi_shortcut_container",
@@ -73377,7 +73390,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -73409,7 +73422,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -73494,7 +73507,7 @@ const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -73659,7 +73672,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$b, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -73801,7 +73814,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -73822,7 +73835,7 @@ const Caption = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css$a, "@jsenv/navi/src/text/caption.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -74235,7 +74248,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -74292,7 +74305,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -74355,7 +74368,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
   @layer navi {
   }
 
@@ -74446,7 +74459,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$9, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -74504,7 +74517,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -74642,7 +74655,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -74767,7 +74780,7 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   .navi_text_box {
     min-width: 0;
     align-items: flex-start;
@@ -74809,7 +74822,7 @@ const TextBox = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/text_box.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/text_box.jsx"];
   const boxRef = useRef(null);
   const contentRef = useRef(null);
   useLayoutEffect(() => {
@@ -74855,7 +74868,7 @@ const adjustWidth = (boxEl, contentEl) => {
   contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -74865,7 +74878,7 @@ installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -74889,7 +74902,7 @@ const useTitleLevel = () => {
 };
 const TitlePseudoClasses = [":hover"];
 
-installImportMetaCssBuild(import.meta);const css$4 = /* css */`
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
   @keyframes navi_image_shimmer {
     0% {
       background-position: -200% 0;
@@ -74944,7 +74957,7 @@ const Image = ({
   placeholderDark = false,
   ...rest
 }) => {
-  import.meta.css = [css$4, "@jsenv/navi/src/graphic/image.jsx"];
+  import.meta.css = [css$5, "@jsenv/navi/src/graphic/image.jsx"];
   const loadedRef = useRef();
   let resolvedPlaceholder = placeholderColor;
   if (resolvedPlaceholder === undefined) {
@@ -75010,7 +75023,7 @@ installImportMetaCssBuild(import.meta);/**
  * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
  * @returns {ReactElement} A composed SVG with all elements properly masked
  */
-const css$3 = /* css */`
+const css$4 = /* css */`
   .svg_mask_content * {
     color: black !important;
     opacity: 1 !important;
@@ -75024,7 +75037,7 @@ const SVGMaskOverlay = ({
   viewBox,
   children
 }) => {
-  import.meta.css = [css$3, "@jsenv/navi/src/graphic/svg_mask_overlay.jsx"];
+  import.meta.css = [css$4, "@jsenv/navi/src/graphic/svg_mask_overlay.jsx"];
   if (!Array.isArray(children)) {
     return children;
   }
@@ -75088,7 +75101,7 @@ installImportMetaCssBuild(import.meta);/**
  * space the outer box genuinely occupies — so a narrow window shrinks the card
  * and still shows that room, instead of pushing it against the edges.
  */
-const css$2 = /* css */`
+const css$3 = /* css */`
   @layer navi {
     .navi_card_layout {
       --layout-margin: 30px;
@@ -75194,7 +75207,7 @@ const CardLayout = ({
   alignY = "center",
   ...props
 }) => {
-  import.meta.css = [css$2, "@jsenv/navi/src/layout/card_layout.jsx"];
+  import.meta.css = [css$3, "@jsenv/navi/src/layout/card_layout.jsx"];
   return jsx(Box, {
     baseClassName: "navi_card_layout",
     styleCSSVars: CardLayoutStyleCSSVars,
@@ -75209,6 +75222,654 @@ const CardLayout = ({
     })
   });
 };
+
+installImportMetaCssBuild(import.meta);/**
+ * Where one stands in a walk of steps, drawn as dots on a path.
+ *
+ * Two distinct facts, drawn separately — they usually agree, and everything
+ * this component says comes from the moments they do not:
+ *
+ * - DONE and the PATH (the blue fill). The mental model, to keep in mind
+ *   when touching any of this: the circles are THINGS TO DO, and the path is
+ *   the progression along the linear walk from the first to the last — a
+ *   thing done is what lets the path advance. Answering a step fills its
+ *   dot AND the line onward, up to the NEXT dot: the invitation to go
+ *   there. If that next step is already done the path crosses it from
+ *   behind and carries on, and so forth — the fill covers the answered
+ *   prefix plus one segment of appetite. It stops at the edge of the first
+ *   dot not answered, which stays empty: the fill's one meaning is
+ *   "answered", and the first dot is NOT filled on arrival — it becomes so
+ *   by being answered. Past the fill the line is dashed, the road not
+ *   walked yet; steps answered out of order are filled dots standing alone,
+ *   dashed segments around them: the holes, readable at a glance.
+ * - the POSITION (`current`): the step being looked at, marked by a halo
+ *   around its dot and its label emphasized. It travels freely, so it can
+ *   be AHEAD of the path or BEHIND it.
+ *
+ * Both move smoothly on change (a CSS transition each), so pressing a step
+ * or answering one is seen travelling rather than jumping.
+ *
+ * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
+ * An Item renders nothing: it REGISTERS with the list as it renders (order
+ * of rendering is the order of the steps), and the list draws everything —
+ * which is what lets an Item come from anywhere: a .map(), a fragment, a
+ * component of your own wrapping it. One caveat comes with reading the
+ * children as they render: hand the list fresh Item vnodes on each render
+ * (the usual JSX), not a memoized array a bailout would keep from rendering.
+ *
+ * The dots are drawn in SVG, twice: a muted layer, and a filled layer
+ * clipped at the path's edge — the clip is what makes the path's progress a
+ * single sweep that fills the line and the dots it crosses in one movement.
+ * The line is drawn as segments between the dots (never behind them), so the
+ * dots need no background of their own and the component sits on any
+ * surface. Colors are CSS custom properties (see the css below), overridden
+ * from outside for a dark band or a different accent.
+ *
+ * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
+ * pressing a step travels there (--navi-go-to-slide), and the position is
+ * READ off the container rather than said by a prop — including mid-travel:
+ * the container paints --slide-travel-progress on this element (it is a
+ * follower, same mechanism as <Nav slideContainer>), so the halo rides the
+ * drag under the finger, in CSS alone. The path is not concerned: it moves
+ * on answers, never on movement.
+ */
+const css$2 = /* css */`
+  .navi_step_list {
+    /* The knobs: one accent for everything filled — the dots and the line
+       share it, because the fill has ONE meaning (answered) and a meaning
+       does not change color. Muted is what is not answered, on-accent
+       writes on filled dots. Said from OUTSIDE (any ancestor — a dark band,
+       a themed app) on the plain names; resolved here through an
+       indirection (--x-…, the way Button does), because a default written
+       on the plain name on this very element would beat anything an
+       ancestor says. */
+    --x-step-list-accent: var(--step-list-accent, #4f8ef7);
+    --x-step-list-on-accent: var(--step-list-on-accent, white);
+    --x-step-list-muted: var(--step-list-muted, light-dark(#8a93a8, #8b99b8));
+    --x-step-list-line: var(
+      --step-list-line,
+      light-dark(#c9d0dd, rgba(255, 255, 255, 0.35))
+    );
+    --x-step-list-current-color: var(
+      --step-list-current-color,
+      light-dark(#1c2433, white)
+    );
+    /* How long a movement takes — the path sweeping, the halo sliding. One
+       number for all of them: they tell one story. */
+    --x-step-list-duration: var(--step-list-duration, 300ms);
+
+    position: relative;
+    display: block;
+    height: 64px;
+  }
+  .navi_step_list_rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  /* The road not walked yet. */
+  .navi_step_list_rail line {
+    stroke: var(--x-step-list-line);
+    stroke-width: 2;
+    stroke-dasharray: 4 5;
+  }
+  .navi_step_list_rail circle {
+    fill: none;
+    stroke: var(--x-step-list-muted);
+    stroke-width: 1.5;
+  }
+  .navi_step_list_rail text {
+    font-weight: 600;
+    font-size: 12px;
+    fill: var(--x-step-list-muted);
+  }
+  /* The current dot says so in the drawing itself, not only by its halo: on
+     a dark band a muted number under a faint ring reads as nothing. Said in
+     the base layer only (see renderRail) — a current dot the path has
+     covered keeps the filled colors. */
+  .navi_step_list_rail g[data-current] circle {
+    stroke: var(--x-step-list-current-color);
+  }
+  .navi_step_list_rail g[data-current] text {
+    fill: var(--x-step-list-current-color);
+  }
+  /* A step answered has its dot filled, wherever the path stands: answered
+     out of order it stands alone, a filled dot between dashed segments.
+     After the current rule on purpose: answered wins the drawing, the halo
+     says current. */
+  .navi_step_list_rail g[data-done] circle {
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
+  }
+  .navi_step_list_rail g[data-done] text {
+    fill: var(--x-step-list-on-accent);
+  }
+  /* The path: same drawing, filled, revealed up to the fill's edge — the
+     answered prefix plus its segment of appetite (see the top comment). The
+     clip is set inline (a width in px); transitioning it is what makes an
+     answered step SWEEP its dot and the line onward rather than pop. */
+  .navi_step_list_rail_filled {
+    transition: clip-path var(--x-step-list-duration) ease;
+  }
+  .navi_step_list_rail_filled line {
+    stroke: var(--x-step-list-accent);
+    stroke-dasharray: none;
+  }
+  .navi_step_list_rail_filled circle {
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
+  }
+  .navi_step_list_rail_filled text {
+    fill: var(--x-step-list-on-accent);
+  }
+  /* The position: a halo around the dot being looked at. It slides from dot
+     to dot (transform, transitioned) — the g moves, the circle inside is
+     drawn at x=0. */
+  .navi_step_list_marker {
+    transition: transform var(--x-step-list-duration) ease;
+  }
+  .navi_step_list_marker circle {
+    fill: none;
+    stroke: color-mix(in srgb, var(--x-step-list-accent) 65%, transparent);
+    stroke-width: 1.5;
+  }
+
+  /* Connected to slides: the movement is not this component's anymore. The
+     container paints --slide-travel-progress here (this element follows it,
+     see data-slide-container-follows) — an asked-for travel animates it, a
+     finger drags it — and everything below is a calc() of that number, so
+     the halo and the path move per frame in CSS alone.
+     Position, in dots-x px: where the picture is right now. */
+  .navi_step_list[data-slide-container-follows] {
+    --step-list-position: calc(
+      var(--step-list-pos-x, 0) + var(--slide-travel-progress) *
+        var(--step-list-pos-dx, 0)
+    );
+  }
+  .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
+    transform: translateX(calc(var(--step-list-position) * 1px));
+    transition: none;
+  }
+
+  /* One press target per step, covering the dot AND the label under it. The
+     feedback is NOT the whole surface: a rectangle would say the whole band
+     is a button, when the affordance is the dot — so hover and focus land on
+     a circle drawn over the dot, plus the label brightening.
+     --step-dot-x anchors both on the dot, wherever the dot sits in the slot:
+     the first and last slots are asymmetric (cut at the container's edge,
+     see the geometry in the component). */
+  .navi_step_list_slot {
+    position: absolute;
+    top: 0;
+    box-sizing: border-box;
+    height: 100%;
+  }
+  /* Doubled selector: the button's own state formulas (a readonly color
+     mixed at the variant level) are declared in navi's stylesheet, injected
+     after this one — specificity is what makes these values the ones read. */
+  .navi_step_list .navi_step_list_step {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    font-size: 12px;
+    outline: none;
+    --button-color: var(--x-step-list-muted);
+    --button-color-readonly: var(--x-step-list-muted);
+    /* The button's own focus ring, silenced: it would outline the whole
+       press surface, and the ring this list draws is the one around the dot
+       (see below) — two rings read as a mistake. Width rather than style,
+       because the dot sets its own style in full. */
+    --button-outline-width: 0px;
+  }
+  /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
+     cy 17). A real element rather than a ::before, because it is also what a
+     callout anchors to (data-callout-anchor needs a selector) — a message
+     about a step points at its CIRCLE, not at the press surface. */
+  .navi_step_list_dot {
+    position: absolute;
+    top: 17px;
+    left: var(--step-dot-x);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    translate: -50% -50%;
+    pointer-events: none;
+  }
+  .navi_step_list_step:hover .navi_step_list_dot,
+  .navi_step_list_step[data-hover] .navi_step_list_dot {
+    background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
+  }
+  .navi_step_list .navi_step_list_step:hover,
+  .navi_step_list .navi_step_list_step[data-hover] {
+    --button-color: var(--x-step-list-current-color);
+  }
+  .navi_step_list_step:focus-visible .navi_step_list_dot,
+  .navi_step_list_step[data-focus-visible] .navi_step_list_dot {
+    outline-width: var(--navi-focus-outline-width);
+    outline-style: solid;
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: 1px;
+  }
+  .navi_step_list_label {
+    position: absolute;
+    bottom: 6px;
+    left: var(--step-dot-x);
+    white-space: nowrap;
+    translate: -50% 0;
+  }
+  .navi_step_list .navi_step_list_step[data-current] {
+    font-weight: 600;
+    --button-color: var(--x-step-list-current-color);
+    --button-color-readonly: var(--x-step-list-current-color);
+  }
+`;
+const RAIL_H = 34;
+const DOT_R = 11;
+const RING_R = 14.5;
+// Room for the first and last dot (and their halo) not to touch the edges.
+const EDGE_INSET = 30;
+// Between a dot's edge and the line running to the next one: enough for the
+// halo of a current dot not to sit on the line.
+const LINE_GAP = 5;
+
+// What the Items say to the list holding them (see Step): where to write
+// themselves down. Null outside any list — a Step alone renders nothing and
+// registers nowhere.
+const StepListContext = createContext(null);
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   current?: string,
+ *   slideContainer?: string,
+ *   travelByClick?: boolean,
+ *   travelByKeyboard?: boolean,
+ *   duration?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [current] - the step being looked at: its dot gets the
+ *   halo, its label the emphasis. Omit for "nowhere" — a confirmation
+ *   screen after the walk, say. With `slideContainer` the position is read
+ *   off the container instead, and this prop is ignored.
+ * @param {string} [slideContainer] - id of a <SlideContainer> these steps
+ *   are the slides of. Pressing a step travels there
+ *   (--navi-go-to-slide), the halo follows the container — drags included —
+ *   and this element becomes a follower of the container
+ *   (data-slide-container-follows), which is also what keeps the arrow keys
+ *   working from here.
+ * @param {boolean} [travelByClick=true] - whether pressing a step goes
+ *   there. Off, the steps are read-only — shown, not offered. To DO
+ *   something on a press, say `onClick` on the Item itself: like every other
+ *   prop an Item carries, it lands on that step's button.
+ * @param {boolean} [travelByKeyboard=true] - whether the arrow keys walk
+ *   from one step to the other (the focus moves, Enter presses). Only when
+ *   the list stands alone: connected to slides the arrows belong to the
+ *   CONTAINER — this element is a follower, so a press here already walks
+ *   the slides, and the container's own `travelByKeyboard` is the one that
+ *   says so. One owner per mode, or one arrow would do both.
+ * @param {string} [duration] - how long a movement takes (the path
+ *   sweeping, the halo sliding), any CSS duration. 300ms unless said —
+ *   here, or from outside via --step-list-duration.
+ */
+const StepList = ({
+  current,
+  slideContainer,
+  travelByClick = true,
+  travelByKeyboard = true,
+  duration,
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$2, "@jsenv/navi/src/layout/step_list.jsx"];
+  const rootRef = useRef();
+  // The dots spread over whatever width the component is given, so the
+  // geometry is measured rather than declared — and measured again when the
+  // room changes.
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const rootElement = rootRef.current;
+    const measure = () => {
+      setWidth(rootElement.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rootElement);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // The arrows walk the steps — standing alone only: connected, this element
+  // follows the container, whose own keydown listener already walks the
+  // slides from here (and whose travelByKeyboard says whether to). A focus
+  // group on top of that would make one arrow do both.
+  useFocusGroup(rootRef, {
+    enabled: Boolean(travelByKeyboard) && !slideContainer,
+    direction: "x"
+  });
+
+  // The roll call: every render of this list opens a fresh page, the Items
+  // rendering below write themselves on it (in rendering order, which is the
+  // order of the steps), and the layout effect reads the page back. What was
+  // read is STATE — the first render knows no steps, the effect's render
+  // draws them — and a change in what the Items say (a done toggled) flows
+  // the same way: fresh page, fresh read, redraw.
+  const registryRef = useRef(null);
+  if (!registryRef.current) {
+    registryRef.current = {
+      renderedSteps: []
+    };
+  }
+  const registry = registryRef.current;
+  registry.renderedSteps = [];
+  const [steps, setSteps] = useState([]);
+  useLayoutEffect(() => {
+    const collected = registry.renderedSteps;
+    // An empty page while steps are known: the children were most likely
+    // bailed out of rendering (memoized vnodes), not removed — keeping the
+    // known steps beats erasing the drawing (see the caveat in the top
+    // comment).
+    if (collected.length === 0 && steps.length > 0) {
+      return;
+    }
+    setSteps(previous => sameSteps(previous, collected) ? previous : [...collected]);
+  });
+  const stepCount = steps.length;
+  const dotXs = [];
+  if (width > 0 && stepCount > 0) {
+    const span = width - EDGE_INSET * 2;
+    let index = 0;
+    while (index < stepCount) {
+      dotXs.push(stepCount === 1 ? width / 2 : EDGE_INSET + span * index / (stepCount - 1));
+      index++;
+    }
+  }
+  const indexOf = value => steps.findIndex(step => step.value === value);
+
+  // Where the slides are, read off the container: which slide is current,
+  // and — while a travel or a drag is playing — which one the picture leans
+  // towards. The current area re-renders this component (the emphasized
+  // label, the data-current dot); the in-between positions never do: they
+  // are written as numbers on this element and interpolated by the CSS
+  // above, at the pace of --slide-travel-progress.
+  const [containerCurrent, setContainerCurrent] = useState(undefined);
+  useLayoutEffect(() => {
+    if (!slideContainer || dotXs.length === 0) {
+      return undefined;
+    }
+    const containerElement = document.getElementById(slideContainer);
+    if (!containerElement) {
+      console.warn(`<StepList slideContainer="${slideContainer}"> but no element with that id found`);
+      return undefined;
+    }
+    const rootElement = rootRef.current;
+    const read = () => {
+      const currentArea = containerElement.getAttribute("data-slide-current");
+      const towardArea = containerElement.getAttribute("data-slide-travel-toward");
+      setContainerCurrent(currentArea ?? undefined);
+      const currentIdx = currentArea === null ? -1 : indexOf(currentArea);
+      if (currentIdx === -1) {
+        // A slide no step names (a confirmation screen): the halo is not
+        // rendered, and the last position is left standing for the path.
+        return;
+      }
+      const x = dotXs[currentIdx];
+      let dx = 0;
+      if (towardArea && towardArea !== currentArea) {
+        const towardIdx = indexOf(towardArea);
+        if (towardIdx !== -1 && towardIdx !== currentIdx) {
+          // The container counts +1 when the picture leans on a slide BEFORE
+          // the current one, -1 after: the delta is signed the same way, so
+          // progress × delta lands exactly on the other dot.
+          const sign = towardIdx > currentIdx ? -1 : 1;
+          dx = (dotXs[towardIdx] - x) * sign;
+        }
+      }
+      rootElement.style.setProperty("--step-list-pos-x", x);
+      rootElement.style.setProperty("--step-list-pos-dx", dx);
+    };
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(containerElement, {
+      attributes: true,
+      attributeFilter: ["data-slide-current", "data-slide-travel-toward"]
+    });
+    return () => {
+      observer.disconnect();
+    };
+    // width: the dots move when the room does, and the written positions are
+    // pixels of those dots.
+  }, [slideContainer, width, stepCount]);
+  const resolvedCurrent = slideContainer ? containerCurrent : current;
+  const currentIndex = resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
+  // The path, deduced from what the Items say: the steps answered without a
+  // gap from the start. -1 when the first step is not answered yet — there
+  // is no path then, only dots.
+  let pathEndIndex = steps.findIndex(step => !step.done);
+  if (pathEndIndex === -1) {
+    pathEndIndex = stepCount;
+  }
+  pathEndIndex -= 1;
+  // How far the fill goes: nowhere while nothing is answered; past the last
+  // dot (radius plus stroke) when everything is; otherwise THROUGH the
+  // answered prefix and onward to the edge of the next dot — the segment of
+  // appetite (see the top comment), with the dot it points at left empty.
+  let fillX;
+  if (pathEndIndex === -1) {
+    fillX = 0;
+  } else if (pathEndIndex >= stepCount - 1) {
+    fillX = dotXs[stepCount - 1] + DOT_R + 3;
+  } else {
+    fillX = dotXs[pathEndIndex + 1] - DOT_R - LINE_GAP;
+  }
+  const cy = RAIL_H / 2;
+  const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
+  const renderRail = filled => jsx("svg", {
+    className: filled ? "navi_step_list_rail navi_step_list_rail_filled" : "navi_step_list_rail",
+    style: filled ? {
+      clipPath: `inset(0 ${width - fillX}px 0 0)`
+    } : undefined,
+    width: width,
+    height: RAIL_H,
+    viewBox: `0 0 ${width} ${RAIL_H}`,
+    "aria-hidden": "true",
+    children: dotXs.map((x, index) => jsxs("g", {
+      // Base layer only: dots the path covers are drawn filled by the
+      // layer above anyway (see the css).
+      "data-current": !filled && index === currentIndex ? "" : undefined,
+      "data-done": !filled && steps[index].done ? "" : undefined,
+      children: [index > 0 ? jsx("line", {
+        x1: dotXs[index - 1] + DOT_R + LINE_GAP,
+        y1: cy,
+        x2: x - DOT_R - LINE_GAP,
+        y2: cy
+      }) : null, jsx("circle", {
+        cx: x,
+        cy: cy,
+        r: DOT_R
+      }), jsx("text", {
+        x: x,
+        y: cy,
+        dy: "0.36em",
+        "text-anchor": "middle",
+        children: index + 1
+      })]
+    }, steps[index].value))
+  });
+  return jsxs(Box, {
+    ...rest,
+    ref: rootRef,
+    baseClassName: "navi_step_list",
+    "data-step-list": ""
+    // A follower of the container: the travel's progress is painted here
+    // for the CSS to draw with, and the arrow keys keep walking the slides
+    // from this element.
+    ,
+
+    "data-slide-container-follows": slideContainer,
+    style: {
+      ...rest.style,
+      ...(duration ? {
+        "--step-list-duration": duration
+      } : undefined)
+    },
+    children: [jsx(StepListContext.Provider, {
+      value: registry,
+      children: children
+    }), width > 0 && stepCount > 0 ? jsxs(Fragment$1, {
+      children: [renderRail(false), renderRail(true), currentIndex !== -1 && dotXs[currentIndex] !== undefined ? jsx("svg", {
+        className: "navi_step_list_rail",
+        width: width,
+        height: RAIL_H,
+        viewBox: `0 0 ${width} ${RAIL_H}`,
+        "aria-hidden": "true",
+        children: jsx("g", {
+          className: "navi_step_list_marker"
+          // Connected to slides, the position comes from the CSS calc
+          // above — an inline transform would override it.
+          ,
+
+          style: slideContainer ? undefined : {
+            transform: `translateX(${dotXs[currentIndex]}px)`
+          },
+          children: jsx("circle", {
+            cx: "0",
+            cy: cy,
+            r: RING_R
+          })
+        })
+      }) : null, steps.map((step, index) => {
+        // The slots tile the row, cut at the container's edges: the
+        // first and the last cover only the inner half of the room an
+        // interior slot gets, so pressing just outside the box presses
+        // nothing.
+        const first = index === 0;
+        const last = index === stepCount - 1;
+        const slotLeft = first ? dotXs[index] - EDGE_INSET : dotXs[index] - slotWidth / 2;
+        const slotRight = last ? dotXs[index] + EDGE_INSET : dotXs[index] + slotWidth / 2;
+        return jsx("div", {
+          className: "navi_step_list_slot",
+          style: {
+            "left": `${slotLeft}px`,
+            "width": `${slotRight - slotLeft}px`,
+            "--step-dot-x": `${dotXs[index] - slotLeft}px`
+          },
+          children: jsxs(Button, {
+            ...step.buttonProps,
+            // bare, not discrete: what is drawn IS the dot and its
+            // label — the hover wash a discrete button paints over its
+            // whole surface is exactly what must not appear here (the
+            // feedback is the circle over the dot, see the css).
+            variant: "bare",
+            className: "navi_step_list_step",
+            "aria-current": index === currentIndex ? "step" : undefined,
+            "data-current": index === currentIndex ? "" : undefined,
+            readOnly: !travelByClick
+            // Towards the slides when connected, by name: the command
+            // reaches the container wherever this list sits on the
+            // page. What else a press should do is the Item's own
+            // onClick, which arrived through buttonProps.
+            ,
+
+            command: slideContainer && travelByClick ? `--navi-go-to-slide:${step.value}` : undefined,
+            commandFor: slideContainer
+            // A message about a step (a callout) points at its circle,
+            // above it: the label lives below.
+            ,
+
+            "data-callout-anchor": ".navi_step_list_dot",
+            "data-callout-position": "top",
+            children: [jsx("span", {
+              className: "navi_step_list_dot",
+              "aria-hidden": "true"
+            }), jsx("span", {
+              className: "navi_step_list_label",
+              children: step.label
+            })]
+          })
+        }, step.value);
+      })]
+    }) : null]
+  });
+};
+
+// The same steps saying the same things: nothing to redraw. The labels are
+// vnodes, fresh objects on every render — comparing them would always say
+// "changed", so they are left out: what they show changes through the state
+// it came from, which re-renders this list anyway.
+const sameSteps = (previousSteps, nextSteps) => {
+  if (previousSteps.length !== nextSteps.length) {
+    return false;
+  }
+  let index = 0;
+  while (index < previousSteps.length) {
+    const previous = previousSteps[index];
+    const next = nextSteps[index];
+    if (previous.value !== next.value || previous.done !== next.done) {
+      return false;
+    }
+    if (!sameShallow(previous.buttonProps, next.buttonProps)) {
+      return false;
+    }
+    index++;
+  }
+  return true;
+};
+const sameShallow = (previousObject, nextObject) => {
+  const previousKeys = Object.keys(previousObject);
+  const nextKeys = Object.keys(nextObject);
+  if (previousKeys.length !== nextKeys.length) {
+    return false;
+  }
+  for (const key of previousKeys) {
+    if (previousObject[key] !== nextObject[key]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * One step of the walk: `value` names it (what `current` says and what a
+ * press reports), `done` says it is answered (its dot fills, and the path is
+ * deduced from the answered steps), the children are its label.
+ *
+ * It renders NOTHING: it registers with the list around it as it renders,
+ * and the list draws everything — the dot, the label, the button. Whatever
+ * else it carries (onClick, pseudoState, aria-*) lands on that button.
+ *
+ * It is both StepList.Item and an export of its own, the way Slide is to
+ * SlideContainer.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value: string,
+ *   done?: boolean,
+ *   [key: string]: any,
+ * }>}
+ * @param {boolean} [done] - this step is answered: its dot is filled — the
+ *   fill's one meaning. Steps answered out of order are filled dots
+ *   standing alone, dashed segments around them.
+ */
+const Step = ({
+  value,
+  done,
+  children,
+  ...buttonProps
+}) => {
+  const registry = useContext(StepListContext);
+  if (registry) {
+    registry.renderedSteps.push({
+      value: value ?? String(registry.renderedSteps.length),
+      done: Boolean(done),
+      label: children,
+      buttonProps
+    });
+  }
+  return null;
+};
+StepList.Item = Step;
 
 installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
@@ -75784,5 +76445,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

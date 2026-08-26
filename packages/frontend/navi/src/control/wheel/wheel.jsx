@@ -57,6 +57,7 @@ import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import {
   claimWheelGesture,
+  dispatchPublicCustomEvent,
   releaseWheelGesture,
   wheelGestureIsTakenFrom,
 } from "@jsenv/dom";
@@ -1638,6 +1639,16 @@ function WheelUI(props) {
     // uiAction; here we fire the action explicitly, once, on the settled value.
     const input = inputRef.current;
     if (input) {
+      // Said out loud too, OUTSIDE the action pipeline: the action above goes
+      // through the gates (validity included), and what listens to a settle
+      // may be exactly the thing that RESTORES validity — a range's other
+      // bound giving way (see TimeRangeWheel) cannot wait on a gate that
+      // refuses invalid values. Bubbles, so a group holding this wheel hears
+      // it without knowing where the wheel sits.
+      dispatchPublicCustomEvent(input, "navi_wheel_settle", {
+        value: trackedItemsRef.current[index].value,
+        event: settleEvent,
+      });
       dispatchRequestAction(input, { event: settleEvent });
     }
   };
@@ -2187,7 +2198,11 @@ export const WheelGroup = (props) => {
     useControlgroupProps(props, {
       allowCapture: true,
       wantRequesterButtonState: true,
-      controlType: "control_group",
+      // Its own type, not the generic "control_group": the group IS one
+      // control made of parts, and a wheel settling runs the group's own
+      // action — the way a radio checking runs its group's (the auto group
+      // action in control_hooks keys on this type).
+      controlType: "wheel_group",
       stateType: "object",
       cascadeValidationToChildren: true,
       aggregateChildStates: props.aggregateChildStates,

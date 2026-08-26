@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Créer une annonce</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 820px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .phone {
+        display: flex;
+        width: 380px;
+        height: 670px;
+        flex: none;
+        flex-direction: column;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        min-height: 0;
+        padding: 20px;
+        flex: 1;
+        flex-direction: column;
+        gap: 16px;
+        overflow: auto;
+      }
+      .page_title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      /* .phone n'est pas une Box navi: la place que la colonne donne aux
+         slides est dite ici plutôt que par expandY. */
+      .phone > .wizard_slides {
+        min-height: 0;
+        flex: 1 1 auto;
+      }
+      .wizard_head {
+        color: white;
+        background: #26314a;
+      }
+      .wizard_head_row {
+        position: relative;
+      }
+      .wizard_title {
+        margin: 0;
+        flex: 1;
+        font-size: 1.05rem;
+        text-align: center;
+      }
+      /* Le div est à moi, le Button vit dedans en flux normal: sa structure
+         interne (qui change avec readOnly) n'a rien à casser. */
+      .wizard_cancel_slot {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        translate: 0 -50%;
+      }
+      .wizard_cancel {
+        --button-color: #b9c4dd;
+        --button-background-color-hover: rgba(255, 255, 255, 0.1);
+      }
+      .step_title {
+        margin: 0;
+        font-size: 1rem;
+      }
+      /* Les questions d'une diapo, à la taille des titres de diapo. */
+      .question_title {
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      /* Le StepList sur le bandeau sombre. */
+      .wizard_head .navi_step_list {
+        --step-list-muted: #8b99b8;
+        --step-list-line: rgba(255, 255, 255, 0.35);
+        --step-list-current-color: white;
+        margin-bottom: 4px;
+      }
+
+      /* Dans la plage horaire, la typo s'efface devant les nombres: le "h"
+         des roues et le "à" entre les deux sont des liants, pas des valeurs. */
+      .horaire_range .navi_wheel_group_separator {
+        color: #8a94a6;
+        font-weight: 400;
+      }
+      .horaire_a {
+        color: #8a94a6;
+        font-weight: 400;
+      }
+      .group_legend {
+        padding: 0;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      /* Une pastille cochée (jour, niveau) se voit: le fond passe à
+         l'accent. La variante bouton de navi garde exprès ses couleurs de
+         bouton quand elle est cochée — ici c'est le fond qui dit la
+         sélection, donc on le reprend. */
+      .phone .round_chip:has(:checked) {
+        color: white;
+        background: #4f8ef7;
+        border-color: #4f8ef7;
+      }
+      .annonce_list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .annonce_card {
+        display: flex;
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        background: #eceff1;
+        border-radius: 8px;
+      }
+      .done_check {
+        display: flex;
+        width: 48px;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+        background: #2e7d32;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useState } from "preact/hooks";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        CheckboxGroup,
+        CloseSvg,
+        Form,
+        Icon,
+        Input,
+        List,
+        RadioGroup,
+        Select,
+        SelectableInput,
+        Separator,
+        Slide,
+        SlideContainer,
+        StepList,
+        Text,
+        TimeRangeWheel,
+        useSearchText,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../../internal/demo_header.jsx";
+      import {
+        FakeBackend,
+        createFakeBackend,
+      } from "../../../../internal/fake_backend.jsx";
+
+      // ── Ce qu'une annonce dit ─────────────────────────────────────────────
+      const DAYS = [
+        { key: "lun", initial: "L", short: "Lu", label: "Lundi" },
+        { key: "mar", initial: "M", short: "Ma", label: "Mardi" },
+        { key: "mer", initial: "M", short: "Me", label: "Mercredi" },
+        { key: "jeu", initial: "J", short: "Je", label: "Jeudi" },
+        { key: "ven", initial: "V", short: "Ve", label: "Vendredi" },
+        { key: "sam", initial: "S", short: "Sa", label: "Samedi" },
+        { key: "dim", initial: "D", short: "Di", label: "Dimanche" },
+      ];
+      const WEEK_KEYS = ["lun", "mar", "mer", "jeu", "ven"];
+      const WEEKEND_KEYS = ["sam", "dim"];
+      const dayShort = (key) => DAYS.find((day) => day.key === key)?.short;
+
+      // "18:00" → "18h00", pour l'affichage.
+      const fmtHeure = (time) => (time ? time.replace(":", "h") : "");
+      const fmtHoraire = (horaire) =>
+        horaire ? `${fmtHeure(horaire.start)} – ${fmtHeure(horaire.end)}` : "";
+
+      const CLUBS = [
+        {
+          id: "padel-club-toulouse",
+          name: "Padel Club Toulouse",
+          ville: "Toulouse",
+        },
+        {
+          id: "toulouse-padel-club",
+          name: "Toulouse Padel Club",
+          ville: "Toulouse",
+        },
+        { id: "padel-tolosa", name: "Padel Tolosa", ville: "Toulouse" },
+        { id: "urban-padel", name: "Urban Padel", ville: "Toulouse" },
+        {
+          id: "4padel-colomiers",
+          name: "4Padel Colomiers",
+          ville: "Colomiers",
+        },
+        { id: "padel-attitude", name: "Padel Attitude", ville: "Colomiers" },
+        { id: "esprit-padel", name: "Esprit Padel", ville: "Balma" },
+        {
+          id: "squash-padel-balma",
+          name: "Squash & Padel Balma",
+          ville: "Balma",
+        },
+        { id: "padel-factory", name: "Padel Factory", ville: "Blagnac" },
+        { id: "axess-padel", name: "Axess Padel", ville: "Blagnac" },
+      ];
+      const VILLES = [...new Set(CLUBS.map((club) => club.ville))];
+      const clubName = (id) => CLUBS.find((club) => club.id === id)?.name;
+
+      const NIVEAUX = ["1", "2", "3", "4", "5", "6", "7", "8"];
+      const NIVEAUX_MAX = 3;
+
+      const COTES = [
+        { key: "gauche", label: "À gauche" },
+        { key: "droite", label: "À droite" },
+        { key: "indifferent", label: "Peu importe" },
+      ];
+      const coteLabel = (key) => COTES.find((cote) => cote.key === key)?.label;
+
+      // ── Le backend ────────────────────────────────────────────────────────
+      // Rien n'y part avant la fin du parcours: les étapes écrivent un
+      // brouillon à l'écran, seul le récapitulatif envoie (POST ou PUT).
+      const backend = createFakeBackend({
+        value: [],
+        persist: "navi_demo_create_announcement",
+      });
+      const annonces = () => backend.valueSignal.value;
+      const nextAnnonceId = () => {
+        let biggest = 0;
+        for (const annonce of annonces()) {
+          const id = Number(annonce.id);
+          if (id > biggest) {
+            biggest = id;
+          }
+        }
+        return String(biggest + 1);
+      };
+      const writeAnnonce = (annonce) => {
+        const rest = annonces().filter(
+          (candidate) => candidate.id !== annonce.id,
+        );
+        backend.setValue([...rest, annonce]);
+        return annonce;
+      };
+      const api = {
+        create: (values) =>
+          backend.call("POST /annonces", () =>
+            writeAnnonce({ id: nextAnnonceId(), ...values }),
+          ),
+        update: (id, values) =>
+          backend.call(`PUT /annonces/${id}`, () =>
+            writeAnnonce({ id, ...values }),
+          ),
+      };
+
+      // ── Les étapes ────────────────────────────────────────────────────────
+      const STEPS = [
+        { area: "dispo", label: "Dispo" },
+        { area: "club", label: "Lieu" },
+        { area: "place", label: "Type" },
+        { area: "recap", label: "Récap" },
+      ];
+      const stepAnswered = (draft, area) => {
+        if (area === "dispo") {
+          return Boolean(draft.jours?.length && draft.horaire);
+        }
+        if (area === "club") {
+          return Boolean(draft.clubs?.length);
+        }
+        if (area === "place") {
+          return Boolean(draft.niveaux?.length && draft.cote);
+        }
+        return false;
+      };
+      // La première étape à qui il manque une info — ce qui retient "Publier"
+      // tant que tout n'est pas rempli. Le dessin du chemin, lui, est
+      // l'affaire du StepList (déduit des items done).
+      const pathFrontier = (draft) =>
+        STEPS.findIndex((step) => !stepAnswered(draft, step.area));
+
+      // ── Les slides ────────────────────────────────────────────────────────
+      const StepFooter = ({ first, submitLabel = "Suivant" }) => (
+        <Box flex="x" spacing="s">
+          <Button
+            command="--navi-left"
+            expandX
+            style={first ? { visibility: "hidden" } : undefined}
+            inert={first || undefined}
+          >
+            Précédent
+          </Button>
+          <Button type="submit" cta expandX>
+            {submitLabel}
+          </Button>
+        </Box>
+      );
+
+      // Une étape: un formulaire dans une slide. L'envoi qui aboutit dit
+      // "--navi-done" à la slide, qui avance d'elle-même — "Suivant" est un
+      // simple submit. canSendWhileUnchanged: c'est l'envoi qui pose les
+      // valeurs de l'étape dans le brouillon, y compris quand on garde les
+      // valeurs proposées telles quelles.
+      // Aucun verrou: la navigation entre étapes est libre, seul le CHEMIN du
+      // StepList dit ce qui est rempli.
+      const StepSlide = ({ area, title, first, onValues, children }) => (
+        <Slide id={area} overflow="auto">
+          <Form action={onValues} canSendWhileUnchanged>
+            <Box flex="y" spacing="l" padding="l">
+              <h3 className="step_title">{title}</h3>
+              {children}
+              <StepFooter first={first} />
+            </Box>
+          </Form>
+        </Slide>
+      );
+
+      const HORAIRE_SUGGESTIONS = [
+        { label: "matinée", horaire: { start: "09:00", end: "12:00" } },
+        { label: "midi", horaire: { start: "12:00", end: "14:00" } },
+        { label: "soirée", horaire: { start: "18:00", end: "21:00" } },
+      ];
+
+      const DispoSlide = ({ patchDraft, joursSignal, horaireSignal }) => (
+        <StepSlide
+          area="dispo"
+          first
+          onValues={(values) => {
+            patchDraft({
+              jours: values.jours ? [].concat(values.jours) : [],
+              horaire: values.horaire,
+            });
+          }}
+        >
+          <Box flex="y" spacing="s" alignX="center">
+            <Text
+              className="question_title"
+              selfAlignX="start"
+              marginBottom="xs"
+            >
+              Quels jours êtes-vous disponible ?
+            </Text>
+            <CheckboxGroup
+              name="jours"
+              required
+              signal={joursSignal}
+              flex="x"
+              spacing="s"
+              borderWidth="0"
+              padding="0"
+            >
+              {DAYS.map((day) => (
+                <Input
+                  key={day.key}
+                  type="checkbox"
+                  variant="button"
+                  className="round_chip"
+                  value={day.key}
+                  aria-label={day.label}
+                  width="38"
+                  height="38"
+                  borderRadius="50%"
+                  alignX="center"
+                  alignY="center"
+                  icon={<span>{day.initial}</span>}
+                />
+              ))}
+            </CheckboxGroup>
+            <Box flex="x" spacing="s" alignY="center">
+              <Button
+                variant="discrete"
+                onClick={() => {
+                  joursSignal.value = WEEK_KEYS;
+                }}
+              >
+                En semaine
+              </Button>
+              <Separator vertical />
+              <Button
+                variant="discrete"
+                onClick={() => {
+                  joursSignal.value = WEEKEND_KEYS;
+                }}
+              >
+                Le weekend
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            flex="y"
+            spacing="m"
+            alignX="start"
+            marginTop="s"
+            marginBottom="s"
+          >
+            <Text className="question_title">À quels horaires ?</Text>
+            {/* La borne qu'on tient n'est pas encore une réponse: l'autre ne
+                cède qu'au relâchement, quand la roue s'est posée. */}
+            <Box flex="x" alignX="center" expandX>
+              <TimeRangeWheel
+                className="horaire_range"
+                name="horaire"
+                size="l"
+                startLabel={<span className="horaire_a">de</span>}
+                endLabel={<span className="horaire_a">à</span>}
+                signal={horaireSignal}
+                minuteStep={30}
+                hours={{ min: 6, max: 23 }}
+                minDuration={60}
+                timeProps={{ border: "none" }}
+              />
+            </Box>
+            <Box flex="x" spacing="s" alignY="center" selfAlignX="center">
+              {HORAIRE_SUGGESTIONS.map((suggestion, index) => (
+                <>
+                  {index > 0 ? <Separator vertical /> : null}
+                  <Button
+                    key={suggestion.label}
+                    variant="discrete"
+                    onClick={() => {
+                      horaireSignal.value = suggestion.horaire;
+                    }}
+                  >
+                    {suggestion.label}
+                  </Button>
+                </>
+              ))}
+            </Box>
+          </Box>
+        </StepSlide>
+      );
+
+      const ClubSlide = ({ draft, patchDraft }) => {
+        const [searchText, setSearchText] = useState("");
+        const [ville, setVille] = useState("");
+        const [clubIds, setClubIds] = useState(draft.clubs ?? []);
+        const clubsOfVille = ville
+          ? CLUBS.filter((club) => club.ville === ville)
+          : CLUBS;
+        const [matchingNames, getMatchInfo] = useSearchText(
+          searchText,
+          clubsOfVille.map((club) => club.name),
+        );
+        const clubs = clubsOfVille.filter((club) =>
+          matchingNames.includes(club.name),
+        );
+        const listId = useId();
+        return (
+          <Slide id="club" overflow="auto">
+            <Box flex="y" spacing="m" padding="l">
+              <h3 className="step_title">Où voulez-vous jouer ?</h3>
+              {/* Hors du formulaire: filtrer n'est pas répondre, et Entrée
+                  dans la recherche ne doit pas envoyer l'étape. */}
+              <Box flex="x" spacing="s">
+                <Select
+                  value={ville}
+                  action={(value) => {
+                    setVille(value);
+                  }}
+                >
+                  <option value="">Toutes les villes</option>
+                  {VILLES.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  type="search"
+                  placeholder="Rechercher un club"
+                  navi-list={listId}
+                  value={searchText}
+                  action={(value) => {
+                    setSearchText(value);
+                  }}
+                  expandX
+                />
+              </Box>
+              <Form
+                action={() => {
+                  patchDraft({ clubs: clubIds });
+                }}
+                canSendWhileUnchanged
+                flex="y"
+                spacing="m"
+              >
+                <List
+                  selectable
+                  multiple
+                  maxLengthGuard={5}
+                  id={listId}
+                  name="clubs"
+                  required
+                  maxHeight="240"
+                  separator
+                  action={(value) => {
+                    setClubIds(value ? [].concat(value) : []);
+                  }}
+                  searchFallback={
+                    <Text color="#666" padding="m">
+                      Aucun club ne correspond.
+                    </Text>
+                  }
+                >
+                  {clubs.map((club, index) => (
+                    <List.Item
+                      selectable
+                      key={club.id}
+                      id={`club_${club.id}`}
+                      index={index}
+                      value={club.id}
+                      selected={clubIds.includes(club.id)}
+                      matchInfo={getMatchInfo(club.name)}
+                      paddingX="m"
+                      paddingY="s"
+                      flex="x"
+                      spacing="s"
+                      alignY="center"
+                    >
+                      <SelectableInput />
+                      <Box flex="y">
+                        <Text>{club.name}</Text>
+                        <Text size="s" color="#8a94a6">
+                          {club.ville}
+                        </Text>
+                      </Box>
+                    </List.Item>
+                  ))}
+                </List>
+                <StepFooter />
+              </Form>
+            </Box>
+          </Slide>
+        );
+      };
+
+      const PlaceSlide = ({ draft, patchDraft, niveauxSignal }) => {
+        const niveauxSelected = niveauxSignal.value || [];
+        return (
+          <StepSlide
+            area="place"
+            title="Quel type de partie?"
+            onValues={(values) => {
+              patchDraft({
+                niveaux: values.niveaux ? [].concat(values.niveaux) : [],
+                cote: values.cote,
+              });
+            }}
+          >
+            <CheckboxGroup
+              name="niveaux"
+              required
+              signal={niveauxSignal}
+              flex="x"
+              wrap
+              spacing="xs"
+            >
+              <legend className="group_legend">
+                Niveau ({NIVEAUX_MAX} max)
+              </legend>
+              {NIVEAUX.map((niveau) => {
+                const selected = niveauxSelected.includes(niveau);
+                return (
+                  <Input
+                    key={niveau}
+                    type="checkbox"
+                    variant="button"
+                    className="round_chip"
+                    value={niveau}
+                    aria-label={`Niveau ${niveau}`}
+                    width="38"
+                    height="38"
+                    borderRadius="50%"
+                    alignX="center"
+                    alignY="center"
+                    readOnly={
+                      niveauxSelected.length >= NIVEAUX_MAX && !selected
+                    }
+                    icon={<span>{niveau}</span>}
+                  />
+                );
+              })}
+            </CheckboxGroup>
+            <RadioGroup
+              name="cote"
+              required
+              defaultValue={draft.cote}
+              flex="x"
+              wrap
+              spacing="xs"
+            >
+              <legend className="group_legend">Côté</legend>
+              {COTES.map((cote) => (
+                <Input
+                  key={cote.key}
+                  type="radio"
+                  variant="button"
+                  width="auto"
+                  value={cote.key}
+                  icon={<span>{cote.label}</span>}
+                />
+              ))}
+            </RadioGroup>
+          </StepSlide>
+        );
+      };
+
+      const RecapLine = ({ label, area, filled, children }) => (
+        <Box flex="x" alignY="center" spacing="s">
+          <Box flex="y" expandX>
+            <Text size="s" color="#666">
+              {label}
+            </Text>
+            <Text>{children}</Text>
+          </Box>
+          <Button variant="discrete" command={`--navi-go-to-slide:${area}`}>
+            {filled ? "modifier" : "À compléter"}
+          </Button>
+        </Box>
+      );
+
+      const Wizard = ({ annonce, onExit }) => {
+        const editing = Boolean(annonce);
+        // Le brouillon vit à l'écran: chaque étape y écrit à l'envoi de son
+        // formulaire, et rien ne part au backend avant le récapitulatif.
+        const [draft, setDraft] = useState(() =>
+          editing
+            ? {
+                jours: annonce.jours,
+                horaire: annonce.horaire,
+                clubs: annonce.clubs,
+                niveaux: annonce.niveaux,
+                cote: annonce.cote,
+              }
+            : {},
+        );
+        const patchDraft = (patch) => {
+          setDraft((previous) => ({ ...previous, ...patch }));
+        };
+        // Les signaux tiennent ce que les contrôles montrent: c'est ce qui
+        // permet aux quick actions d'écrire dedans et au chip désactivé de
+        // lire combien sont cochés.
+        const joursSignal = useSignal(draft.jours ?? []);
+        const horaireSignal = useSignal(
+          draft.horaire ?? { start: "12:00", end: "14:00" },
+        );
+        const niveauxSignal = useSignal(draft.niveaux ?? []);
+        const stepSignal = useSignal("dispo");
+        const containerId = useId();
+        const save = async () => {
+          const values = {
+            jours: draft.jours,
+            horaire: draft.horaire,
+            clubs: draft.clubs,
+            niveaux: draft.niveaux,
+            cote: draft.cote,
+          };
+          if (editing) {
+            await api.update(annonce.id, values);
+          } else {
+            await api.create(values);
+          }
+        };
+
+        return (
+          <>
+            <Box className="wizard_head" flex="y">
+              <Box
+                className="wizard_head_row"
+                flex="x"
+                alignY="center"
+                spacing="s"
+                paddingX="l"
+                paddingY="m"
+              >
+                <h2 className="wizard_title">
+                  {editing ? "Modifier l'annonce" : "Créer une annonce"}
+                </h2>
+                <div className="wizard_cancel_slot">
+                  <Button
+                    variant="discrete"
+                    className="wizard_cancel"
+                    icon
+                    aria-label="Annuler"
+                    onClick={onExit}
+                  >
+                    <Icon>
+                      <CloseSvg />
+                    </Icon>
+                  </Button>
+                </div>
+              </Box>
+              <StepList
+                slideContainer={containerId}
+                travelByClick={stepSignal.value !== "done"}
+              >
+                {STEPS.map((step) => (
+                  <StepList.Item
+                    key={step.area}
+                    value={step.area}
+                    done={stepAnswered(draft, step.area)}
+                  >
+                    {step.label}
+                  </StepList.Item>
+                ))}
+              </StepList>
+            </Box>
+            {/* Navigation libre: les flèches, le drag et le StepList vont où
+                on veut — le chemin, lui, ne bouge que sur validation. */}
+            <SlideContainer
+              id={containerId}
+              signal={stepSignal}
+              className="wizard_slides"
+            >
+              <DispoSlide
+                patchDraft={patchDraft}
+                joursSignal={joursSignal}
+                horaireSignal={horaireSignal}
+              />
+              <ClubSlide draft={draft} patchDraft={patchDraft} />
+              <PlaceSlide
+                draft={draft}
+                patchDraft={patchDraft}
+                niveauxSignal={niveauxSignal}
+              />
+              {/* preventNavNext: l'écran de confirmation ne s'atteint qu'en
+                  publiant — le --navi-done d'un envoi réussi lève le verrou
+                  lui-même, une flèche ou un drag non. */}
+              <Slide id="recap" overflow="auto" preventNavNext>
+                {/* Sans champ, ce formulaire n'est jamais "changé":
+                    canSendWhileUnchanged pour que l'envoi parte quand même. */}
+                <Form action={save} canSendWhileUnchanged>
+                  <Box flex="y" spacing="l" padding="l">
+                    <h3 className="step_title">Récapitulatif</h3>
+                    <Box flex="y" spacing="m">
+                      <RecapLine
+                        label="Jours"
+                        area="dispo"
+                        filled={Boolean(draft.jours?.length)}
+                      >
+                        {(draft.jours || []).map(dayShort).join(", ")}
+                      </RecapLine>
+                      <RecapLine
+                        label="Horaire"
+                        area="dispo"
+                        filled={Boolean(draft.horaire)}
+                      >
+                        {fmtHoraire(draft.horaire)}
+                      </RecapLine>
+                      <RecapLine
+                        label="Lieux"
+                        area="club"
+                        filled={Boolean(draft.clubs?.length)}
+                      >
+                        {(draft.clubs || []).map(clubName).join(", ")}
+                      </RecapLine>
+                      <RecapLine
+                        label="Niveau"
+                        area="place"
+                        filled={Boolean(draft.niveaux?.length)}
+                      >
+                        {(draft.niveaux || []).join(", ")}
+                      </RecapLine>
+                      <RecapLine
+                        label="Côté"
+                        area="place"
+                        filled={Boolean(draft.cote)}
+                      >
+                        {coteLabel(draft.cote)}
+                      </RecapLine>
+                    </Box>
+                    <Box flex="x" spacing="s">
+                      <Button command="--navi-left" expandX>
+                        Précédent
+                      </Button>
+                      {/* Tant que le chemin n'a pas atteint le récap, il
+                          manque une réponse quelque part: rien à publier. */}
+                      <Button
+                        type="submit"
+                        cta
+                        expandX
+                        readOnly={pathFrontier(draft) !== STEPS.length - 1}
+                      >
+                        {editing ? "Enregistrer" : "Publier l'annonce"}
+                      </Button>
+                    </Box>
+                  </Box>
+                </Form>
+              </Slide>
+              <Slide id="done" preventNavPrevious>
+                <Box
+                  flex="y"
+                  spacing="m"
+                  alignX="center"
+                  alignY="center"
+                  padding="l"
+                  expandY
+                >
+                  <span className="done_check">✓</span>
+                  <Text bold>
+                    {editing ? "Annonce modifiée" : "Annonce publiée"}
+                  </Text>
+                  <Button cta onClick={onExit}>
+                    Voir mes annonces
+                  </Button>
+                </Box>
+              </Slide>
+            </SlideContainer>
+          </>
+        );
+      };
+
+      const summarize = (annonce) =>
+        [
+          (annonce.jours || []).map(dayShort).join(", "),
+          fmtHoraire(annonce.horaire),
+          `Niveau ${(annonce.niveaux || []).join(", ")}`,
+        ].join(" · ");
+
+      const HomePage = ({ onCreate, onEdit }) => {
+        const list = annonces();
+        return (
+          <div className="page">
+            <h2 className="page_title">Mes annonces</h2>
+            {list.length === 0 ? (
+              <Text color="#666">Aucune annonce pour le moment.</Text>
+            ) : (
+              <div className="annonce_list">
+                {list.map((annonce) => (
+                  <div className="annonce_card" key={annonce.id}>
+                    <Text bold>
+                      {(annonce.clubs || []).map(clubName).join(", ")}
+                    </Text>
+                    <Text size="s" color="#555">
+                      {summarize(annonce)}
+                    </Text>
+                    <Button variant="discrete" onClick={() => onEdit(annonce)}>
+                      Modifier
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button cta onClick={onCreate}>
+              Créer une annonce
+            </Button>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [screen, setScreen] = useState({ name: "home" });
+        const goHome = () => setScreen({ name: "home" });
+        return (
+          <Box flex="y" spacing="l">
+            <DemoHeader title="Créer une annonce" />
+            <div className="demo-section">
+              <p className="caption">
+                Créer une annonce en plusieurs étapes, la publier, puis la
+                modifier.
+              </p>
+              <FakeBackend backend={backend}>
+                {() => (
+                  <div className="phone">
+                    {screen.name === "home" ? (
+                      <HomePage
+                        onCreate={() => setScreen({ name: "create" })}
+                        onEdit={(annonce) =>
+                          setScreen({ name: "edit", annonce })
+                        }
+                      />
+                    ) : (
+                      <Wizard
+                        key={screen.annonce?.id ?? "new"}
+                        annonce={screen.annonce}
+                        onExit={goHome}
+                      />
+                    )}
+                  </div>
+                )}
+              </FakeBackend>
+            </div>
+          </Box>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

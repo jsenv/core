@@ -53,10 +53,12 @@ export const REQUIRED_CONSTRAINT = {
       };
     }
 
-    // checkbox_group controller: check aggregate uiState array
+    // checkbox_group controller: check aggregate uiState array. An empty
+    // selection aggregates to undefined, not to an empty array (see
+    // GROUP_DEFAULTS.checkbox_group) — both mean "nothing checked" here.
     if (controlType === "checkbox_group") {
       const uiState = field.uiState;
-      if (uiState.length > 0) {
+      if (uiState !== undefined && uiState.length > 0) {
         return null;
       }
       return {
