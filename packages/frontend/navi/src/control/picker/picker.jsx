@@ -733,77 +733,73 @@ const PickerButton = (props) => {
               }
               maxLines={maxLines}
             >
-              <PickerContext.Provider value={{ value, placeholder, maxLines }}>
-                {ui === undefined ? <PickerDefaultUI /> : ui}
-              </PickerContext.Provider>
+              <PickerOwnContent>
+                <PickerContext.Provider
+                  value={{ value, placeholder, maxLines }}
+                >
+                  {ui === undefined ? <PickerDefaultUI /> : ui}
+                </PickerContext.Provider>
+              </PickerOwnContent>
             </Text>
           )}
           {variant === "headless" || ui === "default" ? null : (
             <span className="navi_picker_right_slot">
-              {/* The slot holds the control's own furniture, not another control
-                of the field around it: what lives here must not take the id
-                (nor the name) a <Field> hands down, which is the picker's. Two
-                controls under one id is one registry entry, and the one that
-                unmounts first — the cross, the moment the value it cleared is
-                gone — takes the picker's own entry with it. */}
-              <ControlIdContext.Provider value={undefined}>
-                <ControlNameContext.Provider value={undefined}>
-                  {/* Clearing is a modification: nothing to offer on a picker
+              <PickerOwnContent>
+                {/* Clearing is a modification: nothing to offer on a picker
                     whose value cannot be changed. The cross is a control of its
                     own, so the interaction gate finds IT rather than the picker
                     and would let the press through — the tap aimed where the
                     chevron sits would empty a field nothing else can touch. */}
-                  {clearable &&
-                  interactive &&
-                  value !== undefined &&
-                  value !== "" ? (
-                    <Button
-                      command="--navi-clear"
-                      commandFor={inputProps.id}
-                      // The question, asked before the clear rather than by the
-                      // action the clear sends — see the --navi-clear command.
-                      confirm={clearConfirm}
-                      confirmPopupContent={clearConfirmPopupContent}
-                      tabIndex="-1"
-                      // No navi-focus-delegate, unlike the identical button inside an
-                      // input: handing focus back to the picker's own input is what
-                      // opens the popup, and clearing is the opposite intention.
-                      icon
-                      variant="discrete"
-                      // What is busy once the clear is sent is the picker — the value
-                      // being removed is the whole field's, and the picker already
-                      // draws the wait around all of it. Two outlines for one wait is
-                      // one too many.
-                      loadingOutline={false}
-                      // preventDefault, not just tabIndex="-1": a mousedown focuses
-                      // its target before any click happens, and this button should
-                      // never hold focus at all — the field keeps it.
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                      }}
-                      flex
-                      align="center"
-                    >
-                      <Icon size={rightSlotIconSize} lineOverflow="allow">
-                        <CloseSvg />
-                      </Icon>
-                    </Button>
-                  ) : rightSlot === undefined ? (
-                    // lineOverflow: what sits in the slot is an affordance, not a
-                    // character — a caller asking for a bigger one wants it bigger,
-                    // not capped at the height of the line it sits on
+                {clearable &&
+                interactive &&
+                value !== undefined &&
+                value !== "" ? (
+                  <Button
+                    command="--navi-clear"
+                    commandFor={inputProps.id}
+                    // The question, asked before the clear rather than by the
+                    // action the clear sends — see the --navi-clear command.
+                    confirm={clearConfirm}
+                    confirmPopupContent={clearConfirmPopupContent}
+                    tabIndex="-1"
+                    // No navi-focus-delegate, unlike the identical button inside an
+                    // input: handing focus back to the picker's own input is what
+                    // opens the popup, and clearing is the opposite intention.
+                    icon
+                    variant="discrete"
+                    // What is busy once the clear is sent is the picker — the value
+                    // being removed is the whole field's, and the picker already
+                    // draws the wait around all of it. Two outlines for one wait is
+                    // one too many.
+                    loadingOutline={false}
+                    // preventDefault, not just tabIndex="-1": a mousedown focuses
+                    // its target before any click happens, and this button should
+                    // never hold focus at all — the field keeps it.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    flex
+                    align="center"
+                  >
                     <Icon size={rightSlotIconSize} lineOverflow="allow">
-                      {rightSlotIcon === undefined ? (
-                        <ChevronDownSvg />
-                      ) : (
-                        rightSlotIcon
-                      )}
+                      <CloseSvg />
                     </Icon>
-                  ) : (
-                    rightSlot
-                  )}
-                </ControlNameContext.Provider>
-              </ControlIdContext.Provider>
+                  </Button>
+                ) : rightSlot === undefined ? (
+                  // lineOverflow: what sits in the slot is an affordance, not a
+                  // character — a caller asking for a bigger one wants it bigger,
+                  // not capped at the height of the line it sits on
+                  <Icon size={rightSlotIconSize} lineOverflow="allow">
+                    {rightSlotIcon === undefined ? (
+                      <ChevronDownSvg />
+                    ) : (
+                      rightSlotIcon
+                    )}
+                  </Icon>
+                ) : (
+                  rightSlot
+                )}
+              </PickerOwnContent>
             </span>
           )}
         </span>
@@ -814,6 +810,21 @@ const PickerButton = (props) => {
     </ReadOnlyContext.Provider>
   );
 };
+// What the picker draws itself — the value it shows, the furniture in its slot,
+// and whatever a caller puts in either — is not another control of the field
+// around it: none of it may take the id (nor the name) a <Field> hands down,
+// which is the picker's. Two controls under one id is one registry entry, and
+// the one that unmounts first — the clear cross the moment the field it emptied
+// is empty, a chip the moment its value is taken out — takes the picker's own
+// entry with it, leaving the picker looking for a controller that is gone.
+const PickerOwnContent = ({ children }) => (
+  <ControlIdContext.Provider value={undefined}>
+    <ControlNameContext.Provider value={undefined}>
+      {children}
+    </ControlNameContext.Provider>
+  </ControlIdContext.Provider>
+);
+
 // `id` is what --navi-select/--navi-unselect carry (a list addresses its rows by
 // id); asked of a picker, what they carry is one entry of the list the picker
 // holds — the same thing a `<Picker.Chip value>` stands for.
