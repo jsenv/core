@@ -177,11 +177,9 @@ export const BadgeList = (props) => {
 
 // Nothing to measure, cap, or count: the badges render themselves — no
 // registry, no context, no effect, one element.
-const BadgeListPlain = ({ children, ...boxProps }) => {
+const BadgeListPlain = (props) => {
   return (
-    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...boxProps}>
-      {children}
-    </Box>
+    <Box baseClassName="navi_badge_list" {...BADGE_LIST_PROPS} {...props} />
   );
 };
 
