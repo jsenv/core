@@ -51,10 +51,31 @@
         font-size: 0.9rem;
         line-height: 1.5;
       }
+      .demo-section h4 {
+        margin: 0 0 10px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.85rem;
+        scroll-margin-top: 12px;
+      }
       .demo-subsection {
         margin-top: 24px;
         padding-top: 20px;
         border-top: 1px solid #eee;
+      }
+      .demo-subsection-part {
+        margin-top: 20px;
+      }
+      .demo-subsection-part:first-of-type {
+        margin-top: 0;
+      }
+      .demo-toggle {
+        display: inline-flex;
+        margin-bottom: 16px;
+        align-items: center;
+        gap: 6px;
+        color: #555;
+        font-size: 0.85rem;
       }
       .demo-subsection:first-of-type {
         margin-top: 0;
@@ -122,11 +143,8 @@
             <TableOfContents />
             <Chapter id="dimensions" title="Dimensions — size & overflow">
               <FontSizeDemo />
-              <WidthDemo />
-              <PopupWidthDemo />
-              <OverflowDemo />
-              <MaxLinesDemo />
-              <BeyondMaxLinesDemo />
+              <WidthSection />
+              <HeightSection />
             </Chapter>
             <Chapter id="icon" title="Picker icon">
               <PickerIconDemo />
@@ -205,6 +223,15 @@
         </div>
       );
 
+      const SubsectionPart = ({ id, title, children }) => (
+        <div className="demo-subsection-part">
+          <Heading level={4} id={id}>
+            {title}
+          </Heading>
+          {children}
+        </div>
+      );
+
       const TableOfContents = () => (
         <div class="demo-section">
           <h2>Table of contents</h2>
@@ -216,23 +243,35 @@
                   <Link href="#dim-font-size">Font size</Link>
                 </li>
                 <li>
-                  <Link href="#dim-width">Width adapts to value</Link>
+                  <Link href="#dim-width">Width</Link>
+                  <ol>
+                    <li>
+                      <Link href="#dim-width-value">Width adapts to value</Link>
+                    </li>
+                    <li>
+                      <Link href="#dim-popup-width">
+                        Popup width follows the trigger
+                      </Link>
+                    </li>
+                  </ol>
                 </li>
                 <li>
-                  <Link href="#dim-popup-width">
-                    Popup width follows the trigger
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#dim-overflow">One line by default</Link>
-                </li>
-                <li>
-                  <Link href="#dim-maxlines">More lines with maxLines</Link>
-                </li>
-                <li>
-                  <Link href="#dim-beyond-maxlines">
-                    Past maxLines — everything overflows
-                  </Link>
+                  <Link href="#dim-height">Height</Link>
+                  <ol>
+                    <li>
+                      <Link href="#dim-single-line">
+                        Single line by default
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="#dim-maxlines">More lines with maxLines</Link>
+                    </li>
+                    <li>
+                      <Link href="#dim-multiline-overflow">
+                        Overflow on multiple lines
+                      </Link>
+                    </li>
+                  </ol>
                 </li>
               </ol>
             </li>
@@ -355,8 +394,10 @@
 
       const SHORT_VALUE = "Apple";
       const MEDIUM_VALUE = "Elderberry";
-      const LONG_SENTENCE =
-        "A very long selected value that definitely overflows the picker trigger button";
+      // Long enough to overflow one line at the picker width used below, short
+      // enough to land inside two — that contrast is the whole point of the
+      // overflow subsections.
+      const LONG_SENTENCE = "A selected value that runs onto a second line";
       const LONG_WORD = "Supercalifragilisticexpialidocious";
       const VERY_LONG_TEXT =
         "This value is intentionally so long that it spans more than three lines inside the constrained picker width, so the line-clamp kicks in and an ellipsis appears at the end";
@@ -461,8 +502,8 @@
         </Subsection>
       );
 
-      const WidthDemo = () => (
-        <Subsection id="dim-width" title="Width adapts to value">
+      const WidthValueDemo = () => (
+        <SubsectionPart id="dim-width-value" title="Width adapts to value">
           <Box
             flex="x"
             spacing="s"
@@ -582,31 +623,20 @@
               </Box>
             </Field>
           </Box>
-        </Subsection>
+        </SubsectionPart>
       );
 
       // The same four values, laid out the same way, so what changes between
-      // the subsections below is only how many lines the picker is given.
+      // the parts below is only how many lines the picker is given.
       const OverflowCases = ({
         idPrefix,
         maxLines,
-        word,
+        pickerProps,
         sentence,
+        word,
         selection,
       }) => (
         <Box flex="y" spacing="m">
-          <Field vertical>
-            <Label>A long word</Label>
-            <Picker
-              name={`${idPrefix}_word`}
-              value={word}
-              action={() => {}}
-              maxWidth="200"
-              maxLines={maxLines}
-            >
-              <BasicPickerContent />
-            </Picker>
-          </Field>
           <Field vertical>
             <Label>A long sentence</Label>
             <Picker
@@ -615,6 +645,20 @@
               action={() => {}}
               maxWidth="200"
               maxLines={maxLines}
+              {...pickerProps}
+            >
+              <BasicPickerContent />
+            </Picker>
+          </Field>
+          <Field vertical>
+            <Label>A long word</Label>
+            <Picker
+              name={`${idPrefix}_word`}
+              value={word}
+              action={() => {}}
+              maxWidth="200"
+              maxLines={maxLines}
+              {...pickerProps}
             >
               <BasicPickerContent />
             </Picker>
@@ -627,6 +671,7 @@
               action={() => {}}
               maxWidth="200"
               maxLines={maxLines}
+              {...pickerProps}
             >
               <BasicPickerContent />
             </Picker>
@@ -644,6 +689,7 @@
               action={() => {}}
               maxWidth="200"
               maxLines={maxLines}
+              {...pickerProps}
               ui={
                 <BadgeList>
                   {selection.map((item) => (
@@ -656,70 +702,6 @@
             </Picker>
           </Field>
         </Box>
-      );
-
-      const OverflowDemo = () => (
-        <Subsection id="dim-overflow" title="One line by default">
-          <p>
-            A picker shows its value on a single line: whatever does not fit is
-            cut off with an ellipsis. That is <code>maxLines={1}</code>, the
-            default — the four values below are all too wide for the trigger.
-          </p>
-          <p>
-            The last one is the odd one: a <code>BadgeList</code> wraps flex
-            rows, which CSS line-clamp cannot see. The picker hands its{" "}
-            <code>maxLines</code> down instead, and the list renders the badges
-            that fit plus a <code>+N more</code> badge for the rest.
-          </p>
-          <OverflowCases
-            idPrefix="dim_overflow"
-            word={LONG_WORD}
-            sentence={LONG_SENTENCE}
-            selection={LONG_SELECTION}
-          />
-        </Subsection>
-      );
-
-      const MaxLinesDemo = () => (
-        <Subsection id="dim-maxlines" title="More lines with maxLines">
-          <p>
-            <code>maxLines</code> set to anything but 1 lets the value wrap and
-            clamps it at that many lines. The same four values, given two lines,
-            now fit.
-          </p>
-          <p>
-            Except the first: a word has nowhere to break, so no number of lines
-            makes it fit — it stays truncated.
-          </p>
-          <OverflowCases
-            idPrefix="dim_maxlines"
-            maxLines={2}
-            word={LONG_WORD}
-            sentence={LONG_SENTENCE}
-            selection={LONG_SELECTION}
-          />
-        </Subsection>
-      );
-
-      const BeyondMaxLinesDemo = () => (
-        <Subsection
-          id="dim-beyond-maxlines"
-          title="Past maxLines — everything overflows"
-        >
-          <p>
-            Still two lines, but values too long for them. Text ends on an
-            ellipsis; the <code>BadgeList</code> ends on the{" "}
-            <code>+N more</code> badge, which is the same idea said with a
-            badge.
-          </p>
-          <OverflowCases
-            idPrefix="dim_beyond"
-            maxLines={2}
-            word={LONGER_WORD}
-            sentence={VERY_LONG_TEXT}
-            selection={LONGER_SELECTION}
-          />
-        </Subsection>
       );
 
       const ShortPickerContent = () => (
@@ -735,7 +717,7 @@
       );
 
       const PopupWidthDemo = () => (
-        <Subsection
+        <SubsectionPart
           id="dim-popup-width"
           title="Popup width follows the trigger"
         >
@@ -767,8 +749,66 @@
               </Picker>
             </Field>
           </Box>
+        </SubsectionPart>
+      );
+
+      const WidthSection = () => (
+        <Subsection id="dim-width" title="Width">
+          <WidthValueDemo />
+          <PopupWidthDemo />
         </Subsection>
       );
+
+      const HeightSection = () => {
+        // paddingY is what stands between the lines and the trigger's edges;
+        // the checkbox is there to check it survives every clamping mode.
+        const [padded, setPadded] = useState(false);
+        const pickerProps = padded ? { paddingY: "l" } : undefined;
+        return (
+          <Subsection id="dim-height" title="Height">
+            <label className="demo-toggle">
+              <input
+                type="checkbox"
+                checked={padded}
+                onChange={(e) => setPadded(e.currentTarget.checked)}
+              />
+              <code>paddingY="l"</code>
+            </label>
+            <SubsectionPart id="dim-single-line" title="Single line by default">
+              <OverflowCases
+                idPrefix="dim_single_line"
+                pickerProps={pickerProps}
+                sentence={LONG_SENTENCE}
+                word={LONG_WORD}
+                selection={LONG_SELECTION}
+              />
+            </SubsectionPart>
+            <SubsectionPart id="dim-maxlines" title="More lines with maxLines">
+              <OverflowCases
+                idPrefix="dim_maxlines"
+                maxLines={2}
+                pickerProps={pickerProps}
+                sentence={LONG_SENTENCE}
+                word={LONG_WORD}
+                selection={LONG_SELECTION}
+              />
+            </SubsectionPart>
+            <SubsectionPart
+              id="dim-multiline-overflow"
+              title="Overflow on multiple lines"
+            >
+              <OverflowCases
+                idPrefix="dim_multiline_overflow"
+                maxLines={2}
+                pickerProps={pickerProps}
+                sentence={VERY_LONG_TEXT}
+                word={LONGER_WORD}
+                selection={LONGER_SELECTION}
+              />
+            </SubsectionPart>
+          </Subsection>
+        );
+      };
 
       // ── Popover position ──────────────────────────────────────────────────────
 
