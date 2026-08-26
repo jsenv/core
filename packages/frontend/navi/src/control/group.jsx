@@ -32,7 +32,7 @@ const css = /* css */ `
        positioned element to mean anything, hence position: relative.
        Deliberately not paired with isolation: isolate — a stacking context
        here would also trap the popup of a picker held in the group, which
-       counts on its own band reaching the whole page. What keeps these two
+       counts on its own band reaching the whole page. What keeps these
        values from escaping is instead that everything they could reach is a
        band above them (see navi_z_indexes.js). */
     > *:hover,
@@ -51,6 +51,25 @@ const css = /* css */ `
     > *:has([data-focus-visible]) {
       position: relative;
       z-index: var(--navi-z-index-control-focused);
+    }
+    /* The member holding something open. Neither of the two above covers it:
+       the click that opened the popup gives no focus ring, the focus itself
+       left for the popup's content, and the pointer is free to travel to a
+       neighbour — yet the member keeps the border color its open state gives
+       it, and that border is exactly what the neighbour painted after it
+       slices. Read as a state, not as a pseudo-class: :active only lasts as
+       long as the button is held down, and while it is held :hover is true
+       anyway, so it would add nothing here.
+
+       :has, for the same reason as focus-visible above — the group member can
+       be an enrobage around the control that expands — and reaching a popup
+       held inline (a Popover with layer="local" renders inside its member)
+       costs nothing: that popup only reads expanded while its own member is,
+       which is the member this raises. */
+    > *[aria-expanded="true"],
+    > *:has([aria-expanded="true"]) {
+      position: relative;
+      z-index: var(--navi-z-index-control-expanded);
     }
 
     /* Horizontal (default): Cumulative margin for border overlap */

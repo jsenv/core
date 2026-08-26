@@ -74,14 +74,14 @@ file is the overview, this table is its summary. Bands are a decade apart so
 one can grow without reaching the next, and so a value seen in devtools says
 which band it came from.
 
-| Band                                                                                                                                | Token                                                              | Value                        |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
-| Top layer (`Dialog`/`Popover` with `layer="top"`)                                                                                   | —                                                                  | above everything             |
-| `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                                                                   | `--navi-z-index-popup`, `--navi-z-index-callout`                   | 1000 `+ stack order`         |
-| `FixedBar`                                                                                                                          | `--navi-z-index-bar`                                               | 100                          |
-| Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot, `Box` header/footer, `<Box sticky>` | `--navi-z-index-sticky`                                            | 10                           |
-| A `Group` member under the pointer, then the one holding focus                                                                      | `--navi-z-index-control-hovered`, `--navi-z-index-control-focused` | 1, 2                         |
-| `Table` sticky cells, drag, resize                                                                                                  | `src/control/table/z_indexes.js`                                   | 1–7, derived from each other |
+| Band                                                                                                                                | Token                                                                                                 | Value                        |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Top layer (`Dialog`/`Popover` with `layer="top"`)                                                                                   | —                                                                                                     | above everything             |
+| `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                                                                   | `--navi-z-index-popup`, `--navi-z-index-callout`                                                      | 1000 `+ stack order`         |
+| `FixedBar`                                                                                                                          | `--navi-z-index-bar`                                                                                  | 100                          |
+| Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot, `Box` header/footer, `<Box sticky>` | `--navi-z-index-sticky`                                                                               | 10                           |
+| A `Group` member under the pointer, then the one holding focus, then the one holding a popup open                                   | `--navi-z-index-control-hovered`, `--navi-z-index-control-focused`, `--navi-z-index-control-expanded` | 1, 2, 3                      |
+| `Table` sticky cells, drag, resize                                                                                                  | `src/control/table/z_indexes.js`                                                                      | 1–7, derived from each other |
 
 What to read from it:
 

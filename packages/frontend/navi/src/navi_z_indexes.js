@@ -32,6 +32,16 @@ const css = /* css */ `
       --navi-z-index-control-hovered: 1;
       --navi-z-index-control-focused: 2;
 
+      /* A control the user is not on and yet still has to paint in front: one
+         holding something open (a picker showing its list, an expandable
+         header). Its border keeps the color the open state gives it, while
+         hover and focus have both moved on — into the popup, or onto whatever
+         the pointer travelled to next — so neither of the two values above is
+         there to raise it, and the neighbour painted after it cuts the very
+         border that says what is open. Above both: the member holding the
+         popup open outranks a member merely hovered or focused. */
+      --navi-z-index-control-expanded: 3;
+
       /* Kept stuck while something scrolls under it: a list header, the head
          and foot of a side panel, a table's sticky cells, the header and
          footer of any scrolling Box. Above raised controls — a control

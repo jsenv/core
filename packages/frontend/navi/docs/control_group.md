@@ -47,14 +47,19 @@ Live examples: `src/control/demos/15_group_demo.html`.
   last one loses it on the other side, and any member in between loses all
   four. A single member keeps its own radius — a group of one looks like the
   control alone. The ask is made twice, in two forms — see below.
-- **Overlap order**: the member under the pointer, and the member showing a
-  focus ring, paint above their neighbours (`position: relative` plus
-  `--navi-z-index-control-hovered` / `-focused`). Without it the border color
-  change and the focus ring of the active member would be sliced by whichever
-  neighbour is painted after it. The focused member is matched whether it wears
-  `data-focus-visible` itself or merely contains it — a control that wraps a
-  real input (`Picker`, `Spin`) draws the ring on its own frame while the
-  keyboard is held inside. There is deliberately no `isolation: isolate` — see
+- **Overlap order**: the member under the pointer, the member showing a focus
+  ring, and the member holding something open (`aria-expanded="true"`) paint
+  above their neighbours (`position: relative` plus
+  `--navi-z-index-control-hovered` / `-focused` / `-expanded`). Without it the
+  border color change and the focus ring of the active member would be sliced
+  by whichever neighbour is painted after it. The focused member is matched
+  whether it wears `data-focus-visible` itself or merely contains it — a
+  control that wraps a real input (`Picker`, `Spin`) draws the ring on its own
+  frame while the keyboard is held inside; the expanded member is matched the
+  same way, since it can be wrapped in an enrobage. Expanded ranks highest: a
+  `Picker` opened by a click shows no focus ring, hands the focus to its popup
+  and lets the pointer travel to a neighbour, yet its border keeps saying it is
+  the one open. There is deliberately no `isolation: isolate` — see
   [z_index.md](./z_index.md).
 
 Nothing else: a group does not restyle its members, does not impose a size,
