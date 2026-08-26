@@ -411,6 +411,12 @@ export const normalizeStyle = (
 
   if (colorPropertySet.has(propertyName)) {
     if (typeof value === "string") {
+      if (context === "css") {
+        // A string is already what the DOM takes, and it takes more of them
+        // (system colors, relative color syntax) than this parser knows;
+        // parsing it to rgba and back would only cost.
+        return value;
+      }
       if (isCSSKeyword(value)) {
         return value;
       }
