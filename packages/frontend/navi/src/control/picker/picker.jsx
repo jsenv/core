@@ -264,6 +264,10 @@ const css = /* css */ `
         color: var(--picker-placeholder-color);
       }
 
+      &:has(.navi_badge_list) {
+        display: inline-flex;
+      }
+
       /* The façade is transparent to the pointer — a press on what it draws
          means "open the picker". An own target is the exception, the same way
          the clear cross is one in the slot below: it says the press is aimed at

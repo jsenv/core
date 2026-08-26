@@ -1,8 +1,7 @@
 import { measureWidestChildRow } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { stringifySpacingStyle } from "../box/box_style_util.js";
 import { BadgeUI } from "./badge.jsx";
 import { BadgeListContext, createBadgeRegistry } from "./badge_list_context.js";
 import { naviI18n } from "./navi_i18n.js";
@@ -20,35 +19,13 @@ const css = /* css */ `
       pointer-events: none;
     }
 
-    /* maxRows: keep the first N flex lines and cut the rest off.
-       A flex line is not a line box, so line-clamp/text-overflow can't do this
-       (they only ever see inline text); capping the height of N rows is what
-       is left. That height needs no measuring: a badge trims its text box down
-       to the cap height ("text-box: trim-both cap alphabetic" in badge.jsx) so
-       it is exactly 1cap tall at its own font size, plus its vertical padding —
-       both restated here as ratios of the list font size. */
-    &[data-max-rows] {
-      --x-badge-font-size: 0.7;
-      --x-badge-padding-y: 0.4;
-      --x-row-height: calc(
-        1cap * var(--x-badge-font-size) + 2em * var(--x-badge-padding-y) *
-          var(--x-badge-font-size)
-      );
-      /* 1cap is read on the list, whose font-weight is not the badge's bold, so
-         the row height lands a fraction of a pixel short. Half a gap of slack
-         absorbs it and stays small enough to keep the next row fully out. */
-      --x-slack: max(1px, var(--badge-list-gap) / 2);
-
-      max-height: calc(
-        var(--badge-list-max-rows) *
-          var(--badge-list-row-height, var(--x-row-height)) +
-          (var(--badge-list-max-rows) - 1) * var(--badge-list-gap) +
-          var(--x-slack)
-      );
-      /* Rows must pile up from the top: the default "stretch" would spread them
-         over the capped height instead of letting the extra ones fall out. */
-      align-content: start;
-      overflow: clip;
+    /* maxRows renders every badge for one layout, reads where the rows fell,
+       then renders again with only what fits. The in-between is hidden rather
+       than clipped: the badges that don't make it must leave the DOM, not sit
+       there cut in half. Both renders land in the same frame (the second one
+       is queued from a layout effect), so nothing shows up half measured. */
+    &[navi-badge-list-measuring] {
+      visibility: hidden;
     }
   }
 
@@ -56,6 +33,71 @@ const css = /* css */ `
     white-space: nowrap;
   }
 `;
+
+// Groups badges by the row they wrapped onto.
+// The signal we look for is horizontal: inside a row each badge starts further
+// right than the previous one, at a wrap the next one starts back at the row
+// start. Vertical positions can't be used because "align-items: center" gives
+// badges of different heights different tops within a single row.
+const groupRectsByRow = (elements) => {
+  const rows = [];
+  let previousLeft = -Infinity;
+  for (const element of elements) {
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    if (rows.length === 0 || rect.left <= previousLeft) {
+      rows.push([]);
+    }
+    rows[rows.length - 1].push(rect);
+    previousLeft = rect.left;
+  }
+  return rows;
+};
+
+// Reads a list that currently holds every badge plus the "+N" badge and tells
+// how many badges fit in maxRows rows.
+const measureRowFit = (listEl, maxRows) => {
+  const elements = Array.from(listEl.children);
+  if (elements.length < 2) {
+    return elements.length;
+  }
+  // The "+N" badge is rendered last. It sits after every badge so it moves none
+  // of them, which is what lets it be measured in the same layout it is left
+  // out of.
+  const moreRect = elements[elements.length - 1].getBoundingClientRect();
+  const badgeElements = elements.slice(0, -1);
+  const rows = groupRectsByRow(badgeElements);
+  if (rows.length <= maxRows) {
+    return badgeElements.length;
+  }
+
+  const styles = getComputedStyle(listEl);
+  const gap = parseFloat(styles.columnGap) || 0;
+  const contentRight =
+    listEl.getBoundingClientRect().right -
+    (parseFloat(styles.paddingRight) || 0) -
+    (parseFloat(styles.borderRightWidth) || 0);
+
+  // The "+N" badge lands right after the last kept badge, so it eats into the
+  // last visible row: drop badges from that row until it fits. Emptying that
+  // row entirely is a valid outcome — the badge then wraps onto it and takes it
+  // for itself, which is still within maxRows.
+  const rowsKept = rows.slice(0, maxRows);
+  const lastRow = rowsKept[rowsKept.length - 1];
+  let lastRowCount = lastRow.length;
+  while (
+    lastRowCount > 0 &&
+    lastRow[lastRowCount - 1].right + gap + moreRect.width > contentRight + 0.5
+  ) {
+    lastRowCount--;
+  }
+  return (
+    rowsKept.slice(0, -1).reduce((count, row) => count + row.length, 0) +
+    lastRowCount
+  );
+};
 
 export const BadgeList = ({
   fallback,
@@ -68,10 +110,26 @@ export const BadgeList = ({
   import.meta.css = css;
   const measureRef = useRef();
   const visibleRef = useRef();
-  // maxRows caps the height in CSS, which only works while the list is as wide
-  // as the room it was given; shrinkWrap narrows it down to its widest row and
-  // would re-wrap the badges under the cap.
+  // maxRows needs the list to be as wide as the room it was given; shrinkWrap
+  // narrows it down to its widest row, which would re-wrap the badges under it.
   const shrinkWrapEnabled = shrinkWrap && !maxRows;
+
+  // The badges below hand themselves over as they render instead of being read
+  // upfront from the children vnodes: see badge_list_context.js.
+  const registryRef = useRef();
+  const registry =
+    registryRef.current || (registryRef.current = createBadgeRegistry());
+  // Whether Preact is about to render the badges again or hand back the ones it
+  // already has, which it does when this list re-renders on its own.
+  const previousChildrenRef = useRef();
+  registry.startPass(previousChildrenRef.current !== children);
+  previousChildrenRef.current = children;
+
+  // How many badges fit in maxRows rows. null means "not measured yet": the
+  // list then renders all of them, hidden, for the layout effect to read.
+  const [rowFit, setRowFit] = useState(null);
+  const measuredRef = useRef({ count: -1, width: -1 });
+  const measuring = maxRows !== undefined && rowFit === null;
 
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
@@ -117,34 +175,67 @@ export const BadgeList = ({
     };
   }, [shrinkWrapEnabled, children]);
 
-  // The badges below hand themselves over as they render instead of being read
-  // upfront from the children vnodes: see badge_list_context.js. It only holds
-  // because BadgeList keeps no state of its own, so it never re-renders alone —
-  // it re-renders with its parent, which hands it fresh children vnodes and
-  // makes every badge below run again.
-  const registryRef = useRef();
-  const registry =
-    registryRef.current || (registryRef.current = createBadgeRegistry());
-  registry.startPass();
+  // Runs after every render, which is when the badges have registered and the
+  // DOM holds whatever this render asked for.
+  useLayoutEffect(() => {
+    const visibleEl = visibleRef.current;
+    if (maxRows === undefined || !visibleEl) {
+      return;
+    }
+    const count = registry.getEntries().length;
+    if (count === 0) {
+      return;
+    }
+    if (rowFit === null) {
+      measuredRef.current = {
+        count,
+        width: visibleEl.getBoundingClientRect().width,
+      };
+      setRowFit(measureRowFit(visibleEl, maxRows));
+      return;
+    }
+    if (measuredRef.current.count !== count) {
+      // Badges came or went: what was measured no longer describes them.
+      setRowFit(null);
+    }
+  });
 
-  const spacing = props.spacing === undefined ? "xs" : props.spacing;
+  useLayoutEffect(() => {
+    const visibleEl = visibleRef.current;
+    const outerParent = visibleEl?.parentElement?.parentElement;
+    if (maxRows === undefined || !outerParent) {
+      return undefined;
+    }
+    let rafId;
+    const remeasure = () => {
+      // Only a width change can move the rows. Height changes are ignored on
+      // purpose: cutting badges off changes this list's own height, and
+      // reacting to that would loop.
+      const width = outerParent.getBoundingClientRect().width;
+      if (Math.abs(width - measuredRef.current.width) < 0.5) {
+        return;
+      }
+      measuredRef.current.width = width;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setRowFit(null));
+    };
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(outerParent);
+    window.addEventListener("resize", remeasure);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener("resize", remeasure);
+    };
+  }, [maxRows]);
+
   const sharedProps = {
     inline: true,
     flex: "x",
     alignY: "center",
-    spacing,
+    spacing: "xs",
     ...props,
   };
-  if (maxRows) {
-    sharedProps["data-max-rows"] = "";
-    sharedProps.style = {
-      "--badge-list-max-rows": maxRows,
-      // The gap sits between the rows, so the cap has to account for it. It is
-      // read back from the prop rather than from the layout.
-      "--badge-list-gap": stringifySpacingStyle(spacing, "gap"),
-      ...props.style,
-    };
-  }
 
   return (
     <Box relative inline flex>
@@ -159,39 +250,61 @@ export const BadgeList = ({
         navi-badge-list-clone=""
       />
       {/* Visible element */}
-      <Box baseClassName="navi_badge_list" {...sharedProps} ref={visibleRef}>
+      <Box
+        baseClassName="navi_badge_list"
+        {...sharedProps}
+        ref={visibleRef}
+        navi-badge-list-measuring={measuring ? "" : undefined}
+      >
         {/* Registers the badges, renders nothing */}
         <BadgeListContext.Provider value={registry}>
           {children}
         </BadgeListContext.Provider>
         {/* Renders them, after they all registered */}
-        <BadgeListContent registry={registry} fallback={fallback} max={max} />
+        <BadgeListContent
+          registry={registry}
+          fallback={fallback}
+          max={max}
+          measuring={measuring}
+          rowFit={rowFit}
+        />
       </Box>
     </Box>
   );
 };
 
-const BadgeListContent = ({ registry, fallback, max }) => {
+const BadgeListContent = ({ registry, fallback, max, measuring, rowFit }) => {
   const entries = registry.getEntries();
   const count = entries.length;
   if (count === 0) {
     return fallback;
   }
+
   // The "+N" badge stands among the badges, so it takes one of the max slots
   // when there is a surplus to name. A list of exactly `max` badges has nothing
   // to name and keeps all of them.
-  const hasMore = max !== undefined && count > max;
-  const shownEntries = hasMore ? entries.slice(0, max - 1) : entries;
+  let shownCount = max !== undefined && count > max ? max - 1 : count;
+  if (!measuring && rowFit !== null && rowFit < shownCount) {
+    shownCount = rowFit;
+  }
+  // While measuring, everything above is on screen (hidden) along with the "+N"
+  // badge, so the layout effect can see where the rows fall and how much room
+  // that badge asks for. Its label then reads the worst case — every badge
+  // hidden — so the room reserved is never short.
+  const hasMore = measuring || shownCount < count;
+
   return (
     <>
-      {shownEntries.map((badgeProps, index) => (
+      {entries.slice(0, shownCount).map((badgeProps, index) => (
         // Keyed by position: a badge's own key went to the registering vnode
         // above and doesn't reach here, and badges keep no state worth moving.
         <BadgeUI key={index} {...badgeProps} />
       ))}
       {hasMore && (
         <BadgeUI className="navi_badge_more">
-          {naviI18n("badge_list.more", { count: count - (max - 1) })}
+          {naviI18n("badge_list.more", {
+            count: measuring ? count : count - shownCount,
+          })}
         </BadgeUI>
       )}
     </>

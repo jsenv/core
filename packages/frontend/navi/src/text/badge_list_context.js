@@ -10,26 +10,37 @@ export const BadgeListContext = createContext(null);
 
 export const createBadgeRegistry = () => {
   let pass = 0;
+  let passCount = 0;
   let entries = [];
+  let childrenAreNew = true;
 
   return {
-    // Called by BadgeList at the top of every render, before the badges below
-    // register again.
-    startPass: () => {
+    // Called by BadgeList at the top of every render. childrenAreNew says
+    // whether it was handed fresh children vnodes: when it re-renders on its
+    // own (its own state changed) Preact hands the untouched children straight
+    // back and skips them, so none of the badges registers again. That empty
+    // pass means "unchanged", not "no badge left" — see getEntries.
+    startPass: (areNew) => {
       pass++;
-      entries = [];
+      passCount = 0;
+      childrenAreNew = areNew;
     },
     // entryState is the badge's own memory. A badge that re-renders on its own
     // must update its entry, not append a second one.
     register: (entryState, props) => {
-      if (entryState.pass === pass) {
-        entries[entryState.index] = props;
-        return;
+      if (entryState.pass !== pass) {
+        entryState.pass = pass;
+        entryState.index = passCount;
+        passCount++;
       }
-      entryState.pass = pass;
-      entryState.index = entries.length;
-      entries.push(props);
+      entries[entryState.index] = props;
     },
-    getEntries: () => entries,
+    getEntries: () => {
+      if (passCount === 0 && !childrenAreNew) {
+        return entries;
+      }
+      entries.length = passCount;
+      return entries;
+    },
   };
 };

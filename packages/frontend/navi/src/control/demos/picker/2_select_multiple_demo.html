@@ -398,7 +398,7 @@
                   name="multiselect_chips_simple_mr1"
                   value={selectedArrayMr1}
                   ui={
-                    <BadgeList fallback={chipsFallback}>
+                    <BadgeList maxRows={1} fallback={chipsFallback}>
                       {selectedArrayMr1.map((opt) => (
                         <Badge key={opt}>{opt}</Badge>
                       ))}
@@ -534,7 +534,7 @@
               name="multiselect_chips_delete_mr1"
               value={selectedArrayMr1}
               ui={
-                <BadgeList>
+                <BadgeList maxRows={1}>
                   {selectedArrayMr1.map((opt) => (
                     <Picker.Chip key={opt} value={opt}>
                       <Text>{opt}</Text>
@@ -549,7 +549,6 @@
                 selectedSignalMr1.value = v;
               }}
               maxWidth="200"
-              maxLines={1}
             >
               <List
                 selectable
