@@ -1109,8 +1109,8 @@ const PickerFirstResolver = (props) => {
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
  *   next to it. A `ui` must therefore say on its own that the picker is empty,
  *   and take the same room empty as it does filled. A <BadgeList> gets both
- *   from its `fallback` — a transparent <Badge> holding the placeholder text,
- *   see docs/badge_list.md. `"default"` draws nothing in the slot at all.
+ *   from its `fallback` — the placeholder text, as plain text, see
+ *   docs/badge_list.md. `"default"` draws nothing in the slot at all.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.

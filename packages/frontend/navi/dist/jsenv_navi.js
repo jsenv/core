@@ -1339,6 +1339,10 @@ naviI18n.addAll({
     en: "More actions",
     fr: "Autres actions",
   },
+  "button.remove": {
+    en: "Remove",
+    fr: "Retirer",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()
@@ -1637,6 +1641,14 @@ naviI18n.addAll({
   "constraint.readonly.option": {
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
+  },
+  "constraint.readonly.selection": {
+    fr: "La sélection ne peut plus être modifiée.",
+    en: "This selection cannot be changed.",
+  },
+  "constraint.readonly.choice": {
+    fr: "Ce choix ne peut plus être changé.",
+    en: "This choice cannot be changed.",
   },
   "constraint.readonly.item": {
     fr: "Cet élément n'est pas disponible.",
@@ -2113,6 +2125,276 @@ naviI18n.addAll({
 });
 
 const FormContext = createContext();
+
+const CONSTRAINT_ATTRIBUTE_SET = new Set();
+
+const CONSTRAINT_NAME_TO_PROP = {
+  disabled: "disabledMessage",
+  required: "requiredMessage",
+  pattern: "patternMessage",
+  type_email: "typeMessage",
+  type_number: "typeMessage",
+  min_length: "minLengthMessage",
+  max_length: "maxLengthMessage",
+  min: "minMessage",
+  max: "maxMessage",
+  single_space: "singleSpaceMessage",
+  same_as: "sameAsMessage",
+  min_lower_letter: "minLowerLetterMessage",
+  min_upper_letter: "minUpperLetterMessage",
+  min_digit: "minDigitMessage",
+  min_special_char: "minSpecialCharMessage",
+  one_of: "oneOfMessage",
+  readonly: "readOnlyMessage",
+  available: "availableMessage",
+};
+
+const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+  Object.values(CONSTRAINT_NAME_TO_PROP),
+);
+
+const extractMessageAndRemainingProps = (props) => {
+  const ownMessages = {};
+  const remaining = {};
+  const keyToVisit = new Set(Object.keys(props));
+  for (const key of keyToVisit) {
+    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
+      ownMessages[key] = props[key];
+    } else {
+      remaining[key] = props[key];
+    }
+  }
+  return [ownMessages, remaining];
+};
+
+const getConstraintMessage = (
+  controller,
+  constraint,
+  generatedMessage,
+  { requester },
+) => {
+  const { name: constraintName } = constraint;
+  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
+
+  // 1. Search first on the requester (e.g. the <li> that was clicked),
+  //  then fall back to element (e.g. the hidden <input>).
+  if (requester) {
+    const requesterController = requester.__uiStateController__;
+    if (requesterController && requesterController !== controller) {
+      const requesterControllerMessage = requesterController.props[propName];
+      if (requesterControllerMessage) {
+        return {
+          message: requesterControllerMessage,
+          origin: "requester controller",
+        };
+      }
+    }
+  }
+
+  const controllerMessage = controller.props[propName];
+  if (controllerMessage) {
+    return {
+      message: controllerMessage,
+      origin: "controller",
+    };
+  }
+
+  return {
+    message: generatedMessage,
+    origin: "generated message",
+  };
+};
+
+// prop that we'll set on the control
+const CONTROL_ATTRIBUTE_SET = new Set([
+  ...CONSTRAINT_ATTRIBUTE_SET,
+
+  "ref",
+  "children",
+  "id",
+  "name",
+  "type",
+  "value",
+  "checked",
+  "placeholder",
+  "inputMode",
+  "autoComplete",
+  "spellcheck",
+  "autoCorrect",
+  "aria-controls",
+  "tabIndex",
+  "command",
+  "commandFor",
+  "command-value", // not standard but make sense, allow to give param to the command in question
+  "list",
+
+  // "ui-action-target",
+  "navi-input-type",
+  "navi-value-pad",
+  "navi-control-proxy-for",
+  "navi-command-proxy-for",
+  "navi-command-target",
+  "onnavi_command",
+  "onnavi_request_open",
+  "onnavi_request_close",
+
+  "data-callout-arrow-x",
+  "data-callout-point-to-border-box",
+  "data-callout-point-to-content-box",
+  "data-callout-viewport-spacing",
+  "data-callout-position",
+  "data-callout-position-fixed",
+
+  "data-testid", // playwright, cypress
+  "data-separator", // used by InputGroup paste-to-fill
+]);
+// prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
+const CONTROL_PROP_SET = new Set([
+  ...CONTROL_ATTRIBUTE_SET,
+  ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
+
+  "action",
+  "confirm",
+  "confirmPopupContent",
+  "actionEvent",
+  "actionAfterChange",
+  "actionOnMouseDown",
+  "actionDebounce",
+  // A signal bound two-way to the control: its value seeds the control's state and
+  // is written back on every uiAction. Precludes value/checked (see createControlInfo).
+  "signal",
+  "defaultValue",
+  "defaultChecked",
+  "readOnly", // will depend wether readOnly is supported
+
+  "loading",
+  "basePseudoState",
+  "constraints",
+
+  // A real target inside a zone that belongs to another control — see
+  // own_target.js.
+  "ownTarget",
+
+  "autoFocus",
+  "autoFocusVisible",
+  "autoFocusSelect",
+
+  "onMouseDown",
+  "onClick",
+  "onKeyDown",
+  "onPaste",
+  "onInput",
+  "eventReactionDefinitions",
+
+  "onCancel",
+  "cancelOnBlurInvalid",
+  "cancelOnEscape",
+  "onActionPrevented",
+  "onActionStart",
+  "onActionAborted",
+  "onActionError",
+  "actionErrorEffect",
+  "errorMapping",
+  "onActionEnd",
+
+  "resetOnCancel",
+  "resetOnAbort",
+  "resetOnError",
+  "optimistic",
+
+  "charGuard",
+  "maxLengthGuard",
+]);
+
+const MessagePropsRefContext = createContext();
+
+const ControlIdContext = createContext();
+const ControlNameContext = createContext();
+const DisabledContext = createContext();
+const ReadOnlyContext = createContext();
+const RequiredContext = createContext();
+const LoadingContext$1 = createContext();
+createContext();
+
+const ActionContext = createContext();
+const ActionRequesterContext = createContext();
+
+/**
+ * A target of its own inside a zone that belongs to another control.
+ *
+ * A pressable row, a picker's façade, a slide that travels under the finger:
+ * each of them answers a press that lands anywhere in its box. An affordance an
+ * application draws in there — a chip's cross, an eye that opens a profile, a
+ * diskette that saves a guest — is aimed AT, not merely inside, and the press
+ * belongs to it alone.
+ *
+ * Saying that by hand takes three guards, one per moment of the same press: the
+ * pointerdown where gestures are arbitrated, the mousedown where a picker opens,
+ * the click where it opens too when a gesture disputed the press. All three are
+ * navi's own knowledge of navi's own event flow, and an application that gets
+ * one wrong finds out by opening a popup it meant to keep shut. `ownTarget` is
+ * that knowledge, said once.
+ *
+ * The other half is interactivity: the affordance is a control, so it already
+ * refuses on its own terms once the zone around it holds it read-only — but a
+ * caller's `onClick` is plain DOM and fires before any gate. So an own target
+ * withholds the caller's handler until its own gate has allowed it, and by
+ * default goes rather than greys: a remove cross that still removes is worse
+ * than no cross, and one that refuses politely still says "there is something to
+ * remove here" on a row that is only being read.
+ */
+
+
+const OWN_TARGET_ATTRIBUTE = "data-navi-own-target";
+
+/**
+ * Whether `event` was aimed at an own target sitting below this control — in
+ * which case the control is not what the press was for and must not answer it.
+ *
+ * Read from the event's target rather than from a mark left by a handler: the
+ * question is "who is this press for", and the DOM between the pointer and the
+ * control is the whole answer. Nothing is asked of the own target itself, which
+ * is what lets it be anything — a button, a link, a field.
+ */
+const isAimedAtOwnTargetBelow = (event, controlHost) => {
+  const target = event?.target;
+  if (!target || typeof target.closest !== "function") {
+    return false;
+  }
+  const ownTarget = target.closest(`[${OWN_TARGET_ATTRIBUTE}]`);
+  if (!ownTarget) {
+    return false;
+  }
+  // The claim is against what is ABOVE it: the control that IS the own target,
+  // and any control living inside it, are being aimed at like anything else.
+  if (ownTarget === controlHost || ownTarget.contains(controlHost)) {
+    return false;
+  }
+  // From the root rather than the host: a layered control (a picker holding an
+  // input) has its gate on the input, and what the application drew sits beside
+  // it, not in it.
+  const controlRoot = controlHost.closest("[navi-control]") || controlHost;
+  return controlRoot.contains(ownTarget);
+};
+
+/**
+ * Whether an own target has nothing to offer where it sits: the zone around it
+ * is read-only, disabled or busy, so the affordance goes.
+ *
+ * `ownTarget="refuse"` keeps it on screen instead, refusing with a callout like
+ * every other navi control — for an affordance whose presence is information in
+ * itself (an eye that opens a profile is worth seeing on a row being read).
+ */
+const useOwnTargetHidden = (props) => {
+  const disabled = useContext(DisabledContext);
+  const readOnly = useContext(ReadOnlyContext);
+  const loading = useContext(LoadingContext$1);
+  const { ownTarget } = props;
+  if (!ownTarget || ownTarget === "refuse") {
+    return false;
+  }
+  return Boolean(disabled || readOnly || loading);
+};
 
 /*
  * Deep structural equality for arbitrary JS values — what `===` can't do but this
@@ -6490,83 +6772,6 @@ const isInertOnClick = (element) => {
   return true;
 };
 
-const CONSTRAINT_NAME_TO_PROP = {
-  disabled: "disabledMessage",
-  required: "requiredMessage",
-  pattern: "patternMessage",
-  type_email: "typeMessage",
-  type_number: "typeMessage",
-  min_length: "minLengthMessage",
-  max_length: "maxLengthMessage",
-  min: "minMessage",
-  max: "maxMessage",
-  single_space: "singleSpaceMessage",
-  same_as: "sameAsMessage",
-  min_lower_letter: "minLowerLetterMessage",
-  min_upper_letter: "minUpperLetterMessage",
-  min_digit: "minDigitMessage",
-  min_special_char: "minSpecialCharMessage",
-  one_of: "oneOfMessage",
-  readonly: "readOnlyMessage",
-  available: "availableMessage",
-};
-
-const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
-  Object.values(CONSTRAINT_NAME_TO_PROP),
-);
-
-const extractMessageAndRemainingProps = (props) => {
-  const ownMessages = {};
-  const remaining = {};
-  const keyToVisit = new Set(Object.keys(props));
-  for (const key of keyToVisit) {
-    if (CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key)) {
-      ownMessages[key] = props[key];
-    } else {
-      remaining[key] = props[key];
-    }
-  }
-  return [ownMessages, remaining];
-};
-
-const getConstraintMessage = (
-  controller,
-  constraint,
-  generatedMessage,
-  { requester },
-) => {
-  const { name: constraintName } = constraint;
-  const propName = CONSTRAINT_NAME_TO_PROP[constraintName];
-
-  // 1. Search first on the requester (e.g. the <li> that was clicked),
-  //  then fall back to element (e.g. the hidden <input>).
-  if (requester) {
-    const requesterController = requester.__uiStateController__;
-    if (requesterController && requesterController !== controller) {
-      const requesterControllerMessage = requesterController.props[propName];
-      if (requesterControllerMessage) {
-        return {
-          message: requesterControllerMessage,
-          origin: "requester controller",
-        };
-      }
-    }
-  }
-
-  const controllerMessage = controller.props[propName];
-  if (controllerMessage) {
-    return {
-      message: controllerMessage,
-      origin: "controller",
-    };
-  }
-
-  return {
-    message: generatedMessage,
-    origin: "generated message",
-  };
-};
-
 /**
  * DOM utilities for the proxy control pattern.
  *
@@ -8240,8 +8445,6 @@ const RUNNING = { id: "running" };
 const ABORTED = { id: "aborted" };
 const FAILED = { id: "failed" };
 const COMPLETED = { id: "completed" };
-
-const CONSTRAINT_ATTRIBUTE_SET = new Set();
 
 const BUSY_CONSTRAINT = {
   name: "busy",
@@ -10295,6 +10498,20 @@ const onRequestInteraction = (
 
   const currentTarget = requestInteractionCustomEvent.currentTarget;
   const controlHost = findControlHost(currentTarget) || currentTarget;
+
+  // Aimed at something else that lives in this control's box: a chip's cross, an
+  // eye, a diskette. The press is that affordance's alone (see own_target.js),
+  // and stepping back here — rather than stopping the propagation over there —
+  // is what leaves the event whole for everything that is not a navi
+  // interaction. Stepping back, not refusing: the reaction never happened, so
+  // its `prevented`/`always` (an `e.preventDefault()`, for most of them) have
+  // nothing to undo and would take the press from the affordance itself.
+  if (isAimedAtOwnTargetBelow(event, controlHost)) {
+    debugInteraction(event, `"${name}" is for an own target below`);
+    requestInteractionCustomEvent.preventDefault();
+    return false;
+  }
+
   const controller = controlHost.__uiStateController__;
 
   if (controller && !bypassInteractivity) {
@@ -16085,6 +16302,26 @@ const POSITION_PROPS = {
     return { transform: `skew(${value})` };
   },
 };
+const singleLineEllipsisStyles = () => {
+  return {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    overflowWrap: "normal",
+  };
+};
+// The lines beyond the clamp are still laid out, so the clip edge decides
+// whether the top of the first hidden one is visible: "overflow: hidden" clips
+// at the padding box and lets it show inside the block-end padding. Clipping at
+// the content box instead ends the element right after its last visible line.
+const lineClampStyles = (value) => {
+  return {
+    "overflow": "clip",
+    "overflowClipMargin": "content-box",
+    "display": "-webkit-box",
+    "-webkit-box-orient": "vertical",
+    "-webkit-line-clamp": value,
+  };
+};
 const TYPO_PROPS = {
   font: applyOnCSSProp("fontFamily"),
   fontFamily: PASS_THROUGH,
@@ -16122,39 +16359,21 @@ const TYPO_PROPS = {
       return null;
     }
     if (value === 1 || value === "1") {
-      return {
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        overflowWrap: "normal",
-      };
+      return singleLineEllipsisStyles();
     }
-    return {
-      "overflow": "hidden",
-      "display": "-webkit-box",
-      "-webkit-box-orient": "vertical",
-      "-webkit-line-clamp": value,
-    };
+    return lineClampStyles(value);
   },
   overflowEllipsis: (value) => {
     if (!value) {
       return null;
     }
-    return {
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      overflowWrap: "normal",
-    };
+    return singleLineEllipsisStyles();
   },
   lineClamp: (value) => {
     if (!value) {
       return null;
     }
-    return {
-      "overflow": "hidden",
-      "display": "-webkit-box",
-      "-webkit-box-orient": "vertical",
-      "-webkit-line-clamp": value,
-    };
+    return lineClampStyles(value);
   },
   textAlign: PASS_THROUGH,
   textBox: PASS_THROUGH,
@@ -16200,6 +16419,7 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  overflowClipMargin: PASS_THROUGH,
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
   scrollbarWidth: PASS_THROUGH,
@@ -23467,116 +23687,6 @@ registerNaviCommand("--navi-unselect", (source, event) => {
   };
 });
 
-// prop that we'll set on the control
-const CONTROL_ATTRIBUTE_SET = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-
-  "ref",
-  "children",
-  "id",
-  "name",
-  "type",
-  "value",
-  "checked",
-  "placeholder",
-  "inputMode",
-  "autoComplete",
-  "spellcheck",
-  "autoCorrect",
-  "aria-controls",
-  "tabIndex",
-  "command",
-  "commandFor",
-  "command-value", // not standard but make sense, allow to give param to the command in question
-  "list",
-
-  // "ui-action-target",
-  "navi-input-type",
-  "navi-value-pad",
-  "navi-control-proxy-for",
-  "navi-command-proxy-for",
-  "navi-command-target",
-  "onnavi_command",
-  "onnavi_request_open",
-  "onnavi_request_close",
-
-  "data-callout-arrow-x",
-  "data-callout-point-to-border-box",
-  "data-callout-point-to-content-box",
-  "data-callout-viewport-spacing",
-  "data-callout-position",
-  "data-callout-position-fixed",
-
-  "data-testid", // playwright, cypress
-  "data-separator", // used by InputGroup paste-to-fill
-]);
-// prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
-const CONTROL_PROP_SET = new Set([
-  ...CONTROL_ATTRIBUTE_SET,
-  ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
-
-  "action",
-  "confirm",
-  "confirmPopupContent",
-  "actionEvent",
-  "actionAfterChange",
-  "actionOnMouseDown",
-  "actionDebounce",
-  // A signal bound two-way to the control: its value seeds the control's state and
-  // is written back on every uiAction. Precludes value/checked (see createControlInfo).
-  "signal",
-  "defaultValue",
-  "defaultChecked",
-  "readOnly", // will depend wether readOnly is supported
-
-  "loading",
-  "basePseudoState",
-  "constraints",
-
-  "autoFocus",
-  "autoFocusVisible",
-  "autoFocusSelect",
-
-  "onMouseDown",
-  "onClick",
-  "onKeyDown",
-  "onPaste",
-  "onInput",
-  "eventReactionDefinitions",
-
-  "onCancel",
-  "cancelOnBlurInvalid",
-  "cancelOnEscape",
-  "onActionPrevented",
-  "onActionStart",
-  "onActionAborted",
-  "onActionError",
-  "actionErrorEffect",
-  "errorMapping",
-  "onActionEnd",
-
-  "resetOnCancel",
-  "resetOnAbort",
-  "resetOnError",
-  "optimistic",
-
-  "charGuard",
-  "maxLengthGuard",
-]);
-
-const MessagePropsRefContext = createContext();
-
-const ControlIdContext = createContext();
-const ControlNameContext = createContext();
-const DisabledContext = createContext();
-const ReadOnlyContext = createContext();
-const RequiredContext = createContext();
-const LoadingContext$1 = createContext();
-createContext();
-
-const ActionContext = createContext();
-const ActionRequesterContext = createContext();
-
 /**
  * How a control tells the labels pointing at it what it is (disabled, readOnly,
  * required) and when it goes away.
@@ -25798,18 +25908,18 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           if (child !== firstChildControllerRef.current) {
             return;
           }
-          if (
-            silent &&
-            uiStateHoldsNothing(child.uiState) &&
-            !uiStateHoldsNothing(s.realUIStateController.uiState)
-          ) {
+          if (silent && uiStateHoldsNothing(child.uiState)) {
             // A silent sync means the child's own structure changed (children
             // mounted/unmounted), not that the user acted. A child that ends up
             // with no value there is one that currently *cannot* express one —
             // a <List loading> holds no items yet, a popup whose items are gone
             // aggregates to the empty array its stateType falls back to — which
             // must not read as the user clearing the picker, nor fire its
-            // uiAction.
+            // uiAction. And when the picker holds nothing either, there is
+            // still nothing to adopt: the sync would only respell one nothing
+            // as another (an array picker's [] becoming undefined, say) and
+            // hand that to uiAction — an empty array picker opened its popup
+            // and told its owner the value changed.
             return;
           }
           updatingRef.current = true;
@@ -25822,7 +25932,18 @@ const useUIFacadeStateController = (props, realUIStateController) => {
             detail: {},
           });
           chainEvent(propagateUpEvent, e);
-          s.realUIStateController.setUIState(child.uiState, propagateUpEvent);
+          // What the popup aggregates arrives in the popup's terms, where an
+          // empty multiple list is `undefined`. The picker answers a question of
+          // its own shape (see resolveEmptyUIState): a <Picker type="array">
+          // whose last item was unselected holds [], the same thing clearing it
+          // leaves — not a value that changes type on its owner the moment it
+          // empties.
+          const { emptyUIState } = s.realUIStateController;
+          const uiStateToAdopt =
+            child.uiState === undefined && emptyUIState !== undefined
+              ? emptyUIState
+              : child.uiState;
+          s.realUIStateController.setUIState(uiStateToAdopt, propagateUpEvent);
           updatingRef.current = false;
         },
       };
@@ -26732,11 +26853,29 @@ const useControlProps = (props, {
       }
       return dispatched;
     };
-    const applyEventReaction = (eventName, e) => {
+
+    // What the caller wrote runs from inside the gate when this control is an
+    // own target: a plain `onClick` is DOM, and it would fire from a cross drawn
+    // greyed by the read-only control the affordance sits in (see own_target.js).
+    const callerHandlerIsGated = Boolean(props.ownTarget);
+    const gateCallerHandler = (handler, e) => {
+      if (!handler) {
+        return undefined;
+      }
+      if (callerHandlerIsGated) {
+        return handler;
+      }
+      handler(e);
+      return undefined;
+    };
+    const applyEventReaction = (eventName, e, callerHandler) => {
       const defaultEventReactionDefinition = defaultEventReactionDefinitions?.[eventName];
       const customEventReactionDefinition = eventReactionDefinitions?.[eventName];
       const reaction = customEventReactionDefinition?.(e) ?? defaultEventReactionDefinition?.(e);
       if (!reaction) {
+        // No reaction means no gate: there is nothing here that could refuse the
+        // caller's handler, so withholding it would only lose it.
+        callerHandler?.(e);
         return false;
       }
       const {
@@ -26761,19 +26900,18 @@ const useControlProps = (props, {
           prevented?.();
         },
         allowed: () => {
+          callerHandler?.(e);
           allowed?.();
         },
         always
       });
     };
     const onMouseDown = e => {
-      props.onMouseDown?.(e);
-      applyEventReaction("mouseDown", e);
+      applyEventReaction("mouseDown", e, gateCallerHandler(props.onMouseDown, e));
       transferFocusToTarget(e);
     };
     const onClick = e => {
-      props.onClick?.(e);
-      applyEventReaction("click", e);
+      applyEventReaction("click", e, gateCallerHandler(props.onClick, e));
       transferFocusToTarget(e);
     };
     const onKeyDown = e => {
@@ -27296,6 +27434,15 @@ const useInteractiveProps = (props, {
   } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
+  if (props.ownTarget) {
+    // "This press is mine" said in the DOM, because that is where it is read
+    // from the outside: by the controls above (see own_target.js), and by the
+    // two gesture readers below — the one that travels a box and the one that
+    // carries a piece, each with its own way of being told to keep out.
+    controlRootProps[OWN_TARGET_ATTRIBUTE] = "";
+    controlRootProps["data-no-drag-travel"] = "";
+    controlRootProps["data-drag-ignore"] = "";
+  }
   const {
     "navi-control-proxy-for": naviProxyFor
   } = props;
@@ -28412,6 +28559,7 @@ const ButtonFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  const ownTargetHidden = useOwnTargetHidden(props);
 
   // Attached to the element rather than kept as a prop: the action a button
   // requests is not always run by the button (a submit button hands the send to
@@ -28421,6 +28569,9 @@ const ButtonFirstResolver = props => {
     message: props.confirm,
     content: props.confirmPopupContent
   });
+  if (ownTargetHidden) {
+    return null;
+  }
   return jsx(Next, {
     ...props
   });
@@ -28511,6 +28662,21 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
     children: naviI18n("button.open")
   })
 };
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   ownTarget?: boolean | "refuse",
+ *   [key: string]: any,
+ * }>}
+ * @param {boolean|"refuse"} [ownTarget] A real target inside a zone that belongs
+ *   to another control — a chip's cross on a picker's façade, an eye on a
+ *   pressable row, a diskette inside a slide that travels. The press is this
+ *   button's alone (no travel starts, no popup opens, nothing above answers) and
+ *   its `onClick` waits for its own interaction gate instead of firing from the
+ *   DOM. Where the zone around it is read-only, disabled or busy the button
+ *   goes; `"refuse"` keeps it on screen refusing with a callout, for an
+ *   affordance whose presence is information in itself.
+ */
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
 // How long a popup waits before handing the focus to a field, when giving it
@@ -30071,6 +30237,10 @@ const css$_ = /* css */`
     padding: 0;
     flex-direction: column;
 
+    /* A new surface writes in its own ink, not in its container's — see
+       --navi-popup-color. Declared here rather than left to the UA's own
+       dialog { color: CanvasText } so the ink is themed along with the paper. */
+    color: var(--navi-popup-color);
     background-color: var(--dialog-background-color);
     border-width: var(--dialog-border-width);
     border-style: solid;
@@ -31600,6 +31770,10 @@ const css$Z = /* css */`
       var(--x-popover-max-height)
     );
     max-height: var(--x-popover-max-height);
+    /* A new surface writes in its own ink, not in its container's — see
+       --navi-popup-color. The UA only resets color on a [popover] element,
+       and the local renderer is a plain div. */
+    color: var(--navi-popup-color);
     background-color: var(--popover-background-color);
     border-width: var(--popover-border-width);
     border-style: solid;
@@ -55463,6 +55637,16 @@ const isTextInputElement = (el) => {
   );
 };
 
+// How many lines the thing around a component gives it, when that thing caps
+// its own height and cannot cap what it holds.
+//
+// A <Picker> is the case it exists for: its value is clamped with maxLines,
+// which is CSS line-clamp — it counts line boxes of inline text and has no idea
+// what a wrapped flex row is. So a <BadgeList> rendered as a picker's ui reads
+// the number from here and caps its own rows to it, and the picker turns its
+// own clamp off (see .navi_picker_value:has(.navi_badge_list) in picker.jsx).
+const MaxLinesContext = createContext(undefined);
+
 // When a component render a prop that can be anything (js value of preact element)
 // make sure it cannot throw during render by converting it to a string if it's not a valid preact element or a primitive value
 const renderSafe = (value) => {
@@ -57861,12 +58045,24 @@ const ListItemSelectable = props => {
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
+  // Whose reason it is that this row cannot be taken. Read-only reaching it
+  // from above is the LIST's, and what is settled is then the whole answer —
+  // said as the selection where several things are taken, as the choice where
+  // one thing is. Said of each row in turn, "this option is not available"
+  // describes something else entirely: a list where each row happens to be
+  // unavailable for its own reasons, which goes on being said that way. Busy
+  // is not settled either: a list waiting on something says nothing about what
+  // will be possible once it is done, so the row keeps its own words.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const loadingFromAbove = useContext(LoadingContext$1);
+  const answerIsSettled = Boolean(readOnlyFromAbove) && !loadingFromAbove;
+  const readOnlyMessageKey = answerIsSettled ? multiple ? `constraint.readonly.selection` : `constraint.readonly.choice` : `constraint.readonly.option`;
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] = useCheckableProps({
-    readOnlyMessage: naviI18n(`constraint.readonly.option`, props),
+    readOnlyMessage: naviI18n(readOnlyMessageKey, props),
     ...rest,
     ref: inputRef,
     id: inputId,
@@ -62511,6 +62707,51 @@ const PickerPresetResolver = props => {
   });
 };
 
+// Put around its children by BadgeList so a Badge below knows it is inside one.
+// A badge then renders nothing at all: it hands its props to the list and the
+// list renders it. Badges register in tree order, so by the time the list gets
+// to its own content it holds them all, in source order, and knows how many
+// there are before deciding what to show — without ever walking children
+// vnodes, and without rendering a badge it then has to take back.
+const BadgeListContext = createContext(null);
+
+const createBadgeRegistry = () => {
+  let pass = 0;
+  let passCount = 0;
+  let entries = [];
+  let childrenAreNew = true;
+
+  return {
+    // Called by BadgeList at the top of every render. childrenAreNew says
+    // whether it was handed fresh children vnodes: when it re-renders on its
+    // own (its own state changed) Preact hands the untouched children straight
+    // back and skips them, so none of the badges registers again. That empty
+    // pass means "unchanged", not "no badge left" — see getEntries.
+    startPass: (areNew) => {
+      pass++;
+      passCount = 0;
+      childrenAreNew = areNew;
+    },
+    // entryState is the badge's own memory. A badge that re-renders on its own
+    // must update its entry, not append a second one.
+    register: (entryState, props) => {
+      if (entryState.pass !== pass) {
+        entryState.pass = pass;
+        entryState.index = passCount;
+        passCount++;
+      }
+      entries[entryState.index] = props;
+    },
+    getEntries: () => {
+      if (passCount === 0 && !childrenAreNew) {
+        return entries;
+      }
+      entries.length = passCount;
+      return entries;
+    },
+  };
+};
+
 installImportMetaCssBuild(import.meta);const css$x = /* css */`
   @layer navi {
   }
@@ -62569,6 +62810,11 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
+    /* Cuts the font's half-leading above the first line and below the last one,
+       down to cap-height/baseline: the padding becomes the only vertical space
+       and the text is exactly centered. Space between wrapped lines is left
+       untouched, unlike a line-height tweak. */
+    text-box: trim-both cap alphabetic;
     background: var(--x-background);
     background-color: var(--x-background-color);
     border-radius: 1em;
@@ -62618,7 +62864,22 @@ installImportMetaCssBuild(import.meta);const css$x = /* css */`
     }
   }
 `;
-const Badge = ({
+const Badge = props => {
+  const badgeList = useContext(BadgeListContext);
+  const entryStateRef = useRef();
+  if (badgeList) {
+    // Inside a BadgeList the badge renders nothing: it hands itself over and
+    // the list renders it, which is how the list gets to see them all before
+    // deciding how many it shows. See badge_list_context.js.
+    const entryState = entryStateRef.current || (entryStateRef.current = {});
+    badgeList.register(entryState, props);
+    return null;
+  }
+  return jsx(BadgeUI, {
+    ...props
+  });
+};
+const BadgeUI = ({
   children,
   className,
   ...props
@@ -62633,7 +62894,14 @@ const Badge = ({
   return jsx(Text, {
     className: withPropsClassName("navi_badge", className),
     bold: true,
-    maxLines: 1,
+    maxLines: 1
+    // The text-box trim ends the content box at the baseline, and a clamped
+    // badge is clipped there: descenders of the last visible line would be
+    // cut. Halfway to the next line's cap top keeps them, still above any
+    // ink from the line the clamp hides.
+    ,
+
+    overflowClipMargin: "content-box calc((1lh - 1cap) / 2)",
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
     spacing: jsx("span", {}),
@@ -62657,6 +62925,15 @@ const BadgeStyleCSSVars = {
   fontSize: "--font-size"
 };
 const BadgeButton = props => {
+  const ownTargetHidden = useOwnTargetHidden(props);
+  if (ownTargetHidden) {
+    return null;
+  }
+  return jsx(BadgeButtonUI, {
+    ...props
+  });
+};
+const BadgeButtonUI = props => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {
@@ -62687,20 +62964,208 @@ installImportMetaCssBuild(import.meta);const css$w = /* css */`
       visibility: hidden;
       pointer-events: none;
     }
+
+    /* maxLines renders every badge for one layout, reads where the rows fell,
+       then renders again with only what fits. The in-between is hidden rather
+       than clipped: the badges that don't make it must leave the DOM, not sit
+       there cut in half. Both renders land in the same frame (the second one
+       is queued from a layout effect), so nothing shows up half measured. */
+    &[navi-badge-list-measuring] {
+      visibility: hidden;
+    }
   }
 
   .navi_badge.navi_badge_more {
     white-space: nowrap;
   }
 `;
-const BadgeList = ({
+
+// Groups badges by the row they wrapped onto.
+// The signal we look for is horizontal: inside a row each badge starts further
+// right than the previous one, at a wrap the next one starts back at the row
+// start. Vertical positions can't be used because "align-items: center" gives
+// badges of different heights different tops within a single row.
+const groupRectsByRow = elements => {
+  const rows = [];
+  let previousLeft = -Infinity;
+  for (const element of elements) {
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    if (rows.length === 0 || rect.left <= previousLeft) {
+      rows.push([]);
+    }
+    rows[rows.length - 1].push(rect);
+    previousLeft = rect.left;
+  }
+  return rows;
+};
+
+// Reads a list that currently holds every badge plus the "+N" badge and tells
+// how many badges fit in maxLines rows.
+const measureRowFit = (listEl, maxLines) => {
+  const elements = Array.from(listEl.children);
+  if (elements.length < 2) {
+    return elements.length;
+  }
+  // The "+N" badge is rendered last. It sits after every badge so it moves none
+  // of them, which is what lets it be measured in the same layout it is left
+  // out of.
+  const moreRect = elements[elements.length - 1].getBoundingClientRect();
+  const badgeElements = elements.slice(0, -1);
+  const rows = groupRectsByRow(badgeElements);
+  if (rows.length <= maxLines) {
+    return badgeElements.length;
+  }
+  const styles = getComputedStyle(listEl);
+  const gap = parseFloat(styles.columnGap) || 0;
+  const contentRight = listEl.getBoundingClientRect().right - (parseFloat(styles.paddingRight) || 0) - (parseFloat(styles.borderRightWidth) || 0);
+
+  // The "+N" badge lands right after the last kept badge, so it eats into the
+  // last visible row: drop badges from that row until it fits. Emptying that
+  // row entirely is a valid outcome — the badge then wraps onto it and takes it
+  // for itself, which is still within maxLines.
+  const rowsKept = rows.slice(0, maxLines);
+  const lastRow = rowsKept[rowsKept.length - 1];
+  let lastRowCount = lastRow.length;
+  while (lastRowCount > 0 && lastRow[lastRowCount - 1].right + gap + moreRect.width > contentRight + 0.5) {
+    lastRowCount--;
+  }
+  return rowsKept.slice(0, -1).reduce((count, row) => count + row.length, 0) + lastRowCount;
+};
+const BADGE_LIST_PROPS = {
+  inline: true,
+  flex: "x",
+  alignY: "center",
+  spacing: "xs"
+};
+
+// The badges hand themselves over as they render instead of being read upfront
+// from the children vnodes: see badge_list_context.js. Only worth it when the
+// list has something to decide — how many to show, or whether there is none at
+// all. Otherwise the badges render themselves and nothing has to be collected.
+const useBadgeRegistry = (children, enabled) => {
+  const registryRef = useRef();
+  const previousChildrenRef = useRef();
+  if (!enabled) {
+    return null;
+  }
+  const registry = registryRef.current || (registryRef.current = createBadgeRegistry());
+  // Whether Preact is about to render the badges again or hand back the ones it
+  // already has, which it does when the list re-renders on its own.
+  registry.startPass(previousChildrenRef.current !== children);
+  previousChildrenRef.current = children;
+  return registry;
+};
+
+/**
+ * A row of badges that wraps.
+ *
+ * Four shapes behind one name, because what the list has to do at runtime is
+ * not the same in each. Nothing is set up for a case that cannot happen: a
+ * plain list is one element holding its children as-is — no registry, no
+ * effect —, a capped one collects its badges but measures nothing, and only
+ * shrinkWrap ever builds the measurement ghost.
+ *
+ * @param {import("ignore:preact").ComponentChildren} [fallback]
+ *   Rendered in place of the badges when there is none. Without it an empty
+ *   list renders nothing at all. In a <Picker> this is the only placeholder
+ *   the user gets — a picker given a `ui` does not draw its own — so pass the
+ *   placeholder text: `fallback="Select skills…"`. Plain text is the right
+ *   choice there: it reads at the picker's size, in the placeholder color the
+ *   picker gives its empty value slot, and the box stays the same height. A
+ *   transparent <Badge> matches the slot to the pixel instead, at the price of
+ *   badge-sized text. See docs/badge_list.md.
+ * @param {boolean} [shrinkWrap]
+ *   Narrows the list down to its widest row so the last row isn't ragged.
+ *   Defaults to true inside a <Picker> — the trigger draws a border around the
+ *   list, so the ragged edge shows — and false elsewhere, where the work would
+ *   often go unseen: opt in where an edge is visible. Ignored when maxLines is
+ *   in play, which needs the full width to know where the rows fall.
+ * @param {number} [max]
+ *   Caps how many badges are rendered; the surplus becomes a "+N" badge, which
+ *   takes one of the max slots.
+ * @param {number} [maxLines]
+ *   Caps how many rows are shown, measured. Falls back to what the surrounding
+ *   component grants (a <Picker>, see max_lines_context.js).
+ */
+const BadgeList = props => {
+  import.meta.css = [css$w, "@jsenv/navi/src/text/badge_list.jsx"];
+  const {
+    maxLines,
+    max,
+    fallback
+  } = props;
+  const maxLinesFromAbove = useContext(MaxLinesContext);
+  const maxLinesResolved = maxLines === undefined ? maxLinesFromAbove : maxLines;
+  // Granted lines mean a clamping container — a <Picker> — whose border makes
+  // the ragged last row show; nothing of the sort around us, and shrink
+  // wrapping is work nobody sees unless asked for.
+  const {
+    shrinkWrap = maxLinesFromAbove !== undefined
+  } = props;
+  if (maxLinesResolved !== undefined) {
+    // shrinkWrap is dropped on purpose: it narrows the list down to its widest
+    // row, which would re-wrap the badges under the cap just measured.
+    return jsx(BadgeListMaxLines, {
+      ...props,
+      maxLines: maxLinesResolved
+    });
+  }
+  if (shrinkWrap) {
+    return jsx(BadgeListShrinkWrap, {
+      ...props
+    });
+  }
+  if (max !== undefined || fallback !== undefined) {
+    return jsx(BadgeListCounted, {
+      ...props
+    });
+  }
+  return jsx(BadgeListPlain, {
+    ...props
+  });
+};
+
+// Nothing to measure, cap, or count: the badges render themselves — no
+// registry, no context, no effect, one element.
+const BadgeListPlain = props => {
+  return jsx(Box, {
+    baseClassName: "navi_badge_list",
+    ...BADGE_LIST_PROPS,
+    ...props
+  });
+};
+
+// max/fallback need the badge count, so the badges are collected — but nothing
+// is measured and no DOM is watched.
+const BadgeListCounted = ({
   fallback,
   children,
-  shrinkWrap = true,
   max,
-  ...props
+  ...boxProps
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/badge_list.jsx"];
+  const registry = useBadgeRegistry(children, true);
+  return jsx(Box, {
+    baseClassName: "navi_badge_list",
+    ...BADGE_LIST_PROPS,
+    ...boxProps,
+    children: jsx(BadgeListChildren, {
+      registry: registry,
+      max: max,
+      fallback: fallback,
+      children: children
+    })
+  });
+};
+const BadgeListShrinkWrap = ({
+  fallback,
+  children,
+  max,
+  ...restProps
+}) => {
+  const registry = useBadgeRegistry(children, max !== undefined || fallback !== undefined);
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -62713,18 +63178,25 @@ const BadgeList = ({
     let rafId;
     const measure = () => {
       visibleEl.style.width = "";
-      if (shrinkWrap) {
-        // Clone the already-rendered DOM nodes instead of letting React/Preact
-        // render the children a second time into the ghost: re-rendering would
-        // instantiate Badge/Badge.Button a second time, double-registering
-        // their controllers (and any other mount side effect) under the same id.
-        measureEl.replaceChildren(...Array.from(visibleEl.children, child => child.cloneNode(true)));
-        const optimalWidth = measureWidestChildRow(measureEl);
-        if (optimalWidth !== null) {
-          visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
-        }
+      // Clone the already-rendered DOM nodes instead of letting React/Preact
+      // render the children a second time into the ghost: re-rendering would
+      // instantiate Badge/Badge.Button a second time, double-registering their
+      // controllers (and any other mount side effect) under the same id.
+      measureEl.replaceChildren(...Array.from(visibleEl.children, child => child.cloneNode(true)));
+      const optimalWidth = measureWidestChildRow(measureEl);
+      if (optimalWidth !== null) {
+        visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
       }
     };
+
+    // A single badge is a single row, and a single row is already the widest
+    // one: there is nothing to narrow, and no width the list could be given
+    // that would change that.
+    if (visibleEl.children.length < 2) {
+      visibleEl.style.width = "";
+      measureEl.replaceChildren();
+      return undefined;
+    }
     measure();
     const onResize = () => {
       cancelAnimationFrame(rafId);
@@ -62741,36 +63213,201 @@ const BadgeList = ({
       observer?.disconnect();
       window.removeEventListener("resize", onResize);
     };
-  }, [shrinkWrap, children]);
-  const childArray = toChildArray(children);
-  const hasMax = max !== undefined && childArray.length > max;
-  const visibleChildren = hasMax ? childArray.slice(0, max - 1) : childArray;
-  const hiddenCount = hasMax ? childArray.length - (max - 1) : 0;
-  const sharedProps = {
-    inline: true,
-    flex: "x",
-    alignY: "center",
-    spacing: "xs",
-    ...props
+  }, [children]);
+  const boxProps = {
+    ...BADGE_LIST_PROPS,
+    ...restProps
   };
-  return jsxs(Box, {
-    relative: true,
-    children: [jsx(Box, {
-      baseClassName: "navi_badge_list",
-      ...sharedProps,
-      ref: measureRef,
-      "aria-hidden": "true",
-      "navi-badge-list-clone": ""
-    }), jsxs(Box, {
-      baseClassName: "navi_badge_list",
-      ...sharedProps,
-      ref: visibleRef,
-      children: [visibleChildren.length ? visibleChildren : fallback, hiddenCount > 0 && jsx(Badge, {
-        className: "navi_badge_more",
-        children: naviI18n("badge_list.more", {
-          count: hiddenCount
+  return (
+    // inline flex, not a plain block: the wrapper must sit on the line the way
+    // the list itself would, otherwise the list lands a pixel low in some
+    // containers.
+    jsxs(Box, {
+      relative: true,
+      inline: true,
+      flex: "x",
+      children: [jsx(Box, {
+        baseClassName: "navi_badge_list",
+        ...boxProps,
+        ref: measureRef,
+        "aria-hidden": "true",
+        "navi-badge-list-clone": ""
+      }), jsx(Box, {
+        baseClassName: "navi_badge_list",
+        ...boxProps,
+        ref: visibleRef,
+        children: jsx(BadgeListChildren, {
+          registry: registry,
+          max: max,
+          fallback: fallback,
+          children: children
         })
       })]
+    })
+  );
+};
+const BadgeListMaxLines = ({
+  fallback,
+  children,
+  max,
+  maxLines,
+  ...boxProps
+}) => {
+  const registry = useBadgeRegistry(children, true);
+  const visibleRef = useRef();
+
+  // What the measure found: how many badges there were and how many of them fit
+  // in maxLines rows. null means "not measured yet": the list then renders them
+  // all, hidden, for the layout effect to read.
+  const [fit, setFit] = useState(null);
+  // The two widths this list gives whatever is around it: the one it takes with
+  // every badge rendered, and the one it settles on once the surplus is gone.
+  // Neither is a reason to measure again — see the resize watch below.
+  const selfWidthsRef = useRef({
+    full: -1,
+    settled: -1
+  });
+  const measuring = fit === null;
+  // A single badge is a single row whatever the width, so nothing can move it
+  // out of the cap and nothing has to be watched.
+  const watchesResize = fit !== null && fit.count > 1;
+
+  // Runs after every render, which is when the badges have registered and the
+  // DOM holds whatever this render asked for.
+  useLayoutEffect(() => {
+    const visibleEl = visibleRef.current;
+    if (!visibleEl) {
+      return;
+    }
+    const count = registry.getEntries().length;
+    const width = visibleEl.parentElement?.getBoundingClientRect().width ?? -1;
+    if (fit === null) {
+      selfWidthsRef.current.full = width;
+      setFit({
+        count,
+        shown: count < 2 ? count : measureRowFit(visibleEl, maxLines)
+      });
+      return;
+    }
+    selfWidthsRef.current.settled = width;
+    if (fit.count !== count) {
+      // Badges came or went: what was measured no longer describes them.
+      setFit(null);
+    }
+  });
+  useLayoutEffect(() => {
+    const outerParent = visibleRef.current?.parentElement;
+    if (!watchesResize || !outerParent) {
+      return undefined;
+    }
+    let rafId;
+    const remeasure = () => {
+      // Only a width change can move the rows — a height change is this list
+      // growing or shrinking, never the room it was given.
+      //
+      // And not every width change either. Nothing guarantees an ancestor whose
+      // width does not follow its content (a column with align-items: start
+      // sizes every row to what is inside it), so rendering every badge widens
+      // what is being watched and dropping the surplus narrows it right back.
+      // Those two widths are this list talking to itself; measuring again on
+      // them never ends. Any other width is the room around it changing.
+      const width = outerParent.getBoundingClientRect().width;
+      const {
+        full,
+        settled
+      } = selfWidthsRef.current;
+      if (Math.abs(width - full) < 0.5 || Math.abs(width - settled) < 0.5) {
+        return;
+      }
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setFit(null));
+    };
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(outerParent);
+    window.addEventListener("resize", remeasure);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener("resize", remeasure);
+    };
+  }, [watchesResize, maxLines]);
+  return jsx(Box, {
+    baseClassName: "navi_badge_list",
+    ...BADGE_LIST_PROPS,
+    ...boxProps,
+    ref: visibleRef,
+    "navi-badge-list-measuring": measuring ? "" : undefined,
+    children: jsx(BadgeListChildren, {
+      registry: registry,
+      max: max,
+      fallback: fallback,
+      measuring: measuring,
+      rowFit: fit?.shown ?? null,
+      children: children
+    })
+  });
+};
+const BadgeListChildren = ({
+  registry,
+  children,
+  fallback,
+  max,
+  measuring,
+  rowFit
+}) => {
+  if (!registry) {
+    // The badges are on their own: nothing here decides which of them render.
+    return children;
+  }
+  return jsxs(Fragment$1, {
+    children: [jsx(BadgeListContext.Provider, {
+      value: registry,
+      children: children
+    }), jsx(BadgeListContent, {
+      registry: registry,
+      fallback: fallback,
+      max: max,
+      measuring: measuring,
+      rowFit: rowFit
+    })]
+  });
+};
+const BadgeListContent = ({
+  registry,
+  fallback,
+  max,
+  measuring,
+  rowFit
+}) => {
+  const entries = registry.getEntries();
+  const count = entries.length;
+  if (count === 0) {
+    return fallback;
+  }
+
+  // The "+N" badge stands among the badges, so it takes one of the max slots
+  // when there is a surplus to name. A list of exactly `max` badges has nothing
+  // to name and keeps all of them.
+  let shownCount = max !== undefined && count > max ? max - 1 : count;
+  if (!measuring && rowFit !== null && rowFit !== undefined && rowFit < shownCount) {
+    shownCount = rowFit;
+  }
+  // While measuring, everything above is on screen (hidden) along with the "+N"
+  // badge, so the layout effect can see where the rows fall and how much room
+  // that badge asks for. Its label then reads the worst case — every badge
+  // hidden — so the room reserved is never short.
+  const hasMore = measuring || shownCount < count;
+  return jsxs(Fragment$1, {
+    children: [entries.slice(0, shownCount).map((badgeProps, index) =>
+    // Keyed by position: a badge's own key went to the registering vnode
+    // above and doesn't reach here, and badges keep no state worth moving.
+    jsx(BadgeUI, {
+      ...badgeProps
+    }, index)), hasMore && jsx(BadgeUI, {
+      className: "navi_badge_more",
+      children: naviI18n("badge_list.more", {
+        count: measuring ? count : count - shownCount
+      })
     })]
   });
 };
@@ -63001,7 +63638,6 @@ const PickerObjectUI = () => {
 const PickerArray = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    maxLines: "3",
     ui: jsx(PickerArrayUI, {}),
     ...props,
     type: "navi_js",
@@ -63029,6 +63665,57 @@ const PickerArrayUI = () => {
         children: item
       }, item);
     })
+  });
+};
+
+/**
+ * One value the picker holds, drawn as a chip with a cross that takes it back
+ * out. Sits wherever the application draws what was picked — on the picker's
+ * façade (`ui`) or inside its popup — and both behave the same.
+ *
+ * The cross asks with `--navi-unselect` rather than writing a new list, and it
+ * asks the picker — which holds what was picked, and hands it down to whatever
+ * draws it in the popup. Nothing to name: the picker is the nearest control
+ * around the chip. `commandFor` is for a chip that stands outside the picker it
+ * speaks for.
+ *
+ * The cross is an own target (see own_target.js), so the press belongs to it
+ * and not to the picker underneath, and it goes when the picker turns read-only
+ * — a row being read still says what was picked, it just no longer offers to
+ * unpick it.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value: any,
+ *   commandFor?: string,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {any} value The value this chip stands for — one entry of what the
+ *   picker holds, and what `--navi-unselect` carries.
+ * @param {string} [commandFor] The id of the picker to take the value out of,
+ *   when the chip does not sit inside it.
+ */
+const PickerChip = ({
+  value,
+  commandFor,
+  children,
+  ...rest
+}) => {
+  return jsxs(Badge, {
+    inline: true,
+    flex: true,
+    ...rest,
+    children: [children, jsx(Badge.Button, {
+      ownTarget: true,
+      command: "--navi-unselect",
+      commandFor: commandFor,
+      value: value,
+      "aria-label": naviI18n("button.remove"),
+      children: jsx(Icon, {
+        lineOverflow: "allow",
+        children: jsx(CloseSvg, {})
+      })
+    })]
   });
 };
 const PickerColor = props => {
@@ -63469,6 +64156,30 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
       }
+
+      /* A <BadgeList> caps its own rows: it renders the badges that fit and a
+         "+N" badge for the rest, reading the number from MaxLinesContext right
+         below. The picker must then not clamp on top of it — line-clamp turns
+         the value into a -webkit-box and single-line truncation into a
+         nowrap block, either of which takes the badge list out of the
+         inline-flex layout it needs. maxLines writes those as inline styles on
+         the element, hence !important. */
+      &:has(.navi_badge_list) {
+        display: inline-flex !important;
+        -webkit-line-clamp: none !important;
+        overflow: visible !important;
+        -webkit-box-orient: horizontal !important;
+        text-overflow: clip !important;
+        white-space: normal !important;
+      }
+
+      /* The façade is transparent to the pointer — a press on what it draws
+         means "open the picker". An own target is the exception, the same way
+         the clear cross is one in the slot below: it says the press is aimed at
+         IT, so it has to be reachable at all. */
+      [data-navi-own-target] {
+        pointer-events: auto;
+      }
     }
     .navi_picker_right_slot {
       display: inline-flex;
@@ -63757,214 +64468,284 @@ const PickerButton = props => {
   // clearing being a modification like any other.
   const interactive = !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
-  return jsxs(Box, {
-    as: "div",
-    ref: ref
-    // The flow this element really has (.navi_picker is display:inline-flex).
-    // Left unsaid, Box reads a <div> as block and resolves alignX into a
-    // text-align — which is a different intention entirely (that one is the
-    // textAlign prop, placing the text INSIDE the value slot).
-    ,
-
-    inline: true,
-    flex: "x",
-    baseClassName: "navi_picker",
-    pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
-    "data-variant": variant,
-    "navi-picker": "",
-    "navi-single-line": isSingleLine ? "" : undefined,
-    "navi-ui-custom": ui === "default" ? undefined : "",
-    "data-readonly-opens": readOnlyOpens ? "" : undefined,
-    "data-popup-width-fit-content": popupWidthFitContent ? "" : undefined,
-    ...pickerRemainingProps,
-    basePseudoState: basePseudoState,
-    styleCSSVars: PickerStyleCSSVars,
-    variant: undefined,
-    rightSlotIcon: undefined,
-    rightSlotIconSize: undefined,
-    rightSlot: undefined,
-    clearConfirm: undefined,
-    clearConfirmPopupContent: undefined,
-    openWhileReadOnly: undefined,
-    ui: undefined,
-    maxLines: undefined,
-    popupWidthFitContent: undefined,
-    error: undefined,
-    dayLabel: undefined
-    // This wrapper will receive keyboard event bubbling from the picker popup content
-    // we re-dispatch on the input (to get escape to close for instance)
-    ,
-
-    onKeyDown: inputProps.onKeyDown
-    // in case request open/close are dispatched on the control root ->
-    // redispatch them to the host
-    ,
-
-    onnavi_request_open: inputProps.onnavi_request_open,
-    onnavi_request_close: inputProps.onnavi_request_close,
-    children: [jsxs("span", {
-      className: "navi_picker_box",
-      children: [variant === "headless" ? null : jsx(LoadingOutline, {
-        loading: loading,
-        color: "var(--picker-loader-color)",
-        inset: -2
-      }), jsx(PickerInput, {
-        tabIndex: variant === "headless" ? -1 : undefined,
-        "aria-hidden": variant === "headless" ? "true" : undefined,
-        ...inputProps,
-        // eslint-disable-next-line react/no-children-prop
-        children: undefined // we will render children into the div
+  return (
+    /* Read-only crosses into everything the picker is made of: what it really
+       holds is drawn by controls of their own — in the popup, and on the façade
+       where an application puts its own affordances — and each of them refuses
+       in its own words once told. Said from the read-only state alone, never
+       from the busy one — an action running for a moment is not the same thing
+       as a value nobody may change. */
+    jsx(ReadOnlyContext.Provider, {
+      value: readOnlyResolved,
+      children: jsxs(Box, {
+        as: "div",
+        ref: ref
+        // The flow this element really has (.navi_picker is display:inline-flex).
+        // Left unsaid, Box reads a <div> as block and resolves alignX into a
+        // text-align — which is a different intention entirely (that one is the
+        // textAlign prop, placing the text INSIDE the value slot).
         ,
 
-        ui: ui,
-        onFocus: e => {
-          inputProps.onFocus?.(e);
-          e.target.select();
+        inline: true,
+        flex: "x",
+        baseClassName: "navi_picker",
+        pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
+        "data-variant": variant,
+        "navi-picker": "",
+        "navi-single-line": isSingleLine ? "" : undefined,
+        "navi-ui-custom": ui === "default" ? undefined : "",
+        "data-readonly-opens": readOnlyOpens ? "" : undefined,
+        "data-popup-width-fit-content": popupWidthFitContent ? "" : undefined,
+        ...pickerRemainingProps,
+        basePseudoState: basePseudoState,
+        styleCSSVars: PickerStyleCSSVars,
+        variant: undefined,
+        rightSlotIcon: undefined,
+        rightSlotIconSize: undefined,
+        rightSlot: undefined,
+        clearConfirm: undefined,
+        clearConfirmPopupContent: undefined,
+        openWhileReadOnly: undefined,
+        ui: undefined,
+        maxLines: undefined,
+        popupWidthFitContent: undefined,
+        error: undefined,
+        dayLabel: undefined
+        // This wrapper will receive keyboard event bubbling from the picker popup content
+        // we re-dispatch on the input (to get escape to close for instance)
+        ,
+
+        onKeyDown: inputProps.onKeyDown
+        // in case request open/close are dispatched on the control root ->
+        // redispatch them to the host
+        ,
+
+        onnavi_request_open: inputProps.onnavi_request_open,
+        onnavi_request_close: inputProps.onnavi_request_close
+        // `--navi-select`/`--navi-unselect` about one entry of the list the
+        // picker holds — a chip on the façade, a suggestion beside the field.
+        // Answered here rather than by the control drawing that list in the
+        // popup, even though rows are what such a control owns: a picker given
+        // its own value builds its popup only on first open (see
+        // popup_content_mount.js), so before that there is no such control at
+        // all — and building the whole popup to have someone to talk to, for a
+        // cross, is the wrong price. The picker holds the value in the first
+        // place and hands it down whenever the popup is built.
+        ,
+
+        onnavi_request_select: e => {
+          requestPickerListEntry(ref.current, inputRef.current, e, "select");
         },
-        onCopy: e => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          e.preventDefault();
-          const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+        onnavi_request_unselect: e => {
+          requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
         },
-        onCut: e => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          // the copy part don't need control to be interactable
-          const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-          // the clear ui state part need control to be interactable
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "cut",
-            allowed: () => {
-              dispatchRequestClearUIState(inputRef.current, e);
-            }
-          });
-          e.preventDefault();
-        },
-        onPaste: e => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            // Don't intercept inside the picker popup content.
-            return;
-          }
-          const naviData = e.clipboardData.getData("application/x-navi");
-          let pasteValue;
-          if (naviData) {
-            try {
-              pasteValue = JSON.parse(naviData);
-            } catch {
-              pasteValue = naviData;
-            }
-          } else {
-            pasteValue = e.clipboardData.getData("text/plain");
-          }
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "paste",
-            allowed: () => {
-              dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                event: e
+        children: [jsxs("span", {
+          className: "navi_picker_box",
+          children: [variant === "headless" ? null : jsx(LoadingOutline, {
+            loading: loading,
+            color: "var(--picker-loader-color)",
+            inset: -2
+          }), jsx(PickerInput, {
+            tabIndex: variant === "headless" ? -1 : undefined,
+            "aria-hidden": variant === "headless" ? "true" : undefined,
+            ...inputProps,
+            // eslint-disable-next-line react/no-children-prop
+            children: undefined // we will render children into the div
+            ,
+
+            ui: ui,
+            onFocus: e => {
+              inputProps.onFocus?.(e);
+              e.target.select();
+            },
+            onCopy: e => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                return;
+              }
+              const uiState = uiStateController.uiState;
+              if (uiState === undefined) {
+                return;
+              }
+              e.preventDefault();
+              const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+              e.clipboardData.setData("text/plain", displayText);
+              e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+            },
+            onCut: e => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                return;
+              }
+              const uiState = uiStateController.uiState;
+              if (uiState === undefined) {
+                return;
+              }
+              // the copy part don't need control to be interactable
+              const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+              e.clipboardData.setData("text/plain", displayText);
+              e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+              // the clear ui state part need control to be interactable
+              dispatchRequestInteraction(pickerEl, {
+                event: e,
+                name: "cut",
+                allowed: () => {
+                  dispatchRequestClearUIState(inputRef.current, e);
+                }
               });
+              e.preventDefault();
+            },
+            onPaste: e => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                // Don't intercept inside the picker popup content.
+                return;
+              }
+              const naviData = e.clipboardData.getData("application/x-navi");
+              let pasteValue;
+              if (naviData) {
+                try {
+                  pasteValue = JSON.parse(naviData);
+                } catch {
+                  pasteValue = naviData;
+                }
+              } else {
+                pasteValue = e.clipboardData.getData("text/plain");
+              }
+              dispatchRequestInteraction(pickerEl, {
+                event: e,
+                name: "paste",
+                allowed: () => {
+                  dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                    event: e
+                  });
+                }
+              });
+              e.preventDefault();
             }
-          });
-          e.preventDefault();
-        }
-      }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
-        className: "navi_picker_value",
-        "navi-placeholder": value === undefined || value === "" ? "" : undefined,
-        maxLines: maxLines,
-        children: jsx(PickerContext.Provider, {
-          value: {
-            value,
-            placeholder,
-            maxLines
-          },
-          children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
-        })
-      }), variant === "headless" || ui === "default" ? null : jsx("span", {
-        className: "navi_picker_right_slot",
-        children: jsx(ControlIdContext.Provider, {
-          value: undefined,
-          children: jsx(ControlNameContext.Provider, {
-            value: undefined,
-            children: clearable && interactive && value !== undefined && value !== "" ? jsx(Button, {
-              command: "--navi-clear",
-              commandFor: inputProps.id
-              // The question, asked before the clear rather than by the
-              // action the clear sends — see the --navi-clear command.
-              ,
+          }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
+            className: "navi_picker_value",
+            "navi-placeholder": uiStateHoldsNothing(value) ? "" : undefined,
+            maxLines: maxLines,
+            children: jsx(PickerOwnContent, {
+              children: jsx(PickerContext.Provider, {
+                value: {
+                  value,
+                  placeholder,
+                  maxLines
+                },
+                children: jsx(MaxLinesContext.Provider, {
+                  value: maxLines,
+                  children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
+                })
+              })
+            })
+          }), variant === "headless" || ui === "default" ? null : jsx("span", {
+            className: "navi_picker_right_slot",
+            children: jsx(PickerOwnContent, {
+              children: clearable && interactive && value !== undefined && value !== "" ? jsx(Button, {
+                command: "--navi-clear",
+                commandFor: inputProps.id
+                // The question, asked before the clear rather than by the
+                // action the clear sends — see the --navi-clear command.
+                ,
 
-              confirm: clearConfirm,
-              confirmPopupContent: clearConfirmPopupContent,
-              tabIndex: "-1"
-              // No navi-focus-delegate, unlike the identical button inside an
-              // input: handing focus back to the picker's own input is what
-              // opens the popup, and clearing is the opposite intention.
-              ,
+                confirm: clearConfirm,
+                confirmPopupContent: clearConfirmPopupContent,
+                tabIndex: "-1"
+                // No navi-focus-delegate, unlike the identical button inside an
+                // input: handing focus back to the picker's own input is what
+                // opens the popup, and clearing is the opposite intention.
+                ,
 
-              icon: true,
-              variant: "discrete"
-              // What is busy once the clear is sent is the picker — the value
-              // being removed is the whole field's, and the picker already
-              // draws the wait around all of it. Two outlines for one wait is
-              // one too many.
-              ,
+                icon: true,
+                variant: "discrete"
+                // What is busy once the clear is sent is the picker — the value
+                // being removed is the whole field's, and the picker already
+                // draws the wait around all of it. Two outlines for one wait is
+                // one too many.
+                ,
 
-              loadingOutline: false
-              // preventDefault, not just tabIndex="-1": a mousedown focuses
-              // its target before any click happens, and this button should
-              // never hold focus at all — the field keeps it.
-              ,
+                loadingOutline: false
+                // preventDefault, not just tabIndex="-1": a mousedown focuses
+                // its target before any click happens, and this button should
+                // never hold focus at all — the field keeps it.
+                ,
 
-              onMouseDown: e => {
-                e.preventDefault();
-              },
-              flex: true,
-              align: "center",
-              children: jsx(Icon, {
+                onMouseDown: e => {
+                  e.preventDefault();
+                },
+                flex: true,
+                align: "center",
+                children: jsx(Icon, {
+                  size: rightSlotIconSize,
+                  lineOverflow: "allow",
+                  children: jsx(CloseSvg, {})
+                })
+              }) : rightSlot === undefined ?
+              // lineOverflow: what sits in the slot is an affordance, not a
+              // character — a caller asking for a bigger one wants it bigger,
+              // not capped at the height of the line it sits on
+              jsx(Icon, {
                 size: rightSlotIconSize,
                 lineOverflow: "allow",
-                children: jsx(CloseSvg, {})
-              })
-            }) : rightSlot === undefined ?
-            // lineOverflow: what sits in the slot is an affordance, not a
-            // character — a caller asking for a bigger one wants it bigger,
-            // not capped at the height of the line it sits on
-            jsx(Icon, {
-              size: rightSlotIconSize,
-              lineOverflow: "allow",
-              children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
-            }) : rightSlot
+                children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
+              }) : rightSlot
+            })
+          })]
+        }), jsx(ControlFacadeChildrenWrapper, {
+          ...facadeChildrenProps,
+          children: jsx("div", {
+            className: "navi_picker_content",
+            children: children
           })
-        })
-      })]
-    }), jsx(ControlFacadeChildrenWrapper, {
-      ...facadeChildrenProps,
-      children: jsx(ReadOnlyContext.Provider, {
-        value: readOnlyResolved,
-        children: jsx("div", {
-          className: "navi_picker_content",
-          children: children
-        })
+        })]
       })
-    })]
+    })
+  );
+};
+// What the picker draws itself — the value it shows, the furniture in its slot,
+// and whatever a caller puts in either — is not another control of the field
+// around it: none of it may take the id (nor the name) a <Field> hands down,
+// which is the picker's. Two controls under one id is one registry entry, and
+// the one that unmounts first — the clear cross the moment the field it emptied
+// is empty, a chip the moment its value is taken out — takes the picker's own
+// entry with it, leaving the picker looking for a controller that is gone.
+const PickerOwnContent = ({
+  children
+}) => jsx(ControlIdContext.Provider, {
+  value: undefined,
+  children: jsx(ControlNameContext.Provider, {
+    value: undefined,
+    children: children
+  })
+});
+
+// `id` is what --navi-select/--navi-unselect carry (a list addresses its rows by
+// id); asked of a picker, what they carry is one entry of the list the picker
+// holds — the same thing a `<Picker.Chip value>` stands for.
+const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
+  const uiState = getUIStateFromElement(pickerInputEl);
+  if (!Array.isArray(uiState)) {
+    return;
+  }
+  const {
+    id: entry
+  } = e.detail;
+  const isThere = uiState.some(item => compareTwoJsValues(item, entry));
+  if (goal === "select" ? isThere : !isThere) {
+    return;
+  }
+  const uiStateNext = goal === "select" ? [...uiState, entry] : uiState.filter(item => !compareTwoJsValues(item, entry));
+  dispatchRequestInteraction(pickerEl, {
+    event: e,
+    name: goal,
+    prevented: () => e.preventDefault(),
+    allowed: () => {
+      dispatchRequestSetUIState(pickerInputEl, uiStateNext, {
+        event: e
+      });
+    }
   });
 };
 const isWithinPickerContent = (el, pickerEl) => {
@@ -64109,6 +64890,7 @@ const PickerFirstResolver = props => {
   });
 };
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
+Picker.Chip = PickerChip;
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;

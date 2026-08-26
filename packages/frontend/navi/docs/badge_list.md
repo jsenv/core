@@ -47,36 +47,34 @@ list itself is a local override.
 `max` is a different cap: a number of badges, whatever the rows. The two
 compose — the `+N` badge takes one of the `max` slots.
 
-## The `fallback`, and why it is a badge
+## The `fallback`
 
-Without a `fallback`, an empty list renders **nothing**, and whatever is sized
-by the list collapses: a list row, a table cell — or a picker's value slot.
-Inside a picker there is one more thing to know: a picker given a `ui` draws
-that and only that, its own `placeholder` is **not** drawn next to it. An empty
-`BadgeList` in a picker is a blank picker.
-
-So the fallback has two jobs: say what the picker is for, and take the room a
-badge takes. Plain text does the first and not the second — a line of text is
-set by the host's font and line-height, a badge by its own padding and smaller
-font, and the two do not match (0.89px apart at the default font size; more
-with `size`). The right fallback is a badge that looks like the placeholder:
+Without a `fallback`, an empty list renders **nothing**. Inside a picker there
+is one more thing to know: a picker given a `ui` draws that and only that, its
+own `placeholder` is **not** drawn next to it. An empty `BadgeList` in a picker
+is a blank picker — so the list's `fallback` is the placeholder, and the
+placeholder text is what to pass:
 
 ```jsx
-<BadgeList
-  fallback={
-    <Badge background="transparent" color="var(--picker-placeholder-color)">
-      Select skills…
-    </Badge>
-  }
->
+<BadgeList fallback="Select skills…">
   {selected.map((skill) => (
     <Badge key={skill}>{skill}</Badge>
   ))}
 </BadgeList>
 ```
 
-The picker box itself is held one line tall by its own line (the right slot is
-`1lh`), so it does not move in the common case — the value slot inside it does,
-and so does any host that has no line of its own. Section 4 of
-`src/control/demos/picker/2_select_multiple_demo.html` measures the three cases
-(no fallback, plain text, transparent badge) box and slot side by side.
+Plain text is the right shape for it. It reads at the picker's own size, in the
+placeholder color — the picker colors its value slot that way while it holds
+nothing — and the picker box stays the same height empty and filled: the box is
+held one line tall by the picker's own line (the right slot is `1lh`), whatever
+the slot inside holds. That slot is a fraction of a pixel taller with a line of
+text than with a row of badges (0.89px at the default font size — a line is set
+by the picker's font and line-height, a badge by its own padding and smaller
+font), which nothing shows.
+
+A transparent `Badge` as fallback matches the slot to the pixel instead, but its
+text is badge-sized — smaller than the picker's — and reads as a badge with
+nothing in it. Only worth it where the slot itself is what something else is
+sized on. Section 4 of `src/control/demos/picker/2_select_multiple_demo.html`
+measures the three cases (no fallback, plain text, transparent badge), box and
+slot side by side.

@@ -272,14 +272,7 @@
         ]);
         const selectedArrayMr2 = selectedSignalMr2.value;
 
-        const chipsFallback = (
-          <Badge
-            background="transparent"
-            color="var(--picker-placeholder-color)"
-          >
-            Select skills…
-          </Badge>
-        );
+        const chipsFallback = "Select skills…";
 
         return (
           <div class="demo-section">
@@ -427,17 +420,13 @@
               name="multiselect_chips_delete"
               value={selectedArray}
               ui={
-                selectedArray.length === 0 ? (
-                  <span style="color: #999">Select skills…</span>
-                ) : (
-                  <BadgeList>
-                    {selectedArray.map((opt) => (
-                      <Picker.Chip key={opt} value={opt}>
-                        <Text>{opt}</Text>
-                      </Picker.Chip>
-                    ))}
-                  </BadgeList>
-                )
+                <BadgeList fallback="Select skills…">
+                  {selectedArray.map((opt) => (
+                    <Picker.Chip key={opt} value={opt}>
+                      <Text>{opt}</Text>
+                    </Picker.Chip>
+                  ))}
+                </BadgeList>
               }
               uiAction={(v) => {
                 selectedSignal.value = v;
@@ -498,7 +487,7 @@
               value={selectedArrayMr2}
               maxLines={2}
               ui={
-                <BadgeList>
+                <BadgeList fallback="Select skills…">
                   {selectedArrayMr2.map((opt) => (
                     <Picker.Chip key={opt} value={opt}>
                       <Text>{opt}</Text>
@@ -828,8 +817,11 @@
         const heightDelta = round(b.height - a.height);
         const hasInner = a.innerHeight !== null && b.innerHeight !== null;
         const innerDelta = hasInner ? round(b.innerHeight - a.innerHeight) : 0;
-        const pixelPerfect =
-          widthDelta === 0 && heightDelta === 0 && innerDelta === 0;
+        // The verdict is the picker's height — what moves the row on screen,
+        // or not. The width is fixed by the demo, and the value slot is only
+        // reported along: a change inside a box that does not move is
+        // suboptimal for the eye, nothing more.
+        const pixelPerfect = heightDelta === 0;
         return (
           <div
             style={{
@@ -840,9 +832,14 @@
             }}
           >
             {labelB} − {labelA}: Δw {signed(widthDelta)} · Δh{" "}
-            {signed(heightDelta)}
-            {hasInner ? ` · Δh value slot ${signed(innerDelta)}` : ""}{" "}
-            {pixelPerfect ? "✓ same size" : "✗ mismatch"}
+            {signed(heightDelta)}{" "}
+            {pixelPerfect ? "✓ same height" : "✗ height changed"}
+            {hasInner && (
+              <span style={{ color: "#868e96" }}>
+                {" "}
+                (value slot Δh {signed(innerDelta)})
+              </span>
+            )}
           </div>
         );
       };
@@ -928,32 +925,32 @@
           <p>
             A picker drawn from chips must look the same empty as it does with a
             value: as tall, and saying something. Empty above, with a value
-            below, with dotted rulers giving the exact rendered size of the
-            picker box and of its value slot (the part holding the chips), so
-            the two states can be compared pixel per pixel.
+            below, with dotted rulers giving the exact rendered height of the
+            picker box — and, as information, of its value slot, the part
+            holding the chips. The picker's own line (the right slot is 1lh)
+            holds the box one line tall, so the box does not move in any of the
+            three cases; what differs is what the empty picker shows.
           </p>
 
           <fieldset>
-            <legend>No fallback — nothing in the value slot</legend>
+            <legend>No fallback — a blank picker</legend>
             <p>
               An empty <code>BadgeList</code> renders nothing, and the picker's
               own <code>placeholder</code> is not drawn either: a picker given a{" "}
-              <code>ui</code> draws that and only that. The value slot collapses
-              to its borders; the box is still held one line tall by the
-              picker's own line, so it does not move here — but the picker is
-              blank, and a host sized by what the list holds (a list row, a
-              table cell) jumps.
+              <code>ui</code> draws that and only that. Same height, but the
+              picker says nothing.
             </p>
             <EmptyVersusFilled id="empty_height_none" />
           </fieldset>
 
           <fieldset>
-            <legend>Fallback as plain text — a line, not a badge</legend>
+            <legend>Fallback as plain text — recommended</legend>
             <p>
-              <code>fallback="Select skills…"</code> says something, but a line
-              of text is set by the picker's font and line-height where a badge
-              is set by its own padding and smaller font: the two are not the
-              same height, and the slot moves between the two states.
+              <code>fallback="Select skills…"</code>: the placeholder text, at
+              the picker's own size, in the placeholder color (the picker colors
+              its value slot that way while it holds nothing). The box is the
+              same height; the slot is off by a fraction of a pixel, which
+              nothing shows.
             </p>
             <EmptyVersusFilled
               id="empty_height_text"
@@ -963,13 +960,14 @@
 
           <fieldset>
             <legend>
-              Fallback as a transparent badge — same size, says it
+              Fallback as a transparent badge — slot exact, text small
             </legend>
             <p>
-              A <code>Badge</code> with no background and the placeholder color
-              takes the exact room a badge takes and says what the picker is
-              for: the empty list is as tall as a filled one and the value slot
-              never moves.
+              A <code>Badge</code> with no background takes the exact room a
+              badge takes, so even the slot does not move — but the text is
+              badge-sized, smaller than the picker's, and reads as a badge with
+              nothing in it. Only worth it where the slot itself is what
+              something else is sized on.
             </p>
             <EmptyVersusFilled
               id="empty_height_badge"

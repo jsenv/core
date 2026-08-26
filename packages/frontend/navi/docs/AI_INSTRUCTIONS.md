@@ -127,12 +127,11 @@ consistency across the app, not from any single call site.
   `shrinkWrap`, `maxLines`) and how it counts its badges (a `Badge` inside one
   renders nothing and hands itself to the list — so badges must be direct
   children). How `maxLines` reaches a list drawn inside a `Picker`
-  (`MaxLinesContext`, the picker's own clamp turned off), and why the
-  `fallback` must be a transparent `Badge` and not text: a picker given a `ui`
-  draws no placeholder of its own, and a line of text is not the height of a
-  badge. Read it before putting a `BadgeList` in a picker's `ui`, before
-  passing `fallback="…"` as a string, and before setting `maxLines` on the
-  list rather than on the picker.
+  (`MaxLinesContext`, the picker's own clamp turned off), and why a list in a
+  picker needs a `fallback` — the placeholder text, as plain text: a picker
+  given a `ui` draws no placeholder of its own. Read it before putting a
+  `BadgeList` in a picker's `ui`, before wrapping its fallback in a `Badge`,
+  and before setting `maxLines` on the list rather than on the picker.
 - `docs/control_value.md` — who holds a control's value: nobody, a bound
   `signal` (two-way, in both directions), or you (`value`/`checked`). What
   `signal` + `defaultValue` says, what a signal holds for each kind of control,

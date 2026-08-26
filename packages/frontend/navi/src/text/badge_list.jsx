@@ -137,13 +137,13 @@ const useBadgeRegistry = (children, enabled) => {
  *
  * @param {import("preact").ComponentChildren} [fallback]
  *   Rendered in place of the badges when there is none. Without it an empty
- *   list renders nothing at all, and whatever is sized by the list — a row, a
- *   cell, a picker's value slot — collapses. Give it the height of a badge: a
- *   <Badge> with no background and the placeholder color, not plain text — a
- *   line of text is set by the host's font and line-height, a badge by its own
- *   padding and smaller font, and the two do not match. In a <Picker> this is
- *   also the only placeholder the user gets: a picker given a `ui` does not
- *   draw its own. See docs/badge_list.md.
+ *   list renders nothing at all. In a <Picker> this is the only placeholder
+ *   the user gets — a picker given a `ui` does not draw its own — so pass the
+ *   placeholder text: `fallback="Select skills…"`. Plain text is the right
+ *   choice there: it reads at the picker's size, in the placeholder color the
+ *   picker gives its empty value slot, and the box stays the same height. A
+ *   transparent <Badge> matches the slot to the pixel instead, at the price of
+ *   badge-sized text. See docs/badge_list.md.
  * @param {boolean} [shrinkWrap]
  *   Narrows the list down to its widest row so the last row isn't ragged.
  *   Defaults to true inside a <Picker> — the trigger draws a border around the
