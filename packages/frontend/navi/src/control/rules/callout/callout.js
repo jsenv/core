@@ -34,7 +34,11 @@ import { isValidElement } from "preact";
 
 import { findControlHost, findControlRoot } from "../../control_dom.js";
 import { findControlProxy } from "../../control_proxy.js";
-import { renderIntoCallout } from "./callout.jsx";
+import {
+  clearCalloutMessage,
+  renderHtmlIntoCallout,
+  renderIntoCallout,
+} from "./callout.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -138,7 +142,10 @@ const css = /* css */ `
       }
 
       .navi_callout_body {
-        --callout-icon-height: round(1.5em, 1px);
+        /* The first line of the message: the icon and the close button sit
+           in columns of that height, pinned to the top, so both stay level
+           with it however many lines the message takes. */
+        --callout-icon-height: round(1lh, 1px);
 
         position: relative;
         display: flex;
@@ -194,10 +201,15 @@ const css = /* css */ `
       align-self: flex-start;
 
       .navi_callout_close_button {
-        width: 1em;
-        height: 1em;
-        padding: 0;
-        align-self: center;
+        /* A square filling the column, so the whole first line is the target;
+           the padding keeps the cross itself at glyph size. */
+        display: inline-flex;
+        box-sizing: border-box;
+        aspect-ratio: 1 / 1;
+        height: 100%;
+        padding: 0.2em;
+        align-items: center;
+        justify-content: center;
         color: currentColor;
         font-size: inherit;
         background: none;
@@ -491,11 +503,11 @@ export const openCallout = (
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
       debug(`callout update message (node)`);
-      calloutMessageElement.innerHTML = "";
+      clearCalloutMessage(calloutMessageElement);
       calloutMessageElement.appendChild(newMessage);
     } else if (typeof newMessage === "function") {
       debug(`callout update message (function)`);
-      calloutMessageElement.innerHTML = "";
+      clearCalloutMessage(calloutMessageElement);
       newMessage({
         renderIntoCallout: (jsx) =>
           renderIntoCallout(jsx, calloutMessageElement, { requestClose }),
@@ -520,14 +532,15 @@ export const openCallout = (
         iframe.srcdoc = newMessage;
 
         debug(`callout update message (html document iframe)`);
-        // Clear existing content and add iframe
-        calloutMessageElement.innerHTML = "";
+        clearCalloutMessage(calloutMessageElement);
         calloutMessageElement.appendChild(iframe);
       } else {
         debug(
           `callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`,
         );
-        calloutMessageElement.innerHTML = newMessage;
+        renderHtmlIntoCallout(String(newMessage), calloutMessageElement, {
+          requestClose,
+        });
       }
     }
     // After updating content the callout size likely changed — re-position immediately
