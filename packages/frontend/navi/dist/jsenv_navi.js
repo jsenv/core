@@ -2819,7 +2819,10 @@ const readSignalForUrlBuild = (connection) => {
 /**
  * Creates a custom route pattern matcher
  */
-const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
+const createRoutePattern = (
+  pattern,
+  { searchParams = {}, params: paramConstraints = {} } = {},
+) => {
   // Detect and process path signals in the pattern
   const [cleanPattern, pathConnections] = detectSignals(pattern);
 
@@ -2844,9 +2847,11 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   // All connections (path + query) for ancestor/descendant signal resolution
   const connections = [...pathConnections, ...queryConnectionMap.values()];
 
+  const paramConstraintMap = createParamConstraintMap(paramConstraints);
   const parsedPattern = parsePattern(cleanPattern, {
     pathConnectionMap,
     queryConnectionMap,
+    paramConstraintMap,
   });
 
   debug$3(`[CustomPattern] Created pattern:`, parsedPattern);
@@ -2854,11 +2859,21 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   debug$3(`[CustomPattern] Path connections:`, pathConnectionMap.size);
   debug$3(`[CustomPattern] Query connections:`, queryConnectionMap.size);
 
-  const applyOn = (url) => {
+  /**
+   * @param {string} url
+   * @param {object} [options]
+   * @param {boolean} [options.exact] - Only match the url this pattern is the
+   *   address of: a trailing slash or a wildcard stops catching what lies below
+   *   it. What "/" means for a container ("everything under me") and what it
+   *   means for a redirection ("that very address") are not the same question.
+   */
+  const applyOn = (url, { exact = false } = {}) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
       baseFileUrl,
       queryConnectionMap,
+      paramConstraintMap,
+      exact,
       patternObj: patternObject,
     });
 
@@ -3524,7 +3539,9 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     const entryIsMeaningful = (conn) => {
       const entry = intended.get(conn.paramName);
       return (
-        Boolean(entry) && entry.value !== undefined && conn.isCustomValue(entry.value)
+        Boolean(entry) &&
+        entry.value !== undefined &&
+        conn.isCustomValue(entry.value)
       );
     };
     if (ancestorPattern !== patternObject.parent) {
@@ -3714,6 +3731,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     connections,
     pathConnectionMap, // Separate map for path parameters
     queryConnectionMap, // Separate map for query parameters
+    paramConstraintMap, // Which values each param accepts (Map<paramName, test>)
     parsedPattern,
     children: [],
     parent: null,
@@ -3821,10 +3839,60 @@ const detectSignals = (routePattern) => {
   return [updatedPattern, signalConnections];
 };
 
+const EMPTY_PARAM_CONSTRAINT_MAP = new Map();
+
+/**
+ * Turns `{ gameId: /^W-[A-Z0-9]{8}$/i }` into `Map<paramName, (value) => boolean>`.
+ * A constraint is a regexp, a list of accepted values, or a predicate.
+ * A constraint decides which url segments the param accepts; a segment it
+ * declines makes the whole route a non-match, so only path params can carry
+ * one — a search param is extracted from a url the path already matched.
+ */
+const createParamConstraintMap = (paramConstraints) => {
+  const entries = Object.entries(paramConstraints);
+  if (entries.length === 0) {
+    return EMPTY_PARAM_CONSTRAINT_MAP;
+  }
+  const paramConstraintMap = new Map();
+  for (const [paramName, constraint] of entries) {
+    if (constraint instanceof RegExp) {
+      paramConstraintMap.set(paramName, (value) => {
+        constraint.lastIndex = 0; // a /g or /y regexp would otherwise resume where the previous test stopped
+        return constraint.test(value);
+      });
+      continue;
+    }
+    if (Array.isArray(constraint)) {
+      // a url segment is a string, so the list is compared as strings:
+      // `oneOf: [1, 2, 3]` accepts "/2"
+      const acceptedValueSet = new Set(
+        constraint.map((value) => String(value)),
+      );
+      paramConstraintMap.set(paramName, (value) => acceptedValueSet.has(value));
+      continue;
+    }
+    if (typeof constraint === "function") {
+      paramConstraintMap.set(paramName, (value) => Boolean(constraint(value)));
+      continue;
+    }
+    throw new TypeError(
+      `params.${paramName} must be a regexp, an array of values or a function, got ${constraint}`,
+    );
+  }
+  return paramConstraintMap;
+};
+
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
+const parsePattern = (
+  pattern,
+  {
+    pathConnectionMap,
+    queryConnectionMap,
+    paramConstraintMap = EMPTY_PARAM_CONSTRAINT_MAP,
+  },
+) => {
   // Build queryParams from queryConnectionMap
   const queryParams = [];
   for (const [paramName, connection] of queryConnectionMap) {
@@ -3878,13 +3946,14 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
+      //    — unless the param is constrained: "no segment" is not one of the values it accepts
       const connection =
         pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const hasDefault =
         connection && connection.getDefaultValue() !== undefined;
       let isOptional = seg.endsWith("?") || hasDefault;
 
-      if (!isOptional) {
+      if (!isOptional && !paramConstraintMap.has(paramName)) {
         // Check if connected signal has undefined value (making parameter optional for index routes)
         if (
           connection &&
@@ -3995,7 +4064,14 @@ const tryExtractChildParameters = (
       // We need to verify that this parameter isn't already captured by parent
       if (!(segment.name in existingParams)) {
         const urlSegment = remainingSegments[remainingIndex];
-        childParams[segment.name] = decodeURIComponent(urlSegment);
+        const paramValue = decodeURIComponent(urlSegment);
+        const paramConstraint = childPattern.paramConstraintMap.get(
+          segment.name,
+        );
+        if (paramConstraint && !paramConstraint(paramValue)) {
+          return null; // the child declines this value, it cannot explain these segments
+        }
+        childParams[segment.name] = paramValue;
         remainingIndex++;
       }
     } else if (
@@ -4022,7 +4098,14 @@ const tryExtractChildParameters = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, baseFileUrl, queryConnectionMap, patternObj = null },
+  {
+    baseUrl,
+    baseFileUrl,
+    queryConnectionMap,
+    paramConstraintMap = EMPTY_PARAM_CONSTRAINT_MAP,
+    exact = false,
+    patternObj = null,
+  },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -4064,7 +4147,7 @@ const matchUrl = (
     }
 
     // Root route with trailing slash matches all sub-paths (prefix matching, like other trailing-slash routes)
-    if (parsedPattern.trailingSlash) {
+    if (parsedPattern.trailingSlash && !exact) {
       return extractSearchParams(urlObj, queryConnectionMap);
     }
 
@@ -4133,7 +4216,12 @@ const matchUrl = (
 
       // Capture URL segment as parameter value
       const urlSeg = urlSegments[urlSegmentIndex];
-      params[patternSeg.name] = decodeURIComponent(urlSeg);
+      const paramValue = decodeURIComponent(urlSeg);
+      const paramConstraint = paramConstraintMap.get(patternSeg.name);
+      if (paramConstraint && !paramConstraint(paramValue)) {
+        return null; // the param declines this value: the route does not match
+      }
+      params[patternSeg.name] = paramValue;
       urlSegmentIndex++;
     }
   }
@@ -4142,8 +4230,7 @@ const matchUrl = (
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
   if (
-    !parsedPattern.wildcard &&
-    !parsedPattern.trailingSlash &&
+    (exact || (!parsedPattern.wildcard && !parsedPattern.trailingSlash)) &&
     urlSegmentIndex < urlSegments.length
   ) {
     return null; // Pattern without trailing slash/wildcard should not match extra segments
@@ -4862,8 +4949,61 @@ const getRoutePrivateProperties = (route) => {
 const ROUTE_NOT_MATCHING_PARAMS = {};
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
-const route = (pattern, { searchParams } = {}) => {
-  const routePattern = createRoutePattern(pattern, { searchParams });
+/**
+ * Declares a route from an url pattern.
+ *
+ * @param {string} pattern - The url pattern, where `:name` is a path param and
+ *   `:name=${signal}` binds that param to a signal.
+ * @param {object} [options]
+ * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
+ *   Search params this route two-way syncs with, by name.
+ * @param {Object<string, RegExp | Array | ((value: string) => boolean)>} [options.params]
+ *   Which values a path param accepts, by param name: a regexp tested against the
+ *   decoded segment, the list of accepted values (compared as strings, so it can
+ *   be the `oneOf` of the signal bound to that param), or a predicate. A route
+ *   whose param declines the segment does not match at all: no signal is
+ *   written, `<Route fallback>` is reachable, and `/:gameId` can sit at the root
+ *   without swallowing `/cgu`. A constrained param is also required — no segment
+ *   is not one of the values it accepts — so `/:gameId` does not match `/`.
+ *
+ *   Constrain the shape, not the existence: whether that game exists is for the
+ *   route action and the page to answer, on a route that did match.
+ *
+ *   ```js
+ *   route(`/:gameId=${gamePageIdSignal}`, { params: { gameId: /^W-[A-Z0-9]{8}$/i } });
+ *   route(`/games/:section=${sectionSignal}`, { params: { section: SECTIONS } });
+ *   ```
+ * @param {object} [options.redirectRoute]
+ *   This address only sends elsewhere: the route it resolves to. The
+ *   redirection happens at the door of the navigation, so this address is never
+ *   displayed, never enters the history, runs no route action and writes no
+ *   signal — going back lands on the page before it, not on the redirection
+ *   again. It fires on this route's own address only: a trailing slash still
+ *   catches what lies below it for rendering, never for redirecting.
+ *
+ *   The params found in the url carry over to the ones the target route
+ *   declares under the same name; what it cannot place is left behind.
+ *
+ *   ```js
+ *   route("/", { redirectRoute: MY_GAMES_PAGE });
+ *   // gameId carries over on its own, shareState is not a param of GAME_PAGE
+ *   route("/:gameId/:shareState", { redirectRoute: GAME_PAGE });
+ *   ```
+ * @param {object|Function|null} [options.redirectRouteParams]
+ *   What to change about the params carried over: an object, or a function of
+ *   the params found in the url returning one. Written params win over inherited
+ *   ones, `undefined` drops one, and `null` carries nothing over at all.
+ *
+ *   ```js
+ *   route("/legacy/:id", { redirectRoute: GAME_PAGE, redirectRouteParams: ({ id }) => ({ gameId: id }) });
+ *   route("/:gameId/invite", { redirectRoute: HOME_PAGE, redirectRouteParams: null });
+ *   ```
+ */
+const route = (
+  pattern,
+  { searchParams, params, redirectRoute, redirectRouteParams } = {},
+) => {
+  const routePattern = createRoutePattern(pattern, { searchParams, params });
   const { cleanPattern } = routePattern;
   const [publishStatus, subscribeStatus] = createPubSub();
 
@@ -4906,6 +5046,8 @@ const route = (pattern, { searchParams } = {}) => {
   {
     const routePrivateProperties = {
       routePattern,
+      redirectRoute,
+      redirectRouteParams,
       setup: null,
       updateStatus: null,
       cleanup: null,
@@ -5229,6 +5371,113 @@ const route = (pattern, { searchParams } = {}) => {
 
 const [publishRouteMutations, observeRouteMutations] = createPubSub();
 
+let redirectingRouteSet = null;
+/**
+ * Where does this url really lead?
+ *
+ * Asked at the door of every navigation, before the url is written anywhere —
+ * an address that only sends elsewhere must not become a page, an entry in the
+ * history, or a route anything can see matching. Answered without reading a
+ * single signal: the url alone says it.
+ *
+ * The chain is followed here rather than by letting each redirection navigate
+ * in turn, so one navigation happens and the addresses in between leave no
+ * trace at all.
+ *
+ * @param {string} url
+ * @returns {string|null} The url to go to instead, or null.
+ */
+const resolveRouteRedirection = (url) => {
+  if (!redirectingRouteSet || redirectingRouteSet.size === 0) {
+    return null;
+  }
+  let urlToResolve = url;
+  let redirectionUrl = null;
+  const urlChain = [url];
+  while (true) {
+    const nextUrl = resolveRedirectionOnce(urlToResolve);
+    if (!nextUrl || nextUrl === urlToResolve) {
+      break;
+    }
+    if (urlChain.includes(nextUrl)) {
+      throw new Error(
+        `Redirection cycle: ${[...urlChain, nextUrl].join(" -> ")}`,
+      );
+    }
+    urlChain.push(nextUrl);
+    redirectionUrl = nextUrl;
+    urlToResolve = nextUrl;
+  }
+  return redirectionUrl;
+};
+const resolveRedirectionOnce = (url) => {
+  let redirectingRoute = null;
+  let redirectingRouteParams = null;
+  let maxDepth = -1;
+  for (const route of redirectingRouteSet) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    // exact: what a trailing slash catches is what a container renders, not
+    // what an address redirects — "/" redirecting must not take "/cgu" with it
+    const urlParams = routePattern.applyOn(url, { exact: true });
+    if (!urlParams) {
+      continue;
+    }
+    // Deeper = more specific, the reading the whole router shares (see
+    // replaceParams): "/:gameId/invite" is a child of "/:gameId/:shareState",
+    // so it answers for an url both of them match.
+    if (routePattern.depth > maxDepth) {
+      maxDepth = routePattern.depth;
+      redirectingRoute = route;
+      redirectingRouteParams = urlParams;
+    }
+  }
+  if (!redirectingRoute) {
+    return null;
+  }
+  return buildRedirectionUrl(redirectingRoute, redirectingRouteParams);
+};
+const buildRedirectionUrl = (route, urlParams) => {
+  const { redirectRoute, redirectRouteParams } =
+    getRoutePrivateProperties(route);
+  const paramsCarriedOver =
+    redirectRouteParams === null
+      ? {}
+      : paramsTargetCanPlace(redirectRoute, urlParams);
+  if (!redirectRouteParams) {
+    return redirectRoute.buildUrl(paramsCarriedOver);
+  }
+  const paramsWritten =
+    typeof redirectRouteParams === "function"
+      ? redirectRouteParams(urlParams)
+      : redirectRouteParams;
+  // A param written as undefined is a param dropped: `paramName in params` is
+  // what tells a url build "this one is decided", value included (resolveParams)
+  return redirectRoute.buildUrl({ ...paramsCarriedOver, ...paramsWritten });
+};
+
+/**
+ * The params of the url being left that the target route can put somewhere:
+ * its own path segments and the search params it declares. What it cannot
+ * place would otherwise be appended to the url as a query param, and a share
+ * link resolving to "/W-ABC234PQ?shareState=1" is not the address anyone meant.
+ */
+const paramsTargetCanPlace = (redirectRoute, urlParams) => {
+  const { routePattern } = getRoutePrivateProperties(redirectRoute);
+  const { parsedPattern, queryConnectionMap } = routePattern;
+  const paramsCarriedOver = {};
+  for (const paramName of Object.keys(urlParams)) {
+    const canPlace =
+      queryConnectionMap.has(paramName) ||
+      parsedPattern.segments.some(
+        (segment) => segment.type === "param" && segment.name === paramName,
+      );
+    if (canPlace) {
+      paramsCarriedOver[paramName] = urlParams[paramName];
+    }
+  }
+  return paramsCarriedOver;
+};
+
 let setupRoutesCalled = false;
 const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
@@ -5256,6 +5505,22 @@ This prevents cross-test pollution and ensures clean state.`,
   for (const route of routeSet) {
     const { setup } = getRoutePrivateProperties(route);
     setup({ routeSet, getUrl });
+  }
+
+  // Checked here rather than at declaration: a route may redirect to one
+  // declared after it, and reading the target then would forbid that order.
+  redirectingRouteSet = new Set();
+  for (const route of routeSet) {
+    const { redirectRoute } = getRoutePrivateProperties(route);
+    if (!redirectRoute) {
+      continue;
+    }
+    if (!redirectRoute.isRoute) {
+      throw new TypeError(
+        `${route} redirects to ${redirectRoute}, expecting a route object`,
+      );
+    }
+    redirectingRouteSet.add(route);
   }
 
   // Store previous route states to detect changes
@@ -5501,6 +5766,7 @@ This prevents cross-test pollution and ensures clean state.`,
       routePrivatePropertiesMap.delete(route);
     }
     routeSet.clear();
+    redirectingRouteSet = null;
     setupRoutesCalled = false;
   };
   return {
@@ -21522,6 +21788,24 @@ const setupBrowserIntegrationViaHistory = ({
     // the single door every navigation goes through, rather than by each caller
     // (navBack's fallback in particular arrives here raw).
     const url = new URL(target, window.location.href).href;
+    // An address that only sends elsewhere never becomes anything here: asked
+    // before the announcement, before the history write and before the routes,
+    // so that what follows is entirely about where the reader is going (see
+    // resolveRouteRedirection).
+    const redirectionUrl = resolveRouteRedirection(url);
+    if (redirectionUrl) {
+      if (redirectionUrl === window.location.href) {
+        // Asked to go where we already are: an address that redirects is never
+        // the one being displayed, so there is nothing to go to and nothing to
+        // stack on the history.
+        return undefined;
+      }
+      return handleRoutingTask(redirectionUrl, {
+        ...options,
+        reason: `${options.reason} (redirected from ${url})`,
+        redirected: true,
+      });
+    }
     // Decided before anything is announced: an elided push IS the traversal it
     // becomes, and the traversal will make its own announcements when the
     // browser answers — a before/after cycle here would be about a navigation
@@ -21570,6 +21854,7 @@ const setupBrowserIntegrationViaHistory = ({
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       state,
+      redirected,
     } = options;
 
     // Where the entry being reached stands in this document's own stack —
@@ -21612,6 +21897,14 @@ const setupBrowserIntegrationViaHistory = ({
     } else {
       // traverse / reload: state comes from the history entry, no push/replace needed.
       markUrlAsVisited(url);
+      if (redirected) {
+        // The entry the browser is on names an address that only sends
+        // elsewhere — a cold load on it, or a back into it. Written over where
+        // it stands (the entry keeps its place in the stack, hence its state
+        // and the depth in it): pressing back must not walk into it again.
+        window.history.replaceState(state, null, url);
+        rememberEntryIsOfThisDocument();
+      }
       updateDocumentUrl(url);
       updateDocumentState(state);
     }
