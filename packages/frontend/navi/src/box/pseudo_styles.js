@@ -1,7 +1,7 @@
 import {
   createPubSub,
   dispatchInternalCustomEvent,
-  mergeTwoStyles,
+  mergeOneStyle,
 } from "@jsenv/dom";
 
 import { findControlHost, isControlHost } from "../control/control_dom.js";
@@ -965,8 +965,15 @@ export const initPseudoStyles = (
       onStateChange(state, oldPseudoState);
     }),
   );
-  element.addEventListener("navi_pseudo_state_request_check", () => {
+  const onRequestCheck = () => {
     checkPseudoClasses();
+  };
+  element.addEventListener("navi_pseudo_state_request_check", onRequestCheck);
+  addTeardown(() => {
+    element.removeEventListener(
+      "navi_pseudo_state_request_check",
+      onRequestCheck,
+    );
   });
 
   for (const pseudoClass of pseudoClasses) {
@@ -1008,6 +1015,11 @@ export const applyStyle = (
     return;
   }
   const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  // The same object comes back for every state change of a box whose inline
+  // style has no pseudo entry: nothing to write.
+  if (appliedStyleWeakMap.get(element) === styleToApply) {
+    return;
+  }
   updateStyle(element, styleToApply, preventInitialTransition);
 };
 
@@ -1022,52 +1034,68 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   ) {
     return styles;
   }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
+  let style = styles;
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
+    const requiredStates = getPseudoKeyRequiredStates(pseudoKey);
+    if (!requiredStates.every((state) => pseudoState[state])) {
+      continue;
     }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
+    if (style === styles) {
+      style = { ...styles };
+    }
+    // Both sides are already normalized for CSS by the box; only the
+    // properties that compose (a press scale on top of a translate) go through
+    // a merge, the rest is a plain override.
+    const styleToAdd = pseudoNamedStyles[pseudoKey];
+    for (const key of Object.keys(styleToAdd)) {
+      const value = styleToAdd[key];
+      if (value === undefined) {
+        continue;
+      }
+      if (key === "transform" || key === "willChange") {
+        style[key] = mergeOneStyle(style[key], value, key, "css");
+      } else {
+        style[key] = value;
+      }
+    }
   }
   return style;
 };
 
-const styleKeySetWeakMap = new WeakMap();
+// The state names a pseudo key asks for, parsed once: the same few keys come
+// back on every state change of every box that has them. "::x" alone always
+// matches; "::x:a:b" and ":a:b" ask for a and b.
+const pseudoKeyRequiredStatesMap = new Map();
+const getPseudoKeyRequiredStates = (pseudoKey) => {
+  const cached = pseudoKeyRequiredStatesMap.get(pseudoKey);
+  if (cached) {
+    return cached;
+  }
+  let requiredStates;
+  if (pseudoKey.startsWith("::")) {
+    const nextColonIndex = pseudoKey.indexOf(":", 2);
+    requiredStates =
+      nextColonIndex === -1
+        ? []
+        : getPseudoKeyRequiredStates(pseudoKey.slice(nextColonIndex));
+  } else {
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    requiredStates =
+      nextColonIndex === -1 ? [pseudoKey] : pseudoKey.slice(1).split(":");
+  }
+  pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
+  return requiredStates;
+};
+
+// element → the style object last written to it, so the next one is written
+// as a difference: the values that changed, the keys it no longer has.
+const appliedStyleWeakMap = new WeakMap();
 const elementTransitionWeakMap = new WeakMap();
 const elementRenderedWeakSet = new WeakSet();
-const NO_STYLE_KEY_SET = new Set();
+const NO_STYLE = {};
 const updateStyle = (element, style, preventInitialTransition) => {
-  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  const styleToApply = style || NO_STYLE;
+  const styleApplied = appliedStyleWeakMap.get(element) || NO_STYLE;
   // TRANSITION ANTI-FLICKER STRATEGY:
   // Problem: When setting both transition and styled properties simultaneously
   // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
@@ -1077,32 +1105,32 @@ const updateStyle = (element, style, preventInitialTransition) => {
   // transition to "none", then restore the intended transition after the frame completes.
   // We handle multiple updateStyle calls in the same frame gracefully - only one
   // requestAnimationFrame is scheduled per element, and the final transition value wins.
-  let styleKeySetToApply = styleKeySet;
+  let skipTransition = false;
   if (!elementRenderedWeakSet.has(element)) {
-    const hasTransition = styleKeySet.has("transition");
+    const hasTransition = Object.hasOwn(styleToApply, "transition");
     if (hasTransition || preventInitialTransition) {
-      if (elementTransitionWeakMap.has(element)) {
-        elementTransitionWeakMap.set(element, style?.transition);
-      } else {
+      if (!elementTransitionWeakMap.has(element)) {
         element.style.transition = "none";
-        elementTransitionWeakMap.set(element, style?.transition);
       }
-      // Don't apply the transition property now - we've set it to "none" temporarily
-      styleKeySetToApply = new Set(styleKeySet);
-      styleKeySetToApply.delete("transition");
+      elementTransitionWeakMap.set(element, styleToApply.transition);
+      // Stays "none" until the first frame puts the intended value back
+      skipTransition = true;
     }
     afterFirstFrame(element);
   }
 
-  // Apply all styles normally (excluding transition during anti-flicker)
-  const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySetToApply) {
-    const value = style[key];
+  for (const key of Object.keys(styleToApply)) {
+    const value = styleToApply[key];
     if (value === undefined || value === null) {
-      // Treat undefined/null as "remove" — leave key in keysToDelete
+      // a removal: handled below with the keys this style no longer has
       continue;
     }
-    keysToDelete.delete(key);
+    if (skipTransition && key === "transition") {
+      continue;
+    }
+    if (styleApplied[key] === value) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.setProperty(key, value);
     } else {
@@ -1110,8 +1138,15 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  // Remove obsolete styles
-  for (const key of keysToDelete) {
+  for (const key of Object.keys(styleApplied)) {
+    const previousValue = styleApplied[key];
+    if (previousValue === undefined || previousValue === null) {
+      continue;
+    }
+    const value = styleToApply[key];
+    if (value !== undefined && value !== null) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.removeProperty(key);
     } else {
@@ -1119,7 +1154,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  styleKeySetWeakMap.set(element, styleKeySet);
+  appliedStyleWeakMap.set(element, styleToApply);
 };
 
 // One frame for every element waiting for its first one, not one frame each.

@@ -214,12 +214,6 @@ import.meta.css = /* css */ `
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
         flex: 0 1 auto;
-        /* Overflow makes it focusable via tab: apply the outline styles */
-        outline-width: var(--navi-focus-outline-width);
-        /* Outline must appear ON the body, not outside */
-        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
-        outline-offset: calc(-1 * var(--navi-focus-outline-width));
-        overflow: auto;
 
         /* The same reading as the header's corners above, on all four: a body
            follows the corners of the box it is drawn in — which is also what
@@ -228,6 +222,12 @@ import.meta.css = /* css */ `
         border-top-right-radius: inherit;
         border-bottom-right-radius: inherit;
         border-bottom-left-radius: inherit;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
+        overflow: auto;
 
         &:focus-visible {
           outline-style: solid;
@@ -435,10 +435,10 @@ export const Box = (props) => {
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same
   // fact. Dialog and Popover get it the same way, by asking for that overflow.
-  const scrolls = ["overflow", "overflowX", "overflowY"].some((name) => {
-    const value = rest[name];
-    return value === "auto" || value === "scroll";
-  });
+  const scrolls =
+    isScrollingOverflow(rest.overflow) ||
+    isScrollingOverflow(rest.overflowX) ||
+    isScrollingOverflow(rest.overflowY);
   // <header>/<footer> rather than a div: the role is exactly what those tags
   // mean, and a screen reader gets it for free. The body stays a div — <main>
   // means "the main content of the document", which a popup's body is not.
@@ -555,7 +555,6 @@ export const Box = (props) => {
   const interactionsRef = useRef(null);
   interactionsRef.current = resolveInteractions(interactions);
 
-  const remainingPropKeySet = new Set(Object.keys(rest));
   // The box is only a frame and one of its descendants IS the component (a Button
   // and its content): everything, event handlers included, belongs to that
   // descendant.
@@ -583,6 +582,10 @@ export const Box = (props) => {
 
       preventInitialTransition,
     ];
+    // The pseudo state goes into the deps as key/value entries and never as the
+    // object itself: a control builds that object on every render, and its
+    // identity in the deps would re-run the sync — listeners, observers, style
+    // writes — on each of them, for a state that has not changed.
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
@@ -592,30 +595,28 @@ export const Box = (props) => {
         if (pseudoStateKeySet.has(key)) {
           pseudoStateKeySet.delete(key);
           const value = pseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         } else {
           const value = basePseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         }
       }
       for (const key of pseudoStateKeySet) {
         const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, value);
         innerPseudoState[key] = value;
       }
     } else if (basePseudoState) {
       innerPseudoState = basePseudoState;
       for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, basePseudoState[key]);
       }
     } else if (pseudoState) {
       innerPseudoState = pseudoState;
       for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, pseudoState[key]);
       }
     } else {
       innerPseudoState = PSEUDO_STATE_DEFAULT;
@@ -696,7 +697,6 @@ export const Box = (props) => {
     // style={{ ":hover": { backgroundColor: "red" } }}
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
-    boxPseudoNamedStyles = {};
     const visitProp = (
       value,
       name,
@@ -709,6 +709,9 @@ export const Box = (props) => {
       if (isPseudoElement || isPseudoClass) {
         styleDeps.push(name);
         pseudoClassesFromStyleSet.add(name);
+        if (boxPseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT) {
+          boxPseudoNamedStyles = {};
+        }
         const pseudoStyleContext = {
           ...styleContext,
           styleCSSVars: {
@@ -741,8 +744,8 @@ export const Box = (props) => {
             pseudoClassStyles,
             "pseudo_style",
           );
-          boxPseudoNamedStyles[name] = pseudoClassStyles;
         }
+        boxPseudoNamedStyles[name] = pseudoClassStyles;
         return;
       }
 
@@ -845,7 +848,7 @@ export const Box = (props) => {
         visitProp(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
-    for (const propName of remainingPropKeySet) {
+    for (const propName of Object.keys(rest)) {
       const propValue = rest[propName];
       if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
         if (canForwardToChild) {
@@ -854,9 +857,6 @@ export const Box = (props) => {
           selfForwardedProps[propName] = propValue;
         }
         continue;
-      }
-      if (canForwardToChild && toCopySet.has(propName)) {
-        childForwardedProps[propName] = propValue;
       }
       const isDataAttribute = propName.startsWith("data-");
       if (isDataAttribute) {
@@ -904,7 +904,6 @@ export const Box = (props) => {
       }
     }
 
-    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
@@ -992,8 +991,6 @@ export const Box = (props) => {
   );
 };
 
-const toCopySet = new Set([]);
-
 export const applySeparatorOnChildren = (children, separator) => {
   const flattenedChildren = toChildArray(children);
   if (flattenedChildren.length <= 1) {
@@ -1050,3 +1047,4 @@ const isNonZeroSpacing = (value) => {
   }
   return true;
 };
+const isScrollingOverflow = (value) => value === "auto" || value === "scroll";
