@@ -1952,7 +1952,18 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             detail: {},
           });
           chainEvent(propagateUpEvent, e);
-          s.realUIStateController.setUIState(child.uiState, propagateUpEvent);
+          // What the popup aggregates arrives in the popup's terms, where an
+          // empty multiple list is `undefined`. The picker answers a question of
+          // its own shape (see resolveEmptyUIState): a <Picker type="array">
+          // whose last item was unselected holds [], the same thing clearing it
+          // leaves — not a value that changes type on its owner the moment it
+          // empties.
+          const { emptyUIState } = s.realUIStateController;
+          const uiStateToAdopt =
+            child.uiState === undefined && emptyUIState !== undefined
+              ? emptyUIState
+              : child.uiState;
+          s.realUIStateController.setUIState(uiStateToAdopt, propagateUpEvent);
           updatingRef.current = false;
         },
       };

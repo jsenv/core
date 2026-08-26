@@ -25,6 +25,7 @@ import {
   useControlFacadeProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
@@ -745,9 +746,7 @@ const PickerButton = (props) => {
           ui === "default" ? null : (
             <Text
               className="navi_picker_value"
-              navi-placeholder={
-                value === undefined || value === "" ? "" : undefined
-              }
+              navi-placeholder={uiStateHoldsNothing(value) ? "" : undefined}
               maxLines={maxLines}
             >
               <PickerOwnContent>
