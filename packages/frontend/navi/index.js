@@ -255,7 +255,7 @@ export {
   formatTime,
   formatTimeRelative,
 } from "./src/text/format_time.js";
-export { Icon } from "./src/text/icon.jsx";
+export { Icon } from "./src/text/text.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
 export { interpolateText } from "./src/text/interpolate_text.js";
 export {
@@ -268,7 +268,7 @@ export { Meter } from "./src/text/meter.jsx";
 export { naviI18n } from "./src/text/navi_i18n.js";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity } from "./src/text/quantity.jsx";
-export { Text } from "./src/text/text.jsx";
+export { renderEmojiAsIcon, Text } from "./src/text/text.jsx";
 export { TextBox } from "./src/text/text_box.jsx";
 export { Time } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";

@@ -1,6 +1,6 @@
 import { useContext } from "preact/hooks";
 
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { Label } from "../field.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 

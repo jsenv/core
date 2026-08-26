@@ -16,8 +16,7 @@ import {
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { Icon } from "../../text/icon.jsx";
-import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
+import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";

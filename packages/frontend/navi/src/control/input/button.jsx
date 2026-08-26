@@ -127,17 +127,22 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 
 /**
  * @type {import("preact").FunctionComponent<{
- *   ownTarget?: boolean | "refuse",
+ *   ownTarget?: boolean | "refuse" | "always",
+ *   emojiAsIcon?: boolean,
  *   [key: string]: any,
  * }>}
- * @param {boolean|"refuse"} [ownTarget] A real target inside a zone that belongs
- *   to another control — a chip's cross on a picker's façade, an eye on a
- *   pressable row, a diskette inside a slide that travels. The press is this
- *   button's alone (no travel starts, no popup opens, nothing above answers) and
- *   its `onClick` waits for its own interaction gate instead of firing from the
- *   DOM. Where the zone around it is read-only, disabled or busy the button
- *   goes; `"refuse"` keeps it on screen refusing with a callout, for an
- *   affordance whose presence is information in itself.
+ * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
+ *   so the button keeps the height of its text — `Text`'s prop, on by default
+ *   here. Pass `false` to let an emoji draw at its natural size.
+ * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
+ *   that belongs to another control — a chip's cross on a picker's façade, an
+ *   eye on a pressable row, a diskette inside a slide that travels. The press is
+ *   this button's alone (no travel starts, no popup opens, no navi control above
+ *   answers) and its `onClick` waits for its own interaction gate instead of
+ *   firing from the DOM. What it does where the zone is read-only, disabled or
+ *   busy depends on whether it WRITES to the control it sits in: it goes by
+ *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
+ *   the zone's state entirely — for a gesture that never touched that control.
  */
 export const Button = createComponentResolver([
   ButtonFirstResolver,

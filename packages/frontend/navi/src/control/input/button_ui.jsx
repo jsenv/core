@@ -465,6 +465,7 @@ export const ButtonUI = (props) => {
     icon,
     cta,
     spacing,
+    emojiAsIcon = true,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -527,6 +528,7 @@ export const ButtonUI = (props) => {
       // without having to call preventDefault() on button clicks
       type="button"
       spacing={undefined}
+      emojiAsIcon={undefined}
       cta={undefined}
       pressEffect={undefined}
       loadingOutline={undefined}
@@ -575,18 +577,21 @@ export const ButtonUI = (props) => {
         color="var(--button-loader-color)"
       />
       <ControlChildrenWrapper {...controlChildrenWrapperProps}>
-        <ButtonContent spacing={spacing}>{children}</ButtonContent>
+        <ButtonContent spacing={spacing} emojiAsIcon={emojiAsIcon}>
+          {children}
+        </ButtonContent>
       </ControlChildrenWrapper>
     </Box>
   );
 };
-const ButtonContent = ({ spacing, children }) => {
+const ButtonContent = ({ spacing, emojiAsIcon, children }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return (
     <Text
       {...boxForwardedProps}
       display="inherit"
       spacing={spacing}
+      emojiAsIcon={emojiAsIcon}
       className="navi_button_content"
     >
       {children}

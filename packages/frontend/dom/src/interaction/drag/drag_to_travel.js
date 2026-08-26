@@ -178,7 +178,10 @@ const DRAG_RESISTANCE = 0.3;
 // from one travels, and the click it would have made is swallowed on the way
 // out. A drag SOURCE is not either: it says which way it goes and only takes
 // that (see DRAG_SOURCE_AXES_ATTRIBUTE) — but a dedicated handle is, being a
-// place whose only purpose is to be taken hold of, from the first pixel.
+// place whose only purpose is to be taken hold of, from the first pixel. And so
+// is an OWN TARGET: an element saying a press landing on it is aimed at IT,
+// which is the same sentence said to every gesture at once rather than to this
+// one (see DRAG_IGNORED_SELECTOR in drag_to.js).
 const DRAG_EXCLUDED_SELECTOR = [
   "input",
   "textarea",
@@ -187,6 +190,7 @@ const DRAG_EXCLUDED_SELECTOR = [
   '[contenteditable="true"]',
   "[data-drag-handle]",
   "[data-no-drag-travel]",
+  "[data-own-target]",
 ].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by

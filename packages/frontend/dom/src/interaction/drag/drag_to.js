@@ -180,7 +180,8 @@ const css = /* css */ `
   [data-drag-source] {
     cursor: default;
   }
-  [data-drag-ignore] {
+  [data-drag-ignore],
+  [data-own-target] {
     cursor: auto;
   }
 
@@ -274,6 +275,14 @@ const css = /* css */ `
 // At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
 import.meta.css = css;
+
+// What a press must not be read from at all. `data-drag-ignore` is said by
+// something whose press is its own business — a text one wants to select, a
+// control that reads the pointer itself. `data-own-target` is the same fact said
+// once for every gesture there is: an element declaring that a press landing on
+// it is aimed AT it, whatever it happens to sit inside (see also
+// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js).
+const DRAG_IGNORED_SELECTOR = "[data-drag-ignore],[data-own-target]";
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -842,7 +851,7 @@ export const startDragTo = (
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control that
   // owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -1026,7 +1035,7 @@ const startDragToCarryCopy = (
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control
   // that owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.

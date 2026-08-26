@@ -14,13 +14,24 @@
  * one wrong finds out by opening a popup it meant to keep shut. `ownTarget` is
  * that knowledge, said once.
  *
- * The other half is interactivity: the affordance is a control, so it already
- * refuses on its own terms once the zone around it holds it read-only — but a
- * caller's `onClick` is plain DOM and fires before any gate. So an own target
- * withholds the caller's handler until its own gate has allowed it, and by
- * default goes rather than greys: a remove cross that still removes is worse
- * than no cross, and one that refuses politely still says "there is something to
- * remove here" on a row that is only being read.
+ * The other half is interactivity, and the question that settles it is: **does
+ * this affordance write to the control it sits in?**
+ *
+ * - it does, and once the value cannot be changed it has nothing left to offer:
+ *   it GOES. A remove cross that still removes is worse than no cross, and one
+ *   that refuses politely still says "there is something to remove here" on a
+ *   row that is only being read. That is the default.
+ * - it does, but its presence is information in itself: `"refuse"` keeps it and
+ *   refuses in its own words, like every other navi control.
+ * - it does NOT — a diskette saving a row into the reader's own address book, a
+ *   badge explaining why a placement is odd. The read-only around it is about a
+ *   value it never touches, so `"always"` ignores it: the affordance stays lit
+ *   and stays pressable. It is on the caller to use it only for a gesture that
+ *   genuinely writes nothing to the control around it.
+ *
+ * Whichever mode, the affordance's own handler runs from inside its own gate
+ * rather than from the DOM: a caller's `onClick` fires before any of this, and
+ * would go off from a button drawn greyed.
  */
 
 import { useContext } from "preact/hooks";
@@ -31,7 +42,16 @@ import {
   ReadOnlyContext,
 } from "./control_context.js";
 
-export const OWN_TARGET_ATTRIBUTE = "data-navi-own-target";
+/**
+ * The whole claim, in the DOM, on any element — a `<button>` an application
+ * draws itself as much as a navi control. It is read from the outside and
+ * nowhere else: by the controls above (below), and by the gesture readers
+ * (@jsenv/dom's DRAG_EXCLUDED_SELECTOR and DRAG_IGNORED_SELECTOR), which is why
+ * one attribute is enough and the `ownTarget` prop only writes it.
+ *
+ * Its value is the mode, when there is one to say: `data-own-target="always"`.
+ */
+export const OWN_TARGET_ATTRIBUTE = "data-own-target";
 
 /**
  * Whether `event` was aimed at an own target sitting below this control — in
@@ -40,7 +60,7 @@ export const OWN_TARGET_ATTRIBUTE = "data-navi-own-target";
  * Read from the event's target rather than from a mark left by a handler: the
  * question is "who is this press for", and the DOM between the pointer and the
  * control is the whole answer. Nothing is asked of the own target itself, which
- * is what lets it be anything — a button, a link, a field.
+ * is what lets it be anything — a button, a link, a field, a bare element.
  */
 export const isAimedAtOwnTargetBelow = (event, controlHost) => {
   const target = event?.target;
@@ -64,19 +84,25 @@ export const isAimedAtOwnTargetBelow = (event, controlHost) => {
 };
 
 /**
- * Whether an own target has nothing to offer where it sits: the zone around it
- * is read-only, disabled or busy, so the affordance goes.
- *
- * `ownTarget="refuse"` keeps it on screen instead, refusing with a callout like
- * every other navi control — for an affordance whose presence is information in
- * itself (an eye that opens a profile is worth seeing on a row being read).
+ * Whether the read-only, disabled and busy of the zone around this own target
+ * are about it at all — see the modes at the top of this file.
+ */
+export const ownTargetIgnoresZoneState = (ownTarget) => ownTarget === "always";
+
+/**
+ * Whether an own target has nothing to offer where it sits: it writes to the
+ * control around it, and that control cannot be changed, so the affordance goes.
  */
 export const useOwnTargetHidden = (props) => {
   const disabled = useContext(DisabledContext);
   const readOnly = useContext(ReadOnlyContext);
   const loading = useContext(LoadingContext);
   const { ownTarget } = props;
-  if (!ownTarget || ownTarget === "refuse") {
+  if (
+    !ownTarget ||
+    ownTarget === "refuse" ||
+    ownTargetIgnoresZoneState(ownTarget)
+  ) {
     return false;
   }
   return Boolean(disabled || readOnly || loading);

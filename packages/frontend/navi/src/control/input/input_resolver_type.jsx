@@ -5,7 +5,7 @@ import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { Button } from "./button.jsx";
 import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
 import { InputTextualContext } from "./input_textual_context.js";

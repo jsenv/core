@@ -1,4 +1,4 @@
-import { Icon } from "../../text/icon.jsx";
+import { Icon } from "../../text/text.jsx";
 import { LoadingDotsSvg } from "./loading_dots_svg.jsx";
 import { LoadingIndicatorFluid } from "./loading_indicator_fluid.jsx";
 

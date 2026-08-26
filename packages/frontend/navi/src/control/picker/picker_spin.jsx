@@ -43,7 +43,7 @@ import {
   SlideContainer,
 } from "@jsenv/navi/src/layout/slide_container.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { triggerNaviCommand } from "../commands.js";

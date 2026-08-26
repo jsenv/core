@@ -10,9 +10,8 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
-import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import {
@@ -286,7 +285,7 @@ const css = /* css */ `
          means "open the picker". An own target is the exception, the same way
          the clear cross is one in the slot below: it says the press is aimed at
          IT, so it has to be reachable at all. */
-      [data-navi-own-target] {
+      [data-own-target] {
         pointer-events: auto;
       }
     }

@@ -11,8 +11,7 @@ import {
   WarningSvg,
 } from "../graphic/icons/level_svg.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
-import { Icon } from "./icon.jsx";
-import { Text } from "./text.jsx";
+import { Icon, Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -68,6 +67,9 @@ export const MessageBox = ({
   padding = "sm",
   icon,
   leftStripe,
+  // A message is free text: an emoji is expected in it, and must not push
+  // the first line down next to the icon and the close button.
+  emojiAsIcon = true,
   children,
   onClose,
   ...rest
@@ -116,7 +118,7 @@ export const MessageBox = ({
           {icon && (
             <Icon
               color="var(--x-message-color)"
-              height="1.5em"
+              height="1lh"
               maxHeight="auto"
               selfAlignY="start"
               aspectRatio="auto"
@@ -124,24 +126,36 @@ export const MessageBox = ({
               {icon}
             </Icon>
           )}
-          <Text>{children}</Text>
+          <Text emojiAsIcon={emojiAsIcon}>{children}</Text>
           {onClose && (
-            <Button
-              action={onClose}
-              icon
-              border="none"
-              alignX="center"
+            // A column as tall as the first line of the message, pinned to the
+            // top, the button centered in it: the close button stays level
+            // with the first line however many lines the message takes (same
+            // layout as Callout).
+            <Box
+              flex
               alignY="center"
-              style={{
-                ":hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.1)",
-                },
-              }}
+              height="1lh"
+              selfAlignY="start"
+              shrink={false}
             >
-              <Icon>
-                <CloseSvg />
-              </Icon>
-            </Button>
+              <Button
+                action={onClose}
+                icon
+                border="none"
+                alignX="center"
+                alignY="center"
+                style={{
+                  ":hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.1)",
+                  },
+                }}
+              >
+                <Icon>
+                  <CloseSvg />
+                </Icon>
+              </Button>
+            </Box>
           )}
         </MessageBoxReportTitleChildContext.Provider>
       </MessageBoxStatusContext.Provider>

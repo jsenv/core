@@ -1,7 +1,6 @@
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { formatNumber } from "./format_number.js";
-import { Icon } from "./icon.jsx";
-import { Text } from "./text.jsx";
+import { Icon, Text } from "./text.jsx";
 import { Unit } from "./unit.jsx";
 
 const css = /* css */ `

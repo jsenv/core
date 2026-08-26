@@ -95,7 +95,8 @@ const css = /* css */ `
        not to the gesture, and two fingers are never a drag. */
     touch-action: pinch-zoom;
   }
-  [data-drag-ignore] {
+  [data-drag-ignore],
+  [data-own-target] {
     -webkit-touch-callout: default;
     touch-action: auto;
   }

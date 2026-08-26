@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { useNextResolver } from "../../resolver/resolver.jsx";
 import { Button } from "./button.jsx";
 import { InputRightSlot } from "./input_components.jsx";

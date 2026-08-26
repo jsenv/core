@@ -33,7 +33,7 @@ import { useRef } from "preact/hooks";
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import {
   inputCss,

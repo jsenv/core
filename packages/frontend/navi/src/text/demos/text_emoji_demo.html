@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Text emojiAsIcon Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      h2 {
+        margin: 32px 0 4px;
+        font-size: 1rem;
+      }
+      h3 {
+        margin: 20px 0 6px;
+        color: #444;
+        font-weight: normal;
+        font-size: 0.9rem;
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #666;
+        font-size: 13px;
+      }
+      /* Deux exemples collés bord à bord : une différence de hauteur se voit
+         sans rien mesurer. */
+      .compare {
+        display: flex;
+        align-items: flex-start;
+      }
+      .compare > * {
+        outline: 1px dotted #6a8fd8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Badge, Box, Button, Icon, Text } from "@jsenv/navi";
+
+      const PersonSvg = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6z" />
+        </svg>
+      );
+
+      const Compare = ({ children }) => <div class="compare">{children}</div>;
+
+      const Row = ({ name, lineHeight, emojiAsIcon }) => (
+        <Box
+          flex
+          alignY="center"
+          spacing="s"
+          width="16em"
+          paddingX="s"
+          paddingY="xxs"
+          background="#dce7fb"
+          color="#1f3f8a"
+          lineHeight={lineHeight}
+        >
+          <Icon shrink={false}>
+            <PersonSvg />
+          </Icon>
+          <Text shrink={false}>Orga :</Text>
+          <Text maxLines={1} expandX emojiAsIcon={emojiAsIcon}>
+            {name}
+          </Text>
+          <Badge shrink={false}>7-8</Badge>
+        </Box>
+      );
+      const RowCompare = (props) => (
+        <Compare>
+          <Row name="before after and more" {...props} />
+          <Row name="before 🌸 after and more" {...props} />
+          <Row name="before a little bit longer 🌸" {...props} />
+        </Compare>
+      );
+
+      const MESSAGE =
+        "Salut, on se retrouve au parc vers 19h ? Ramène des chips et ta bonne humeur, il paraît qu'il y aura de la musique jusqu'à tard.";
+      const MESSAGE_WITH_EMOJI =
+        "Salut 👋 on se retrouve au parc 🌳 vers 19h ? Ramène des chips 🍟 et ta bonne humeur 😄, il paraît qu'il y aura de la musique 🎶 jusqu'à tard.";
+      const Paragraph = ({ children, ...props }) => (
+        <Text block width="18em" paddingX="s" {...props}>
+          {children}
+        </Text>
+      );
+      const ParagraphCompare = ({
+        text = MESSAGE,
+        textWithEmoji = MESSAGE_WITH_EMOJI,
+        ...props
+      }) => (
+        <Compare>
+          <Paragraph {...props}>{text}</Paragraph>
+          <Paragraph {...props}>{textWithEmoji}</Paragraph>
+        </Compare>
+      );
+
+      const DENSE =
+        "Ce soir c'est la fête au parc avec pizza et musique ! Ramène des chips, des boissons et surtout ta bonne humeur. On finit tard promis !";
+      const DENSE_WITH_EMOJI =
+        "Ce soir 🎉 c'est la fête 🥳 au parc 🌳 avec pizza 🍕 et musique 🎶 ! Ramène 🙏 des chips 🍟, des boissons 🥤 et surtout 😄 ta bonne humeur ✨. On finit 🌙 tard 🕛 promis 🤞 !";
+      const DenseCompare = (props) => (
+        <ParagraphCompare
+          text={DENSE}
+          textWithEmoji={DENSE_WITH_EMOJI}
+          emojiAsIcon
+          {...props}
+        />
+      );
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Text emojiAsIcon</h1>
+
+            <h2>Une ligne tronquée (maxLines={1})</h2>
+            <p class="caption">
+              Sans emoji, avec l'emoji visible, avec l'emoji derrière
+              l'ellipsis.
+            </p>
+            <h3>Rien</h3>
+            <RowCompare />
+            <h3>lineHeight="1.5"</h3>
+            <RowCompare lineHeight="1.5" />
+            <h3>emojiAsIcon</h3>
+            <RowCompare emojiAsIcon />
+
+            <h2>Multi-ligne</h2>
+            <h3>Rien</h3>
+            <ParagraphCompare />
+            <h3>lineHeight="1.5"</h3>
+            <ParagraphCompare lineHeight="1.5" />
+            <h3>emojiAsIcon</h3>
+            <ParagraphCompare emojiAsIcon />
+
+            <h2>emojiAsIcon, cas avancés</h2>
+            <h3>Beaucoup d'emojis</h3>
+            <DenseCompare />
+            <h3>Beaucoup d'emojis, lineHeight="1.2"</h3>
+            <DenseCompare lineHeight="1.2" />
+            <h3>Beaucoup d'emojis, lineHeight="1.4"</h3>
+            <DenseCompare lineHeight="1.4" />
+            <h3>Emojis à la suite, séquences, drapeaux</h3>
+            <Compare>
+              <Paragraph emojiAsIcon>
+                Bravo 🎉🎉🎉 à toute l'équipe 👨‍👩‍👧 de 🇫🇷 et 🇯🇵 ❤️🧡💛💚💙💜 pour
+                ce résultat 👍🏽👍🏿👍🏻 !
+              </Paragraph>
+              <Paragraph emojiAsIcon>
+                🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+              </Paragraph>
+            </Compare>
+            <h3>Grande taille, size="xl"</h3>
+            <DenseCompare size="xl" />
+            <h3>Grande taille, size="xl", lineHeight="1.2"</h3>
+            <DenseCompare size="xl" lineHeight="1.2" />
+
+            <h2>Badge</h2>
+            <h3>Rien</h3>
+            <Compare>
+              <Badge>Nouveau</Badge>
+              <Badge>Nouveau 🎉</Badge>
+            </Compare>
+            <h3>lineHeight="1.5"</h3>
+            <Compare>
+              <Badge lineHeight="1.5">Nouveau</Badge>
+              <Badge lineHeight="1.5">Nouveau 🎉</Badge>
+            </Compare>
+            <h3>emojiAsIcon</h3>
+            <Compare>
+              <Badge emojiAsIcon>Nouveau</Badge>
+              <Badge emojiAsIcon>Nouveau 🎉</Badge>
+            </Compare>
+
+            <h2>Button</h2>
+            <h3>emojiAsIcon={"{false}"}</h3>
+            <Compare>
+              <Button emojiAsIcon={false}>Envoyer</Button>
+              <Button emojiAsIcon={false}>Envoyer 🚀</Button>
+            </Compare>
+            <h3>emojiAsIcon={"{false}"} lineHeight="1.5"</h3>
+            <Compare>
+              <Button emojiAsIcon={false} lineHeight="1.5">
+                Envoyer
+              </Button>
+              <Button emojiAsIcon={false} lineHeight="1.5">
+                Envoyer 🚀
+              </Button>
+            </Compare>
+            <h3>Par défaut (emojiAsIcon)</h3>
+            <Compare>
+              <Button>Envoyer</Button>
+              <Button>Envoyer 🚀</Button>
+            </Compare>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

@@ -531,15 +531,11 @@ sideways), while a `move` goes wherever it is put, a `land` wherever the board h
 places and a `toss` wherever it was thrown (`xy`). `data-drag-delay`,
 `data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
 
-### A control inside something draggable
+### An affordance inside somebody else's box: `ownTarget`
 
-`ownTarget` on the control says it: a chip's cross inside a carried piece, an
-eye on a row that travels, a diskette on a picker's façade. The press belongs to
-that control alone — no gesture starts under it, and nothing above it answers
-the mousedown or the click. It also follows the interactivity of the zone around
-it: read-only, disabled or busy, the affordance goes rather than greys (pass
-`ownTarget="refuse"` for one whose presence is information in itself), and its
-`onClick` waits for its own gate instead of firing from the DOM.
+A chip's cross inside a carried piece, an eye on a row that travels, a diskette
+on a picker's façade. It is aimed AT, not merely inside, and the press belongs
+to it alone:
 
 ```jsx
 <Badge.Button ownTarget onClick={() => remove(id)}>
@@ -547,9 +543,50 @@ it: read-only, disabled or busy, the affordance goes rather than greys (pass
 </Badge.Button>
 ```
 
-`data-drag-ignore` says the same thing to the gesture alone, for something that
-is not a control: the press there is none of the gesture's business, and the
-element keeps both its cursor and its text selection.
+No gesture starts under it, no navi control above it answers the mousedown or
+the click, and its `onClick` waits for its own interaction gate instead of
+firing from the DOM.
+
+#### Does it write to the control it sits in?
+
+That question, and nothing else, picks the mode:
+
+| what it does                                                 | mode                 | on a read-only / disabled / busy zone     |
+| ------------------------------------------------------------ | -------------------- | ----------------------------------------- |
+| writes to it (a cross that removes, a stepper)               | `ownTarget`          | it goes                                   |
+| writes to it, and its presence says there is something there | `ownTarget="refuse"` | it stays and refuses with a callout       |
+| never touches it (a diskette saving into MY address book)    | `ownTarget="always"` | nothing changes: still lit, still pressed |
+
+A greyed cross that still removes is worse than no cross — hence the default.
+`"always"` is the other extreme and the caller owns it: the zone's read-only is
+about a value the affordance does not write, so answering "read-only" to a
+gesture that was never going to write anything says nothing true. Use it only
+when that is really the case.
+
+#### On an element you draw yourself
+
+The claim is one attribute, and nothing is asked of the element carrying it —
+`ownTarget` is only the prop that writes it on a navi control:
+
+```jsx
+<button class="court_side" data-own-target="always" onClick={explain}>
+```
+
+That is what the controls above read, and what the gesture readers read
+(`data-drag-handle`, `data-drag-ignore` and friends are the same vocabulary). An
+application keeps its own drawing and gets the press ownership all the same.
+
+#### navi steps back; a plain `onClick` does not
+
+What `ownTarget` stops is navi answering: the controls above it, and the
+gestures. It does **not** stop the event — the propagation is left whole, so
+that everything which is not a navi interaction still sees the press it always
+saw. A raw `onClick` on an ancestor is one of those, and still fires; stop it
+there yourself if it must not.
+
+`data-drag-ignore` says a narrower thing, to the gesture alone: the press there
+is none of the gesture's business, and the element keeps both its cursor and its
+text selection.
 
 ### What says a thing can be picked up
 

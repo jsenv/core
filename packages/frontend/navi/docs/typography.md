@@ -28,7 +28,7 @@ same names — `size="l"` is a font size, `padding="l"` is a gap.
 
 Live examples: `src/text/demos/*_demo.html` — one page per concern
 (`text_overflow_demo.html`, `text_spacing_demo.html`, `text_loading_demo.html`,
-`text_attach_last_child_demo.html`, `icon_demo.html`).
+`text_attach_last_child_demo.html`, `text_emoji_demo.html`, `icon_demo.html`).
 
 ## Truncating: `maxLines`, and nothing else
 
@@ -61,7 +61,9 @@ width must say it too**, or the whole chain grows instead of truncating:
 
 ```jsx
 <Box flex width="300" spacing="s">
-  <Box flex expandX minWidth="0">   {/* without minWidth the row just grows */}
+  <Box flex expandX minWidth="0">
+    {" "}
+    {/* without minWidth the row just grows */}
     <Text maxLines={1}>…</Text>
   </Box>
 </Box>
@@ -152,6 +154,45 @@ Two things opt out of that flow:
 - `preventSpaceUnderlines` — inside an `<a>`, browsers draw the underline under
   the space characters too. This replaces them with padding-based spaces, so the
   underline stops at the text. `Link` sets it.
+
+## Emoji
+
+**An emoji is not a character the layout can absorb.** The system emoji fonts
+(Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji) have a taller
+ascent/descent than any text font, so the moment an emoji sits in a line, that
+line is taller than the ones around it: a row shifts down next to its
+neighbours, a paragraph's lines are unevenly spaced, a truncated label no
+longer lines up with its siblings.
+
+So, first: **an emoji is only expected in free text a user typed** — a message,
+a comment, a description. It has no business in a name, a title, an identifier,
+a label. Validate those fields so it never gets in, rather than teaching every
+row of the app to survive it.
+
+Where it is expected, `emojiAsIcon`:
+
+```jsx
+<Text emojiAsIcon>Salut 👋 on se retrouve au parc 🌳 ?</Text>
+```
+
+Every emoji found in the string children is rendered inside an `Icon`, which
+caps it at `1em` and centers it on the line like any glyph icon — the line keeps
+the height of its text, on one line or several. This is what chat apps do (an
+emoji is a 1em box, never a glyph with its own metrics). `Button` and
+`MessageBox` have it on by default — a label is one line whose height
+everything around it relies on, a message is free text; `Badge` forwards it,
+opt-in.
+
+What it does not do, and that is accepted: under `maxLines` the `Text` clips at
+its own box — that is what truncation is — and an emoji drawn a little beyond
+its 1em box can lose a sliver at the top. The line stays aligned, which is the
+part that matters.
+
+**Do not raise `lineHeight` because of emoji.** The default line height keeps
+text compact and, with `emojiAsIcon`, holds up even when nearly every word is
+an emoji (see the dense cases in `text_emoji_demo.html`). A `lineHeight` is a
+typographic choice for the text itself — a paragraph that wants air — never a
+workaround for a glyph that grew too tall; that glyph gets `emojiAsIcon`.
 
 ## Text that must not move when its style changes
 

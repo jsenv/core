@@ -98,7 +98,7 @@ import {
   ChevronUpSvg,
 } from "../graphic/icons/chevron_stroke_svg.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { Icon } from "../text/icon.jsx";
+import { Icon } from "../text/text.jsx";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 
 const css = /* css */ `

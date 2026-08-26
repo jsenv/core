@@ -202,7 +202,8 @@ consistency across the app, not from any single call site.
   `Text`, `maxLines` as the one way to truncate (and why `lineClamp={1}` is
   not it), what makes truncation actually happen in a flex row, and the two
   opposite shapes of "icon | text | icon" — the end icon kept outside the
-  truncating text, or `attachLastChild` so it never lands alone on a line.
+  truncating text, or `attachLastChild` so it never lands alone on a line —
+  and why an emoji belongs only in free text, rendered with `emojiAsIcon`.
   Read it before writing an overflowing label or a row with a trailing icon.
 - `docs/i18n.md` — where the texts an app displays live: `interpolateText` /
   `<Interpolate>` for one sentence, `createI18n` for the app's registry,
@@ -217,7 +218,11 @@ consistency across the app, not from any single call site.
 - `docs/interactions.md` — the `interactions` prop: making a component answer a
   swipe, a held press, a shortcut, and registering a gesture navi does not have.
   It also holds `ownTarget`, for an affordance an application draws inside a
-  zone that belongs to another control — a chip's cross, an eye, a diskette.
+  zone that belongs to another control — a chip's cross, an eye, a diskette:
+  the three modes and the question that picks one (does it write to the control
+  it sits in?), the `data-own-target` attribute for an element you draw
+  yourself, and what `ownTarget` does NOT stop (a plain `onClick` on an
+  ancestor).
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi — and before stopping the propagation of

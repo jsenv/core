@@ -51,7 +51,10 @@ import {
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
-import { OWN_TARGET_ATTRIBUTE } from "./own_target.js";
+import {
+  OWN_TARGET_ATTRIBUTE,
+  ownTargetIgnoresZoneState,
+} from "./own_target.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -1471,13 +1474,12 @@ const useInteractiveProps = (
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
   if (props.ownTarget) {
-    // "This press is mine" said in the DOM, because that is where it is read
-    // from the outside: by the controls above (see own_target.js), and by the
-    // two gesture readers below — the one that travels a box and the one that
-    // carries a piece, each with its own way of being told to keep out.
-    controlRootProps[OWN_TARGET_ATTRIBUTE] = "";
-    controlRootProps["data-no-drag-travel"] = "";
-    controlRootProps["data-drag-ignore"] = "";
+    // One attribute, in the DOM, because that is where the claim is read from —
+    // by the controls above and by the gesture readers below (see
+    // own_target.js). The prop is the ergonomic form of it and nothing more: an
+    // element an application draws itself writes the same attribute by hand.
+    controlRootProps[OWN_TARGET_ATTRIBUTE] =
+      typeof props.ownTarget === "string" ? props.ownTarget : "";
   }
   const { "navi-control-proxy-for": naviProxyFor } = props;
   controlHostProps["navi-control-proxy-for"] = naviProxyFor;
@@ -1505,13 +1507,23 @@ const useInteractiveProps = (
     });
   }
   control_state_props: {
-    const controlDisabled = useContext(DisabledContext);
-    const controlReadOnly = useContext(ReadOnlyContext);
+    const controlDisabledFromAbove = useContext(DisabledContext);
+    const controlReadOnlyFromAbove = useContext(ReadOnlyContext);
     const controlRequired = useContext(RequiredContext);
-    const controlLoading = useContext(LoadingContext);
+    const controlLoadingFromAbove = useContext(LoadingContext);
     const parentActionRequester = useContext(ActionRequesterContext);
     const actionStatus = useActionStatus(boundAction);
     const { disabled, required, readOnly, loading, optimistic } = props;
+
+    // `ownTarget="always"`: an affordance that writes nothing to the control it
+    // sits in has no business inheriting that control's state — a diskette
+    // saving a row into the reader's own address book stays pressable on a game
+    // nobody may edit. Its own props still hold; only what came from above is
+    // dropped (see own_target.js for the three modes).
+    const zoneStateApplies = !ownTargetIgnoresZoneState(props.ownTarget);
+    const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
+    const controlReadOnly = zoneStateApplies && controlReadOnlyFromAbove;
+    const controlLoading = zoneStateApplies && controlLoadingFromAbove;
 
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
@@ -1527,6 +1539,7 @@ const useInteractiveProps = (
     // at, focused and pressed — and answers why (see readonly_constraint.js) —
     // but cannot be taken.
     const readOnlyFromParentMaxLengthGuard = Boolean(
+      zoneStateApplies &&
       uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(
         uiStateController,
       ),
