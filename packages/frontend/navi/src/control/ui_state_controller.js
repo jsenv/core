@@ -1928,18 +1928,18 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           if (child !== firstChildControllerRef.current) {
             return;
           }
-          if (
-            silent &&
-            uiStateHoldsNothing(child.uiState) &&
-            !uiStateHoldsNothing(s.realUIStateController.uiState)
-          ) {
+          if (silent && uiStateHoldsNothing(child.uiState)) {
             // A silent sync means the child's own structure changed (children
             // mounted/unmounted), not that the user acted. A child that ends up
             // with no value there is one that currently *cannot* express one —
             // a <List loading> holds no items yet, a popup whose items are gone
             // aggregates to the empty array its stateType falls back to — which
             // must not read as the user clearing the picker, nor fire its
-            // uiAction.
+            // uiAction. And when the picker holds nothing either, there is
+            // still nothing to adopt: the sync would only respell one nothing
+            // as another (an array picker's [] becoming undefined, say) and
+            // hand that to uiAction — an empty array picker opened its popup
+            // and told its owner the value changed.
             return;
           }
           updatingRef.current = true;
