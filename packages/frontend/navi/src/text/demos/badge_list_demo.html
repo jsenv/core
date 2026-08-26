@@ -173,7 +173,13 @@
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
             <Text bold>maxRows={1}</Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              inline
+              flex
+            >
               <BadgeList maxRows={1}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
@@ -195,7 +201,13 @@
             </Box>
 
             <Text bold>maxRows={2}</Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              inline
+              flex
+            >
               <BadgeList maxRows={2}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
@@ -217,7 +229,13 @@
             </Box>
 
             <Text bold>maxRows={3}</Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              inline
+              flex
+            >
               <BadgeList maxRows={3}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
@@ -238,10 +256,12 @@
               </BadgeList>
             </Box>
 
-            <Text bold>Resizable — drag to test adaptation</Text>
+            <Text bold>max rows 2 + Resizable — drag to test adaptation</Text>
             <Box
               border="2px dotted #aaa"
               borderRadius="4px"
+              inline
+              flex
               style={{
                 resize: "horizontal",
                 overflow: "hidden",
@@ -310,7 +330,13 @@
             <Text bold>
               max={2} combined with maxRows={1}
             </Text>
-            <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
+            <Box
+              maxWidth="300px"
+              border="2px dotted #aaa"
+              borderRadius="4px"
+              inline
+              flex
+            >
               <BadgeList max={2} maxRows={1}>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
