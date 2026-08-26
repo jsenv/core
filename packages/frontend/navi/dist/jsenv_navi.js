@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, stringifyStyle as stringifyStyle$1, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, hasCSSSizeUnit, resolveOklchLightness, contrastColor, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, stringifyStyle as stringifyStyle$1, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$15 = /* css */`
+const css$14 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -102,7 +102,7 @@ const css$15 = /* css */`
     }
   }
 `;
-import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$14, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -371,7 +371,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$14 = /* css */`
+const css$13 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -389,7 +389,7 @@ const css$14 = /* css */`
     }
   }
 `;
-import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$13, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
@@ -2335,17 +2335,37 @@ const ActionRequesterContext = createContext();
  * one wrong finds out by opening a popup it meant to keep shut. `ownTarget` is
  * that knowledge, said once.
  *
- * The other half is interactivity: the affordance is a control, so it already
- * refuses on its own terms once the zone around it holds it read-only — but a
- * caller's `onClick` is plain DOM and fires before any gate. So an own target
- * withholds the caller's handler until its own gate has allowed it, and by
- * default goes rather than greys: a remove cross that still removes is worse
- * than no cross, and one that refuses politely still says "there is something to
- * remove here" on a row that is only being read.
+ * The other half is interactivity, and the question that settles it is: **does
+ * this affordance write to the control it sits in?**
+ *
+ * - it does, and once the value cannot be changed it has nothing left to offer:
+ *   it GOES. A remove cross that still removes is worse than no cross, and one
+ *   that refuses politely still says "there is something to remove here" on a
+ *   row that is only being read. That is the default.
+ * - it does, but its presence is information in itself: `"refuse"` keeps it and
+ *   refuses in its own words, like every other navi control.
+ * - it does NOT — a diskette saving a row into the reader's own address book, a
+ *   badge explaining why a placement is odd. The read-only around it is about a
+ *   value it never touches, so `"always"` ignores it: the affordance stays lit
+ *   and stays pressable. It is on the caller to use it only for a gesture that
+ *   genuinely writes nothing to the control around it.
+ *
+ * Whichever mode, the affordance's own handler runs from inside its own gate
+ * rather than from the DOM: a caller's `onClick` fires before any of this, and
+ * would go off from a button drawn greyed.
  */
 
 
-const OWN_TARGET_ATTRIBUTE = "data-navi-own-target";
+/**
+ * The whole claim, in the DOM, on any element — a `<button>` an application
+ * draws itself as much as a navi control. It is read from the outside and
+ * nowhere else: by the controls above (below), and by the gesture readers
+ * (@jsenv/dom's DRAG_EXCLUDED_SELECTOR and DRAG_IGNORED_SELECTOR), which is why
+ * one attribute is enough and the `ownTarget` prop only writes it.
+ *
+ * Its value is the mode, when there is one to say: `data-own-target="always"`.
+ */
+const OWN_TARGET_ATTRIBUTE = "data-own-target";
 
 /**
  * Whether `event` was aimed at an own target sitting below this control — in
@@ -2354,7 +2374,7 @@ const OWN_TARGET_ATTRIBUTE = "data-navi-own-target";
  * Read from the event's target rather than from a mark left by a handler: the
  * question is "who is this press for", and the DOM between the pointer and the
  * control is the whole answer. Nothing is asked of the own target itself, which
- * is what lets it be anything — a button, a link, a field.
+ * is what lets it be anything — a button, a link, a field, a bare element.
  */
 const isAimedAtOwnTargetBelow = (event, controlHost) => {
   const target = event?.target;
@@ -2378,19 +2398,25 @@ const isAimedAtOwnTargetBelow = (event, controlHost) => {
 };
 
 /**
- * Whether an own target has nothing to offer where it sits: the zone around it
- * is read-only, disabled or busy, so the affordance goes.
- *
- * `ownTarget="refuse"` keeps it on screen instead, refusing with a callout like
- * every other navi control — for an affordance whose presence is information in
- * itself (an eye that opens a profile is worth seeing on a row being read).
+ * Whether the read-only, disabled and busy of the zone around this own target
+ * are about it at all — see the modes at the top of this file.
+ */
+const ownTargetIgnoresZoneState = (ownTarget) => ownTarget === "always";
+
+/**
+ * Whether an own target has nothing to offer where it sits: it writes to the
+ * control around it, and that control cannot be changed, so the affordance goes.
  */
 const useOwnTargetHidden = (props) => {
   const disabled = useContext(DisabledContext);
   const readOnly = useContext(ReadOnlyContext);
   const loading = useContext(LoadingContext$1);
   const { ownTarget } = props;
-  if (!ownTarget || ownTarget === "refuse") {
+  if (
+    !ownTarget ||
+    ownTarget === "refuse" ||
+    ownTargetIgnoresZoneState(ownTarget)
+  ) {
     return false;
   }
   return Boolean(disabled || readOnly || loading);
@@ -6861,6 +6887,10 @@ const findControlProxy = (el) => {
   return firstProxy;
 };
 
+let renderMessageText = text => text;
+const setCalloutMessageTextRenderer = renderer => {
+  renderMessageText = renderer;
+};
 const CalloutRequestCloseContext = createContext();
 const useCalloutRequestClose = () => {
   return useContext(CalloutRequestCloseContext);
@@ -6875,6 +6905,48 @@ const renderIntoCallout = (jsx$1, calloutMessageElement, {
   render(calloutJsx, calloutMessageElement);
 };
 
+// An HTML message is rendered through preact rather than innerHTML so that its
+// text can go through renderMessageText: an emoji in a validation message must
+// not make the first line taller than the icon and close button beside it.
+const renderHtmlIntoCallout = (html, calloutMessageElement, {
+  requestClose
+}) => {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  renderIntoCallout(domToVNodes(template.content), calloutMessageElement, {
+    requestClose
+  });
+};
+
+// Unmounts whatever preact rendered before the element is filled by hand
+// (a DOM node, an iframe); innerHTML alone would leave preact believing its
+// tree is still there.
+const clearCalloutMessage = calloutMessageElement => {
+  render(null, calloutMessageElement);
+  calloutMessageElement.innerHTML = "";
+};
+const domToVNodes = node => {
+  const vnodes = [];
+  for (const child of node.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      vnodes.push(renderMessageText(child.data));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) {
+      continue;
+    }
+    const props = {};
+    for (const {
+      name,
+      value
+    } of child.attributes) {
+      props[name] = value;
+    }
+    vnodes.push(h(child.localName, props, ...domToVNodes(child)));
+  }
+  return vnodes;
+};
+
 installImportMetaCssBuild(import.meta);/**
  * A callout component that mimics native browser validation messages.
  * Features:
@@ -6884,7 +6956,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$13 = /* css */`
+const css$12 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6986,7 +7058,10 @@ const css$13 = /* css */`
       }
 
       .navi_callout_body {
-        --callout-icon-height: round(1.5em, 1px);
+        /* The first line of the message: the icon and the close button sit
+           in columns of that height, pinned to the top, so both stay level
+           with it however many lines the message takes. */
+        --callout-icon-height: round(1lh, 1px);
 
         position: relative;
         display: flex;
@@ -7042,10 +7117,15 @@ const css$13 = /* css */`
       align-self: flex-start;
 
       .navi_callout_close_button {
-        width: 1em;
-        height: 1em;
-        padding: 0;
-        align-self: center;
+        /* A square filling the column, so the whole first line is the target;
+           the padding keeps the cross itself at glyph size. */
+        display: inline-flex;
+        box-sizing: border-box;
+        aspect-ratio: 1 / 1;
+        height: 100%;
+        padding: 0.2em;
+        align-items: center;
+        justify-content: center;
         color: currentColor;
         font-size: inherit;
         background: none;
@@ -7127,7 +7207,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -7309,11 +7389,11 @@ const openCallout = (message, {
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
       debug(`callout update message (node)`);
-      calloutMessageElement.innerHTML = "";
+      clearCalloutMessage(calloutMessageElement);
       calloutMessageElement.appendChild(newMessage);
     } else if (typeof newMessage === "function") {
       debug(`callout update message (function)`);
-      calloutMessageElement.innerHTML = "";
+      clearCalloutMessage(calloutMessageElement);
       newMessage({
         renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
           requestClose
@@ -7338,12 +7418,13 @@ const openCallout = (message, {
         iframe.style.backgroundColor = "white";
         iframe.srcdoc = newMessage;
         debug(`callout update message (html document iframe)`);
-        // Clear existing content and add iframe
-        calloutMessageElement.innerHTML = "";
+        clearCalloutMessage(calloutMessageElement);
         calloutMessageElement.appendChild(iframe);
       } else {
         debug(`callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`);
-        calloutMessageElement.innerHTML = newMessage;
+        renderHtmlIntoCallout(String(newMessage), calloutMessageElement, {
+          requestClose
+        });
       }
     }
     // After updating content the callout size likely changed — re-position immediately
@@ -19419,7 +19500,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$12 = /* css */`
+installImportMetaCssBuild(import.meta);const css$11 = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -19451,7 +19532,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -19656,7 +19737,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$11 = /* css */`
+installImportMetaCssBuild(import.meta);const css$10 = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -19693,7 +19774,7 @@ installImportMetaCssBuild(import.meta);const css$11 = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$11, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -19883,6 +19964,256 @@ const getHrefTargetInfo = (href) => {
   };
 };
 
+/**
+ * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
+ * or popover visibility.
+ *
+ * Motivation: some effects (auto-scroll, measurement, focus) only make sense
+ * when the element is actually presented on screen. A plain useLayoutEffect
+ * fires on mount even when the component is inside a closed <dialog>, a
+ * collapsed <details>, or a hidden popover, where scroll and layout operations
+ * are no-ops.
+ *
+ * Behavior:
+ *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
+ *     useLayoutEffect with the provided deps.
+ *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
+ *     the callback once the ancestor opens — see @jsenv/dom's own
+ *     observeAncestorOpenState for exactly how that's detected, and why it
+ *     matters that it happens before the browser paints.
+ *   - Inside an open ancestor → runs on mount AND every subsequent open.
+ *
+ * The callback's second argument is always a `navi_displayed` CustomEvent,
+ * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
+ *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
+ *     `{ ancestor: document, ancestorType: "document" }`.
+ *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
+ *     | "popover" | "details" | "aria-expanded" }`.
+ * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
+ *   - true — the element was already mounted and the ancestor just opened,
+ *     revealing it along with everything else it holds. The opening has an
+ *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
+ *     should defer to it — see use_auto_focus.js.
+ *   - false — the element was mounted just now, into a surface already on
+ *     screen (or into the plain document). Nothing else owns this appearance:
+ *     what the element says about itself (an autofocus, a measurement) is the
+ *     only word there is.
+ *
+ * Usage:
+ *   useDisplayedLayoutEffect(ref, () => {
+ *     scrollToSelected();
+ *   }, []);
+ */
+const useDisplayedLayoutEffect = (ref, callback, deps) => {
+  if (typeof callback !== "function") {
+    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
+  }
+
+  // Keep a stable ref so the open listener always calls the latest callback
+  // without needing to be re-registered when deps change.
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  // Run on mount (or when deps change) — but only if the element is visible.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const ancestor = closestOpenableAncestor(el);
+    if (!ancestor) {
+      callbackRef.current(el, createDisplayedEvent(document, false));
+      return;
+    }
+    if (!isAncestorOpen(ancestor)) {
+      // Ancestor is closed — skip now; the observeAncestorOpenState call
+      // below will fire once it opens.
+      return;
+    }
+    callbackRef.current(el, createDisplayedEvent(ancestor, false));
+  }, deps);
+
+  // Re-run every time the ancestor opens.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    const ancestor = closestOpenableAncestor(el);
+    if (!ancestor) {
+      return undefined;
+    }
+    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
+      if (!isOpen) {
+        return;
+      }
+      const lastEl = ref.current;
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
+    });
+  }, []);
+};
+
+const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
+  return new CustomEvent("navi_displayed", {
+    detail: {
+      ancestor,
+      ancestorType: getAncestorOpenType(ancestor),
+      becauseAncestorOpened,
+    },
+  });
+};
+
+installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
+const css$$ = /* css */`
+  .navi_text_anchor {
+    vertical-align: baseline;
+    user-select: none;
+    overflow: hidden;
+  }
+`;
+
+/**
+ * Positions children vertically relative to the surrounding text, correcting for font-size differences.
+ *
+ * Place this component around any inline element whose font-size differs from the surrounding text.
+ * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
+ * the child so that its visual position matches the requested `textAnchor` value — regardless of
+ * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
+ *
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ *   - `"line-top"`    — child top aligns with the top of the surrounding line box
+ *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
+ *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
+ *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
+ * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
+ *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
+ *   reruns when the surrounding text's font-size or vertical-align changes.
+ * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
+ */
+const TextAnchor = ({
+  childRef,
+  children,
+  textAnchor = "char-bottom",
+  textKey,
+  textSize,
+  lineLayout
+}) => {
+  import.meta.css = [css$$, "@jsenv/navi/src/text/text_anchor.jsx"];
+  const anchorRef = useRef();
+
+  // Plain useLayoutEffect would also fire while an ancestor dialog/popover
+  // (e.g. a closed SidePanel) is still display:none — every rect involved
+  // reads 0×0 at that point, so the math trivially (and wrongly) resolves
+  // to topOffset 0: not a real "no correction needed" result, just a
+  // zero-by-zero coincidence that happens to look fine only because it
+  // leaves the browser's own default alignment untouched. The real
+  // correction then only gets applied later, on whatever unrelated
+  // re-render next happens to change one of this effect's own deps —
+  // which reads as the child "jumping" even though nothing about its own
+  // geometry changed. useDisplayedLayoutEffect skips the initial run in
+  // that case and reruns once the ancestor actually opens instead.
+  useDisplayedLayoutEffect(anchorRef, anchorEl => {
+    const childEl = childRef.current;
+    if (!anchorEl || !childEl) {
+      return;
+    }
+    // Only correct when the anchor lives in an inline formatting context.
+    // If the parent is a flex/grid container, inline layout rules don't apply
+    // and our font-metrics model is invalid.
+    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+    if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
+      anchorEl.setAttribute("hidden", "");
+      setTopOffset(childEl, 0);
+      return;
+    }
+    anchorEl.removeAttribute("hidden");
+    const topOffset = computeTopOffset({
+      anchorEl,
+      childEl,
+      textAnchor
+    });
+    setTopOffset(childEl, topOffset);
+  }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
+  return jsxs(Fragment$1, {
+    children: [children, jsx("span", {
+      ref: anchorRef,
+      className: "navi_text_anchor",
+      "aria-hidden": "true",
+      children: "\u200B"
+    })]
+  });
+};
+const setTopOffset = (childEl, topOffset) => {
+  // position:relative + top shifts the element visually.
+  // marginTop: -topOffset makes the layout box follow the visual position, so any container
+  // (button, link, box…) computes its own padding/border/height based on the real final position
+  // rather than the original unshifted one. This means a badge inside a button will symmetrically
+  // expand the button height instead of overflowing or being clipped.
+  // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+  // the shift is purely a repositioning, not an inflation of the line.
+  if (!topOffset) {
+    childEl.style.position = "";
+    childEl.style.top = "";
+    childEl.style.marginTop = "";
+    childEl.style.marginBottom = "";
+    return;
+  }
+  childEl.style.position = "relative";
+  childEl.style.top = `${topOffset}px`;
+  childEl.style.marginTop = `${-topOffset}px`;
+  childEl.style.marginBottom = `${topOffset}px`;
+};
+const computeTopOffset = ({
+  anchorEl,
+  childEl,
+  textAnchor
+}) => {
+  if (textAnchor === "char-bottom") {
+    // Align child's bottom with the char's bottom = the baseline.
+    // The CSS spec says an inline-block with no text content has its baseline at its bottom margin edge.
+    // So the browser's default placement already puts the child's bottom at the line's baseline.
+    // No correction needed.
+    return 0;
+  }
+  // The anchor's rendered rect corresponds to the surrounding text's line box:
+  // top and bottom are the visual bounds of the line (including line-height).
+  const anchorRect = anchorEl.getBoundingClientRect();
+
+  // Measure the child's current rect, then subtract any previously applied top correction
+  // to recover its natural position — avoiding a style reset + reflow.
+  const childRect = childEl.getBoundingClientRect();
+  const childH = childRect.height;
+  const previousTop = parseFloat(childEl.style.top) || 0;
+  const childNaturalTop = childRect.top - previousTop;
+
+  // Compute desired child top Y based on textAnchor intention.
+  let desiredChildTopY = 0;
+  if (textAnchor === "line-top") {
+    desiredChildTopY = anchorRect.top;
+  } else if (textAnchor === "char-top") {
+    const anchorStyle = getComputedStyle(anchorEl);
+    const ctx = charTopCanvas.getContext("2d");
+    ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
+    const m = ctx.measureText("M");
+    const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
+    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+  } else if (textAnchor === "center") {
+    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
+    desiredChildTopY = anchorCenterY - childH / 2;
+  } else if (textAnchor === "char-bottom") {
+    // Already handled above (early return 0), but guard here for completeness.
+    return 0;
+  } else if (textAnchor === "line-bottom") {
+    desiredChildTopY = anchorRect.bottom - childH;
+  } else {
+    return 0; // unknown textAnchor, no correction
+  }
+  return desiredChildTopY - childNaturalTop;
+};
+const charTopCanvas = document.createElement("canvas");
+
 const useInitialTextSelection = (ref, textSelection) => {
   const deps = [];
   if (Array.isArray(textSelection)) {
@@ -19983,7 +20314,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$10 = /* css */`
+const css$_ = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -20167,6 +20498,91 @@ const css$10 = /* css */`
       opacity: 1;
     }
   }
+
+  /* ── Icon ── */
+
+  @layer navi {
+    /* Ensure data attributes from box.jsx can win to update display */
+    .navi_icon {
+      display: inline-flex;
+      box-sizing: border-box;
+      max-width: 100%;
+      /* An icon never grows past the box it sits in, so a glyph can never make
+         a line of text taller than the text itself. lineOverflow="allow" opts
+         out, for an icon that is an affordance rather than a character — a
+         control's chevron or clear button, sized to be touched, not read. */
+      max-height: 100%;
+
+      &[data-line-overflow="allow"] {
+        max-height: none;
+      }
+    }
+  }
+
+  .navi_icon {
+    white-space: nowrap;
+    vertical-align: inherit;
+
+    &[data-icon-char] {
+      aspect-ratio: 1/1;
+      min-width: 0;
+      height: round(1em, 1px);
+      max-height: round(1em, 1px);
+      flex-grow: 0 !important;
+      align-items: center;
+      justify-content: center;
+
+      /* fillLine: measured on the line box (1lh) instead of the character box
+         (1em). The icon still stays inside the line — it just uses all of it,
+         which is what an icon standing on its own in a control's slot wants,
+         where a glyph sitting among letters wants to match their size. */
+      &[data-fill-line] {
+        height: round(1lh, 1px);
+        max-height: round(1lh, 1px);
+      }
+
+      svg,
+      img {
+        width: 100%;
+        height: 100%;
+      }
+      svg {
+        overflow: visible;
+      }
+    }
+    &[data-flow-inline] {
+      width: 1em;
+      height: 1em;
+    }
+    &[data-interactive] {
+      cursor: pointer;
+    }
+    &[data-icon-text] {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+  }
+
+  .navi_icon > svg,
+  .navi_icon > img {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-width-fixed] > svg,
+  .navi_icon[data-width-fixed] > img {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height-fixed] > svg,
+  .navi_icon[data-height-fixed] > img {
+    width: auto;
+    height: 100%;
+  }
+  .navi_icon[data-width-fixed][data-height-fixed] > svg,
+  .navi_icon[data-width-fixed][data-height-fixed] > img {
+    width: 100%;
+    height: 100%;
+  }
 `;
 const REGULAR_SPACE = jsx("span", {
   "data-navi-space": "",
@@ -20349,6 +20765,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   loading?: boolean,
  *   skeleton?: boolean,
  *   attachLastChild?: boolean,
+ *   emojiAsIcon?: boolean,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("ignore:preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -20387,6 +20804,12 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   prevent that break. For wrapping text; a child that must survive
  *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
  *   `Link` sets it on its own whenever it renders an end icon.
+ *
+ * @param {boolean} [emojiAsIcon]
+ *   Renders every emoji found in the string children as an `Icon`, so it sits
+ *   in the line like a character and never makes the line taller than the
+ *   text. For free text a user typed (a message, a description) — the only
+ *   place an emoji is expected; see `docs/typography.md`.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -20504,12 +20927,13 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$10, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
     preventSpaceUnderlines = false,
     attachLastChild = false,
+    emojiAsIcon = false,
     boldStable,
     holdSpaceForStyle,
     capitalize,
@@ -20539,6 +20963,11 @@ const TextUI = props => {
     boxProps.spacing = resolvedSpacing;
   } else {
     children = applySpacingOnTextChildren(children, resolvedSpacing, defaultSpace);
+  }
+  if (emojiAsIcon) {
+    // After the spacing pass: an emoji glued to a word ("hello👋") must not
+    // get a separator injected as if it were a child element.
+    children = renderEmojiAsIcon(children);
   }
   if (boldStable) {
     const {
@@ -20653,6 +21082,244 @@ const TextWithSelectRange = ({
     selectRange: undefined
   });
 };
+
+/**
+ * Renders an icon — an inline SVG/emoji/text glyph that inherits the
+ * surrounding text's `currentColor` and (by default) its font size, so it sits
+ * on the text baseline like a character.
+ *
+ * Content comes from either `href` (references an external/sprite symbol via
+ * `<use>`) or `children` (an inline `<svg>` element, or a string for a
+ * text/emoji icon). All extra props are spread onto the underlying `Box`/`Text`
+ * (sizing, spacing, color, className, data-attributes, …).
+ *
+ * Render mode is chosen automatically:
+ * - `children` is a **string** → a text icon (`<Text data-icon-text>`).
+ * - **sized** (an explicit `width`/`height`, or `flex`/`grid`) → a block icon
+ *   (`<Box square>`), laid out as its own box rather than inline.
+ * - otherwise → an **inline char-like** icon that flows on the text baseline
+ *   (`data-icon-char`), aligned via `textAnchor`.
+ *
+ * Accessibility: an icon is treated as decorative (`aria-hidden`) by default
+ * whenever it has no explicit size and no `onClick`; give it an explicit
+ * `decorative={false}` (or make it interactive) when it conveys meaning.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - URL/id of an external SVG symbol, rendered via
+ *   `<svg><use href></svg>`. Mutually exclusive with meaningful `children`.
+ * @param {import("ignore:preact").ComponentChildren} [props.children] - Inline icon
+ *   content: an `<svg>` element, or a string (renders as a text/emoji icon).
+ * @param {boolean} [props.decorative] - Marks the icon `aria-hidden`. Defaults
+ *   to `true` for an unsized, non-interactive icon; pass `false` for a
+ *   meaning-bearing icon that needs to be exposed to assistive tech.
+ * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
+ *   interactive (`data-interactive`, pointer cursor) and non-decorative.
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
+ *   - Vertical alignment within the surrounding text line for the inline
+ *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
+ *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
+ *   centers on the line box, `"char-bottom"` sits on the baseline. See
+ *   `text_anchor.jsx`.
+ * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
+ *   Describes the surrounding line context (font size / vertical-align),
+ *   forwarded to `TextAnchor` so it recomputes the vertical correction when
+ *   that context changes.
+ * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
+ *   Any explicit size switches the icon to block (sized) mode.
+ * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
+ * @param {"allow"} [props.lineOverflow] - `"allow"` lets the icon be taller
+ *   than the box it sits in (a line of text, a control's slot) instead of being
+ *   capped by it. For an icon that is an affordance sized for the finger rather
+ *   than a character sized for reading.
+ * @param {boolean} [props.fillLine] - Sizes the icon on the line box (1lh)
+ *   rather than on the character box (1em), so it uses the full height of the
+ *   line without leaving it. Unlike `lineOverflow`, the icon still never
+ *   exceeds the line.
+ * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
+ *   dimension it fixes the other too.
+ * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
+ * @param {string|number} [props.aspectRatio] - Fixes the second dimension from
+ *   the one explicit dimension.
+ * @param {"x"|"y"|boolean} [props.flex] - Forces block/flex layout; auto-set to
+ *   `"x"` when the icon is sized.
+ * @param {boolean} [props.grid] - Forces block/grid layout.
+ * @param {string} [props.className] - Merged with the base `"navi_icon"` class.
+ */
+const Icon = ({
+  href,
+  children,
+  decorative,
+  onClick,
+  textAnchor = "center",
+  lineLayout,
+  lineOverflow,
+  fillLine,
+  ...props
+}) => {
+  import.meta.css = [css$_, "@jsenv/navi/src/text/text.jsx"];
+  const innerChildren = href ? jsx("svg", {
+    width: "100%",
+    height: "100%",
+    children: jsx("use", {
+      href: href
+    })
+  }) : children;
+  let {
+    flex,
+    grid,
+    width,
+    height
+  } = props;
+  if (width === "auto") {
+    width = undefined;
+  }
+  if (height === "auto") {
+    height = undefined;
+  }
+  const hasExplicitWidth = width !== undefined;
+  const hasExplicitHeight = height !== undefined;
+  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
+  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
+  if (widthFixed || heightFixed) {
+    if (flex === undefined) {
+      flex = "x";
+    }
+  } else if (decorative === undefined && !onClick) {
+    decorative = true;
+  }
+  const ariaProps = decorative ? {
+    "aria-hidden": "true"
+  } : {};
+  const textRef = useRef();
+  if (typeof children === "string") {
+    return jsx(Text, {
+      ...props,
+      ...ariaProps,
+      "data-icon-text": "",
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
+      children: children
+    });
+  }
+  if (flex || grid) {
+    return jsx(Box, {
+      square: true,
+      ...props,
+      ...ariaProps,
+      flex: flex,
+      baseClassName: "navi_icon",
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
+      onClick: onClick,
+      children: innerChildren
+    });
+  }
+  return jsx(TextAnchor, {
+    childRef: textRef,
+    textAnchor: textAnchor,
+    textSize: props.size,
+    lineLayout: lineLayout,
+    children: jsxs(Text, {
+      ...props,
+      ...ariaProps,
+      className: withPropsClassName("navi_icon", props.className),
+      spacing: "pre",
+      "data-icon-char": "",
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
+      "data-width-fixed": widthFixed ? "" : undefined,
+      "data-height-fixed": heightFixed ? "" : undefined,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
+      ref: textRef,
+      children: [jsx("span", {
+        style: "user-select:none",
+        children: "\u200B"
+      }), innerChildren]
+    })
+  });
+};
+
+// An emoji-presentation character (🌸), or a pictogram forced into emoji
+// presentation by VS16 (❤️), followed by its skin-tone modifiers and ZWJ
+// sequence. A flag is two regional indicators that must stay together.
+const EMOJI_REGEX = /\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|[\p{Extended_Pictographic}--\p{Emoji_Presentation}]\uFE0F)(?:[\p{Emoji_Modifier}\uFE0F]|\u200D\p{Extended_Pictographic}\uFE0F?)*/gv;
+
+/**
+ * What `emojiAsIcon` does, for something that renders text without going
+ * through `Text` (a callout's message): every emoji in the string children
+ * comes back wrapped in an `Icon`. The system emoji fonts have a taller
+ * ascent/descent than text fonts, so a raw emoji glyph makes its line taller
+ * than the lines around it; inside an Icon it is capped at 1em and centered on
+ * the line like any glyph icon.
+ *
+ * Children come back in the shape they arrived in: a string stays a string
+ * when it holds no emoji, and the array is only built once a child actually
+ * needs rewriting.
+ */
+const renderEmojiAsIcon = children => {
+  if (typeof children === "string") {
+    return renderEmojiInString(children);
+  }
+  const childArray = toChildArray(children);
+  let result = null;
+  let index = 0;
+  for (const child of childArray) {
+    if (typeof child === "string") {
+      const rendered = renderEmojiInString(child);
+      if (rendered !== child) {
+        if (result === null) {
+          result = childArray.slice(0, index);
+        }
+        for (const part of rendered) {
+          result.push(part);
+        }
+        index++;
+        continue;
+      }
+    }
+    if (result !== null) {
+      result.push(child);
+    }
+    index++;
+  }
+  if (result === null) {
+    return children;
+  }
+  return result;
+};
+const renderEmojiInString = string => {
+  let parts = null;
+  let lastIndex = 0;
+  for (const match of string.matchAll(EMOJI_REGEX)) {
+    if (parts === null) {
+      parts = [];
+    }
+    if (match.index > lastIndex) {
+      parts.push(string.slice(lastIndex, match.index));
+    }
+    parts.push(jsx(Icon, {
+      decorative: false,
+      children: jsx("span", {
+        children: match[0]
+      })
+    }));
+    lastIndex = match.index + match[0].length;
+  }
+  if (parts === null) {
+    return string;
+  }
+  if (lastIndex < string.length) {
+    parts.push(string.slice(lastIndex));
+  }
+  return parts;
+};
+// A callout message is free text like any other; see callout.jsx for why it
+// cannot import this itself.
+setCalloutMessageTextRenderer(renderEmojiAsIcon);
 
 const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
 const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
@@ -20795,105 +21462,6 @@ const useActionStatus = (action) => {
     completed,
     data,
   };
-};
-
-/**
- * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
- * or popover visibility.
- *
- * Motivation: some effects (auto-scroll, measurement, focus) only make sense
- * when the element is actually presented on screen. A plain useLayoutEffect
- * fires on mount even when the component is inside a closed <dialog>, a
- * collapsed <details>, or a hidden popover, where scroll and layout operations
- * are no-ops.
- *
- * Behavior:
- *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
- *     useLayoutEffect with the provided deps.
- *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
- *     the callback once the ancestor opens — see @jsenv/dom's own
- *     observeAncestorOpenState for exactly how that's detected, and why it
- *     matters that it happens before the browser paints.
- *   - Inside an open ancestor → runs on mount AND every subsequent open.
- *
- * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
- *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
- *     `{ ancestor: document, ancestorType: "document" }`.
- *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
- *     | "popover" | "details" | "aria-expanded" }`.
- * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
- *   - true — the element was already mounted and the ancestor just opened,
- *     revealing it along with everything else it holds. The opening has an
- *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
- *     should defer to it — see use_auto_focus.js.
- *   - false — the element was mounted just now, into a surface already on
- *     screen (or into the plain document). Nothing else owns this appearance:
- *     what the element says about itself (an autofocus, a measurement) is the
- *     only word there is.
- *
- * Usage:
- *   useDisplayedLayoutEffect(ref, () => {
- *     scrollToSelected();
- *   }, []);
- */
-const useDisplayedLayoutEffect = (ref, callback, deps) => {
-  if (typeof callback !== "function") {
-    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
-  }
-
-  // Keep a stable ref so the open listener always calls the latest callback
-  // without needing to be re-registered when deps change.
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
-
-  // Run on mount (or when deps change) — but only if the element is visible.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    const ancestor = closestOpenableAncestor(el);
-    if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document, false));
-      return;
-    }
-    if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; the observeAncestorOpenState call
-      // below will fire once it opens.
-      return;
-    }
-    callbackRef.current(el, createDisplayedEvent(ancestor, false));
-  }, deps);
-
-  // Re-run every time the ancestor opens.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    const ancestor = closestOpenableAncestor(el);
-    if (!ancestor) {
-      return undefined;
-    }
-    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
-      if (!isOpen) {
-        return;
-      }
-      const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
-    });
-  }, []);
-};
-
-const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
-  return new CustomEvent("navi_displayed", {
-    detail: {
-      ancestor,
-      ancestorType: getAncestorOpenType(ancestor),
-      becauseAncestorOpened,
-    },
-  });
 };
 
 /**
@@ -27435,13 +28003,11 @@ const useInteractiveProps = (props, {
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
   if (props.ownTarget) {
-    // "This press is mine" said in the DOM, because that is where it is read
-    // from the outside: by the controls above (see own_target.js), and by the
-    // two gesture readers below — the one that travels a box and the one that
-    // carries a piece, each with its own way of being told to keep out.
-    controlRootProps[OWN_TARGET_ATTRIBUTE] = "";
-    controlRootProps["data-no-drag-travel"] = "";
-    controlRootProps["data-drag-ignore"] = "";
+    // One attribute, in the DOM, because that is where the claim is read from —
+    // by the controls above and by the gesture readers below (see
+    // own_target.js). The prop is the ergonomic form of it and nothing more: an
+    // element an application draws itself writes the same attribute by hand.
+    controlRootProps[OWN_TARGET_ATTRIBUTE] = typeof props.ownTarget === "string" ? props.ownTarget : "";
   }
   const {
     "navi-control-proxy-for": naviProxyFor
@@ -27477,10 +28043,10 @@ const useInteractiveProps = (props, {
     });
   }
   {
-    const controlDisabled = useContext(DisabledContext);
-    const controlReadOnly = useContext(ReadOnlyContext);
+    const controlDisabledFromAbove = useContext(DisabledContext);
+    const controlReadOnlyFromAbove = useContext(ReadOnlyContext);
     const controlRequired = useContext(RequiredContext);
-    const controlLoading = useContext(LoadingContext$1);
+    const controlLoadingFromAbove = useContext(LoadingContext$1);
     const parentActionRequester = useContext(ActionRequesterContext);
     const actionStatus = useActionStatus(boundAction);
     const {
@@ -27490,6 +28056,16 @@ const useInteractiveProps = (props, {
       loading,
       optimistic
     } = props;
+
+    // `ownTarget="always"`: an affordance that writes nothing to the control it
+    // sits in has no business inheriting that control's state — a diskette
+    // saving a row into the reader's own address book stays pressable on a game
+    // nobody may edit. Its own props still hold; only what came from above is
+    // dropped (see own_target.js for the three modes).
+    const zoneStateApplies = !ownTargetIgnoresZoneState(props.ownTarget);
+    const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
+    const controlReadOnly = zoneStateApplies && controlReadOnlyFromAbove;
+    const controlLoading = zoneStateApplies && controlLoadingFromAbove;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
     // Busy because the group above is running the action THIS control asked
@@ -27501,7 +28077,7 @@ const useInteractiveProps = (props, {
     // (`maxLengthGuard`) and this one would make it longer: it can be pointed
     // at, focused and pressed — and answers why (see readonly_constraint.js) —
     // but cannot be taken.
-    const readOnlyFromParentMaxLengthGuard = Boolean(uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(uiStateController));
+    const readOnlyFromParentMaxLengthGuard = Boolean(zoneStateApplies && uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(uiStateController));
     const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || controlInfo.readOnlyUncontrolled;
     // An optimistic control trusts its action to succeed: the state the user
     // just set stays visible and interactive while the action runs — no
@@ -27935,7 +28511,7 @@ const getAssociatedLabels = element => {
   return Array.from(element.labels);
 };
 
-installImportMetaCssBuild(import.meta);const css$$ = /* css */`
+installImportMetaCssBuild(import.meta);const css$Z = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -28366,7 +28942,7 @@ installImportMetaCssBuild(import.meta);const css$$ = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$$, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -28379,6 +28955,7 @@ const ButtonUI = props => {
     icon,
     cta,
     spacing,
+    emojiAsIcon = true,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -28436,6 +29013,7 @@ const ButtonUI = props => {
 
     type: "button",
     spacing: undefined,
+    emojiAsIcon: undefined,
     cta: undefined,
     pressEffect: undefined,
     loadingOutline: undefined,
@@ -28489,6 +29067,7 @@ const ButtonUI = props => {
       ...controlChildrenWrapperProps,
       children: jsx(ButtonContent, {
         spacing: spacing,
+        emojiAsIcon: emojiAsIcon,
         children: children
       })
     })]
@@ -28496,6 +29075,7 @@ const ButtonUI = props => {
 };
 const ButtonContent = ({
   spacing,
+  emojiAsIcon,
   children
 }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
@@ -28503,6 +29083,7 @@ const ButtonContent = ({
     ...boxForwardedProps,
     display: "inherit",
     spacing: spacing,
+    emojiAsIcon: emojiAsIcon,
     className: "navi_button_content",
     children: [children, jsx(ButtonShadow, {})]
   });
@@ -28665,17 +29246,22 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 
 /**
  * @type {import("ignore:preact").FunctionComponent<{
- *   ownTarget?: boolean | "refuse",
+ *   ownTarget?: boolean | "refuse" | "always",
+ *   emojiAsIcon?: boolean,
  *   [key: string]: any,
  * }>}
- * @param {boolean|"refuse"} [ownTarget] A real target inside a zone that belongs
- *   to another control — a chip's cross on a picker's façade, an eye on a
- *   pressable row, a diskette inside a slide that travels. The press is this
- *   button's alone (no travel starts, no popup opens, nothing above answers) and
- *   its `onClick` waits for its own interaction gate instead of firing from the
- *   DOM. Where the zone around it is read-only, disabled or busy the button
- *   goes; `"refuse"` keeps it on screen refusing with a callout, for an
- *   affordance whose presence is information in itself.
+ * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
+ *   so the button keeps the height of its text — `Text`'s prop, on by default
+ *   here. Pass `false` to let an emoji draw at its natural size.
+ * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
+ *   that belongs to another control — a chip's cross on a picker's façade, an
+ *   eye on a pressable row, a diskette inside a slide that travels. The press is
+ *   this button's alone (no travel starts, no popup opens, no navi control above
+ *   answers) and its `onClick` waits for its own interaction gate instead of
+ *   firing from the DOM. What it does where the zone is read-only, disabled or
+ *   busy depends on whether it WRITES to the control it sits in: it goes by
+ *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
+ *   the zone's state entirely — for a gesture that never touched that control.
  */
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
@@ -30096,7 +30682,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$_ = /* css */`
+const css$Y = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -30684,7 +31270,7 @@ const css$_ = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$_, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -31676,7 +32262,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$Z = /* css */`
+const css$X = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -32136,7 +32722,7 @@ const css$Z = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -33164,7 +33750,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$Y = /* css */`
+const css$W = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -33301,7 +33887,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -33385,7 +33971,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$X = /* css */`
+installImportMetaCssBuild(import.meta);const css$V = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -33410,7 +33996,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$X, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -39035,7 +39621,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$W = /* css */`
+const css$U = /* css */`
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -39464,7 +40050,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -39521,7 +40107,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const {
     type,
     duration
@@ -39557,7 +40143,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$W, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/nav/route_transition.jsx"];
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -40158,7 +40744,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$V = /* css */`
+const css$T = /* css */`
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -40548,7 +41134,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/nav/route_travel.jsx"];
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being
@@ -43105,402 +43691,6 @@ const PhoneSvg = () => {
     children: jsx("path", {
       d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
       fill: "currentColor"
-    })
-  });
-};
-
-installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$U = /* css */`
-  .navi_text_anchor {
-    vertical-align: baseline;
-    user-select: none;
-    overflow: hidden;
-  }
-`;
-
-/**
- * Positions children vertically relative to the surrounding text, correcting for font-size differences.
- *
- * Place this component around any inline element whose font-size differs from the surrounding text.
- * It renders an invisible anchor that inherits the surrounding text's font metrics, then shifts
- * the child so that its visual position matches the requested `textAnchor` value — regardless of
- * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
- *
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
- *   - `"line-top"`    — child top aligns with the top of the surrounding line box
- *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
- *   - `"center"`      — child is vertically centered on the surrounding line box
- *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
- *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
- * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
- *   Describes the surrounding line context. Used as layout-effect dependencies so the correction
- *   reruns when the surrounding text's font-size or vertical-align changes.
- * @param {import("ignore:preact").RefObject} childRef — ref on the child element to reposition
- */
-const TextAnchor = ({
-  childRef,
-  children,
-  textAnchor = "char-bottom",
-  textKey,
-  textSize,
-  lineLayout
-}) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/text/text_anchor.jsx"];
-  const anchorRef = useRef();
-
-  // Plain useLayoutEffect would also fire while an ancestor dialog/popover
-  // (e.g. a closed SidePanel) is still display:none — every rect involved
-  // reads 0×0 at that point, so the math trivially (and wrongly) resolves
-  // to topOffset 0: not a real "no correction needed" result, just a
-  // zero-by-zero coincidence that happens to look fine only because it
-  // leaves the browser's own default alignment untouched. The real
-  // correction then only gets applied later, on whatever unrelated
-  // re-render next happens to change one of this effect's own deps —
-  // which reads as the child "jumping" even though nothing about its own
-  // geometry changed. useDisplayedLayoutEffect skips the initial run in
-  // that case and reruns once the ancestor actually opens instead.
-  useDisplayedLayoutEffect(anchorRef, anchorEl => {
-    const childEl = childRef.current;
-    if (!anchorEl || !childEl) {
-      return;
-    }
-    // Only correct when the anchor lives in an inline formatting context.
-    // If the parent is a flex/grid container, inline layout rules don't apply
-    // and our font-metrics model is invalid.
-    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-    if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
-      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
-      anchorEl.setAttribute("hidden", "");
-      setTopOffset(childEl, 0);
-      return;
-    }
-    anchorEl.removeAttribute("hidden");
-    const topOffset = computeTopOffset({
-      anchorEl,
-      childEl,
-      textAnchor
-    });
-    setTopOffset(childEl, topOffset);
-  }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
-  return jsxs(Fragment$1, {
-    children: [children, jsx("span", {
-      ref: anchorRef,
-      className: "navi_text_anchor",
-      "aria-hidden": "true",
-      children: "\u200B"
-    })]
-  });
-};
-const setTopOffset = (childEl, topOffset) => {
-  // position:relative + top shifts the element visually.
-  // marginTop: -topOffset makes the layout box follow the visual position, so any container
-  // (button, link, box…) computes its own padding/border/height based on the real final position
-  // rather than the original unshifted one. This means a badge inside a button will symmetrically
-  // expand the button height instead of overflowing or being clipped.
-  // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
-  // the shift is purely a repositioning, not an inflation of the line.
-  if (!topOffset) {
-    childEl.style.position = "";
-    childEl.style.top = "";
-    childEl.style.marginTop = "";
-    childEl.style.marginBottom = "";
-    return;
-  }
-  childEl.style.position = "relative";
-  childEl.style.top = `${topOffset}px`;
-  childEl.style.marginTop = `${-topOffset}px`;
-  childEl.style.marginBottom = `${topOffset}px`;
-};
-const computeTopOffset = ({
-  anchorEl,
-  childEl,
-  textAnchor
-}) => {
-  if (textAnchor === "char-bottom") {
-    // Align child's bottom with the char's bottom = the baseline.
-    // The CSS spec says an inline-block with no text content has its baseline at its bottom margin edge.
-    // So the browser's default placement already puts the child's bottom at the line's baseline.
-    // No correction needed.
-    return 0;
-  }
-  // The anchor's rendered rect corresponds to the surrounding text's line box:
-  // top and bottom are the visual bounds of the line (including line-height).
-  const anchorRect = anchorEl.getBoundingClientRect();
-
-  // Measure the child's current rect, then subtract any previously applied top correction
-  // to recover its natural position — avoiding a style reset + reflow.
-  const childRect = childEl.getBoundingClientRect();
-  const childH = childRect.height;
-  const previousTop = parseFloat(childEl.style.top) || 0;
-  const childNaturalTop = childRect.top - previousTop;
-
-  // Compute desired child top Y based on textAnchor intention.
-  let desiredChildTopY = 0;
-  if (textAnchor === "line-top") {
-    desiredChildTopY = anchorRect.top;
-  } else if (textAnchor === "char-top") {
-    const anchorStyle = getComputedStyle(anchorEl);
-    const ctx = charTopCanvas.getContext("2d");
-    ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
-    const m = ctx.measureText("M");
-    const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
-    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
-  } else if (textAnchor === "center") {
-    const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
-    desiredChildTopY = anchorCenterY - childH / 2;
-  } else if (textAnchor === "char-bottom") {
-    // Already handled above (early return 0), but guard here for completeness.
-    return 0;
-  } else if (textAnchor === "line-bottom") {
-    desiredChildTopY = anchorRect.bottom - childH;
-  } else {
-    return 0; // unknown textAnchor, no correction
-  }
-  return desiredChildTopY - childNaturalTop;
-};
-const charTopCanvas = document.createElement("canvas");
-
-installImportMetaCssBuild(import.meta);const css$T = /* css */`
-  @layer navi {
-    /* Ensure data attributes from box.jsx can win to update display */
-    .navi_icon {
-      display: inline-flex;
-      box-sizing: border-box;
-      max-width: 100%;
-      /* An icon never grows past the box it sits in, so a glyph can never make
-         a line of text taller than the text itself. lineOverflow="allow" opts
-         out, for an icon that is an affordance rather than a character — a
-         control's chevron or clear button, sized to be touched, not read. */
-      max-height: 100%;
-
-      &[data-line-overflow="allow"] {
-        max-height: none;
-      }
-    }
-  }
-
-  .navi_icon {
-    white-space: nowrap;
-    vertical-align: inherit;
-
-    &[data-icon-char] {
-      aspect-ratio: 1/1;
-      min-width: 0;
-      height: round(1em, 1px);
-      max-height: round(1em, 1px);
-      flex-grow: 0 !important;
-      align-items: center;
-      justify-content: center;
-
-      /* fillLine: measured on the line box (1lh) instead of the character box
-         (1em). The icon still stays inside the line — it just uses all of it,
-         which is what an icon standing on its own in a control's slot wants,
-         where a glyph sitting among letters wants to match their size. */
-      &[data-fill-line] {
-        height: round(1lh, 1px);
-        max-height: round(1lh, 1px);
-      }
-
-      svg,
-      img {
-        width: 100%;
-        height: 100%;
-      }
-      svg {
-        overflow: visible;
-      }
-    }
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
-    &[data-interactive] {
-      cursor: pointer;
-    }
-    &[data-icon-text] {
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
-  }
-
-  .navi_icon > svg,
-  .navi_icon > img {
-    width: 100%;
-    height: 100%;
-  }
-  .navi_icon[data-width-fixed] > svg,
-  .navi_icon[data-width-fixed] > img {
-    width: 100%;
-    height: auto;
-  }
-  .navi_icon[data-height-fixed] > svg,
-  .navi_icon[data-height-fixed] > img {
-    width: auto;
-    height: 100%;
-  }
-  .navi_icon[data-width-fixed][data-height-fixed] > svg,
-  .navi_icon[data-width-fixed][data-height-fixed] > img {
-    width: 100%;
-    height: 100%;
-  }
-`;
-
-/**
- * Renders an icon — an inline SVG/emoji/text glyph that inherits the
- * surrounding text's `currentColor` and (by default) its font size, so it sits
- * on the text baseline like a character.
- *
- * Content comes from either `href` (references an external/sprite symbol via
- * `<use>`) or `children` (an inline `<svg>` element, or a string for a
- * text/emoji icon). All extra props are spread onto the underlying `Box`/`Text`
- * (sizing, spacing, color, className, data-attributes, …).
- *
- * Render mode is chosen automatically:
- * - `children` is a **string** → a text icon (`<Text data-icon-text>`).
- * - **sized** (an explicit `width`/`height`, or `flex`/`grid`) → a block icon
- *   (`<Box square>`), laid out as its own box rather than inline.
- * - otherwise → an **inline char-like** icon that flows on the text baseline
- *   (`data-icon-char`), aligned via `textAnchor`.
- *
- * Accessibility: an icon is treated as decorative (`aria-hidden`) by default
- * whenever it has no explicit size and no `onClick`; give it an explicit
- * `decorative={false}` (or make it interactive) when it conveys meaning.
- *
- * @param {object} props
- * @param {string} [props.href] - URL/id of an external SVG symbol, rendered via
- *   `<svg><use href></svg>`. Mutually exclusive with meaningful `children`.
- * @param {import("ignore:preact").ComponentChildren} [props.children] - Inline icon
- *   content: an `<svg>` element, or a string (renders as a text/emoji icon).
- * @param {boolean} [props.decorative] - Marks the icon `aria-hidden`. Defaults
- *   to `true` for an unsized, non-interactive icon; pass `false` for a
- *   meaning-bearing icon that needs to be exposed to assistive tech.
- * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
- *   interactive (`data-interactive`, pointer cursor) and non-decorative.
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
- *   - Vertical alignment within the surrounding text line for the inline
- *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
- *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
- *   centers on the line box, `"char-bottom"` sits on the baseline. See
- *   `text_anchor.jsx`.
- * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
- *   Describes the surrounding line context (font size / vertical-align),
- *   forwarded to `TextAnchor` so it recomputes the vertical correction when
- *   that context changes.
- * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
- *   Any explicit size switches the icon to block (sized) mode.
- * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
- * @param {"allow"} [props.lineOverflow] - `"allow"` lets the icon be taller
- *   than the box it sits in (a line of text, a control's slot) instead of being
- *   capped by it. For an icon that is an affordance sized for the finger rather
- *   than a character sized for reading.
- * @param {boolean} [props.fillLine] - Sizes the icon on the line box (1lh)
- *   rather than on the character box (1em), so it uses the full height of the
- *   line without leaving it. Unlike `lineOverflow`, the icon still never
- *   exceeds the line.
- * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
- *   dimension it fixes the other too.
- * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
- * @param {string|number} [props.aspectRatio] - Fixes the second dimension from
- *   the one explicit dimension.
- * @param {"x"|"y"|boolean} [props.flex] - Forces block/flex layout; auto-set to
- *   `"x"` when the icon is sized.
- * @param {boolean} [props.grid] - Forces block/grid layout.
- * @param {string} [props.className] - Merged with the base `"navi_icon"` class.
- */
-const Icon = ({
-  href,
-  children,
-  decorative,
-  onClick,
-  textAnchor = "center",
-  lineLayout,
-  lineOverflow,
-  fillLine,
-  ...props
-}) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/text/icon.jsx"];
-  const innerChildren = href ? jsx("svg", {
-    width: "100%",
-    height: "100%",
-    children: jsx("use", {
-      href: href
-    })
-  }) : children;
-  let {
-    flex,
-    grid,
-    width,
-    height
-  } = props;
-  if (width === "auto") {
-    width = undefined;
-  }
-  if (height === "auto") {
-    height = undefined;
-  }
-  const hasExplicitWidth = width !== undefined;
-  const hasExplicitHeight = height !== undefined;
-  const widthFixed = hasExplicitWidth || hasExplicitHeight && (props.square || props.circle || props.aspectRatio);
-  const heightFixed = hasExplicitHeight || hasExplicitWidth && (props.square || props.circle || props.aspectRatio);
-  if (widthFixed || heightFixed) {
-    if (flex === undefined) {
-      flex = "x";
-    }
-  } else if (decorative === undefined && !onClick) {
-    decorative = true;
-  }
-  const ariaProps = decorative ? {
-    "aria-hidden": "true"
-  } : {};
-  const textRef = useRef();
-  if (typeof children === "string") {
-    return jsx(Text, {
-      ...props,
-      ...ariaProps,
-      "data-icon-text": "",
-      "data-line-overflow": lineOverflow,
-      "data-fill-line": fillLine ? "" : undefined,
-      children: children
-    });
-  }
-  if (flex || grid) {
-    return jsx(Box, {
-      square: true,
-      ...props,
-      ...ariaProps,
-      flex: flex,
-      baseClassName: "navi_icon",
-      "data-width-fixed": widthFixed ? "" : undefined,
-      "data-height-fixed": heightFixed ? "" : undefined,
-      "data-interactive": onClick ? "" : undefined,
-      "data-line-overflow": lineOverflow,
-      "data-fill-line": fillLine ? "" : undefined,
-      onClick: onClick,
-      children: innerChildren
-    });
-  }
-  return jsx(TextAnchor, {
-    childRef: textRef,
-    textAnchor: textAnchor,
-    textSize: props.size,
-    lineLayout: lineLayout,
-    children: jsxs(Text, {
-      ...props,
-      ...ariaProps,
-      className: withPropsClassName("navi_icon", props.className),
-      spacing: "pre",
-      "data-icon-char": "",
-      "data-line-overflow": lineOverflow,
-      "data-fill-line": fillLine ? "" : undefined,
-      "data-width-fixed": widthFixed ? "" : undefined,
-      "data-height-fixed": heightFixed ? "" : undefined,
-      "data-interactive": onClick ? "" : undefined,
-      onClick: onClick,
-      ref: textRef,
-      children: [jsx("span", {
-        style: "user-select:none",
-        children: "\u200B"
-      }), innerChildren]
     })
   });
 };
@@ -64177,7 +64367,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
          means "open the picker". An own target is the exception, the same way
          the clear cross is one in the slot below: it says the press is aimed at
          IT, so it has to be reachable at all. */
-      [data-navi-own-target] {
+      [data-own-target] {
         pointer-events: auto;
       }
     }
@@ -75686,6 +75876,9 @@ const MessageBox = ({
   padding = "sm",
   icon,
   leftStripe,
+  // A message is free text: an emoji is expected in it, and must not push
+  // the first line down next to the icon and the close button.
+  emojiAsIcon = true,
   children,
   onClose,
   ...rest
@@ -75723,26 +75916,39 @@ const MessageBox = ({
         value: setHasTitleChild,
         children: [icon && jsx(Icon, {
           color: "var(--x-message-color)",
-          height: "1.5em",
+          height: "1lh",
           maxHeight: "auto",
           selfAlignY: "start",
           aspectRatio: "auto",
           children: icon
         }), jsx(Text, {
+          emojiAsIcon: emojiAsIcon,
           children: children
-        }), onClose && jsx(Button, {
-          action: onClose,
-          icon: true,
-          border: "none",
-          alignX: "center",
+        }), onClose &&
+        // A column as tall as the first line of the message, pinned to the
+        // top, the button centered in it: the close button stays level
+        // with the first line however many lines the message takes (same
+        // layout as Callout).
+        jsx(Box, {
+          flex: true,
           alignY: "center",
-          style: {
-            ":hover": {
-              backgroundColor: "rgba(0, 0, 0, 0.1)"
-            }
-          },
-          children: jsx(Icon, {
-            children: jsx(CloseSvg, {})
+          height: "1lh",
+          selfAlignY: "start",
+          shrink: false,
+          children: jsx(Button, {
+            action: onClose,
+            icon: true,
+            border: "none",
+            alignX: "center",
+            alignY: "center",
+            style: {
+              ":hover": {
+                backgroundColor: "rgba(0, 0, 0, 0.1)"
+              }
+            },
+            children: jsx(Icon, {
+              children: jsx(CloseSvg, {})
+            })
           })
         })]
       })
@@ -77830,5 +78036,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineNaviConfirmPopupOptions, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
