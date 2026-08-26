@@ -139,6 +139,133 @@ export const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
 So the rule is the one you would want: name a section and it becomes a place;
 leave it unnamed and it stays a setting carried along.
 
+### Which values a param accepts
+
+A param says which segments it accepts, and a segment it declines is not a
+half-match to be sorted out later — the route simply does not match:
+
+```js
+export const GAME_ROUTE = route(`/:gameId=${gameIdSignal}`, {
+  params: { gameId: /^W-[A-Z0-9]{8}$/i },
+});
+```
+
+A constraint is a regexp, the list of accepted values, or a `(value) => boolean`
+— the list is compared as strings, so it can be the very `oneOf` given to the
+signal bound to that param:
+
+```js
+const SECTIONS = ["candidate", "to_come", "done"];
+const sectionSignal = stateSignal("to_come", {
+  id: "section",
+  oneOf: SECTIONS,
+});
+export const GAMES_SECTION_ROUTE = route(`/games/:section=${sectionSignal}`, {
+  params: { section: SECTIONS },
+});
+```
+
+This is what makes a param usable at the root, where it would otherwise swallow
+every single-segment address: `/cgu` and `/me` stay other routes' urls,
+`<Route fallback>` is reachable for `/whatever`, and no signal is written for a
+url this route has nothing to do with.
+
+A constrained param is also **required** — no segment is not one of the values
+it accepts — so `/:gameId` does not match `/`. The address with no segment is a
+route of its own, which is the shape you want anyway.
+
+#### Constrain the shape, never the existence
+
+A constraint answers one question: **is this segment addressed to this route?**
+It is decided on the url alone, before anything is written, so it can only be
+about shape — that a segment looks like a game code, not that the game exists.
+
+Whether the value is any good is a different question, asked later and answered
+by different things: the signal's own validation (`oneOf`, `autoFix`) and the
+route action's data. That question belongs to a route that **did** match, with a
+page free to repair itself, show a not-found screen, offer a way out:
+
+```js
+// ✅ /W-ZZZZZZZZ matches, the action 404s, the page says so
+// ❌ constraining gameId to the codes that exist — matching cannot ask a server,
+//    and "no route matched" is a worse answer than "this game is gone"
+```
+
+So the signal never takes part in matching. It knows what to make of a value;
+the route decides whether the url is its own.
+
+#### Why order stops being load-bearing
+
+When several routes match one url and bind the **same signal** on a param of the
+same name, they all write it, in declaration order — the last one wins:
+
+```js
+route(`/games/:gameId=${gameIdSignal}`); // declared first
+route(`/:gameId=${gameIdSignal}/:state`); // declared later
+// on /games/W-ABC234PQ the second one matches too and writes "games"
+```
+
+Constraining `gameId` removes that second match entirely, which is the fix.
+Where a param genuinely cannot be constrained, the routes must not share a
+signal.
+
+### An address that only sends elsewhere
+
+Some addresses are not pages: the root of an app whose home screen is « my
+games », the old address of a section that moved, the share link of a game
+carrying a segment only WhatsApp cares about. They exist to be resolved, and a
+route says so itself:
+
+```js
+export const HOME_ROUTE = route("/", { redirectRoute: MY_GAMES_ROUTE });
+export const GAME_SHARED_ROUTE = route("/:gameId/:shareState", {
+  redirectRoute: GAME_ROUTE,
+});
+```
+
+The params found in the url carry over to the ones the target route declares
+under the same name — `gameId` above needs no help — and what it cannot place
+is left behind, `shareState` included. `redirectRouteParams` says the rest:
+
+```js
+// renaming, when the two routes do not call it the same thing
+route("/partie/:id", {
+  redirectRoute: GAME_ROUTE,
+  redirectRouteParams: ({ id }) => ({ gameId: id }),
+});
+// dropping one, keeping the others
+route("/:gameId/invite", {
+  redirectRoute: MY_GAMES_ROUTE,
+  redirectRouteParams: { gameId: undefined },
+});
+// carrying nothing over
+route("/tri", { redirectRoute: MY_GAMES_ROUTE, redirectRouteParams: null });
+```
+
+#### Why it is not a page rendering `null`
+
+The redirection is resolved at the door of the navigation, before the url is
+written anywhere. Nothing about that address ever happens: no history entry, no
+route matching, no route action loading data for a screen nobody will see, no
+element mounted, nothing painted — and going back lands on the page before it
+rather than replaying the redirection forever.
+
+A page doing it in an effect gets none of that. It has to be routed to first,
+which means the address exists, its action runs, and the app is on a screen
+nobody should see for one paint — one a route transition can even animate _to_.
+Anything reached by rendering is already too late, so a redirection is declared
+with the address and never appears in the `<Route>` tree at all.
+
+It fires on the route's own address only. `/` catches everything below it when
+it renders a container, and would carry `/cgu` away with it if redirecting
+followed the same reading — so redirecting asks the stricter question: is this
+url exactly that route's address?
+
+Where several redirecting routes answer for one url, the more specific wins —
+`/:gameId/invite` over `/:gameId/:shareState`, the same reading the rest of the
+router uses. Chains collapse into one navigation, and a cycle throws naming the
+addresses it goes through.
+
 ### Search params
 
 A param that qualifies a page rather than naming it — a zoom level, a sort, a

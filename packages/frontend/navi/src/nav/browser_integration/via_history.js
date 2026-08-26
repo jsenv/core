@@ -5,6 +5,7 @@ import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
+import { resolveRouteRedirection } from "../route.js";
 import {
   installScrollRestoration,
   restoreScrollPosition,
@@ -121,6 +122,24 @@ export const setupBrowserIntegrationViaHistory = ({
     // the single door every navigation goes through, rather than by each caller
     // (navBack's fallback in particular arrives here raw).
     const url = new URL(target, window.location.href).href;
+    // An address that only sends elsewhere never becomes anything here: asked
+    // before the announcement, before the history write and before the routes,
+    // so that what follows is entirely about where the reader is going (see
+    // resolveRouteRedirection).
+    const redirectionUrl = resolveRouteRedirection(url);
+    if (redirectionUrl) {
+      if (redirectionUrl === window.location.href) {
+        // Asked to go where we already are: an address that redirects is never
+        // the one being displayed, so there is nothing to go to and nothing to
+        // stack on the history.
+        return undefined;
+      }
+      return handleRoutingTask(redirectionUrl, {
+        ...options,
+        reason: `${options.reason} (redirected from ${url})`,
+        redirected: true,
+      });
+    }
     // Decided before anything is announced: an elided push IS the traversal it
     // becomes, and the traversal will make its own announcements when the
     // browser answers — a before/after cycle here would be about a navigation
@@ -169,6 +188,7 @@ export const setupBrowserIntegrationViaHistory = ({
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       state,
+      redirected,
     } = options;
 
     // Where the entry being reached stands in this document's own stack —
@@ -211,6 +231,14 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       // traverse / reload: state comes from the history entry, no push/replace needed.
       markUrlAsVisited(url);
+      if (redirected) {
+        // The entry the browser is on names an address that only sends
+        // elsewhere — a cold load on it, or a back into it. Written over where
+        // it stands (the entry keeps its place in the stack, hence its state
+        // and the depth in it): pressing back must not walk into it again.
+        window.history.replaceState(state, null, url);
+        rememberEntryIsOfThisDocument();
+      }
       updateDocumentUrl(url);
       updateDocumentState(state);
     }

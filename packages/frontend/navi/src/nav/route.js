@@ -22,8 +22,61 @@ const getRoutePrivateProperties = (route) => {
 const ROUTE_NOT_MATCHING_PARAMS = {};
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
-export const route = (pattern, { searchParams } = {}) => {
-  const routePattern = createRoutePattern(pattern, { searchParams });
+/**
+ * Declares a route from an url pattern.
+ *
+ * @param {string} pattern - The url pattern, where `:name` is a path param and
+ *   `:name=${signal}` binds that param to a signal.
+ * @param {object} [options]
+ * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
+ *   Search params this route two-way syncs with, by name.
+ * @param {Object<string, RegExp | Array | ((value: string) => boolean)>} [options.params]
+ *   Which values a path param accepts, by param name: a regexp tested against the
+ *   decoded segment, the list of accepted values (compared as strings, so it can
+ *   be the `oneOf` of the signal bound to that param), or a predicate. A route
+ *   whose param declines the segment does not match at all: no signal is
+ *   written, `<Route fallback>` is reachable, and `/:gameId` can sit at the root
+ *   without swallowing `/cgu`. A constrained param is also required — no segment
+ *   is not one of the values it accepts — so `/:gameId` does not match `/`.
+ *
+ *   Constrain the shape, not the existence: whether that game exists is for the
+ *   route action and the page to answer, on a route that did match.
+ *
+ *   ```js
+ *   route(`/:gameId=${gamePageIdSignal}`, { params: { gameId: /^W-[A-Z0-9]{8}$/i } });
+ *   route(`/games/:section=${sectionSignal}`, { params: { section: SECTIONS } });
+ *   ```
+ * @param {object} [options.redirectRoute]
+ *   This address only sends elsewhere: the route it resolves to. The
+ *   redirection happens at the door of the navigation, so this address is never
+ *   displayed, never enters the history, runs no route action and writes no
+ *   signal — going back lands on the page before it, not on the redirection
+ *   again. It fires on this route's own address only: a trailing slash still
+ *   catches what lies below it for rendering, never for redirecting.
+ *
+ *   The params found in the url carry over to the ones the target route
+ *   declares under the same name; what it cannot place is left behind.
+ *
+ *   ```js
+ *   route("/", { redirectRoute: MY_GAMES_PAGE });
+ *   // gameId carries over on its own, shareState is not a param of GAME_PAGE
+ *   route("/:gameId/:shareState", { redirectRoute: GAME_PAGE });
+ *   ```
+ * @param {object|Function|null} [options.redirectRouteParams]
+ *   What to change about the params carried over: an object, or a function of
+ *   the params found in the url returning one. Written params win over inherited
+ *   ones, `undefined` drops one, and `null` carries nothing over at all.
+ *
+ *   ```js
+ *   route("/legacy/:id", { redirectRoute: GAME_PAGE, redirectRouteParams: ({ id }) => ({ gameId: id }) });
+ *   route("/:gameId/invite", { redirectRoute: HOME_PAGE, redirectRouteParams: null });
+ *   ```
+ */
+export const route = (
+  pattern,
+  { searchParams, params, redirectRoute, redirectRouteParams } = {},
+) => {
+  const routePattern = createRoutePattern(pattern, { searchParams, params });
   if (DEBUG) {
     console.debug(`Creating route: ${pattern}`);
   }
@@ -69,6 +122,8 @@ export const route = (pattern, { searchParams } = {}) => {
   route_private_properties: {
     const routePrivateProperties = {
       routePattern,
+      redirectRoute,
+      redirectRouteParams,
       setup: null,
       updateStatus: null,
       cleanup: null,
@@ -439,6 +494,113 @@ export const route = (pattern, { searchParams } = {}) => {
 const [publishRouteMutations, observeRouteMutations] = createPubSub();
 export { observeRouteMutations };
 
+let redirectingRouteSet = null;
+/**
+ * Where does this url really lead?
+ *
+ * Asked at the door of every navigation, before the url is written anywhere —
+ * an address that only sends elsewhere must not become a page, an entry in the
+ * history, or a route anything can see matching. Answered without reading a
+ * single signal: the url alone says it.
+ *
+ * The chain is followed here rather than by letting each redirection navigate
+ * in turn, so one navigation happens and the addresses in between leave no
+ * trace at all.
+ *
+ * @param {string} url
+ * @returns {string|null} The url to go to instead, or null.
+ */
+export const resolveRouteRedirection = (url) => {
+  if (!redirectingRouteSet || redirectingRouteSet.size === 0) {
+    return null;
+  }
+  let urlToResolve = url;
+  let redirectionUrl = null;
+  const urlChain = [url];
+  while (true) {
+    const nextUrl = resolveRedirectionOnce(urlToResolve);
+    if (!nextUrl || nextUrl === urlToResolve) {
+      break;
+    }
+    if (urlChain.includes(nextUrl)) {
+      throw new Error(
+        `Redirection cycle: ${[...urlChain, nextUrl].join(" -> ")}`,
+      );
+    }
+    urlChain.push(nextUrl);
+    redirectionUrl = nextUrl;
+    urlToResolve = nextUrl;
+  }
+  return redirectionUrl;
+};
+const resolveRedirectionOnce = (url) => {
+  let redirectingRoute = null;
+  let redirectingRouteParams = null;
+  let maxDepth = -1;
+  for (const route of redirectingRouteSet) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    // exact: what a trailing slash catches is what a container renders, not
+    // what an address redirects — "/" redirecting must not take "/cgu" with it
+    const urlParams = routePattern.applyOn(url, { exact: true });
+    if (!urlParams) {
+      continue;
+    }
+    // Deeper = more specific, the reading the whole router shares (see
+    // replaceParams): "/:gameId/invite" is a child of "/:gameId/:shareState",
+    // so it answers for an url both of them match.
+    if (routePattern.depth > maxDepth) {
+      maxDepth = routePattern.depth;
+      redirectingRoute = route;
+      redirectingRouteParams = urlParams;
+    }
+  }
+  if (!redirectingRoute) {
+    return null;
+  }
+  return buildRedirectionUrl(redirectingRoute, redirectingRouteParams);
+};
+const buildRedirectionUrl = (route, urlParams) => {
+  const { redirectRoute, redirectRouteParams } =
+    getRoutePrivateProperties(route);
+  const paramsCarriedOver =
+    redirectRouteParams === null
+      ? {}
+      : paramsTargetCanPlace(redirectRoute, urlParams);
+  if (!redirectRouteParams) {
+    return redirectRoute.buildUrl(paramsCarriedOver);
+  }
+  const paramsWritten =
+    typeof redirectRouteParams === "function"
+      ? redirectRouteParams(urlParams)
+      : redirectRouteParams;
+  // A param written as undefined is a param dropped: `paramName in params` is
+  // what tells a url build "this one is decided", value included (resolveParams)
+  return redirectRoute.buildUrl({ ...paramsCarriedOver, ...paramsWritten });
+};
+
+/**
+ * The params of the url being left that the target route can put somewhere:
+ * its own path segments and the search params it declares. What it cannot
+ * place would otherwise be appended to the url as a query param, and a share
+ * link resolving to "/W-ABC234PQ?shareState=1" is not the address anyone meant.
+ */
+const paramsTargetCanPlace = (redirectRoute, urlParams) => {
+  const { routePattern } = getRoutePrivateProperties(redirectRoute);
+  const { parsedPattern, queryConnectionMap } = routePattern;
+  const paramsCarriedOver = {};
+  for (const paramName of Object.keys(urlParams)) {
+    const canPlace =
+      queryConnectionMap.has(paramName) ||
+      parsedPattern.segments.some(
+        (segment) => segment.type === "param" && segment.name === paramName,
+      );
+    if (canPlace) {
+      paramsCarriedOver[paramName] = urlParams[paramName];
+    }
+  }
+  return paramsCarriedOver;
+};
+
 let setupRoutesCalled = false;
 let activeCleanup = null;
 export const setupRoutes = (routes) => {
@@ -467,6 +629,22 @@ This prevents cross-test pollution and ensures clean state.`,
   for (const route of routeSet) {
     const { setup } = getRoutePrivateProperties(route);
     setup({ routeSet, getUrl });
+  }
+
+  // Checked here rather than at declaration: a route may redirect to one
+  // declared after it, and reading the target then would forbid that order.
+  redirectingRouteSet = new Set();
+  for (const route of routeSet) {
+    const { redirectRoute } = getRoutePrivateProperties(route);
+    if (!redirectRoute) {
+      continue;
+    }
+    if (!redirectRoute.isRoute) {
+      throw new TypeError(
+        `${route} redirects to ${redirectRoute}, expecting a route object`,
+      );
+    }
+    redirectingRouteSet.add(route);
   }
 
   // Store previous route states to detect changes
@@ -712,6 +890,7 @@ This prevents cross-test pollution and ensures clean state.`,
       routePrivatePropertiesMap.delete(route);
     }
     routeSet.clear();
+    redirectingRouteSet = null;
     setupRoutesCalled = false;
     activeCleanup = null;
   };

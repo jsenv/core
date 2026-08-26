@@ -37,6 +37,7 @@ import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
+import { resolveRouteRedirection } from "../route.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import {
@@ -123,11 +124,25 @@ export const setupBrowserIntegrationViaNavigation = ({
     return null;
   };
 
+  // An address that only sends elsewhere is answered by going there, and this
+  // document never routes to it (see resolveRouteRedirection). A press that
+  // asked for a new entry gets one, on the destination; anything else takes the
+  // place of the entry the redirecting address would have held — the reader
+  // must not be able to walk back into it.
+  const redirectAway = (redirectionUrl, { history = "replace", info } = {}) => {
+    navigation.navigate(redirectionUrl, { history, info });
+  };
+
   // The routing itself — what the intercept handler, init and reload share.
   // Aborting: each run aborts the previous one, and the navigate event's own
   // signal (superseded navigation, stop button) aborts the current one.
   let abortController = null;
   const runRouting = (url, { reason, navigationType, state, abortEvent }) => {
+    const redirectionUrl = resolveRouteRedirection(url);
+    if (redirectionUrl) {
+      redirectAway(redirectionUrl);
+      return { allResult: undefined, requestedResult: undefined };
+    }
     // Where the entry being reached stands in this document's own stack —
     // decided before the state that carries it is built (see
     // document_back_and_forward.js).
@@ -238,6 +253,31 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
     const url = event.destination.url;
     const navigationType = event.navigationType;
+
+    // Before anything is announced or committed: where this url really leads.
+    // A push can be declined and re-asked; a traversal the browser has already
+    // decided cannot, so it is intercepted and left immediately — the entry is
+    // written over on the way out.
+    const redirectionUrl = resolveRouteRedirection(url);
+    if (redirectionUrl) {
+      const options = {
+        history: navigationType === "push" ? "push" : "replace",
+        info: event.info,
+      };
+      if (event.cancelable) {
+        event.preventDefault();
+        redirectAway(redirectionUrl, options);
+        return;
+      }
+      event.intercept({
+        scroll: "manual",
+        focusReset: "manual",
+        handler: async () => {
+          redirectAway(redirectionUrl, options);
+        },
+      });
+      return;
+    }
 
     // A link that takes the place of the current entry rather than stacking on
     // it (see link_replace.js). The browser has already decided this is a push

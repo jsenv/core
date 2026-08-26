@@ -52,7 +52,10 @@ const readSignalForUrlBuild = (connection) => {
 /**
  * Creates a custom route pattern matcher
  */
-export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
+export const createRoutePattern = (
+  pattern,
+  { searchParams = {}, params: paramConstraints = {} } = {},
+) => {
   // Detect and process path signals in the pattern
   const [cleanPattern, pathConnections] = detectSignals(pattern);
 
@@ -77,21 +80,36 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   // All connections (path + query) for ancestor/descendant signal resolution
   const connections = [...pathConnections, ...queryConnectionMap.values()];
 
+  const paramConstraintMap = createParamConstraintMap(paramConstraints);
   const parsedPattern = parsePattern(cleanPattern, {
     pathConnectionMap,
     queryConnectionMap,
+    paramConstraintMap,
   });
+  if (import.meta.dev) {
+    warnOnParamConstraintWithoutSegment(paramConstraintMap, parsedPattern);
+  }
 
   debug(`[CustomPattern] Created pattern:`, parsedPattern);
   debug(`[CustomPattern] Signal connections:`, connections);
   debug(`[CustomPattern] Path connections:`, pathConnectionMap.size);
   debug(`[CustomPattern] Query connections:`, queryConnectionMap.size);
 
-  const applyOn = (url) => {
+  /**
+   * @param {string} url
+   * @param {object} [options]
+   * @param {boolean} [options.exact] - Only match the url this pattern is the
+   *   address of: a trailing slash or a wildcard stops catching what lies below
+   *   it. What "/" means for a container ("everything under me") and what it
+   *   means for a redirection ("that very address") are not the same question.
+   */
+  const applyOn = (url, { exact = false } = {}) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
       baseFileUrl,
       queryConnectionMap,
+      paramConstraintMap,
+      exact,
       patternObj: patternObject,
     });
 
@@ -757,7 +775,9 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     const entryIsMeaningful = (conn) => {
       const entry = intended.get(conn.paramName);
       return (
-        Boolean(entry) && entry.value !== undefined && conn.isCustomValue(entry.value)
+        Boolean(entry) &&
+        entry.value !== undefined &&
+        conn.isCustomValue(entry.value)
       );
     };
     if (ancestorPattern !== patternObject.parent) {
@@ -947,6 +967,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     connections,
     pathConnectionMap, // Separate map for path parameters
     queryConnectionMap, // Separate map for query parameters
+    paramConstraintMap, // Which values each param accepts (Map<paramName, test>)
     parsedPattern,
     children: [],
     parent: null,
@@ -1054,10 +1075,76 @@ const detectSignals = (routePattern) => {
   return [updatedPattern, signalConnections];
 };
 
+const EMPTY_PARAM_CONSTRAINT_MAP = new Map();
+
+/**
+ * Turns `{ gameId: /^W-[A-Z0-9]{8}$/i }` into `Map<paramName, (value) => boolean>`.
+ * A constraint is a regexp, a list of accepted values, or a predicate.
+ * A constraint decides which url segments the param accepts; a segment it
+ * declines makes the whole route a non-match, so only path params can carry
+ * one — a search param is extracted from a url the path already matched.
+ */
+const createParamConstraintMap = (paramConstraints) => {
+  const entries = Object.entries(paramConstraints);
+  if (entries.length === 0) {
+    return EMPTY_PARAM_CONSTRAINT_MAP;
+  }
+  const paramConstraintMap = new Map();
+  for (const [paramName, constraint] of entries) {
+    if (constraint instanceof RegExp) {
+      paramConstraintMap.set(paramName, (value) => {
+        constraint.lastIndex = 0; // a /g or /y regexp would otherwise resume where the previous test stopped
+        return constraint.test(value);
+      });
+      continue;
+    }
+    if (Array.isArray(constraint)) {
+      // a url segment is a string, so the list is compared as strings:
+      // `oneOf: [1, 2, 3]` accepts "/2"
+      const acceptedValueSet = new Set(
+        constraint.map((value) => String(value)),
+      );
+      paramConstraintMap.set(paramName, (value) => acceptedValueSet.has(value));
+      continue;
+    }
+    if (typeof constraint === "function") {
+      paramConstraintMap.set(paramName, (value) => Boolean(constraint(value)));
+      continue;
+    }
+    throw new TypeError(
+      `params.${paramName} must be a regexp, an array of values or a function, got ${constraint}`,
+    );
+  }
+  return paramConstraintMap;
+};
+
+const warnOnParamConstraintWithoutSegment = (
+  paramConstraintMap,
+  parsedPattern,
+) => {
+  for (const paramName of paramConstraintMap.keys()) {
+    const hasSegment = parsedPattern.segments.some(
+      (segment) => segment.type === "param" && segment.name === paramName,
+    );
+    if (!hasSegment) {
+      console.warn(
+        `params.${paramName} has no effect on "${parsedPattern.original}": there is no ":${paramName}" segment in this pattern`,
+      );
+    }
+  }
+};
+
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
+const parsePattern = (
+  pattern,
+  {
+    pathConnectionMap,
+    queryConnectionMap,
+    paramConstraintMap = EMPTY_PARAM_CONSTRAINT_MAP,
+  },
+) => {
   // Build queryParams from queryConnectionMap
   const queryParams = [];
   for (const [paramName, connection] of queryConnectionMap) {
@@ -1111,13 +1198,14 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
+      //    — unless the param is constrained: "no segment" is not one of the values it accepts
       const connection =
         pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const hasDefault =
         connection && connection.getDefaultValue() !== undefined;
       let isOptional = seg.endsWith("?") || hasDefault;
 
-      if (!isOptional) {
+      if (!isOptional && !paramConstraintMap.has(paramName)) {
         // Check if connected signal has undefined value (making parameter optional for index routes)
         if (
           connection &&
@@ -1228,7 +1316,14 @@ const tryExtractChildParameters = (
       // We need to verify that this parameter isn't already captured by parent
       if (!(segment.name in existingParams)) {
         const urlSegment = remainingSegments[remainingIndex];
-        childParams[segment.name] = decodeURIComponent(urlSegment);
+        const paramValue = decodeURIComponent(urlSegment);
+        const paramConstraint = childPattern.paramConstraintMap.get(
+          segment.name,
+        );
+        if (paramConstraint && !paramConstraint(paramValue)) {
+          return null; // the child declines this value, it cannot explain these segments
+        }
+        childParams[segment.name] = paramValue;
         remainingIndex++;
       }
     } else if (
@@ -1255,7 +1350,14 @@ const tryExtractChildParameters = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, baseFileUrl, queryConnectionMap, patternObj = null },
+  {
+    baseUrl,
+    baseFileUrl,
+    queryConnectionMap,
+    paramConstraintMap = EMPTY_PARAM_CONSTRAINT_MAP,
+    exact = false,
+    patternObj = null,
+  },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -1297,7 +1399,7 @@ const matchUrl = (
     }
 
     // Root route with trailing slash matches all sub-paths (prefix matching, like other trailing-slash routes)
-    if (parsedPattern.trailingSlash) {
+    if (parsedPattern.trailingSlash && !exact) {
       return extractSearchParams(urlObj, queryConnectionMap);
     }
 
@@ -1366,7 +1468,12 @@ const matchUrl = (
 
       // Capture URL segment as parameter value
       const urlSeg = urlSegments[urlSegmentIndex];
-      params[patternSeg.name] = decodeURIComponent(urlSeg);
+      const paramValue = decodeURIComponent(urlSeg);
+      const paramConstraint = paramConstraintMap.get(patternSeg.name);
+      if (paramConstraint && !paramConstraint(paramValue)) {
+        return null; // the param declines this value: the route does not match
+      }
+      params[patternSeg.name] = paramValue;
       urlSegmentIndex++;
     }
   }
@@ -1375,8 +1482,7 @@ const matchUrl = (
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
   if (
-    !parsedPattern.wildcard &&
-    !parsedPattern.trailingSlash &&
+    (exact || (!parsedPattern.wildcard && !parsedPattern.trailingSlash)) &&
     urlSegmentIndex < urlSegments.length
   ) {
     return null; // Pattern without trailing slash/wildcard should not match extra segments
