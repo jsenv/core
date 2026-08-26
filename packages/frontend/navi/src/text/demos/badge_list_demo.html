@@ -86,14 +86,18 @@
             Shrink wrap
           </Title>
           <Paragraph>
-            The badge list automatically shrinks its width to the longest
-            wrapped line, so there is no blank space to the right of the badges.
-            The dotted border shows the element boundary.
+            With <code>shrinkWrap</code> the badge list shrinks its width to the
+            longest wrapped line, so there is no blank space to the right of the
+            badges. Opt-in outside a picker (inside one it is the default — a
+            picker draws a border around the list). The dotted border shows the
+            element boundary.
           </Paragraph>
           <Box flex="y" spacing="m" alignX="start">
-            <Text bold>Just enough to wrap — snaps to longest line</Text>
+            <Text bold>
+              <code>shrinkWrap</code> — snaps to longest line
+            </Text>
             <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList>
+              <BadgeList shrinkWrap>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -104,12 +108,9 @@
               </BadgeList>
             </Box>
 
-            <Text bold>
-              Without shrink wrap (<code>shrinkWrap={"{false}"}</code>) — blank
-              space on the right
-            </Text>
+            <Text bold>Default — blank space on the right</Text>
             <Box maxWidth="280px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList shrinkWrap={false}>
+              <BadgeList>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -122,7 +123,7 @@
 
             <Text bold>More lines, varying widths</Text>
             <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList>
+              <BadgeList shrinkWrap>
                 <Badge>HTML</Badge>
                 <Badge>CSS</Badge>
                 <Badge>JavaScript</Badge>
@@ -142,7 +143,7 @@
 
             <Text bold>Mix of very short and very long</Text>
             <Box maxWidth="300px" border="2px dotted #aaa" borderRadius="4px">
-              <BadgeList>
+              <BadgeList shrinkWrap>
                 <Badge>JS</Badge>
                 <Badge>Rust</Badge>
                 <Badge>C++</Badge>
