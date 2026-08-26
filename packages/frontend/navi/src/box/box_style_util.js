@@ -751,16 +751,10 @@ export const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-export const prepareStyleValue = (
-  existingValue,
-  value,
-  name,
-  styleContext,
-  context,
-) => {
+export const prepareStyleValue = (existingValue, value, name, styleContext) => {
   const stringifier = getStringifier(name);
-  const cssValue = stringifier(value, name, styleContext, context);
-  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
+  const cssValue = stringifier(value, name, styleContext);
+  const mergedValue = mergeOneStyle(existingValue, cssValue, name, "css");
   return mergedValue;
 };
 

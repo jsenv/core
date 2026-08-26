@@ -472,7 +472,6 @@ const computeBox = (props, parentBoxFlow) => {
     as: asProp = "div",
     baseClassName,
     className,
-    baseStyle,
 
     // style management
     style,
@@ -717,13 +716,12 @@ const computeBox = (props, parentBoxFlow) => {
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const canForwardToChild = hasChildUsingForwardedProps;
 
-    const addStyle = (value, name, styleContext, stylesTarget, context) => {
+    const addStyle = (value, name, styleContext, stylesTarget) => {
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
         value,
         name,
         styleContext,
-        context,
       );
       const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
@@ -751,22 +749,21 @@ const computeBox = (props, parentBoxFlow) => {
       name,
       styleContext,
       stylesTarget,
-      context,
       visualChildPropStrategy,
     ) => {
       if (!visualChildPropStrategy) {
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
       }
       if (!canForwardToChild) {
         return false;
@@ -831,14 +828,12 @@ const computeBox = (props, parentBoxFlow) => {
         return;
       }
 
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+      if (styleOrigin === "style") {
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       if (name.startsWith("--")) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -857,7 +852,6 @@ const computeBox = (props, parentBoxFlow) => {
             name,
             styleContext,
             boxStylesTarget,
-            context,
             visualChildPropStrategy,
           );
           if (needForwarding) {
@@ -881,7 +875,6 @@ const computeBox = (props, parentBoxFlow) => {
             styleName,
             styleContext,
             boxStylesTarget,
-            context,
             visualChildPropStrategy,
           );
         }
@@ -924,12 +917,6 @@ const computeBox = (props, parentBoxFlow) => {
       return;
     };
 
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        visitProp(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
     for (const propName of Object.keys(rest)) {
       const propValue = rest[propName];
       if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {

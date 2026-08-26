@@ -1068,7 +1068,8 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 
 // The state names a pseudo key asks for, parsed once: the same few keys come
 // back on every state change of every box that has them. "::x" alone always
-// matches; "::x:a:b" and ":a:b" ask for a and b.
+// matches; "::x:a:b" and ":a:b" ask for ":a" and ":b" — the state keys as
+// checkPseudoClasses writes them, colon included.
 const pseudoKeyRequiredStatesMap = new Map();
 const getPseudoKeyRequiredStates = (pseudoKey) => {
   const cached = pseudoKeyRequiredStatesMap.get(pseudoKey);
@@ -1085,7 +1086,12 @@ const getPseudoKeyRequiredStates = (pseudoKey) => {
   } else {
     const nextColonIndex = pseudoKey.indexOf(":", 1);
     requiredStates =
-      nextColonIndex === -1 ? [pseudoKey] : pseudoKey.slice(1).split(":");
+      nextColonIndex === -1
+        ? [pseudoKey]
+        : pseudoKey
+            .slice(1)
+            .split(":")
+            .map((state) => `:${state}`);
   }
   pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
   return requiredStates;
