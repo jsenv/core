@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, mergeTwoStyles, normalizeStyles, resolveCSSSize, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, hasCSSSizeUnit, resolveOklchLightness, contrastColor, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, stringifyStyle as stringifyStyle$1, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createPubSub, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createIterableWeakSet, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, resolveCSSSize, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, hasCSSSizeUnit, resolveOklchLightness, contrastColor, clickIsSuppressed, isTouchDrivenEvent, scrollIntoViewScoped, scrollRoomTowards, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, findBefore, findAfter, initFocusGroup, stringifyStyle as stringifyStyle$1, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { createContext, isValidElement, h, Fragment, render, toChildArray, options, cloneElement } from "preact";
@@ -2430,9 +2430,13 @@ const useOwnTargetHidden = (props) => {
  *
  * Beyond recursive object/array comparison it covers the edge cases `===` gets
  * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
- * cycles don't loop (a seen-set guards circular refs), and same-type is required
- * before descending. Cheap paths run first: reference equality, then the identity
- * short-circuit below, then array length before element-by-element.
+ * cycles don't loop (a set of the pairs being compared guards circular refs),
+ * and same-type is required
+ * before descending. Functions, and objects with nothing enumerable to compare
+ * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
+ * them says whether two are "the same". Cheap paths run first: reference
+ * equality, then the identity short-circuit below, then array length before
+ * element-by-element.
  *
  * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
  * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
@@ -2494,6 +2498,11 @@ const compareTwoJsValues = (
     if (aType !== bType) {
       return false;
     }
+    if (aType === "function") {
+      // Not the same function (reference equality came first), and nothing in
+      // a function says whether two of them do the same thing.
+      return false;
+    }
     const aIsPrimitive =
       a === null || (aType !== "object" && aType !== "function");
     const bIsPrimitive =
@@ -2504,14 +2513,22 @@ const compareTwoJsValues = (
     if (aIsPrimitive && bIsPrimitive) {
       return a === b;
     }
-    if (seenSet.has(a)) {
+    // Back on something still being compared: a cycle. No loop, and no answer
+    // either — equal by a route that never ends is not equal.
+    if (seenSet.has(a) || seenSet.has(b)) {
       return false;
     }
-    if (seenSet.has(b)) {
-      return false;
-    }
+    // Held only while a and b are being compared, not for the rest of the
+    // walk: the same object is rightly met again elsewhere — in an unordered
+    // array every element of a is tried against every element of b.
     seenSet.add(a);
     seenSet.add(b);
+    const result = compareComposite(a, b);
+    seenSet.delete(a);
+    seenSet.delete(b);
+    return result;
+  };
+  const compareComposite = (a, b) => {
     const aIsArray = Array.isArray(a);
     const bIsArray = Array.isArray(b);
     if (aIsArray !== bIsArray) {
@@ -2569,23 +2586,23 @@ const compareTwoJsValues = (
       return true;
     }
     // Date objects must be compared by time value, not by enumerable keys (which are empty)
-    {
-      const aIsDate = a instanceof Date;
-      const bIsDate = b instanceof Date;
-      if (aIsDate !== bIsDate) {
-        return false;
-      }
-      if (aIsDate && bIsDate) {
-        const aTime = a.getTime();
-        const bTime = b.getTime();
-        if (aTime !== bTime) {
-          return false;
-        }
-      }
+    const aIsDate = a instanceof Date;
+    const bIsDate = b instanceof Date;
+    if (aIsDate !== bIsDate) {
+      return false;
+    }
+    if (aIsDate) {
+      return a.getTime() === b.getTime();
     }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    if (aKeys.length === 0 && (!isPlainObject$2(a) || !isPlainObject$2(b))) {
+      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
+      // apart, so they are the same one or they are not — and they are not,
+      // reference equality came first.
       return false;
     }
     if (lightKeySet) {
@@ -2623,6 +2640,11 @@ const compareTwoJsValues = (
     : compare;
 
   return compare(rootA, rootB);
+};
+
+const isPlainObject$2 = (value) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };
 
 // Global signal registry for route template detection
@@ -16708,16 +16730,10 @@ const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-const prepareStyleValue = (
-  existingValue,
-  value,
-  name,
-  styleContext,
-  context,
-) => {
+const prepareStyleValue = (existingValue, value, name, styleContext) => {
   const stringifier = getStringifier(name);
-  const cssValue = stringifier(value, name, styleContext, context);
-  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
+  const cssValue = stringifier(value, name, styleContext);
+  const mergedValue = mergeOneStyle(existingValue, cssValue, name, "css");
   return mergedValue;
 };
 
@@ -17806,30 +17822,61 @@ const isKeyboardModality = () => keyboardNavigationUsed;
     return false;
   };
 
-  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
-  // listeners + a MutationObserver on aria-controls so that when the attribute
-  // changes while the element is focused, old and new controlled elements are
-  // notified to re-check their own focus state.
-  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
-  // listeners (e.g. keydown/keyup for :focus-visible).
-  const setupFocus = (el, callback) => {
-    const onFocusChange = (e) => {
-      callback();
-      notifyAriaControlled(el, e);
-    };
-    el.addEventListener("focusin", onFocusChange);
-    el.addEventListener("focusout", onFocusChange);
-    // Only observe aria-controls mutations when the element already has the
-    // attribute at setup time. If aria-controls is guaranteed to be set before
-    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
-    // real cases without paying the MutationObserver cost for every element.
-    let observer;
-    // if (el.hasAttribute("aria-controls")) {
-    observer = new MutationObserver((mutations) => {
-      if (!el.matches(":focus-within")) {
-        return;
+  // One registration per element for everything focus-related, shared by
+  // :focus, :focus-visible and :focus-within: they all react to the same
+  // focusin/focusout, and they all re-check through the same callback (see
+  // initPseudoStyles), which the Set turns into one call.
+  const focusTrackingWeakMap = new WeakMap();
+  const trackFocus = (el, callback) => {
+    let tracking = focusTrackingWeakMap.get(el);
+    if (!tracking) {
+      const callbackSet = new Set();
+      const onFocusChange = (e) => {
+        for (const trackedCallback of callbackSet) {
+          trackedCallback();
+        }
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      tracking = {
+        callbackSet,
+        teardown: () => {
+          el.removeEventListener("focusin", onFocusChange);
+          el.removeEventListener("focusout", onFocusChange);
+          focusTrackingWeakMap.delete(el);
+        },
+      };
+      focusTrackingWeakMap.set(el, tracking);
+      observeAriaControls();
+    }
+    tracking.callbackSet.add(callback);
+    return () => {
+      tracking.callbackSet.delete(callback);
+      if (tracking.callbackSet.size === 0) {
+        tracking.teardown();
       }
+    };
+  };
+  // When aria-controls changes on a focused element, what it used to control
+  // and what it controls now both re-check their inherited focus. One observer
+  // on the document rather than one per tracked element: the attribute changes
+  // rarely, on few elements, while thousands are tracked — and it can be set
+  // after the element was, so "has it at setup" would miss it.
+  let ariaControlsObserver = null;
+  const observeAriaControls = () => {
+    if (ariaControlsObserver) {
+      return;
+    }
+    ariaControlsObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
+        const el = mutation.target;
+        if (!focusTrackingWeakMap.has(el)) {
+          continue;
+        }
+        if (!el.matches(":focus-within")) {
+          continue;
+        }
         const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
         for (const id of oldIds) {
           const controlled = document.getElementById(id);
@@ -17837,30 +17884,20 @@ const isKeyboardModality = () => keyboardNavigationUsed;
             requestPseudoStateCheck(controlled, {});
           }
         }
+        notifyAriaControlled(el, {});
       }
-      notifyAriaControlled(el, {});
     });
-    observer.observe(el, {
+    ariaControlsObserver.observe(document.documentElement, {
+      subtree: true,
       attributes: true,
       attributeFilter: ["aria-controls"],
       attributeOldValue: true,
     });
-    // }
-    return () => {
-      el.removeEventListener("focusin", onFocusChange);
-      el.removeEventListener("focusout", onFocusChange);
-      observer?.disconnect();
-    };
   };
 
   definePseudoClass(":focus", {
     attribute: "data-focus",
-    setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      return () => {
-        cleanup();
-      };
-    },
+    setup: trackFocus,
     test: (el) => {
       if (el.matches(":focus")) {
         return true;
@@ -17876,9 +17913,7 @@ const isKeyboardModality = () => keyboardNavigationUsed;
     // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
     // handler re-checks the focused element (the only one a keystroke can turn
     // focus-visible) so a keypress stays O(1), not O(number-of-boxes).
-    setup: (el, callback) => {
-      return setupFocus(el, callback);
-    },
+    setup: trackFocus,
     test: (el) => {
       if (isMatchingFocusVisible(el)) {
         return true;
@@ -17891,18 +17926,7 @@ const isKeyboardModality = () => keyboardNavigationUsed;
   });
   definePseudoClass(":focus-within", {
     attribute: "data-focus-within",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
+    setup: trackFocus,
     test: (el) => {
       if (el.matches(":focus-within")) {
         return true;
@@ -18197,8 +18221,18 @@ const initPseudoStyles = (
       onStateChange(state, oldPseudoState);
     }),
   );
-  element.addEventListener("navi_pseudo_state_request_check", () => {
+  // One function for every way a re-check can be asked, so that setups
+  // registering it side by side (the focus tracking, for one) hold the same
+  // callback and call it once.
+  const requestCheck = () => {
     checkPseudoClasses();
+  };
+  element.addEventListener("navi_pseudo_state_request_check", requestCheck);
+  addTeardown(() => {
+    element.removeEventListener(
+      "navi_pseudo_state_request_check",
+      requestCheck,
+    );
   });
 
   for (const pseudoClass of pseudoClasses) {
@@ -18209,9 +18243,7 @@ const initPseudoStyles = (
     }
     const { setup } = pseudoClassDefinition;
     if (setup) {
-      const cleanup = setup(element, () => {
-        checkPseudoClasses();
-      });
+      const cleanup = setup(element, requestCheck);
       addTeardown(cleanup);
     }
   }
@@ -18231,6 +18263,11 @@ const applyStyle = (
     return;
   }
   const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  // The same object comes back for every state change of a box whose inline
+  // style has no pseudo entry: nothing to write.
+  if (appliedStyleWeakMap.get(element) === styleToApply) {
+    return;
+  }
   updateStyle(element, styleToApply, preventInitialTransition);
 };
 
@@ -18245,52 +18282,74 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   ) {
     return styles;
   }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
+  let style = styles;
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
+    const requiredStates = getPseudoKeyRequiredStates(pseudoKey);
+    if (!requiredStates.every((state) => pseudoState[state])) {
+      continue;
     }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
+    if (style === styles) {
+      style = { ...styles };
+    }
+    // Both sides are already normalized for CSS by the box; only the
+    // properties that compose (a press scale on top of a translate) go through
+    // a merge, the rest is a plain override.
+    const styleToAdd = pseudoNamedStyles[pseudoKey];
+    for (const key of Object.keys(styleToAdd)) {
+      const value = styleToAdd[key];
+      if (value === undefined) {
+        continue;
+      }
+      if (key === "transform" || key === "willChange") {
+        style[key] = mergeOneStyle(style[key], value, key, "css");
+      } else {
+        style[key] = value;
+      }
+    }
   }
   return style;
 };
 
-const styleKeySetWeakMap = new WeakMap();
+// The state names a pseudo key asks for, parsed once: the same few keys come
+// back on every state change of every box that has them. "::x" alone always
+// matches; "::x:a:b" and ":a:b" ask for ":a" and ":b" — the state keys as
+// checkPseudoClasses writes them, colon included.
+const pseudoKeyRequiredStatesMap = new Map();
+const getPseudoKeyRequiredStates = (pseudoKey) => {
+  const cached = pseudoKeyRequiredStatesMap.get(pseudoKey);
+  if (cached) {
+    return cached;
+  }
+  let requiredStates;
+  if (pseudoKey.startsWith("::")) {
+    const nextColonIndex = pseudoKey.indexOf(":", 2);
+    requiredStates =
+      nextColonIndex === -1
+        ? []
+        : getPseudoKeyRequiredStates(pseudoKey.slice(nextColonIndex));
+  } else {
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    requiredStates =
+      nextColonIndex === -1
+        ? [pseudoKey]
+        : pseudoKey
+            .slice(1)
+            .split(":")
+            .map((state) => `:${state}`);
+  }
+  pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
+  return requiredStates;
+};
+
+// element → the style object last written to it, so the next one is written
+// as a difference: the values that changed, the keys it no longer has.
+const appliedStyleWeakMap = new WeakMap();
 const elementTransitionWeakMap = new WeakMap();
 const elementRenderedWeakSet = new WeakSet();
-const NO_STYLE_KEY_SET = new Set();
+const NO_STYLE = {};
 const updateStyle = (element, style, preventInitialTransition) => {
-  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  const styleToApply = style || NO_STYLE;
+  const styleApplied = appliedStyleWeakMap.get(element) || NO_STYLE;
   // TRANSITION ANTI-FLICKER STRATEGY:
   // Problem: When setting both transition and styled properties simultaneously
   // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
@@ -18300,32 +18359,32 @@ const updateStyle = (element, style, preventInitialTransition) => {
   // transition to "none", then restore the intended transition after the frame completes.
   // We handle multiple updateStyle calls in the same frame gracefully - only one
   // requestAnimationFrame is scheduled per element, and the final transition value wins.
-  let styleKeySetToApply = styleKeySet;
+  let skipTransition = false;
   if (!elementRenderedWeakSet.has(element)) {
-    const hasTransition = styleKeySet.has("transition");
+    const hasTransition = Object.hasOwn(styleToApply, "transition");
     if (hasTransition || preventInitialTransition) {
-      if (elementTransitionWeakMap.has(element)) {
-        elementTransitionWeakMap.set(element, style?.transition);
-      } else {
+      if (!elementTransitionWeakMap.has(element)) {
         element.style.transition = "none";
-        elementTransitionWeakMap.set(element, style?.transition);
       }
-      // Don't apply the transition property now - we've set it to "none" temporarily
-      styleKeySetToApply = new Set(styleKeySet);
-      styleKeySetToApply.delete("transition");
+      elementTransitionWeakMap.set(element, styleToApply.transition);
+      // Stays "none" until the first frame puts the intended value back
+      skipTransition = true;
     }
     afterFirstFrame(element);
   }
 
-  // Apply all styles normally (excluding transition during anti-flicker)
-  const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySetToApply) {
-    const value = style[key];
+  for (const key of Object.keys(styleToApply)) {
+    const value = styleToApply[key];
     if (value === undefined || value === null) {
-      // Treat undefined/null as "remove" — leave key in keysToDelete
+      // a removal: handled below with the keys this style no longer has
       continue;
     }
-    keysToDelete.delete(key);
+    if (skipTransition && key === "transition") {
+      continue;
+    }
+    if (styleApplied[key] === value) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.setProperty(key, value);
     } else {
@@ -18333,8 +18392,15 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  // Remove obsolete styles
-  for (const key of keysToDelete) {
+  for (const key of Object.keys(styleApplied)) {
+    const previousValue = styleApplied[key];
+    if (previousValue === undefined || previousValue === null) {
+      continue;
+    }
+    const value = styleToApply[key];
+    if (value !== undefined && value !== null) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.removeProperty(key);
     } else {
@@ -18342,7 +18408,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  styleKeySetWeakMap.set(element, styleKeySet);
+  appliedStyleWeakMap.set(element, styleToApply);
 };
 
 // One frame for every element waiting for its first one, not one frame each.
@@ -18394,8 +18460,10 @@ const useComposeElementRef = (syncElement, externalRef) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
   const prevSyncElementRef = useRef(undefined);
-  const refCallbackRef = useRef(null);
+  const stableRef = useRef(null);
   const externalRefRef = useRef(externalRef);
+  const syncElementRef = useRef(syncElement);
+  syncElementRef.current = syncElement;
   // Detect external ref identity change between renders. The refCallback is
   // stable across renders, so when the parent passes a new ref object (or
   // switches from null to a ref), Preact does NOT re-fire the callback while
@@ -18419,24 +18487,24 @@ const useComposeElementRef = (syncElement, externalRef) => {
   }
   externalRefRef.current = externalRef;
 
-  const runSync = (el) => {
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
-    }
-    prevSyncElementRef.current = syncElement;
-    const cleanup = syncElement(el);
-    if (typeof cleanup === "function") {
-      cleanupRef.current = cleanup;
-    }
-  };
-
-  // If element already mounted, re-sync when syncElement reference changed.
-  if (elRef.current && syncElement !== prevSyncElementRef.current) {
-    runSync(elRef.current);
-  }
-
-  if (!refCallbackRef.current) {
+  if (!stableRef.current) {
+    // Created once, like the ref callback that calls it, and reading the sync
+    // function through a ref for that reason: the element can be replaced long
+    // after the first render — a tag that changes, a box hidden then shown —
+    // and what the new element gets must be the current render's sync, not
+    // the one the first render closed over.
+    const runSync = (el) => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+      const syncElementNow = syncElementRef.current;
+      prevSyncElementRef.current = syncElementNow;
+      const cleanup = syncElementNow(el);
+      if (typeof cleanup === "function") {
+        cleanupRef.current = cleanup;
+      }
+    };
     const refCallback = (el) => {
       elRef.current = el;
       // Keep .current in sync immediately so useEffect callbacks that read
@@ -18460,10 +18528,15 @@ const useComposeElementRef = (syncElement, externalRef) => {
         prevSyncElementRef.current = undefined;
       }
     };
-    refCallbackRef.current = refCallback;
+    stableRef.current = { refCallback, runSync };
+  }
+  const { refCallback, runSync } = stableRef.current;
+
+  // If element already mounted, re-sync when syncElement reference changed.
+  if (elRef.current && syncElement !== prevSyncElementRef.current) {
+    runSync(elRef.current);
   }
 
-  const refCallback = refCallbackRef.current;
   refCallback.current = elRef.current;
   return refCallback;
 };
@@ -18657,12 +18730,6 @@ import.meta.css = [/* css */`
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
         flex: 0 1 auto;
-        /* Overflow makes it focusable via tab: apply the outline styles */
-        outline-width: var(--navi-focus-outline-width);
-        /* Outline must appear ON the body, not outside */
-        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
-        outline-offset: calc(-1 * var(--navi-focus-outline-width));
-        overflow: auto;
 
         /* The same reading as the header's corners above, on all four: a body
            follows the corners of the box it is drawn in — which is also what
@@ -18671,6 +18738,12 @@ import.meta.css = [/* css */`
         border-top-right-radius: inherit;
         border-bottom-right-radius: inherit;
         border-bottom-left-radius: inherit;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
+        overflow: auto;
 
         &:focus-visible {
           outline-style: solid;
@@ -18817,6 +18890,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   childPropSet?: Set<string>,
  *   preventInitialTransition?: boolean,
  *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
+ *   ownTarget?: boolean | "refuse" | "always",
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -18824,10 +18898,94 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 const Box = props => {
   const {
     ref,
+    children,
+    separator,
+    interactions,
+    ...computeProps
+  } = props;
+  const parentBoxFlow = useContext(BoxFlowContext);
+  // Which interactions this box answers, and with what. Read here rather than
+  // on the control, so a swipe or a hold can be declared on anything — a row, a
+  // card, a block of text — and reach the control it belongs to (which is what
+  // carries the action, and what knows it is disabled) by looking for it.
+  // Read through a ref by the effect below: what an interaction DOES is this
+  // render, while WHEN it happens is wired once, at mount (see
+  // useInteractionsEffect).
+  const interactionsRef = useRef(null);
+  interactionsRef.current = resolveInteractions(interactions);
+
+  // What the props say about this box is worked out once per distinct set of
+  // them: a parent re-rendering hands every box below it a new props object,
+  // and most of the time nothing in it has changed. Handlers are the
+  // exception — a closure is new on every render — so they are compared by
+  // name only and put back fresh, see withCurrentHandlers.
+  const renderMemoRef = useRef(null);
+  const renderMemo = renderMemoRef.current;
+  let computed;
+  if (renderMemo && renderMemo.parentBoxFlow === parentBoxFlow && arePropsEquivalent(renderMemo.props, computeProps)) {
+    computed = withCurrentHandlers(renderMemo.computed, computeProps);
+  } else {
+    computed = computeBox(computeProps, parentBoxFlow);
+  }
+  renderMemoRef.current = {
+    props: computeProps,
+    parentBoxFlow,
+    computed
+  };
+  const {
+    TagName,
+    boxFlow,
+    boxFlowIsDefault,
+    row,
+    column,
+    aspectRatio,
+    visualSelector,
+    innerClassName,
+    selfForwardedProps,
+    childForwardedProps,
+    styleDeps
+  } = computed;
+  const syncBox = useCallback(computed.syncBox, styleDeps);
+  const finalRef = useComposeElementRef(syncBox, ref);
+  useInteractionsEffect(finalRef, interactionsRef);
+  let innerChildren = children;
+  if (separator) {
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
+  }
+
+  // When hasChildUsingForwardedProps is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  if (props.hasChildUsingForwardedProps) {
+    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
+      value: childForwardedProps,
+      children: innerChildren
+    });
+  }
+  return jsx(TagName, {
+    ref: finalRef,
+    className: innerClassName,
+    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
+    "navi-box-flow-row": row ? "" : undefined,
+    "navi-box-flow-column": column ? "" : undefined,
+    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
+    "data-visual-selector": visualSelector,
+    ...selfForwardedProps,
+    children: jsx(BoxFlowContext.Provider, {
+      value: boxFlow,
+      children: innerChildren
+    })
+  });
+};
+
+// Everything the props decide, for the JSX and for the DOM sync. Pure, which
+// is what lets Box keep the previous result when the props are equivalent.
+const computeBox = (props, parentBoxFlow) => {
+  const {
     as: asProp = "div",
     baseClassName,
     className,
-    baseStyle,
     // style management
     style,
     styleCSSVars = STYLE_CSS_VARS_DEFAULT,
@@ -18853,8 +19011,6 @@ const Box = props => {
     // (when transition is set via props, this is done automatically)
     // so this prop is useful only when transition is enabled from "outside" (via CSS)
     preventInitialTransition,
-    children,
-    separator,
     // Layout roles inside a scrolling container (a Dialog, a Popover): the
     // header stays at the top and the footer at the bottom while the rest
     // scrolls, or — when a body is present — the body is what scrolls and the
@@ -18864,22 +19020,24 @@ const Box = props => {
     header,
     footer,
     body,
-    // Which interactions this box answers, and with what. Read here rather than
-    // on the control, so a swipe or a hold can be declared on anything — a row, a
-    // card, a block of text — and reach the control it belongs to (which is what
-    // carries the action, and what knows it is disabled) by looking for it.
-    interactions,
+    // A press landing here is aimed AT this box, not at whatever it sits in — a
+    // cross an application draws in a card's corner, a badge on a row that
+    // travels. Writing the attribute is the whole of it here: it is read off
+    // the DOM by the controls above and by the gesture readers, and what an
+    // affordance makes of the read-only around it is a question only a control
+    // can answer (see own_target.js).
+    ownTarget,
     ...rest
   } = props;
+  if (ownTarget) {
+    rest[OWN_TARGET_ATTRIBUTE] = typeof ownTarget === "string" ? ownTarget : "";
+  }
   let as = asProp;
 
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same
   // fact. Dialog and Popover get it the same way, by asking for that overflow.
-  const scrolls = ["overflow", "overflowX", "overflowY"].some(name => {
-    const value = rest[name];
-    return value === "auto" || value === "scroll";
-  });
+  const scrolls = isScrollingOverflow(rest.overflow) || isScrollingOverflow(rest.overflowX) || isScrollingOverflow(rest.overflowY);
   // <header>/<footer> rather than a div: the role is exactly what those tags
   // mean, and a screen reader gets it for free. The body stays a div — <main>
   // means "the main content of the document", which a popup's body is not.
@@ -18915,8 +19073,6 @@ const Box = props => {
     }
   }
   const defaultDisplay = getDefaultDisplay(TagName);
-  // Read the parent flow early so we can use it when display="inherit" is requested.
-  const parentBoxFlow = useContext(BoxFlowContext);
   let {
     inline,
     block,
@@ -18992,12 +19148,6 @@ const Box = props => {
   }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
 
-  // Read through a ref by the effect below: what an interaction DOES is this
-  // render, while WHEN it happens is wired once, at mount (see
-  // useInteractionsEffect).
-  const interactionsRef = useRef(null);
-  interactionsRef.current = resolveInteractions(interactions);
-  const remainingPropKeySet = new Set(Object.keys(rest));
   // The box is only a frame and one of its descendants IS the component (a Button
   // and its content): everything, event handlers included, belongs to that
   // descendant.
@@ -19005,15 +19155,20 @@ const Box = props => {
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
-  let finalRef;
+  let styleDeps;
+  let syncBox;
   {
-    const styleDeps = [
+    styleDeps = [
     // Layout and alignment props
     parentBoxFlow, boxFlow,
     // Style context dependencies
     styleCSSVars, pseudoClasses, pseudoElements,
     // Selectors
     visualSelector, pseudoStateSelector, preventInitialTransition];
+    // The pseudo state goes into the deps as key/value entries and never as the
+    // object itself: a control builds that object on every render, and its
+    // identity in the deps would re-run the sync — listeners, observers, style
+    // writes — on each of them, for a state that has not changed.
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
@@ -19023,30 +19178,28 @@ const Box = props => {
         if (pseudoStateKeySet.has(key)) {
           pseudoStateKeySet.delete(key);
           const value = pseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         } else {
           const value = basePseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         }
       }
       for (const key of pseudoStateKeySet) {
         const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, value);
         innerPseudoState[key] = value;
       }
     } else if (basePseudoState) {
       innerPseudoState = basePseudoState;
       for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, basePseudoState[key]);
       }
     } else if (pseudoState) {
       innerPseudoState = pseudoState;
       for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, pseudoState[key]);
       }
     } else {
       innerPseudoState = PSEUDO_STATE_DEFAULT;
@@ -19064,8 +19217,8 @@ const Box = props => {
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const canForwardToChild = hasChildUsingForwardedProps;
-    const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
+    const addStyle = (value, name, styleContext, stylesTarget) => {
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext);
       const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
@@ -19087,20 +19240,20 @@ const Box = props => {
       styleDeps.push(name, value); // impact box style -> add to deps
       stylesTarget[name] = value;
     };
-    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
+    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, visualChildPropStrategy) => {
       if (!visualChildPropStrategy) {
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
       }
       if (!canForwardToChild) {
         return false;
@@ -19113,13 +19266,15 @@ const Box = props => {
     // style={{ ":hover": { backgroundColor: "red" } }}
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
-    boxPseudoNamedStyles = {};
     const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
       const isPseudoElement = name.startsWith("::");
       const isPseudoClass = name.startsWith(":");
       if (isPseudoElement || isPseudoClass) {
         styleDeps.push(name);
         pseudoClassesFromStyleSet.add(name);
+        if (boxPseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT) {
+          boxPseudoNamedStyles = {};
+        }
         const pseudoStyleContext = {
           ...styleContext,
           styleCSSVars: {
@@ -19140,18 +19295,16 @@ const Box = props => {
         const pseudoClassStyles = {};
         for (const key of pseudoStyleKeys) {
           visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
-          boxPseudoNamedStyles[name] = pseudoClassStyles;
         }
+        boxPseudoNamedStyles[name] = pseudoClassStyles;
         return;
       }
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+      if (styleOrigin === "style") {
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       if (name.startsWith("--")) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -19163,7 +19316,7 @@ const Box = props => {
         if (
         // prop name === css style name
         !getStyle) {
-          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, visualChildPropStrategy);
           if (needForwarding) {
             if (isPseudoStyle) ; else {
               childForwardedProps[name] = value;
@@ -19178,7 +19331,7 @@ const Box = props => {
         let needForwarding = false;
         for (const styleName of Object.keys(cssValues)) {
           const cssValue = cssValues[styleName];
-          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, visualChildPropStrategy);
         }
         if (needForwarding) {
           if (isPseudoStyle) ; else {
@@ -19214,13 +19367,7 @@ const Box = props => {
       }
       return;
     };
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        visitProp(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
-    for (const propName of remainingPropKeySet) {
+    for (const propName of Object.keys(rest)) {
       const propValue = rest[propName];
       if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
         if (canForwardToChild) {
@@ -19229,9 +19376,6 @@ const Box = props => {
           selfForwardedProps[propName] = propValue;
         }
         continue;
-      }
-      if (canForwardToChild && toCopySet.has(propName)) {
-        childForwardedProps[propName] = propValue;
       }
       const isDataAttribute = propName.startsWith("data-");
       if (isDataAttribute) {
@@ -19274,7 +19418,6 @@ const Box = props => {
         visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
-    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
@@ -19291,7 +19434,7 @@ const Box = props => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    const syncBox = useCallback(boxEl => {
+    syncBox = boxEl => {
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
       if (!pseudoStateEl) {
         console.error(`pseudoStateSelector "${pseudoStateSelector}" did not match any element inside the box`, boxEl);
@@ -19306,42 +19449,24 @@ const Box = props => {
         elementToImpact: boxEl,
         elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
       });
-    }, styleDeps);
-    finalRef = useComposeElementRef(syncBox, ref);
-  }
-  useInteractionsEffect(finalRef, interactionsRef);
-  let innerChildren = children;
-  if (separator) {
-    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    innerChildren = applySeparatorOnChildren(innerChildren, separator);
-  }
-
-  // When hasChildUsingForwardedProps is used it means
-  // Some/all the children needs to access remainingProps
-  // to render and will provide a function to do so.
-  if (hasChildUsingForwardedProps) {
-    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
-      value: childForwardedProps,
-      children: innerChildren
-    });
+    };
   }
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
-  return jsx(TagName, {
-    ref: finalRef,
-    className: innerClassName,
-    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
-    "navi-box-flow-row": row ? "" : undefined,
-    "navi-box-flow-column": column ? "" : undefined,
-    "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
-    "data-visual-selector": visualSelector,
-    ...selfForwardedProps,
-    children: jsx(BoxFlowContext.Provider, {
-      value: boxFlow,
-      children: innerChildren
-    })
-  });
+  return {
+    TagName,
+    boxFlow,
+    boxFlowIsDefault,
+    row,
+    column,
+    aspectRatio,
+    visualSelector,
+    innerClassName,
+    selfForwardedProps,
+    childForwardedProps,
+    styleDeps,
+    syncBox
+  };
 };
-const toCopySet = new Set([]);
 const applySeparatorOnChildren = (children, separator) => {
   const flattenedChildren = toChildArray(children);
   if (flattenedChildren.length <= 1) {
@@ -19386,6 +19511,62 @@ const isNonZeroSpacing = value => {
     return false;
   }
   return true;
+};
+const isScrollingOverflow = value => value === "auto" || value === "scroll";
+
+// Same props as far as computeBox is concerned. Handlers count by name only,
+// see withCurrentHandlers; no style or state key starts with "on".
+const arePropsEquivalent = (previousProps, props) => compareTwoJsValues(previousProps, props, {
+  keyComparator: comparePropAt
+});
+const comparePropAt = (a, b, key, recurse) => {
+  if (typeof key === "string" && key.startsWith("on")) {
+    return true;
+  }
+  return recurse(a, b);
+};
+// The previous computation with this render's handlers: a handler goes where
+// its name went the previous time, self or child, the split being decided by
+// props that are the same. The forwarded objects keep their identity when no
+// handler changed, so what reads them through context sees nothing new.
+const withCurrentHandlers = (computed, props) => {
+  let {
+    selfForwardedProps,
+    childForwardedProps
+  } = computed;
+  for (const key of Object.keys(props)) {
+    if (!key.startsWith("on")) {
+      continue;
+    }
+    const value = props[key];
+    if (Object.hasOwn(childForwardedProps, key)) {
+      if (childForwardedProps[key] !== value) {
+        if (childForwardedProps === computed.childForwardedProps) {
+          childForwardedProps = {
+            ...childForwardedProps
+          };
+        }
+        childForwardedProps[key] = value;
+      }
+    } else if (Object.hasOwn(selfForwardedProps, key)) {
+      if (selfForwardedProps[key] !== value) {
+        if (selfForwardedProps === computed.selfForwardedProps) {
+          selfForwardedProps = {
+            ...selfForwardedProps
+          };
+        }
+        selfForwardedProps[key] = value;
+      }
+    }
+  }
+  if (selfForwardedProps === computed.selfForwardedProps && childForwardedProps === computed.childForwardedProps) {
+    return computed;
+  }
+  return {
+    ...computed,
+    selfForwardedProps,
+    childForwardedProps
+  };
 };
 
 const useDebounceTrue = (value, delay = 300) => {
@@ -20844,14 +21025,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   internally for overlays such as the skeleton container.
  */
 const Text = props => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  return jsx(TextDispatcher, {
-    ...props,
-    ref: ref
-  });
-};
-const TextDispatcher = props => {
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -20877,9 +21050,8 @@ const TextDispatcher = props => {
   });
 };
 const TextShrinkWrap = props => {
-  const {
-    ref
-  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const applyWidth = () => {
     const text = ref.current;
     // Reset any previously forced width so we measure the natural size
@@ -20920,8 +21092,9 @@ const TextShrinkWrap = props => {
       window.removeEventListener("resize", applyWidth);
     };
   }, []);
-  return jsx(TextDispatcher, {
+  return jsx(Text, {
     ...props,
+    ref: ref,
     "data-shrinkwrap": "",
     shrinkWrap: undefined
   });
@@ -21037,7 +21210,7 @@ const TextSkeleton = ({
     "aria-hidden": "true",
     children: "W"
   });
-  return jsx(TextDispatcher, {
+  return jsx(Text, {
     "data-skeleton": "",
     "data-loading": loading ? "" : undefined,
     ...props,
@@ -21053,7 +21226,7 @@ const TextOverflow = ({
   children,
   ...rest
 }) => {
-  return jsx(TextDispatcher, {
+  return jsx(Text, {
     block: true,
     as: "div",
     pre: noWrap === undefined ? true : undefined
@@ -21075,10 +21248,12 @@ const TextWithSelectRange = ({
   selectRange,
   ...props
 }) => {
-  useInitialTextSelection(ref, selectRange);
-  return jsx(TextDispatcher, {
+  const defaultRef = useRef();
+  const innerRef = ref || defaultRef;
+  useInitialTextSelection(innerRef, selectRange);
+  return jsx(Text, {
     ...props,
-    ref: ref,
+    ref: innerRef,
     selectRange: undefined
   });
 };
@@ -63256,7 +63431,8 @@ const useBadgeRegistry = (children, enabled) => {
  * not the same in each. Nothing is set up for a case that cannot happen: a
  * plain list is one element holding its children as-is — no registry, no
  * effect —, a capped one collects its badges but measures nothing, and only
- * shrinkWrap ever builds the measurement ghost.
+ * shrinkWrap on its own builds the measurement ghost: under maxLines the list
+ * is measured in place, once the rows are known.
  *
  * @param {import("ignore:preact").ComponentChildren} [fallback]
  *   Rendered in place of the badges when there is none. Without it an empty
@@ -63271,8 +63447,9 @@ const useBadgeRegistry = (children, enabled) => {
  *   Narrows the list down to its widest row so the last row isn't ragged.
  *   Defaults to true inside a <Picker> — the trigger draws a border around the
  *   list, so the ragged edge shows — and false elsewhere, where the work would
- *   often go unseen: opt in where an edge is visible. Ignored when maxLines is
- *   in play, which needs the full width to know where the rows fall.
+ *   often go unseen: opt in where an edge is visible. Composes with maxLines:
+ *   the rows are read at the full width first, and the list is narrowed once
+ *   the surplus is gone.
  * @param {number} [max]
  *   Caps how many badges are rendered; the surplus becomes a "+N" badge, which
  *   takes one of the max slots.
@@ -63296,11 +63473,10 @@ const BadgeList = props => {
     shrinkWrap = maxLinesFromAbove !== undefined
   } = props;
   if (maxLinesResolved !== undefined) {
-    // shrinkWrap is dropped on purpose: it narrows the list down to its widest
-    // row, which would re-wrap the badges under the cap just measured.
     return jsx(BadgeListMaxLines, {
       ...props,
-      maxLines: maxLinesResolved
+      maxLines: maxLinesResolved,
+      shrinkWrap: shrinkWrap
     });
   }
   if (shrinkWrap) {
@@ -63441,6 +63617,7 @@ const BadgeListMaxLines = ({
   children,
   max,
   maxLines,
+  shrinkWrap,
   ...boxProps
 }) => {
   const registry = useBadgeRegistry(children, true);
@@ -63462,8 +63639,29 @@ const BadgeListMaxLines = ({
   // out of the cap and nothing has to be watched.
   const watchesResize = fit !== null && fit.count > 1;
 
+  // The list's own width. While the rows are being read the list takes all the
+  // room it is given — a width kept from an earlier shrink wrap would fold the
+  // badges under it. Once the surplus is gone, shrinkWrap narrows the list to
+  // its widest row, measured where the badges stand: nothing is painted before
+  // the effect below has run, so no clone is needed.
+  useLayoutEffect(() => {
+    const visibleEl = visibleRef.current;
+    if (!visibleEl) {
+      return;
+    }
+    visibleEl.style.width = "";
+    if (fit === null || !shrinkWrap) {
+      return;
+    }
+    const widestRowWidth = measureWidestChildRow(visibleEl);
+    if (widestRowWidth !== null) {
+      visibleEl.style.width = `${Math.ceil(widestRowWidth)}px`;
+    }
+  }, [fit, shrinkWrap]);
+
   // Runs after every render, which is when the badges have registered and the
-  // DOM holds whatever this render asked for.
+  // DOM holds whatever this render asked for, at the width the effect above
+  // gave it.
   useLayoutEffect(() => {
     const visibleEl = visibleRef.current;
     if (!visibleEl) {
@@ -63498,7 +63696,8 @@ const BadgeListMaxLines = ({
       // And not every width change either. Nothing guarantees an ancestor whose
       // width does not follow its content (a column with align-items: start
       // sizes every row to what is inside it), so rendering every badge widens
-      // what is being watched and dropping the surplus narrows it right back.
+      // what is being watched and dropping the surplus — then shrink wrapping
+      // what is left — narrows it right back.
       // Those two widths are this list talking to itself; measuring again on
       // them never ends. Any other width is the room around it changing.
       const width = outerParent.getBoundingClientRect().width;
