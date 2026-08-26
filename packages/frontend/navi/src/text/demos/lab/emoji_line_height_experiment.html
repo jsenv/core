@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Emoji dans une ligne de texte tronquée — options</title>
+    <style>
+      body {
+        margin: 24px;
+        color: #222;
+        font-family: system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 32px 0 4px;
+        font-size: 1rem;
+      }
+      .note {
+        max-width: 70ch;
+        margin: 0 0 12px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+      code {
+        padding: 0 3px;
+        font-size: 0.85em;
+        background: #f0f0f0;
+        border-radius: 3px;
+      }
+      .controls {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        padding: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 24px;
+        font-size: 0.9rem;
+        background: #f6f7f9;
+        border-radius: 6px;
+      }
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .info {
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        color: #666;
+        font:
+          italic bold 11px Georgia,
+          serif;
+        background: white;
+        border: 1px solid #999;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+      .info[aria-expanded="true"] {
+        color: white;
+        background: #666;
+      }
+      .pair {
+        display: flex;
+        align-items: flex-start;
+      }
+      .case {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .case_caption {
+        color: #888;
+        font-size: 0.75rem;
+        font-family: system-ui, sans-serif;
+      }
+      /* La ligne du screenshot : icône, "Orga :", le nom tronqué, un
+         badge. Largeur fixe pour que l'ellipsis apparaisse toujours ; les
+         deux cas sont collés pour comparer les hauteurs. */
+      .chip {
+        display: flex;
+        width: 14em;
+        padding: 0.15em 0.5em;
+        align-items: center;
+        gap: 0.35em;
+        color: #1f3f8a;
+        background: #dce7fb;
+        outline: 1px dotted #6a8fd8;
+      }
+      .chip svg {
+        width: 1em;
+        height: 1em;
+        flex-shrink: 0;
+      }
+      .chip .prefix {
+        flex-shrink: 0;
+      }
+      .chip .value {
+        min-width: 0;
+        flex: 1;
+      }
+
+      /* ── Débordement : comment laisser la fleur visible malgré le clip ──
+         Le nom est un Text maxLines={1} : overflow: hidden pour l'ellipsis,
+         donc tout glyphe qui sort de la boîte est rogné. */
+
+      /* Le clip se fait sur la padding box : un padding vertical agrandit
+         la zone visible, la marge négative rend la place prise. */
+      .clip_padding {
+        margin-block: -0.3em;
+        padding-block: 0.3em;
+      }
+      /* overflow-clip-margin ne marche qu'avec overflow: clip. L'ellipsis
+         demande un overflow autre que visible, clip en fait partie. */
+      .clip_margin {
+        overflow: clip !important;
+        overflow-clip-margin: 0.3em;
+      }
+
+      /* ── F. police emoji aux métriques du texte ─────────────────────
+         La police système des emoji (Apple Color Emoji, Segoe UI Emoji,
+         Noto Color Emoji) a un ascent/descent plus grand que celui des
+         polices de texte : c'est ça qui fait gonfler la ligne. On la
+         redéclare avec des métriques alignées sur celles du texte — le
+         glyphe est dessiné pareil (il peut dépasser), mais la boîte de
+         ligne ne grandit plus. Les pourcentages ci-dessous sont ceux de
+         SF/Helvetica/Arial (≈ 0.9 / 0.22) ; une autre police de texte
+         demanderait d'autres valeurs. */
+      @font-face {
+        font-family: "emoji_text_metrics";
+        line-gap-override: 0%;
+        ascent-override: 90%;
+        descent-override: 22%;
+        src:
+          local("Apple Color Emoji"), local("AppleColorEmoji"),
+          local("Segoe UI Emoji"), local("Noto Color Emoji");
+      }
+      .opt_font_stack {
+        font-family: var(--text-font), "emoji_text_metrics";
+      }
+      .opt_font_span {
+        font-family: "emoji_text_metrics";
+      }
+
+      /* ── D. inline-block de 1em ──────────────────────────────────── */
+      .opt_inline_block {
+        display: inline-block;
+        height: 1em;
+        line-height: 1;
+        vertical-align: -0.1em;
+      }
+
+      /* ── G. text-box trim sur "Orga :" et le nom ─────────────────
+         Le rognage se fait sur la police du texte (la première
+         disponible), pas sur celle de l'emoji : la place que l'emoji
+         ajoutait disparaît, le glyphe reste dessiné (puis clippé ou non
+         par le débordement). */
+      .opt_text_box_trim_cap .chip > .navi_text:not(.navi_badge) {
+        text-box: trim-both cap alphabetic;
+      }
+      .opt_text_box_trim_text .chip > .navi_text:not(.navi_badge) {
+        text-box: trim-both text;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Badge, Icon, Text } from "@jsenv/navi";
+
+      // Un emoji "présentation emoji" (🌸), ou un pictogramme forcé en emoji
+      // par VS16 (❤️), suivi de ses modificateurs / séquences ZWJ. Un drapeau
+      // est deux Regional Indicators qu'il ne faut pas séparer.
+      const EMOJI_REGEX =
+        /(?:\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F)(?:\p{Emoji_Modifier}|\uFE0F|\u200D(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\uFE0F?)*)/gu;
+
+      const splitEmoji = (text) => {
+        const parts = [];
+        let lastIndex = 0;
+        for (const match of text.matchAll(EMOJI_REGEX)) {
+          if (match.index > lastIndex) {
+            parts.push({
+              emoji: false,
+              value: text.slice(lastIndex, match.index),
+            });
+          }
+          parts.push({ emoji: true, value: match[0] });
+          lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+          parts.push({ emoji: false, value: text.slice(lastIndex) });
+        }
+        return parts;
+      };
+
+      const asIs = (emoji) => emoji;
+
+      const OPTIONS = [
+        {
+          id: "problem",
+          title: "Le problème",
+          note: "Rien de spécial : la fleur agrandit la boîte du nom, et toute la ligne avec.",
+          renderEmoji: asIs,
+        },
+        {
+          id: "line_height",
+          title: "B — line-height: 1.5 sur le bloc",
+          note: (
+            <>
+              Un <code>line-height</code> fixe borne la hauteur de chaque boîte
+              inline, mais la boîte de l'emoji reste centrée sur ses propres
+              métriques : selon la police il peut rester un décalage. Et toutes
+              les lignes, avec ou sans emoji, deviennent plus hautes.
+            </>
+          ),
+          chipStyle: { lineHeight: 1.5 },
+          renderEmoji: asIs,
+        },
+        {
+          id: "line_height_zero",
+          title: "C — line-height: 0 sur l'emoji",
+          note: (
+            <>
+              La boîte inline de l'emoji fait 0 de haut : elle ne compte plus
+              dans la ligne, le glyphe déborde.
+            </>
+          ),
+          renderEmoji: (emoji) => (
+            <span style={{ lineHeight: 0 }}>{emoji}</span>
+          ),
+        },
+        {
+          id: "inline_block",
+          title: "D — inline-block de 1em",
+          note: (
+            <>
+              <code>display: inline-block; height: 1em; line-height: 1</code> :
+              une boîte de la taille d'un caractère, le glyphe déborde.{" "}
+              <code>vertical-align</code> à ajuster à la main.
+            </>
+          ),
+          renderEmoji: (emoji) => (
+            <span className="opt_inline_block">{emoji}</span>
+          ),
+        },
+        {
+          id: "icon",
+          title: "E — <Icon> de navi (mode caractère)",
+          note: (
+            <>
+              <code>&lt;Icon&gt;&lt;span&gt;🌸&lt;/span&gt;&lt;/Icon&gt;</code>{" "}
+              : c'est D, plus le recentrage de <code>TextAnchor</code>. Ce que
+              navi a déjà.
+            </>
+          ),
+          renderEmoji: (emoji) => (
+            <Icon>
+              <span>{emoji}</span>
+            </Icon>
+          ),
+        },
+        {
+          id: "font_stack",
+          title: "F1 — police emoji redéclarée, dans la pile de polices",
+          note: (
+            <>
+              <code>@font-face</code> sur la police emoji système avec{" "}
+              <code>ascent-override</code> / <code>descent-override</code>{" "}
+              alignés sur le texte, ajoutée en fallback :{" "}
+              <code>font-family: system-ui, "emoji_text_metrics"</code>. Aucun
+              balisage, mais l'app doit l'avoir dans sa pile.
+            </>
+          ),
+          chipClassName: "opt_font_stack",
+          renderEmoji: asIs,
+        },
+        {
+          id: "font_span",
+          title: "F2 — même police, appliquée sur l'emoji",
+          note: (
+            <>
+              La même <code>@font-face</code>, posée par un span autour de
+              l'emoji : faisable depuis <code>Text</code> sans toucher à la pile
+              de polices de l'app.
+            </>
+          ),
+          renderEmoji: (emoji) => (
+            <span className="opt_font_span">{emoji}</span>
+          ),
+        },
+        {
+          id: "text_box_trim_cap",
+          title: "G1 — text-box: trim-both cap alphabetic",
+          note: (
+            <>
+              Label et nom rognés au-dessus des capitales et sous la ligne de
+              base : la place que l'emoji ajoutait part avec. Les lignes sans
+              emoji perdent aussi leur interlignage.
+            </>
+          ),
+          chipClassName: "opt_text_box_trim_cap",
+          renderEmoji: asIs,
+        },
+        {
+          id: "text_box_trim_text",
+          title: "G2 — text-box: trim-both text",
+          note: (
+            <>
+              Rognés aux ascender/descender de la police du texte : une ligne
+              sans emoji garde sa hauteur, une ligne avec emoji retombe à la
+              même.
+            </>
+          ),
+          chipClassName: "opt_text_box_trim_text",
+          renderEmoji: asIs,
+        },
+        {
+          id: "font_size",
+          title: "H — font-size: 0.8em sur l'emoji",
+          note: "Plus petit, il tient dans la boîte : rien ne déborde, rien n'est rogné. La fleur est plus petite.",
+          renderEmoji: (emoji) => (
+            <span style={{ fontSize: "0.8em" }}>{emoji}</span>
+          ),
+        },
+      ];
+
+      const CLIP_MODES = [
+        { id: "hidden", label: "overflow: hidden (celui de maxLines=1)" },
+        { id: "clip_padding", label: "+ padding 0.3em / marge -0.3em" },
+        { id: "clip_margin", label: "overflow: clip + overflow-clip-margin" },
+      ];
+
+      const FONTS = [
+        "system-ui",
+        "Helvetica",
+        "Arial",
+        "Georgia",
+        "Verdana",
+        "Times New Roman",
+      ];
+      const SIZES = ["14px", "16px", "20px", "32px"];
+
+      const PersonIcon = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6z" />
+        </svg>
+      );
+
+      const Chip = ({ className, style, name, renderEmoji, clipMode }) => {
+        const parts = splitEmoji(name);
+        return (
+          <div
+            className={["chip", className].filter(Boolean).join(" ")}
+            style={style}
+          >
+            <PersonIcon />
+            <Text className="prefix">Orga :</Text>
+            <Text
+              maxLines={1}
+              className={["value", clipMode === "hidden" ? "" : clipMode].join(
+                " ",
+              )}
+            >
+              {parts.map((part) =>
+                part.emoji ? renderEmoji(part.value) : part.value,
+              )}
+            </Text>
+            <Badge>Niveau 7-8</Badge>
+          </div>
+        );
+      };
+
+      // Trois noms : le même, sans emoji / avec l'emoji avant le point de
+      // troncature (visible) / avec l'emoji rejeté derrière l'ellipsis. Le
+      // troisième dit si un emoji qu'on ne voit pas compte quand même.
+      const CASES = [
+        { caption: "sans emoji", name: "before after and more" },
+        {
+          caption: "emoji visible",
+          name: "Florette 🌸 · Florette la jardinière",
+        },
+        {
+          caption: "emoji tronqué",
+          name: "Florette · Florette la jardinière 🌸",
+        },
+      ];
+
+      const Pair = ({ option, settings }) => {
+        const chipProps = {
+          className: option.chipClassName,
+          style: option.chipStyle,
+          renderEmoji: option.renderEmoji,
+          clipMode: settings.clipMode,
+        };
+        return (
+          <div
+            className="pair"
+            style={{
+              "--text-font": settings.font,
+              "fontFamily": settings.font,
+              "fontSize": settings.size,
+            }}
+          >
+            {CASES.map(({ caption, name }) => (
+              <div className="case" key={caption}>
+                <span className="case_caption">{caption}</span>
+                <Chip name={name} {...chipProps} />
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      const Section = ({ option, settings }) => {
+        const [detailsVisible, setDetailsVisible] = useState(false);
+        return (
+          <section>
+            <h2>
+              {option.title}
+              <button
+                className="info"
+                aria-expanded={detailsVisible}
+                onClick={() => setDetailsVisible(!detailsVisible)}
+              >
+                i
+              </button>
+            </h2>
+            {detailsVisible && <p className="note">{option.note}</p>}
+            <Pair option={option} settings={settings} />
+          </section>
+        );
+      };
+
+      const App = () => {
+        const [font, setFont] = useState(FONTS[0]);
+        const [size, setSize] = useState(SIZES[1]);
+        const [clipMode, setClipMode] = useState(CLIP_MODES[0].id);
+        const settings = { font, size, clipMode };
+
+        return (
+          <div>
+            <h1>Emoji dans une ligne de texte tronquée</h1>
+            <div className="controls">
+              <label>
+                police{" "}
+                <select value={font} onChange={(e) => setFont(e.target.value)}>
+                  {FONTS.map((f) => (
+                    <option value={f}>{f}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                taille{" "}
+                <select value={size} onChange={(e) => setSize(e.target.value)}>
+                  {SIZES.map((s) => (
+                    <option value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                débordement{" "}
+                <select
+                  value={clipMode}
+                  onChange={(e) => setClipMode(e.target.value)}
+                >
+                  {CLIP_MODES.map((mode) => (
+                    <option value={mode.id}>{mode.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {OPTIONS.map((option) => (
+              <Section key={option.id} option={option} settings={settings} />
+            ))}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
