@@ -9,19 +9,25 @@ export const setCalloutMessageTextRenderer = (renderer) => {
   renderMessageText = renderer;
 };
 
-export const CalloutRequestCloseContext = createContext();
+// What a callout's own JSX may know about the callout around it: how to close
+// it, and the element — whose id is what `commandFor` needs when the button
+// closing it is not inside it (inside, `--navi-close` finds it on its own).
+const CalloutContext = createContext();
 export const useCalloutRequestClose = () => {
-  return useContext(CalloutRequestCloseContext);
+  return useContext(CalloutContext)?.requestClose;
+};
+export const useCalloutElement = () => {
+  return useContext(CalloutContext)?.element;
 };
 export const renderIntoCallout = (
   jsx,
   calloutMessageElement,
-  { requestClose },
+  { requestClose, element },
 ) => {
   const calloutJsx = (
-    <CalloutRequestCloseContext.Provider value={requestClose}>
+    <CalloutContext.Provider value={{ requestClose, element }}>
       {jsx}
-    </CalloutRequestCloseContext.Provider>
+    </CalloutContext.Provider>
   );
 
   render(calloutJsx, calloutMessageElement);
@@ -33,12 +39,13 @@ export const renderIntoCallout = (
 export const renderHtmlIntoCallout = (
   html,
   calloutMessageElement,
-  { requestClose },
+  { requestClose, element },
 ) => {
   const template = document.createElement("template");
   template.innerHTML = html;
   renderIntoCallout(domToVNodes(template.content), calloutMessageElement, {
     requestClose,
+    element,
   });
 };
 

@@ -363,6 +363,21 @@ export const useControlProps = (
       };
 
       if (controlType === "link") {
+        // Nothing waits for a link's action: the press is a departure, and
+        // the navigation goes whatever the action does — so its command goes
+        // too, unlike a button's, which follows its action (see below).
+        const onLinkInteractionAllowed = (e) => {
+          triggerUIAction(e);
+          const control = ref.current;
+          if (!control) {
+            return;
+          }
+          tryActionAfterInteractionAllowed(control, {
+            event: e,
+            action: boundAction,
+            requester: control,
+          });
+        };
         return {
           keyDown: (e) => {
             if (isSpaceToActivate(e)) {
@@ -381,6 +396,7 @@ export const useControlProps = (
           click: (e) => {
             return {
               name: "click",
+              allowed: () => onLinkInteractionAllowed(e),
               prevented: () => {
                 e.preventDefault();
               },
@@ -614,6 +630,16 @@ export const useControlProps = (
 
               if (isRadio) {
                 if (checked) {
+                  if (props.deselectable) {
+                    return {
+                      name: "enter to uncheck radio",
+                      allowed: () =>
+                        dispatchRequestSetUIState(inputEl, undefined, {
+                          event: e,
+                        }),
+                      always,
+                    };
+                  }
                   return {
                     name: "enter on checked radio",
                     allowed: () => triggerUIAction(e),
@@ -649,6 +675,15 @@ export const useControlProps = (
             if (isRadio && e.key === " ") {
               const inputEl = e.currentTarget;
               if (inputEl.checked) {
+                if (props.deselectable) {
+                  return {
+                    name: "space to uncheck radio",
+                    allowed: () =>
+                      dispatchRequestSetUIState(inputEl, undefined, {
+                        event: e,
+                      }),
+                  };
+                }
                 // allow space to still trigger uiState and commands
                 // on checked radios (won't update the ui state but will notify of interaction)
                 return {
@@ -674,6 +709,21 @@ export const useControlProps = (
             // that lands on the <label> (not the <input>) never fires "mousedown" on
             // the input at all, so a DOM-snapshot-at-mousedown approach misses it.
             if (isRadio && uiStateController.uiState !== undefined) {
+              if (props.deselectable) {
+                // Not prevented: a prevented click has the browser put the
+                // radio back to checked once the listeners are done. Left to
+                // run, it changes nothing (the radio was checked already) and
+                // reports nothing — a radio getting unchecked fires no input
+                // event — so this is the one place the uncheck is said.
+                return {
+                  name: `click to uncheck radio`,
+                  allowed: () =>
+                    dispatchRequestSetUIState(ref.current, undefined, {
+                      event: e,
+                    }),
+                  prevented: () => e.preventDefault(),
+                };
+              }
               return {
                 name: `click on checked radio`,
                 allowed: () => triggerUIAction(e),

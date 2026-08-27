@@ -36,7 +36,8 @@ duplicates are fine.
 
 The form has answered its question; `command` says what the screen does about
 it — dismiss the popup (`--navi-close`), move on the slide map
-(`--navi-left`…), go to a page (`--navi-nav-to:/games/42`), stay put
+(`--navi-left`…), go to a page (`--navi-nav-to:/games/42`), go back to the one
+the reader came from (`--navi-nav-back:/games`), stay put
 (`--navi-void`). Left out, the surface the form sits in decides: a popup closes,
 a slide goes on, a form on a page does nothing.
 

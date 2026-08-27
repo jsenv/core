@@ -4,6 +4,7 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
+import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
@@ -458,6 +459,7 @@ export const ButtonUI = (props) => {
     href,
     target,
     rel,
+    replace,
 
     // visual
     variant,
@@ -510,6 +512,10 @@ export const ButtonUI = (props) => {
     ":-navi-href-current": innerCurrent,
   };
 
+  // Worn as an attribute, like a link's (see link_replace.js): read off the
+  // anchor by the click handler, off the source by --navi-nav-to.
+  const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
+
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector,
@@ -537,6 +543,8 @@ export const ButtonUI = (props) => {
       href={href}
       target={innerTarget}
       rel={innerRel}
+      replace={undefined}
+      {...replaceRequest}
       // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
       // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
       onnavi_get_value={(e) => {

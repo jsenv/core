@@ -106,6 +106,17 @@ const css = /* css */ `
       /* Read by Button, and by whatever is drawn as one (a picker under
          variant="button"), so the two keep the same surface. */
       --navi-button-background-color: light-dark(#f3f4f6, #2d3748);
+
+      /* What a callout says about its message, as a color — and what draws
+         as one outside the callout too (the icon a picker in callout mode
+         presses, see CalloutStatusIcon). */
+      --navi-callout-success-color: #4caf50;
+      --navi-callout-info-color: #2196f3;
+      --navi-callout-warning-color: #ff9800;
+      --navi-callout-error-color: #f44336;
+      /* No status: the message is an aside, said without an icon and framed
+         like a control rather than like a warning. */
+      --navi-callout-neutral-color: var(--navi-control-border-color);
       /* For list item we need slightly more padding to be able to see radio/checkbox outline */
       --navi-list-item-padding-x-default: 4px;
       --navi-list-item-padding-y-default: 1px;

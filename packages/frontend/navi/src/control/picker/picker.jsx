@@ -617,6 +617,8 @@ const PickerButton = (props) => {
     error,
   } = props;
   const isSingleLine = maxLines === 1;
+  // Same rule as the root: phrasing content inside a sentence.
+  const ContentTag = variant === "text" ? "span" : "div";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -658,7 +660,9 @@ const PickerButton = (props) => {
        as a value nobody may change. */
     <ReadOnlyContext.Provider value={readOnlyResolved}>
       <Box
-        as="div"
+        // A word in a sentence (variant="text") sits in a <p>, where a <div> is
+        // not allowed: phrasing content there, block content elsewhere.
+        as={variant === "text" ? "span" : "div"}
         ref={ref}
         // The flow this element really has (.navi_picker is display:inline-flex).
         // Left unsaid, Box reads a <div> as block and resolves alignX into a
@@ -938,9 +942,9 @@ const PickerButton = (props) => {
           {/* The attribute is what tells "inside this picker's popup" from
               "on its façade" — read by this picker's own press handling and by
               the command resolution in control_dom.js. */}
-          <div className="navi_picker_content" data-picker-content="">
+          <ContentTag className="navi_picker_content" data-picker-content="">
             {children}
-          </div>
+          </ContentTag>
         </ControlFacadeChildrenWrapper>
       </Box>
     </ReadOnlyContext.Provider>
@@ -1195,11 +1199,12 @@ const PickerFirstResolver = (props) => {
  *   action?: (value: any, event: Event) => void,
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
- *   calloutStatus?: "info" | "warning" | "error" | "success",
+ *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
+ *   calloutCloseButton?: boolean,
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless" | "discrete" | "button" | "text" | "picker",
+ *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "text" | "picker",
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
@@ -1224,6 +1229,10 @@ const PickerFirstResolver = (props) => {
  *   clearable?: boolean,
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
+ *   confirmTestId?: string,
+ *   cancelTestId?: string,
+ *   mountWhenClosed?: boolean,
+ *   unmountWhenClosed?: boolean,
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -1279,9 +1288,20 @@ const PickerFirstResolver = (props) => {
  *   constraints speak in, with its status icon, its cross and its arrow on
  *   the trigger — for a tooltip that opens on a press. It closes the way a
  *   callout does: its cross, Escape, a click outside.
- * @param {"info"|"warning"|"error"|"success"} [calloutStatus="info"]
+ * @param {"info"|"warning"|"error"|"success"|"none"} [calloutStatus]
  *   `mode="callout"`: what the callout says about what it holds — its border,
  *   its icon, and whether a click outside closes it (an "error" stays).
+ *   `"none"` is a plain tooltip: no icon, a neutral frame. "info" by default,
+ *   "none" under `variant="text"`. The trigger's default icon is the
+ *   callout's own status icon in that status (see `CalloutStatusIcon`) —
+ *   square, or round under `variant="circle"`. The callout's arrow points at
+ *   the middle of the trigger (`data-callout-arrow-x="center"` unless the
+ *   picker says otherwise).
+ * @param {boolean} [calloutCloseButton=true] `mode="callout"`: pass false to
+ *   take the cross off the callout. It still closes on Escape, a click
+ *   outside, and a `--navi-close` from what it holds — for a tooltip that is
+ *   read rather than dismissed. Off by nobody's default: a text trigger
+ *   keeps the cross unless told not to.
  * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
  *   over the trigger, "nearby" leaves a small gap below it.
  * @param {string} [positionArea] Where the popup goes — relative to the trigger
@@ -1405,6 +1425,18 @@ const PickerFirstResolver = (props) => {
  *   not only what it holds, which a testid inside the children already names.
  *   A `mode="callout"` picker has no popup of its own — the callout is the
  *   control's, shared with its constraint messages — so it is not named.
+ * @param {string} [confirmTestId] `type="confirm"`, default body: the
+ *   `data-testid` of the yes button; `cancelTestId` that of the no button.
+ *   Both are elements navi builds, which a test may not name by class (see
+ *   docs/testid.md).
+ * @param {string} [cancelTestId]
+ * @param {boolean} [mountWhenClosed] The popup's own (see Popup): build the
+ *   children before any opening. Left out, a picker told no value builds them
+ *   right away — it reads its value off the control they hold — and one told
+ *   a value waits for the first open. A `type="confirm"` picker never builds
+ *   them early: its popup is a question, there is nothing to read.
+ * @param {boolean} [unmountWhenClosed] The popup's own: throw the children
+ *   away once the popup has closed.
  */
 // Every picker type is resolved into one of these before it gets here (see
 // PickerTypeResolver and resolveInputProps): a native input type, or navi_js

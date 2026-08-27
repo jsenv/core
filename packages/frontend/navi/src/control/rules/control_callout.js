@@ -60,6 +60,7 @@ export const createCalloutManager = (
         const [, remainingTokenData] = tokens.entries().next().value;
         callout.update(remainingTokenData.message, {
           status: remainingTokenData.status,
+          closeButton: remainingTokenData.closeButton,
         });
       }
       return false;
@@ -81,7 +82,15 @@ export const createCalloutManager = (
 
   const addOpenToken = (
     token,
-    { message, status, anchorElement, event, skipFocus, onClose } = {},
+    {
+      message,
+      status,
+      closeButton,
+      anchorElement,
+      event,
+      skipFocus,
+      onClose,
+    } = {},
   ) => {
     if (!message) {
       removeOpenToken(token, event);
@@ -89,10 +98,11 @@ export const createCalloutManager = (
     }
     const calloutOptions = {
       status,
+      closeButton,
       closeOnClickOutside: status !== "error",
     };
 
-    tokens.set(token, { message, status, onClose });
+    tokens.set(token, { message, status, closeButton, onClose });
     if (callout) {
       callout.update(message, calloutOptions);
       return;

@@ -30,6 +30,13 @@
         border-bottom: 2px solid #eee;
         scroll-margin-top: 12px;
       }
+      .demo-section h3 {
+        margin: 20px 0 8px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
       /* Direct children only: what a callout holds is inside the section too,
          and must keep the callout's own font and line. */
       .demo-section > p {
@@ -69,7 +76,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Button, Link, Picker } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        CalloutStatusIcon,
+        InfoSvg,
+        Link,
+        Picker,
+      } from "@jsenv/navi";
       import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
       import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
 
@@ -88,6 +102,15 @@
       const Section = ({ id, title, children }) => (
         <div class="demo-section">
           <Heading id={id}>{title}</Heading>
+          {children}
+        </div>
+      );
+
+      const Subsection = ({ id, title, children }) => (
+        <div>
+          <Heading level={3} id={id}>
+            {title}
+          </Heading>
           {children}
         </div>
       );
@@ -119,7 +142,7 @@
           <VariantDemo />
           <StatusDemo />
           <ContentDemo />
-          <PositionDemo />
+          <CustomizationDemo />
         </Box>
       );
 
@@ -170,7 +193,7 @@
               <Tip>An icon one presses.</Tip>
             </Picker>
           </Case>
-          <Case caption='variant="text" — a term in a sentence'>
+          <Case caption='variant="text" — a term in a sentence, calloutStatus="none" by default'>
             <p class="demo-sentence">
               Your files are stored in the{" "}
               <Picker mode="callout" variant="text" ui="vault">
@@ -206,41 +229,45 @@
         <Section id="status" title="calloutStatus">
           <div class="demo-row">
             <Case caption='"info" (default)'>
-              <Picker mode="callout" variant="text" ui="info">
+              <Picker mode="callout">
                 <Tip>An aside.</Tip>
               </Picker>
             </Case>
             <Case caption='calloutStatus="success"'>
-              <Picker
-                mode="callout"
-                calloutStatus="success"
-                variant="text"
-                ui="success"
-              >
+              <Picker mode="callout" calloutStatus="success">
                 <Tip>Saved a minute ago.</Tip>
               </Picker>
             </Case>
             <Case caption='calloutStatus="warning"'>
-              <Picker
-                mode="callout"
-                calloutStatus="warning"
-                variant="text"
-                ui="warning"
-              >
+              <Picker mode="callout" calloutStatus="warning">
                 <Tip>Your plan does not include it.</Tip>
               </Picker>
             </Case>
             <Case caption='calloutStatus="error" — a click outside leaves it'>
-              <Picker
-                mode="callout"
-                calloutStatus="error"
-                variant="text"
-                ui="error"
-              >
+              <Picker mode="callout" calloutStatus="error">
                 <Tip>The last save failed.</Tip>
               </Picker>
             </Case>
+            <Case caption='calloutStatus="none" — no icon, a neutral frame'>
+              <Picker mode="callout" calloutStatus="none">
+                <Tip>A plain tooltip.</Tip>
+              </Picker>
+            </Case>
           </div>
+          <Case caption='variant="text" with calloutStatus="info"'>
+            <p class="demo-sentence">
+              A deleted file is kept{" "}
+              <Picker
+                mode="callout"
+                variant="text"
+                calloutStatus="info"
+                ui="30 days"
+              >
+                <Tip>Counted from the deletion, whatever the file's age.</Tip>
+              </Picker>{" "}
+              before it is gone for good.
+            </p>
+          </Case>
         </Section>
       );
 
@@ -279,20 +306,104 @@
         </Section>
       );
 
-      const PositionDemo = () => (
-        <Section id="position" title="data-callout-position">
-          <div class="demo-row">
-            <Case caption='"bottom" (default)'>
-              <Picker mode="callout">
-                <Tip>Below, when there is room.</Tip>
-              </Picker>
+      const CustomizationDemo = () => (
+        <Section id="customization" title="Customization">
+          <Subsection id="customization-icon-shape" title="Icon shape">
+            <div class="demo-row">
+              <Case caption='variant="icon" (default)'>
+                <Picker mode="callout">
+                  <Tip>The callout's own icon.</Tip>
+                </Picker>
+              </Case>
+              <Case caption='variant="circle"'>
+                <Picker mode="callout" variant="circle">
+                  <Tip>The same icon, round.</Tip>
+                </Picker>
+              </Case>
+              <Case caption='variant="circle" calloutStatus="warning"'>
+                <Picker mode="callout" variant="circle" calloutStatus="warning">
+                  <Tip>Your plan does not include it.</Tip>
+                </Picker>
+              </Case>
+            </div>
+          </Subsection>
+          <Subsection id="customization-icon-custom" title="A custom icon">
+            <div class="demo-row">
+              <Case caption="rightSlotIcon={<InfoSvg />}">
+                <Picker mode="callout" rightSlotIcon={<InfoSvg />}>
+                  <Tip>An icon of your own, in the picker's own color.</Tip>
+                </Picker>
+              </Case>
+              <Case caption='rightSlotIconSize="1.4em"'>
+                <Picker
+                  mode="callout"
+                  rightSlotIcon={<InfoSvg />}
+                  rightSlotIconSize="1.4em"
+                >
+                  <Tip>The same, bigger.</Tip>
+                </Picker>
+              </Case>
+              <Case caption="ui={<span>?</span>}">
+                <Picker mode="callout" ui={<span>?</span>}>
+                  <Tip>Anything drawn as the trigger.</Tip>
+                </Picker>
+              </Case>
+            </div>
+          </Subsection>
+          <Subsection id="customization-close-button" title="Close button">
+            <div class="demo-row">
+              <Case caption="default">
+                <Picker mode="callout">
+                  <Tip>
+                    Dismissed with the cross, Escape, or a click outside.
+                  </Tip>
+                </Picker>
+              </Case>
+              <Case caption="calloutCloseButton={false}">
+                <Picker mode="callout" calloutCloseButton={false}>
+                  <Tip>Escape, or a click outside.</Tip>
+                </Picker>
+              </Case>
+            </div>
+            <Case caption='variant="text" calloutCloseButton={false} — no icon, no cross'>
+              <p class="demo-sentence">
+                A deleted file is kept{" "}
+                <Picker
+                  mode="callout"
+                  variant="text"
+                  calloutCloseButton={false}
+                  ui="30 days"
+                >
+                  <Tip>Counted from the deletion, whatever the file's age.</Tip>
+                </Picker>{" "}
+                before it is gone for good.
+              </p>
             </Case>
-            <Case caption='data-callout-position="top"'>
-              <Picker mode="callout" data-callout-position="top">
-                <Tip>Above, when there is room.</Tip>
-              </Picker>
-            </Case>
-          </div>
+          </Subsection>
+          <Subsection id="customization-position" title="Position">
+            <div class="demo-row">
+              <Case caption='"bottom" (default)'>
+                <Picker mode="callout">
+                  <Tip>Below, when there is room.</Tip>
+                </Picker>
+              </Case>
+              <Case caption='data-callout-position="top"'>
+                <Picker mode="callout" data-callout-position="top">
+                  <Tip>Above, when there is room.</Tip>
+                </Picker>
+              </Case>
+              <Case caption='data-callout-arrow-x="start" (default: "center")'>
+                <Picker
+                  mode="callout"
+                  variant="button"
+                  ui="Help"
+                  data-callout-arrow-x="start"
+                >
+                  <Tip>The arrow on the start of the label.</Tip>
+                </Picker>
+              </Case>
+            </div>
+          </Subsection>
         </Section>
       );
 

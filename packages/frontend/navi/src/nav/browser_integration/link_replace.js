@@ -5,9 +5,11 @@
  * leave by where the reader came in, and the swipe (which replaces already, see
  * route_travel.jsx) and the press say the same thing.
  *
- * `<Link replace>` is that, and it travels as an attribute because the click
- * handler sees the anchor, not the component that rendered it — the same mouth
- * as what a link asks of a route transition.
+ * `<Link replace>` is that, and so is `<Button replace>` — on an `href`, or on
+ * a `--navi-nav-to` command. It travels as an attribute because whoever
+ * answers the press sees the element, not the component that rendered it: the
+ * click handler reads it off the anchor, the command off its source — the same
+ * mouth as what a link asks of a route transition.
  */
 
 export const LINK_REPLACE_ATTRIBUTE = "data-navi-replace";

@@ -384,7 +384,8 @@ top, the phone's own) leaves by where the reader came in:
 
 The link stays a link — an address, a middle click, the keyboard, `aria-current`
 — only the way there changes. It is the same word as `navTo(url, { replace:
-true })` and `route.redirectTo()`.
+true })` and `route.redirectTo()` — and as `<Button replace>`, on an `href` or
+on a `--navi-nav-to` command.
 
 A replaced entry inherits the state of the one it takes the place of (so does
 `route.redirectTo()`): **an entry's state does not say how it arrived**. Only
@@ -426,6 +427,13 @@ pushed, it would put the screen just left one press ahead, and the phone's own
 back button would walk straight back into it — a loop with no way out of the
 app. Without a `fallback`, a `navBack()` with nothing of ours behind does
 nothing.
+
+Said by a button, it is a command, the fallback being its argument the way
+`--navi-nav-to` carries its destination:
+
+```jsx
+<Button command={`--navi-nav-back:${USER_ME_ROUTE.buildUrl()}`}>←</Button>
+```
 
 ## Tabs that travel: `RouteTravel`
 

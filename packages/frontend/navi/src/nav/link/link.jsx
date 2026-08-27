@@ -505,6 +505,14 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {string} [props.command] - What the press asks of a control around
+ *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
+ *   Triggered on the press, before the navigation.
+ * @param {Function} [props.action] - Work the press runs, before the
+ *   navigation. Nothing waits for it — not the navigation, not `command`: what
+ *   the next page must find has to be written synchronously (a draft in a
+ *   signal), and a request goes on its own while the page changes. Work that
+ *   decides the destination navigates itself, from a `<Button action>`.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
  *   click (navigation suppressed; `onClick` still runs).
  * @param {(event: MouseEvent) => void} [props.onClick]
@@ -807,7 +815,9 @@ const LinkPlain = (props) => {
       data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
       data-anchor={anchor ? "" : undefined}
-      data-interactive={onClick ? "" : undefined}
+      data-interactive={
+        onClick || props.command || props.action ? "" : undefined
+      }
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       baseClassName="navi_link"
       styleCSSVars={LinkStyleCSSVars}

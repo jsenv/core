@@ -216,6 +216,9 @@ const css = /* css */ `
 `;
 
 const SelectableListMultipleContext = createContext(false);
+// A single-select list whose selected row, pressed again, lets go: what its
+// rows' radios need to know to answer the press (see `deselectable` on Input).
+const SelectableListDeselectableContext = createContext(false);
 // A row of a selectable list is selectable — the list is what decides, and a
 // row says nothing unless it wants out (`selectable={false}` on a row that is
 // only there to be read). Also set to false by a non-selectable list, so a list
@@ -242,7 +245,8 @@ const ListSelectable = (props) => {
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
-  const { ref, multiple, focusGroupDirection, focusGroupWrap } = props;
+  const { ref, multiple, deselectable, focusGroupDirection, focusGroupWrap } =
+    props;
   // What the list holds, which is not the same as what its rows say. A list
   // draws the rows it needs and no more: the selected one may be scrolled out
   // of the window, or filtered out of the view. Aggregating over the rows that
@@ -385,6 +389,7 @@ const ListSelectable = (props) => {
       defaultValue={undefined}
       selectable={undefined}
       multiple={undefined}
+      deselectable={undefined}
       focusGroupDirection={undefined}
       focusGroupWrap={undefined}
       // Track focus inside the list: whichever item gets focus becomes current.
@@ -496,7 +501,7 @@ const ListSelectable = (props) => {
         if (!currentId) {
           return;
         }
-        if (multiple) {
+        if (multiple || deselectable) {
           const inputId = `${currentId}_input`;
           const childController = uiGroupStateController.findChildById(inputId);
           const isSelected = childController && childController.uiState;
@@ -521,7 +526,11 @@ const ListSelectable = (props) => {
   return (
     <ListSelectableContext.Provider value={true}>
       <SelectableListMultipleContext.Provider value={multiple}>
-        {listVnode}
+        <SelectableListDeselectableContext.Provider
+          value={Boolean(deselectable)}
+        >
+          {listVnode}
+        </SelectableListDeselectableContext.Provider>
       </SelectableListMultipleContext.Provider>
     </ListSelectableContext.Provider>
   );
@@ -572,6 +581,9 @@ const ListItemSelectable = (props) => {
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
+  // A checkbox toggles on its own; only a radio has to be told it may let go.
+  const deselectable =
+    useContext(SelectableListDeselectableContext) && !multiple;
   // Whose reason it is that this row cannot be taken. Read-only reaching it
   // from above is the LIST's, and what is settled is then the whole answer —
   // said as the selection where several things are taken, as the choice where
@@ -599,6 +611,7 @@ const ListItemSelectable = (props) => {
       ref: inputRef,
       id: inputId,
       type: inputType,
+      deselectable,
       defaultChecked: defaultSelected,
       ...(hasSelectedProp ? { checked: selected } : null),
     });
@@ -611,8 +624,9 @@ const ListItemSelectable = (props) => {
       checked,
       readOnly,
       value,
+      deselectable,
     };
-  }, [inputId, inputType, checked, readOnly, value]);
+  }, [inputId, inputType, checked, readOnly, value, deselectable]);
 
   return (
     <Next

@@ -3,7 +3,7 @@ import { createPortal } from "preact/compat";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { InfoSvg } from "@jsenv/navi/src/graphic/icons/info_svg.jsx";
+import { CalloutStatusIcon } from "../rules/callout/callout_status_icon.jsx";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
@@ -191,15 +191,36 @@ export const PickerCustomResolver = (props) => {
     return <PickerNative {...props} />;
   }
   if (props.mode === "callout") {
-    // A tooltip is an icon one presses, unless told otherwise — and that icon
-    // says "there is more to know", not "this opens a list". Own-property
+    // A tooltip is an icon one presses, unless told otherwise. Own-property
     // rather than undefined: an explicit variant={undefined} asks for the
-    // field-like drawing back.
+    // field-like drawing back. "circle" is the icon variant with the status
+    // icon drawn round — a word about the trigger, not a drawing of its own.
     if (!Object.hasOwn(props, "variant")) {
       props.variant = "icon";
     }
+    const circle = props.variant === "circle";
+    if (circle) {
+      props.variant = "icon";
+    }
+    // A word in a sentence asks for a plain tooltip — no icon in the callout,
+    // no status color; an icon one presses is the callout's own status icon,
+    // and says "info" like the callout it opens.
+    if (props.calloutStatus === undefined) {
+      props.calloutStatus = props.variant === "text" ? "none" : "info";
+    }
     if (props.rightSlotIcon === undefined) {
-      props.rightSlotIcon = <InfoSvg />;
+      props.rightSlotIcon = (
+        <CalloutStatusIcon
+          status={props.calloutStatus}
+          shape={circle ? "circle" : "square"}
+        />
+      );
+    }
+    // The arrow on the middle of what was pressed — an icon, a word — rather
+    // than on where its text starts, which is where a callout points at a
+    // field by default (see the anchor attributes in callout.js).
+    if (props["data-callout-arrow-x"] === undefined) {
+      props["data-callout-arrow-x"] = "center";
     }
   }
   if (props.type === undefined) {
@@ -571,7 +592,10 @@ const PickerCustom = (props) => {
       // opens anything. Told a value — even an empty one — the picker owns it
       // and pushes it down instead, leaving the popup free to build its
       // content only when it is first opened (see popup_content_mount.js).
-      mountWhenClosed: !isControlValueGivenByProps(props),
+      // A caller who knows better says so with the popup's own props.
+      mountWhenClosed:
+        props.mountWhenClosed ?? !isControlValueGivenByProps(props),
+      unmountWhenClosed: props.unmountWhenClosed,
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -838,9 +862,12 @@ const PickerContentInsidePopup = (props) => {
     dockedOnSmallTouchScreen,
     animation,
     // mode="callout": what the callout says about what it holds, and paints
-    // in its border and icon. "info" by default — a callout is an aside, and
-    // the picker opening it a way of asking for one.
-    calloutStatus = "info",
+    // in its border and icon — "none" for a plain tooltip (see the callout
+    // defaults in PickerCustomResolver). And whether it wears a cross: without
+    // one it still closes on Escape, a click outside, or a --navi-close of the
+    // content's own.
+    calloutStatus,
+    calloutCloseButton,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -851,6 +878,10 @@ const PickerContentInsidePopup = (props) => {
       aria-haspopup={isPopover ? "listbox" : "dialog"}
       navi-popover-mode={isPopover ? popoverMode : undefined}
       {...rest}
+      // On popupProps already (see the picker's popup assembly); they mean
+      // nothing to the picker element.
+      mountWhenClosed={undefined}
+      unmountWhenClosed={undefined}
       onFocusOut={(e) => {
         if (!isPopover || !closeOnFocusOut) {
           return;
@@ -881,6 +912,7 @@ const PickerContentInsidePopup = (props) => {
           {...popupProps}
           pickerRef={props.ref}
           status={calloutStatus}
+          closeButton={calloutCloseButton}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -961,6 +993,7 @@ const PickerCalloutPopup = ({
   openController,
   pickerRef,
   status,
+  closeButton,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -989,7 +1022,9 @@ const PickerCalloutPopup = ({
           : anchor;
     calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
       message: hostRef.current,
-      status,
+      // "none" is the picker's word for it; the callout's is no status at all.
+      status: status === "none" ? undefined : status,
+      closeButton,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click
@@ -1002,7 +1037,19 @@ const PickerCalloutPopup = ({
         openController.close(event);
       },
     });
+    // A --navi-confirm said inside the callout is aimed at the callout (its
+    // aria-expanded), not at the element the picker listens on: carried over,
+    // for a confirm picker whose question is a speech bubble.
+    const calloutElement = calloutManager.callout.element;
+    const forwardConfirm = (e) => {
+      onnavi_request_confirm?.(e);
+    };
+    calloutElement.addEventListener("navi_request_confirm", forwardConfirm);
     return (closeEvent) => {
+      calloutElement.removeEventListener(
+        "navi_request_confirm",
+        forwardConfirm,
+      );
       calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
     };
   };
@@ -1011,7 +1058,7 @@ const PickerCalloutPopup = ({
     // What the picker addresses (aria-controls, the request events it
     // forwards); the callout itself lives where the callout manager puts it.
     <Box
-      as="div"
+      as="span"
       ref={ref}
       id={id}
       style={{ display: "contents" }}

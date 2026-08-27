@@ -123,8 +123,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @type {import("preact").FunctionComponent<{
  *   ownTarget?: boolean | "refuse" | "always",
  *   emojiAsIcon?: boolean,
+ *   replace?: boolean,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [replace] Go where the press leads — an `href`, a
+ *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
+ *   rather than stacking on it: what `<Link replace>` says, for a press drawn
+ *   as a button.
  * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
  *   so the button keeps the height of its text — `Text`'s prop, on by default
  *   here. Pass `false` to let an emoji draw at its natural size.

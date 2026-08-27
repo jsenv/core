@@ -1126,6 +1126,7 @@ const ListFirstResolver = (props) => {
  * @type {import("preact").FunctionComponent<{
  *   selectable?: boolean,
  *   multiple?: boolean,
+ *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
  *   action?: (value: any) => void,
@@ -1250,6 +1251,11 @@ const ListFirstResolver = (props) => {
  *   Pass `true` for a list whose rows must stay live under the pointer while
  *   it scrolls. The trade of the default is the mirror one: right after a
  *   scroll, the row under the pointer lights up only once the pointer moves.
+ * @param {boolean} [props.deselectable]
+ *   A single-select list allowed to hold nothing: the selected row, pressed
+ *   again, lets go. Without it the list is a radio group — a choice, once
+ *   made, moves to another row but never goes away. A `multiple` list toggles
+ *   its rows already.
  * @param {number} [props.maxLength]
  *   How many items a `selectable multiple` list accepts — the same word, and
  *   the same behaviour, as `maxLength` on a text field: a rule the list is

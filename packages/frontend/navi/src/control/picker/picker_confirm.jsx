@@ -54,6 +54,8 @@ export const PickerConfirmResolver = (props) => {
     message,
     confirmLabel,
     cancelLabel,
+    confirmTestId,
+    cancelTestId,
     focusOnOpen = "confirm",
     // A popover whatever the screen: the question is short and about the
     // control it points at, and a sheet sliding up for one sentence is too
@@ -104,9 +106,15 @@ export const PickerConfirmResolver = (props) => {
       focusCapture={focusCapture}
       openWhileReadOnly={openWhileReadOnly}
       onConfirm={onConfirm}
+      // A question holds no value to read before it is asked: the popup is
+      // built on the first open, like that of a picker told its value (see
+      // mountWhenClosed in picker_custom.jsx).
+      mountWhenClosed={false}
       message={undefined}
       confirmLabel={undefined}
       cancelLabel={undefined}
+      confirmTestId={undefined}
+      cancelTestId={undefined}
       focusOnOpen={undefined}
     >
       {children === undefined ? (
@@ -114,6 +122,8 @@ export const PickerConfirmResolver = (props) => {
           message={message}
           confirmLabel={confirmLabel}
           cancelLabel={cancelLabel}
+          confirmTestId={confirmTestId}
+          cancelTestId={cancelTestId}
           focusOnOpen={focusOnOpen}
         />
       ) : (
@@ -127,16 +137,26 @@ const PickerConfirmBody = ({
   message,
   confirmLabel,
   cancelLabel,
+  confirmTestId,
+  cancelTestId,
   focusOnOpen,
 }) => {
   return (
     <div className="navi_picker_confirm_body">
       <div>{message === undefined ? naviI18n("confirm.message") : message}</div>
       <div className="navi_picker_confirm_actions">
-        <Button command="--navi-cancel" autoFocus={focusOnOpen === "cancel"}>
+        <Button
+          command="--navi-cancel"
+          autoFocus={focusOnOpen === "cancel"}
+          data-testid={cancelTestId}
+        >
           {cancelLabel}
         </Button>
-        <Button command="--navi-confirm" autoFocus={focusOnOpen === "confirm"}>
+        <Button
+          command="--navi-confirm"
+          autoFocus={focusOnOpen === "confirm"}
+          data-testid={confirmTestId}
+        >
           {confirmLabel}
         </Button>
       </div>

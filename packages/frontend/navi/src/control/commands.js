@@ -1,6 +1,10 @@
 import { chainEvent, dispatchCustomEvent } from "@jsenv/dom";
 
-import { navTo } from "../nav/browser_integration/browser_integration.js";
+import {
+  navBack,
+  navTo,
+} from "../nav/browser_integration/browser_integration.js";
+import { linkAsksForReplace } from "../nav/browser_integration/link_replace.js";
 import {
   findClosestControlWithAction,
   findControlHost,
@@ -785,7 +789,25 @@ registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
   const target = resolveExplicitTarget(source) || source;
   return {
     target,
-    implementation: () => navTo(argument),
+    // Which way there is worn by the source, as a link wears it (see
+    // link_replace.js): `<Button command="--navi-nav-to:/done" replace>`.
+    implementation: () =>
+      navTo(
+        argument,
+        linkAsksForReplace(source) ? { replace: true } : undefined,
+      ),
+  };
+});
+
+// Back to the screen the reader came from, with somewhere to land when there
+// is none of ours behind — a url opened cold (see navBack). The fallback is
+// the argument for the reason --navi-nav-to's destination is: it says WHAT the
+// command does when there is nothing to go back to.
+registerNaviCommand("--navi-nav-back", (source, event, { argument }) => {
+  const target = resolveExplicitTarget(source) || source;
+  return {
+    target,
+    implementation: () => navBack({ fallback: argument }),
   };
 });
 

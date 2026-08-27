@@ -39,6 +39,13 @@ import {
   renderHtmlIntoCallout,
   renderIntoCallout,
 } from "./callout.jsx";
+import {
+  CALLOUT_STATUS_GLYPH_PATH,
+  CALLOUT_STATUS_GLYPH_VIEWBOX,
+} from "./callout_status_icon.jsx";
+
+// Unique for the page's lifetime: a caller may write the id in a commandfor.
+let calloutCount = 0;
 
 const css = /* css */ `
   @layer navi {
@@ -49,10 +56,11 @@ const css = /* css */ `
        copies. */
       user-select: text;
 
-      --callout-success-color: #4caf50;
-      --callout-info-color: #2196f3;
-      --callout-warning-color: #ff9800;
-      --callout-error-color: #f44336;
+      --callout-success-color: var(--navi-callout-success-color);
+      --callout-info-color: var(--navi-callout-info-color);
+      --callout-warning-color: var(--navi-callout-warning-color);
+      --callout-error-color: var(--navi-callout-error-color);
+      --callout-neutral-color: var(--navi-callout-neutral-color);
 
       --callout-background-color: white;
       --callout-icon-color: black;
@@ -76,6 +84,9 @@ const css = /* css */ `
   }
 
   .navi_callout {
+    /* No status until one is said (the data-status blocks below): a plain
+       tooltip, framed in the neutral color and shown without an icon. */
+    --x-callout-status-color: var(--callout-neutral-color);
     --x-callout-border-color: var(--x-callout-status-color);
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
@@ -132,6 +143,16 @@ const css = /* css */ `
     }
     &[data-status="error"] {
       --x-callout-status-color: var(--callout-error-color);
+    }
+    &:not([data-status]) {
+      .navi_callout_icon {
+        display: none;
+      }
+    }
+    &[data-close-button="none"] {
+      .navi_callout_close_button_column {
+        display: none;
+      }
     }
 
     .navi_callout_box {
@@ -275,6 +296,9 @@ const css = /* css */ `
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
+ *   still closes on Escape, a click outside and its own `--navi-close` — for a tooltip that is
+ *   read rather than dismissed
  * @param {string} [options.reopen="toggle"] - What to do when the anchor already has an open callout:
  *   "toggle" closes it (a second press on what opened it closes it), "update" replaces its message
  *   in place, "replace" tears it down and opens a new one
@@ -323,6 +347,7 @@ export const openCallout = (
     reopen = "toggle",
     showErrorStack,
     skipFocus = false,
+    closeButton = true,
     debug = () => {},
   } = {},
 ) => {
@@ -503,10 +528,20 @@ export const openCallout = (
     }
     requestClose(e, "click_close_button");
   };
-  const calloutId = `navi_callout_${Date.now()}`;
+  calloutCount++;
+  const calloutId = `navi_callout_${calloutCount}`;
   calloutElement.id = calloutId;
   calloutElement.style.opacity = 0;
   const update = (newMessage, options = {}) => {
+    if (Object.hasOwn(options, "closeButton")) {
+      // Per message rather than per callout: what replaces a message (a
+      // constraint taking over a tooltip's callout) brings its own cross back.
+      if (options.closeButton === false) {
+        calloutElement.setAttribute("data-close-button", "none");
+      } else {
+        calloutElement.removeAttribute("data-close-button");
+      }
+    }
     const prevStatus = callout.status;
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
@@ -531,6 +566,7 @@ export const openCallout = (
       debug(`callout update message (jsx)`);
       renderIntoCallout(newMessage, calloutMessageElement, {
         requestClose,
+        element: calloutElement,
       });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
@@ -542,8 +578,12 @@ export const openCallout = (
       clearCalloutMessage(calloutMessageElement);
       newMessage({
         renderIntoCallout: (jsx) =>
-          renderIntoCallout(jsx, calloutMessageElement, { requestClose }),
+          renderIntoCallout(jsx, calloutMessageElement, {
+            requestClose,
+            element: calloutElement,
+          }),
         requestClose,
+        element: calloutElement,
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -572,6 +612,7 @@ export const openCallout = (
         );
         renderHtmlIntoCallout(String(newMessage), calloutMessageElement, {
           requestClose,
+          element: calloutElement,
         });
       }
     }
@@ -804,6 +845,19 @@ export const openCallout = (
       handleCustomCloseEvent,
     );
   }
+  commands: {
+    // What a command said inside the callout is aimed at, once aria-expanded
+    // made the callout its target (see calloutTemplate): run it, the way a
+    // popup runs the commands aimed at it. Inlined rather than onNaviCommand
+    // from commands.js, which already reaches this module through the callout
+    // manager and must not be reached back.
+    calloutElement.addEventListener("navi_command", (e) => {
+      const { implementation } = e.detail;
+      if (typeof implementation === "function") {
+        implementation();
+      }
+    });
+  }
   Object.assign(callout, {
     element: calloutElement,
     update,
@@ -914,7 +968,7 @@ export const openCallout = (
     });
   }
 
-  update(message, { status });
+  update(message, { status, closeButton });
 
   // positionCallout itself handles both "no anchorElement at all" and "a
   // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its
@@ -948,21 +1002,25 @@ const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
-// HTML template for the callout
+// aria-expanded is what --navi-close/--navi-cancel resolve their target with
+// (closest "[aria-expanded]", see commands.js): a button inside the callout
+// closes the callout, not the picker or dialog around it. Never "false" — a
+// closed callout is removed, not kept.
 const calloutTemplate = /* html */ `
   <div
     class="navi_callout"
     popover="manual"
+    aria-expanded="true"
   >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
         <div class="navi_callout_icon">
-          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
+          <svg
+            viewBox="${CALLOUT_STATUS_GLYPH_VIEWBOX}"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path fill="currentColor" d="${CALLOUT_STATUS_GLYPH_PATH}" />
           </svg>
         </div>
         <!-- Keep .navi_callout_message so preact controls it -->

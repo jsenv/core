@@ -61,6 +61,9 @@ export const CONTROL_PROP_SET = new Set([
   "signal",
   "defaultValue",
   "defaultChecked",
+  // A checked radio pressed again lets its value go — a group allowed to hold
+  // nothing. Answered by the radio's own reactions (see control_hooks.jsx).
+  "deselectable",
   "readOnly", // will depend wether readOnly is supported
 
   "loading",

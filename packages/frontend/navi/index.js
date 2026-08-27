@@ -145,7 +145,11 @@ export { Expandable } from "./src/control/expandable/expandable.jsx";
 // Form
 // Validation
 export { openCallout } from "./src/control/rules/callout/callout.js";
-export { useCalloutRequestClose } from "./src/control/rules/callout/callout.jsx";
+export { CalloutStatusIcon } from "./src/control/rules/callout/callout_status_icon.jsx";
+export {
+  useCalloutElement,
+  useCalloutRequestClose,
+} from "./src/control/rules/callout/callout.jsx";
 export { registerGlobalConstraint } from "./src/control/rules/control_validation.js";
 export { useConstraintValidityState } from "./src/control/rules/hooks/use_constraint_validity_state.js";
 export { createAvailableConstraint } from "./src/control/rules/validation/create_available_constraint.js";
