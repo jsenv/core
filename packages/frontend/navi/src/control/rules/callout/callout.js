@@ -144,11 +144,6 @@ const css = /* css */ `
     &[data-status="error"] {
       --x-callout-status-color: var(--callout-error-color);
     }
-    &:not([data-status]) {
-      .navi_callout_icon {
-        display: none;
-      }
-    }
     &[data-close-button="none"] {
       .navi_callout_close_button_column {
         display: none;
@@ -203,6 +198,15 @@ const css = /* css */ `
           justify-content: center;
           background-color: var(--x-callout-icon-color);
           border-radius: 2px;
+
+          /* Not drawn without a status (nothing to say about the message),
+             nor when the message asked for none (icon: false). Nested in
+             here rather than written beside this block: a rule one level up
+             would lose to the display above on specificity alone. */
+          .navi_callout:not([data-status]) &,
+          .navi_callout[data-icon="none"] & {
+            display: none;
+          }
 
           svg {
             width: 16px;
@@ -296,6 +300,8 @@ const css = /* css */ `
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
+ *   Never shown without a status either way (see the CSS).
  * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
  *   still closes on Escape, a click outside and its own `--navi-close` — for a tooltip that is
  *   read rather than dismissed
@@ -347,6 +353,7 @@ export const openCallout = (
     reopen = "toggle",
     showErrorStack,
     skipFocus = false,
+    icon = true,
     closeButton = true,
     debug = () => {},
   } = {},
@@ -533,6 +540,13 @@ export const openCallout = (
   calloutElement.id = calloutId;
   calloutElement.style.opacity = 0;
   const update = (newMessage, options = {}) => {
+    if (Object.hasOwn(options, "icon")) {
+      if (options.icon === false) {
+        calloutElement.setAttribute("data-icon", "none");
+      } else {
+        calloutElement.removeAttribute("data-icon");
+      }
+    }
     if (Object.hasOwn(options, "closeButton")) {
       // Per message rather than per callout: what replaces a message (a
       // constraint taking over a tooltip's callout) brings its own cross back.
@@ -968,7 +982,7 @@ export const openCallout = (
     });
   }
 
-  update(message, { status, closeButton });
+  update(message, { status, icon, closeButton });
 
   // positionCallout itself handles both "no anchorElement at all" and "a
   // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its

@@ -1200,6 +1200,7 @@ const PickerFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
+ *   calloutIcon?: boolean,
  *   calloutCloseButton?: boolean,
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
@@ -1293,10 +1294,14 @@ const PickerFirstResolver = (props) => {
  *   its icon, and whether a click outside closes it (an "error" stays).
  *   `"none"` is a plain tooltip: no icon, a neutral frame. "info" by default,
  *   "none" under `variant="text"`. The trigger's default icon is the
- *   callout's own status icon in that status (see `CalloutStatusIcon`) —
- *   square, or round under `variant="circle"`. The callout's arrow points at
+ *   callout's own status icon in that status (see `CalloutStatusIcon`) — left
+ *   out, the trigger is that icon; `variant="circle"` draws it round. The callout's arrow points at
  *   the middle of the trigger (`data-callout-arrow-x="center"` unless the
  *   picker says otherwise).
+ * @param {boolean} [calloutIcon] `mode="callout"`: whether the callout shows
+ *   its status icon beside what it holds. On by default, off under
+ *   `variant="text"` — a word asks for a plain bubble — and never shown
+ *   without a status, whatever this says.
  * @param {boolean} [calloutCloseButton=true] `mode="callout"`: pass false to
  *   take the cross off the callout. It still closes on Escape, a click
  *   outside, and a `--navi-close` from what it holds — for a tooltip that is

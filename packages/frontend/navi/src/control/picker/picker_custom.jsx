@@ -208,6 +208,9 @@ export const PickerCustomResolver = (props) => {
     if (props.calloutStatus === undefined) {
       props.calloutStatus = props.variant === "text" ? "none" : "info";
     }
+    if (props.calloutIcon === undefined) {
+      props.calloutIcon = props.variant !== "text";
+    }
     if (props.rightSlotIcon === undefined) {
       props.rightSlotIcon = (
         <CalloutStatusIcon
@@ -867,6 +870,7 @@ const PickerContentInsidePopup = (props) => {
     // one it still closes on Escape, a click outside, or a --navi-close of the
     // content's own.
     calloutStatus,
+    calloutIcon,
     calloutCloseButton,
     ...rest
   } = props;
@@ -912,6 +916,7 @@ const PickerContentInsidePopup = (props) => {
           {...popupProps}
           pickerRef={props.ref}
           status={calloutStatus}
+          icon={calloutIcon}
           closeButton={calloutCloseButton}
         >
           <PopupModeContext.Provider value={mode}>
@@ -993,6 +998,7 @@ const PickerCalloutPopup = ({
   openController,
   pickerRef,
   status,
+  icon,
   closeButton,
   onnavi_request_open,
   onnavi_request_close,
@@ -1024,6 +1030,7 @@ const PickerCalloutPopup = ({
       message: hostRef.current,
       // "none" is the picker's word for it; the callout's is no status at all.
       status: status === "none" ? undefined : status,
+      icon,
       closeButton,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
