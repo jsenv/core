@@ -257,8 +257,14 @@ const lastIndexOfCIOutsideBrackets = (s, ch) => {
   let depth = 0;
   let lastFound = -1;
   for (let i = 0; i < s.length; i++) {
-    if (s[i] === "[") { depth++; continue; }
-    if (s[i] === "]") { if (depth > 0) depth--; continue; }
+    if (s[i] === "[") {
+      depth++;
+      continue;
+    }
+    if (s[i] === "]") {
+      if (depth > 0) depth--;
+      continue;
+    }
     if (depth === 0 && (s[i] === upper || s[i] === lower)) lastFound = i;
   }
   return lastFound;

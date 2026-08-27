@@ -151,6 +151,7 @@ export {
   useCalloutRequestClose,
 } from "./src/control/rules/callout/callout.jsx";
 export { registerGlobalConstraint } from "./src/control/rules/control_validation.js";
+export { constraintFromValidityRule } from "./src/control/rules/validity_bridge.js";
 export { useConstraintValidityState } from "./src/control/rules/hooks/use_constraint_validity_state.js";
 export { createAvailableConstraint } from "./src/control/rules/validation/create_available_constraint.js";
 // Selection

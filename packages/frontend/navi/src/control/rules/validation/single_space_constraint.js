@@ -1,30 +1,32 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
-import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+/**
+ * `data-single-space` — no leading or trailing space, never two in a row.
+ * The rule itself is @jsenv/validity's SINGLE_SPACE_RULE, so a server checking
+ * the value again refuses it for the same reason and in the same words.
+ */
+
+import { SINGLE_SPACE_RULE } from "@jsenv/validity";
+
+import {
+  CONSTRAINT_ATTRIBUTE_SET,
+  isConstraintAttributeOn,
+} from "../constraint_attribute_set.js";
+import { naviI18nFromValidityMessage } from "../validity_bridge.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
   messageAttribute: "data-single-space-message",
   check: (field) => {
     const singleSpace = field.controlHostProps["data-single-space"];
-    if (singleSpace === undefined) {
+    if (!isConstraintAttributeOn(singleSpace)) {
       return null;
     }
-
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const hasLeadingSpace = valueAsString.startsWith(" ");
-    const hasTrailingSpace = valueAsString.endsWith(" ");
-    const hasDoubleSpace = valueAsString.includes("  ");
-    if (!hasLeadingSpace && !hasTrailingSpace && !hasDoubleSpace) {
+    const result = SINGLE_SPACE_RULE.applyOn(true, valueAsString);
+    if (!result) {
       return null;
     }
-    if (hasLeadingSpace) {
-      return naviI18n("constraint.single_space.start.default");
-    }
-    if (hasTrailingSpace) {
-      return naviI18n("constraint.single_space.end.default");
-    }
-    return naviI18n("constraint.single_space.consecutive.default");
+    return naviI18nFromValidityMessage(result);
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");

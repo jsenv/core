@@ -140,7 +140,11 @@ export const PATTERN_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const regex = new RegExp(`^(?:${pattern})$`);
+    // The `u` flag is how the platform compiles this same attribute, and what
+    // lets a pattern speak about characters: `\p{...}` is only recognized under
+    // it, and a range covers whole code points rather than the two halves an
+    // astral character is made of.
+    const regex = new RegExp(`^(?:${pattern})$`, "u");
     if (regex.test(valueAsString)) {
       return null;
     }

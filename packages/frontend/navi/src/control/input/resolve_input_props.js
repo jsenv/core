@@ -1,4 +1,4 @@
-import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
+import { CHAR_CLASS_PRESETS } from "@jsenv/validity";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
 // Maps validity type names → navi input type names.

@@ -88,6 +88,17 @@ consistency across the app, not from any single call site.
   before displaying an error by hand, before writing an error boundary of your
   own, and before concluding that a dev overlay over a page that already shows
   its error is a crash.
+- `docs/field_validation.md` — what a control refuses and who decides it: the
+  split between what only a browser can answer (a blocked keystroke, where the
+  callout lands, when the message appears) and « is this value acceptable »,
+  which is @jsenv/validity's and which a server asks about the same value. The
+  constraint attributes navi ships, the `charGuard`/`maxLengthGuard` props that
+  act before there is a value, how a message key is overridden, and the three
+  places an app's own rule can live — both sides via
+  `constraintFromValidityRule`, the server alone, the browser alone. Read it
+  before writing a constraint of your own: if the sentence would make sense in a
+  server's response, the rule belongs in validity and the constraint is only its
+  browser-side caller.
 - `docs/css_architecture.md` — how Navi's CSS layering works, and the
   supported ways to override component styles (props > CSS variables > direct
   rule overrides, in that preference order).

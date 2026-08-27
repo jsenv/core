@@ -3,17 +3,18 @@ import {
   durationToSeconds,
   parseDuration,
 } from "./duration.js";
+import { message } from "./message.js";
 
 export const CANNOT_CONVERT = {};
 
 const validateNumber = (value) => {
   if (typeof value !== "number") {
-    return `must be a number`;
+    return message("type.number");
   }
   if (!Number.isFinite(value)) {
-    return `must be finite`;
+    return message("type.number.finite");
   }
-  return "";
+  return null;
 };
 const convertStringToNumber = (value) => {
   const parsed = parseFloat(value);
@@ -87,9 +88,9 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (!Array.isArray(value)) {
-        return `must be an array, got ${typeof value}`;
+        return message("type.array", { actualType: typeof value });
       }
-      return "";
+      return null;
     },
     representations: {
       string: {
@@ -116,12 +117,12 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (Array.isArray(value)) {
-        return `must be an object, got array`;
+        return message("type.object.array");
       }
       if (typeof value !== "object" || value === null) {
-        return `must be an object, got ${typeof value}`;
+        return message("type.object", { actualType: typeof value });
       }
-      return "";
+      return null;
     },
     representations: {
       string: {
@@ -162,12 +163,12 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string in YYYY-MM-DD format`;
+        return message("type.date.string");
       }
       const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
       const match = dateRegex.exec(value);
       if (!match) {
-        return `must be in YYYY-MM-DD format`;
+        return message("type.date.format");
       }
       const year = parseInt(match[1], 10);
       const month = parseInt(match[2], 10);
@@ -179,9 +180,9 @@ export const TYPES = {
         date.getMonth() !== month - 1 ||
         date.getDate() !== day
       ) {
-        return `must be a valid date`;
+        return message("type.date.invalid");
       }
-      return "";
+      return null;
     },
   },
   "datetime": {
@@ -202,13 +203,13 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be an ISO 8601 string`;
+        return message("type.datetime.string");
       }
       const d = new Date(value);
       if (isNaN(d.getTime())) {
-        return `must be a valid datetime`;
+        return message("type.datetime.invalid");
       }
-      return "";
+      return null;
     },
   },
   // "datetime-local" matches the value format of <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
@@ -217,17 +218,17 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string in YYYY-MM-DDTHH:MM format`;
+        return message("type.datetime_local.string");
       }
       const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
       if (!regex.test(value)) {
-        return `must be in YYYY-MM-DDTHH:MM format`;
+        return message("type.datetime_local.format");
       }
       const d = new Date(value);
       if (isNaN(d.getTime())) {
-        return `must be a valid datetime`;
+        return message("type.datetime.invalid");
       }
-      return "";
+      return null;
     },
     representations: {
       object: {
@@ -282,9 +283,9 @@ export const TYPES = {
         return numberError;
       }
       if (!Number.isInteger(value)) {
-        return `must be an integer`;
+        return message("type.integer");
       }
-      return "";
+      return null;
     },
     representations: {
       string: {
@@ -380,9 +381,9 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
+        return null;
       }
-      return `must be a number`;
+      return message("type.number");
     },
   },
   "minute": {
@@ -420,9 +421,9 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
+        return null;
       }
-      return `must be a number`;
+      return message("type.number");
     },
   },
   "hour": {
@@ -460,9 +461,9 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
-        return "";
+        return null;
       }
-      return `must be a number`;
+      return message("type.number");
     },
   },
   // "duration" holds an ISO 8601 duration string (e.g. "PT2H15M", "P1Y2M").
@@ -501,17 +502,19 @@ export const TYPES = {
     // Converts the canonical string value to seconds for min/max/step comparison.
     toComparable: (value) => durationToSeconds(value),
     validate: (value) => {
-      if (typeof value !== "string") return "must be a string";
+      if (typeof value !== "string") {
+        return message("type.string");
+      }
       const parsed = parseDuration(value);
       if (!parsed) {
-        return `must be a valid duration string (e.g. "PT2H15M")`;
+        return message("type.duration.invalid");
       }
       for (const v of Object.values(parsed)) {
         if (typeof v !== "number") {
-          return `must be a valid duration string (e.g. "PT2H15M")`;
+          return message("type.duration.invalid");
         }
       }
-      return "";
+      return null;
     },
   },
   // "week" matches the value format of <input type="week">: "YYYY-Www" (e.g. "2024-W03")
@@ -520,13 +523,13 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string in YYYY-Www format`;
+        return message("type.week.string");
       }
       const weekRegex = /^\d{4}-W(?:0[1-9]|[1-4][0-9]|5[0-3])$/;
       if (!weekRegex.test(value)) {
-        return `must be in YYYY-Www format (e.g. "2024-W03")`;
+        return message("type.week.format");
       }
-      return "";
+      return null;
     },
   },
   "month": {
@@ -534,24 +537,24 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value === "number" && Number.isFinite(value)) {
-        return ""; // timestamp
+        return null; // timestamp
       }
       if (value instanceof Date) {
-        return isNaN(value.getTime()) ? `must be a valid date` : "";
+        return isNaN(value.getTime()) ? message("type.date.invalid") : null;
       }
       if (typeof value !== "string") {
-        return `must be a string in YYYY-MM format or a timestamp`;
+        return message("type.month.string");
       }
       const monthRegex = /^\d{4}-\d{2}$/;
       const match = monthRegex.exec(value);
       if (!match) {
-        return `must be in YYYY-MM format`;
+        return message("type.month.format");
       }
       const month = parseInt(match[0].slice(5), 10);
       if (month < 1 || month > 12) {
-        return `must be a valid month (01–12)`;
+        return message("type.month.range");
       }
-      return "";
+      return null;
     },
   },
   // "year" is a plain number (e.g. 2024)
@@ -560,9 +563,9 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "number" || !Number.isInteger(value)) {
-        return `must be an integer year`;
+        return message("type.year");
       }
-      return "";
+      return null;
     },
     representations: {
       string: {
@@ -598,15 +601,15 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value !== "number") {
-        return `must be a number between 0 and 100`;
+        return message("type.percentage");
       }
       if (!Number.isFinite(value)) {
-        return `must be finite`;
+        return message("type.number.finite");
       }
       if (value < 0 || value > 100) {
-        return `must be between 0 and 100`;
+        return message("type.percentage.range");
       }
-      return "";
+      return null;
     },
   },
   // string/advanced
@@ -620,13 +623,13 @@ export const TYPES = {
     },
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string`;
+        return message("type.string");
       }
       const timeRegex = /^(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
       if (!timeRegex.test(value)) {
-        return `must be in HH:MM or HH:MM:SS format`;
+        return message("type.time.format");
       }
-      return "";
+      return null;
     },
   },
   "email": {
@@ -634,17 +637,17 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string`;
+        return message("type.string");
       }
       const emailregex =
         /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
       if (!value.includes("@")) {
-        return `must be a valid email address`;
+        return message("type.email");
       }
       if (!emailregex.test(value)) {
-        return `must be a valid email address`;
+        return message("type.email");
       }
-      return "";
+      return null;
     },
   },
   "url": {
@@ -652,14 +655,14 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string`;
+        return message("type.string");
       }
       try {
         // eslint-disable-next-line no-new
         new URL(value);
-        return "";
+        return null;
       } catch {
-        return `must be a valid URL`;
+        return message("type.url");
       }
     },
   },
@@ -668,7 +671,7 @@ export const TYPES = {
     localStorageRepresentation: "string",
     validate: (value) => {
       if (typeof value !== "string") {
-        return `must be a string`;
+        return message("type.string");
       }
       const hexRegex = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
       const rgbRegex =
@@ -681,9 +684,9 @@ export const TYPES = {
         rgbaRegex.test(value) ||
         wellKnownColorSet.has(value.toLowerCase())
       ) {
-        return "";
+        return null;
       }
-      return `must be a valid color (hex, rgb, rgba, or named color)`;
+      return message("type.color");
     },
   },
 };

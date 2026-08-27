@@ -108,6 +108,9 @@ read (`required`, `data-single-space`, `data-displayable`…) exist because thos
 constraints are global and need a per-field switch; a constraint written for
 one call site does not.
 
+Where such a rule belongs — a navi constraint, a @jsenv/validity rule the
+server runs too, or both — is `docs/field_validation.md`.
+
 ## What a failing action does
 
 It writes the error into `errorSignal`, moves to `FAILED`, and stops.

@@ -1,12 +1,18 @@
 import { createContext } from "preact";
 
-import { CONSTRAINT_ATTRIBUTE_SET } from "./rules/constraint_attribute_set.js";
+import {
+  CONSTRAINT_ATTRIBUTE_SET,
+  constraintAttributeFromProp,
+} from "./rules/constraint_attribute_set.js";
 import { CONSTRAINT_MESSAGE_PROP_NAME_SET } from "./rules/constraint_message.js";
 
-// prop that we'll set on the control
+// prop that we'll set on the control.
+// CONSTRAINT_ATTRIBUTE_SET is consulted through controlAttributeFromProp()
+// rather than spread in here: a constraint registers into it when its own
+// module evaluates, so anything read at module-eval time reads a set that is
+// still filling up — and in a bundle, whichever constraint happens to evaluate
+// last would silently lose its attribute.
 export const CONTROL_ATTRIBUTE_SET = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-
   "ref",
   "children",
   "id",
@@ -48,7 +54,6 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 export const CONTROL_PROP_SET = new Set([
-  ...CONTROL_ATTRIBUTE_SET,
   ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
@@ -109,6 +114,21 @@ export const CONTROL_PROP_SET = new Set([
   "charGuard",
   "maxLengthGuard",
 ]);
+
+/**
+ * The attribute a prop must be written as on the control host, `null` when the
+ * prop is not one. A constraint attribute may be passed either way — as the
+ * attribute itself (`data-no-emoji`) or as the prop it stands for (`noEmoji`).
+ */
+export const controlAttributeFromProp = (key) => {
+  if (CONTROL_ATTRIBUTE_SET.has(key) || CONSTRAINT_ATTRIBUTE_SET.has(key)) {
+    return key;
+  }
+  return constraintAttributeFromProp(key);
+};
+
+export const isControlProp = (key) =>
+  CONTROL_PROP_SET.has(key) || controlAttributeFromProp(key) !== null;
 
 export const MessagePropsRefContext = createContext();
 

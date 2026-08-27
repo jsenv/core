@@ -1,20 +1,18 @@
+import { message } from "./message.js";
 import { TYPES } from "./types.js";
 
 export const TYPE_RULE = {
   id: "type",
   applyOn: (type, value) => {
     const actualType = typeof value;
-    let message;
     const typeDef = TYPES[type];
     if (typeDef?.validate) {
-      message = typeDef.validate(value);
-    } else if (actualType !== type) {
-      message = `must be a ${type}, got ${actualType}`;
+      return typeDef.validate(value) || null;
     }
-    if (!message) {
+    if (actualType === type) {
       return null;
     }
-    return { message };
+    return message("type.mismatch", { type, actualType });
   },
 };
 export const MIN_RULE = {
@@ -38,9 +36,8 @@ export const MIN_RULE = {
       if (valueMs >= minMs) {
         return null;
       }
-      const minLabel = formatTemporalBound(min, type);
       return {
-        message: `must be on or after ${minLabel}`,
+        ...message("min.temporal", { min: formatTemporalBound(min, type) }),
         autoFix: () => fromMs(minMs, value, type),
       };
     }
@@ -53,7 +50,7 @@ export const MIN_RULE = {
       if (comparable >= min) {
         return null;
       }
-      return { message: `must be >= ${min}` };
+      return message("min.default", { min });
     }
     if (typeof value !== "number") {
       return null;
@@ -62,7 +59,9 @@ export const MIN_RULE = {
       return null;
     }
     return {
-      message: min === 0 ? `must be positive` : `must be >= ${min}`,
+      ...(min === 0
+        ? message("min.positive")
+        : message("min.default", { min })),
       autoFix: () => min,
     };
   },
@@ -88,9 +87,8 @@ export const MAX_RULE = {
       if (valueMs <= maxMs) {
         return null;
       }
-      const maxLabel = formatTemporalBound(max, type);
       return {
-        message: `must be on or before ${maxLabel}`,
+        ...message("max.temporal", { max: formatTemporalBound(max, type) }),
         autoFix: () => fromMs(maxMs, value, type),
       };
     }
@@ -103,7 +101,7 @@ export const MAX_RULE = {
       if (comparable <= max) {
         return null;
       }
-      return { message: `must be <= ${max}` };
+      return message("max.default", { max });
     }
     if (typeof value !== "number") {
       return null;
@@ -112,7 +110,9 @@ export const MAX_RULE = {
       return null;
     }
     return {
-      message: max === 0 ? `must be negative` : `must be <= ${max}`,
+      ...(max === 0
+        ? message("max.negative")
+        : message("max.default", { max })),
       autoFix: () => max,
     };
   },
@@ -153,7 +153,12 @@ export const STEP_RULE = {
       const before = secondsToTimeString(beforeSeconds);
       const after = secondsToTimeString(afterSeconds);
       return {
-        message: `must be a multiple of ${stepSeconds}s from ${typeof min === "string" ? min : secondsToTimeString(minSeconds)} (e.g. ${before} or ${after})`,
+        ...message("step.time", {
+          step: stepSeconds,
+          min: typeof min === "string" ? min : secondsToTimeString(minSeconds),
+          before,
+          after,
+        }),
         autoFix: () => {
           const rounded =
             minSeconds +
@@ -192,19 +197,24 @@ export const STEP_RULE = {
       return null; // Valid
     }
 
-    // Determine the error message
-    let message;
-    if (hasTooMuchPrecision && !isMultipleOfStep) {
-      message = `must be a multiple of ${step} with at most ${maxAllowedDecimals} decimal places`;
-    } else if (hasTooMuchPrecision) {
-      message = `must have at most ${maxAllowedDecimals} decimal places`;
-    } else {
-      message =
-        step === 1 ? `must be an integer` : `must be a multiple of ${step}`;
-    }
+    const stepMessage = (() => {
+      if (hasTooMuchPrecision && !isMultipleOfStep) {
+        return message("step.multiple_and_precision", {
+          step,
+          decimals: maxAllowedDecimals,
+        });
+      }
+      if (hasTooMuchPrecision) {
+        return message("step.precision", { decimals: maxAllowedDecimals });
+      }
+      if (step === 1) {
+        return message("step.integer");
+      }
+      return message("step.multiple", { step });
+    })();
 
     return {
-      message,
+      ...stepMessage,
       autoFix: () => {
         // First round to proper precision, then ensure it's a multiple of step
         const precisionFixed = Number(value.toFixed(maxAllowedDecimals));
@@ -236,9 +246,10 @@ export const ONE_OF_RULE = {
     if (oneOf.includes(value)) {
       return null;
     }
-    const oneOfSource = oneOf.map((v) => JSON.stringify(v)).join(", ");
     return {
-      message: `must be one of: ${oneOfSource}`,
+      ...message("one_of.default", {
+        values: oneOf.map((v) => JSON.stringify(v)).join(", "),
+      }),
       autoFix: () => oneOf[0],
     };
   },

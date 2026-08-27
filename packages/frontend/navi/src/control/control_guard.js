@@ -1,6 +1,8 @@
 /**
  * Input guard — enforces character and length constraints during typing, paste,
- * and external value sets.
+ * and external value sets. What a character class holds and which sentence
+ * refuses it comes from @jsenv/validity; the guard is what only a field can do,
+ * blocking the keystroke before the value exists.
  *
  * The guard owns a single callout token (shared across all rejection reasons) so
  * successive rejections update the same callout rather than stacking.
@@ -13,24 +15,21 @@
  */
 
 import { getKeyboardEventDefaultAction } from "@jsenv/dom";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import {
-  getCharGuardMessageKey,
+  compileCharClass,
+  compileCharClassAnchored,
+  getCharClassMessageKey,
   resolveCharClass,
-} from "./char_guard_presets.js";
+} from "@jsenv/validity";
+
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { naviI18nFromValidityMessage } from "./rules/validity_bridge.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
 export const isTypingIntent = (e) =>
   getKeyboardEventDefaultAction(e) === "type";
 
 const s = (n) => (n > 1 ? "s" : "");
-
-// The `u` flag is what lets a char class speak about characters: `\p{...}` is
-// only recognized under it, and a range covers whole code points instead of
-// the two halves an astral character (an emoji) is made of.
-const compileCharClass = (charClass) => new RegExp(charClass, "u");
-const compileCharClassAnchored = (charClass) =>
-  new RegExp(`^(?:${charClass})*$`, "u");
 
 // Keydown: block only single printable characters that don't match the class.
 // Multi-character key names (Delete, ArrowLeft…) are always allowed.
@@ -41,7 +40,7 @@ const getInvalidCharMessage = (char, { charClass, messageKey }) => {
     return null;
   }
   if (compileCharClass(charClass).test(char)) return null;
-  return naviI18n(messageKey);
+  return naviI18nFromValidityMessage({ key: messageKey });
 };
 
 // Keydown: block when inserting one char would exceed maxLength.
@@ -61,7 +60,7 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
 const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
   const str = uiState === undefined ? "" : String(uiState);
   if (compileCharClassAnchored(charClass).test(str)) return null;
-  return naviI18n(messageKey);
+  return naviI18nFromValidityMessage({ key: messageKey });
 };
 
 // Paste / set: truncate when value exceeds maxLength.
@@ -107,7 +106,7 @@ export const createControlGuard = (controller) => {
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const messageKey = getCharGuardMessageKey(charGuard);
+      const messageKey = getCharClassMessageKey(charGuard);
       const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
       if (charMsg) {
         show(charMsg, e);
@@ -140,7 +139,7 @@ export const createControlGuard = (controller) => {
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const messageKey = getCharGuardMessageKey(charGuard);
+      const messageKey = getCharClassMessageKey(charGuard);
       const charsMsg = getInvalidCharsMessage(uiState, {
         charClass,
         messageKey,

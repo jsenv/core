@@ -60,6 +60,8 @@ import { findControlProxyTargetController } from "../controller_registry.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
 import { DISPLAYABLE_CONSTRAINT } from "./validation/displayable_constraint.js";
+import { MAX_LINE_BREAKS_CONSTRAINT } from "./validation/max_line_breaks_constraint.js";
+import { NO_EMOJI_CONSTRAINT } from "./validation/no_emoji_constraint.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -104,6 +106,8 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   DISPLAYABLE_CONSTRAINT,
+  MAX_LINE_BREAKS_CONSTRAINT,
+  NO_EMOJI_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,

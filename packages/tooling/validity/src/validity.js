@@ -1,3 +1,4 @@
+import { formatMessageInEnglish } from "./message.js";
 import {
   MAX_RULE,
   MIN_RULE,
@@ -5,6 +6,15 @@ import {
   STEP_RULE,
   TYPE_RULE,
 } from "./rules.js";
+import {
+  CHAR_CLASS_RULE,
+  DISPLAYABLE_RULE,
+  MAX_LENGTH_RULE,
+  MAX_LINE_BREAKS_RULE,
+  MIN_LENGTH_RULE,
+  NO_EMOJI_RULE,
+  SINGLE_SPACE_RULE,
+} from "./text_rules.js";
 import { CANNOT_CONVERT, TYPES } from "./types.js";
 
 /**
@@ -16,6 +26,16 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * @param {number} [ruleConfig.max] - Maximum value (for numbers)
  * @param {number} [ruleConfig.step] - Step increment for numbers (e.g., 0.1 for one decimal place, 1 for integers)
  * @param {Array} [ruleConfig.oneOf] - Array of allowed values (enumeration validation)
+ * @param {number} [ruleConfig.minLength] - Minimum character count (for strings)
+ * @param {number} [ruleConfig.maxLength] - Maximum character count (for strings)
+ * @param {string} [ruleConfig.charClass] - Which characters the value may hold: a preset name ("tel", "slug"…) or a regex character class ("[A-Z0-9_]")
+ * @param {boolean} [ruleConfig.displayable] - Refuse what the layout cannot draw: stacked marks (zalgo), a value showing nothing, blank lines in series, a joiner joining nothing
+ * @param {number} [ruleConfig.maxStackedMarks] - How many marks may stack on one base character (default 5, read by `displayable`)
+ * @param {boolean} [ruleConfig.singleSpace] - No leading or trailing space, never two in a row
+ * @param {boolean} [ruleConfig.noEmoji] - Refuse emoji: a name, an identifier or a title may not want one even where the layout survives it
+ * @param {number} [ruleConfig.maxLineBreaks] - How many line breaks the value may hold (counted in breaks, not in rendered lines, which depend on wrapping)
+ * @param {Function} [ruleConfig.formatMessage] - `(key, params) => string`, the sentence for a refusal. Defaults to English; pass the app's i18n so a field and a server refuse in the same words
+ * @param {Array} [ruleConfig.rules] - Rules of the app's own, checked alongside the built-in ones. Each is `{ name, applyOn(ruleValue, value, ruleConfig) }`; `ruleValue` is `ruleConfig[name]`, and the refusal lands on `validity[name]`
  *
  * @returns {[Object, Function]} Tuple containing:
  *   - validity: Reactive validity object with current validation state
@@ -30,6 +50,7 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * - `max` {string|undefined}: Maximum validation error message or undefined if valid
  * - `step` {string|undefined}: Step validation error message or undefined if valid
  * - `oneOf` {string|undefined}: Enumeration validation error message or undefined if valid
+ * - `minLength` / `maxLength` / `charClass` / `displayable` / `singleSpace` / `noEmoji` / `maxLineBreaks` {string|undefined}: text validation error message or undefined if valid
  *
  * The returned applyOn function:
  * - Takes a value to validate
@@ -60,6 +81,38 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * console.log(validity.representations.valid); // { type: 'number', value: 123 }
  *
  * @example
+ * // Text validation — the same config a server and a field both run
+ * const [validity, applyOn] = createValidity({
+ *   type: 'string',
+ *   maxLength: 500,
+ *   charClass: '[^\u0000-\u001f\u007f]',
+ *   displayable: true,
+ *   singleSpace: true,
+ *   maxLineBreaks: 4,
+ * });
+ *
+ * applyOn('  hello');
+ * console.log(validity.valid); // false
+ * console.log(validity.singleSpace); // "must not start with a space"
+ *
+ * @example
+ * // A rule of the app's own — a business rule has no reason to live in a library
+ * const MAX_WORDS_RULE = {
+ *   name: 'maxWords',
+ *   applyOn: (maxWords, value) => {
+ *     if (maxWords === undefined || typeof value !== 'string') return null;
+ *     const count = value.trim().split(/\s+/).length;
+ *     if (count <= maxWords) return null;
+ *     return { key: 'max_words', params: { max: maxWords, count } };
+ *   },
+ * };
+ * const [validity, applyOn] = createValidity({
+ *   type: 'string',
+ *   rules: [MAX_WORDS_RULE],
+ *   maxWords: 40,
+ * });
+ *
+ * @example
  * // Enumeration validation
  * const [validity, applyOn] = createValidity({
  *   oneOf: ['red', 'green', 'blue']
@@ -82,6 +135,8 @@ export const createValidity = (ruleConfig) => {
     representation,
     typeCoercion = true,
     autoFix: autoFixOption = false,
+    formatMessage = formatMessageInEnglish,
+    rules: customRuleArray = [],
     ...ruleConfigWithoutRepresentation
   } = ruleConfig;
   ruleConfig = ruleConfigWithoutRepresentation;
@@ -174,7 +229,41 @@ export const createValidity = (ruleConfig) => {
         }
       }
     }
-    const { type, min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
+    for (const customRule of customRuleArray) {
+      const { name } = customRule;
+      if (typeof name !== "string" || !name) {
+        throw new Error(`[createValidity] a rule must have a name`);
+      }
+      if (typeof customRule.applyOn !== "function") {
+        throw new Error(`[createValidity] rule "${name}" must have applyOn`);
+      }
+      validity[name] = undefined;
+      ruleSet.add({
+        key: name,
+        rule: customRule,
+        ruleValue: effectiveRuleConfig[name],
+      });
+    }
+    const {
+      type,
+      min,
+      max,
+      step,
+      oneOf,
+      minLength,
+      maxLength,
+      charClass,
+      displayable,
+      singleSpace,
+      noEmoji,
+      maxLineBreaks,
+      // A parameter of the displayable rule, not a rule of its own.
+      maxStackedMarks,
+      ...unknown
+    } = effectiveRuleConfig;
+    for (const customRule of customRuleArray) {
+      delete unknown[customRule.name];
+    }
     if (Object.keys(unknown).length > 0) {
       console.warn(
         "[createValidity] Unknown ruleConfig properties:",
@@ -242,6 +331,78 @@ export const createValidity = (ruleConfig) => {
         ruleValue: oneOf,
       });
     }
+    if (minLength !== undefined) {
+      validity.minLength = undefined;
+      assertPositiveInteger("minLength", minLength);
+      if (maxLength !== undefined && minLength > maxLength) {
+        throw new Error(
+          `[createValidity] minLength (${minLength}) is greater than maxLength (${maxLength})`,
+        );
+      }
+      ruleSet.add({
+        key: "minLength",
+        rule: MIN_LENGTH_RULE,
+        ruleValue: minLength,
+      });
+    }
+    if (maxLength !== undefined) {
+      validity.maxLength = undefined;
+      assertPositiveInteger("maxLength", maxLength);
+      ruleSet.add({
+        key: "maxLength",
+        rule: MAX_LENGTH_RULE,
+        ruleValue: maxLength,
+      });
+    }
+    if (charClass !== undefined) {
+      validity.charClass = undefined;
+      if (typeof charClass !== "string") {
+        throw new Error(
+          `[createValidity] charClass must be a preset name or a regex character class string`,
+        );
+      }
+      ruleSet.add({
+        key: "charClass",
+        rule: CHAR_CLASS_RULE,
+        ruleValue: charClass,
+      });
+    }
+    if (displayable !== undefined) {
+      validity.displayable = undefined;
+      if (maxStackedMarks !== undefined) {
+        assertPositiveInteger("maxStackedMarks", maxStackedMarks);
+      }
+      ruleSet.add({
+        key: "displayable",
+        rule: DISPLAYABLE_RULE,
+        ruleValue: displayable,
+      });
+    }
+    if (singleSpace !== undefined) {
+      validity.singleSpace = undefined;
+      ruleSet.add({
+        key: "singleSpace",
+        rule: SINGLE_SPACE_RULE,
+        ruleValue: singleSpace,
+      });
+    }
+    if (noEmoji !== undefined) {
+      validity.noEmoji = undefined;
+      ruleSet.add({
+        key: "noEmoji",
+        rule: NO_EMOJI_RULE,
+        ruleValue: noEmoji,
+      });
+    }
+    if (maxLineBreaks !== undefined) {
+      validity.maxLineBreaks = undefined;
+      assertPositiveInteger("maxLineBreaks", maxLineBreaks);
+      ruleSet.add({
+        key: "maxLineBreaks",
+        rule: MAX_LINE_BREAKS_RULE,
+        ruleValue: maxLineBreaks,
+      });
+    }
     validity.valid = true;
     validity.autoFixed = false;
     validity.value = undefined;
@@ -279,9 +440,14 @@ export const createValidity = (ruleConfig) => {
         validity[key] = undefined;
         continue;
       }
-      const { message, autoFix } = result;
       valid = false;
-      validity[key] = message;
+      // A rule may answer with a finished sentence instead of a key — an app
+      // rule with nothing to translate has no reason to declare one.
+      const autoFix = typeof result === "string" ? undefined : result.autoFix;
+      validity[key] =
+        typeof result === "string"
+          ? result
+          : formatMessage(result.key, result.params);
       if (!autoFix) {
         continue;
       }
@@ -402,4 +568,10 @@ export const createValidity = (ruleConfig) => {
   };
 
   return [validity, applyOn];
+};
+
+const assertPositiveInteger = (name, value) => {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error(`[createValidity] ${name} must be a positive integer`);
+  }
 };

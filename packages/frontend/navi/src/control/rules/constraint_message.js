@@ -10,6 +10,8 @@ export const CONSTRAINT_NAME_TO_PROP = {
   max: "maxMessage",
   single_space: "singleSpaceMessage",
   displayable: "displayableMessage",
+  max_line_breaks: "maxLineBreaksMessage",
+  no_emoji: "noEmojiMessage",
   same_as: "sameAsMessage",
   min_lower_letter: "minLowerLetterMessage",
   min_upper_letter: "minUpperLetterMessage",

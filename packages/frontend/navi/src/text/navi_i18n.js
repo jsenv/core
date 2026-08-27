@@ -687,29 +687,41 @@ naviI18n.addAll({
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",
     en: "The time must be <strong>[max]</strong> or earlier.",
   },
-  "constraint.single_space.start.default": {
+  "constraint.single_space.start": {
     fr: "Ce champ ne doit pas commencer par un espace.",
     en: "This field must not start with a space.",
   },
-  "constraint.single_space.end.default": {
+  "constraint.single_space.end": {
     fr: "Ce champ ne doit pas finir par un espace.",
     en: "This field must not end with a space.",
   },
-  "constraint.single_space.consecutive.default": {
+  "constraint.single_space.consecutive": {
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
-  "constraint.displayable.stacked_marks.default": {
+  "constraint.displayable.stacked_marks": {
     fr: "Ce champ ne doit pas empiler plus de <strong>[max]</strong> signes sur un même caractère.",
     en: "This field must not stack more than <strong>[max]</strong> marks on a single character.",
   },
-  "constraint.displayable.invisible.default": {
+  "constraint.displayable.invisible": {
     fr: "Ce champ doit contenir au moins un caractère visible.",
     en: "This field must contain at least one visible character.",
   },
-  "constraint.displayable.blank_lines.default": {
+  "constraint.displayable.blank_lines": {
     fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
     en: "This field must not contain consecutive blank lines.",
+  },
+  "constraint.displayable.dangling_joiner": {
+    fr: "Ce champ contient un caractère de liaison invisible qui ne relie rien.",
+    en: "This field contains an invisible joiner that joins nothing.",
+  },
+  "constraint.no_emoji": {
+    fr: "Ce champ ne doit pas contenir d'emoji.",
+    en: "This field must not contain emoji.",
+  },
+  "constraint.max_line_breaks": {
+    fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
+    en: "This field must not contain more than [max] line break[s].",
   },
   "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
@@ -777,35 +789,42 @@ naviI18n.addAll({
   },
 });
 
-// charGuard / maxLengthGuard callout messages
+// Character class and maxLengthGuard messages. The char class keys are
+// @jsenv/validity's own ("char_class.slug"), prefixed with "constraint." —
+// the same sentence refuses a keystroke in a callout and a whole value in a
+// constraint, so there is one key for both.
 naviI18n.addAll({
   // Preset-specific char messages — more informative than the generic fallback
-  "constraint.guard.number": {
+  "constraint.char_class.numeric": {
     fr: "Ce champ ne peut contenir que des chiffres.",
     en: "This field can only contain digits.",
   },
-  "constraint.guard.alpha": {
+  "constraint.char_class.alpha": {
     fr: "Ce champ ne peut contenir que des lettres.",
     en: "This field can only contain letters.",
   },
-  "constraint.guard.alphanumeric": {
+  "constraint.char_class.alphanumeric": {
     fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
     en: "This field can only contain letters and digits.",
   },
-  "constraint.guard.uppercase": {
+  "constraint.char_class.uppercase": {
     fr: "Ce champ ne peut contenir que des lettres majuscules.",
     en: "This field can only contain uppercase letters.",
   },
-  "constraint.guard.hex": {
+  "constraint.char_class.hex": {
     fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
     en: "This field can only contain hexadecimal digits (0-9, A-F).",
   },
-  "constraint.guard.slug": {
+  "constraint.char_class.slug": {
     fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
     en: "This field can only contain lowercase letters, digits, and hyphens.",
   },
   // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
-  "constraint.guard.chars": {
+  "constraint.char_class.no_emoji": {
+    fr: "Ce champ ne peut pas contenir d'emoji.",
+    en: "This field cannot contain emoji.",
+  },
+  "constraint.char_class.default": {
     fr: "Ce champ ne peut contenir que les caractères autorisés.",
     en: "This field can only contain allowed characters.",
   },

@@ -58,8 +58,8 @@ import {
 import {
   ActionContext,
   ActionRequesterContext,
-  CONTROL_ATTRIBUTE_SET,
-  CONTROL_PROP_SET,
+  controlAttributeFromProp,
+  isControlProp,
   ControlIdContext,
   ControlNameContext,
   DisabledContext,
@@ -2026,13 +2026,15 @@ const splitControlProps = (props) => {
   };
   const controlRootProps = {};
   for (const key of Object.keys(props)) {
-    if (CONTROL_PROP_SET.has(key)) {
-      if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlHostProps[key] = props[key];
-      }
-    } else {
-      controlRootProps[key] = props[key];
+    const attributeName = controlAttributeFromProp(key);
+    if (attributeName) {
+      controlHostProps[attributeName] = props[key];
+      continue;
     }
+    if (isControlProp(key)) {
+      continue;
+    }
+    controlRootProps[key] = props[key];
   }
   return [controlRootProps, controlHostProps];
 };
