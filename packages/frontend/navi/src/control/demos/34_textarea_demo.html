@@ -41,6 +41,11 @@
          le temps, et pas seulement tant que le placeholder est affiché.
          Le sélecteur reprend les classes du composant pour passer devant sa
          propre règle, plus spécifique d'une pseudo-classe. */
+      /* Ce que ça donnerait sans la line-height fixe du composant : la ligne
+         qui porte un emoji prend la hauteur de la police emoji. */
+      .demo-line-height-normal .navi_input.navi_textarea .navi_control_input {
+        line-height: normal;
+      }
       .demo-placeholder-floor .navi_input.navi_textarea .navi_control_input {
         min-height: max(
           calc(var(--textarea-min-rows, 1.5) * 1lh),
@@ -94,6 +99,9 @@
 
       const LONG_PLACEHOLDER =
         "Décrivez votre problème en quelques phrases, en précisant ce que vous attendiez et ce qui s'est passé à la place…";
+
+      const EMOJI_LINES =
+        "Une ligne sans rien\nUne ligne avec \u{1F3BE}\nUne ligne sans rien";
 
       const THREE_LINES = `La première ligne
 la deuxième
@@ -236,6 +244,14 @@ six`}
                   "\u{1F44B} une\n\u{1F3BE} deux\n\u{1F525} trois\n\u{1F389} quatre\n\u{1F44D} cinq"
                 }
               />
+            </Variant>
+            <Variant caption="line-height: 1.5 (le composant)">
+              <Textarea defaultValue={EMOJI_LINES} />
+            </Variant>
+            <Variant caption="line-height: normal">
+              <div class="demo-line-height-normal">
+                <Textarea defaultValue={EMOJI_LINES} />
+              </div>
             </Variant>
           </Box>
         </div>

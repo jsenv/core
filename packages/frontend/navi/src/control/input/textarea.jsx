@@ -38,11 +38,18 @@ const css = /* css */ `
          99999 fallback means "no cap" without needing a conditional rule. */
       max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
       field-sizing: content;
-      /* Explicit, never normal: minRows/maxRows are lengths in lh, and with
-         line-height normal the lh unit resolves to a theoretical value that
-         does not match the real rendered line — the box then jumps by a few
-         pixels the moment the first character replaces the theory with a real
-         line. One number for both keeps every row count exact. */
+      /* Explicit, never normal, for two independent reasons.
+         minRows/maxRows are lengths in lh, and with line-height normal the lh
+         unit resolves to a theoretical value that does not match the real
+         rendered line — the box then jumps by a few pixels the moment the first
+         character replaces the theory with a real line.
+         And a line box under "normal" takes the height of the tallest font it
+         holds, so the one line carrying an emoji stands taller than the ones
+         around it — here, where the text is typed and no glyph can be wrapped
+         the way emojiAsIcon wraps one, the line height is the only lever.
+         1.5 is also tall enough to contain an emoji's own box, so it is not
+         clipped either; a tighter value would keep the rows even and cut the
+         glyph. See docs/typography.md. */
       line-height: 1.5;
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;

@@ -215,6 +215,20 @@ an emoji (see the dense cases in `text_emoji_demo.html`). A `lineHeight` is a
 typographic choice for the text itself — a paragraph that wants air — never a
 workaround for a glyph that grew too tall; that glyph gets `emojiAsIcon`.
 
+**A control one types in is the exception, and there the line height is the
+whole answer.** `emojiAsIcon` rewrites strings into markup, and there is no
+markup inside a `<textarea>` or an `<input>`: the value is raw text the browser
+draws itself, so no glyph in it can be wrapped in anything. Under
+`line-height: normal` a line box takes the height of the tallest font it holds,
+so the one line carrying an emoji stands taller than the ones around it — rows
+of uneven height, and a box sized in `lh` (`minRows`/`maxRows`) that jumps as
+soon as one is typed. `Textarea` therefore fixes its line height, and picks a
+value tall enough to contain an emoji's own box so the glyph is not clipped
+either: a tighter one would keep the rows even and cut the top off the emoji.
+Do not remove it, and do not tighten it — `34_textarea_demo.html` shows the two
+side by side. The rule above still holds everywhere the text is rendered rather
+than typed.
+
 ## Text that must not move when its style changes
 
 A label that becomes bold when its row is selected reflows everything around it.

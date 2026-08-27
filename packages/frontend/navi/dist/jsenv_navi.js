@@ -11,7 +11,7 @@ import { isValidElement, createContext, render, h, Fragment, toChildArray, optio
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, createValidity, durationToISOString } from "@jsenv/validity";
+import { parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
@@ -3676,7 +3676,54 @@ const findProxyControllers = (realInputId) => {
   return proxyControllersByRealInputId.get(realInputId) ?? null;
 };
 
+/**
+ * The attributes constraints read, filled by each constraint module as it
+ * evaluates. A constraint declares the attribute it wants (`"data-no-emoji"`)
+ * and gets the prop for free: a control accepts the camelCase form
+ * (`noEmoji`) and writes it on the control host under the attribute name — the
+ * same conversion `element.dataset` does, so what a component is passed and
+ * what ends up in the DOM read as one thing.
+ */
+
 const CONSTRAINT_ATTRIBUTE_SET = new Set();
+
+const dataAttributeCache = new Map();
+// A constraint imported lazily registers its attribute after controls have
+// already rendered, so an answer computed before it arrived must not survive it.
+let attributeCountWhenCached = 0;
+/**
+ * The constraint attribute a prop stands for, `null` when it stands for none:
+ * `"noEmoji"` → `"data-no-emoji"`.
+ */
+const constraintAttributeFromProp = (key) => {
+  if (attributeCountWhenCached !== CONSTRAINT_ATTRIBUTE_SET.size) {
+    dataAttributeCache.clear();
+    attributeCountWhenCached = CONSTRAINT_ATTRIBUTE_SET.size;
+  }
+  const fromCache = dataAttributeCache.get(key);
+  if (fromCache !== undefined) {
+    return fromCache;
+  }
+  let attribute = null;
+  // An attribute is already written as one (`data-no-emoji`, `aria-label`) —
+  // there is nothing to convert, and the literal lookup has already happened.
+  if (!key.includes("-")) {
+    const candidate = `data-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+    if (CONSTRAINT_ATTRIBUTE_SET.has(candidate)) {
+      attribute = candidate;
+    }
+  }
+  dataAttributeCache.set(key, attribute);
+  return attribute;
+};
+
+/**
+ * Whether a constraint attribute is on. Present means on — `""` is how HTML
+ * writes a bare attribute — and only the values that say "passed, and off"
+ * turn it off.
+ */
+const isConstraintAttributeOn = (value) =>
+  value !== undefined && value !== null && value !== false;
 
 const CONSTRAINT_NAME_TO_PROP = {
   disabled: "disabledMessage",
@@ -3690,6 +3737,8 @@ const CONSTRAINT_NAME_TO_PROP = {
   max: "maxMessage",
   single_space: "singleSpaceMessage",
   displayable: "displayableMessage",
+  max_line_breaks: "maxLineBreaksMessage",
+  no_emoji: "noEmojiMessage",
   same_as: "sameAsMessage",
   min_lower_letter: "minLowerLetterMessage",
   min_upper_letter: "minUpperLetterMessage",
@@ -3756,10 +3805,13 @@ const getConstraintMessage = (
   };
 };
 
-// prop that we'll set on the control
+// prop that we'll set on the control.
+// CONSTRAINT_ATTRIBUTE_SET is consulted through controlAttributeFromProp()
+// rather than spread in here: a constraint registers into it when its own
+// module evaluates, so anything read at module-eval time reads a set that is
+// still filling up — and in a bundle, whichever constraint happens to evaluate
+// last would silently lose its attribute.
 const CONTROL_ATTRIBUTE_SET = new Set([
-  ...CONSTRAINT_ATTRIBUTE_SET,
-
   "ref",
   "children",
   "id",
@@ -3801,7 +3853,6 @@ const CONTROL_ATTRIBUTE_SET = new Set([
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
 const CONTROL_PROP_SET = new Set([
-  ...CONTROL_ATTRIBUTE_SET,
   ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
@@ -3862,6 +3913,21 @@ const CONTROL_PROP_SET = new Set([
   "charGuard",
   "maxLengthGuard",
 ]);
+
+/**
+ * The attribute a prop must be written as on the control host, `null` when the
+ * prop is not one. A constraint attribute may be passed either way — as the
+ * attribute itself (`data-no-emoji`) or as the prop it stands for (`noEmoji`).
+ */
+const controlAttributeFromProp = (key) => {
+  if (CONTROL_ATTRIBUTE_SET.has(key) || CONSTRAINT_ATTRIBUTE_SET.has(key)) {
+    return key;
+  }
+  return constraintAttributeFromProp(key);
+};
+
+const isControlProp = (key) =>
+  CONTROL_PROP_SET.has(key) || controlAttributeFromProp(key) !== null;
 
 const MessagePropsRefContext = createContext();
 
@@ -7239,29 +7305,47 @@ naviI18n.addAll({
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",
     en: "The time must be <strong>[max]</strong> or earlier.",
   },
-  "constraint.single_space.start.default": {
+  "constraint.single_space.start": {
     fr: "Ce champ ne doit pas commencer par un espace.",
     en: "This field must not start with a space.",
   },
-  "constraint.single_space.end.default": {
+  "constraint.single_space.end": {
     fr: "Ce champ ne doit pas finir par un espace.",
     en: "This field must not end with a space.",
   },
-  "constraint.single_space.consecutive.default": {
+  "constraint.single_space.consecutive": {
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
-  "constraint.displayable.stacked_marks.default": {
-    fr: "Ce champ ne doit pas empiler plus de <strong>[max]</strong> signes sur un même caractère.",
-    en: "This field must not stack more than <strong>[max]</strong> marks on a single character.",
+  // [sample] is the offending character with its marks — a stack is invisible
+  // as a description and obvious as a sample.
+  "constraint.displayable.stacked_marks.singular": {
+    fr: "Ce champ contient un caractère qui empile plus de <strong>[max]</strong> signes : « [sample] ».",
+    en: "This field contains a character stacking more than <strong>[max]</strong> marks: “[sample]”.",
   },
-  "constraint.displayable.invisible.default": {
+  "constraint.displayable.stacked_marks.plural": {
+    fr: "Ce champ contient [count] caractères qui empilent plus de <strong>[max]</strong> signes (tel que « [sample] »).",
+    en: "This field contains [count] characters stacking more than <strong>[max]</strong> marks (such as “[sample]”).",
+  },
+  "constraint.displayable.invisible": {
     fr: "Ce champ doit contenir au moins un caractère visible.",
     en: "This field must contain at least one visible character.",
   },
-  "constraint.displayable.blank_lines.default": {
+  "constraint.displayable.blank_lines": {
     fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
     en: "This field must not contain consecutive blank lines.",
+  },
+  "constraint.displayable.dangling_joiner": {
+    fr: "Ce champ contient un caractère de liaison invisible qui ne relie rien.",
+    en: "This field contains an invisible joiner that joins nothing.",
+  },
+  "constraint.no_emoji.default": {
+    fr: "Ce champ ne doit pas contenir d'emoji.",
+    en: "This field must not contain emoji.",
+  },
+  "constraint.max_line_breaks.default": {
+    fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
+    en: "This field must not contain more than [max] line break[s].",
   },
   "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
@@ -7329,35 +7413,42 @@ naviI18n.addAll({
   },
 });
 
-// charGuard / maxLengthGuard callout messages
+// Character class and maxLengthGuard messages. The char class keys are
+// @jsenv/validity's own ("char_class.slug"), prefixed with "constraint." —
+// the same sentence refuses a keystroke in a callout and a whole value in a
+// constraint, so there is one key for both.
 naviI18n.addAll({
   // Preset-specific char messages — more informative than the generic fallback
-  "constraint.guard.number": {
+  "constraint.char_class.numeric": {
     fr: "Ce champ ne peut contenir que des chiffres.",
     en: "This field can only contain digits.",
   },
-  "constraint.guard.alpha": {
+  "constraint.char_class.alpha": {
     fr: "Ce champ ne peut contenir que des lettres.",
     en: "This field can only contain letters.",
   },
-  "constraint.guard.alphanumeric": {
+  "constraint.char_class.alphanumeric": {
     fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
     en: "This field can only contain letters and digits.",
   },
-  "constraint.guard.uppercase": {
+  "constraint.char_class.uppercase": {
     fr: "Ce champ ne peut contenir que des lettres majuscules.",
     en: "This field can only contain uppercase letters.",
   },
-  "constraint.guard.hex": {
+  "constraint.char_class.hex": {
     fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
     en: "This field can only contain hexadecimal digits (0-9, A-F).",
   },
-  "constraint.guard.slug": {
+  "constraint.char_class.slug": {
     fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
     en: "This field can only contain lowercase letters, digits, and hyphens.",
   },
   // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
-  "constraint.guard.chars": {
+  "constraint.char_class.no_emoji": {
+    fr: "Ce champ ne peut pas contenir d'emoji.",
+    en: "This field cannot contain emoji.",
+  },
+  "constraint.char_class.default": {
     fr: "Ce champ ne peut contenir que les caractères autorisés.",
     en: "This field can only contain allowed characters.",
   },
@@ -8505,7 +8596,11 @@ const PATTERN_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    const regex = new RegExp(`^(?:${pattern})$`);
+    // The `u` flag is how the platform compiles this same attribute, and what
+    // lets a pattern speak about characters: `\p{...}` is only recognized under
+    // it, and a range covers whole code points rather than the two halves an
+    // astral character is made of.
+    const regex = new RegExp(`^(?:${pattern})$`, "u");
     if (regex.test(valueAsString)) {
       return null;
     }
@@ -10988,89 +11083,175 @@ const isFunctionButNotAnActionFunction = (action) => {
 };
 
 /**
- * `data-displayable` — the value must be something the layout can actually
- * draw. Three shapes break a row, a card or a list even though every character
- * taken alone is legitimate, so no character class can express them:
+ * Where navi meets @jsenv/validity.
  *
- * - marks stacked on one base character ("zalgo"): a diacritic is a normal
- *   character — a decomposed Vietnamese letter carries two, a vocalized Hebrew
- *   one three — what is not normal is the count in a row. Thirty of them draw
- *   far above the line, over the row above.
- * - a value that is not empty and yet shows nothing: only spaces, only marks,
- *   only format characters. An empty-looking line in the middle of a list
- *   reads as a bug.
- * - blank lines in series: forty newlines make a card as tall as the screen.
+ * validity names a refusal with a key and its parameters rather than a
+ * sentence, so that a field and a server can refuse in the same words in the
+ * language of the person reading. navi is one of those two callers: it says the
+ * sentence, in the browser, through `naviI18n`. The keys line up on purpose —
+ * validity's `"single_space.start"` is navi's `"constraint.single_space.start"`
+ * — so overriding a message is looking up one key, not going through a
+ * translation table.
  *
- * These are display rules, not app rules: they hold for every field, whatever
- * it holds — which is why they ship here rather than being rewritten per app.
- *
- * Note what is deliberately NOT refused: U+200D (ZWJ) and U+200C (ZWNJ) are
- * invisible characters, but the first assembles 👨‍👩‍👧 and 🏳️‍🌈 and the second
- * separates two letters in Persian. Banning invisible characters outright
- * would mean banning composed emoji. They only make a value fail here when
- * nothing visible is left once they are removed.
+ * The other direction is `constraintFromValidityRule`: a rule an app wrote for
+ * its server, worn by a control as a constraint.
  */
 
 
-// Above what any writing system needs on one base character, far below what
-// zalgo uses. Raise it with data-max-stacked-marks when a language needs more.
-const DEFAULT_MAX_STACKED_MARKS = 5;
-
-// Everything that occupies no ink of its own: spaces, control and format
-// characters, and combining marks (which draw on a base character, so a value
-// made only of them has nothing to draw on).
-const INK_LESS_REGEX = /[\p{White_Space}\p{Cc}\p{Cf}\p{M}]/gu;
-// Two newlines are one blank line — a paragraph break; three are two.
-const BLANK_LINES_REGEX = /\n[^\S\n]*\n[^\S\n]*\n/;
-
-const stackedMarksRegexCache = new Map();
-const getStackedMarksRegex = (maxStackedMarks) => {
-  const fromCache = stackedMarksRegexCache.get(maxStackedMarks);
-  if (fromCache) {
-    return fromCache;
-  }
-  const regex = new RegExp(`\\p{M}{${maxStackedMarks + 1},}`, "u");
-  stackedMarksRegexCache.set(maxStackedMarks, regex);
-  return regex;
+/**
+ * Turns a @jsenv/validity rule into a constraint a control can wear, so an app
+ * rule written once — in the package its server reads too — is checked on both
+ * sides instead of being written twice.
+ *
+ * @param {object} rule
+ *   `{ name, applyOn(ruleValue, value, ruleConfig) }`, the same object passed
+ *   to `createValidity({ rules })`.
+ * @param {object} [ruleConfig]
+ *   What parameterizes the rule, under its own name — `{ maxWords: 40 }` for a
+ *   rule named `maxWords`. Pass `formatMessage` here to say the refusal through
+ *   the app's own i18n; without it the key is looked up in `naviI18n` under
+ *   `constraint.<key>`, and a rule answering with a finished sentence is shown
+ *   as-is.
+ *
+ * Call it once, at module level: a constraint rebuilt on every render is a new
+ * object on every check.
+ */
+const constraintFromValidityRule = (rule, ruleConfig = {}) => {
+  const { formatMessage, ...ruleParams } = ruleConfig;
+  return {
+    name: rule.name,
+    check: (field) => {
+      const result = rule.applyOn(
+        ruleParams[rule.name],
+        field.uiState,
+        ruleParams,
+      );
+      if (!result) {
+        return null;
+      }
+      if (typeof result === "string") {
+        return result;
+      }
+      if (formatMessage) {
+        return formatMessage(result.key, result.params);
+      }
+      return naviI18nFromValidityMessage(result);
+    },
+  };
 };
+
+const naviI18nFromValidityMessage = ({ key, params }) => {
+  if (params && typeof params.max === "number") {
+    // Lets a template pluralize on the bound it names: "[max] retour[s]".
+    return naviI18n(`constraint.${key}`, {
+      ...params,
+      s: params.max > 1 ? "s" : "",
+    });
+  }
+  return naviI18n(`constraint.${key}`, params);
+};
+
+/**
+ * `data-displayable` — the value must be something the layout can actually
+ * draw. What it refuses and why lives in @jsenv/validity's DISPLAYABLE_RULE:
+ * these are display rules, not app rules, so a server re-checking the value
+ * asks the exact same question and gets the exact same refusal.
+ *
+ * `data-max-stacked-marks` raises how many marks may stack on one base
+ * character, for a language that needs more than the default.
+ */
+
 
 const DISPLAYABLE_CONSTRAINT = {
   name: "displayable",
   messageAttribute: "data-displayable-message",
   check: (field) => {
     const displayable = field.controlHostProps["data-displayable"];
-    if (displayable === undefined) {
+    if (!isConstraintAttributeOn(displayable)) {
       return null;
     }
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    if (valueAsString === "") {
-      // An empty field is `required`'s business, not this one's.
-      return null;
-    }
-
     const maxStackedMarksAttribute =
       field.controlHostProps["data-max-stacked-marks"];
-    const maxStackedMarks =
-      maxStackedMarksAttribute === undefined
-        ? DEFAULT_MAX_STACKED_MARKS
-        : parseInt(maxStackedMarksAttribute, 10);
-    if (getStackedMarksRegex(maxStackedMarks).test(valueAsString)) {
-      return naviI18n("constraint.displayable.stacked_marks.default", {
-        max: maxStackedMarks,
-      });
+    const result = DISPLAYABLE_RULE.applyOn(true, valueAsString, {
+      maxStackedMarks:
+        maxStackedMarksAttribute === undefined
+          ? undefined
+          : parseInt(maxStackedMarksAttribute, 10),
+    });
+    if (!result) {
+      return null;
     }
-    if (valueAsString.replace(INK_LESS_REGEX, "") === "") {
-      return naviI18n("constraint.displayable.invisible.default");
-    }
-    if (BLANK_LINES_REGEX.test(valueAsString)) {
-      return naviI18n("constraint.displayable.blank_lines.default");
-    }
-    return null;
+    return naviI18nFromValidityMessage(result);
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-displayable");
 CONSTRAINT_ATTRIBUTE_SET.add("data-max-stacked-marks");
+
+/**
+ * `data-max-line-breaks` — how many line breaks the value may hold. Counted in
+ * breaks rather than in lines because how many lines a value renders as depends
+ * on wrapping, which is the layout's answer, not the value's.
+ *
+ * The rule is @jsenv/validity's MAX_LINE_BREAKS_RULE — a textarea in the
+ * browser and a server receiving the value both ask it.
+ */
+
+
+const MAX_LINE_BREAKS_CONSTRAINT = {
+  name: "max_line_breaks",
+  messageAttribute: "data-max-line-breaks-message",
+  check: (field) => {
+    const maxLineBreaksAttribute =
+      field.controlHostProps["data-max-line-breaks"];
+    if (!isConstraintAttributeOn(maxLineBreaksAttribute)) {
+      return null;
+    }
+    const maxLineBreaks = parseInt(maxLineBreaksAttribute, 10);
+    if (isNaN(maxLineBreaks)) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const result = MAX_LINE_BREAKS_RULE.applyOn(maxLineBreaks, valueAsString);
+    if (!result) {
+      return null;
+    }
+    return naviI18nFromValidityMessage(result);
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-max-line-breaks");
+
+/**
+ * `data-no-emoji` — an app is free with emoji or it is not, and that is not the
+ * layout's call: a row survives an emoji, a legal name, an identifier or a
+ * title may still not want one. So it is its own switch rather than a part of
+ * `data-displayable`.
+ *
+ * The rule is @jsenv/validity's NO_EMOJI_RULE. To refuse the keystroke instead
+ * of the value, `charGuard="noEmoji"` is the same knowledge on the other side.
+ */
+
+
+const NO_EMOJI_CONSTRAINT = {
+  name: "no_emoji",
+  messageAttribute: "data-no-emoji-message",
+  check: (field) => {
+    const noEmoji = field.controlHostProps["data-no-emoji"];
+    if (!isConstraintAttributeOn(noEmoji)) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    const result = NO_EMOJI_RULE.applyOn(true, valueAsString);
+    if (!result) {
+      return null;
+    }
+    return naviI18nFromValidityMessage(result);
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-no-emoji");
 
 const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
@@ -11341,30 +11522,28 @@ const SAME_AS_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
 
+/**
+ * `data-single-space` — no leading or trailing space, never two in a row.
+ * The rule itself is @jsenv/validity's SINGLE_SPACE_RULE, so a server checking
+ * the value again refuses it for the same reason and in the same words.
+ */
+
+
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
   messageAttribute: "data-single-space-message",
   check: (field) => {
     const singleSpace = field.controlHostProps["data-single-space"];
-    if (singleSpace === undefined) {
+    if (!isConstraintAttributeOn(singleSpace)) {
       return null;
     }
-
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
-    const hasLeadingSpace = valueAsString.startsWith(" ");
-    const hasTrailingSpace = valueAsString.endsWith(" ");
-    const hasDoubleSpace = valueAsString.includes("  ");
-    if (!hasLeadingSpace && !hasTrailingSpace && !hasDoubleSpace) {
+    const result = SINGLE_SPACE_RULE.applyOn(true, valueAsString);
+    if (!result) {
       return null;
     }
-    if (hasLeadingSpace) {
-      return naviI18n("constraint.single_space.start.default");
-    }
-    if (hasTrailingSpace) {
-      return naviI18n("constraint.single_space.end.default");
-    }
-    return naviI18n("constraint.single_space.consecutive.default");
+    return naviI18nFromValidityMessage(result);
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
@@ -11490,6 +11669,8 @@ const NAVI_CONSTRAINT_SET = new Set([
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   DISPLAYABLE_CONSTRAINT,
+  MAX_LINE_BREAKS_CONSTRAINT,
+  NO_EMOJI_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -11660,6 +11841,13 @@ const createControlValidation = (
         failedConstraintInfo = thisConstraintFailureInfo;
       }
     }
+
+    // Several constraints can fail at once and only one sentence is shown —
+    // naming it here lets whoever draws its own summary of the failures say the
+    // same thing as the callout instead of picking a second one.
+    newConstraintValidityState.reported = failedConstraintInfo
+      ? failedConstraintInfo.name
+      : null;
 
     const activeFailedConstraintInfo = failedConstraintInfo;
     if (activeFailedConstraintInfo) {
@@ -31095,58 +31283,19 @@ const subscribeToControlState = (controlId, callback) => {
 const FormContext = createContext();
 
 /**
- * Named presets for the `charGuard` prop.
- * Each value is a regex character class (including the [ ] delimiters).
- */
-const CHAR_CLASS_PRESETS = {
-  numeric: "[0-9]", // digits only
-  alpha: "[A-Za-z]", // letters only
-  alphanumeric: "[0-9A-Za-z]", // letters and digits
-  decimal: "[-0-9.,]", // digits, minus, dot, comma
-  uppercase: "[A-Z]", // uppercase letters only
-  tel: "[-0-9+() ]", // phone: digits, +, -, parens, space
-  email: "[a-zA-Z0-9._%+@-]", // email characters
-  card: "[0-9 ]", // credit card: digits and spaces
-  hex: "[0-9A-Fa-f]", // hexadecimal digits
-  pin: "[0-9]", // numeric PIN
-  postal: "[0-9A-Za-z -]", // postal code (FR, UK, US)
-  iban: "[0-9A-Z]", // IBAN: uppercase and digits
-  slug: "[a-z0-9-]", // URL slug
-};
-
-// Specific i18n keys per preset — more informative than the generic fallback
-const MESSAGE_KEY_FROM_PRESET = {
-  numeric: "constraint.guard.number",
-  pin: "constraint.guard.number",
-  alpha: "constraint.guard.alpha",
-  alphanumeric: "constraint.guard.alphanumeric",
-  uppercase: "constraint.guard.uppercase",
-  hex: "constraint.guard.hex",
-  slug: "constraint.guard.slug",
-  // tel, card, postal, iban, custom → generic fallback
-};
-
-/**
- * Returns the regex character class for a preset name, or the raw value as-is
- * if it's not a known preset (allows custom classes like "[A-Z0-9_]").
- */
-const resolveCharClass = (value) => {
-  if (!value) return null;
-  return CHAR_CLASS_PRESETS[value] ?? value;
-};
-
-/**
- * Returns the i18n key for the char guard rejection message.
- * Falls back to the generic "constraint.guard.chars" for custom classes and
- * presets without a specific message.
- */
-const getCharGuardMessageKey = (value) => {
-  return MESSAGE_KEY_FROM_PRESET[value] ?? "constraint.guard.chars";
-};
-
-/**
  * Input guard — enforces character and length constraints during typing, paste,
- * and external value sets.
+ * and external value sets. What a character class holds and which sentence
+ * refuses it comes from @jsenv/validity; the guard is what only a field can do,
+ * blocking the keystroke before the value exists.
+ *
+ * The guard answers for the GESTURE, never for what the control already holds.
+ * A value can arrive already outside the class or already too long — a
+ * `defaultValue`, a signal, a value written from elsewhere — and refusing the
+ * next keystroke over it would blame the person for a character they did not
+ * type. So a change is refused only when it makes the value worse: one more
+ * character outside the class, or one more character over the limit. What is
+ * already there is the `charClass`/`maxLength` constraint's business, and it
+ * says so at submit.
  *
  * The guard owns a single callout token (shared across all rejection reasons) so
  * successive rejections update the same callout rather than stacking.
@@ -31164,13 +31313,6 @@ const isTypingIntent = (e) =>
 
 const s = (n) => (n > 1 ? "s" : "");
 
-// The `u` flag is what lets a char class speak about characters: `\p{...}` is
-// only recognized under it, and a range covers whole code points instead of
-// the two halves an astral character (an emoji) is made of.
-const compileCharClass = (charClass) => new RegExp(charClass, "u");
-const compileCharClassAnchored = (charClass) =>
-  new RegExp(`^(?:${charClass})*$`, "u");
-
 // Keydown: block only single printable characters that don't match the class.
 // Multi-character key names (Delete, ArrowLeft…) are always allowed.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
@@ -31180,7 +31322,7 @@ const getInvalidCharMessage = (char, { charClass, messageKey }) => {
     return null;
   }
   if (compileCharClass(charClass).test(char)) return null;
-  return naviI18n(messageKey);
+  return naviI18nFromValidityMessage({ key: messageKey });
 };
 
 // Keydown: block when inserting one char would exceed maxLength.
@@ -31196,18 +31338,41 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   });
 };
 
-// Paste / set: block when value contains disallowed chars.
-const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
-  const str = uiState === undefined ? "" : String(uiState);
-  if (compileCharClassAnchored(charClass).test(str)) return null;
-  return naviI18n(messageKey);
+const countCharsOutsideClass = (str, charClass) => {
+  const regex = compileCharClass(charClass);
+  let count = 0;
+  for (const char of str) {
+    if (!regex.test(char)) {
+      count++;
+    }
+  }
+  return count;
 };
 
-// Paste / set: truncate when value exceeds maxLength.
-const getLengthOverflowResult = (uiState, { maxLength }) => {
+// Paste / set: block when the gesture brings in a character the class refuses.
+const getInvalidCharsMessage = (
+  uiState,
+  { charClass, messageKey, uiStateNow },
+) => {
+  const str = uiState === undefined ? "" : String(uiState);
+  if (compileCharClassAnchored(charClass).test(str)) return null;
+  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  if (
+    countCharsOutsideClass(str, charClass) <=
+    countCharsOutsideClass(strNow, charClass)
+  ) {
+    return null;
+  }
+  return naviI18nFromValidityMessage({ key: messageKey });
+};
+
+// Paste / set: truncate what the gesture adds beyond the limit.
+const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
   if (maxLength === undefined) return null;
   const str = uiState === undefined ? "" : String(uiState);
   if (str.length <= maxLength) return null;
+  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  if (str.length <= strNow.length) return null;
   return {
     fixedValue: str.slice(0, maxLength),
     message: naviI18n("constraint.guard.max_length.value", {
@@ -31246,7 +31411,7 @@ const createControlGuard = (controller) => {
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const messageKey = getCharGuardMessageKey(charGuard);
+      const messageKey = getCharClassMessageKey(charGuard);
       const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
       if (charMsg) {
         show(charMsg, e);
@@ -31276,13 +31441,17 @@ const createControlGuard = (controller) => {
    */
   const checkUIState = (uiState, e) => {
     const { charGuard, maxLengthGuard } = controller.props;
+    // What the control holds right now — setUIState has not written the new
+    // value yet, and the paste path computes it without applying it.
+    const uiStateNow = controller.uiState;
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
-      const messageKey = getCharGuardMessageKey(charGuard);
+      const messageKey = getCharClassMessageKey(charGuard);
       const charsMsg = getInvalidCharsMessage(uiState, {
         charClass,
         messageKey,
+        uiStateNow,
       });
       if (charsMsg) {
         show(charsMsg, e);
@@ -31293,6 +31462,7 @@ const createControlGuard = (controller) => {
     if (maxLengthGuard !== undefined) {
       const lengthResult = getLengthOverflowResult(uiState, {
         maxLength: maxLengthGuard,
+        uiStateNow,
       });
       if (lengthResult) {
         show(lengthResult.message, e);
@@ -35320,13 +35490,15 @@ const splitControlProps = props => {
   };
   const controlRootProps = {};
   for (const key of Object.keys(props)) {
-    if (CONTROL_PROP_SET.has(key)) {
-      if (CONTROL_ATTRIBUTE_SET.has(key)) {
-        controlHostProps[key] = props[key];
-      }
-    } else {
-      controlRootProps[key] = props[key];
+    const attributeName = controlAttributeFromProp(key);
+    if (attributeName) {
+      controlHostProps[attributeName] = props[key];
+      continue;
     }
+    if (isControlProp(key)) {
+      continue;
+    }
+    controlRootProps[key] = props[key];
   }
   return [controlRootProps, controlHostProps];
 };
@@ -42914,7 +43086,16 @@ const createToggleEvent = open => {
   return toggleEvent;
 };
 
-const DEFAULT_VALIDITY_STATE = { valid: true };
+const DEFAULT_VALIDITY_STATE = { valid: true, reported: null };
+
+/**
+ * The control's constraint validity, re-read whenever it changes:
+ * `{ valid, reported, [constraintName]: null | failureInfo }`.
+ *
+ * `reported` names the constraint whose message the callout shows — the one
+ * navi picks when several fail at once. A failure info carries `messageString`,
+ * the sentence itself.
+ */
 const useConstraintValidityState = (ref) => {
   const checkValue = () => {
     const element = ref.current;
@@ -46592,10 +46773,13 @@ installImportMetaCssBuild(import.meta);/**
  *   "postal"       → postal code (digits, letters, space, hyphen)
  *   "iban"         → IBAN (uppercase and digits)
  *   "slug"         → URL slug (lowercase, digits, hyphens)
+ *   "noEmoji"      → anything but an emoji
  *   "[A-Z0-9]"     → any custom regex character class, compiled with the `u`
  *                    flag: `\p{...}` is available, and an emoji counts as one
  *                    character rather than two halves.
  *   inputMode and pattern are auto-derived from the preset when not explicitly set.
+ *   The presets come from @jsenv/validity, so the same name names the class a
+ *   server checks the value against (see docs/field_validation.md).
  *
  * - maxLengthGuard — combines maxLength + overflow guard in one prop.
  *   Blocks keydown when the limit is reached; truncates on paste/set with an info callout.
@@ -67776,11 +67960,18 @@ const css$r = /* css */`
          99999 fallback means "no cap" without needing a conditional rule. */
       max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
       field-sizing: content;
-      /* Explicit, never normal: minRows/maxRows are lengths in lh, and with
-         line-height normal the lh unit resolves to a theoretical value that
-         does not match the real rendered line — the box then jumps by a few
-         pixels the moment the first character replaces the theory with a real
-         line. One number for both keeps every row count exact. */
+      /* Explicit, never normal, for two independent reasons.
+         minRows/maxRows are lengths in lh, and with line-height normal the lh
+         unit resolves to a theoretical value that does not match the real
+         rendered line — the box then jumps by a few pixels the moment the first
+         character replaces the theory with a real line.
+         And a line box under "normal" takes the height of the tallest font it
+         holds, so the one line carrying an emoji stands taller than the ones
+         around it — here, where the text is typed and no glyph can be wrapped
+         the way emojiAsIcon wraps one, the line height is the only lever.
+         1.5 is also tall enough to contain an emoji's own box, so it is not
+         clipped either; a tighter value would keep the rows even and cut the
+         glyph. See docs/typography.md. */
       line-height: 1.5;
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
@@ -79046,5 +79237,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
