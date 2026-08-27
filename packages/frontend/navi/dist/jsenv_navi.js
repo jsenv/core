@@ -65012,7 +65012,7 @@ const PickerButton = props => {
               });
               e.preventDefault();
             }
-          }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
+          }), variant === "headless" || ui === "default" ? null : jsx(Text, {
             className: "navi_picker_value",
             "navi-placeholder": uiStateHoldsNothing(value) ? "" : undefined,
             maxLines: maxLines,
@@ -65025,11 +65025,20 @@ const PickerButton = props => {
                 },
                 children: jsx(MaxLinesContext.Provider, {
                   value: maxLines,
-                  children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
+                  children: ui === undefined ? variant === "icon" ?
+                  // An icon picker draws no value, so there is no slot
+                  // beside it either — the icon that would have sat in
+                  // that slot IS the trigger, and a caller's own `ui`
+                  // replaces it like any other.
+                  jsx(Icon, {
+                    size: rightSlotIconSize,
+                    lineOverflow: "allow",
+                    children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
+                  }) : jsx(PickerDefaultUI, {}) : ui
                 })
               })
             })
-          }), variant === "headless" || ui === "default" ? null : jsx("span", {
+          }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx("span", {
             className: "navi_picker_right_slot",
             children: jsx(PickerOwnContent, {
               children: clearable && interactive && value !== undefined && value !== "" ? jsx(Button, {

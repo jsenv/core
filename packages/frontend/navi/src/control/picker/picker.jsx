@@ -510,6 +510,7 @@ const css = /* css */ `
 const PickerButton = (props) => {
   import.meta.css = css;
   warnOnUnknownPickerType(props);
+  warnOnUIDrawnByNobody(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -740,9 +741,7 @@ const PickerButton = (props) => {
               e.preventDefault();
             }}
           />
-          {variant === "icon" ||
-          variant === "headless" ||
-          ui === "default" ? null : (
+          {variant === "headless" || ui === "default" ? null : (
             <Text
               className="navi_picker_value"
               navi-placeholder={uiStateHoldsNothing(value) ? "" : undefined}
@@ -755,13 +754,33 @@ const PickerButton = (props) => {
                   {/* For what the picker cannot clamp itself: a <BadgeList>
                       wraps flex rows, which line-clamp never sees. */}
                   <MaxLinesContext.Provider value={maxLines}>
-                    {ui === undefined ? <PickerDefaultUI /> : ui}
+                    {ui === undefined ? (
+                      variant === "icon" ? (
+                        // An icon picker draws no value, so there is no slot
+                        // beside it either — the icon that would have sat in
+                        // that slot IS the trigger, and a caller's own `ui`
+                        // replaces it like any other.
+                        <Icon size={rightSlotIconSize} lineOverflow="allow">
+                          {rightSlotIcon === undefined ? (
+                            <ChevronDownSvg />
+                          ) : (
+                            rightSlotIcon
+                          )}
+                        </Icon>
+                      ) : (
+                        <PickerDefaultUI />
+                      )
+                    ) : (
+                      ui
+                    )}
                   </MaxLinesContext.Provider>
                 </PickerContext.Provider>
               </PickerOwnContent>
             </Text>
           )}
-          {variant === "headless" || ui === "default" ? null : (
+          {variant === "icon" ||
+          variant === "headless" ||
+          ui === "default" ? null : (
             <span className="navi_picker_right_slot">
               <PickerOwnContent>
                 {/* Clearing is a modification: nothing to offer on a picker
@@ -1110,6 +1129,11 @@ const PickerFirstResolver = (props) => {
  *   and take the same room empty as it does filled. A <BadgeList> gets both
  *   from its `fallback` — the placeholder text, as plain text, see
  *   docs/badge_list.md. `"default"` draws nothing in the slot at all.
+ *
+ *   Under `variant="icon"` there is no value to draw, so this IS the trigger:
+ *   left out it is the icon the right slot would have shown (`rightSlotIcon`,
+ *   or the chevron), and given it is drawn instead — one icon of the caller's
+ *   own, and nothing else.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1150,6 +1174,12 @@ const PickerFirstResolver = (props) => {
  *   something that does. Decoration only — it is wrapped in an `<Icon>`, which
  *   is `aria-hidden`, so anything focusable in there would be reachable by tab
  *   while invisible to assistive tech. Use `rightSlot` for that.
+ *
+ *   The slot only exists beside a value. `variant="icon"` has none, so there is
+ *   no slot either: the icon becomes the trigger itself and is drawn as the
+ *   `ui` — which is also what a caller overrides to draw their own. Nothing
+ *   else is drawn there, the clear cross included: one icon has room for one
+ *   thing.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
  *   interactive right slot goes.
@@ -1243,6 +1273,25 @@ const PICKER_RESOLVED_TYPE_SET = new Set([
   "navi_js",
 ]);
 const pickerTypeWarnedSet = new Set();
+// A headless picker draws nothing at all — no value, no slot — so anything a
+// caller wrote for either is silently dropped. Said out loud, because a prop
+// that renders nowhere looks exactly like a prop that does not work.
+let uiDrawnByNobodyWarned = false;
+const warnOnUIDrawnByNobody = (props) => {
+  if (!import.meta.dev || uiDrawnByNobodyWarned) {
+    return;
+  }
+  const { ui, variant } = props;
+  if (variant !== "headless" || ui === undefined || ui === "default") {
+    return;
+  }
+  uiDrawnByNobodyWarned = true;
+  console.warn(
+    `[navi] <Picker variant="headless" ui={…}> — a headless picker draws nothing, so this "ui" is never rendered. ` +
+      `For a trigger that is one icon of your own: <Picker variant="icon" ui={<YourSvg />}>.`,
+  );
+};
+
 const warnOnUnknownPickerType = (props) => {
   if (!import.meta.dev) {
     return;

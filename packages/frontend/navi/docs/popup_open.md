@@ -270,6 +270,34 @@ dialog hides: a popup written once, far from every press that opens it, has to
 be told what it is about and has to answer somebody — and neither question
 exists once the popup is written where it is used.
 
+### A trigger that is only an icon
+
+`variant="icon"` draws no value, and therefore no slot beside one either: the
+whole trigger is its `ui`.
+
+```jsx
+<Picker variant="icon" ui={<DisketteSvg />} />
+```
+
+Left out, that `ui` is the icon the slot would have shown — the chevron, or the
+one the picker's type carries (a pencil for `type="text"`, a calendar for
+`type="date"`), so `<Picker type="date" variant="icon" />` is a calendar and
+nothing else. `rightSlotIcon`/`rightSlot` belong to the shapes that DO draw a
+value and want something beside it; under `variant="icon"` the first is only the
+default for `ui`, and the second has nowhere to go — the clear cross included.
+
+### When a shared popup is still the right answer
+
+Two cases, and only two:
+
+- **the press can come from anywhere** — a keyboard shortcut, a menu, a button,
+  all opening the same thing. Written per press it would exist several times
+  over, each with its own open state;
+- **the popup has to outlive its trigger** — a row that leaves while its dialog
+  is open (a list refreshing under it) takes a popup written inside it with it.
+
+Neither is "one popup per row of a list", which is what a picker is for.
+
 Do not mix the two. A `<Form>` at the root of a picker's popup IS the mirrored
 control, so its value is the picker's value: handing the picker something else
 (a created profile, say) pushes it back down into the form's named fields and
