@@ -813,6 +813,9 @@ const PickerContentInsidePopup = (props) => {
     // but popupProps is built explicitly here, so it only travels if named.
     // "popupLayer" rather than "layer": the picker itself is not the popup.
     popupLayer,
+    // Same reason: a `data-testid` on the picker names the trigger (see
+    // docs/testid.md) — this one names the popup.
+    popupTestId,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -886,6 +889,7 @@ const PickerContentInsidePopup = (props) => {
       ) : (
         <Popup
           {...popupProps}
+          data-testid={popupTestId}
           mode={mode}
           layer={popupLayer}
           animation={animation}

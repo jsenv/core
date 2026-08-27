@@ -95,6 +95,7 @@ const css = /* css */ `
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   escapeEffect?: "cancel" | "close",
  *   popupLayer?: "top" | "local",
+ *   popupTestId?: string,
  *   [key: string]: any,
  * }>}
  * @param {Array<{value: any, label: import("preact").ComponentChildren}>} options
@@ -136,7 +137,7 @@ const css = /* css */ `
  * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMinWidth`/`Height`,
  * `dialogMaxWidth`/`Height`,
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
- * `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
+ * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
  * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
@@ -376,6 +377,7 @@ export const SplitButton = (props) => {
 const POPUP_PROP_SET = new Set([
   "mode",
   "popupLayer",
+  "popupTestId",
   "positionArea",
   "popoverMode",
   "popoverSpacing",

@@ -1223,6 +1223,7 @@ const PickerFirstResolver = (props) => {
  *   dialogBorderWidth?: number | string,
  *   clearable?: boolean,
  *   popupLayer?: "top" | "local",
+ *   popupTestId?: string,
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -1397,6 +1398,13 @@ const PickerFirstResolver = (props) => {
  *   well as its placement, so what an expanded dialog leaves visible around
  *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
  *   Dialog's own 3vvw in dialog mode.
+ * @param {string} [popupTestId] The `data-testid` of the popup element — the
+ *   popover or dialog the children open in. A `data-testid` on the picker
+ *   itself names the trigger (see docs/testid.md); this one is for a test that
+ *   needs the popup's own box — its surface, its position, its backdrop — and
+ *   not only what it holds, which a testid inside the children already names.
+ *   A `mode="callout"` picker has no popup of its own — the callout is the
+ *   control's, shared with its constraint messages — so it is not named.
  */
 // Every picker type is resolved into one of these before it gets here (see
 // PickerTypeResolver and resolveInputProps): a native input type, or navi_js

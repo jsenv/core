@@ -30,7 +30,9 @@
         border-bottom: 2px solid #eee;
         scroll-margin-top: 12px;
       }
-      .demo-section p {
+      /* Direct children only: what a callout holds is inside the section too,
+         and must keep the callout's own font and line. */
+      .demo-section > p {
         margin: 0 0 16px;
         color: #555;
         font-size: 0.9rem;

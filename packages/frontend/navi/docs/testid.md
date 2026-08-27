@@ -83,12 +83,30 @@ error message, a section, a row — put the testid on the surrounding component
 (`<Field data-testid="email-field">`, `<Box data-testid="cart-row">`); anything
 built on `Box` forwards it to its own element.
 
+A picker's popup is the one element the application does not render itself:
+`<Picker>` builds it, so a `data-testid` on the picker names the trigger and
+nothing names the popup. `popupTestId` does:
+
+```jsx
+<Picker data-testid="tie-break" popupTestId="tie-break-sheet">
+  …
+</Picker>
+```
+
+Most tests do not need it — a testid on what the popup holds (`<Box
+data-testid="place-pick">` among the children) names the screen, not the frame,
+and is the better name for a test that reads or clicks the content. Reach for
+`popupTestId` when the frame IS what the test looks at: a screenshot of the
+popup's surface, its position, its size, its backdrop.
+
 ## What not to target
 
 Navi's own attributes are implementation, not a contract: `data-header`,
 `data-body`, `data-scrollable`, `data-variant`, `data-callout-*`,
-`navi-control*`, `.navi_*` class names, and the ids navi generates when none is
-given (`useId`). They change without notice and without a migration note.
+`navi-control*`, `.navi_*` class names, the ids navi generates when none is
+given (`useId`), and the ids it derives from yours (a picker's popup id is built
+from the picker's, so the suffix is navi's even when the base is not). They
+change without notice and without a migration note.
 Likewise a `view-transition-name` or a CSS variable: those exist to draw, not
 to be found.
 

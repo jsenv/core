@@ -58,6 +58,20 @@ const css = /* css */ `
       --callout-icon-color: black;
       --callout-padding: 8px;
       --callout-z-index: var(--navi-z-index-callout);
+      /* The callout's own, like its font: the icon and the cross are columns
+         one line tall (1lh), and that line has to be the message's first
+         line — which it is only if both read the same line-height, rather
+         than whatever the element the callout sits in happens to use. */
+      --callout-line-height: 1.5;
+      /* The cross is furniture, not content: quieter than the message beside
+         it, and the size of a glyph on the message's first line. */
+      --callout-close-button-color: color-mix(
+        in srgb,
+        currentColor 45%,
+        transparent
+      );
+      --callout-close-button-color-hover: currentColor;
+      --callout-close-button-size: 0.7em;
     }
   }
 
@@ -87,6 +101,9 @@ const css = /* css */ `
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
     font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
+    line-height: var(
+      --callout-line-height
+    ); /* Same reason — and what the columns measure their 1lh against */
     background: transparent;
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
@@ -198,37 +215,52 @@ const css = /* css */ `
     .navi_callout_close_button_column {
       display: flex;
       height: var(--callout-icon-height);
+      /* The button is a square one line tall around a cross of glyph size,
+         so most of it is empty. Taken back on both sides: what is drawn then
+         sits one gap from the text and one padding from the edge — where the
+         icon sits on the other side — instead of that plus the button's own
+         margin. The target keeps its full size; only the space it claims in
+         the row shrinks. */
+      margin-inline: calc(
+        -1 * (var(--callout-icon-height) - var(--callout-close-button-size)) / 2
+      );
+      /* Whatever the cross measures, it sits on the middle of the first line
+         — the line it is read with. */
+      align-items: center;
       align-self: flex-start;
 
       .navi_callout_close_button {
         /* A square filling the column, so the whole first line is the target;
-           the padding keeps the cross itself at glyph size. */
+           the cross itself is drawn at glyph size in the middle of it. */
         display: inline-flex;
         box-sizing: border-box;
         aspect-ratio: 1 / 1;
         height: 100%;
-        padding: 0.2em;
+        padding: 0;
         align-items: center;
         justify-content: center;
-        color: currentColor;
+        color: var(--callout-close-button-color);
         font-size: inherit;
         background: none;
         border: none;
         border-radius: 0.2em;
+        /* transition: color 0.15s ease-in-out; */
         cursor: pointer;
 
         &:hover {
-          background: rgba(0, 0, 0, 0.1);
+          color: var(--callout-close-button-color-hover);
+          background: rgba(0, 0, 0, 0.06);
         }
 
         &:focus-visible,
         .navi_callout:focus-visible & {
+          color: var(--callout-close-button-color-hover);
           outline: auto;
         }
 
         .navi_callout_close_button_svg {
-          width: 100%;
-          height: 100%;
+          width: var(--callout-close-button-size);
+          height: var(--callout-close-button-size);
         }
       }
     }
