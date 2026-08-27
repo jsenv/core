@@ -60266,14 +60266,20 @@ const ListUI = props => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     }
   });
-  // A new pass every time the list renders: its children are about to say
-  // again, in order, which rows of the collection they stand for.
+  // A new pass every time the list's children are walked: they are about to
+  // say again, in order, which rows of the collection they stand for. Given
+  // back the very vnodes it already holds, preact skips them — the list
+  // re-rendered on its own and nothing is said again, so nothing is asked
+  // again either (see openPass).
   const virtualRef = useRef(null);
   if (!virtualRef.current) {
     virtualRef.current = createListVirtual();
   }
   const virtual = virtualRef.current;
-  virtual.openPass(renderBudget, scrolled ?? defaultScrolled);
+  const childrenPreviousRef = useRef(undefined);
+  const childrenWalked = childrenPreviousRef.current !== children;
+  childrenPreviousRef.current = children;
+  virtual.openPass(renderBudget, scrolled ?? defaultScrolled, childrenWalked);
   const {
     virtualItemSizeSignal,
     renderWindow,
@@ -62866,9 +62872,22 @@ const createListVirtual = () => {
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
-    openPass: (renderBudget, scrolled) => {
+    openPass: (renderBudget, scrolled, childrenWalked) => {
       virtual.renderBudget = renderBudget;
       virtual.scrolled = scrolled;
+      // Places are handed out again only when the children are actually walked
+      // again. A list re-rendering on its own — the render window moved, its
+      // scroller resolved — hands preact the very children vnodes it already
+      // holds, and preact skips them: nobody says where they sit, so nobody
+      // may lose where they sat. Reopening the pass there would empty the
+      // places without anyone refilling them, and the next row to render on
+      // its own (an item being selected, a run following the window) would be
+      // handed the first place — drawing itself as the top of the list, its
+      // separator gone, and the one after it wearing a separator it should not
+      // have.
+      if (!childrenWalked) {
+        return;
+      }
       passId++;
       nextIndex = 0;
     },
@@ -63183,8 +63202,13 @@ const ListItems = ({
     }, `${ownerId}_group_${group.key}`));
     group = null;
   };
+  // Which group a row belongs to, or undefined when it belongs to none. Asked
+  // before the row is pushed as well as while pushing it: a row opening a
+  // group is the one row that must not wear a separator (see below).
+  const groupKeyOf = (item, rowIndex) => groupBy && item !== undefined ? groupBy(item, rowIndex) : undefined;
+  const opensGroup = groupKey => groupKey !== undefined && (!group || group.key !== groupKey);
   const pushRow = (rowNode, item, rowIndex) => {
-    const groupKey = groupBy && item !== undefined ? groupBy(item, rowIndex) : undefined;
+    const groupKey = groupKeyOf(item, rowIndex);
     if (groupKey === undefined) {
       closeGroup();
       rows.push(rowNode);
@@ -63258,7 +63282,13 @@ const ListItems = ({
       });
     }
     if (rowVnode) {
-      if (separator && rowIndex > 0) {
+      // The first row of a group wears no separator: the gap it sits at is the
+      // one between two groups, and that gap is the group wrapper's own — it
+      // is a row of the list like any other and draws its separator itself
+      // (see ListItemUI). Drawn here it would land inside the group instead,
+      // as a hairline under the label.
+      const drawSeparator = separator && rowIndex > 0 && !opensGroup(groupKeyOf(item, rowIndex));
+      if (drawSeparator) {
         pushRow(cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
           key: `${key}_separator`
         }), item, rowIndex);
