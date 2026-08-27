@@ -134,16 +134,6 @@ const css = /* css */ `
       --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
       --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
 
-      /* The popup an action's "confirm" asks its question in. Its own tokens
-         rather than the popup ones above: every confirmation in an app is
-         re-shaped together here, without touching the pickers and panels that
-         are also popups. */
-      --navi-confirm-popup-padding: var(--navi-m);
-      --navi-confirm-popup-spacing: var(--navi-m);
-      --navi-confirm-popup-action-spacing: var(--navi-s);
-      --navi-confirm-popup-min-width: 180px;
-      --navi-confirm-popup-max-width: 320px;
-
       /* Link colors. They live here rather than only on .navi_link because a
          var declared on the element itself always beats the same var inherited
          from an ancestor: a page setting --link-color-pressed on :root would

@@ -6,10 +6,6 @@ import "./src/navi_z_indexes.js";
 import "./src/nav/url_target/url_target.js";
 
 // actions
-// Importing this also registers the popup an action with a `confirm` asks its
-// question in — the action path only knows how to ask, not how to show (see
-// src/action/confirm.js).
-export { defineNaviConfirmPopupOptions } from "./src/action/confirm_popup.jsx";
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
 export { actionRunEffect } from "./src/action/action_run_effect.js";
 export {

@@ -4,7 +4,6 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { useConfirmParams } from "../../action/confirm.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { useOwnTargetHidden } from "../own_target.js";
@@ -17,15 +16,6 @@ const ButtonFirstResolver = (props) => {
   props.ref = props.ref || defaultRef;
 
   const ownTargetHidden = useOwnTargetHidden(props);
-
-  // Attached to the element rather than kept as a prop: the action a button
-  // requests is not always run by the button (a submit button hands the send to
-  // the form around it), and what the request carries all the way there is this
-  // element — see confirm.js.
-  useConfirmParams(props.ref, {
-    message: props.confirm,
-    content: props.confirmPopupContent,
-  });
 
   if (ownTargetHidden) {
     return null;
@@ -116,6 +106,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
   }),
   "--navi-cancel": () => ({
     children: naviI18n("button.cancel"),
+  }),
+  "--navi-confirm": () => ({
+    children: naviI18n("button.confirm"),
+    cta: true,
   }),
   "--navi-close": () => ({
     children: naviI18n("button.close"),

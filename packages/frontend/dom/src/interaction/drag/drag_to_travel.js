@@ -181,7 +181,9 @@ const DRAG_RESISTANCE = 0.3;
 // place whose only purpose is to be taken hold of, from the first pixel. And so
 // is an OWN TARGET: an element saying a press landing on it is aimed at IT,
 // which is the same sentence said to every gesture at once rather than to this
-// one (see DRAG_IGNORED_SELECTOR in drag_to.js).
+// one (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
+// dialog: a layer OVER the box, whose press only bubbles through the box because
+// the layer is anchored in it.
 const DRAG_EXCLUDED_SELECTOR = [
   "input",
   "textarea",
@@ -191,6 +193,8 @@ const DRAG_EXCLUDED_SELECTOR = [
   "[data-drag-handle]",
   "[data-no-drag-travel]",
   "[data-own-target]",
+  "[popover]",
+  "dialog",
 ].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
@@ -422,7 +426,7 @@ export const startDragToTravel = (
   },
 ) => {
   const target = pointerDownEvent.target;
-  if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
+  if (!target.closest || isPressExcluded(target, element)) {
     return null;
   }
   // A box between the finger and this one that travels the same way, and then
@@ -882,7 +886,7 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
       // nothing is prevented and the browser scrolls as it would have.
       const { target } = wheelEvent;
       if (
-        (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR)) ||
+        (target.closest && isPressExcluded(target, element)) ||
         scrollRoomTowards(target, element, axis, sign) ||
         // …plus the third: a box below this one that travels on this axis. Its
         // watcher hears the same wheel event this one does — they all listen at
@@ -962,4 +966,12 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     releaseWheelGesture(element);
     forgetGesture();
   };
+};
+
+// The nearest word wins: what is excluded INSIDE the box takes the press away
+// from it, what is around the box does not — a docked dialog IS the box that
+// travels, and being a dialog is no reason for it to refuse its own press.
+const isPressExcluded = (target, element) => {
+  const excluded = target.closest(DRAG_EXCLUDED_SELECTOR);
+  return Boolean(excluded) && !excluded.contains(element);
 };

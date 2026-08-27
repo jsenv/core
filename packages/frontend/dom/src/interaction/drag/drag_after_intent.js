@@ -96,7 +96,9 @@ const css = /* css */ `
     touch-action: pinch-zoom;
   }
   [data-drag-ignore],
-  [data-own-target] {
+  [data-own-target],
+  [data-drag-source] [popover],
+  [data-drag-source] dialog {
     -webkit-touch-callout: default;
     touch-action: auto;
   }

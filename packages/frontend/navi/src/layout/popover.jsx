@@ -1436,6 +1436,13 @@ const usePopoverProps = (props) => {
   if (isTopLayer) {
     backdropProps["popover"] = "manual";
     contentProps["popover"] = "manual";
+  } else {
+    // A plain div is not a layer the gesture readers recognize on their own
+    // the way [popover]/<dialog> are (see DRAG_IGNORED_SELECTOR in @jsenv/dom's
+    // drag_to.js), so it says so itself: a press in it is never a grab of
+    // whatever it is anchored in.
+    backdropProps["data-drag-ignore"] = "";
+    contentProps["data-drag-ignore"] = "";
   }
   Object.assign(backdropProps, {
     "ref": backdropRef,
