@@ -72,16 +72,19 @@ export const isControl = (el) => {
  * The search walks up `parentElement` manually (rather than using `.closest()`)
  * so it can stop at hard boundaries.
  *
- * **`[navi-control="picker"]` boundary**: a picker is a hard stop. Elements inside a picker
- * (including inside its popover content) can reach the picker itself, but nothing above it.
- * This prevents an input inside a picker from accidentally submitting a parent form.
+ * **`[navi-control="picker"]` boundary**: a picker is a hard stop for what is
+ * inside its popup. Elements in there can reach the picker itself, but nothing
+ * above it — an input inside a picker must not submit the form around it. The
+ * picker's own trigger is not inside it: a picker pressed as a whole (a confirm
+ * picker sending the form around it, see picker_confirm.jsx) stands in that
+ * form like any control there, and reaches it.
  *
  * ```html
- * <form data-action="outer">              ← NOT found (above picker boundary)
- *   <button navi-control="picker" data-action="p">  ← found and search stops here
- *     <input navi-control-host />         ← el (in picker button area)
- *     <div popover>
- *       <input navi-control-host />       ← el (in picker popover)
+ * <form data-action="outer">              ← found from the picker's own input,
+ *   <button navi-control="picker" data-action="p">  NOT from inside its popup
+ *     <input navi-control-host />         ← el (the picker's own input)
+ *     <div popover data-picker-content>
+ *       <input navi-control-host />       ← el (in picker popover): stops at the picker
  *     </div>
  *   </button>
  * </form>
@@ -93,13 +96,19 @@ export const findClosestControlWithAction = (el) => {
     if (current.hasAttribute("data-action")) {
       return current;
     }
-    // Stop at a picker boundary — nothing above the picker is reachable from within.
-    if (current.getAttribute("navi-control") === "picker") {
+    if (isPickerBoundaryFor(current, el)) {
       return undefined;
     }
     current = current.parentElement;
   }
   return undefined;
+};
+const isPickerBoundaryFor = (candidate, el) => {
+  if (candidate.getAttribute("navi-control") !== "picker") {
+    return false;
+  }
+  const content = el.closest("[data-picker-content]");
+  return Boolean(content) && candidate.contains(content);
 };
 
 /**

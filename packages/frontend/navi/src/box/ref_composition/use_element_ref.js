@@ -26,8 +26,10 @@ export const useComposeElementRef = (syncElement, externalRef) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
   const prevSyncElementRef = useRef(undefined);
-  const refCallbackRef = useRef(null);
+  const stableRef = useRef(null);
   const externalRefRef = useRef(externalRef);
+  const syncElementRef = useRef(syncElement);
+  syncElementRef.current = syncElement;
   // Detect external ref identity change between renders. The refCallback is
   // stable across renders, so when the parent passes a new ref object (or
   // switches from null to a ref), Preact does NOT re-fire the callback while
@@ -51,24 +53,24 @@ export const useComposeElementRef = (syncElement, externalRef) => {
   }
   externalRefRef.current = externalRef;
 
-  const runSync = (el) => {
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
-    }
-    prevSyncElementRef.current = syncElement;
-    const cleanup = syncElement(el);
-    if (typeof cleanup === "function") {
-      cleanupRef.current = cleanup;
-    }
-  };
-
-  // If element already mounted, re-sync when syncElement reference changed.
-  if (elRef.current && syncElement !== prevSyncElementRef.current) {
-    runSync(elRef.current);
-  }
-
-  if (!refCallbackRef.current) {
+  if (!stableRef.current) {
+    // Created once, like the ref callback that calls it, and reading the sync
+    // function through a ref for that reason: the element can be replaced long
+    // after the first render — a tag that changes, a box hidden then shown —
+    // and what the new element gets must be the current render's sync, not
+    // the one the first render closed over.
+    const runSync = (el) => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+      const syncElementNow = syncElementRef.current;
+      prevSyncElementRef.current = syncElementNow;
+      const cleanup = syncElementNow(el);
+      if (typeof cleanup === "function") {
+        cleanupRef.current = cleanup;
+      }
+    };
     const refCallback = (el) => {
       elRef.current = el;
       // Keep .current in sync immediately so useEffect callbacks that read
@@ -92,10 +94,15 @@ export const useComposeElementRef = (syncElement, externalRef) => {
         prevSyncElementRef.current = undefined;
       }
     };
-    refCallbackRef.current = refCallback;
+    stableRef.current = { refCallback, runSync };
+  }
+  const { refCallback, runSync } = stableRef.current;
+
+  // If element already mounted, re-sync when syncElement reference changed.
+  if (elRef.current && syncElement !== prevSyncElementRef.current) {
+    runSync(elRef.current);
   }
 
-  const refCallback = refCallbackRef.current;
   refCallback.current = elRef.current;
   return refCallback;
 };

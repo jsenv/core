@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker confirm demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+        scroll-margin-top: 12px;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .demo-case {
+        display: flex;
+        margin-bottom: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .demo-caption {
+        color: #666;
+        font-size: 0.8rem;
+      }
+      .demo-caption code {
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Icon,
+        Input,
+        Label,
+        Link,
+        List,
+        ListItem,
+        Picker,
+        Text,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Section = ({ id, title, children }) => (
+        <div class="demo-section">
+          <Heading id={id}>{title}</Heading>
+          {children}
+        </div>
+      );
+
+      const Case = ({ caption, children }) => (
+        <div class="demo-case">
+          <span class="demo-caption">{caption}</span>
+          {children}
+        </div>
+      );
+
+      const noop = () => {};
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Picker confirm"
+            previous={{
+              href: "./9_picker_settings_sheet_demo.html",
+              label: "Settings sheet",
+            }}
+          />
+          <div class="demo-section">
+            <h2>Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <MessageDemo />
+          <ChildrenDemo />
+          <VariantDemo />
+          <ModeDemo />
+          <ButtonsDemo />
+          <FormDemo />
+          <ClearDemo />
+        </Box>
+      );
+
+      const NominalDemo = () => (
+        <Section id="nominal" title="Cas nominal">
+          <FakeBackend value={{ files: 3 }}>
+            {({ value, action }) => (
+              <Picker
+                type="confirm"
+                ui="Delete a file"
+                message="Delete this file?"
+                action={() => action({ files: value.files - 1 })}
+              />
+            )}
+          </FakeBackend>
+        </Section>
+      );
+
+      const StatesDemo = () => (
+        <Section id="states" title="États">
+          <div class="demo-row">
+            <Case caption="default">
+              <Picker type="confirm" ui="Delete" action={noop} />
+            </Case>
+            <Case caption="readOnly">
+              <Picker type="confirm" ui="Delete" readOnly action={noop} />
+            </Case>
+            <Case caption="disabled">
+              <Picker type="confirm" ui="Delete" disabled action={noop} />
+            </Case>
+            <Case caption="loading">
+              <Picker type="confirm" ui="Delete" loading action={noop} />
+            </Case>
+            <Case caption="focus visible">
+              <Picker
+                type="confirm"
+                ui="Delete"
+                pseudoState={{ ":focus-visible": true }}
+                action={noop}
+              />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const MessageDemo = () => (
+        <Section id="message" title="message">
+          <Case caption="no message">
+            <Picker type="confirm" ui="Delete" action={noop} />
+          </Case>
+          <Case caption='message="Delete rapport-2024.pdf?"'>
+            <Picker
+              type="confirm"
+              ui="Delete"
+              message="Delete rapport-2024.pdf?"
+              action={noop}
+            />
+          </Case>
+          <Case caption="message as JSX">
+            <Picker
+              type="confirm"
+              ui="Delete"
+              message={
+                <>
+                  Delete <strong>rapport-2024.pdf</strong>? Deleted files leave
+                  no copy behind —{" "}
+                  <Link href="https://docs.example.com/files/deleting">
+                    how deletion works
+                  </Link>
+                  .
+                </>
+              }
+              action={noop}
+            />
+          </Case>
+        </Section>
+      );
+
+      const ChildrenDemo = () => (
+        <Section id="children" title="children — the whole popup">
+          <FakeBackend value={{ files: 3 }}>
+            {({ value, action }) => (
+              <Picker
+                type="confirm"
+                ui="Delete"
+                action={() => action({ files: value.files - 1 })}
+              >
+                <Box flex="y" spacing="m" padding="m" maxWidth="360px">
+                  <Text bold>Delete rapport-2024.pdf?</Text>
+                  <Box flex="y" spacing="xs">
+                    <Text>Shared with 3 people.</Text>
+                    <Link href="https://docs.example.com/files/deleting">
+                      Read this before deleting a shared file
+                    </Link>
+                  </Box>
+                  <Box flex="x" spacing="s" alignX="end">
+                    <Button command="--navi-cancel">Keep the file</Button>
+                    <Button command="--navi-confirm" autoFocus>
+                      Delete anyway
+                    </Button>
+                  </Box>
+                </Box>
+              </Picker>
+            )}
+          </FakeBackend>
+        </Section>
+      );
+
+      const VariantDemo = () => (
+        <Section id="variant" title="variant">
+          <div class="demo-row">
+            <Case caption='variant="button" (default)'>
+              <Picker type="confirm" ui="Delete" action={noop} />
+            </Case>
+            <Case caption='variant="icon"'>
+              <Picker
+                type="confirm"
+                variant="icon"
+                ui={<Icon>🗑️</Icon>}
+                message="Delete this file?"
+                action={noop}
+              />
+            </Case>
+            <Case caption='variant="discrete"'>
+              <Picker
+                type="confirm"
+                variant="discrete"
+                ui="Delete"
+                action={noop}
+              />
+            </Case>
+            <Case caption='variant="picker"'>
+              <Picker
+                type="confirm"
+                variant="picker"
+                ui="Delete"
+                action={noop}
+              />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const ModeDemo = () => (
+        <Section id="mode" title="mode">
+          <div class="demo-row">
+            <Case caption="popover (default, on every screen)">
+              <Picker type="confirm" ui="Delete" action={noop} />
+            </Case>
+            <Case caption='mode="dialog"'>
+              <Picker type="confirm" ui="Delete" mode="dialog" action={noop} />
+            </Case>
+            <Case caption='positionArea="top"'>
+              <Picker
+                type="confirm"
+                ui="Delete"
+                positionArea="top"
+                action={noop}
+              />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const ButtonsDemo = () => (
+        <Section id="buttons" title="The two buttons">
+          <div class="demo-row">
+            <Case caption='confirmLabel="Delete anyway" cancelLabel="Keep"'>
+              <Picker
+                type="confirm"
+                ui="Delete"
+                confirmLabel="Delete anyway"
+                cancelLabel="Keep"
+                action={noop}
+              />
+            </Case>
+            <Case caption='focusOnOpen="cancel"'>
+              <Picker
+                type="confirm"
+                ui="Delete"
+                focusOnOpen="cancel"
+                action={noop}
+              />
+            </Case>
+            <Case caption='focusOnOpen="none"'>
+              <Picker
+                type="confirm"
+                ui="Delete"
+                focusOnOpen="none"
+                action={noop}
+              />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const FormDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <Section id="form" title='In a form — command="--navi-send"'>
+            <FakeBackend value={{ email: "old@address.com" }}>
+              {({ value, action }) => (
+                <Form
+                  canSendWhileUnchanged
+                  action={async ({ email }) => {
+                    push("Form action", { email });
+                    await action({ email });
+                    push("Form action done");
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Field>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        name="email"
+                        defaultValue={value.email}
+                      />
+                    </Field>
+                    <Picker
+                      type="confirm"
+                      ui="Save"
+                      command="--navi-send"
+                      message="Change the address every notification is sent to?"
+                    />
+                  </Box>
+                </Form>
+              )}
+            </FakeBackend>
+            <CallLog entries={entries} onClear={clear} />
+          </Section>
+        );
+      };
+
+      const FRUITS = ["Apple", "Cherry", "Elderberry"];
+      const ClearDemo = () => (
+        <Section id="clear" title="A picker's clear cross — clearConfirm">
+          <FakeBackend value={{ fruit: "Cherry" }}>
+            {({ value, action }) => (
+              <Field vertical>
+                <Label>clearable + clearConfirm</Label>
+                <Picker
+                  name="fruit"
+                  minWidth="200"
+                  clearable
+                  clearConfirm={`Remove "${value.fruit}" from this field?`}
+                  placeholder="Pick a fruit…"
+                  value={value.fruit}
+                  action={(fruit) => action({ fruit })}
+                >
+                  <List selectable command="--navi-send">
+                    {FRUITS.map((fruit, i) => (
+                      <ListItem
+                        selectable
+                        key={fruit}
+                        id={`fruit_${fruit}`}
+                        index={i}
+                        value={fruit}
+                        selected={value.fruit === fruit}
+                        paddingX="m"
+                        paddingY="s"
+                      >
+                        {fruit}
+                      </ListItem>
+                    ))}
+                  </List>
+                </Picker>
+              </Field>
+            )}
+          </FakeBackend>
+        </Section>
+      );
+
+      render(<App />, document.querySelector("#container"));
+    </script>
+  </body>
+</html>

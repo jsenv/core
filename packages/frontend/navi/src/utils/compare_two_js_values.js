@@ -6,9 +6,13 @@
  *
  * Beyond recursive object/array comparison it covers the edge cases `===` gets
  * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
- * cycles don't loop (a seen-set guards circular refs), and same-type is required
- * before descending. Cheap paths run first: reference equality, then the identity
- * short-circuit below, then array length before element-by-element.
+ * cycles don't loop (a set of the pairs being compared guards circular refs),
+ * and same-type is required
+ * before descending. Functions, and objects with nothing enumerable to compare
+ * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
+ * them says whether two are "the same". Cheap paths run first: reference
+ * equality, then the identity short-circuit below, then array length before
+ * element-by-element.
  *
  * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
  * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
@@ -70,6 +74,11 @@ export const compareTwoJsValues = (
     if (aType !== bType) {
       return false;
     }
+    if (aType === "function") {
+      // Not the same function (reference equality came first), and nothing in
+      // a function says whether two of them do the same thing.
+      return false;
+    }
     const aIsPrimitive =
       a === null || (aType !== "object" && aType !== "function");
     const bIsPrimitive =
@@ -80,14 +89,22 @@ export const compareTwoJsValues = (
     if (aIsPrimitive && bIsPrimitive) {
       return a === b;
     }
-    if (seenSet.has(a)) {
+    // Back on something still being compared: a cycle. No loop, and no answer
+    // either — equal by a route that never ends is not equal.
+    if (seenSet.has(a) || seenSet.has(b)) {
       return false;
     }
-    if (seenSet.has(b)) {
-      return false;
-    }
+    // Held only while a and b are being compared, not for the rest of the
+    // walk: the same object is rightly met again elsewhere — in an unordered
+    // array every element of a is tried against every element of b.
     seenSet.add(a);
     seenSet.add(b);
+    const result = compareComposite(a, b);
+    seenSet.delete(a);
+    seenSet.delete(b);
+    return result;
+  };
+  const compareComposite = (a, b) => {
     const aIsArray = Array.isArray(a);
     const bIsArray = Array.isArray(b);
     if (aIsArray !== bIsArray) {
@@ -145,23 +162,23 @@ export const compareTwoJsValues = (
       return true;
     }
     // Date objects must be compared by time value, not by enumerable keys (which are empty)
-    date_compare: {
-      const aIsDate = a instanceof Date;
-      const bIsDate = b instanceof Date;
-      if (aIsDate !== bIsDate) {
-        return false;
-      }
-      if (aIsDate && bIsDate) {
-        const aTime = a.getTime();
-        const bTime = b.getTime();
-        if (aTime !== bTime) {
-          return false;
-        }
-      }
+    const aIsDate = a instanceof Date;
+    const bIsDate = b instanceof Date;
+    if (aIsDate !== bIsDate) {
+      return false;
+    }
+    if (aIsDate) {
+      return a.getTime() === b.getTime();
     }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    if (aKeys.length === 0 && (!isPlainObject(a) || !isPlainObject(b))) {
+      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
+      // apart, so they are the same one or they are not — and they are not,
+      // reference equality came first.
       return false;
     }
     if (lightKeySet) {
@@ -199,4 +216,9 @@ export const compareTwoJsValues = (
     : compare;
 
   return compare(rootA, rootB);
+};
+
+const isPlainObject = (value) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };

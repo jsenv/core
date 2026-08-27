@@ -168,7 +168,8 @@ const css = /* css */ `
      whoever puts the drag there asks for the hand when a grab really is the
      first thing the element offers.
      An opted-out area keeps both its cursor and its selection, and never starts
-     a drag (see the check in startDragTo).
+     a drag (see the check in startDragTo); a popover or a dialog anchored in a
+     source is one without having to say so.
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself.
      Only the resting cursor is set here: what it becomes once a drag is under
@@ -181,7 +182,9 @@ const css = /* css */ `
     cursor: default;
   }
   [data-drag-ignore],
-  [data-own-target] {
+  [data-own-target],
+  [data-drag-source] [popover],
+  [data-drag-source] dialog {
     cursor: auto;
   }
 
@@ -281,8 +284,13 @@ import.meta.css = css;
 // control that reads the pointer itself. `data-own-target` is the same fact said
 // once for every gesture there is: an element declaring that a press landing on
 // it is aimed AT it, whatever it happens to sit inside (see also
-// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js).
-const DRAG_IGNORED_SELECTOR = "[data-drag-ignore],[data-own-target]";
+// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js). A popover or a dialog says it
+// without being asked: it is a layer OVER the surface, so a press in it is aimed
+// at the layer — yet it stays a descendant of whatever it is anchored in (a
+// callout next to a button, in the card that carries both), and the press
+// bubbles through the surface as if it had landed on it.
+const DRAG_IGNORED_SELECTOR =
+  "[data-drag-ignore],[data-own-target],[popover],dialog";
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -850,8 +858,8 @@ export const startDragTo = (
   { draggedElement = event.currentTarget, ...options } = {},
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control that
-  // owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
+  // owns the gesture, a callout): the press there is none of our business.
+  if (isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -1034,8 +1042,8 @@ const startDragToCarryCopy = (
   },
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control
-  // that owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
+  // that owns the gesture, a callout): the press there is none of our business.
+  if (isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -1618,4 +1626,16 @@ const createDragClone = (element, pointerEvent) => {
   element.parentElement.appendChild(wrapper);
 
   return wrapper;
+};
+
+// The nearest word about the press wins: an opted-out area INSIDE the dragged
+// element takes the press away from it, one AROUND it does not — a list
+// reordered inside a dialog, or a dialog carried by its own handle, is itself the
+// last thing said before the finger.
+const isPressIgnored = (target, draggedElement) => {
+  if (!target.closest) {
+    return false;
+  }
+  const ignored = target.closest(DRAG_IGNORED_SELECTOR);
+  return Boolean(ignored) && !ignored.contains(draggedElement);
 };

@@ -38,10 +38,27 @@ const css = /* css */ `
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_popover {
-        --popover-border-radius: var(--picker-border-radius);
+        --popover-border-radius: var(
+          --picker-popup-border-radius,
+          var(--picker-border-radius)
+        );
         --popover-border-width: var(--picker-border-width);
         --popover-border-color: var(--x-picker-border-color);
-        --popover-background-color: var(--picker-background-color);
+        /* The sheet is the popup's own, never the trigger's paint: a variant
+           that takes the box away from the trigger (icon, discrete, headless
+           all paint it transparent) must not take the sheet with it. The trim
+           above still echoes the field — a transparent edge still leaves a
+           readable surface; the surface does not.
+
+           With an explicit fallback, unlike --popover-max-height below: the
+           popover paints background-color from this var with no fallback of
+           its own, so a declaration invalid at computed-value time would not
+           step aside for the @layer default — it makes the var guaranteed-
+           invalid, and the sheet goes transparent. */
+        --popover-background-color: var(
+          --picker-popup-background-color,
+          var(--navi-popup-background-color)
+        );
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
         /* No fallback on purpose: when the picker's own popoverMaxHeight prop
@@ -99,9 +116,18 @@ const css = /* css */ `
     /* dialog */
     &[aria-haspopup="dialog"] {
       .navi_dialog {
-        --dialog-border-radius: var(--picker-border-radius);
+        --dialog-border-radius: var(
+          --picker-popup-border-radius,
+          var(--picker-border-radius)
+        );
+        --dialog-border-width: var(--picker-dialog-border-width);
         --dialog-border-color: var(--x-picker-border-color);
-        --dialog-background-color: var(--picker-background-color);
+        /* The picker's own surface is not this one — see the popover branch,
+           including why the fallback is spelled out. */
+        --dialog-background-color: var(
+          --picker-popup-background-color,
+          var(--navi-popup-background-color)
+        );
         --dialog-outline-width: var(--picker-outline-width);
         --dialog-outline-color: var(--picker-outline-color);
 
@@ -258,6 +284,10 @@ const PickerCustom = (props) => {
     // "close" makes Escape say the same thing as clicking outside: keep what
     // was chosen, close the popup.
     escapeEffect = "cancel",
+    // What a `--navi-confirm` said inside the popup means, once the popup has
+    // closed on it. A confirm picker is the one saying something (see
+    // picker_confirm.jsx): its press, deferred until the question is answered.
+    onConfirm,
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -291,6 +321,7 @@ const PickerCustom = (props) => {
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
   delete pickerProps.escapeEffect;
+  delete pickerProps.onConfirm;
   // Read below for the popup alone; on the trigger it would land on the DOM as
   // an unknown attribute holding a ref object.
   delete pickerProps.anchor;
@@ -302,6 +333,11 @@ const PickerCustom = (props) => {
   // ref
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
+  // The `navi_request_confirm` a `--navi-confirm` dispatches right before its
+  // `navi_request_close`: remembered here, answered once the popup has really
+  // closed (see onClose below) — a press that ran before the close would make
+  // the picker busy, and a busy picker refuses the very close that follows.
+  const confirmEventRef = useRef(null);
   // aria-controls + id
   const popupId = `${props.id}_picker_popup`;
   id: {
@@ -396,6 +432,11 @@ const PickerCustom = (props) => {
               requestCloseEvent.preventDefault();
             },
           });
+          if (requestCloseEvent.defaultPrevented) {
+            // Refused: the popup stays, and the yes that asked for this close
+            // goes with the close it belonged to.
+            confirmEventRef.current = null;
+          }
         },
         onClose: (closeEvent) => {
           if (closeEvent.detail.isCancel) {
@@ -447,6 +488,11 @@ const PickerCustom = (props) => {
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
           resetMode();
+          const confirmEvent = confirmEventRef.current;
+          confirmEventRef.current = null;
+          if (confirmEvent && !closeEvent.detail.isCancel) {
+            onConfirm?.(confirmEvent);
+          }
         },
       };
     });
@@ -545,15 +591,27 @@ const PickerCustom = (props) => {
           allowed: () => {
             requestClose(e, { isCancel: e.detail.isCancel });
           },
+          prevented: () => {
+            confirmEventRef.current = null;
+          },
         });
+      },
+      // Said by the popup's own yes button, to the popup (the expandable
+      // nearest to it) — see the `--navi-confirm` command.
+      onnavi_request_confirm: (e) => {
+        confirmEventRef.current = e;
       },
     });
 
     interactions: {
+      // Inside a popup this picker holds — its own, or that of a picker sitting
+      // on its façade (a confirm picker in the right slot): a press in there is
+      // never a press on this trigger. The nearest content upward, contained
+      // in this picker, rather than this picker's first content element: with
+      // a picker in the slot, the first one in DOM order is the nested one.
       const isWithinPickerContent = (el) => {
         const pickerEl = ref.current;
-        const pickerContentEl = pickerEl.querySelector(".navi_picker_content");
-        return pickerContentEl?.contains(el);
+        return pickerEl.contains(el.closest("[data-picker-content]"));
       };
 
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
@@ -712,7 +770,7 @@ const PickerCustom = (props) => {
   return <PickerContentInsidePopup {...pickerProps} mode={mode} />;
 };
 
-const getPickerInput = (pickerEl) => {
+export const getPickerInput = (pickerEl) => {
   return pickerEl.querySelector(".navi_picker_input");
 };
 const getPickerInputUIState = (pickerEl) => {

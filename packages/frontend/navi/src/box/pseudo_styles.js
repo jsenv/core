@@ -1,7 +1,7 @@
 import {
   createPubSub,
   dispatchInternalCustomEvent,
-  mergeTwoStyles,
+  mergeOneStyle,
 } from "@jsenv/dom";
 
 import { findControlHost, isControlHost } from "../control/control_dom.js";
@@ -574,30 +574,61 @@ focus_classes: {
     return false;
   };
 
-  // Shared setup for :focus and :focus-visible. Both need focusin/focusout
-  // listeners + a MutationObserver on aria-controls so that when the attribute
-  // changes while the element is focused, old and new controlled elements are
-  // notified to re-check their own focus state.
-  // extraSetup: optional (el, callback) => teardown for pseudo-class-specific
-  // listeners (e.g. keydown/keyup for :focus-visible).
-  const setupFocus = (el, callback) => {
-    const onFocusChange = (e) => {
-      callback();
-      notifyAriaControlled(el, e);
-    };
-    el.addEventListener("focusin", onFocusChange);
-    el.addEventListener("focusout", onFocusChange);
-    // Only observe aria-controls mutations when the element already has the
-    // attribute at setup time. If aria-controls is guaranteed to be set before
-    // initPseudoStyles runs (e.g. passed as a prop in box.jsx), this covers all
-    // real cases without paying the MutationObserver cost for every element.
-    let observer;
-    // if (el.hasAttribute("aria-controls")) {
-    observer = new MutationObserver((mutations) => {
-      if (!el.matches(":focus-within")) {
-        return;
+  // One registration per element for everything focus-related, shared by
+  // :focus, :focus-visible and :focus-within: they all react to the same
+  // focusin/focusout, and they all re-check through the same callback (see
+  // initPseudoStyles), which the Set turns into one call.
+  const focusTrackingWeakMap = new WeakMap();
+  const trackFocus = (el, callback) => {
+    let tracking = focusTrackingWeakMap.get(el);
+    if (!tracking) {
+      const callbackSet = new Set();
+      const onFocusChange = (e) => {
+        for (const trackedCallback of callbackSet) {
+          trackedCallback();
+        }
+        notifyAriaControlled(el, e);
+      };
+      el.addEventListener("focusin", onFocusChange);
+      el.addEventListener("focusout", onFocusChange);
+      tracking = {
+        callbackSet,
+        teardown: () => {
+          el.removeEventListener("focusin", onFocusChange);
+          el.removeEventListener("focusout", onFocusChange);
+          focusTrackingWeakMap.delete(el);
+        },
+      };
+      focusTrackingWeakMap.set(el, tracking);
+      observeAriaControls();
+    }
+    tracking.callbackSet.add(callback);
+    return () => {
+      tracking.callbackSet.delete(callback);
+      if (tracking.callbackSet.size === 0) {
+        tracking.teardown();
       }
+    };
+  };
+  // When aria-controls changes on a focused element, what it used to control
+  // and what it controls now both re-check their inherited focus. One observer
+  // on the document rather than one per tracked element: the attribute changes
+  // rarely, on few elements, while thousands are tracked — and it can be set
+  // after the element was, so "has it at setup" would miss it.
+  let ariaControlsObserver = null;
+  const observeAriaControls = () => {
+    if (ariaControlsObserver) {
+      return;
+    }
+    ariaControlsObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
+        const el = mutation.target;
+        if (!focusTrackingWeakMap.has(el)) {
+          continue;
+        }
+        if (!el.matches(":focus-within")) {
+          continue;
+        }
         const oldIds = (mutation.oldValue || "").split(" ").filter(Boolean);
         for (const id of oldIds) {
           const controlled = document.getElementById(id);
@@ -605,30 +636,20 @@ focus_classes: {
             requestPseudoStateCheck(controlled, {});
           }
         }
+        notifyAriaControlled(el, {});
       }
-      notifyAriaControlled(el, {});
     });
-    observer.observe(el, {
+    ariaControlsObserver.observe(document.documentElement, {
+      subtree: true,
       attributes: true,
       attributeFilter: ["aria-controls"],
       attributeOldValue: true,
     });
-    // }
-    return () => {
-      el.removeEventListener("focusin", onFocusChange);
-      el.removeEventListener("focusout", onFocusChange);
-      observer?.disconnect();
-    };
   };
 
   definePseudoClass(":focus", {
     attribute: "data-focus",
-    setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      return () => {
-        cleanup();
-      };
-    },
+    setup: trackFocus,
     test: (el) => {
       if (el.matches(":focus")) {
         return true;
@@ -644,9 +665,7 @@ focus_classes: {
     // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
     // handler re-checks the focused element (the only one a keystroke can turn
     // focus-visible) so a keypress stays O(1), not O(number-of-boxes).
-    setup: (el, callback) => {
-      return setupFocus(el, callback);
-    },
+    setup: trackFocus,
     test: (el) => {
       if (isMatchingFocusVisible(el)) {
         return true;
@@ -659,18 +678,7 @@ focus_classes: {
   });
   definePseudoClass(":focus-within", {
     attribute: "data-focus-within",
-    setup: (el, callback) => {
-      const onFocusChange = (e) => {
-        callback();
-        notifyAriaControlled(el, e);
-      };
-      el.addEventListener("focusin", onFocusChange);
-      el.addEventListener("focusout", onFocusChange);
-      return () => {
-        el.removeEventListener("focusin", onFocusChange);
-        el.removeEventListener("focusout", onFocusChange);
-      };
-    },
+    setup: trackFocus,
     test: (el) => {
       if (el.matches(":focus-within")) {
         return true;
@@ -965,8 +973,18 @@ export const initPseudoStyles = (
       onStateChange(state, oldPseudoState);
     }),
   );
-  element.addEventListener("navi_pseudo_state_request_check", () => {
+  // One function for every way a re-check can be asked, so that setups
+  // registering it side by side (the focus tracking, for one) hold the same
+  // callback and call it once.
+  const requestCheck = () => {
     checkPseudoClasses();
+  };
+  element.addEventListener("navi_pseudo_state_request_check", requestCheck);
+  addTeardown(() => {
+    element.removeEventListener(
+      "navi_pseudo_state_request_check",
+      requestCheck,
+    );
   });
 
   for (const pseudoClass of pseudoClasses) {
@@ -977,21 +995,14 @@ export const initPseudoStyles = (
     }
     const { setup } = pseudoClassDefinition;
     if (setup) {
-      const cleanup = setup(element, () => {
-        checkPseudoClasses();
-      });
+      const cleanup = setup(element, requestCheck);
       addTeardown(cleanup);
     }
   }
   checkPseudoClasses();
   if (import.meta.dev) {
     // just in case + catch use forcing them in chrome devtools
-    const interval = setInterval(() => {
-      checkPseudoClasses();
-    }, 1_000);
-    addTeardown(() => {
-      clearInterval(interval);
-    });
+    addTeardown(pollInDev(requestCheck));
   }
 
   return teardown;
@@ -1008,6 +1019,11 @@ export const applyStyle = (
     return;
   }
   const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  // The same object comes back for every state change of a box whose inline
+  // style has no pseudo entry: nothing to write.
+  if (appliedStyleWeakMap.get(element) === styleToApply) {
+    return;
+  }
   updateStyle(element, styleToApply, preventInitialTransition);
 };
 
@@ -1022,52 +1038,74 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   ) {
     return styles;
   }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
+  let style = styles;
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
+    const requiredStates = getPseudoKeyRequiredStates(pseudoKey);
+    if (!requiredStates.every((state) => pseudoState[state])) {
+      continue;
     }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
+    if (style === styles) {
+      style = { ...styles };
+    }
+    // Both sides are already normalized for CSS by the box; only the
+    // properties that compose (a press scale on top of a translate) go through
+    // a merge, the rest is a plain override.
+    const styleToAdd = pseudoNamedStyles[pseudoKey];
+    for (const key of Object.keys(styleToAdd)) {
+      const value = styleToAdd[key];
+      if (value === undefined) {
+        continue;
+      }
+      if (key === "transform" || key === "willChange") {
+        style[key] = mergeOneStyle(style[key], value, key, "css");
+      } else {
+        style[key] = value;
+      }
+    }
   }
   return style;
 };
 
-const styleKeySetWeakMap = new WeakMap();
+// The state names a pseudo key asks for, parsed once: the same few keys come
+// back on every state change of every box that has them. "::x" alone always
+// matches; "::x:a:b" and ":a:b" ask for ":a" and ":b" — the state keys as
+// checkPseudoClasses writes them, colon included.
+const pseudoKeyRequiredStatesMap = new Map();
+const getPseudoKeyRequiredStates = (pseudoKey) => {
+  const cached = pseudoKeyRequiredStatesMap.get(pseudoKey);
+  if (cached) {
+    return cached;
+  }
+  let requiredStates;
+  if (pseudoKey.startsWith("::")) {
+    const nextColonIndex = pseudoKey.indexOf(":", 2);
+    requiredStates =
+      nextColonIndex === -1
+        ? []
+        : getPseudoKeyRequiredStates(pseudoKey.slice(nextColonIndex));
+  } else {
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    requiredStates =
+      nextColonIndex === -1
+        ? [pseudoKey]
+        : pseudoKey
+            .slice(1)
+            .split(":")
+            .map((state) => `:${state}`);
+  }
+  pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
+  return requiredStates;
+};
+
+// element → the style object last written to it, so the next one is written
+// as a difference: the values that changed, the keys it no longer has.
+const appliedStyleWeakMap = new WeakMap();
 const elementTransitionWeakMap = new WeakMap();
 const elementRenderedWeakSet = new WeakSet();
-const NO_STYLE_KEY_SET = new Set();
+const NO_STYLE = {};
 const updateStyle = (element, style, preventInitialTransition) => {
-  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  const styleToApply = style || NO_STYLE;
+  const styleApplied = appliedStyleWeakMap.get(element) || NO_STYLE;
   // TRANSITION ANTI-FLICKER STRATEGY:
   // Problem: When setting both transition and styled properties simultaneously
   // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
@@ -1077,32 +1115,32 @@ const updateStyle = (element, style, preventInitialTransition) => {
   // transition to "none", then restore the intended transition after the frame completes.
   // We handle multiple updateStyle calls in the same frame gracefully - only one
   // requestAnimationFrame is scheduled per element, and the final transition value wins.
-  let styleKeySetToApply = styleKeySet;
+  let skipTransition = false;
   if (!elementRenderedWeakSet.has(element)) {
-    const hasTransition = styleKeySet.has("transition");
+    const hasTransition = Object.hasOwn(styleToApply, "transition");
     if (hasTransition || preventInitialTransition) {
-      if (elementTransitionWeakMap.has(element)) {
-        elementTransitionWeakMap.set(element, style?.transition);
-      } else {
+      if (!elementTransitionWeakMap.has(element)) {
         element.style.transition = "none";
-        elementTransitionWeakMap.set(element, style?.transition);
       }
-      // Don't apply the transition property now - we've set it to "none" temporarily
-      styleKeySetToApply = new Set(styleKeySet);
-      styleKeySetToApply.delete("transition");
+      elementTransitionWeakMap.set(element, styleToApply.transition);
+      // Stays "none" until the first frame puts the intended value back
+      skipTransition = true;
     }
     afterFirstFrame(element);
   }
 
-  // Apply all styles normally (excluding transition during anti-flicker)
-  const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySetToApply) {
-    const value = style[key];
+  for (const key of Object.keys(styleToApply)) {
+    const value = styleToApply[key];
     if (value === undefined || value === null) {
-      // Treat undefined/null as "remove" — leave key in keysToDelete
+      // a removal: handled below with the keys this style no longer has
       continue;
     }
-    keysToDelete.delete(key);
+    if (skipTransition && key === "transition") {
+      continue;
+    }
+    if (styleApplied[key] === value) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.setProperty(key, value);
     } else {
@@ -1110,8 +1148,15 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  // Remove obsolete styles
-  for (const key of keysToDelete) {
+  for (const key of Object.keys(styleApplied)) {
+    const previousValue = styleApplied[key];
+    if (previousValue === undefined || previousValue === null) {
+      continue;
+    }
+    const value = styleToApply[key];
+    if (value !== undefined && value !== null) {
+      continue;
+    }
     if (key.startsWith("--")) {
       element.style.removeProperty(key);
     } else {
@@ -1119,7 +1164,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
     }
   }
 
-  styleKeySetWeakMap.set(element, styleKeySet);
+  appliedStyleWeakMap.set(element, styleToApply);
 };
 
 // One frame for every element waiting for its first one, not one frame each.
@@ -1153,4 +1198,28 @@ const afterFirstFrame = (element) => {
       elementRenderedWeakSet.add(element);
     }
   });
+};
+
+// Dev only: a periodic re-check for what nothing announces — a state forced
+// from the devtools. One interval walking every registered check rather than
+// one per element: a page of a thousand boxes would otherwise run a thousand
+// timers a second.
+const devPollCheckSet = new Set();
+let devPollInterval = null;
+const pollInDev = (check) => {
+  devPollCheckSet.add(check);
+  if (devPollInterval === null) {
+    devPollInterval = setInterval(() => {
+      for (const registeredCheck of devPollCheckSet) {
+        registeredCheck();
+      }
+    }, 1_000);
+  }
+  return () => {
+    devPollCheckSet.delete(check);
+    if (devPollCheckSet.size === 0) {
+      clearInterval(devPollInterval);
+      devPollInterval = null;
+    }
+  };
 };

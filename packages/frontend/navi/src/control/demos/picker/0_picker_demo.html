@@ -1801,13 +1801,13 @@
           title="A cross that asks, then sends the clear"
         >
           <p>
-            <code>clearConfirm</code> is the question the cross asks — the same
-            thing <code>&lt;Button confirm&gt;</code> takes, plain text or JSX.
-            It is asked BEFORE anything is emptied: while it is on the screen
-            the field is exactly as it was, and answering no leaves it that way.
-            Answering yes clears and sends, so the picker&apos;s own action
-            receives the cleared value like any other choice — nothing else to
-            wire.
+            <code>clearConfirm</code> is the question the cross asks — the cross
+            is then a <code>&lt;Picker type="confirm"&gt;</code>, and this its{" "}
+            <code>message</code>, plain text or JSX. It is asked BEFORE anything
+            is emptied: while it is on the screen the field is exactly as it
+            was, and answering no leaves it that way. Answering yes clears and
+            sends, so the picker&apos;s own action receives the cleared value
+            like any other choice — nothing else to wire.
           </p>
           <p>
             The clear is <strong>optimistic</strong>: the field empties on the

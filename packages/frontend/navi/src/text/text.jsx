@@ -544,13 +544,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   internally for overlays such as the skeleton container.
  */
 export const Text = (props) => {
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-
-  return <TextDispatcher {...props} ref={ref} />;
-};
-
-const TextDispatcher = (props) => {
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
@@ -566,7 +559,8 @@ const TextDispatcher = (props) => {
   return <TextUI {...props} />;
 };
 const TextShrinkWrap = (props) => {
-  const { ref } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const applyWidth = () => {
     const text = ref.current;
@@ -611,7 +605,7 @@ const TextShrinkWrap = (props) => {
   }, []);
 
   return (
-    <TextDispatcher {...props} data-shrinkwrap="" shrinkWrap={undefined} />
+    <Text {...props} ref={ref} data-shrinkwrap="" shrinkWrap={undefined} />
   );
 };
 const TextUI = (props) => {
@@ -742,7 +736,7 @@ const TextSkeleton = ({ loading, children, ...props }) => {
     </span>
   );
   return (
-    <TextDispatcher
+    <Text
       data-skeleton=""
       data-loading={loading ? "" : undefined}
       {...props}
@@ -750,12 +744,12 @@ const TextSkeleton = ({ loading, children, ...props }) => {
       childrenOutsideFlow={skeletonOverlay}
     >
       {innerChildren}
-    </TextDispatcher>
+    </Text>
   );
 };
 const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
   return (
-    <TextDispatcher
+    <Text
       block
       as="div"
       pre={noWrap === undefined ? true : undefined}
@@ -769,13 +763,15 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
       capitalize={capitalize}
     >
       {children}
-    </TextDispatcher>
+    </Text>
   );
 };
 const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
-  useInitialTextSelection(ref, selectRange);
+  const defaultRef = useRef();
+  const innerRef = ref || defaultRef;
+  useInitialTextSelection(innerRef, selectRange);
 
-  return <TextDispatcher {...props} ref={ref} selectRange={undefined} />;
+  return <Text {...props} ref={innerRef} selectRange={undefined} />;
 };
 
 /**

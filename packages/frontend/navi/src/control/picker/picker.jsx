@@ -35,6 +35,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
+import { PickerConfirmResolver } from "./picker_confirm.jsx";
 import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
@@ -315,15 +316,20 @@ const css = /* css */ `
       .navi_icon:not([data-line-overflow="allow"]) {
         max-height: 100%;
       }
-      /* The clear button is the exception — it is a real target with its own
-         intention (clear, the opposite of open), so it takes its clicks back. */
-      .navi_button {
+      /* The clear cross is the exception — it is a real target with its own
+         intention (clear, the opposite of open), so it takes its clicks back.
+         A button, or a picker when the cross asks first (see clearConfirm). */
+      .navi_button,
+      .navi_picker {
         pointer-events: auto;
-
-        /* Drawn small but not small to hit: the spacing around the cross — the
-           slot margins on the sides, the picker padding above and below —
-           belongs to its clickable zone, the same zone the clear cross of an
-           input claims. The visual stays untouched; only the hit area grows. */
+      }
+      /* Drawn small but not small to hit: the spacing around the cross — the
+         slot margins on the sides, the picker padding above and below —
+         belongs to its clickable zone, the same zone the clear cross of an
+         input claims. The visual stays untouched; only the hit area grows.
+         On the box for a picker: the picker root is not positioned. */
+      .navi_button,
+      .navi_picker .navi_picker_box {
         &::before {
           position: absolute;
           top: calc(-1 * var(--x-picker-padding-top));
@@ -416,8 +422,11 @@ const css = /* css */ `
     &[data-readonly-opens] {
       --x-picker-cursor: pointer;
     }
-    /* Focus */
-    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
+    /* Focus. The second selector is the state held by hand (pseudoState on
+       the picker lands on this root, which is never focused for real): a demo
+       showing the ring without a Tab press. */
+    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]),
+    &[data-focus-visible] {
       --x-picker-border-color: transparent;
 
       .navi_picker_box {
@@ -504,12 +513,46 @@ const css = /* css */ `
         z-index: -1;
       }
     }
+    /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
+       and the --navi-button-* vars) — its surface, its padding, a centered
+       label, its washed-out read-only and disabled — for a picker that IS a
+       button with a popup behind it (a confirm). The value slot draws the
+       label (the ui prop), and no slot follows it: nothing says "this opens",
+       what it opens says it. Hover keeps the picker's own formulas, which are
+       the button's already. */
+    &[data-variant="button"] {
+      --picker-padding-x-default: var(--navi-button-padding-x-default);
+      --picker-padding-y-default: var(--navi-button-padding-y-default);
+      --picker-align-x-default: center;
+      --picker-background-color: var(--navi-button-background-color);
+      /* Read-only / disabled: fading toward the surface, not toward
+         transparent — the button's own rule. */
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 30%,
+        var(--navi-surface-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-color-readonly: color-mix(
+        in srgb,
+        var(--picker-color) 30%,
+        transparent
+      );
+      --picker-border-color-disabled: var(--picker-border-color-readonly);
+      --picker-background-color-disabled: var(
+        --picker-background-color-readonly
+      );
+      --picker-color-disabled: var(--picker-color-readonly);
+
+      text-align: center;
+    }
   }
 `;
 
 const PickerButton = (props) => {
   import.meta.css = css;
   warnOnUnknownPickerType(props);
+  warnOnUIDrawnByNobody(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -542,10 +585,9 @@ const PickerButton = (props) => {
     // "Are you sure?" before the cross clears anything. A cross of three
     // millimetres at the edge of a touch screen, right where the chevron is
     // aimed at, is the button pressed by accident — and what it removes does
-    // not come back. Asked before the clear, so a "no" leaves the field
-    // untouched (see the --navi-clear command).
+    // not come back. The cross is then a confirm picker (see
+    // picker_confirm.jsx), and the clear only goes out on yes.
     clearConfirm,
-    clearConfirmPopupContent,
     readOnly,
     error,
   } = props;
@@ -615,7 +657,6 @@ const PickerButton = (props) => {
         rightSlotIconSize={undefined}
         rightSlot={undefined}
         clearConfirm={undefined}
-        clearConfirmPopupContent={undefined}
         openWhileReadOnly={undefined}
         ui={undefined}
         maxLines={undefined}
@@ -740,12 +781,16 @@ const PickerButton = (props) => {
               e.preventDefault();
             }}
           />
-          {variant === "icon" ||
-          variant === "headless" ||
-          ui === "default" ? null : (
+          {variant === "headless" || ui === "default" ? null : (
             <Text
               className="navi_picker_value"
-              navi-placeholder={uiStateHoldsNothing(value) ? "" : undefined}
+              // A button's label is not a placeholder, however empty the
+              // picker behind it is.
+              navi-placeholder={
+                variant !== "button" && uiStateHoldsNothing(value)
+                  ? ""
+                  : undefined
+              }
               maxLines={maxLines}
             >
               <PickerOwnContent>
@@ -755,13 +800,34 @@ const PickerButton = (props) => {
                   {/* For what the picker cannot clamp itself: a <BadgeList>
                       wraps flex rows, which line-clamp never sees. */}
                   <MaxLinesContext.Provider value={maxLines}>
-                    {ui === undefined ? <PickerDefaultUI /> : ui}
+                    {ui === undefined ? (
+                      variant === "icon" ? (
+                        // An icon picker draws no value, so there is no slot
+                        // beside it either — the icon that would have sat in
+                        // that slot IS the trigger, and a caller's own `ui`
+                        // replaces it like any other.
+                        <Icon size={rightSlotIconSize} lineOverflow="allow">
+                          {rightSlotIcon === undefined ? (
+                            <ChevronDownSvg />
+                          ) : (
+                            rightSlotIcon
+                          )}
+                        </Icon>
+                      ) : (
+                        <PickerDefaultUI />
+                      )
+                    ) : (
+                      ui
+                    )}
                   </MaxLinesContext.Provider>
                 </PickerContext.Provider>
               </PickerOwnContent>
             </Text>
           )}
-          {variant === "headless" || ui === "default" ? null : (
+          {variant === "icon" ||
+          variant === "headless" ||
+          variant === "button" ||
+          ui === "default" ? null : (
             <span className="navi_picker_right_slot">
               <PickerOwnContent>
                 {/* Clearing is a modification: nothing to offer on a picker
@@ -772,14 +838,32 @@ const PickerButton = (props) => {
                 {clearable &&
                 interactive &&
                 value !== undefined &&
-                value !== "" ? (
+                value !== "" &&
+                clearConfirm !== undefined ? (
+                  // A picker on the façade of a picker: the cross opens the
+                  // question, and yes sends the clear to this picker's input.
+                  // A door only (allowNameless): the form around does not see
+                  // a field in it.
+                  <Picker
+                    type="confirm"
+                    variant="icon"
+                    ui={
+                      <Icon size={rightSlotIconSize} lineOverflow="allow">
+                        <CloseSvg />
+                      </Icon>
+                    }
+                    message={clearConfirm}
+                    command="--navi-clear"
+                    commandFor={inputProps.id}
+                    tabIndex="-1"
+                  />
+                ) : clearable &&
+                  interactive &&
+                  value !== undefined &&
+                  value !== "" ? (
                   <Button
                     command="--navi-clear"
                     commandFor={inputProps.id}
-                    // The question, asked before the clear rather than by the
-                    // action the clear sends — see the --navi-clear command.
-                    confirm={clearConfirm}
-                    confirmPopupContent={clearConfirmPopupContent}
                     tabIndex="-1"
                     // No navi-focus-delegate, unlike the identical button inside an
                     // input: handing focus back to the picker's own input is what
@@ -823,7 +907,12 @@ const PickerButton = (props) => {
           )}
         </span>
         <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
-          <div className="navi_picker_content">{children}</div>
+          {/* The attribute is what tells "inside this picker's popup" from
+              "on its façade" — read by this picker's own press handling and by
+              the command resolution in control_dom.js. */}
+          <div className="navi_picker_content" data-picker-content="">
+            {children}
+          </div>
         </ControlFacadeChildrenWrapper>
       </Box>
     </ReadOnlyContext.Provider>
@@ -877,8 +966,10 @@ const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
   });
 };
 
+// The nearest popup content upward, contained in this picker — see the same
+// helper in picker_custom.jsx for why not this picker's first content element.
 const isWithinPickerContent = (el, pickerEl) => {
-  return pickerEl.querySelector(".navi_picker_content")?.contains(el);
+  return pickerEl.contains(el.closest("[data-picker-content]"));
 };
 
 const PICKER_ERROR_TOKEN = createOpenToken();
@@ -1051,8 +1142,14 @@ const PickerFirstResolver = (props) => {
  * With `children`, opens a popover (desktop) or dialog (mobile) containing the children.
  * Pass `mode="popover"` or `mode="dialog"` to override the automatic choice.
  *
+ * `type="confirm"` is the picker that asks "are you sure?" before doing what it
+ * stands for: its popup is the question, `ui` its label, and yes runs its
+ * `action` or triggers its `command` once the popup has closed — see
+ * picker_confirm.jsx, and `message`, `confirmLabel`, `cancelLabel`,
+ * `focusOnOpen` below.
+ *
  * @type {import("preact").FunctionComponent<{
- *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "navi_time" | "navi_number" | "navi_percentage",
+ *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "confirm" | "navi_time" | "navi_number" | "navi_percentage",
  *   value?: any,
  *   defaultValue?: any,
  *   name?: string,
@@ -1073,14 +1170,18 @@ const PickerFirstResolver = (props) => {
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless" | "discrete",
+ *   variant?: "icon" | "headless" | "discrete" | "button" | "picker",
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
  *   rightSlotIconSize?: number | string,
  *   rightSlot?: import("preact").ComponentChildren,
  *   clearConfirm?: string | import("preact").ComponentChildren,
- *   clearConfirmPopupContent?: import("preact").ComponentChildren,
+ *   message?: import("preact").ComponentChildren,
+ *   confirmLabel?: import("preact").ComponentChildren,
+ *   cancelLabel?: import("preact").ComponentChildren,
+ *   focusOnOpen?: "confirm" | "cancel" | "none",
+ *   onConfirm?: (confirmEvent: CustomEvent) => void,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
@@ -1090,6 +1191,7 @@ const PickerFirstResolver = (props) => {
  *   dialogMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
+ *   dialogBorderWidth?: number | string,
  *   clearable?: boolean,
  *   popupLayer?: "top" | "local",
  *   dialogExpand?: boolean,
@@ -1103,6 +1205,12 @@ const PickerFirstResolver = (props) => {
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {string} [popupBackgroundColor] The popup's surface. Left out it is
+ *   the one every navi popup uses (`--navi-popup-background-color`, which
+ *   follows the theme) — the trigger's own `backgroundColor` is not it, so a
+ *   variant that paints the trigger transparent leaves the popup a real sheet.
+ * @param {number|string} [popupBorderRadius] The popup's corners. Left out they
+ *   echo the trigger's `borderRadius`.
  * @param {import("preact").ComponentChildren | "default"} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
@@ -1110,6 +1218,11 @@ const PickerFirstResolver = (props) => {
  *   and take the same room empty as it does filled. A <BadgeList> gets both
  *   from its `fallback` — the placeholder text, as plain text, see
  *   docs/badge_list.md. `"default"` draws nothing in the slot at all.
+ *
+ *   Under `variant="icon"` there is no value to draw, so this IS the trigger:
+ *   left out it is the icon the right slot would have shown (`rightSlotIcon`,
+ *   or the chevron), and given it is drawn instead — one icon of the caller's
+ *   own, and nothing else.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1150,17 +1263,44 @@ const PickerFirstResolver = (props) => {
  *   something that does. Decoration only — it is wrapped in an `<Icon>`, which
  *   is `aria-hidden`, so anything focusable in there would be reachable by tab
  *   while invisible to assistive tech. Use `rightSlot` for that.
+ *
+ *   The slot only exists beside a value. `variant="icon"` has none, so there is
+ *   no slot either: the icon becomes the trigger itself and is drawn as the
+ *   `ui` — which is also what a caller overrides to draw their own. Nothing
+ *   else is drawn there, the clear cross included: one icon has room for one
+ *   thing.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
  *   interactive right slot goes.
  * @param {string|import("preact").ComponentChildren} [clearConfirm] The
- *   question asked before the clear cross clears anything — same prop a
- *   `<Button confirm>` takes, plain text or JSX. Asked BEFORE the ui state is
- *   emptied, so answering no leaves the field exactly as it was; answering yes
- *   clears and sends, and the picker's own action receives the cleared value
- *   like any other choice.
- * @param {import("preact").ComponentChildren} [clearConfirmPopupContent] The
- *   whole confirmation popup body, replacing the default question + buttons.
+ *   question asked before the clear cross clears anything — the `message` of
+ *   the `<Picker type="confirm">` the cross then is, plain text or JSX. Asked
+ *   BEFORE the ui state is emptied, so answering no leaves the field exactly
+ *   as it was; answering yes clears and sends, and the picker's own action
+ *   receives the cleared value like any other choice.
+ * @param {"icon"|"headless"|"discrete"|"button"|"picker"} [variant] How the
+ *   trigger is drawn. `"button"` is a Button's drawing — surface, padding, a
+ *   centered label, no chevron — and what a `type="confirm"` picker draws
+ *   unless told otherwise: nothing is picked, the popup is a question. Under
+ *   `type="confirm"`, `"picker"` (or an explicit `variant={undefined}`) asks
+ *   for the field-like drawing every other picker has.
+ * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
+ *   question, in the popup's default body — text, or JSX when it needs an
+ *   emphasis, a link. Left out, a generic "are you sure?" in the current
+ *   language. To draw the whole popup instead, pass `children`: yes is then
+ *   whatever carries `--navi-confirm`, no whatever closes (`--navi-cancel`).
+ * @param {import("preact").ComponentChildren} [confirmLabel] `type="confirm"`,
+ *   default body: what the yes button reads. Defaults to the translated
+ *   "Confirm".
+ * @param {import("preact").ComponentChildren} [cancelLabel] Same, for the no
+ *   button. Defaults to the translated "Cancel".
+ * @param {"confirm"|"cancel"|"none"} [focusOnOpen="confirm"] `type="confirm"`,
+ *   default body: which button the keyboard lands on when the popup opens.
+ *   `"cancel"` is the careful choice before something that cannot be undone —
+ *   a stray Enter then answers no.
+ * @param {(confirmEvent: CustomEvent) => void} [onConfirm] Called once the
+ *   popup has closed on a `--navi-confirm` said inside it. What a confirm
+ *   picker uses to run its press; a picker of any type may listen too.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.
@@ -1243,6 +1383,25 @@ const PICKER_RESOLVED_TYPE_SET = new Set([
   "navi_js",
 ]);
 const pickerTypeWarnedSet = new Set();
+// A headless picker draws nothing at all — no value, no slot — so anything a
+// caller wrote for either is silently dropped. Said out loud, because a prop
+// that renders nowhere looks exactly like a prop that does not work.
+let uiDrawnByNobodyWarned = false;
+const warnOnUIDrawnByNobody = (props) => {
+  if (!import.meta.dev || uiDrawnByNobodyWarned) {
+    return;
+  }
+  const { ui, variant } = props;
+  if (variant !== "headless" || ui === undefined || ui === "default") {
+    return;
+  }
+  uiDrawnByNobodyWarned = true;
+  console.warn(
+    `[navi] <Picker variant="headless" ui={…}> — a headless picker draws nothing, so this "ui" is never rendered. ` +
+      `For a trigger that is one icon of your own: <Picker variant="icon" ui={<YourSvg />}>.`,
+  );
+};
+
 const warnOnUnknownPickerType = (props) => {
   if (!import.meta.dev) {
     return;
@@ -1258,7 +1417,7 @@ const warnOnUnknownPickerType = (props) => {
   console.warn(
     `[navi] <Picker type="${type}"> — "${type}" is not a picker type. ` +
       `The picker holds a single text value instead, so an object given to it is written as "[object Object]". ` +
-      `Types are: date, month, week, time, datetime, duration, color, file, text, array, object — ` +
+      `Types are: date, month, week, time, datetime, duration, color, file, text, array, object, confirm — ` +
       `"object" being the one for a popup holding several named controls.`,
   );
 };
@@ -1266,6 +1425,7 @@ const warnOnUnknownPickerType = (props) => {
 export const Picker = createComponentResolver([
   PickerFirstResolver,
   PickerPresetResolver,
+  PickerConfirmResolver,
   PickerCustomResolver,
   PickerTypeResolver,
   PickerButton,

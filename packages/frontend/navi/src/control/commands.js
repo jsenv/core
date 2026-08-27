@@ -1,14 +1,10 @@
 import { chainEvent, dispatchCustomEvent } from "@jsenv/dom";
 
-import {
-  getConfirmParams,
-  requestConfirmation,
-  suspendConfirmParams,
-} from "../action/confirm.js";
 import { navTo } from "../nav/browser_integration/browser_integration.js";
 import {
   findClosestControlWithAction,
   findControlHost,
+  findControlRoot,
   getParentControl,
   isControlRoot,
 } from "./control_dom.js";
@@ -132,6 +128,17 @@ const resolveFirstChildControl = (el) => {
 };
 const resolveClosestExpandable = (el) => {
   return el.closest("[aria-expanded]");
+};
+// The surface a send is decided on: the expandable holding the CONTROL that
+// sends, never one that control is itself. A picker's own root carries
+// aria-expanded for its popup, and a confirm picker pressed as a whole (see
+// picker_confirm.jsx) sends from its input: what it answers is the surface
+// around the picker, not the picker. Same for a popup told to send upward
+// once it has closed (data-after-send="--navi-send"): the surface above it.
+const resolveExpandableAround = (source) => {
+  const sender = findControlRoot(source) || source;
+  const parent = sender.parentElement;
+  return parent ? parent.closest("[aria-expanded]") : null;
 };
 // An element carrying navi-command-proxy-for="anchorId" stands in for that
 // other element as the command's source when the source is forwarded to
@@ -373,62 +380,31 @@ registerNaviCommand("--navi-clear", (source, event) => {
 
     if (fromInput) {
       // clearing input search should not close a popover/dialog
-    } else if (
-      // Only what is open: the clear cross of a picker sits on the closed
-      // trigger, and asking that trigger to close is asking it to do nothing —
-      // except that the ask goes through the interaction gate, which turns it
-      // down while the clear it just sent is still running and says so out loud
-      // ("this element is busy"). A clear pressed INSIDE an open popup is the
-      // one this is for: it answers the popup, so the popup goes away.
-      resolveClosestExpandable(source)?.getAttribute("aria-expanded") === "true"
-    ) {
-      triggerNaviCommand(source, "--navi-close", clearEvent, {
-        optional: true,
-      });
+      return;
     }
+    // Only what is open: the clear cross of a picker sits on the closed
+    // trigger, and asking that trigger to close is asking it to do nothing —
+    // except that the ask goes through the interaction gate, which turns it
+    // down while the clear it just sent is still running and says so out loud
+    // ("this element is busy"). A clear pressed INSIDE an open popup is the
+    // one this is for: it answers the popup, so the popup goes away.
+    const expandable = resolveClosestExpandable(source);
+    if (expandable?.getAttribute("aria-expanded") !== "true") {
+      return;
+    }
+    // Asked of the popup itself, not resolved again from the source: a
+    // `commandfor` on the source belongs to the clear (the cross of a confirm
+    // picker names the input it empties), and a close resolved from it would
+    // aim at that input's picker — busy with the send it was just handed —
+    // rather than at the popup the cross is in.
+    triggerNaviCommand(expandable, "--navi-close", clearEvent, {
+      optional: true,
+    });
   };
 
   return {
     target,
-    implementation: () => {
-      // "Are you sure?" comes before anything is cleared. It is asked here
-      // rather than by the action the clear ends up sending (which is where a
-      // confirmation is normally asked, see use_execute_action) because that
-      // one only runs AFTER the ui state was emptied: the field would go blank
-      // behind the question, and answering "no" would leave it blank over a
-      // value that was never removed.
-      const confirmParams = getConfirmParams(source);
-      if (!confirmParams) {
-        performClear(event);
-        return;
-      }
-      requestConfirmation({
-        ...confirmParams,
-        anchor: source,
-      }).then((confirmed) => {
-        if (!confirmed) {
-          return;
-        }
-        // A new event, chained to the press: the press itself is over and has
-        // been consumed — the control that took the click cancelled it on its
-        // way out so the region around it would not read it as "unfold me" (see
-        // click_to_expand.js), and navi refuses an interaction on a cancelled
-        // event. What happens now happens BECAUSE of that press, which is what
-        // the chain says, but it is no longer that press.
-        const clearConfirmedEvent = new CustomEvent("navi_clear_confirmed", {
-          detail: {},
-        });
-        chainEvent(clearConfirmedEvent, event);
-        // Answered — and the send that follows must not ask it again: it reads
-        // the same question off this same element (getConfirmParams(requester)).
-        const restoreConfirmParams = suspendConfirmParams(source);
-        try {
-          performClear(clearConfirmedEvent);
-        } finally {
-          restoreConfirmParams();
-        }
-      });
-    },
+    implementation: () => performClear(event),
   };
 });
 registerNaviCommand("--navi-reset", (source, event) => {
@@ -496,7 +472,7 @@ const resolveAfterSend = (target, requester) => {
 };
 
 registerNaviCommand("--navi-send", (source, event) => {
-  const expandable = resolveClosestExpandable(source);
+  const expandable = resolveExpandableAround(source);
   const target =
     resolveExplicitTarget(source) ||
     resolveClosestSendTarget(
@@ -902,11 +878,11 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     },
   };
 });
-// "Yes, do it" — said inside the popup an action's `confirm` opened, by its own
-// confirm button or by whatever a caller put there instead (see
-// action/confirm_popup.jsx). Its counterpart is --navi-cancel; the difference
-// between the two is this event, since both then close the popup, and a popup
-// that closes without having said this is the answer "no".
+// "Yes, do it" — said inside the popup of a confirm picker (see
+// picker/picker_confirm.jsx), by its own yes button or by whatever a caller put
+// there instead. Its counterpart is --navi-cancel; the difference between the
+// two is this event, since both then close the popup, and a popup that closes
+// without having said this is the answer "no".
 registerNaviCommand("--navi-confirm", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);

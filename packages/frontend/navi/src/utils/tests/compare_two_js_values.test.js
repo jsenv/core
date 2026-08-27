@@ -268,4 +268,62 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return results;
   });
+
+  test("functions and keyless objects compare by reference", () => {
+    const results = {};
+    const fn = () => 1;
+    results.same_function = compareTwoJsValues(fn, fn);
+    results.different_functions = compareTwoJsValues(
+      () => 1,
+      () => 1,
+    );
+    results.object_with_same_function = compareTwoJsValues({ fn }, { fn });
+    results.object_with_different_functions = compareTwoJsValues(
+      { fn: () => 1 },
+      { fn: () => 1 },
+    );
+    const set = new Set([1]);
+    results.same_set = compareTwoJsValues(set, set);
+    results.different_sets = compareTwoJsValues(new Set([1]), new Set([1]));
+    results.different_maps = compareTwoJsValues(new Map(), new Map());
+    results.different_urls = compareTwoJsValues(
+      new URL("https://example.com"),
+      new URL("https://example.com"),
+    );
+    results.empty_plain_objects = compareTwoJsValues({}, {});
+    results.plain_object_vs_set = compareTwoJsValues({}, new Set());
+    results.dates_same_time = compareTwoJsValues(new Date(0), new Date(0));
+    results.dates_different_time = compareTwoJsValues(new Date(0), new Date(1));
+    class WithFields {
+      constructor() {
+        this.a = 1;
+      }
+    }
+    results.instances_with_fields = compareTwoJsValues(
+      new WithFields(),
+      new WithFields(),
+    );
+    return results;
+  });
+
+  test("cycle guard holds only while a pair is being compared", () => {
+    const results = {};
+    const o = { a: 1 };
+    const o2 = { a: 1 };
+    results.same_object_met_twice = compareTwoJsValues(
+      { x: o, y: o },
+      { x: o2, y: o2 },
+    );
+    results.unordered_equal_objects = compareTwoJsValues(
+      [{ a: 1 }, { a: 1 }, { b: 2 }],
+      [{ b: 2 }, { a: 1 }, { a: 1 }],
+      { ignoreArrayOrder: true },
+    );
+    const cyclicA = { name: "a" };
+    cyclicA.self = cyclicA;
+    const cyclicB = { name: "a" };
+    cyclicB.self = cyclicB;
+    results.cycles_do_not_loop = compareTwoJsValues(cyclicA, cyclicB);
+    return results;
+  });
 });

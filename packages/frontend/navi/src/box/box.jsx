@@ -59,6 +59,8 @@ import {
   resolveInteractions,
   useInteractionsEffect,
 } from "../control/interaction/interactions.js";
+import { OWN_TARGET_ATTRIBUTE } from "../control/own_target.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
@@ -214,12 +216,6 @@ import.meta.css = /* css */ `
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
         flex: 0 1 auto;
-        /* Overflow makes it focusable via tab: apply the outline styles */
-        outline-width: var(--navi-focus-outline-width);
-        /* Outline must appear ON the body, not outside */
-        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
-        outline-offset: calc(-1 * var(--navi-focus-outline-width));
-        overflow: auto;
 
         /* The same reading as the header's corners above, on all four: a body
            follows the corners of the box it is drawn in — which is also what
@@ -228,6 +224,12 @@ import.meta.css = /* css */ `
         border-top-right-radius: inherit;
         border-bottom-right-radius: inherit;
         border-bottom-left-radius: inherit;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
+        overflow: auto;
 
         &:focus-visible {
           outline-style: solid;
@@ -375,17 +377,101 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   childPropSet?: Set<string>,
  *   preventInitialTransition?: boolean,
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
+ *   ownTarget?: boolean | "refuse" | "always",
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
  */
 export const Box = (props) => {
+  const { ref, children, separator, interactions, ...computeProps } = props;
+  const parentBoxFlow = useContext(BoxFlowContext);
+  // Which interactions this box answers, and with what. Read here rather than
+  // on the control, so a swipe or a hold can be declared on anything — a row, a
+  // card, a block of text — and reach the control it belongs to (which is what
+  // carries the action, and what knows it is disabled) by looking for it.
+  // Read through a ref by the effect below: what an interaction DOES is this
+  // render, while WHEN it happens is wired once, at mount (see
+  // useInteractionsEffect).
+  const interactionsRef = useRef(null);
+  interactionsRef.current = resolveInteractions(interactions);
+
+  // What the props say about this box is worked out once per distinct set of
+  // them: a parent re-rendering hands every box below it a new props object,
+  // and most of the time nothing in it has changed. Handlers are the
+  // exception — a closure is new on every render — so they are compared by
+  // name only and put back fresh, see withCurrentHandlers.
+  const renderMemoRef = useRef(null);
+  const renderMemo = renderMemoRef.current;
+  let computed;
+  if (
+    renderMemo &&
+    renderMemo.parentBoxFlow === parentBoxFlow &&
+    arePropsEquivalent(renderMemo.props, computeProps)
+  ) {
+    computed = withCurrentHandlers(renderMemo.computed, computeProps);
+  } else {
+    computed = computeBox(computeProps, parentBoxFlow);
+  }
+  renderMemoRef.current = { props: computeProps, parentBoxFlow, computed };
   const {
-    ref,
+    TagName,
+    boxFlow,
+    boxFlowIsDefault,
+    row,
+    column,
+    aspectRatio,
+    visualSelector,
+    innerClassName,
+    selfForwardedProps,
+    childForwardedProps,
+    styleDeps,
+  } = computed;
+  const syncBox = useCallback(computed.syncBox, styleDeps);
+  const finalRef = useComposeElementRef(syncBox, ref);
+  useInteractionsEffect(finalRef, interactionsRef);
+
+  let innerChildren = children;
+  if (separator) {
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    innerChildren = applySeparatorOnChildren(innerChildren, separator);
+  }
+
+  // When hasChildUsingForwardedProps is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  if (props.hasChildUsingForwardedProps) {
+    innerChildren = (
+      <BoxForwardedPropsContext.Provider value={childForwardedProps}>
+        {innerChildren}
+      </BoxForwardedPropsContext.Provider>
+    );
+  }
+
+  return (
+    <TagName
+      ref={finalRef}
+      className={innerClassName}
+      navi-box-flow={boxFlowIsDefault ? undefined : boxFlow}
+      navi-box-flow-row={row ? "" : undefined}
+      navi-box-flow-column={column ? "" : undefined}
+      navi-aspect-ratio={aspectRatio ? aspectRatio : undefined}
+      data-visual-selector={visualSelector}
+      {...selfForwardedProps}
+    >
+      <BoxFlowContext.Provider value={boxFlow}>
+        {innerChildren}
+      </BoxFlowContext.Provider>
+    </TagName>
+  );
+};
+
+// Everything the props decide, for the JSX and for the DOM sync. Pure, which
+// is what lets Box keep the previous result when the props are equivalent.
+const computeBox = (props, parentBoxFlow) => {
+  const {
     as: asProp = "div",
     baseClassName,
     className,
-    baseStyle,
 
     // style management
     style,
@@ -411,9 +497,6 @@ export const Box = (props) => {
     // (when transition is set via props, this is done automatically)
     // so this prop is useful only when transition is enabled from "outside" (via CSS)
     preventInitialTransition,
-
-    children,
-    separator,
     // Layout roles inside a scrolling container (a Dialog, a Popover): the
     // header stays at the top and the footer at the bottom while the rest
     // scrolls, or — when a body is present — the body is what scrolls and the
@@ -423,22 +506,27 @@ export const Box = (props) => {
     header,
     footer,
     body,
-    // Which interactions this box answers, and with what. Read here rather than
-    // on the control, so a swipe or a hold can be declared on anything — a row, a
-    // card, a block of text — and reach the control it belongs to (which is what
-    // carries the action, and what knows it is disabled) by looking for it.
-    interactions,
+    // A press landing here is aimed AT this box, not at whatever it sits in — a
+    // cross an application draws in a card's corner, a badge on a row that
+    // travels. Writing the attribute is the whole of it here: it is read off
+    // the DOM by the controls above and by the gesture readers, and what an
+    // affordance makes of the read-only around it is a question only a control
+    // can answer (see own_target.js).
+    ownTarget,
     ...rest
   } = props;
+  if (ownTarget) {
+    rest[OWN_TARGET_ATTRIBUTE] = typeof ownTarget === "string" ? ownTarget : "";
+  }
   let as = asProp;
 
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same
   // fact. Dialog and Popover get it the same way, by asking for that overflow.
-  const scrolls = ["overflow", "overflowX", "overflowY"].some((name) => {
-    const value = rest[name];
-    return value === "auto" || value === "scroll";
-  });
+  const scrolls =
+    isScrollingOverflow(rest.overflow) ||
+    isScrollingOverflow(rest.overflowX) ||
+    isScrollingOverflow(rest.overflowY);
   // <header>/<footer> rather than a div: the role is exactly what those tags
   // mean, and a screen reader gets it for free. The body stays a div — <main>
   // means "the main content of the document", which a popup's body is not.
@@ -475,8 +563,6 @@ export const Box = (props) => {
   }
 
   const defaultDisplay = getDefaultDisplay(TagName);
-  // Read the parent flow early so we can use it when display="inherit" is requested.
-  const parentBoxFlow = useContext(BoxFlowContext);
   let { inline, block, flex, grid, row, column } = rest;
   // To obtain flex direction we have the following deprecated props:
   // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
@@ -549,13 +635,6 @@ export const Box = (props) => {
   }
   const boxFlowIsDefault = boxFlow === defaultDisplay;
 
-  // Read through a ref by the effect below: what an interaction DOES is this
-  // render, while WHEN it happens is wired once, at mount (see
-  // useInteractionsEffect).
-  const interactionsRef = useRef(null);
-  interactionsRef.current = resolveInteractions(interactions);
-
-  const remainingPropKeySet = new Set(Object.keys(rest));
   // The box is only a frame and one of its descendants IS the component (a Button
   // and its content): everything, event handlers included, belongs to that
   // descendant.
@@ -565,9 +644,10 @@ export const Box = (props) => {
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
-  let finalRef;
+  let styleDeps;
+  let syncBox;
   styling: {
-    const styleDeps = [
+    styleDeps = [
       // Layout and alignment props
       parentBoxFlow,
       boxFlow,
@@ -583,6 +663,10 @@ export const Box = (props) => {
 
       preventInitialTransition,
     ];
+    // The pseudo state goes into the deps as key/value entries and never as the
+    // object itself: a control builds that object on every render, and its
+    // identity in the deps would re-run the sync — listeners, observers, style
+    // writes — on each of them, for a state that has not changed.
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
@@ -592,30 +676,28 @@ export const Box = (props) => {
         if (pseudoStateKeySet.has(key)) {
           pseudoStateKeySet.delete(key);
           const value = pseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         } else {
           const value = basePseudoState[key];
-          styleDeps.push(value);
+          styleDeps.push(key, value);
           innerPseudoState[key] = value;
         }
       }
       for (const key of pseudoStateKeySet) {
         const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, value);
         innerPseudoState[key] = value;
       }
     } else if (basePseudoState) {
       innerPseudoState = basePseudoState;
       for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, basePseudoState[key]);
       }
     } else if (pseudoState) {
       innerPseudoState = pseudoState;
       for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
+        styleDeps.push(key, pseudoState[key]);
       }
     } else {
       innerPseudoState = PSEUDO_STATE_DEFAULT;
@@ -634,13 +716,12 @@ export const Box = (props) => {
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const canForwardToChild = hasChildUsingForwardedProps;
 
-    const addStyle = (value, name, styleContext, stylesTarget, context) => {
+    const addStyle = (value, name, styleContext, stylesTarget) => {
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
         value,
         name,
         styleContext,
-        context,
       );
       const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
@@ -668,22 +749,21 @@ export const Box = (props) => {
       name,
       styleContext,
       stylesTarget,
-      context,
       visualChildPropStrategy,
     ) => {
       if (!visualChildPropStrategy) {
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
         return false;
       }
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
-        addStyle(value, name, styleContext, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget);
       }
       if (!canForwardToChild) {
         return false;
@@ -696,7 +776,6 @@ export const Box = (props) => {
     // style={{ ":hover": { backgroundColor: "red" } }}
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
-    boxPseudoNamedStyles = {};
     const visitProp = (
       value,
       name,
@@ -709,6 +788,9 @@ export const Box = (props) => {
       if (isPseudoElement || isPseudoClass) {
         styleDeps.push(name);
         pseudoClassesFromStyleSet.add(name);
+        if (boxPseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT) {
+          boxPseudoNamedStyles = {};
+        }
         const pseudoStyleContext = {
           ...styleContext,
           styleCSSVars: {
@@ -741,19 +823,17 @@ export const Box = (props) => {
             pseudoClassStyles,
             "pseudo_style",
           );
-          boxPseudoNamedStyles[name] = pseudoClassStyles;
         }
+        boxPseudoNamedStyles[name] = pseudoClassStyles;
         return;
       }
 
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+      if (styleOrigin === "style") {
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       if (name.startsWith("--")) {
-        addStyle(value, name, styleContext, boxStylesTarget, context);
+        addStyle(value, name, styleContext, boxStylesTarget);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -772,7 +852,6 @@ export const Box = (props) => {
             name,
             styleContext,
             boxStylesTarget,
-            context,
             visualChildPropStrategy,
           );
           if (needForwarding) {
@@ -796,7 +875,6 @@ export const Box = (props) => {
             styleName,
             styleContext,
             boxStylesTarget,
-            context,
             visualChildPropStrategy,
           );
         }
@@ -839,13 +917,7 @@ export const Box = (props) => {
       return;
     };
 
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        visitProp(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
-    for (const propName of remainingPropKeySet) {
+    for (const propName of Object.keys(rest)) {
       const propValue = rest[propName];
       if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
         if (canForwardToChild) {
@@ -854,9 +926,6 @@ export const Box = (props) => {
           selfForwardedProps[propName] = propValue;
         }
         continue;
-      }
-      if (canForwardToChild && toCopySet.has(propName)) {
-        childForwardedProps[propName] = propValue;
       }
       const isDataAttribute = propName.startsWith("data-");
       if (isDataAttribute) {
@@ -904,7 +973,6 @@ export const Box = (props) => {
       }
     }
 
-    styleDeps.push(pseudoStateSelector, innerPseudoState);
     let innerPseudoClasses;
     if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
@@ -921,7 +989,7 @@ export const Box = (props) => {
         styleDeps.push(...pseudoClasses);
       }
     }
-    const syncBox = useCallback((boxEl) => {
+    syncBox = (boxEl) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
@@ -950,49 +1018,24 @@ export const Box = (props) => {
         elementListeningPseudoState:
           visualEl === pseudoStateEl ? null : visualEl,
       });
-    }, styleDeps);
-    finalRef = useComposeElementRef(syncBox, ref);
+    };
   }
-  useInteractionsEffect(finalRef, interactionsRef);
-
-  let innerChildren = children;
-  if (separator) {
-    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
-    innerChildren = applySeparatorOnChildren(innerChildren, separator);
-  }
-
-  // When hasChildUsingForwardedProps is used it means
-  // Some/all the children needs to access remainingProps
-  // to render and will provide a function to do so.
-  if (hasChildUsingForwardedProps) {
-    innerChildren = (
-      <BoxForwardedPropsContext.Provider value={childForwardedProps}>
-        {innerChildren}
-      </BoxForwardedPropsContext.Provider>
-    );
-  }
-
   const aspectRatio = rest.square || rest.circle ? "1/1" : rest.aspectRatio;
-
-  return (
-    <TagName
-      ref={finalRef}
-      className={innerClassName}
-      navi-box-flow={boxFlowIsDefault ? undefined : boxFlow}
-      navi-box-flow-row={row ? "" : undefined}
-      navi-box-flow-column={column ? "" : undefined}
-      navi-aspect-ratio={aspectRatio ? aspectRatio : undefined}
-      data-visual-selector={visualSelector}
-      {...selfForwardedProps}
-    >
-      <BoxFlowContext.Provider value={boxFlow}>
-        {innerChildren}
-      </BoxFlowContext.Provider>
-    </TagName>
-  );
+  return {
+    TagName,
+    boxFlow,
+    boxFlowIsDefault,
+    row,
+    column,
+    aspectRatio,
+    visualSelector,
+    innerClassName,
+    selfForwardedProps,
+    childForwardedProps,
+    styleDeps,
+    syncBox,
+  };
 };
-
-const toCopySet = new Set([]);
 
 export const applySeparatorOnChildren = (children, separator) => {
   const flattenedChildren = toChildArray(children);
@@ -1049,4 +1092,51 @@ const isNonZeroSpacing = (value) => {
     return false;
   }
   return true;
+};
+const isScrollingOverflow = (value) => value === "auto" || value === "scroll";
+
+// Same props as far as computeBox is concerned. Handlers count by name only,
+// see withCurrentHandlers; no style or state key starts with "on".
+const arePropsEquivalent = (previousProps, props) =>
+  compareTwoJsValues(previousProps, props, { keyComparator: comparePropAt });
+const comparePropAt = (a, b, key, recurse) => {
+  if (typeof key === "string" && key.startsWith("on")) {
+    return true;
+  }
+  return recurse(a, b);
+};
+// The previous computation with this render's handlers: a handler goes where
+// its name went the previous time, self or child, the split being decided by
+// props that are the same. The forwarded objects keep their identity when no
+// handler changed, so what reads them through context sees nothing new.
+const withCurrentHandlers = (computed, props) => {
+  let { selfForwardedProps, childForwardedProps } = computed;
+  for (const key of Object.keys(props)) {
+    if (!key.startsWith("on")) {
+      continue;
+    }
+    const value = props[key];
+    if (Object.hasOwn(childForwardedProps, key)) {
+      if (childForwardedProps[key] !== value) {
+        if (childForwardedProps === computed.childForwardedProps) {
+          childForwardedProps = { ...childForwardedProps };
+        }
+        childForwardedProps[key] = value;
+      }
+    } else if (Object.hasOwn(selfForwardedProps, key)) {
+      if (selfForwardedProps[key] !== value) {
+        if (selfForwardedProps === computed.selfForwardedProps) {
+          selfForwardedProps = { ...selfForwardedProps };
+        }
+        selfForwardedProps[key] = value;
+      }
+    }
+  }
+  if (
+    selfForwardedProps === computed.selfForwardedProps &&
+    childForwardedProps === computed.childForwardedProps
+  ) {
+    return computed;
+  }
+  return { ...computed, selfForwardedProps, childForwardedProps };
 };

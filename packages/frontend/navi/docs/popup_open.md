@@ -8,6 +8,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [Which element receives the command](#which-element-receives-the-command)
 - [The anchor](#the-anchor)
 - [Opening it ON something](#opening-it-on-something)
+- [A press that opens a popup and acts on it](#a-press-that-opens-a-popup-and-acts-on-it)
 - [Reacting to open and close](#reacting-to-open-and-close)
 - [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
 - [When `open` is the right answer, and what it costs](#when-open-is-the-right-answer-and-what-it-costs)
@@ -201,6 +202,107 @@ A `navi_request_open` listener added on the element is the request itself, ahead
 of the popup acting on it — but it is ordered against the popup's own handler by
 registration, and it has to be attached in an effect on a ref. `onOpen` is that
 moment, said as a prop.
+
+## A press that opens a popup and acts on it
+
+A press that opens something and then does something with what came of it — a
+"save this guest" prompt on a row, which replaces the guest once the profile
+exists — is not a dialog plus a way home. It is a `Picker`: a trigger, a popup,
+and an `action` that runs on what the popup settled.
+
+```jsx
+// one per row: the trigger IS the thing that receives the answer
+<Picker
+  variant="icon"
+  rightSlotIcon={<DisketteSvg />}
+  action={async (created) => {
+    await USERS.GET_MANY.rerun();
+    replaceGuest(guest, created);
+  }}
+>
+  <GuestSavePrompt kind="player" name={guest.name} />
+</Picker>
+```
+
+Two things fall out of writing it this way, and both are the reason to prefer it
+over a shared dialog opened by `--navi-open`:
+
+- **what the popup needs to know travels as props**, because the popup is
+  written where the press is. No value to carry through the command, nothing to
+  read back out of an event;
+- **the popup is built the first time it opens**, not once per row on the render
+  that draws the list (see [what a popup holds while it is
+  closed](#what-the-popup-holds-while-it-is-closed)). A hundred rows is a
+  hundred triggers, not a hundred dialogs.
+
+The same component can of course be written once and used in every picker —
+`<GuestSavePrompt>` above is one — so "the prompt exists once" is a question
+about components, not about the DOM.
+
+### Composing a value, or doing work
+
+A picker mirrors **one** control in its popup — the first one that is not a
+button, a link or a control saying it is not the answer (`allowNameless`). That
+mirror is what makes `<Picker><List selectable/></Picker>` work with nothing
+wired: the picker's value IS the list's, both ways, and the picker's `action`
+runs on it when the popup closes.
+
+That is the shape for a popup that **composes a value**. A popup that **does
+work** — creates a profile, uploads a file — is the other shape, and it does not
+need the picker's `action` at all: the work is written where the press is, so
+its callback already has everything around it.
+
+```jsx
+<Picker variant="icon" rightSlotIcon={<DisketteSvg />}>
+  <Form
+    action={async (fields) => {
+      const created = await USERS.POST(fields);
+      replaceGuest(guest, created); // the row is right here
+    }}
+  >
+    …
+  </Form>
+</Picker>
+```
+
+Nothing travels back, because nothing left. This is the difference a shared
+dialog hides: a popup written once, far from every press that opens it, has to
+be told what it is about and has to answer somebody — and neither question
+exists once the popup is written where it is used.
+
+### A trigger that is only an icon
+
+`variant="icon"` draws no value, and therefore no slot beside one either: the
+whole trigger is its `ui`.
+
+```jsx
+<Picker variant="icon" ui={<DisketteSvg />} />
+```
+
+Left out, that `ui` is the icon the slot would have shown — the chevron, or the
+one the picker's type carries (a pencil for `type="text"`, a calendar for
+`type="date"`), so `<Picker type="date" variant="icon" />` is a calendar and
+nothing else. `rightSlotIcon`/`rightSlot` belong to the shapes that DO draw a
+value and want something beside it; under `variant="icon"` the first is only the
+default for `ui`, and the second has nowhere to go — the clear cross included.
+
+### When a shared popup is still the right answer
+
+Two cases, and only two:
+
+- **the press can come from anywhere** — a keyboard shortcut, a menu, a button,
+  all opening the same thing. Written per press it would exist several times
+  over, each with its own open state;
+- **the popup has to outlive its trigger** — a row that leaves while its dialog
+  is open (a list refreshing under it) takes a popup written inside it with it.
+
+Neither is "one popup per row of a list", which is what a picker is for.
+
+Do not mix the two. A `<Form>` at the root of a picker's popup IS the mirrored
+control, so its value is the picker's value: handing the picker something else
+(a created profile, say) pushes it back down into the form's named fields and
+comes back as the form's aggregate. When the popup does work, let the work keep
+its result.
 
 ## Reacting to open and close
 

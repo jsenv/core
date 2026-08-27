@@ -2702,6 +2702,12 @@ const normalizeStyle = (
 
   if (colorPropertySet.has(propertyName)) {
     if (typeof value === "string") {
+      if (context === "css") {
+        // A string is already what the DOM takes, and it takes more of them
+        // (system colors, relative color syntax) than this parser knows;
+        // parsing it to rgba and back would only cost.
+        return value;
+      }
       if (isCSSKeyword(value)) {
         return value;
       }
@@ -9478,7 +9484,9 @@ const css$4 = /* css */`
     touch-action: pinch-zoom;
   }
   [data-drag-ignore],
-  [data-own-target] {
+  [data-own-target],
+  [data-drag-source] [popover],
+  [data-drag-source] dialog {
     -webkit-touch-callout: default;
     touch-action: auto;
   }
@@ -11920,7 +11928,8 @@ const css$1 = /* css */`
      whoever puts the drag there asks for the hand when a grab really is the
      first thing the element offers.
      An opted-out area keeps both its cursor and its selection, and never starts
-     a drag (see the check in startDragTo).
+     a drag (see the check in startDragTo); a popover or a dialog anchored in a
+     source is one without having to say so.
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself.
      Only the resting cursor is set here: what it becomes once a drag is under
@@ -11933,7 +11942,9 @@ const css$1 = /* css */`
     cursor: default;
   }
   [data-drag-ignore],
-  [data-own-target] {
+  [data-own-target],
+  [data-drag-source] [popover],
+  [data-drag-source] dialog {
     cursor: auto;
   }
 
@@ -12033,8 +12044,12 @@ import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
 // control that reads the pointer itself. `data-own-target` is the same fact said
 // once for every gesture there is: an element declaring that a press landing on
 // it is aimed AT it, whatever it happens to sit inside (see also
-// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js).
-const DRAG_IGNORED_SELECTOR = "[data-drag-ignore],[data-own-target]";
+// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js). A popover or a dialog says it
+// without being asked: it is a layer OVER the surface, so a press in it is aimed
+// at the layer — yet it stays a descendant of whatever it is anchored in (a
+// callout next to a button, in the card that carries both), and the press
+// bubbles through the surface as if it had landed on it.
+const DRAG_IGNORED_SELECTOR = "[data-drag-ignore],[data-own-target],[popover],dialog";
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -12534,8 +12549,8 @@ const startDragTo = (event, effects, {
   ...options
 } = {}) => {
   // An area that opted out of dragging (a text one wants to select, a control that
-  // owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
+  // owns the gesture, a callout): the press there is none of our business.
+  if (isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -12716,8 +12731,8 @@ const startDragToCarryCopy = (event, {
   ...options
 }) => {
   // An area that opted out of dragging (a text one wants to select, a control
-  // that owns the gesture): the press there is none of our business.
-  if (event.target.closest && event.target.closest(DRAG_IGNORED_SELECTOR)) {
+  // that owns the gesture, a callout): the press there is none of our business.
+  if (isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -13225,6 +13240,18 @@ const createDragClone = (element, pointerEvent) => {
   return wrapper;
 };
 
+// The nearest word about the press wins: an opted-out area INSIDE the dragged
+// element takes the press away from it, one AROUND it does not — a list
+// reordered inside a dialog, or a dialog carried by its own handle, is itself the
+// last thing said before the finger.
+const isPressIgnored = (target, draggedElement) => {
+  if (!target.closest) {
+    return false;
+  }
+  const ignored = target.closest(DRAG_IGNORED_SELECTOR);
+  return Boolean(ignored) && !ignored.contains(draggedElement);
+};
+
 const startDragToResizeGesture = (
   pointerdownEvent,
   { onDragStart, onDrag, onRelease, ...options },
@@ -13465,8 +13492,10 @@ const DRAG_RESISTANCE = 0.3;
 // place whose only purpose is to be taken hold of, from the first pixel. And so
 // is an OWN TARGET: an element saying a press landing on it is aimed at IT,
 // which is the same sentence said to every gesture at once rather than to this
-// one (see DRAG_IGNORED_SELECTOR in drag_to.js).
-const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", "[data-own-target]"].join(",");
+// one (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
+// dialog: a layer OVER the box, whose press only bubbles through the box because
+// the layer is anchored in it.
+const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", "[data-own-target]", "[popover]", "dialog"].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
 // whoever owns the box: it is what a box ABOVE another reads to know the
@@ -13692,7 +13721,7 @@ const startDragToTravel = (pointerDownEvent, {
   onGiveUp = () => {}
 }) => {
   const target = pointerDownEvent.target;
-  if (!target.closest || target.closest(DRAG_EXCLUDED_SELECTOR)) {
+  if (!target.closest || isPressExcluded(target, element)) {
     return null;
   }
   // A box between the finger and this one that travels the same way, and then
@@ -14153,7 +14182,7 @@ const watchWheelTravel = (element, {
       const {
         target
       } = wheelEvent;
-      if (target.closest && target.closest(DRAG_EXCLUDED_SELECTOR) || scrollRoomTowards(target, element, axis, sign) ||
+      if (target.closest && isPressExcluded(target, element) || scrollRoomTowards(target, element, axis, sign) ||
       // …plus the third: a box below this one that travels on this axis. Its
       // watcher hears the same wheel event this one does — they all listen at
       // the document — so without this both step, and one push moves two
@@ -14242,6 +14271,14 @@ const watchWheelTravel = (element, {
     releaseWheelGesture(element);
     forgetGesture();
   };
+};
+
+// The nearest word wins: what is excluded INSIDE the box takes the press away
+// from it, what is around the box does not — a docked dialog IS the box that
+// travels, and being a dialog is no reason for it to refuse its own press.
+const isPressExcluded = (target, element) => {
+  const excluded = target.closest(DRAG_EXCLUDED_SELECTOR);
+  return Boolean(excluded) && !excluded.contains(element);
 };
 
 // Shared by navi's own use_displayed_layout_effect.js (rich "navi_displayed"
@@ -19720,14 +19757,22 @@ const getMaxWidth = (
  * Summing their `width` values therefore over-counts the true line width.
  *
  * Instead we compute the bounding extent per line: track the minimum `left`
- * and maximum `right` across all rects sharing the same rounded `top`, then
- * use `right - left` as the line width. This is correct regardless of nesting
+ * and maximum `right` across all rects of the same line, then use
+ * `right - left` as the line width. This is correct regardless of nesting
  * depth and works well for regular inline text content.
  *
- * Limitation: rects are grouped by `Math.round(r.top)`, so elements on the
- * same visual line but with slightly different baselines (e.g. an icon taller
- * than surrounding text) could be counted as separate lines. This is unlikely
- * to matter in practice for normal text rendering.
+ * ## Implementation note — lines are found by vertical overlap
+ *
+ * Boxes sharing a line do not share a `top`: an inline icon sized to 1em and
+ * sitting on the baseline, a superscript, an inline-block, all start a pixel
+ * or a fraction of one away from the text beside them (and that fraction
+ * moves with a sub-pixel scroll offset). Grouping rects by their rounded
+ * `top` would count such a box as a line of its own, and the "longest line"
+ * would come out as the text without it — short enough to make it wrap once
+ * applied as a width. A rect therefore joins the line it overlaps vertically
+ * by more than half the smaller of the two heights: boxes on one line share
+ * most of their height, while the text rects of two consecutive lines overlap
+ * by a sliver at most (a line-height below the font's content height).
  *
  * Limitation: `range.getClientRects()` returns rects for text nodes and inline
  * boxes as laid out in the flow, ignoring any `overflow: hidden` or `max-width`
@@ -19745,37 +19790,60 @@ const measureLongestVisualLineWidth = (el) => {
   const range = document.createRange();
   range.selectNodeContents(el);
 
-  const lineBoundsByTop = new Map();
-  for (const r of range.getClientRects()) {
-    if (r.width === 0) {
+  const lines = [];
+  for (const rect of range.getClientRects()) {
+    if (rect.width === 0) {
       continue;
     }
-    const top = Math.round(r.top);
-    const existing = lineBoundsByTop.get(top);
-    if (existing === undefined) {
-      lineBoundsByTop.set(top, { left: r.left, right: r.right });
-    } else {
-      if (r.left < existing.left) {
-        existing.left = r.left;
-      }
-      if (r.right > existing.right) {
-        existing.right = r.right;
-      }
+    const line = lines.find((candidate) => sharesLine(candidate, rect));
+    if (line === undefined) {
+      lines.push({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+      });
+      continue;
+    }
+    if (rect.top < line.top) {
+      line.top = rect.top;
+    }
+    if (rect.bottom > line.bottom) {
+      line.bottom = rect.bottom;
+    }
+    if (rect.left < line.left) {
+      line.left = rect.left;
+    }
+    if (rect.right > line.right) {
+      line.right = rect.right;
     }
   }
 
-  if (lineBoundsByTop.size <= 1) {
+  if (lines.length <= 1) {
     return null;
   }
 
   let longestLineWidth = 0;
-  for (const { left, right } of lineBoundsByTop.values()) {
+  for (const { left, right } of lines) {
     const w = right - left;
     if (w > longestLineWidth) {
       longestLineWidth = w;
     }
   }
   return longestLineWidth;
+};
+
+const sharesLine = (line, rect) => {
+  const overlapTop = rect.top > line.top ? rect.top : line.top;
+  const overlapBottom = rect.bottom < line.bottom ? rect.bottom : line.bottom;
+  const overlap = overlapBottom - overlapTop;
+  if (overlap <= 0) {
+    return false;
+  }
+  const rectHeight = rect.bottom - rect.top;
+  const lineHeight = line.bottom - line.top;
+  const smallerHeight = rectHeight < lineHeight ? rectHeight : lineHeight;
+  return overlap > smallerHeight / 2;
 };
 
 // Measures the width of the widest row of direct children.

@@ -168,6 +168,39 @@ To merely REMEMBER the value rather than send it, neither is the answer: bind a
 signal and drop the callback entirely — see
 [control_value.md](./control_value.md).
 
+## A press that opens something and waits for the answer
+
+A press that runs work is an `action`; one that reports a value is a `uiAction`;
+one that asks something of a control near it is a `command` (a value proposed is
+`--navi-update`, see
+[control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)).
+Reaching for a plain `onClick` usually means one of those was missed.
+
+The press that looks like a fourth case is the one that opens something and then
+does something with what came of it — "save this guest", pressed on a row,
+replacing the guest once the profile exists. It is not a fourth case and it is
+not a dialog plus a way home: it is a `Picker`, whose whole shape is a trigger,
+a popup, and an `action` that runs on what the popup settled.
+
+```jsx
+<Picker variant="icon" rightSlotIcon={<DisketteSvg />} action={onCreated}>
+  <GuestSavePrompt kind="player" name={guest.name} />
+</Picker>
+```
+
+Written this way, what the popup needs to know travels as props rather than
+through the press, and the popup is built the first time it opens rather than
+once per row. See
+[popup_open.md](./popup_open.md#a-press-that-opens-a-popup-and-acts-on-it).
+
+What is left for an `onClick` is what no value can express — imperative work
+with nothing to open and nothing to send. And one nuance worth knowing: on an
+`ownTarget`, a caller's `onClick` runs inside that control's own interaction
+gate rather than firing from the DOM (see
+[interactions.md](./interactions.md#an-affordance-inside-somebody-elses-box-owntarget)),
+so the usual objection — an `onClick` fires on a read-only control — does not
+apply there. Everywhere else it does.
+
 ## `uiAction` mirrors the state, it does not report a gesture
 
 `uiAction` fires whenever the control's state changes, whoever changed it. The

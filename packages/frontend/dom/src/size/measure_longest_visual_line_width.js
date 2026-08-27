@@ -19,14 +19,22 @@
  * Summing their `width` values therefore over-counts the true line width.
  *
  * Instead we compute the bounding extent per line: track the minimum `left`
- * and maximum `right` across all rects sharing the same rounded `top`, then
- * use `right - left` as the line width. This is correct regardless of nesting
+ * and maximum `right` across all rects of the same line, then use
+ * `right - left` as the line width. This is correct regardless of nesting
  * depth and works well for regular inline text content.
  *
- * Limitation: rects are grouped by `Math.round(r.top)`, so elements on the
- * same visual line but with slightly different baselines (e.g. an icon taller
- * than surrounding text) could be counted as separate lines. This is unlikely
- * to matter in practice for normal text rendering.
+ * ## Implementation note — lines are found by vertical overlap
+ *
+ * Boxes sharing a line do not share a `top`: an inline icon sized to 1em and
+ * sitting on the baseline, a superscript, an inline-block, all start a pixel
+ * or a fraction of one away from the text beside them (and that fraction
+ * moves with a sub-pixel scroll offset). Grouping rects by their rounded
+ * `top` would count such a box as a line of its own, and the "longest line"
+ * would come out as the text without it — short enough to make it wrap once
+ * applied as a width. A rect therefore joins the line it overlaps vertically
+ * by more than half the smaller of the two heights: boxes on one line share
+ * most of their height, while the text rects of two consecutive lines overlap
+ * by a sliver at most (a line-height below the font's content height).
  *
  * Limitation: `range.getClientRects()` returns rects for text nodes and inline
  * boxes as laid out in the flow, ignoring any `overflow: hidden` or `max-width`
@@ -44,35 +52,58 @@ export const measureLongestVisualLineWidth = (el) => {
   const range = document.createRange();
   range.selectNodeContents(el);
 
-  const lineBoundsByTop = new Map();
-  for (const r of range.getClientRects()) {
-    if (r.width === 0) {
+  const lines = [];
+  for (const rect of range.getClientRects()) {
+    if (rect.width === 0) {
       continue;
     }
-    const top = Math.round(r.top);
-    const existing = lineBoundsByTop.get(top);
-    if (existing === undefined) {
-      lineBoundsByTop.set(top, { left: r.left, right: r.right });
-    } else {
-      if (r.left < existing.left) {
-        existing.left = r.left;
-      }
-      if (r.right > existing.right) {
-        existing.right = r.right;
-      }
+    const line = lines.find((candidate) => sharesLine(candidate, rect));
+    if (line === undefined) {
+      lines.push({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+      });
+      continue;
+    }
+    if (rect.top < line.top) {
+      line.top = rect.top;
+    }
+    if (rect.bottom > line.bottom) {
+      line.bottom = rect.bottom;
+    }
+    if (rect.left < line.left) {
+      line.left = rect.left;
+    }
+    if (rect.right > line.right) {
+      line.right = rect.right;
     }
   }
 
-  if (lineBoundsByTop.size <= 1) {
+  if (lines.length <= 1) {
     return null;
   }
 
   let longestLineWidth = 0;
-  for (const { left, right } of lineBoundsByTop.values()) {
+  for (const { left, right } of lines) {
     const w = right - left;
     if (w > longestLineWidth) {
       longestLineWidth = w;
     }
   }
   return longestLineWidth;
+};
+
+const sharesLine = (line, rect) => {
+  const overlapTop = rect.top > line.top ? rect.top : line.top;
+  const overlapBottom = rect.bottom < line.bottom ? rect.bottom : line.bottom;
+  const overlap = overlapBottom - overlapTop;
+  if (overlap <= 0) {
+    return false;
+  }
+  const rectHeight = rect.bottom - rect.top;
+  const lineHeight = line.bottom - line.top;
+  const smallerHeight = rectHeight < lineHeight ? rectHeight : lineHeight;
+  return overlap > smallerHeight / 2;
 };

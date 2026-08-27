@@ -461,6 +461,9 @@ const css = /* css */`
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --navi-button-padding-x-default: 6px;
       --navi-button-padding-y-default: 1px;
+      /* Read by Button, and by whatever is drawn as one (a picker under
+         variant="button"), so the two keep the same surface. */
+      --navi-button-background-color: light-dark(#f3f4f6, #2d3748);
       /* For list item we need slightly more padding to be able to see radio/checkbox outline */
       --navi-list-item-padding-x-default: 4px;
       --navi-list-item-padding-y-default: 1px;
@@ -491,16 +494,6 @@ const css = /* css */`
          pulls visual focus onto the popover's own content. */
       --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
       --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
-
-      /* The popup an action's "confirm" asks its question in. Its own tokens
-         rather than the popup ones above: every confirmation in an app is
-         re-shaped together here, without touching the pickers and panels that
-         are also popups. */
-      --navi-confirm-popup-padding: var(--navi-m);
-      --navi-confirm-popup-spacing: var(--navi-m);
-      --navi-confirm-popup-action-spacing: var(--navi-s);
-      --navi-confirm-popup-min-width: 180px;
-      --navi-confirm-popup-max-width: 320px;
 
       /* Link colors. They live here rather than only on .navi_link because a
          var declared on the element itself always beats the same var inherited

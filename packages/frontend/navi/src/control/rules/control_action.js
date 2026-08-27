@@ -19,7 +19,6 @@
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
-import { getConfirmParams } from "../../action/confirm.js";
 import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { dispatchRequestInteraction } from "./control_interaction.js";
@@ -160,15 +159,6 @@ export const tryActionAfterInteractionAllowed = (
   // requester.
   const hasOwnAction = Boolean(controller?.props.action);
 
-  // What the requester asks before the action runs at all, read off it rather
-  // than passed down from each call site: a confirmation belongs to the button
-  // the user pressed, whichever route brought the request here. Only asked on
-  // the request that carries the real work, or the same press would ask twice.
-  const confirmParams =
-    hasOwnAction || requester !== controlHost
-      ? getConfirmParams(requester)
-      : undefined;
-
   // Resolve proxy so navi_action_* fires on the real control element.
   let elementForAction = controlHost;
   let uiState;
@@ -224,7 +214,6 @@ export const tryActionAfterInteractionAllowed = (
       action,
       method,
       meta,
-      confirmParams,
     });
   }
   return true;

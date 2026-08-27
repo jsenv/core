@@ -80,6 +80,10 @@ naviI18n.addAll({
     en: "Confirm",
     fr: "Confirmer",
   },
+  "confirm.message": {
+    en: "Are you sure you want to do this?",
+    fr: "Êtes-vous sûr de vouloir faire cette action ?",
+  },
   "button.more_actions": {
     en: "More actions",
     fr: "Autres actions",
