@@ -2,6 +2,7 @@ import {
   closestOpenableAncestor,
   getAncestorOpenType,
   isAncestorOpen,
+  isDisplayedDespiteClosedAncestor,
   observeAncestorOpenState,
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -24,6 +25,13 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *     observeAncestorOpenState for exactly how that's detected, and why it
  *     matters that it happens before the browser paints.
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
+ *   - Inside the always-on-screen part of a *closed* one — a picker's façade,
+ *     an expandable's header, a <summary>: those elements are displayed the
+ *     whole time their ancestor reads as closed (aria-expanded on a trigger
+ *     describes the popup it controls, not its own contents). They run on
+ *     mount like anything else on screen, and the ancestor opening later
+ *     reveals nothing about them, so it does not re-run them either. See
+ *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
  * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
@@ -56,6 +64,10 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
+  // Set by the mount effect below for an element that lives in its openable
+  // ancestor's façade rather than in what that ancestor opens.
+  const displayedWhileAncestorClosedRef = useRef(false);
+
   // Run on mount (or when deps change) — but only if the element is visible.
   useLayoutEffect(() => {
     const el = ref.current;
@@ -68,9 +80,16 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; the observeAncestorOpenState call
-      // below will fire once it opens.
-      return;
+      if (!isDisplayedDespiteClosedAncestor(el)) {
+        // Ancestor is closed and took this element off screen with it — skip
+        // now; the observeAncestorOpenState call below will fire once it
+        // opens.
+        return;
+      }
+      // Closed, yet on screen: the ancestor is the trigger of what is
+      // closed, not the thing itself, and this element belongs to the façade
+      // it keeps showing.
+      displayedWhileAncestorClosedRef.current = true;
     }
     callbackRef.current(el, createDisplayedEvent(ancestor, false));
   }, deps);
@@ -87,6 +106,12 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     return observeAncestorOpenState(ancestor, ({ isOpen }) => {
       if (!isOpen) {
+        return;
+      }
+      if (displayedWhileAncestorClosedRef.current) {
+        // Façade content: on screen the whole time, so this opening reveals
+        // nothing here — and `becauseAncestorOpened: true` about it would be
+        // false in a way consumers act on (see use_auto_focus.js).
         return;
       }
       const lastEl = ref.current;

@@ -68,6 +68,11 @@ export const CONTROL_PROP_SET = new Set([
 
   "loading",
   "basePseudoState",
+  // App constraints this control must satisfy, on top of the ones navi ships:
+  // `constraints={[MY_CONSTRAINT]}`. A constraint is an object, so it carries
+  // its own parameters — nothing has to travel through an attribute. Read on
+  // every check in control_validation.js; `registerGlobalConstraint` is the
+  // same thing for every control at once.
   "constraints",
 
   // A real target inside a zone that belongs to another control — see

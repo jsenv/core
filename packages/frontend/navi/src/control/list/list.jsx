@@ -51,10 +51,11 @@ const PendingScrollRefContext = createContext(null);
 //   "muted"               — keep in DOM, visible but opacified and still interactive
 const SearchNoMatchModeContext = createContext("remove");
 
-// When total rendered items exceeds renderBudget, a render window [start, end)
-// is activated to cap the number of DOM nodes. Items outside the window return
-// null. The window slides as the user scrolls, using actual DOM positions
-// (getBoundingClientRect) to find the first visible item — no height estimation.
+// How many rows the list draws at once. Past that, a render window [start, end)
+// caps the number of DOM nodes: the window slides as the user scrolls, using
+// actual DOM positions (getBoundingClientRect) to find the first visible item —
+// no height estimation. It frames the rows a run draws (see ListItems); items
+// declared one by one (<List.Item>) are all drawn, whatever the budget.
 const RENDER_BUDGET_DEFAULT = 100;
 
 // Attribute used on <li> elements rendered by ListItemReal so the scroll listener
@@ -63,8 +64,9 @@ const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
 // Rows standing in for content that has not arrived (see List's renderSkeleton).
 const SKELETON_LIST_ITEM_CLASS = "navi_list_item_skeleton";
 
-// Carries the render window {start, end} (or null = render all) from
-// List down to each ListItem.
+// Carries the render window {start, end} from List down to the runs of rows
+// inside it (see ListItems): a run draws the rows it frames and holds the room
+// of the others.
 const RenderWindowContext = createContext(null);
 // Carries List's own `columns` prop (a grid-template-columns value, e.g.
 // "1fr auto auto") down to each ListItem/filler/fallback so they can render
@@ -918,13 +920,47 @@ const ListUI = (props) => {
     horizontal,
   });
 
+  // renderBudget frames the rows of a run; a list whose items are all declared
+  // one by one draws every one of them, and the prop looks exactly like it is
+  // doing something. Said once per list, when there is something drawn to
+  // judge it on — a run mounting later (rows behind a loading state) is not a
+  // list without one.
+  const renderBudgetWarnedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (props.renderBudget === undefined || renderBudgetWarnedRef.current) {
+      return;
+    }
+    if (virtual.hasRuns() || tracker.itemsSignal.peek().length === 0) {
+      return;
+    }
+    renderBudgetWarnedRef.current = true;
+    console.warn(
+      `List: renderBudget=${renderBudget} has no effect here. The render window frames the rows a run draws (<List.Items itemsAction>); items declared one by one (<List.Item>) are all rendered. Move the items to <List.Items> to cap the number of DOM nodes, or drop the prop.`,
+    );
+  });
+
   virtual.captureAnchor = captureAnchor;
   virtual.virtualItemSizeSignal = virtualItemSizeSignal;
   virtual.horizontal = Boolean(horizontal);
   virtual.renderSkeleton = renderSkeleton;
 
+  // A row is addressed by id from outside (--navi-scroll, --navi-select): the
+  // ones drawn have registered themselves with the tracker, and the ones a run
+  // holds without drawing are known only to that run (see List.Items' row
+  // locator). Both answer here, so a row is reachable whether or not the
+  // window happens to frame it.
   const getItemById = (itemId) => {
-    return tracker.itemsSignal.peek().find((item) => item.id === itemId);
+    const itemDrawn = tracker.itemsSignal
+      .peek()
+      .find((item) => item.id === itemId);
+    if (itemDrawn) {
+      return itemDrawn;
+    }
+    const rowIndex = virtual.locateRow(itemId);
+    if (rowIndex === null) {
+      return undefined;
+    }
+    return { id: itemId, index: rowIndex };
   };
 
   const noMatchCount = tracker.noMatchCountSignal.value;
@@ -3617,6 +3653,9 @@ const createListVirtual = () => {
       passId++;
       nextIndex = 0;
     },
+    // Whether any run of rows lives in this list: what makes a render window
+    // mean anything (see List's renderBudget).
+    hasRuns: () => locatorByOwner.size > 0,
     setRowLocator: (ownerId, locate) => {
       locatorByOwner.set(ownerId, locate);
     },
@@ -3659,12 +3698,17 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * for them — which is what makes an infinitely scrolled list nothing more than
  * a list that says how many rows it has.
  *
- * The rows come from `itemsAction(range)`: the run asks for what it is about to
- * draw and keeps what it gets. The range says the same thing three ways, so a
- * source can read it however it paginates — `{ start, end }` (places in the
- * collection, a negative `start` counting back from the end like
- * `Range: items=-25`, which is what a list opening on its last rows asks for
- * before it knows how many there are), `limit` (how many rows), and
+ * A collection held in memory is given whole: `items={rows}`. The run holds all
+ * of them from the first render and never asks for anything — it is still the
+ * render window that decides how many are drawn.
+ *
+ * A collection read a slice at a time comes from `itemsAction(range)`: the run
+ * asks for what it is about to draw and keeps what it gets. The range says the
+ * same thing three ways, so a source can read it however it paginates —
+ * `{ start, end }` (places in the collection, a negative `start` counting back
+ * from the end like `Range: items=-25`, which is what a list opening on its
+ * last rows asks for before it knows how many there are), `limit` (how many
+ * rows), and
  * `before`/`after`/`around` (the id of a row to count from, for a source
  * paginating by cursor). Answer with the rows (an array — that is all of
  * them), or with a range the way a Content-Range does: `{ items, start, count }`
@@ -3678,11 +3722,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * copies of the JSON. The list holds the slices, the store holds the objects
  * (see docs/resource.md).
  *
- * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
- * What it gives back is kept, so a collection that changes as a whole (a search
- * reordering it) is a different collection: give the run a `key` that changes
- * with it, the way one does for anything else that is not the same thing
- * anymore.
+ * A collection that changes as a whole (a search reordering it) is a different
+ * collection: with `items`, another array is another collection and the run
+ * draws it from its first row; with `itemsAction`, give the run a `key` that
+ * changes with it, the way one does for anything else that is not the same
+ * thing anymore.
  *
  * A row says what it is where it is drawn: `renderItem` returns a
  * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
@@ -3694,7 +3738,8 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *
  * @type {import("preact").FunctionComponent<{
  *   renderItem: (item: any, index: number, state: {refreshing: boolean}) => import("preact").ComponentChildren,
- *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
+ *   items?: any[],
+ *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
@@ -3709,6 +3754,13 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   What one row is, given the item and where it sits. `state.refreshing` says
  *   the rows drawn are the ones from before while the run reads the collection
  *   again — the list carries `navi-refreshing` for the same reason.
+ * @param {any[]} [props.items]
+ *   The collection, when it is held in memory: all of it, in order. Nothing is
+ *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
+ *   no part to play, and no row is ever a skeleton.
+ * @param {(range: object) => any} [props.itemsAction]
+ *   Where the rows come from when the collection is read a slice at a time:
+ *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
  * @param {(item: any, index: number) => any} [props.groupBy]
  *   What tells rows that belong together apart from the others — the day of a
  *   message, the month of a game. Consecutive rows sharing it are wrapped in a
@@ -3731,7 +3783,8 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   How many rows the run keeps in memory. Past that, the ones far from what is
  *   on screen are dropped (and asked for again if the user goes back) — the
  *   same trade the render window makes with the DOM, one order of magnitude
- *   further out. `0` keeps everything.
+ *   further out. `Infinity` keeps every row the run ever received; `0` keeps
+ *   only the ones around the window.
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for a row the run does not hold. Defaults to List's own
  *   `renderSkeleton`, then to a bare `<List.Item skeleton>`; `false` leaves the
@@ -3752,6 +3805,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  */
 export const ListItems = ({
   renderItem,
+  items,
   itemsAction,
   count,
   pageSize,
@@ -3768,6 +3822,7 @@ export const ListItems = ({
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
+    items,
     count,
     itemsAction,
     memoryBudget,
@@ -4101,11 +4156,17 @@ const rangeIsSame = (a, b) => {
 // are in all is enough to place it, so the pages need not be contiguous nor
 // arrive in order.
 const useItemStore = ({
+  items,
   count,
   itemsAction,
   memoryBudget,
   onRequestStateChange,
 }) => {
+  // A collection given whole (`items`) is held from the first render: nothing
+  // to ask for, nothing to keep across mounts, nothing to invalidate. The rest
+  // of the store then never has a hole to fill, so it stays inert on its own —
+  // the asking below finds nothing missing.
+  const inMemory = items !== undefined;
   // The run's asking, on the same channel as the window it asks for — they are
   // one subject: what the list is about to draw is what it goes to fetch (see
   // `useRequestMissing`, and `updateRenderWindow` which logs the other half).
@@ -4126,21 +4187,44 @@ const useItemStore = ({
   // handed something else keeps drawing rows and quietly gives up everything
   // the reader holds for it (see resource_range_reader.js).
   const warnedRef = useRef(false);
-  if (
-    import.meta.dev &&
-    typeof itemsAction === "function" &&
-    !itemsAction.isRangeReader &&
-    !warnedRef.current
-  ) {
-    warnedRef.current = true;
-    console.warn(
-      `<List.Items itemsAction> received a plain function, not a range reader: this list starts from zero on every mount (no composition kept), hears nothing when a write moves the collection (no invalidation), and keeps everything it loads (no memory budget). Pass RESOURCE.GET_RANGE.bindParams(...) itself; to be told what the run is doing, use onRequestStateChange rather than wrapping it.`,
-    );
+  if (import.meta.dev && !warnedRef.current) {
+    if (inMemory && itemsAction !== undefined) {
+      warnedRef.current = true;
+      console.warn(
+        `<List.Items> received both items and itemsAction: the collection is read from items, itemsAction is never called. A collection held in memory goes through items={rows}; one read a slice at a time goes through itemsAction={RESOURCE.GET_RANGE.bindParams(...)}.`,
+      );
+    } else if (
+      !inMemory &&
+      typeof itemsAction === "function" &&
+      !itemsAction.isRangeReader
+    ) {
+      warnedRef.current = true;
+      console.warn(
+        `<List.Items itemsAction> received a plain function, not a range reader: this list starts from zero on every mount (no composition kept), hears nothing when a write moves the collection (no invalidation), and keeps everything it loads (no memory budget). Pass RESOURCE.GET_RANGE.bindParams(...) itself; a collection held in memory goes through items={rows}. To be told what the run is doing, use onRequestStateChange rather than wrapping it.`,
+      );
+    }
   }
 
   const pagesRef = useRef(null);
+  const itemsRef = useRef(items);
+  const itemsHeldRef = useRef(false);
   let restored = false;
-  if (!pagesRef.current) {
+  if (inMemory) {
+    // The array as a whole is the collection: another array is another
+    // collection, drawn from its first row (which is also why a run reading a
+    // collection that changes as a whole takes a key).
+    if (!pagesRef.current || itemsRef.current !== items) {
+      itemsRef.current = items;
+      const byIndex = new Map();
+      let index = 0;
+      while (index < items.length) {
+        byIndex.set(index, items[index]);
+        index++;
+      }
+      pagesRef.current = { byIndex, count: items.length };
+      itemsHeldRef.current = false;
+    }
+  } else if (!pagesRef.current) {
     const composition =
       typeof itemsAction === "function" && itemsAction.readComposition
         ? itemsAction.readComposition()
@@ -4189,6 +4273,16 @@ const useItemStore = ({
   const [failure, setFailure] = useState(null);
 
   const virtual = useContext(ListVirtualContext);
+  // The rows are there, which is what the list waits for to place itself on the
+  // row it is held at (see placeWhereHeld). Said from an effect: a signal read
+  // during this very render must not be written during it.
+  useLayoutEffect(() => {
+    if (!inMemory || itemsHeldRef.current) {
+      return;
+    }
+    itemsHeldRef.current = true;
+    virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
+  });
   // Before the first answer a run does not know how many rows it stands for.
   // It stands for a windowful of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
@@ -4263,11 +4357,13 @@ const useItemStore = ({
     // dropped and simply asked for again if the user goes back — the same
     // trade the render window makes, one order of magnitude further out.
     forget: (windowFrom, windowTo) => {
-      const budget =
-        memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
-      if (!budget) {
+      if (inMemory) {
+        // Dropping a row here would drop it for good: there is no source to
+        // ask it back from.
         return;
       }
+      const budget =
+        memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
       const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
       if (pages.byIndex.size > budget) {

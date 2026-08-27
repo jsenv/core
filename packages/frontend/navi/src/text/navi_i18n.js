@@ -699,6 +699,18 @@ naviI18n.addAll({
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
+  "constraint.displayable.stacked_marks.default": {
+    fr: "Ce champ ne doit pas empiler plus de <strong>[max]</strong> signes sur un même caractère.",
+    en: "This field must not stack more than <strong>[max]</strong> marks on a single character.",
+  },
+  "constraint.displayable.invisible.default": {
+    fr: "Ce champ doit contenir au moins un caractère visible.",
+    en: "This field must contain at least one visible character.",
+  },
+  "constraint.displayable.blank_lines.default": {
+    fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
+    en: "This field must not contain consecutive blank lines.",
+  },
   "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
     en: "This password must contain at least one lowercase letter.",

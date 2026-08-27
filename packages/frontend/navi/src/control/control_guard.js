@@ -25,11 +25,22 @@ export const isTypingIntent = (e) =>
 
 const s = (n) => (n > 1 ? "s" : "");
 
+// The `u` flag is what lets a char class speak about characters: `\p{...}` is
+// only recognized under it, and a range covers whole code points instead of
+// the two halves an astral character (an emoji) is made of.
+const compileCharClass = (charClass) => new RegExp(charClass, "u");
+const compileCharClassAnchored = (charClass) =>
+  new RegExp(`^(?:${charClass})*$`, "u");
+
 // Keydown: block only single printable characters that don't match the class.
 // Multi-character key names (Delete, ArrowLeft…) are always allowed.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
-  if (char.length !== 1) return null;
-  if (new RegExp(charClass).test(char)) return null;
+  // Counted in code points: an astral character is one character typed, not two.
+  const codePointCount = [...char].length;
+  if (codePointCount !== 1) {
+    return null;
+  }
+  if (compileCharClass(charClass).test(char)) return null;
   return naviI18n(messageKey);
 };
 
@@ -49,7 +60,7 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
 // Paste / set: block when value contains disallowed chars.
 const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
   const str = uiState === undefined ? "" : String(uiState);
-  if (new RegExp(`^(?:${charClass})*$`).test(str)) return null;
+  if (compileCharClassAnchored(charClass).test(str)) return null;
   return naviI18n(messageKey);
 };
 

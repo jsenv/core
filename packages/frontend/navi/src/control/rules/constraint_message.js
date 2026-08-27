@@ -9,6 +9,7 @@ export const CONSTRAINT_NAME_TO_PROP = {
   min: "minMessage",
   max: "maxMessage",
   single_space: "singleSpaceMessage",
+  displayable: "displayableMessage",
   same_as: "sameAsMessage",
   min_lower_letter: "minLowerLetterMessage",
   min_upper_letter: "minUpperLetterMessage",

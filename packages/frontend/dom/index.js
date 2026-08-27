@@ -150,6 +150,7 @@ export {
   closestOpenableAncestor,
   getAncestorOpenType,
   isAncestorOpen,
+  isDisplayedDespiteClosedAncestor,
   observeAncestorOpenState,
   onAncestorReopen,
 } from "./src/position/ancestor_open.js";

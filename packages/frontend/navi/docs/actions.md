@@ -176,6 +176,13 @@ one that asks something of a control near it is a `command` (a value proposed is
 [control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)).
 Reaching for a plain `onClick` usually means one of those was missed.
 
+On a link — a `Link`, a `<Button href>` or `<Button route>` — the three fire on
+the press, before the navigation, and the navigation waits for none of them: a
+`command="--navi-close"` closes the sheet the link leaves, an `action` that
+writes a draft synchronously is found by the next page, and a request goes on
+its own while the page changes. Work that decides the destination is not a
+link's: it navigates itself, from a `<Button action>`.
+
 The press that looks like a fourth case is the one that opens something and then
 does something with what came of it — "save this guest", pressed on a row,
 replacing the guest once the profile exists. It is not a fourth case and it is

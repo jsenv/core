@@ -144,7 +144,7 @@ export const createRangeReader = (
   // dropped here is one that gets asked for again after a remount.
   readRange.trimComposition = (keepFrom, keepTo, budget) => {
     const composition = findComposition(currentParams());
-    if (!composition || !budget || composition.idByIndex.size <= budget) {
+    if (!composition || composition.idByIndex.size <= budget) {
       return;
     }
     for (const index of composition.idByIndex.keys()) {

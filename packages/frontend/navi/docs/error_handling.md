@@ -94,6 +94,20 @@ Not an error at all, and not to be modelled as one: a value the app or the
 browser refuses is a **status on the control**, carried by navi's constraint
 validation. Never throw to reject a value — see `src/control/rules/`.
 
+An app's own rule joins that set as a constraint — `{ name, check }`, where
+`check(field)` reads `field.uiState` and returns a message or `null`:
+
+```jsx
+<Input constraints={[TEXT_SHAPE_CONSTRAINT]} />; // this control
+registerGlobalConstraint(TEXT_SHAPE_CONSTRAINT); // every control
+```
+
+A constraint is an object, so it carries whatever it needs to decide — there is
+nothing to pass through an attribute. The attributes the shipped constraints
+read (`required`, `data-single-space`, `data-displayable`…) exist because those
+constraints are global and need a per-field switch; a constraint written for
+one call site does not.
+
 ## What a failing action does
 
 It writes the error into `errorSignal`, moves to `FAILED`, and stops.

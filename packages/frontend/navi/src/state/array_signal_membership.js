@@ -1,3 +1,4 @@
+import { useComputed } from "@preact/signals";
 import { useMemo } from "preact/hooks";
 
 import { addIntoArray, removeFromArray } from "../utils/array_add_remove.js";
@@ -8,12 +9,18 @@ export const useArraySignalMembership = (...args) => {
       "useArraySignalMembership requires at least 2 arguments: [arraySignal, id]",
     );
   }
+  const [arraySignal, id] = args;
 
-  return useMemo(() => {
-    const [useIsMember, add, remove] = arraySignalMembership(...args);
-    const isMember = useIsMember();
-    return [isMember, add, remove];
-  }, args);
+  // Through a computed so the component re-renders when its own membership
+  // changes, not every time anything else is added to or removed from the
+  // array: a list of 200 rows each watching the same array would otherwise all
+  // re-render (and each re-scan the array) when one row is toggled.
+  const isMember = useComputed(() => arraySignal.value.includes(id)).value;
+  const [, add, remove] = useMemo(
+    () => arraySignalMembership(arraySignal, id),
+    [arraySignal, id],
+  );
+  return [isMember, add, remove];
 };
 
 export const arraySignalMembership = (...args) => {

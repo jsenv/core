@@ -60,8 +60,15 @@ The available commands: `--navi-open`, `--navi-close`, `--navi-toggle`,
 `--navi-confirm` (says yes, then closes). What "revert" does to what is inside
 is [its own section](#escape-cancels-the-other-gestures-keep) — it is also what
 Escape says. `--navi-close:all` closes every popup above the button, nearest
-first — a link leaving from a badge shown over a sheet leaves both; a popup
-that refuses to close keeps the ones above it open too.
+first; a popup that refuses to close keeps the ones above it open too. A link
+that leaves is the usual case — a badge shown over a sheet, both left in one
+press:
+
+```jsx
+<Link href={PLAYER_ROUTE.buildUrl({ playerId })} command="--navi-close:all">
+  Profil
+</Link>
+```
 
 ## Something else opens it: `triggerNaviCommand`
 

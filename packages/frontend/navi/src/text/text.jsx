@@ -508,8 +508,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [emojiAsIcon]
  *   Renders every emoji found in the string children as an `Icon`, so it sits
  *   in the line like a character and never makes the line taller than the
- *   text. For free text a user typed (a message, a description) — the only
- *   place an emoji is expected; see `docs/typography.md`.
+ *   text. For free text a user typed (a message, a description); see
+ *   `docs/typography.md`. Only the strings this `Text` receives are rewritten —
+ *   a string a child component renders is out of reach, and that component
+ *   calls `renderEmojiAsIcon()` itself instead.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.

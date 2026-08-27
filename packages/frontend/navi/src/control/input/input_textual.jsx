@@ -33,7 +33,9 @@
  *   "postal"       → postal code (digits, letters, space, hyphen)
  *   "iban"         → IBAN (uppercase and digits)
  *   "slug"         → URL slug (lowercase, digits, hyphens)
- *   "[A-Z0-9]"     → any custom regex character class
+ *   "[A-Z0-9]"     → any custom regex character class, compiled with the `u`
+ *                    flag: `\p{...}` is available, and an emoji counts as one
+ *                    character rather than two halves.
  *   inputMode and pattern are auto-derived from the preset when not explicitly set.
  *
  * - maxLengthGuard — combines maxLength + overflow guard in one prop.

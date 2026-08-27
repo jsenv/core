@@ -59,6 +59,7 @@ import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
+import { DISPLAYABLE_CONSTRAINT } from "./validation/displayable_constraint.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -102,6 +103,7 @@ const STANDARD_CONSTRAINT_SET = new Set([
 const NAVI_CONSTRAINT_SET = new Set([
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
+  DISPLAYABLE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -114,8 +116,29 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 export const registerGlobalConstraint = (customConstraint) => {
-  NAVI_CONSTRAINT_SET.add(customConstraint);
-  DEFAULT_CONSTRAINT_SET.add(customConstraint);
+  const constraint = normalizeConstraint(customConstraint);
+  NAVI_CONSTRAINT_SET.add(constraint);
+  DEFAULT_CONSTRAINT_SET.add(constraint);
+};
+
+// A constraint may be written as a bare check function; the rest of the code
+// wants the object shape. The wrapper is cached so a function passed on every
+// render keeps one identity across checks.
+const constraintFromFunctionMap = new WeakMap();
+const normalizeConstraint = (constraint) => {
+  if (typeof constraint !== "function") {
+    return constraint;
+  }
+  const existing = constraintFromFunctionMap.get(constraint);
+  if (existing) {
+    return existing;
+  }
+  const constraintObject = {
+    name: constraint.name || "custom_function",
+    check: constraint,
+  };
+  constraintFromFunctionMap.set(constraint, constraintObject);
+  return constraintObject;
 };
 
 export const createControlValidation = (
@@ -131,15 +154,10 @@ export const createControlValidation = (
   const dynamicConstraintSet = new Set();
   register_constraint: {
     controlValidity.registerConstraint = (constraint) => {
-      if (typeof constraint === "function") {
-        constraint = {
-          name: constraint.name || "custom_function",
-          check: constraint,
-        };
-      }
-      dynamicConstraintSet.add(constraint);
+      const constraintObject = normalizeConstraint(constraint);
+      dynamicConstraintSet.add(constraintObject);
       return () => {
-        dynamicConstraintSet.delete(constraint);
+        dynamicConstraintSet.delete(constraintObject);
       };
     };
   }
@@ -196,6 +214,16 @@ export const createControlValidation = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
+    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
+    // Read from the raw props on every check so a constraint whose parameters
+    // are closed over is re-created freely, and last so the constraints navi
+    // ships are the ones reported first (see pickConstraintFailureInfo).
+    const constraintsFromProps = controller.props.constraints;
+    if (constraintsFromProps) {
+      for (const constraintFromProps of constraintsFromProps) {
+        constraintSet.add(normalizeConstraint(constraintFromProps));
+      }
+    }
     const elementSig = getElementSignature(controller.ref.current);
     // Not logged: every control checks its constraints on every interaction and
     // almost always passes, so this line alone was most of the debug output —

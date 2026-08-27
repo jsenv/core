@@ -165,9 +165,18 @@ neighbours, a paragraph's lines are unevenly spaced, a truncated label no
 longer lines up with its siblings.
 
 So, first: **an emoji is only expected in free text a user typed** — a message,
-a comment, a description. It has no business in a name, a title, an identifier,
-a label. Validate those fields so it never gets in, rather than teaching every
-row of the app to survive it.
+a comment, a description. It has no business in a title, an identifier, a
+label, and a field holding one of those can refuse it outright rather than
+teaching every row of the app to survive it.
+
+A name is the exception worth stating: people are called what they are called,
+and a whitelist on a name field ends up refusing somebody's real name. An app
+taking that side puts `emojiAsIcon` on everything that renders a name, and
+keeps the name field itself to the rules that are about the layout rather than
+the alphabet — `data-displayable`, which refuses only what cannot be drawn:
+marks stacked into zalgo (the one thing `emojiAsIcon` does not rescue, since it
+draws over the row above), a value that shows nothing at all, blank lines in
+series.
 
 Where it is expected, `emojiAsIcon`:
 
@@ -182,6 +191,18 @@ emoji is a 1em box, never a glyph with its own metrics). `Button` and
 `MessageBox` have it on by default — a label is one line whose height
 everything around it relies on, a message is free text; `Badge` forwards it,
 opt-in.
+
+**It does not go through a component.** Only the strings the `Text` itself
+receives are rewritten, so `<Text emojiAsIcon><UserName /></Text>` does
+nothing at all: the string is inside `UserName`, and that is where
+`renderEmojiAsIcon()` has to be called. Doing it there also spares a `Text`
+that would inject a separator between the name and whatever follows it.
+
+There is no way to turn it on for a whole app, on purpose: most of an app's
+text is its own wording, where an emoji cannot appear, and the ones that do
+carry a typed value are known one by one. An app that renders such a value
+everywhere writes its own component around `Text` — the same place it already
+decides how a name is displayed.
 
 What it does not do, and that is accepted: under `maxLines` the `Text` clips at
 its own box — that is what truncation is — and an emoji drawn a little beyond

@@ -118,7 +118,17 @@ export const TextAnchor = ({
   return (
     <>
       {children}
-      <span ref={anchorRef} className="navi_text_anchor" aria-hidden="true">
+      {/* Hidden until the effect above confirms an inline formatting context
+          around it: a measurement device earns its place in the flow only
+          where it measures something, and a zero-width flex item still takes
+          the container's `gap` on both sides of it. A constant literal, so
+          Preact never diffs it back on after the effect removed it. */}
+      <span
+        ref={anchorRef}
+        className="navi_text_anchor"
+        aria-hidden="true"
+        hidden
+      >
         &#8203;
       </span>
     </>

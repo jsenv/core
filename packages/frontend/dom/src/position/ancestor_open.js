@@ -41,6 +41,36 @@ export const isAncestorOpen = (ancestor) => {
   return true;
 };
 
+/**
+ * Whether `element` is on screen even though the openable ancestor it was
+ * resolved against is closed. Ask it only about an ancestor `isAncestorOpen`
+ * already said is closed.
+ *
+ * `[aria-expanded]` in OPENABLE_SELECTOR covers two opposite kinds of element:
+ * the surface being opened (a <dialog>, a [popover], and the plain <div> navi's
+ * custom renderers build a popup out of, which carries aria-expanded and
+ * nothing else), which takes its whole subtree off screen while closed — and
+ * the *trigger* that opens one (a picker's root, an expandable's header), whose
+ * aria-expanded describes the popup it controls rather than its own contents:
+ * its façade stays on screen the entire time aria-expanded is "false".
+ *
+ * Markup tells the two apart badly, so ask the layout instead. A closed surface
+ * is display:none, natively for [popover]/<dialog> and through the library's
+ * own closed-state CSS ([navi-hidden], :not([popover])) for the custom
+ * renderers — so nothing inside one answers true here, while everything a
+ * trigger keeps on screen does.
+ */
+export const isDisplayedDespiteClosedAncestor = (element) => {
+  if (typeof element.checkVisibility !== "function") {
+    // Nothing to tell the two apart with: leave the caller treating the closed
+    // ancestor as hiding this element.
+    return false;
+  }
+  // Default options: the question is "does it have a layout box", not "can it
+  // be seen" — visibility:hidden/opacity:0 keep geometry intact.
+  return element.checkVisibility();
+};
+
 export const getAncestorOpenType = (ancestor) => {
   if (ancestor === document) {
     return "document";
