@@ -7,6 +7,8 @@ return renderCases({ type: "string", displayable: true }, "displayable", [
   "Tí́nh",
   // seven marks on one base character — zalgo
   "é̀̂̃̄̆̇",
+  // two of them in one value — the message counts them and shows one
+  "á̀̂̃̄̆̇ b́̀̂̃̄̆̇",
   // a value made only of things that draw nothing
   "​ ­",
   "line\n\n\nline",
@@ -26,7 +28,9 @@ return renderCases({ type: "string", displayable: true }, "displayable", [
 ├──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
 │ "Tí́nh"           │ true   │ "Tí́nh"                       │ undefined                                          │
 ├──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
-│ "é̀̂̃̄̆̇"              │ false  │ undefined                    │ "must not stack more than 5 marks on a single cha… │
+│ "é̀̂̃̄̆̇"              │ false  │ undefined                    │ 'must not contain a character stacking more than … │
+├──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
+│ "á̀̂̃̄̆̇ b́̀̂̃̄̆̇"            │ false  │ undefined                    │ 'must not contain 2 characters stacking more than… │
 ├──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤
 │ "​ ­"              │ false  │ undefined                    │ "must contain at least one visible character"      │
 ├──────────────────┼────────┼──────────────────────────────┼────────────────────────────────────────────────────┤

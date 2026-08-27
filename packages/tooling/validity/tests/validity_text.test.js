@@ -73,6 +73,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "Tí́nh",
       // seven marks on one base character — zalgo
       "é̀̂̃̄̆̇",
+      // two of them in one value — the message counts them and shows one
+      "á̀̂̃̄̆̇ b́̀̂̃̄̆̇",
       // a value made only of things that draw nothing
       "​ ­",
       "line\n\n\nline",

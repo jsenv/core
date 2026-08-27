@@ -511,6 +511,17 @@
               />
             )}
           </RuleCase>
+          <RuleCase caption='charGuard="slug" — le champ part avec des caractères refusés : tapez une lettre autorisée, effacez une majuscule'>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="guard_slug_dirty"
+                width="320px"
+                defaultValue="Mon Beau Terrain"
+                charGuard="slug"
+              />
+            )}
+          </RuleCase>
           <RuleCase caption='charGuard="noEmoji" — collez un emoji'>
             {(ref) => (
               <Input

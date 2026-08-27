@@ -113,6 +113,7 @@ et la troisième`;
           <BasicsDemo />
           <StatesDemo />
           <RowsDemo />
+          <EmojiDemo />
           <LongPlaceholderDemo />
           <CharCountDemo />
           <ActionDemo />
@@ -186,6 +187,55 @@ six`}
             </Variant>
             <Variant caption="resizable : la poignée verticale du navigateur">
               <Textarea resizable defaultValue={THREE_LINES} />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Emoji ─────────────────────────────────────────────────────────────
+
+      const EmojiDemo = () => (
+        <div class="demo-section">
+          <Heading id="emoji">Emoji</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="sans">
+              <Textarea defaultValue={"On se retrouve au parc samedi ?"} />
+            </Variant>
+            <Variant caption="avec">
+              <Textarea
+                defaultValue={
+                  "On se retrouve au parc \u{1F333} samedi \u{2600}\uFE0F ?"
+                }
+              />
+            </Variant>
+            <Variant caption="que des emoji">
+              <Textarea
+                defaultValue={
+                  "\u{1F44B}\u{1F3BE}\u{1F525}\u{1F389}\u{1F44D}\u{1F602}\u{1F60D}\u{1F680}"
+                }
+              />
+            </Variant>
+            <Variant caption="composés : famille, drapeau, teinte de peau">
+              <Textarea
+                defaultValue={
+                  "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} \u{1F3F3}\uFE0F\u200D\u{1F308} \u{1F44B}\u{1F3FE}"
+                }
+              />
+            </Variant>
+            <Variant caption="plusieurs lignes, une seule en porte">
+              <Textarea
+                defaultValue={
+                  "Première ligne\nDeuxième \u{1F3BE}\nTroisième ligne"
+                }
+              />
+            </Variant>
+            <Variant caption="maxRows={3}">
+              <Textarea
+                maxRows={3}
+                defaultValue={
+                  "\u{1F44B} une\n\u{1F3BE} deux\n\u{1F525} trois\n\u{1F389} quatre\n\u{1F44D} cinq"
+                }
+              />
             </Variant>
           </Box>
         </div>
