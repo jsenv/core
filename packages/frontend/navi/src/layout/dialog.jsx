@@ -754,10 +754,14 @@ const UncontrolledDialog = (props) => {
         });
       }}
       onnavi_request_close={(e) => {
-        openController.requestClose(e, {
+        const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
           requester: e.detail?.source,
         });
+        if (!closing) {
+          // Said back to whoever asked: --navi-close:all stops climbing here.
+          e.preventDefault();
+        }
       }}
     />
   );

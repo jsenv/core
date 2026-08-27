@@ -130,6 +130,9 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {Function} [action] On a button with an `href` or a `route`, the
+ *   same order as a Link's: it runs on the press, before the navigation, and
+ *   the navigation does not wait for it (see Link's `action`).
  * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
  *   so the button keeps the height of its text — `Text`'s prop, on by default
  *   here. Pass `false` to let an emoji draw at its natural size.

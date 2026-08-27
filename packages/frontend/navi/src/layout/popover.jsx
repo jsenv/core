@@ -612,7 +612,13 @@ const UncontrolledPopover = (props) => {
         });
       }}
       onnavi_request_close={(e) => {
-        openController.requestClose(e, { isCancel: e.detail?.isCancel });
+        const closing = openController.requestClose(e, {
+          isCancel: e.detail?.isCancel,
+        });
+        if (!closing) {
+          // Said back to whoever asked: --navi-close:all stops climbing here.
+          e.preventDefault();
+        }
       }}
     />
   );

@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, clickIsSuppressed, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, Fragment, toChildArray, options, cloneElement } from "preact";
@@ -25330,75 +25330,85 @@ const setupBrowserIntegrationViaHistory = ({
     return requestedResult;
   };
 
-  // Browser event handlers
+  // A click on a link is answered on the link itself, after the link's own
+  // listeners: a navi control decides there whether the press is allowed — it
+  // refuses with preventDefault from its click reaction — and runs its command
+  // and its action; only then does the routing take the browser's place. This
+  // is the order the Navigation API integration gets for free, where the
+  // navigation starts once the click has been dispatched.
+  const onLinkClick = (e) => {
+    if (e.button !== 0) {
+      // Ignore non-left clicks
+      return;
+    }
+    if (e.metaKey) {
+      // Ignore clicks with meta key (e.g. open in new tab)
+      return;
+    }
+    if (e.defaultPrevented) {
+      // Refused — by the link itself, or by whoever came before it.
+      return;
+    }
+    const linkElement = e.currentTarget;
+    if (linkElement.hasAttribute("data-readonly")) {
+      return;
+    }
+    const href = linkElement.href;
+    const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
+      getHrefTargetInfo(href);
+    if (isEmpty || !isSameOrigin) {
+      // Let link to other origins be handled by the browser
+      return;
+    }
+    if (isAnchor) {
+      // Fragment navigation belongs to the browser: it owns the indicated
+      // part of the document, and taking it over would cost `:target` and the
+      // focus handling that come with it.
+      if (isCurrent) {
+        // Except this one, which the browser answers with a scroll and
+        // nothing else: same pathname, same hash, so no event and no url
+        // change reaches whoever is waiting on the designated element.
+        rearmUrlTarget();
+      }
+      return;
+    }
+    // Nothing here declared a route, so there is nothing to route to: the
+    // page is a plain document and a link in it is a plain link. Taking it
+    // over anyway would push the url and then have nothing to show for it —
+    // the address bar moves and the page does not (see applyRouting's own
+    // "not called yet" branch, which is where that used to end up).
+    if (!isRouting()) {
+      return;
+    }
+    e.preventDefault();
+    handleRoutingTask(href, {
+      reason: `"click" on a[href="${href}"]`,
+      // A link that takes the place of the current entry instead of stacking
+      // on it says so on itself (see link_replace.js).
+      navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
+      // Who started it. Announced with the navigation because a press
+      // carries things the url does not: what a link asks of a route
+      // transition is the first of them (see route_transition.jsx). Read by
+      // whoever knows what to do with it, and it is the anchor itself —
+      // resolved here, where it already is.
+      element: linkElement,
+    });
+  };
+  // Wired from the capture phase on window, the first place a click is seen,
+  // so that a link is answered whatever handler stops the click on its way up
+  // (a card's own onClick). Wired on every click: a listener an element
+  // already has is not added twice, and a link seen for the first time is
+  // wired before the click reaches it. The click a gesture leaves behind
+  // never gets this far — its suppressor (click_suppression.js in
+  // @jsenv/dom) stops it on window, before anything below.
   window.addEventListener(
     "click",
     (e) => {
-      if (e.button !== 0) {
-        // Ignore non-left clicks
-        return;
-      }
-      if (e.metaKey) {
-        // Ignore clicks with meta key (e.g. open in new tab)
-        return;
-      }
-      if (e.defaultPrevented) {
-        return;
-      }
-      if (clickIsSuppressed()) {
-        // The click that ends a gesture (click_suppression.js in @jsenv/dom).
-        // Its suppressor also listens on window in capture, so whichever
-        // module registered first runs first — asked explicitly, the order
-        // stops mattering.
-        return;
-      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
       }
-      if (linkElement.hasAttribute("data-readonly")) {
-        return;
-      }
-      const href = linkElement.href;
-      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
-        getHrefTargetInfo(href);
-      if (isEmpty || !isSameOrigin) {
-        // Let link to other origins be handled by the browser
-        return;
-      }
-      if (isAnchor) {
-        // Fragment navigation belongs to the browser: it owns the indicated
-        // part of the document, and taking it over would cost `:target` and the
-        // focus handling that come with it.
-        if (isCurrent) {
-          // Except this one, which the browser answers with a scroll and
-          // nothing else: same pathname, same hash, so no event and no url
-          // change reaches whoever is waiting on the designated element.
-          rearmUrlTarget();
-        }
-        return;
-      }
-      // Nothing here declared a route, so there is nothing to route to: the
-      // page is a plain document and a link in it is a plain link. Taking it
-      // over anyway would push the url and then have nothing to show for it —
-      // the address bar moves and the page does not (see applyRouting's own
-      // "not called yet" branch, which is where that used to end up).
-      if (!isRouting()) {
-        return;
-      }
-      e.preventDefault();
-      handleRoutingTask(href, {
-        reason: `"click" on a[href="${href}"]`,
-        // A link that takes the place of the current entry instead of stacking
-        // on it says so on itself (see link_replace.js).
-        navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
-        // Who started it. Announced with the navigation because a press
-        // carries things the url does not: what a link asks of a route
-        // transition is the first of them (see route_transition.jsx). Read by
-        // whoever knows what to do with it, and it is the anchor itself —
-        // resolved here, where it already is.
-        element: linkElement,
-      });
+      linkElement.addEventListener("click", onLinkClick);
     },
     { capture: true },
   );
@@ -29838,7 +29848,11 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     },
   };
 });
-registerNaviCommand("--navi-close", (source, event) => {
+// "--navi-close:all" closes every expandable above the source, nearest first —
+// a link leaving from a badge shown over a sheet leaves both. A surface that
+// refuses (a form asking about its changes) keeps what is above it open too:
+// one cannot be out of the sheet while still in the badge.
+registerNaviCommand("--navi-close", (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -29847,13 +29861,30 @@ registerNaviCommand("--navi-close", (source, event) => {
   return {
     target,
     implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_close", {
-        event,
-        source: resolveCommandProxySource(source),
-      });
+      const detail = { event, source: resolveCommandProxySource(source) };
+      if (argument === "all") {
+        return requestCloseUpward(target, detail);
+      }
+      return dispatchCustomEvent(target, "navi_request_close", detail);
     },
   };
 });
+const requestCloseUpward = (target, detail) => {
+  let expandable = target;
+  while (expandable) {
+    const closing = dispatchCustomEvent(
+      expandable,
+      "navi_request_close",
+      detail,
+    );
+    if (!closing) {
+      return false;
+    }
+    const parent = expandable.parentElement;
+    expandable = parent ? parent.closest("[aria-expanded]") : null;
+  }
+  return true;
+};
 registerNaviCommand("--navi-cancel", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
@@ -33572,6 +33603,13 @@ const useControlProps = (props, {
                   e.preventDefault(); // prevent page scroll
                 }
               };
+            }
+            if (getKeyboardEventDefaultAction(e) === "activate") {
+              // Enter: the browser presses the link itself, with a click that
+              // follows this keydown — and the click reaction below is where
+              // the press is answered, once. A tab for a slide (no href) gets
+              // no such click; Link answers Enter on its own there.
+              return null;
             }
             return keyDownDefault(e);
           },
@@ -39127,9 +39165,12 @@ const LinkPlain = props => {
     replace: undefined,
     "data-navi-route-transition-request": routeTransitionRequest,
     ...replaceRequest,
+    // The control's own handlers first — the interaction gate, the caller's
+    // onClick/onKeyDown, the command and the action — then what only a link
+    // does. Written over the spread above, so they have to be called here.
     onClick: e => {
-      onClick?.(e);
-      if (slide) {
+      controlHostProps.onClick(e);
+      if (slide && !e.defaultPrevented) {
         goToSlide(e.currentTarget, e);
       }
       if (preventDefault) {
@@ -39142,7 +39183,7 @@ const LinkPlain = props => {
     ,
 
     onKeyDown: e => {
-      props.onKeyDown?.(e);
+      controlHostProps.onKeyDown(e);
       if (!slide || e.defaultPrevented) {
         return;
       }
@@ -45772,6 +45813,9 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {Function} [action] On a button with an `href` or a `route`, the
+ *   same order as a Link's: it runs on the press, before the navigation, and
+ *   the navigation does not wait for it (see Link's `action`).
  * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
  *   so the button keeps the height of its text — `Text`'s prop, on by default
  *   here. Pass `false` to let an emoji draw at its natural size.
@@ -51781,7 +51825,8 @@ const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
  * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
  *   `mountContent`/`openEffect`, then `openHandler`.
  * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
- *   stopping after the first if denied. The popup may choose to stay open.
+ *   stopping after the first if denied. The popup may choose to stay open,
+ *   which is what a `false` return says (`true`: closed, or closed already).
  * - `close()`: closes for real — calls only `onClose`, skipping
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
@@ -52074,7 +52119,7 @@ const createOpenController = (
       detail,
     ) => {
       if (!controller.opened) {
-        return;
+        return true;
       }
       const requestCloseEvent = new CustomEvent("navi_request_close", {
         detail: { event: e, ...detail },
@@ -52089,9 +52134,10 @@ const createOpenController = (
         if (nativeCancelEvent) {
           nativeCancelEvent.preventDefault();
         }
-        return;
+        return false;
       }
       performClose(requestCloseEvent);
+      return true;
     },
     close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
       if (!controller.opened) {
@@ -53658,10 +53704,14 @@ const UncontrolledDialog = props => {
       });
     },
     onnavi_request_close: e => {
-      openController.requestClose(e, {
+      const closing = openController.requestClose(e, {
         isCancel: e.detail?.isCancel,
         requester: e.detail?.source
       });
+      if (!closing) {
+        // Said back to whoever asked: --navi-close:all stops climbing here.
+        e.preventDefault();
+      }
     }
   });
 };
@@ -55108,9 +55158,13 @@ const UncontrolledPopover = props => {
       });
     },
     onnavi_request_close: e => {
-      openController.requestClose(e, {
+      const closing = openController.requestClose(e, {
         isCancel: e.detail?.isCancel
       });
+      if (!closing) {
+        // Said back to whoever asked: --navi-close:all stops climbing here.
+        e.preventDefault();
+      }
     }
   });
 };
@@ -56433,6 +56487,9 @@ const PickerCustomResolver = props => {
     if (circle) {
       props.variant = "icon";
     }
+    // A door, never a field (see `allowNameless`): the form around it expects
+    // no value from it, and no name.
+    props.allowNameless = true;
     // A word in a sentence asks for a plain tooltip — no icon in the callout,
     // no status color; an icon one presses is the callout's own status icon,
     // and says "info" like the callout it opens.
@@ -56782,7 +56839,10 @@ const PickerCustom = props => {
         dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
       },
       "onnavi_request_close": e => {
-        dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
+        const closing = dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
+        if (!closing) {
+          e.preventDefault();
+        }
       },
       children
     });
@@ -56834,12 +56894,17 @@ const PickerCustom = props => {
           event: e,
           intent: "read",
           allowed: () => {
-            requestClose(e, {
+            const closing = requestClose(e, {
               isCancel: e.detail.isCancel
             });
+            if (!closing) {
+              e.preventDefault();
+            }
           },
           prevented: () => {
             confirmEventRef.current = null;
+            // Not closing either way; said back to whoever asked.
+            e.preventDefault();
           }
         });
       },

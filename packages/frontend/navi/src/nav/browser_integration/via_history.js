@@ -1,4 +1,3 @@
-import { clickIsSuppressed } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 
 import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
@@ -285,75 +284,85 @@ export const setupBrowserIntegrationViaHistory = ({
     return requestedResult;
   };
 
-  // Browser event handlers
+  // A click on a link is answered on the link itself, after the link's own
+  // listeners: a navi control decides there whether the press is allowed — it
+  // refuses with preventDefault from its click reaction — and runs its command
+  // and its action; only then does the routing take the browser's place. This
+  // is the order the Navigation API integration gets for free, where the
+  // navigation starts once the click has been dispatched.
+  const onLinkClick = (e) => {
+    if (e.button !== 0) {
+      // Ignore non-left clicks
+      return;
+    }
+    if (e.metaKey) {
+      // Ignore clicks with meta key (e.g. open in new tab)
+      return;
+    }
+    if (e.defaultPrevented) {
+      // Refused — by the link itself, or by whoever came before it.
+      return;
+    }
+    const linkElement = e.currentTarget;
+    if (linkElement.hasAttribute("data-readonly")) {
+      return;
+    }
+    const href = linkElement.href;
+    const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
+      getHrefTargetInfo(href);
+    if (isEmpty || !isSameOrigin) {
+      // Let link to other origins be handled by the browser
+      return;
+    }
+    if (isAnchor) {
+      // Fragment navigation belongs to the browser: it owns the indicated
+      // part of the document, and taking it over would cost `:target` and the
+      // focus handling that come with it.
+      if (isCurrent) {
+        // Except this one, which the browser answers with a scroll and
+        // nothing else: same pathname, same hash, so no event and no url
+        // change reaches whoever is waiting on the designated element.
+        rearmUrlTarget();
+      }
+      return;
+    }
+    // Nothing here declared a route, so there is nothing to route to: the
+    // page is a plain document and a link in it is a plain link. Taking it
+    // over anyway would push the url and then have nothing to show for it —
+    // the address bar moves and the page does not (see applyRouting's own
+    // "not called yet" branch, which is where that used to end up).
+    if (!isRouting()) {
+      return;
+    }
+    e.preventDefault();
+    handleRoutingTask(href, {
+      reason: `"click" on a[href="${href}"]`,
+      // A link that takes the place of the current entry instead of stacking
+      // on it says so on itself (see link_replace.js).
+      navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
+      // Who started it. Announced with the navigation because a press
+      // carries things the url does not: what a link asks of a route
+      // transition is the first of them (see route_transition.jsx). Read by
+      // whoever knows what to do with it, and it is the anchor itself —
+      // resolved here, where it already is.
+      element: linkElement,
+    });
+  };
+  // Wired from the capture phase on window, the first place a click is seen,
+  // so that a link is answered whatever handler stops the click on its way up
+  // (a card's own onClick). Wired on every click: a listener an element
+  // already has is not added twice, and a link seen for the first time is
+  // wired before the click reaches it. The click a gesture leaves behind
+  // never gets this far — its suppressor (click_suppression.js in
+  // @jsenv/dom) stops it on window, before anything below.
   window.addEventListener(
     "click",
     (e) => {
-      if (e.button !== 0) {
-        // Ignore non-left clicks
-        return;
-      }
-      if (e.metaKey) {
-        // Ignore clicks with meta key (e.g. open in new tab)
-        return;
-      }
-      if (e.defaultPrevented) {
-        return;
-      }
-      if (clickIsSuppressed()) {
-        // The click that ends a gesture (click_suppression.js in @jsenv/dom).
-        // Its suppressor also listens on window in capture, so whichever
-        // module registered first runs first — asked explicitly, the order
-        // stops mattering.
-        return;
-      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
       }
-      if (linkElement.hasAttribute("data-readonly")) {
-        return;
-      }
-      const href = linkElement.href;
-      const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
-        getHrefTargetInfo(href);
-      if (isEmpty || !isSameOrigin) {
-        // Let link to other origins be handled by the browser
-        return;
-      }
-      if (isAnchor) {
-        // Fragment navigation belongs to the browser: it owns the indicated
-        // part of the document, and taking it over would cost `:target` and the
-        // focus handling that come with it.
-        if (isCurrent) {
-          // Except this one, which the browser answers with a scroll and
-          // nothing else: same pathname, same hash, so no event and no url
-          // change reaches whoever is waiting on the designated element.
-          rearmUrlTarget();
-        }
-        return;
-      }
-      // Nothing here declared a route, so there is nothing to route to: the
-      // page is a plain document and a link in it is a plain link. Taking it
-      // over anyway would push the url and then have nothing to show for it —
-      // the address bar moves and the page does not (see applyRouting's own
-      // "not called yet" branch, which is where that used to end up).
-      if (!isRouting()) {
-        return;
-      }
-      e.preventDefault();
-      handleRoutingTask(href, {
-        reason: `"click" on a[href="${href}"]`,
-        // A link that takes the place of the current entry instead of stacking
-        // on it says so on itself (see link_replace.js).
-        navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
-        // Who started it. Announced with the navigation because a press
-        // carries things the url does not: what a link asks of a route
-        // transition is the first of them (see route_transition.jsx). Read by
-        // whoever knows what to do with it, and it is the anchor itself —
-        // resolved here, where it already is.
-        element: linkElement,
-      });
+      linkElement.addEventListener("click", onLinkClick);
     },
     { capture: true },
   );

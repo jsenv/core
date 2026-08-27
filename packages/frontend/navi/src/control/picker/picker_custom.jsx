@@ -202,6 +202,9 @@ export const PickerCustomResolver = (props) => {
     if (circle) {
       props.variant = "icon";
     }
+    // A door, never a field (see `allowNameless`): the form around it expects
+    // no value from it, and no name.
+    props.allowNameless = true;
     // A word in a sentence asks for a plain tooltip — no icon in the callout,
     // no status color; an icon one presses is the callout's own status icon,
     // and says "info" like the callout it opens.
@@ -579,7 +582,14 @@ const PickerCustom = (props) => {
         dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
       },
       "onnavi_request_close": (e) => {
-        dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
+        const closing = dispatchCustomEvent(
+          popupRef.current,
+          "navi_request_close",
+          e.detail,
+        );
+        if (!closing) {
+          e.preventDefault();
+        }
       },
       children,
     });
@@ -632,10 +642,15 @@ const PickerCustom = (props) => {
           event: e,
           intent: "read",
           allowed: () => {
-            requestClose(e, { isCancel: e.detail.isCancel });
+            const closing = requestClose(e, { isCancel: e.detail.isCancel });
+            if (!closing) {
+              e.preventDefault();
+            }
           },
           prevented: () => {
             confirmEventRef.current = null;
+            // Not closing either way; said back to whoever asked.
+            e.preventDefault();
           },
         });
       },

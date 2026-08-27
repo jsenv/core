@@ -391,6 +391,13 @@ export const useControlProps = (
                 },
               };
             }
+            if (getKeyboardEventDefaultAction(e) === "activate") {
+              // Enter: the browser presses the link itself, with a click that
+              // follows this keydown — and the click reaction below is where
+              // the press is answered, once. A tab for a slide (no href) gets
+              // no such click; Link answers Enter on its own there.
+              return null;
+            }
             return keyDownDefault(e);
           },
           click: (e) => {

@@ -762,9 +762,12 @@ const LinkPlain = (props) => {
       replace={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
       {...replaceRequest}
+      // The control's own handlers first — the interaction gate, the caller's
+      // onClick/onKeyDown, the command and the action — then what only a link
+      // does. Written over the spread above, so they have to be called here.
       onClick={(e) => {
-        onClick?.(e);
-        if (slide) {
+        controlHostProps.onClick(e);
+        if (slide && !e.defaultPrevented) {
           goToSlide(e.currentTarget, e);
         }
         if (preventDefault) {
@@ -775,7 +778,7 @@ const LinkPlain = (props) => {
       // focusable because it says so (tabIndex below) and it answers the two
       // keys a button answers, since that is what it behaves like.
       onKeyDown={(e) => {
-        props.onKeyDown?.(e);
+        controlHostProps.onKeyDown(e);
         if (!slide || e.defaultPrevented) {
           return;
         }

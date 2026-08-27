@@ -59,7 +59,9 @@ The available commands: `--navi-open`, `--navi-close`, `--navi-toggle`,
 `--navi-cancel` (closes, telling the popup the close means "revert"),
 `--navi-confirm` (says yes, then closes). What "revert" does to what is inside
 is [its own section](#escape-cancels-the-other-gestures-keep) — it is also what
-Escape says.
+Escape says. `--navi-close:all` closes every popup above the button, nearest
+first — a link leaving from a badge shown over a sheet leaves both; a popup
+that refuses to close keeps the ones above it open too.
 
 ## Something else opens it: `triggerNaviCommand`
 

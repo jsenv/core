@@ -60,7 +60,8 @@ const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
  * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
  *   `mountContent`/`openEffect`, then `openHandler`.
  * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
- *   stopping after the first if denied. The popup may choose to stay open.
+ *   stopping after the first if denied. The popup may choose to stay open,
+ *   which is what a `false` return says (`true`: closed, or closed already).
  * - `close()`: closes for real — calls only `onClose`, skipping
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
@@ -353,7 +354,7 @@ export const createOpenController = (
       detail,
     ) => {
       if (!controller.opened) {
-        return;
+        return true;
       }
       const requestCloseEvent = new CustomEvent("navi_request_close", {
         detail: { event: e, ...detail },
@@ -368,9 +369,10 @@ export const createOpenController = (
         if (nativeCancelEvent) {
           nativeCancelEvent.preventDefault();
         }
-        return;
+        return false;
       }
       performClose(requestCloseEvent);
+      return true;
     },
     close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
       if (!controller.opened) {

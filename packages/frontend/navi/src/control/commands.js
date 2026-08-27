@@ -867,7 +867,11 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     },
   };
 });
-registerNaviCommand("--navi-close", (source, event) => {
+// "--navi-close:all" closes every expandable above the source, nearest first —
+// a link leaving from a badge shown over a sheet leaves both. A surface that
+// refuses (a form asking about its changes) keeps what is above it open too:
+// one cannot be out of the sheet while still in the badge.
+registerNaviCommand("--navi-close", (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -876,13 +880,30 @@ registerNaviCommand("--navi-close", (source, event) => {
   return {
     target,
     implementation: () => {
-      return dispatchCustomEvent(target, "navi_request_close", {
-        event,
-        source: resolveCommandProxySource(source),
-      });
+      const detail = { event, source: resolveCommandProxySource(source) };
+      if (argument === "all") {
+        return requestCloseUpward(target, detail);
+      }
+      return dispatchCustomEvent(target, "navi_request_close", detail);
     },
   };
 });
+const requestCloseUpward = (target, detail) => {
+  let expandable = target;
+  while (expandable) {
+    const closing = dispatchCustomEvent(
+      expandable,
+      "navi_request_close",
+      detail,
+    );
+    if (!closing) {
+      return false;
+    }
+    const parent = expandable.parentElement;
+    expandable = parent ? parent.closest("[aria-expanded]") : null;
+  }
+  return true;
+};
 registerNaviCommand("--navi-cancel", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
