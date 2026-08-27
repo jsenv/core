@@ -337,6 +337,19 @@
               />
             )}
           </RuleCase>
+          <RuleCase caption="deux caractères empilés dans la même valeur">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="zalgo_two"
+                width="320px"
+                defaultValue={
+                  "a\u0300\u0301\u0302\u0303\u0304\u0306 b\u0300\u0301\u0302\u0303\u0304\u0306"
+                }
+                displayable
+              />
+            )}
+          </RuleCase>
           <RuleCase caption="maxStackedMarks={2} — un tilde et un accent suffisent à dépasser">
             {(ref) => (
               <Input

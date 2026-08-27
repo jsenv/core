@@ -85,13 +85,16 @@ const BLANK_LINES_REGEX = /\n[^\S\n]*\n[^\S\n]*\n/;
 const DANGLING_JOINER_REGEX =
   /^[\u200c\u200d]|[\u200c\u200d]$|\s[\u200c\u200d]|[\u200c\u200d]\s/u;
 
+// The base character comes along with its marks: a refusal that shows what it
+// is talking about is the only way to find the offender in a long value — the
+// stack is invisible as a description and obvious as a sample.
 const stackedMarksRegexCache = new Map();
 const getStackedMarksRegex = (maxStackedMarks) => {
   const fromCache = stackedMarksRegexCache.get(maxStackedMarks);
   if (fromCache) {
     return fromCache;
   }
-  const regex = new RegExp(`\\p{M}{${maxStackedMarks + 1},}`, "u");
+  const regex = new RegExp(`\\P{M}?\\p{M}{${maxStackedMarks + 1},}`, "gu");
   stackedMarksRegexCache.set(maxStackedMarks, regex);
   return regex;
 };
@@ -103,8 +106,16 @@ export const DISPLAYABLE_RULE = {
       return null;
     }
     const { maxStackedMarks = DEFAULT_MAX_STACKED_MARKS } = ruleConfig;
-    if (getStackedMarksRegex(maxStackedMarks).test(value)) {
-      return message("displayable.stacked_marks", { max: maxStackedMarks });
+    // `match` with a global regex, never `test`: `test` would carry `lastIndex`
+    // over from the previous call on a cached regex.
+    const stacks = value.match(getStackedMarksRegex(maxStackedMarks));
+    if (stacks) {
+      return message(
+        stacks.length === 1
+          ? "displayable.stacked_marks.singular"
+          : "displayable.stacked_marks.plural",
+        { max: maxStackedMarks, count: stacks.length, sample: stacks[0] },
+      );
     }
     if (value.replace(INK_LESS_REGEX, "") === "") {
       return message("displayable.invisible");

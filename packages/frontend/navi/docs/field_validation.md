@@ -80,6 +80,14 @@ against: `charGuard="tel"`, `charGuard="slug"`, `charGuard="noEmoji"`. Refusing
 the keystroke and refusing the value are different jobs — the pair
 `maxLengthGuard`/`maxLength` is the same split — and a field usually wants both.
 
+**A guard answers for the gesture, never for what the field already holds.** A
+value can arrive already outside the class or already too long — a
+`defaultValue`, a signal, a value written from elsewhere — and a guard that
+re-judged the whole value would refuse every keystroke over it, blaming the
+person for a character they did not type, and refuse the deletion that would
+have fixed it. So a change is refused only when it makes the value worse. What
+is already there is the constraint's business, and it says so at submit.
+
 ## Reading the validity without submitting
 
 `useConstraintValidityState(ref)` gives the control's validity as it stands,

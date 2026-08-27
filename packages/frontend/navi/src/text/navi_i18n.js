@@ -699,9 +699,15 @@ naviI18n.addAll({
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
   },
-  "constraint.displayable.stacked_marks": {
-    fr: "Ce champ ne doit pas empiler plus de <strong>[max]</strong> signes sur un même caractère.",
-    en: "This field must not stack more than <strong>[max]</strong> marks on a single character.",
+  // [sample] is the offending character with its marks — a stack is invisible
+  // as a description and obvious as a sample.
+  "constraint.displayable.stacked_marks.singular": {
+    fr: "Ce champ contient un caractère qui empile plus de <strong>[max]</strong> signes : « [sample] ».",
+    en: "This field contains a character stacking more than <strong>[max]</strong> marks: “[sample]”.",
+  },
+  "constraint.displayable.stacked_marks.plural": {
+    fr: "Ce champ contient [count] caractères qui empilent plus de <strong>[max]</strong> signes (tel que « [sample] »).",
+    en: "This field contains [count] characters stacking more than <strong>[max]</strong> marks (such as “[sample]”).",
   },
   "constraint.displayable.invisible": {
     fr: "Ce champ doit contenir au moins un caractère visible.",
@@ -715,11 +721,11 @@ naviI18n.addAll({
     fr: "Ce champ contient un caractère de liaison invisible qui ne relie rien.",
     en: "This field contains an invisible joiner that joins nothing.",
   },
-  "constraint.no_emoji": {
+  "constraint.no_emoji.default": {
     fr: "Ce champ ne doit pas contenir d'emoji.",
     en: "This field must not contain emoji.",
   },
-  "constraint.max_line_breaks": {
+  "constraint.max_line_breaks.default": {
     fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
     en: "This field must not contain more than [max] line break[s].",
   },

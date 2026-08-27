@@ -4,6 +4,15 @@
  * refuses it comes from @jsenv/validity; the guard is what only a field can do,
  * blocking the keystroke before the value exists.
  *
+ * The guard answers for the GESTURE, never for what the control already holds.
+ * A value can arrive already outside the class or already too long — a
+ * `defaultValue`, a signal, a value written from elsewhere — and refusing the
+ * next keystroke over it would blame the person for a character they did not
+ * type. So a change is refused only when it makes the value worse: one more
+ * character outside the class, or one more character over the limit. What is
+ * already there is the `charClass`/`maxLength` constraint's business, and it
+ * says so at submit.
+ *
  * The guard owns a single callout token (shared across all rejection reasons) so
  * successive rejections update the same callout rather than stacking.
  *
@@ -56,18 +65,41 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   });
 };
 
-// Paste / set: block when value contains disallowed chars.
-const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
+const countCharsOutsideClass = (str, charClass) => {
+  const regex = compileCharClass(charClass);
+  let count = 0;
+  for (const char of str) {
+    if (!regex.test(char)) {
+      count++;
+    }
+  }
+  return count;
+};
+
+// Paste / set: block when the gesture brings in a character the class refuses.
+const getInvalidCharsMessage = (
+  uiState,
+  { charClass, messageKey, uiStateNow },
+) => {
   const str = uiState === undefined ? "" : String(uiState);
   if (compileCharClassAnchored(charClass).test(str)) return null;
+  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  if (
+    countCharsOutsideClass(str, charClass) <=
+    countCharsOutsideClass(strNow, charClass)
+  ) {
+    return null;
+  }
   return naviI18nFromValidityMessage({ key: messageKey });
 };
 
-// Paste / set: truncate when value exceeds maxLength.
-const getLengthOverflowResult = (uiState, { maxLength }) => {
+// Paste / set: truncate what the gesture adds beyond the limit.
+const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
   if (maxLength === undefined) return null;
   const str = uiState === undefined ? "" : String(uiState);
   if (str.length <= maxLength) return null;
+  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  if (str.length <= strNow.length) return null;
   return {
     fixedValue: str.slice(0, maxLength),
     message: naviI18n("constraint.guard.max_length.value", {
@@ -136,6 +168,9 @@ export const createControlGuard = (controller) => {
    */
   const checkUIState = (uiState, e) => {
     const { charGuard, maxLengthGuard } = controller.props;
+    // What the control holds right now — setUIState has not written the new
+    // value yet, and the paste path computes it without applying it.
+    const uiStateNow = controller.uiState;
 
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
@@ -143,6 +178,7 @@ export const createControlGuard = (controller) => {
       const charsMsg = getInvalidCharsMessage(uiState, {
         charClass,
         messageKey,
+        uiStateNow,
       });
       if (charsMsg) {
         show(charsMsg, e);
@@ -153,6 +189,7 @@ export const createControlGuard = (controller) => {
     if (maxLengthGuard !== undefined) {
       const lengthResult = getLengthOverflowResult(uiState, {
         maxLength: maxLengthGuard,
+        uiStateNow,
       });
       if (lengthResult) {
         show(lengthResult.message, e);

@@ -67,8 +67,10 @@ export const MESSAGE_TEMPLATES = {
   "char_class.slug": "must only contain lowercase letters, digits and hyphens",
   "char_class.no_emoji": "must not contain emoji",
   "no_emoji.default": "must not contain emoji",
-  "displayable.stacked_marks":
-    "must not stack more than [max] marks on a single character",
+  "displayable.stacked_marks.singular":
+    'must not contain a character stacking more than [max] marks: "[sample]"',
+  "displayable.stacked_marks.plural":
+    'must not contain [count] characters stacking more than [max] marks (such as "[sample]")',
   "displayable.invisible": "must contain at least one visible character",
   "displayable.blank_lines": "must not contain consecutive blank lines",
   "displayable.dangling_joiner":
