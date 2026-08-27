@@ -422,8 +422,11 @@ const css = /* css */ `
     &[data-readonly-opens] {
       --x-picker-cursor: pointer;
     }
-    /* Focus */
-    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
+    /* Focus. The second selector is the state held by hand (pseudoState on
+       the picker lands on this root, which is never focused for real): a demo
+       showing the ring without a Tab press. */
+    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]),
+    &[data-focus-visible] {
       --x-picker-border-color: transparent;
 
       .navi_picker_box {
@@ -510,15 +513,36 @@ const css = /* css */ `
         z-index: -1;
       }
     }
-    /* button: drawn as a Button is — its surface, its padding, a centered
-       label — for a picker that IS a button with a popup behind it (a confirm).
-       The value slot draws the label (the ui prop), and no slot follows it:
-       nothing says "this opens", what it opens says it. */
+    /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
+       and the --navi-button-* vars) — its surface, its padding, a centered
+       label, its washed-out read-only and disabled — for a picker that IS a
+       button with a popup behind it (a confirm). The value slot draws the
+       label (the ui prop), and no slot follows it: nothing says "this opens",
+       what it opens says it. Hover keeps the picker's own formulas, which are
+       the button's already. */
     &[data-variant="button"] {
       --picker-padding-x-default: var(--navi-button-padding-x-default);
       --picker-padding-y-default: var(--navi-button-padding-y-default);
       --picker-align-x-default: center;
-      --picker-background-color: light-dark(#f3f4f6, #2d3748);
+      --picker-background-color: var(--navi-button-background-color);
+      /* Read-only / disabled: fading toward the surface, not toward
+         transparent — the button's own rule. */
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 30%,
+        var(--navi-surface-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-color-readonly: color-mix(
+        in srgb,
+        var(--picker-color) 30%,
+        transparent
+      );
+      --picker-border-color-disabled: var(--picker-border-color-readonly);
+      --picker-background-color-disabled: var(
+        --picker-background-color-readonly
+      );
+      --picker-color-disabled: var(--picker-color-readonly);
 
       text-align: center;
     }
@@ -1146,7 +1170,7 @@ const PickerFirstResolver = (props) => {
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless" | "discrete" | "button",
+ *   variant?: "icon" | "headless" | "discrete" | "button" | "picker",
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
@@ -1254,6 +1278,12 @@ const PickerFirstResolver = (props) => {
  *   BEFORE the ui state is emptied, so answering no leaves the field exactly
  *   as it was; answering yes clears and sends, and the picker's own action
  *   receives the cleared value like any other choice.
+ * @param {"icon"|"headless"|"discrete"|"button"|"picker"} [variant] How the
+ *   trigger is drawn. `"button"` is a Button's drawing — surface, padding, a
+ *   centered label, no chevron — and what a `type="confirm"` picker draws
+ *   unless told otherwise: nothing is picked, the popup is a question. Under
+ *   `type="confirm"`, `"picker"` (or an explicit `variant={undefined}`) asks
+ *   for the field-like drawing every other picker has.
  * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
  *   question, in the popup's default body — text, or JSX when it needs an
  *   emphasis, a link. Left out, a generic "are you sure?" in the current

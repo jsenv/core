@@ -35,7 +35,7 @@ const css = /* css */ `
       --button-border-color: var(--navi-control-border-color);
       --button-background-color: var(
         --button-background,
-        light-dark(#f3f4f6, #2d3748)
+        var(--navi-button-background-color)
       );
       --button-color: currentColor;
       --button-cursor: pointer;

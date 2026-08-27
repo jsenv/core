@@ -103,6 +103,9 @@ const css = /* css */ `
       /* Use --button-padding, --button-padding-x, --button-padding-y for per-button overrides. */
       --navi-button-padding-x-default: 6px;
       --navi-button-padding-y-default: 1px;
+      /* Read by Button, and by whatever is drawn as one (a picker under
+         variant="button"), so the two keep the same surface. */
+      --navi-button-background-color: light-dark(#f3f4f6, #2d3748);
       /* For list item we need slightly more padding to be able to see radio/checkbox outline */
       --navi-list-item-padding-x-default: 4px;
       --navi-list-item-padding-y-default: 1px;
