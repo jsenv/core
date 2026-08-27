@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker callout demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+        scroll-margin-top: 12px;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .demo-case {
+        display: flex;
+        margin-bottom: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .demo-caption {
+        color: #666;
+        font-size: 0.8rem;
+      }
+      .demo-caption code {
+        font-size: 0.8rem;
+      }
+      .demo-sentence {
+        max-width: 420px;
+        color: #333;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box, Button, Link, Picker } from "@jsenv/navi";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Section = ({ id, title, children }) => (
+        <div class="demo-section">
+          <Heading id={id}>{title}</Heading>
+          {children}
+        </div>
+      );
+
+      const Case = ({ caption, children }) => (
+        <div class="demo-case">
+          <span class="demo-caption">{caption}</span>
+          {children}
+        </div>
+      );
+
+      const Tip = ({ children }) => <p style={{ margin: 0 }}>{children}</p>;
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Picker callout"
+            previous={{
+              href: "./10_picker_confirm_demo.html",
+              label: "Confirm",
+            }}
+          />
+          <div class="demo-section">
+            <h2>Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <VariantDemo />
+          <StatusDemo />
+          <ContentDemo />
+          <PositionDemo />
+        </Box>
+      );
+
+      const NominalDemo = () => (
+        <Section id="nominal" title="Cas nominal">
+          <Picker mode="callout">
+            <Tip>Kept across reloads, on this device only.</Tip>
+          </Picker>
+        </Section>
+      );
+
+      const StatesDemo = () => (
+        <Section id="states" title="États">
+          <div class="demo-row">
+            <Case caption="default">
+              <Picker mode="callout">
+                <Tip>Kept across reloads.</Tip>
+              </Picker>
+            </Case>
+            <Case caption="readOnly">
+              <Picker mode="callout" readOnly>
+                <Tip>Kept across reloads.</Tip>
+              </Picker>
+            </Case>
+            <Case caption="disabled">
+              <Picker mode="callout" disabled>
+                <Tip>Kept across reloads.</Tip>
+              </Picker>
+            </Case>
+            <Case caption="loading">
+              <Picker mode="callout" loading>
+                <Tip>Kept across reloads.</Tip>
+              </Picker>
+            </Case>
+            <Case caption="focus visible">
+              <Picker mode="callout" pseudoState={{ ":focus-visible": true }}>
+                <Tip>Kept across reloads.</Tip>
+              </Picker>
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const VariantDemo = () => (
+        <Section id="variant" title="variant">
+          <Case caption='variant="icon" (default)'>
+            <Picker mode="callout">
+              <Tip>An icon one presses.</Tip>
+            </Picker>
+          </Case>
+          <Case caption='variant="text" — a term in a sentence'>
+            <p class="demo-sentence">
+              Your files are stored in the{" "}
+              <Picker mode="callout" variant="text" ui="vault">
+                <Tip>
+                  The vault is an encrypted folder only your devices can open.
+                </Tip>
+              </Picker>{" "}
+              until you delete them, and a deleted file is kept{" "}
+              <Picker mode="callout" variant="text" ui="30 days">
+                <Tip>Counted from the deletion, whatever the file's age.</Tip>
+              </Picker>{" "}
+              before it is gone for good.
+            </p>
+          </Case>
+          <Case caption='variant="discrete"'>
+            <Picker
+              mode="callout"
+              variant="discrete"
+              placeholder="What does this setting do?"
+            >
+              <Tip>It keeps the fruit you pick across reloads.</Tip>
+            </Picker>
+          </Case>
+          <Case caption='variant="button"'>
+            <Picker mode="callout" variant="button" ui="Help">
+              <Tip>Press a fruit to pick it, press it again to unpick it.</Tip>
+            </Picker>
+          </Case>
+        </Section>
+      );
+
+      const StatusDemo = () => (
+        <Section id="status" title="calloutStatus">
+          <div class="demo-row">
+            <Case caption='"info" (default)'>
+              <Picker mode="callout" variant="text" ui="info">
+                <Tip>An aside.</Tip>
+              </Picker>
+            </Case>
+            <Case caption='calloutStatus="success"'>
+              <Picker
+                mode="callout"
+                calloutStatus="success"
+                variant="text"
+                ui="success"
+              >
+                <Tip>Saved a minute ago.</Tip>
+              </Picker>
+            </Case>
+            <Case caption='calloutStatus="warning"'>
+              <Picker
+                mode="callout"
+                calloutStatus="warning"
+                variant="text"
+                ui="warning"
+              >
+                <Tip>Your plan does not include it.</Tip>
+              </Picker>
+            </Case>
+            <Case caption='calloutStatus="error" — a click outside leaves it'>
+              <Picker
+                mode="callout"
+                calloutStatus="error"
+                variant="text"
+                ui="error"
+              >
+                <Tip>The last save failed.</Tip>
+              </Picker>
+            </Case>
+          </div>
+        </Section>
+      );
+
+      const ContentDemo = () => (
+        <Section id="content" title="What the callout holds">
+          <Case caption="a link">
+            <Picker mode="callout">
+              <Tip>
+                Your plan does not include it —{" "}
+                <Link href="#content">see what does</Link>.
+              </Tip>
+            </Picker>
+          </Case>
+          <Case caption='a button closing it — command="--navi-close"'>
+            <Picker mode="callout">
+              <Box flex="y" spacing="s" alignX="start">
+                <Tip>Kept across reloads, on this device only.</Tip>
+                <Button command="--navi-close">Got it</Button>
+              </Box>
+            </Picker>
+          </Case>
+          <Case caption="several lines">
+            <Picker mode="callout">
+              <Box flex="y" spacing="s">
+                <Tip>
+                  <strong>Kept across reloads.</strong>
+                </Tip>
+                <Tip>
+                  The fruit you pick is written to this browser's storage and
+                  read back the next time the page opens. Another browser, or a
+                  private window, starts from nothing.
+                </Tip>
+              </Box>
+            </Picker>
+          </Case>
+        </Section>
+      );
+
+      const PositionDemo = () => (
+        <Section id="position" title="data-callout-position">
+          <div class="demo-row">
+            <Case caption='"bottom" (default)'>
+              <Picker mode="callout">
+                <Tip>Below, when there is room.</Tip>
+              </Picker>
+            </Case>
+            <Case caption='data-callout-position="top"'>
+              <Picker mode="callout" data-callout-position="top">
+                <Tip>Above, when there is room.</Tip>
+              </Picker>
+            </Case>
+          </div>
+        </Section>
+      );
+
+      render(<App />, document.querySelector("#container"));
+    </script>
+  </body>
+</html>

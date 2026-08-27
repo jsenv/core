@@ -546,6 +546,31 @@ const css = /* css */ `
 
       text-align: center;
     }
+    /* text: a word in a sentence, marked by the dotted line under it — the way
+       a term one can ask about is marked. No box, no slot; the font is the
+       sentence's own, so the word sits in its line like the ones around it. */
+    &[data-variant="text"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+
+      font-size: inherit;
+      font-family: inherit;
+      text-decoration: underline dotted;
+      text-underline-offset: 0.2em;
+
+      &[data-hover] {
+        text-decoration-style: solid;
+      }
+    }
   }
 `;
 
@@ -787,7 +812,9 @@ const PickerButton = (props) => {
               // A button's label is not a placeholder, however empty the
               // picker behind it is.
               navi-placeholder={
-                variant !== "button" && uiStateHoldsNothing(value)
+                variant !== "button" &&
+                variant !== "text" &&
+                uiStateHoldsNothing(value)
                   ? ""
                   : undefined
               }
@@ -827,6 +854,7 @@ const PickerButton = (props) => {
           {variant === "icon" ||
           variant === "headless" ||
           variant === "button" ||
+          variant === "text" ||
           ui === "default" ? null : (
             <span className="navi_picker_right_slot">
               <PickerOwnContent>
@@ -1166,11 +1194,12 @@ const PickerFirstResolver = (props) => {
  *   uiAction?: (value: any, event: Event) => void,
  *   action?: (value: any, event: Event) => void,
  *   children?: import("preact").ComponentChildren,
- *   mode?: "popover" | "dialog",
+ *   mode?: "popover" | "dialog" | "callout",
+ *   calloutStatus?: "info" | "warning" | "error" | "success",
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "headless" | "discrete" | "button" | "picker",
+ *   variant?: "icon" | "headless" | "discrete" | "button" | "text" | "picker",
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
@@ -1243,6 +1272,15 @@ const PickerFirstResolver = (props) => {
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.
  *   Dismissing it discards that error; a new `error` value raises another one.
+ * @param {"popover"|"dialog"|"callout"} [mode] Which popup the children open
+ *   in. Left out, a popover on a large screen and a dialog on a narrow one.
+ *   `"callout"` shows them in the picker's own callout — the speech bubble its
+ *   constraints speak in, with its status icon, its cross and its arrow on
+ *   the trigger — for a tooltip that opens on a press. It closes the way a
+ *   callout does: its cross, Escape, a click outside.
+ * @param {"info"|"warning"|"error"|"success"} [calloutStatus="info"]
+ *   `mode="callout"`: what the callout says about what it holds — its border,
+ *   its icon, and whether a click outside closes it (an "error" stays).
  * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
  *   over the trigger, "nearby" leaves a small gap below it.
  * @param {string} [positionArea] Where the popup goes — relative to the trigger
@@ -1278,12 +1316,16 @@ const PickerFirstResolver = (props) => {
  *   BEFORE the ui state is emptied, so answering no leaves the field exactly
  *   as it was; answering yes clears and sends, and the picker's own action
  *   receives the cleared value like any other choice.
- * @param {"icon"|"headless"|"discrete"|"button"|"picker"} [variant] How the
- *   trigger is drawn. `"button"` is a Button's drawing — surface, padding, a
- *   centered label, no chevron — and what a `type="confirm"` picker draws
- *   unless told otherwise: nothing is picked, the popup is a question. Under
- *   `type="confirm"`, `"picker"` (or an explicit `variant={undefined}`) asks
- *   for the field-like drawing every other picker has.
+ * @param {"icon"|"headless"|"discrete"|"button"|"text"|"picker"} [variant]
+ *   How the trigger is drawn. `"button"` is a Button's drawing — surface,
+ *   padding, a centered label, no chevron — and what a `type="confirm"` picker
+ *   draws unless told otherwise: nothing is picked, the popup is a question.
+ *   `"text"` is a word in a sentence, underlined with dots, no box and no
+ *   slot: what `mode="callout"` uses for a callout on a term rather than on an
+ *   icon (`"icon"` being its default, with an info icon in place of the
+ *   chevron). `"picker"` (or an explicit `variant={undefined}`) asks a
+ *   confirm or callout picker for the field-like drawing every other picker
+ *   has.
  * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
  *   question, in the popup's default body — text, or JSX when it needs an
  *   emphasis, a link. Left out, a generic "are you sure?" in the current

@@ -109,7 +109,11 @@ export const createCalloutManager = (
       openingEvent: event,
       skipFocus,
       debug: debugPopup,
-      onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
+      onClose: ({
+        event: closeEvent,
+        reason,
+        shouldTransferFocusFromCallout,
+      }) => {
         removeCloseOnCleanup?.();
         for (const result of openResults) {
           if (typeof result === "function") {
@@ -118,8 +122,10 @@ export const createCalloutManager = (
         }
         callout = null;
         // User dismissed the callout — notify all active tokens then clear.
+        // Told what closed it: a token whose content is a popup of its own (a
+        // picker in callout mode) closes that popup on the same event.
         for (const [, tokenData] of tokens) {
-          tokenData.onClose?.();
+          tokenData.onClose?.({ event: closeEvent, reason });
         }
         tokens.clear();
         const element = controller.ref.current;

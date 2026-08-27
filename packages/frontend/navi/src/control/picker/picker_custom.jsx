@@ -1,6 +1,9 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
+import { createPortal } from "preact/compat";
 import { useContext, useId, useRef } from "preact/hooks";
 
+import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { InfoSvg } from "@jsenv/navi/src/graphic/icons/info_svg.jsx";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
@@ -20,6 +23,7 @@ import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
 import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
+import { createOpenToken } from "../rules/control_callout.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
@@ -185,6 +189,18 @@ export const PickerCustomResolver = (props) => {
 
   if (props.children === undefined) {
     return <PickerNative {...props} />;
+  }
+  if (props.mode === "callout") {
+    // A tooltip is an icon one presses, unless told otherwise — and that icon
+    // says "there is more to know", not "this opens a list". Own-property
+    // rather than undefined: an explicit variant={undefined} asks for the
+    // field-like drawing back.
+    if (!Object.hasOwn(props, "variant")) {
+      props.variant = "icon";
+    }
+    if (props.rightSlotIcon === undefined) {
+      props.rightSlotIcon = <InfoSvg />;
+    }
   }
   if (props.type === undefined) {
     // A picker with a popup of its own holds whatever the control inside it
@@ -818,9 +834,14 @@ const PickerContentInsidePopup = (props) => {
     // marginWithAnchor.
     dockedOnSmallTouchScreen,
     animation,
+    // mode="callout": what the callout says about what it holds, and paints
+    // in its border and icon. "info" by default — a callout is an aside, and
+    // the picker opening it a way of asking for one.
+    calloutStatus = "info",
     ...rest
   } = props;
   const isPopover = mode === "popover";
+  const isCallout = mode === "callout";
 
   return (
     <Next
@@ -852,41 +873,149 @@ const PickerContentInsidePopup = (props) => {
         });
       }}
     >
-      <Popup
-        {...popupProps}
-        mode={mode}
-        layer={popupLayer}
-        animation={animation}
-        positionArea={
-          isPopover
-            ? (positionArea ??
-              (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
-            : positionArea
-        }
-        marginWithAnchor={isPopover ? popoverSpacing : undefined}
-        marginWithContainer={
-          marginWithContainer === undefined && isPopover
-            ? popoverSpacing
-            : marginWithContainer
-        }
-        scrollCapture={scrollCapture}
-        pointerInteractionOutsideEffect={
-          pointerLock ? "capture" : pointerInteractionOutsideEffect
-        }
-        backdropVariant={backdropVariant}
-        focusCapture={isPopover ? focusCapture : undefined}
-        expand={isPopover ? undefined : dialogExpand}
-        expandX={isPopover ? undefined : dialogExpandX}
-        expandY={isPopover ? undefined : dialogExpandY}
-        dockedOnSmallTouchScreen={
-          isPopover ? undefined : dockedOnSmallTouchScreen
-        }
-      >
-        {/* Let the popup content branch on the mode via usePopupMode(). */}
-        <PopupModeContext.Provider value={mode}>
-          {children}
-        </PopupModeContext.Provider>
-      </Popup>
+      {isCallout ? (
+        <PickerCalloutPopup
+          {...popupProps}
+          pickerRef={props.ref}
+          status={calloutStatus}
+        >
+          <PopupModeContext.Provider value={mode}>
+            {children}
+          </PopupModeContext.Provider>
+        </PickerCalloutPopup>
+      ) : (
+        <Popup
+          {...popupProps}
+          mode={mode}
+          layer={popupLayer}
+          animation={animation}
+          positionArea={
+            isPopover
+              ? (positionArea ??
+                (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
+              : positionArea
+          }
+          marginWithAnchor={isPopover ? popoverSpacing : undefined}
+          marginWithContainer={
+            marginWithContainer === undefined && isPopover
+              ? popoverSpacing
+              : marginWithContainer
+          }
+          scrollCapture={scrollCapture}
+          pointerInteractionOutsideEffect={
+            pointerLock ? "capture" : pointerInteractionOutsideEffect
+          }
+          backdropVariant={backdropVariant}
+          focusCapture={isPopover ? focusCapture : undefined}
+          expand={isPopover ? undefined : dialogExpand}
+          expandX={isPopover ? undefined : dialogExpandX}
+          expandY={isPopover ? undefined : dialogExpandY}
+          dockedOnSmallTouchScreen={
+            isPopover ? undefined : dockedOnSmallTouchScreen
+          }
+        >
+          {/* Let the popup content branch on the mode via usePopupMode(). */}
+          <PopupModeContext.Provider value={mode}>
+            {children}
+          </PopupModeContext.Provider>
+        </Popup>
+      )}
     </Next>
+  );
+};
+
+// One token per picker rather than per instance: a callout manager belongs to
+// one control, so the key only has to be distinct from the other reasons that
+// control may have to show a callout (a failing constraint, a busy refusal, its
+// `error` prop). Those keep working on top of this one: opened while the
+// content is up they take the callout over, and give it back when they go.
+const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
+
+/**
+ * The popup of a `mode="callout"` picker: the picker's own callout — the one
+ * its constraints speak in — showing the picker's children instead of a
+ * message. A speech bubble on the trigger, for a tooltip that opens on a press.
+ *
+ * Wired the way Popover and Dialog are, through `openController.openEffect`:
+ * opening adds a token to the picker's callout manager, whose cleanup removes
+ * it. The callout has ways out of its own (its cross, a click outside, Escape,
+ * focus leaving the picker) and says so through the token's `onClose`, which
+ * closes the controller for real — the popup is already gone, there is no
+ * choice left to offer `requestClose`.
+ *
+ * The content is rendered through a portal into an element this component
+ * owns, handed to the callout as its message (a Node, appended as-is). It is
+ * rendered whether the callout is open or not, so what the content holds
+ * survives a close, the way a popup's `mountWhenClosed` keeps it. The element
+ * carries data-picker-content: the callout is appended inside the picker root,
+ * and a press in there must read as inside the popup, not on the trigger.
+ */
+const PickerCalloutPopup = ({
+  ref,
+  id,
+  anchor,
+  openController,
+  pickerRef,
+  status,
+  onnavi_request_open,
+  onnavi_request_close,
+  onnavi_request_confirm,
+  children,
+}) => {
+  const hostRef = useRef(null);
+  if (!hostRef.current) {
+    const host = document.createElement("div");
+    host.setAttribute("data-picker-content", "");
+    hostRef.current = host;
+  }
+  // Reassigned on every render, like Popover's own, so it closes over the
+  // latest props.
+  openController.openEffect = (openEvent) => {
+    const pickerEl = pickerRef.current;
+    const calloutManager =
+      getPickerInput(pickerEl).__uiStateController__.rules.callout;
+    // Only an anchor the caller named: left unsaid, the manager anchors on the
+    // picker's own input — which is where the data-callout-* attributes a
+    // caller puts on the picker land, and where the callout reads them.
+    const anchorElement =
+      anchor === pickerRef
+        ? undefined
+        : anchor && "current" in anchor
+          ? anchor.current
+          : anchor;
+    calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
+      message: hostRef.current,
+      status,
+      anchorElement,
+      // The request, chained to the press that made it: the callout reads the
+      // mousedown off it to wait for the release before listening for a click
+      // outside — the same gesture's own click would close it otherwise.
+      event: openEvent,
+      // Not skipped: the callout moves the focus into the picker when it is
+      // elsewhere, which is what lets Escape find the callout right away.
+      skipFocus: false,
+      onClose: ({ event }) => {
+        openController.close(event);
+      },
+    });
+    return (closeEvent) => {
+      calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
+    };
+  };
+
+  return (
+    // What the picker addresses (aria-controls, the request events it
+    // forwards); the callout itself lives where the callout manager puts it.
+    <Box
+      as="div"
+      ref={ref}
+      id={id}
+      style={{ display: "contents" }}
+      onnavi_request_open={onnavi_request_open}
+      onnavi_request_close={onnavi_request_close}
+      onnavi_request_confirm={onnavi_request_confirm}
+    >
+      {createPortal(children, hostRef.current)}
+    </Box>
   );
 };
