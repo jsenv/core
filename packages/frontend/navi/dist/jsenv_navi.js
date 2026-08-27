@@ -4,9 +4,9 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
-import { signal, computed, effect, batch, untracked, useSignal } from "@preact/signals";
+import { signal, computed, effect, batch, useComputed, untracked, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, Fragment, toChildArray, options, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
@@ -3689,6 +3689,7 @@ const CONSTRAINT_NAME_TO_PROP = {
   min: "minMessage",
   max: "maxMessage",
   single_space: "singleSpaceMessage",
+  displayable: "displayableMessage",
   same_as: "sameAsMessage",
   min_lower_letter: "minLowerLetterMessage",
   min_upper_letter: "minUpperLetterMessage",
@@ -3820,6 +3821,11 @@ const CONTROL_PROP_SET = new Set([
 
   "loading",
   "basePseudoState",
+  // App constraints this control must satisfy, on top of the ones navi ships:
+  // `constraints={[MY_CONSTRAINT]}`. A constraint is an object, so it carries
+  // its own parameters — nothing has to travel through an attribute. Read on
+  // every check in control_validation.js; `registerGlobalConstraint` is the
+  // same thing for every control at once.
   "constraints",
 
   // A real target inside a zone that belongs to another control — see
@@ -7244,6 +7250,18 @@ naviI18n.addAll({
   "constraint.single_space.consecutive.default": {
     fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
     en: "This field must not contain consecutive spaces.",
+  },
+  "constraint.displayable.stacked_marks.default": {
+    fr: "Ce champ ne doit pas empiler plus de <strong>[max]</strong> signes sur un même caractère.",
+    en: "This field must not stack more than <strong>[max]</strong> marks on a single character.",
+  },
+  "constraint.displayable.invisible.default": {
+    fr: "Ce champ doit contenir au moins un caractère visible.",
+    en: "This field must contain at least one visible character.",
+  },
+  "constraint.displayable.blank_lines.default": {
+    fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
+    en: "This field must not contain consecutive blank lines.",
   },
   "constraint.min_lower_letter.password.singular": {
     fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
@@ -10969,6 +10987,91 @@ const isFunctionButNotAnActionFunction = (action) => {
   return typeof action === "function" && !action.isAction;
 };
 
+/**
+ * `data-displayable` — the value must be something the layout can actually
+ * draw. Three shapes break a row, a card or a list even though every character
+ * taken alone is legitimate, so no character class can express them:
+ *
+ * - marks stacked on one base character ("zalgo"): a diacritic is a normal
+ *   character — a decomposed Vietnamese letter carries two, a vocalized Hebrew
+ *   one three — what is not normal is the count in a row. Thirty of them draw
+ *   far above the line, over the row above.
+ * - a value that is not empty and yet shows nothing: only spaces, only marks,
+ *   only format characters. An empty-looking line in the middle of a list
+ *   reads as a bug.
+ * - blank lines in series: forty newlines make a card as tall as the screen.
+ *
+ * These are display rules, not app rules: they hold for every field, whatever
+ * it holds — which is why they ship here rather than being rewritten per app.
+ *
+ * Note what is deliberately NOT refused: U+200D (ZWJ) and U+200C (ZWNJ) are
+ * invisible characters, but the first assembles 👨‍👩‍👧 and 🏳️‍🌈 and the second
+ * separates two letters in Persian. Banning invisible characters outright
+ * would mean banning composed emoji. They only make a value fail here when
+ * nothing visible is left once they are removed.
+ */
+
+
+// Above what any writing system needs on one base character, far below what
+// zalgo uses. Raise it with data-max-stacked-marks when a language needs more.
+const DEFAULT_MAX_STACKED_MARKS = 5;
+
+// Everything that occupies no ink of its own: spaces, control and format
+// characters, and combining marks (which draw on a base character, so a value
+// made only of them has nothing to draw on).
+const INK_LESS_REGEX = /[\p{White_Space}\p{Cc}\p{Cf}\p{M}]/gu;
+// Two newlines are one blank line — a paragraph break; three are two.
+const BLANK_LINES_REGEX = /\n[^\S\n]*\n[^\S\n]*\n/;
+
+const stackedMarksRegexCache = new Map();
+const getStackedMarksRegex = (maxStackedMarks) => {
+  const fromCache = stackedMarksRegexCache.get(maxStackedMarks);
+  if (fromCache) {
+    return fromCache;
+  }
+  const regex = new RegExp(`\\p{M}{${maxStackedMarks + 1},}`, "u");
+  stackedMarksRegexCache.set(maxStackedMarks, regex);
+  return regex;
+};
+
+const DISPLAYABLE_CONSTRAINT = {
+  name: "displayable",
+  messageAttribute: "data-displayable-message",
+  check: (field) => {
+    const displayable = field.controlHostProps["data-displayable"];
+    if (displayable === undefined) {
+      return null;
+    }
+    const valueAsString =
+      field.uiState === undefined ? "" : String(field.uiState);
+    if (valueAsString === "") {
+      // An empty field is `required`'s business, not this one's.
+      return null;
+    }
+
+    const maxStackedMarksAttribute =
+      field.controlHostProps["data-max-stacked-marks"];
+    const maxStackedMarks =
+      maxStackedMarksAttribute === undefined
+        ? DEFAULT_MAX_STACKED_MARKS
+        : parseInt(maxStackedMarksAttribute, 10);
+    if (getStackedMarksRegex(maxStackedMarks).test(valueAsString)) {
+      return naviI18n("constraint.displayable.stacked_marks.default", {
+        max: maxStackedMarks,
+      });
+    }
+    if (valueAsString.replace(INK_LESS_REGEX, "") === "") {
+      return naviI18n("constraint.displayable.invisible.default");
+    }
+    if (BLANK_LINES_REGEX.test(valueAsString)) {
+      return naviI18n("constraint.displayable.blank_lines.default");
+    }
+    return null;
+  },
+};
+CONSTRAINT_ATTRIBUTE_SET.add("data-displayable");
+CONSTRAINT_ATTRIBUTE_SET.add("data-max-stacked-marks");
+
 const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
   messageAttribute: "data-min-lower-letter-message",
@@ -11386,6 +11489,7 @@ const STANDARD_CONSTRAINT_SET = new Set([
 const NAVI_CONSTRAINT_SET = new Set([
   MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
+  DISPLAYABLE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -11398,8 +11502,29 @@ const DEFAULT_CONSTRAINT_SET = new Set([
   ...NAVI_CONSTRAINT_SET,
 ]);
 const registerGlobalConstraint = (customConstraint) => {
-  NAVI_CONSTRAINT_SET.add(customConstraint);
-  DEFAULT_CONSTRAINT_SET.add(customConstraint);
+  const constraint = normalizeConstraint(customConstraint);
+  NAVI_CONSTRAINT_SET.add(constraint);
+  DEFAULT_CONSTRAINT_SET.add(constraint);
+};
+
+// A constraint may be written as a bare check function; the rest of the code
+// wants the object shape. The wrapper is cached so a function passed on every
+// render keeps one identity across checks.
+const constraintFromFunctionMap = new WeakMap();
+const normalizeConstraint = (constraint) => {
+  if (typeof constraint !== "function") {
+    return constraint;
+  }
+  const existing = constraintFromFunctionMap.get(constraint);
+  if (existing) {
+    return existing;
+  }
+  const constraintObject = {
+    name: constraint.name || "custom_function",
+    check: constraint,
+  };
+  constraintFromFunctionMap.set(constraint, constraintObject);
+  return constraintObject;
 };
 
 const createControlValidation = (
@@ -11415,15 +11540,10 @@ const createControlValidation = (
   const dynamicConstraintSet = new Set();
   {
     controlValidity.registerConstraint = (constraint) => {
-      if (typeof constraint === "function") {
-        constraint = {
-          name: constraint.name || "custom_function",
-          check: constraint,
-        };
-      }
-      dynamicConstraintSet.add(constraint);
+      const constraintObject = normalizeConstraint(constraint);
+      dynamicConstraintSet.add(constraintObject);
       return () => {
-        dynamicConstraintSet.delete(constraint);
+        dynamicConstraintSet.delete(constraintObject);
       };
     };
   }
@@ -11480,6 +11600,16 @@ const createControlValidation = (
       ...DEFAULT_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
+    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
+    // Read from the raw props on every check so a constraint whose parameters
+    // are closed over is re-created freely, and last so the constraints navi
+    // ships are the ones reported first (see pickConstraintFailureInfo).
+    const constraintsFromProps = controller.props.constraints;
+    if (constraintsFromProps) {
+      for (const constraintFromProps of constraintsFromProps) {
+        constraintSet.add(normalizeConstraint(constraintFromProps));
+      }
+    }
     const elementSig = getElementSignature(controller.ref.current);
     // Not logged: every control checks its constraints on every interaction and
     // almost always passes, so this line alone was most of the debug output —
@@ -12807,12 +12937,18 @@ const useArraySignalMembership = (...args) => {
       "useArraySignalMembership requires at least 2 arguments: [arraySignal, id]",
     );
   }
+  const [arraySignal, id] = args;
 
-  return useMemo(() => {
-    const [useIsMember, add, remove] = arraySignalMembership(...args);
-    const isMember = useIsMember();
-    return [isMember, add, remove];
-  }, args);
+  // Through a computed so the component re-renders when its own membership
+  // changes, not every time anything else is added to or removed from the
+  // array: a list of 200 rows each watching the same array would otherwise all
+  // re-render (and each re-scan the array) when one row is toggled.
+  const isMember = useComputed(() => arraySignal.value.includes(id)).value;
+  const [, add, remove] = useMemo(
+    () => arraySignalMembership(arraySignal, id),
+    [arraySignal, id],
+  );
+  return [isMember, add, remove];
 };
 
 const arraySignalMembership = (...args) => {
@@ -14169,7 +14305,7 @@ const createRangeReader = (
   // dropped here is one that gets asked for again after a remount.
   readRange.trimComposition = (keepFrom, keepTo, budget) => {
     const composition = findComposition(currentParams());
-    if (!composition || !budget || composition.idByIndex.size <= budget) {
+    if (!composition || composition.idByIndex.size <= budget) {
       return;
     }
     for (const index of composition.idByIndex.keys()) {
@@ -19726,6 +19862,21 @@ import.meta.css = [/* css */`
     }
   }
 
+  /* A corner claim travels down (see group.jsx) because the member joined to
+     its neighbours is not always the thing that draws the frame: it can be a
+     bare wrapper, a tooltip, a link, and the control inside is what has to
+     square. That only holds while the wrapper adds nothing of its own. A box
+     that paints a background or a border, or that insets what it holds, IS the
+     frame at that spot — what is inside it sits on padding or on that
+     background, never on the corner the group squared — so the claim stops
+     here, exactly as a control stops it once it has answered. */
+  [navi-box-frame] > * {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+  }
+
   @layer navi {
     /*
     When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
@@ -20012,8 +20163,25 @@ const computeBox = (props, parentBoxFlow) => {
     rest["data-body"] = "";
     // Padding is what decides whether the content reaches the body's own
     // corners — see the corner claims in this file's CSS.
-    if (!PADDING_PROP_NAMES.some(name => isNonZeroSpacing(rest[name]))) {
+    let flush = true;
+    for (const name of PADDING_PROP_SET) {
+      if (declaresSomething(rest[name])) {
+        flush = false;
+        break;
+      }
+    }
+    if (flush) {
       rest["data-body-flush"] = "";
+    }
+  }
+  // A box that paints something of its own, or that insets what it holds, is
+  // the frame at that spot: the corner claims coming from a Group are about
+  // ITS corners and nothing inside reaches them, so they stop here — see this
+  // file's CSS.
+  for (const name of FRAME_PROP_SET) {
+    if (declaresSomething(rest[name])) {
+      rest["navi-box-frame"] = "";
+      break;
     }
   }
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -20446,8 +20614,14 @@ const shouldInjectSeparatorBetween = (left, right) => {
   }
   return true;
 };
-const PADDING_PROP_NAMES = ["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"];
-const isNonZeroSpacing = value => {
+const PADDING_PROP_SET = new Set(["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]);
+/* What makes a box the frame at its spot: what it paints of its own, and the
+   padding holding its content away from its corners. Deliberately without the
+   radius props: a radius alone paints nothing — it only says how a background
+   or a border already there is cut — so a box carrying just a radius is still
+   a wrapper around whatever draws. */
+const FRAME_PROP_SET = new Set(["background", "backgroundColor", "backgroundImage", "border", "borderTop", "borderRight", "borderBottom", "borderLeft", "borderWidth", "borderColor", "borderStyle", ...PADDING_PROP_SET]);
+const declaresSomething = value => {
   if (value === undefined || value === null || value === false) {
     return false;
   }
@@ -30042,6 +30216,13 @@ registerNaviCommand("--navi-unselect", (source, event) => {
  *     observeAncestorOpenState for exactly how that's detected, and why it
  *     matters that it happens before the browser paints.
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
+ *   - Inside the always-on-screen part of a *closed* one — a picker's façade,
+ *     an expandable's header, a <summary>: those elements are displayed the
+ *     whole time their ancestor reads as closed (aria-expanded on a trigger
+ *     describes the popup it controls, not its own contents). They run on
+ *     mount like anything else on screen, and the ancestor opening later
+ *     reveals nothing about them, so it does not re-run them either. See
+ *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
  * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
@@ -30074,6 +30255,10 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
+  // Set by the mount effect below for an element that lives in its openable
+  // ancestor's façade rather than in what that ancestor opens.
+  const displayedWhileAncestorClosedRef = useRef(false);
+
   // Run on mount (or when deps change) — but only if the element is visible.
   useLayoutEffect(() => {
     const el = ref.current;
@@ -30086,9 +30271,16 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; the observeAncestorOpenState call
-      // below will fire once it opens.
-      return;
+      if (!isDisplayedDespiteClosedAncestor(el)) {
+        // Ancestor is closed and took this element off screen with it — skip
+        // now; the observeAncestorOpenState call below will fire once it
+        // opens.
+        return;
+      }
+      // Closed, yet on screen: the ancestor is the trigger of what is
+      // closed, not the thing itself, and this element belongs to the façade
+      // it keeps showing.
+      displayedWhileAncestorClosedRef.current = true;
     }
     callbackRef.current(el, createDisplayedEvent(ancestor, false));
   }, deps);
@@ -30105,6 +30297,12 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     return observeAncestorOpenState(ancestor, ({ isOpen }) => {
       if (!isOpen) {
+        return;
+      }
+      if (displayedWhileAncestorClosedRef.current) {
+        // Façade content: on screen the whole time, so this opening reveals
+        // nothing here — and `becauseAncestorOpened: true` about it would be
+        // false in a way consumers act on (see use_auto_focus.js).
         return;
       }
       const lastEl = ref.current;
@@ -30966,11 +31164,22 @@ const isTypingIntent = (e) =>
 
 const s = (n) => (n > 1 ? "s" : "");
 
+// The `u` flag is what lets a char class speak about characters: `\p{...}` is
+// only recognized under it, and a range covers whole code points instead of
+// the two halves an astral character (an emoji) is made of.
+const compileCharClass = (charClass) => new RegExp(charClass, "u");
+const compileCharClassAnchored = (charClass) =>
+  new RegExp(`^(?:${charClass})*$`, "u");
+
 // Keydown: block only single printable characters that don't match the class.
 // Multi-character key names (Delete, ArrowLeft…) are always allowed.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
-  if (char.length !== 1) return null;
-  if (new RegExp(charClass).test(char)) return null;
+  // Counted in code points: an astral character is one character typed, not two.
+  const codePointCount = [...char].length;
+  if (codePointCount !== 1) {
+    return null;
+  }
+  if (compileCharClass(charClass).test(char)) return null;
   return naviI18n(messageKey);
 };
 
@@ -30990,7 +31199,7 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
 // Paste / set: block when value contains disallowed chars.
 const getInvalidCharsMessage = (uiState, { charClass, messageKey }) => {
   const str = uiState === undefined ? "" : String(uiState);
-  if (new RegExp(`^(?:${charClass})*$`).test(str)) return null;
+  if (compileCharClassAnchored(charClass).test(str)) return null;
   return naviI18n(messageKey);
 };
 
@@ -37217,6 +37426,7 @@ const TextAnchor = ({
       ref: anchorRef,
       className: "navi_text_anchor",
       "aria-hidden": "true",
+      hidden: true,
       children: "\u200B"
     })]
   });
@@ -37884,8 +38094,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [emojiAsIcon]
  *   Renders every emoji found in the string children as an `Icon`, so it sits
  *   in the line like a character and never makes the line taller than the
- *   text. For free text a user typed (a message, a description) — the only
- *   place an emoji is expected; see `docs/typography.md`.
+ *   text. For free text a user typed (a message, a description); see
+ *   `docs/typography.md`. Only the strings this `Text` receives are rewritten —
+ *   a string a child component renders is out of reach, and that component
+ *   calls `renderEmojiAsIcon()` itself instead.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -46380,7 +46592,9 @@ installImportMetaCssBuild(import.meta);/**
  *   "postal"       → postal code (digits, letters, space, hyphen)
  *   "iban"         → IBAN (uppercase and digits)
  *   "slug"         → URL slug (lowercase, digits, hyphens)
- *   "[A-Z0-9]"     → any custom regex character class
+ *   "[A-Z0-9]"     → any custom regex character class, compiled with the `u`
+ *                    flag: `\p{...}` is available, and an emoji counts as one
+ *                    character rather than two halves.
  *   inputMode and pattern are auto-derived from the preset when not explicitly set.
  *
  * - maxLengthGuard — combines maxLength + overflow guard in one prop.
@@ -59043,10 +59257,11 @@ const PendingScrollRefContext = createContext(null);
 //   "muted"               — keep in DOM, visible but opacified and still interactive
 const SearchNoMatchModeContext = createContext("remove");
 
-// When total rendered items exceeds renderBudget, a render window [start, end)
-// is activated to cap the number of DOM nodes. Items outside the window return
-// null. The window slides as the user scrolls, using actual DOM positions
-// (getBoundingClientRect) to find the first visible item — no height estimation.
+// How many rows the list draws at once. Past that, a render window [start, end)
+// caps the number of DOM nodes: the window slides as the user scrolls, using
+// actual DOM positions (getBoundingClientRect) to find the first visible item —
+// no height estimation. It frames the rows a run draws (see ListItems); items
+// declared one by one (<List.Item>) are all drawn, whatever the budget.
 const RENDER_BUDGET_DEFAULT = 100;
 
 // Attribute used on <li> elements rendered by ListItemReal so the scroll listener
@@ -59055,8 +59270,9 @@ const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
 // Rows standing in for content that has not arrived (see List's renderSkeleton).
 const SKELETON_LIST_ITEM_CLASS = "navi_list_item_skeleton";
 
-// Carries the render window {start, end} (or null = render all) from
-// List down to each ListItem.
+// Carries the render window {start, end} from List down to the runs of rows
+// inside it (see ListItems): a run draws the rows it frames and holds the room
+// of the others.
 const RenderWindowContext = createContext(null);
 // Carries List's own `columns` prop (a grid-template-columns value, e.g.
 // "1fr auto auto") down to each ListItem/filler/fallback so they can render
@@ -59893,12 +60109,46 @@ const ListUI = props => {
     searchText,
     horizontal
   });
+
+  // renderBudget frames the rows of a run; a list whose items are all declared
+  // one by one draws every one of them, and the prop looks exactly like it is
+  // doing something. Said once per list, when there is something drawn to
+  // judge it on — a run mounting later (rows behind a loading state) is not a
+  // list without one.
+  const renderBudgetWarnedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (props.renderBudget === undefined || renderBudgetWarnedRef.current) {
+      return;
+    }
+    if (virtual.hasRuns() || tracker.itemsSignal.peek().length === 0) {
+      return;
+    }
+    renderBudgetWarnedRef.current = true;
+    console.warn(`List: renderBudget=${renderBudget} has no effect here. The render window frames the rows a run draws (<List.Items itemsAction>); items declared one by one (<List.Item>) are all rendered. Move the items to <List.Items> to cap the number of DOM nodes, or drop the prop.`);
+  });
   virtual.captureAnchor = captureAnchor;
   virtual.virtualItemSizeSignal = virtualItemSizeSignal;
   virtual.horizontal = Boolean(horizontal);
   virtual.renderSkeleton = renderSkeleton;
+
+  // A row is addressed by id from outside (--navi-scroll, --navi-select): the
+  // ones drawn have registered themselves with the tracker, and the ones a run
+  // holds without drawing are known only to that run (see List.Items' row
+  // locator). Both answer here, so a row is reachable whether or not the
+  // window happens to frame it.
   const getItemById = itemId => {
-    return tracker.itemsSignal.peek().find(item => item.id === itemId);
+    const itemDrawn = tracker.itemsSignal.peek().find(item => item.id === itemId);
+    if (itemDrawn) {
+      return itemDrawn;
+    }
+    const rowIndex = virtual.locateRow(itemId);
+    if (rowIndex === null) {
+      return undefined;
+    }
+    return {
+      id: itemId,
+      index: rowIndex
+    };
   };
   const noMatchCount = tracker.noMatchCountSignal.value;
   // What the list stands for, which is not always what it holds: a run saying
@@ -62438,6 +62688,9 @@ const createListVirtual = () => {
       passId++;
       nextIndex = 0;
     },
+    // Whether any run of rows lives in this list: what makes a render window
+    // mean anything (see List's renderBudget).
+    hasRuns: () => locatorByOwner.size > 0,
     setRowLocator: (ownerId, locate) => {
       locatorByOwner.set(ownerId, locate);
     },
@@ -62484,12 +62737,17 @@ const VISIBILITY_HIDDEN_STYLE = {
  * for them — which is what makes an infinitely scrolled list nothing more than
  * a list that says how many rows it has.
  *
- * The rows come from `itemsAction(range)`: the run asks for what it is about to
- * draw and keeps what it gets. The range says the same thing three ways, so a
- * source can read it however it paginates — `{ start, end }` (places in the
- * collection, a negative `start` counting back from the end like
- * `Range: items=-25`, which is what a list opening on its last rows asks for
- * before it knows how many there are), `limit` (how many rows), and
+ * A collection held in memory is given whole: `items={rows}`. The run holds all
+ * of them from the first render and never asks for anything — it is still the
+ * render window that decides how many are drawn.
+ *
+ * A collection read a slice at a time comes from `itemsAction(range)`: the run
+ * asks for what it is about to draw and keeps what it gets. The range says the
+ * same thing three ways, so a source can read it however it paginates —
+ * `{ start, end }` (places in the collection, a negative `start` counting back
+ * from the end like `Range: items=-25`, which is what a list opening on its
+ * last rows asks for before it knows how many there are), `limit` (how many
+ * rows), and
  * `before`/`after`/`around` (the id of a row to count from, for a source
  * paginating by cursor). Answer with the rows (an array — that is all of
  * them), or with a range the way a Content-Range does: `{ items, start, count }`
@@ -62503,11 +62761,11 @@ const VISIBILITY_HIDDEN_STYLE = {
  * copies of the JSON. The list holds the slices, the store holds the objects
  * (see docs/resource.md).
  *
- * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
- * What it gives back is kept, so a collection that changes as a whole (a search
- * reordering it) is a different collection: give the run a `key` that changes
- * with it, the way one does for anything else that is not the same thing
- * anymore.
+ * A collection that changes as a whole (a search reordering it) is a different
+ * collection: with `items`, another array is another collection and the run
+ * draws it from its first row; with `itemsAction`, give the run a `key` that
+ * changes with it, the way one does for anything else that is not the same
+ * thing anymore.
  *
  * A row says what it is where it is drawn: `renderItem` returns a
  * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
@@ -62519,7 +62777,8 @@ const VISIBILITY_HIDDEN_STYLE = {
  *
  * @type {import("ignore:preact").FunctionComponent<{
  *   renderItem: (item: any, index: number, state: {refreshing: boolean}) => import("ignore:preact").ComponentChildren,
- *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
+ *   items?: any[],
+ *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("ignore:preact").ComponentChildren,
@@ -62534,6 +62793,13 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   What one row is, given the item and where it sits. `state.refreshing` says
  *   the rows drawn are the ones from before while the run reads the collection
  *   again — the list carries `navi-refreshing` for the same reason.
+ * @param {any[]} [props.items]
+ *   The collection, when it is held in memory: all of it, in order. Nothing is
+ *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
+ *   no part to play, and no row is ever a skeleton.
+ * @param {(range: object) => any} [props.itemsAction]
+ *   Where the rows come from when the collection is read a slice at a time:
+ *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
  * @param {(item: any, index: number) => any} [props.groupBy]
  *   What tells rows that belong together apart from the others — the day of a
  *   message, the month of a game. Consecutive rows sharing it are wrapped in a
@@ -62556,7 +62822,8 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   How many rows the run keeps in memory. Past that, the ones far from what is
  *   on screen are dropped (and asked for again if the user goes back) — the
  *   same trade the render window makes with the DOM, one order of magnitude
- *   further out. `0` keeps everything.
+ *   further out. `Infinity` keeps every row the run ever received; `0` keeps
+ *   only the ones around the window.
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for a row the run does not hold. Defaults to List's own
  *   `renderSkeleton`, then to a bare `<List.Item skeleton>`; `false` leaves the
@@ -62577,6 +62844,7 @@ const VISIBILITY_HIDDEN_STYLE = {
  */
 const ListItems = ({
   renderItem,
+  items,
   itemsAction,
   count,
   pageSize,
@@ -62593,6 +62861,7 @@ const ListItems = ({
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
+    items,
     count,
     itemsAction,
     memoryBudget,
@@ -62883,11 +63152,17 @@ const rangeIsSame = (a, b) => {
 // are in all is enough to place it, so the pages need not be contiguous nor
 // arrive in order.
 const useItemStore = ({
+  items,
   count,
   itemsAction,
   memoryBudget,
   onRequestStateChange
 }) => {
+  // A collection given whole (`items`) is held from the first render: nothing
+  // to ask for, nothing to keep across mounts, nothing to invalidate. The rest
+  // of the store then never has a hole to fill, so it stays inert on its own —
+  // the asking below finds nothing missing.
+  const inMemory = items !== undefined;
   // The run's asking, on the same channel as the window it asks for — they are
   // one subject: what the list is about to draw is what it goes to fetch (see
   // `useRequestMissing`, and `updateRenderWindow` which logs the other half).
@@ -62909,8 +63184,28 @@ const useItemStore = ({
   // the reader holds for it (see resource_range_reader.js).
   useRef(false);
   const pagesRef = useRef(null);
+  const itemsRef = useRef(items);
+  const itemsHeldRef = useRef(false);
   let restored = false;
-  if (!pagesRef.current) {
+  if (inMemory) {
+    // The array as a whole is the collection: another array is another
+    // collection, drawn from its first row (which is also why a run reading a
+    // collection that changes as a whole takes a key).
+    if (!pagesRef.current || itemsRef.current !== items) {
+      itemsRef.current = items;
+      const byIndex = new Map();
+      let index = 0;
+      while (index < items.length) {
+        byIndex.set(index, items[index]);
+        index++;
+      }
+      pagesRef.current = {
+        byIndex,
+        count: items.length
+      };
+      itemsHeldRef.current = false;
+    }
+  } else if (!pagesRef.current) {
     const composition = typeof itemsAction === "function" && itemsAction.readComposition ? itemsAction.readComposition() : null;
     if (composition && composition.count !== undefined) {
       pagesRef.current = composition;
@@ -62957,6 +63252,16 @@ const useItemStore = ({
   // range askable again (see the request memory just above).
   const [failure, setFailure] = useState(null);
   const virtual = useContext(ListVirtualContext);
+  // The rows are there, which is what the list waits for to place itself on the
+  // row it is held at (see placeWhereHeld). Said from an effect: a signal read
+  // during this very render must not be written during it.
+  useLayoutEffect(() => {
+    if (!inMemory || itemsHeldRef.current) {
+      return;
+    }
+    itemsHeldRef.current = true;
+    virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
+  });
   // Before the first answer a run does not know how many rows it stands for.
   // It stands for a windowful of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
@@ -63029,10 +63334,12 @@ const useItemStore = ({
     // dropped and simply asked for again if the user goes back — the same
     // trade the render window makes, one order of magnitude further out.
     forget: (windowFrom, windowTo) => {
-      const budget = memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
-      if (!budget) {
+      if (inMemory) {
+        // Dropping a row here would drop it for good: there is no source to
+        // ask it back from.
         return;
       }
+      const budget = memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
       const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
       if (pages.byIndex.size > budget) {

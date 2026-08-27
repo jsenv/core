@@ -14324,6 +14324,36 @@ const isAncestorOpen = (ancestor) => {
   return true;
 };
 
+/**
+ * Whether `element` is on screen even though the openable ancestor it was
+ * resolved against is closed. Ask it only about an ancestor `isAncestorOpen`
+ * already said is closed.
+ *
+ * `[aria-expanded]` in OPENABLE_SELECTOR covers two opposite kinds of element:
+ * the surface being opened (a <dialog>, a [popover], and the plain <div> navi's
+ * custom renderers build a popup out of, which carries aria-expanded and
+ * nothing else), which takes its whole subtree off screen while closed — and
+ * the *trigger* that opens one (a picker's root, an expandable's header), whose
+ * aria-expanded describes the popup it controls rather than its own contents:
+ * its façade stays on screen the entire time aria-expanded is "false".
+ *
+ * Markup tells the two apart badly, so ask the layout instead. A closed surface
+ * is display:none, natively for [popover]/<dialog> and through the library's
+ * own closed-state CSS ([navi-hidden], :not([popover])) for the custom
+ * renderers — so nothing inside one answers true here, while everything a
+ * trigger keeps on screen does.
+ */
+const isDisplayedDespiteClosedAncestor = (element) => {
+  if (typeof element.checkVisibility !== "function") {
+    // Nothing to tell the two apart with: leave the caller treating the closed
+    // ancestor as hiding this element.
+    return false;
+  }
+  // Default options: the question is "does it have a layout box", not "can it
+  // be seen" — visibility:hidden/opacity:0 keep geometry intact.
+  return element.checkVisibility();
+};
+
 const getAncestorOpenType = (ancestor) => {
   if (ancestor === document) {
     return "document";
@@ -20021,4 +20051,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
