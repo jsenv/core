@@ -121,6 +121,15 @@ Reference: `.navi_button_content` in `button_ui.jsx` (a button reads then
 stops), `.navi_picker_box`, `.navi_input_slot`, `.navi_popover`,
 `.navi_dialog`.
 
+**A member drawing the frame itself stops it too**, without being a control. A
+row of settings — a `Field`, a `Label`, a `Box` — that paints a background or a
+border, or that insets what it holds with padding, is what the outer corner
+belongs to; the switch at the right end of that row is not on it. `Box` marks
+itself with `navi-box-frame` for exactly those props and stops the claims for
+everything inside. A wrapper adding neither is only an enrobage — a tooltip, a
+link, a bare `<Box>` — and lets them through to the control that really carries
+the frame.
+
 A control that declares its radius on an inner element instead is invisible to
 `Group`: it keeps round corners in the middle of the row, and no rule written
 in `group.jsx` can reach it without naming that private class — which is how a

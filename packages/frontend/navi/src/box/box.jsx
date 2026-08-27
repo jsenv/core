@@ -268,6 +268,21 @@ import.meta.css = /* css */ `
     }
   }
 
+  /* A corner claim travels down (see group.jsx) because the member joined to
+     its neighbours is not always the thing that draws the frame: it can be a
+     bare wrapper, a tooltip, a link, and the control inside is what has to
+     square. That only holds while the wrapper adds nothing of its own. A box
+     that paints a background or a border, or that insets what it holds, IS the
+     frame at that spot — what is inside it sits on padding or on that
+     background, never on the corner the group squared — so the claim stops
+     here, exactly as a control stops it once it has answered. */
+  [navi-box-frame] > * {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+  }
+
   @layer navi {
     /*
     When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
@@ -557,9 +572,22 @@ const computeBox = (props, parentBoxFlow) => {
     rest["data-body"] = "";
     // Padding is what decides whether the content reaches the body's own
     // corners — see the corner claims in this file's CSS.
-    if (!PADDING_PROP_NAMES.some((name) => isNonZeroSpacing(rest[name]))) {
+    if (!PADDING_PROP_NAMES.some((name) => declaresSomething(rest[name]))) {
       rest["data-body-flush"] = "";
     }
+  }
+  // A box that paints something of its own, or that insets what it holds, is
+  // the frame at that spot: the corner claims coming from a Group are about
+  // ITS corners and nothing inside reaches them, so they stop here — see this
+  // file's CSS.
+  const paints = PAINTED_PROP_NAMES.some((name) =>
+    declaresSomething(rest[name]),
+  );
+  const insets = PADDING_PROP_NAMES.some((name) =>
+    declaresSomething(rest[name]),
+  );
+  if (paints || insets) {
+    rest["navi-box-frame"] = "";
   }
 
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -1084,7 +1112,24 @@ const PADDING_PROP_NAMES = [
   "paddingBottom",
   "paddingLeft",
 ];
-const isNonZeroSpacing = (value) => {
+/* What a box paints of its own. Deliberately without the radius props: a
+   radius alone paints nothing — it only says how a background or a border
+   already there is cut — so a box carrying just a radius is still a wrapper
+   around whatever draws. */
+const PAINTED_PROP_NAMES = [
+  "background",
+  "backgroundColor",
+  "backgroundImage",
+  "border",
+  "borderTop",
+  "borderRight",
+  "borderBottom",
+  "borderLeft",
+  "borderWidth",
+  "borderColor",
+  "borderStyle",
+];
+const declaresSomething = (value) => {
   if (value === undefined || value === null || value === false) {
     return false;
   }

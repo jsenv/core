@@ -22,6 +22,7 @@
         Picker,
         Select,
         Separator,
+        Field,
         Label,
         Text,
         NumberSpin,
@@ -531,11 +532,24 @@
         );
       };
 
+      const settingRowProps = {
+        flex: true,
+        block: true,
+        spacing: "m",
+        alignY: "center",
+        paddingX: "m",
+        paddingY: "s",
+        borderRadius: "s",
+        background: "#f5f6f7",
+      };
+
       /* The other form of the ask: the member is a plain <Box> and the control
          that carries the frame is inside it. Nothing lands on the control as a
          radius here — only the --x-corner-*-radius claims travel down — so a
          control that declares its radius without reading them stays round in
-         the middle of the group. Every row below must read as one frame. */
+         the middle of the group. Every row below must read as one frame; the
+         last section says where the claims stop — a member painting its own
+         frame answers for the corner, and what it holds keeps its own. */
       const WrappedMembersDemo = () => {
         return (
           <Box background="white" padding="l" borderRadius="m">
@@ -667,6 +681,45 @@
                     />
                   </Box>
                 </Group>
+              </Box>
+
+              <Box>
+                <h3>
+                  Rows drawing their own frame — the control keeps its own
+                </h3>
+                <Box width="320">
+                  <Group vertical borderWidth="0">
+                    <Field as="label" {...settingRowProps}>
+                      <Text bold>Parking relais</Text>
+                      <Input
+                        type="checkbox"
+                        switch
+                        name="framed_row_switch"
+                        selfAlignX="end"
+                      />
+                    </Field>
+                    <Separator color="#e9ecf0" margin="0" />
+                    <Field as="label" {...settingRowProps}>
+                      <Text bold>Aire de covoiturage</Text>
+                      <Input
+                        type="checkbox"
+                        name="framed_row_checkbox"
+                        defaultChecked
+                        selfAlignX="end"
+                      />
+                    </Field>
+                    <Separator color="#e9ecf0" margin="0" />
+                    <Field as="label" {...settingRowProps}>
+                      <Text bold>Nom du réseau</Text>
+                      <Input
+                        name="framed_row_text"
+                        placeholder="A86"
+                        width="100"
+                        selfAlignX="end"
+                      />
+                    </Field>
+                  </Group>
+                </Box>
               </Box>
             </Box>
           </Box>
