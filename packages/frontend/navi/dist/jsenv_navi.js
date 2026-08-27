@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$14 = /* css */`
+const css$15 = /* css */`
   @layer navi {
     :root {
       /* A control that overlaps its neighbours (the members of a Group share
@@ -102,7 +102,7 @@ const css$14 = /* css */`
     }
   }
 `;
-import.meta.css = [css$14, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -371,7 +371,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$13 = /* css */`
+const css$14 = /* css */`
   @layer navi {
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
@@ -389,7 +389,7 @@ const css$13 = /* css */`
     }
   }
 `;
-import.meta.css = [css$13, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
@@ -750,7 +750,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$12 = /* css */`
+installImportMetaCssBuild(import.meta);const css$13 = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -775,7 +775,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$13, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -3813,6 +3813,9 @@ const CONTROL_PROP_SET = new Set([
   "signal",
   "defaultValue",
   "defaultChecked",
+  // A checked radio pressed again lets its value go — a group allowed to hold
+  // nothing. Answered by the radio's own reactions (see control_hooks.jsx).
+  "deselectable",
   "readOnly", // will depend wether readOnly is supported
 
   "loading",
@@ -4185,15 +4188,26 @@ let renderMessageText = text => text;
 const setCalloutMessageTextRenderer = renderer => {
   renderMessageText = renderer;
 };
-const CalloutRequestCloseContext = createContext();
+
+// What a callout's own JSX may know about the callout around it: how to close
+// it, and the element — whose id is what `commandFor` needs when the button
+// closing it is not inside it (inside, `--navi-close` finds it on its own).
+const CalloutContext = createContext();
 const useCalloutRequestClose = () => {
-  return useContext(CalloutRequestCloseContext);
+  return useContext(CalloutContext)?.requestClose;
+};
+const useCalloutElement = () => {
+  return useContext(CalloutContext)?.element;
 };
 const renderIntoCallout = (jsx$1, calloutMessageElement, {
-  requestClose
+  requestClose,
+  element
 }) => {
-  const calloutJsx = jsx(CalloutRequestCloseContext.Provider, {
-    value: requestClose,
+  const calloutJsx = jsx(CalloutContext.Provider, {
+    value: {
+      requestClose,
+      element
+    },
     children: jsx$1
   });
   render(calloutJsx, calloutMessageElement);
@@ -4203,12 +4217,14 @@ const renderIntoCallout = (jsx$1, calloutMessageElement, {
 // text can go through renderMessageText: an emoji in a validation message must
 // not make the first line taller than the icon and close button beside it.
 const renderHtmlIntoCallout = (html, calloutMessageElement, {
-  requestClose
+  requestClose,
+  element
 }) => {
   const template = document.createElement("template");
   template.innerHTML = html;
   renderIntoCallout(domToVNodes(template.content), calloutMessageElement, {
-    requestClose
+    requestClose,
+    element
   });
 };
 
@@ -4242,6 +4258,98 @@ const domToVNodes = node => {
 };
 
 installImportMetaCssBuild(import.meta);/**
+ * The icon a callout shows beside its message — a square in the status color
+ * with the "!" glyph — drawable on its own, where the callout is not: on the
+ * trigger that opens one (a picker in callout mode), so what one presses looks
+ * like what it opens. The callout's own template draws from the same glyph
+ * (see calloutTemplate in callout.js).
+ */
+
+const css$12 = /* css */`
+  .navi_callout_status_icon {
+    --x-callout-status-icon-color: var(--navi-callout-neutral-color);
+
+    display: inline-flex;
+    box-sizing: border-box;
+    aspect-ratio: 1 / 1;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    vertical-align: middle;
+    background-color: var(--x-callout-status-icon-color);
+    border-radius: 2px;
+
+    &[data-status="success"] {
+      --x-callout-status-icon-color: var(--navi-callout-success-color);
+    }
+    &[data-status="info"] {
+      --x-callout-status-icon-color: var(--navi-callout-info-color);
+    }
+    &[data-status="warning"] {
+      --x-callout-status-icon-color: var(--navi-callout-warning-color);
+    }
+    &[data-status="error"] {
+      --x-callout-status-icon-color: var(--navi-callout-error-color);
+    }
+    &[data-shape="circle"] {
+      border-radius: 50%;
+    }
+
+    svg {
+      width: auto;
+      height: 55%;
+    }
+  }
+  /* Inside an <Icon>, the icon box is the size: fill it. The glyph keeps its
+     own share of it — the Icon's rule sizing any svg it holds to the whole
+     box is for an svg that IS the icon, and this one sits in a square. */
+  .navi_icon > .navi_callout_status_icon {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-icon-char] .navi_callout_status_icon svg {
+    width: auto;
+    height: 55%;
+  }
+`;
+const CALLOUT_STATUS_GLYPH_VIEWBOX = "0 0 125 300";
+const CALLOUT_STATUS_GLYPH_PATH = "m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z";
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   status?: "info" | "warning" | "error" | "success" | "none",
+ *   shape?: "square" | "circle",
+ * }>}
+ * @param {"info"|"warning"|"error"|"success"|"none"} [status="info"] The color
+ *   — the callout's own for that status. `"none"` is the neutral one.
+ * @param {"square"|"circle"} [shape="square"] Square like the callout's own
+ *   icon, or a circle.
+ */
+const CalloutStatusIcon = ({
+  status = "info",
+  shape = "square"
+}) => {
+  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
+  return jsx("span", {
+    className: "navi_callout_status_icon",
+    "data-status": status === "none" ? undefined : status,
+    "data-shape": shape === "circle" ? "circle" : undefined,
+    "aria-hidden": "true",
+    children: jsx("svg", {
+      viewBox: CALLOUT_STATUS_GLYPH_VIEWBOX,
+      xmlns: "http://www.w3.org/2000/svg",
+      children: jsx("path", {
+        fill: "currentColor",
+        d: CALLOUT_STATUS_GLYPH_PATH
+      })
+    })
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
  * A callout component that mimics native browser validation messages.
  * Features:
  * - Positions above or below target element based on available space
@@ -4250,6 +4358,9 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
+
+// Unique for the page's lifetime: a caller may write the id in a commandfor.
+let calloutCount = 0;
 const css$11 = /* css */`
   @layer navi {
     .navi_callout {
@@ -4259,19 +4370,37 @@ const css$11 = /* css */`
        copies. */
       user-select: text;
 
-      --callout-success-color: #4caf50;
-      --callout-info-color: #2196f3;
-      --callout-warning-color: #ff9800;
-      --callout-error-color: #f44336;
+      --callout-success-color: var(--navi-callout-success-color);
+      --callout-info-color: var(--navi-callout-info-color);
+      --callout-warning-color: var(--navi-callout-warning-color);
+      --callout-error-color: var(--navi-callout-error-color);
+      --callout-neutral-color: var(--navi-callout-neutral-color);
 
       --callout-background-color: white;
       --callout-icon-color: black;
       --callout-padding: 8px;
       --callout-z-index: var(--navi-z-index-callout);
+      /* The callout's own, like its font: the icon and the cross are columns
+         one line tall (1lh), and that line has to be the message's first
+         line — which it is only if both read the same line-height, rather
+         than whatever the element the callout sits in happens to use. */
+      --callout-line-height: 1.5;
+      /* The cross is furniture, not content: quieter than the message beside
+         it, and the size of a glyph on the message's first line. */
+      --callout-close-button-color: color-mix(
+        in srgb,
+        currentColor 45%,
+        transparent
+      );
+      --callout-close-button-color-hover: currentColor;
+      --callout-close-button-size: 0.7em;
     }
   }
 
   .navi_callout {
+    /* No status until one is said (the data-status blocks below): a plain
+       tooltip, framed in the neutral color and shown without an icon. */
+    --x-callout-status-color: var(--callout-neutral-color);
     --x-callout-border-color: var(--x-callout-status-color);
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
@@ -4297,6 +4426,9 @@ const css$11 = /* css */`
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
     font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
+    line-height: var(
+      --callout-line-height
+    ); /* Same reason — and what the columns measure their 1lh against */
     background: transparent;
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
@@ -4325,6 +4457,11 @@ const css$11 = /* css */`
     }
     &[data-status="error"] {
       --x-callout-status-color: var(--callout-error-color);
+    }
+    &[data-close-button="none"] {
+      .navi_callout_close_button_column {
+        display: none;
+      }
     }
 
     .navi_callout_box {
@@ -4376,6 +4513,15 @@ const css$11 = /* css */`
           background-color: var(--x-callout-icon-color);
           border-radius: 2px;
 
+          /* Not drawn without a status (nothing to say about the message),
+             nor when the message asked for none (icon: false). Nested in
+             here rather than written beside this block: a rule one level up
+             would lose to the display above on specificity alone. */
+          .navi_callout:not([data-status]) &,
+          .navi_callout[data-icon="none"] & {
+            display: none;
+          }
+
           svg {
             width: 16px;
             height: 12px;
@@ -4408,37 +4554,52 @@ const css$11 = /* css */`
     .navi_callout_close_button_column {
       display: flex;
       height: var(--callout-icon-height);
+      /* The button is a square one line tall around a cross of glyph size,
+         so most of it is empty. Taken back on both sides: what is drawn then
+         sits one gap from the text and one padding from the edge — where the
+         icon sits on the other side — instead of that plus the button's own
+         margin. The target keeps its full size; only the space it claims in
+         the row shrinks. */
+      margin-inline: calc(
+        -1 * (var(--callout-icon-height) - var(--callout-close-button-size)) / 2
+      );
+      /* Whatever the cross measures, it sits on the middle of the first line
+         — the line it is read with. */
+      align-items: center;
       align-self: flex-start;
 
       .navi_callout_close_button {
         /* A square filling the column, so the whole first line is the target;
-           the padding keeps the cross itself at glyph size. */
+           the cross itself is drawn at glyph size in the middle of it. */
         display: inline-flex;
         box-sizing: border-box;
         aspect-ratio: 1 / 1;
         height: 100%;
-        padding: 0.2em;
+        padding: 0;
         align-items: center;
         justify-content: center;
-        color: currentColor;
+        color: var(--callout-close-button-color);
         font-size: inherit;
         background: none;
         border: none;
         border-radius: 0.2em;
+        /* transition: color 0.15s ease-in-out; */
         cursor: pointer;
 
         &:hover {
-          background: rgba(0, 0, 0, 0.1);
+          color: var(--callout-close-button-color-hover);
+          background: rgba(0, 0, 0, 0.06);
         }
 
         &:focus-visible,
         .navi_callout:focus-visible & {
+          color: var(--callout-close-button-color-hover);
           outline: auto;
         }
 
         .navi_callout_close_button_svg {
-          width: 100%;
-          height: 100%;
+          width: var(--callout-close-button-size);
+          height: var(--callout-close-button-size);
         }
       }
     }
@@ -4453,6 +4614,11 @@ const css$11 = /* css */`
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
+ *   Never shown without a status either way (see the CSS).
+ * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
+ *   still closes on Escape, a click outside and its own `--navi-close` — for a tooltip that is
+ *   read rather than dismissed
  * @param {string} [options.reopen="toggle"] - What to do when the anchor already has an open callout:
  *   "toggle" closes it (a second press on what opened it closes it), "update" replaces its message
  *   in place, "replace" tears it down and opens a new one
@@ -4499,6 +4665,8 @@ const openCallout = (message, {
   reopen = "toggle",
   showErrorStack,
   skipFocus = false,
+  icon = true,
+  closeButton = true,
   debug = () => {}
 } = {}) => {
   import.meta.css = [css$11, "@jsenv/navi/src/control/rules/callout/callout.js"];
@@ -4655,10 +4823,27 @@ const openCallout = (message, {
     }
     requestClose(e, "click_close_button");
   };
-  const calloutId = `navi_callout_${Date.now()}`;
+  calloutCount++;
+  const calloutId = `navi_callout_${calloutCount}`;
   calloutElement.id = calloutId;
   calloutElement.style.opacity = 0;
   const update = (newMessage, options = {}) => {
+    if (Object.hasOwn(options, "icon")) {
+      if (options.icon === false) {
+        calloutElement.setAttribute("data-icon", "none");
+      } else {
+        calloutElement.removeAttribute("data-icon");
+      }
+    }
+    if (Object.hasOwn(options, "closeButton")) {
+      // Per message rather than per callout: what replaces a message (a
+      // constraint taking over a tooltip's callout) brings its own cross back.
+      if (options.closeButton === false) {
+        calloutElement.setAttribute("data-close-button", "none");
+      } else {
+        calloutElement.removeAttribute("data-close-button");
+      }
+    }
     const prevStatus = callout.status;
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
@@ -4678,7 +4863,8 @@ const openCallout = (message, {
     if (isValidElement(newMessage)) {
       debug(`callout update message (jsx)`);
       renderIntoCallout(newMessage, calloutMessageElement, {
-        requestClose
+        requestClose,
+        element: calloutElement
       });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
@@ -4690,9 +4876,11 @@ const openCallout = (message, {
       clearCalloutMessage(calloutMessageElement);
       newMessage({
         renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
-          requestClose
+          requestClose,
+          element: calloutElement
         }),
-        requestClose
+        requestClose,
+        element: calloutElement
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -4717,7 +4905,8 @@ const openCallout = (message, {
       } else {
         debug(`callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`);
         renderHtmlIntoCallout(String(newMessage), calloutMessageElement, {
-          requestClose
+          requestClose,
+          element: calloutElement
         });
       }
     }
@@ -4932,6 +5121,21 @@ const openCallout = (message, {
     };
     calloutElement.addEventListener("navi_request_close", handleCustomCloseEvent);
   }
+  {
+    // What a command said inside the callout is aimed at, once aria-expanded
+    // made the callout its target (see calloutTemplate): run it, the way a
+    // popup runs the commands aimed at it. Inlined rather than onNaviCommand
+    // from commands.js, which already reaches this module through the callout
+    // manager and must not be reached back.
+    calloutElement.addEventListener("navi_command", e => {
+      const {
+        implementation
+      } = e.detail;
+      if (typeof implementation === "function") {
+        implementation();
+      }
+    });
+  }
   Object.assign(callout, {
     element: calloutElement,
     update,
@@ -5030,7 +5234,9 @@ const openCallout = (message, {
     });
   }
   update(message, {
-    status
+    status,
+    icon,
+    closeButton
   });
 
   // positionCallout itself handles both "no anchorElement at all" and "a
@@ -5056,21 +5262,25 @@ const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
-// HTML template for the callout
+// aria-expanded is what --navi-close/--navi-cancel resolve their target with
+// (closest "[aria-expanded]", see commands.js): a button inside the callout
+// closes the callout, not the picker or dialog around it. Never "false" — a
+// closed callout is removed, not kept.
 const calloutTemplate = /* html */`
   <div
     class="navi_callout"
     popover="manual"
+    aria-expanded="true"
   >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
         <div class="navi_callout_icon">
-          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
+          <svg
+            viewBox="${CALLOUT_STATUS_GLYPH_VIEWBOX}"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path fill="currentColor" d="${CALLOUT_STATUS_GLYPH_PATH}" />
           </svg>
         </div>
         <!-- Keep .navi_callout_message so preact controls it -->
@@ -5719,6 +5929,8 @@ const createCalloutManager = (
         const [, remainingTokenData] = tokens.entries().next().value;
         callout.update(remainingTokenData.message, {
           status: remainingTokenData.status,
+          icon: remainingTokenData.icon,
+          closeButton: remainingTokenData.closeButton,
         });
       }
       return false;
@@ -5740,7 +5952,16 @@ const createCalloutManager = (
 
   const addOpenToken = (
     token,
-    { message, status, anchorElement, event, skipFocus, onClose } = {},
+    {
+      message,
+      status,
+      icon,
+      closeButton,
+      anchorElement,
+      event,
+      skipFocus,
+      onClose,
+    } = {},
   ) => {
     if (!message) {
       removeOpenToken(token, event);
@@ -5748,10 +5969,12 @@ const createCalloutManager = (
     }
     const calloutOptions = {
       status,
+      icon,
+      closeButton,
       closeOnClickOutside: status !== "error",
     };
 
-    tokens.set(token, { message, status, onClose });
+    tokens.set(token, { message, status, icon, closeButton, onClose });
     if (callout) {
       callout.update(message, calloutOptions);
       return;
@@ -5768,7 +5991,11 @@ const createCalloutManager = (
       openingEvent: event,
       skipFocus,
       debug: debugPopup,
-      onClose: ({ event: closeEvent, shouldTransferFocusFromCallout }) => {
+      onClose: ({
+        event: closeEvent,
+        reason,
+        shouldTransferFocusFromCallout,
+      }) => {
         removeCloseOnCleanup?.();
         for (const result of openResults) {
           if (typeof result === "function") {
@@ -5777,8 +6004,10 @@ const createCalloutManager = (
         }
         callout = null;
         // User dismissed the callout — notify all active tokens then clear.
+        // Told what closed it: a token whose content is a popup of its own (a
+        // picker in callout mode) closes that popup on the same event.
         for (const [, tokenData] of tokens) {
-          tokenData.onClose?.();
+          tokenData.onClose?.({ event: closeEvent, reason });
         }
         tokens.clear();
         const element = controller.ref.current;
@@ -24826,9 +25055,11 @@ const getHrefTargetInfo = (href) => {
  * leave by where the reader came in, and the swipe (which replaces already, see
  * route_travel.jsx) and the press say the same thing.
  *
- * `<Link replace>` is that, and it travels as an attribute because the click
- * handler sees the anchor, not the component that rendered it — the same mouth
- * as what a link asks of a route transition.
+ * `<Link replace>` is that, and so is `<Button replace>` — on an `href`, or on
+ * a `--navi-nav-to` command. It travels as an attribute because whoever
+ * answers the press sees the element, not the component that rendered it: the
+ * click handler reads it off the anchor, the command off its source — the same
+ * mouth as what a link asks of a route transition.
  */
 
 const LINK_REPLACE_ATTRIBUTE = "data-navi-replace";
@@ -29529,7 +29760,25 @@ registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
   const target = resolveExplicitTarget(source) || source;
   return {
     target,
-    implementation: () => navTo(argument),
+    // Which way there is worn by the source, as a link wears it (see
+    // link_replace.js): `<Button command="--navi-nav-to:/done" replace>`.
+    implementation: () =>
+      navTo(
+        argument,
+        linkAsksForReplace(source) ? { replace: true } : undefined,
+      ),
+  };
+});
+
+// Back to the screen the reader came from, with somewhere to land when there
+// is none of ours behind — a url opened cold (see navBack). The fallback is
+// the argument for the reason --navi-nav-to's destination is: it says WHAT the
+// command does when there is nothing to go back to.
+registerNaviCommand("--navi-nav-back", (source, event, { argument }) => {
+  const target = resolveExplicitTarget(source) || source;
+  return {
+    target,
+    implementation: () => navBack({ fallback: argument }),
   };
 });
 
@@ -33296,6 +33545,21 @@ const useControlProps = (props, {
         return defaultAction !== "type" && defaultAction !== "value_change";
       };
       if (controlType === "link") {
+        // Nothing waits for a link's action: the press is a departure, and
+        // the navigation goes whatever the action does — so its command goes
+        // too, unlike a button's, which follows its action (see below).
+        const onLinkInteractionAllowed = e => {
+          triggerUIAction(e);
+          const control = ref.current;
+          if (!control) {
+            return;
+          }
+          tryActionAfterInteractionAllowed(control, {
+            event: e,
+            action: boundAction,
+            requester: control
+          });
+        };
         return {
           keyDown: e => {
             if (isSpaceToActivate(e)) {
@@ -33314,6 +33578,7 @@ const useControlProps = (props, {
           click: e => {
             return {
               name: "click",
+              allowed: () => onLinkInteractionAllowed(e),
               prevented: () => {
                 e.preventDefault();
               }
@@ -33541,6 +33806,15 @@ const useControlProps = (props, {
               };
               if (isRadio) {
                 if (checked) {
+                  if (props.deselectable) {
+                    return {
+                      name: "enter to uncheck radio",
+                      allowed: () => dispatchRequestSetUIState(inputEl, undefined, {
+                        event: e
+                      }),
+                      always
+                    };
+                  }
                   return {
                     name: "enter on checked radio",
                     allowed: () => triggerUIAction(e),
@@ -33566,6 +33840,14 @@ const useControlProps = (props, {
             if (isRadio && e.key === " ") {
               const inputEl = e.currentTarget;
               if (inputEl.checked) {
+                if (props.deselectable) {
+                  return {
+                    name: "space to uncheck radio",
+                    allowed: () => dispatchRequestSetUIState(inputEl, undefined, {
+                      event: e
+                    })
+                  };
+                }
                 // allow space to still trigger uiState and commands
                 // on checked radios (won't update the ui state but will notify of interaction)
                 return {
@@ -33591,6 +33873,20 @@ const useControlProps = (props, {
             // that lands on the <label> (not the <input>) never fires "mousedown" on
             // the input at all, so a DOM-snapshot-at-mousedown approach misses it.
             if (isRadio && uiStateController.uiState !== undefined) {
+              if (props.deselectable) {
+                // Not prevented: a prevented click has the browser put the
+                // radio back to checked once the listeners are done. Left to
+                // run, it changes nothing (the radio was checked already) and
+                // reports nothing — a radio getting unchecked fires no input
+                // event — so this is the one place the uncheck is said.
+                return {
+                  name: `click to uncheck radio`,
+                  allowed: () => dispatchRequestSetUIState(ref.current, undefined, {
+                    event: e
+                  }),
+                  prevented: () => e.preventDefault()
+                };
+              }
               return {
                 name: `click on checked radio`,
                 allowed: () => triggerUIAction(e),
@@ -38584,6 +38880,14 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {string} [props.command] - What the press asks of a control around
+ *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
+ *   Triggered on the press, before the navigation.
+ * @param {Function} [props.action] - Work the press runs, before the
+ *   navigation. Nothing waits for it — not the navigation, not `command`: what
+ *   the next page must find has to be written synchronously (a draft in a
+ *   signal), and a request goes on its own while the page changes. Work that
+ *   decides the destination navigates itself, from a `<Button action>`.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
  *   click (navigation suppressed; `onClick` still runs).
  * @param {(event: MouseEvent) => void} [props.onClick]
@@ -38884,7 +39188,7 @@ const LinkPlain = props => {
     "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
     "data-current-indicator-position": currentIndicatorPosition,
     "data-anchor": anchor ? "" : undefined,
-    "data-interactive": onClick ? "" : undefined,
+    "data-interactive": onClick || props.command || props.action ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     baseClassName: "navi_link",
     styleCSSVars: LinkStyleCSSVars,
@@ -45160,6 +45464,7 @@ const ButtonUI = props => {
     href,
     target,
     rel,
+    replace,
     // visual
     variant,
     pressEffect,
@@ -45206,6 +45511,12 @@ const ButtonUI = props => {
     ...basePseudoState,
     ":-navi-href-current": innerCurrent
   };
+
+  // Worn as an attribute, like a link's (see link_replace.js): read off the
+  // anchor by the click handler, off the source by --navi-nav-to.
+  const replaceRequest = replace ? {
+    [LINK_REPLACE_ATTRIBUTE]: ""
+  } : null;
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
@@ -45232,11 +45543,11 @@ const ButtonUI = props => {
     as: as,
     href: href,
     target: innerTarget,
-    rel: innerRel
+    rel: innerRel,
+    replace: undefined,
+    ...replaceRequest,
     // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
     // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
-    ,
-
     onnavi_get_value: e => {
       e.detail.respondWith(props.value);
     },
@@ -45454,8 +45765,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @type {import("ignore:preact").FunctionComponent<{
  *   ownTarget?: boolean | "refuse" | "always",
  *   emojiAsIcon?: boolean,
+ *   replace?: boolean,
  *   [key: string]: any,
  * }>}
+ * @param {boolean} [replace] Go where the press leads — an `href`, a
+ *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
+ *   rather than stacking on it: what `<Link replace>` says, for a press drawn
+ *   as a button.
  * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
  *   so the button keeps the height of its text — `Text`'s prop, on by default
  *   here. Pass `false` to let an emoji draw at its natural size.
@@ -56105,6 +56421,40 @@ const PickerCustomResolver = props => {
       ...props
     });
   }
+  if (props.mode === "callout") {
+    // A tooltip is an icon one presses, unless told otherwise. Own-property
+    // rather than undefined: an explicit variant={undefined} asks for the
+    // field-like drawing back. "circle" is the icon variant with the status
+    // icon drawn round — a word about the trigger, not a drawing of its own.
+    if (!Object.hasOwn(props, "variant")) {
+      props.variant = "icon";
+    }
+    const circle = props.variant === "circle";
+    if (circle) {
+      props.variant = "icon";
+    }
+    // A word in a sentence asks for a plain tooltip — no icon in the callout,
+    // no status color; an icon one presses is the callout's own status icon,
+    // and says "info" like the callout it opens.
+    if (props.calloutStatus === undefined) {
+      props.calloutStatus = props.variant === "text" ? "none" : "info";
+    }
+    if (props.calloutIcon === undefined) {
+      props.calloutIcon = props.variant !== "text";
+    }
+    if (props.rightSlotIcon === undefined) {
+      props.rightSlotIcon = jsx(CalloutStatusIcon, {
+        status: props.calloutStatus,
+        shape: circle ? "circle" : "square"
+      });
+    }
+    // The arrow on the middle of what was pressed — an icon, a word — rather
+    // than on where its text starts, which is where a callout points at a
+    // field by default (see the anchor attributes in callout.js).
+    if (props["data-callout-arrow-x"] === undefined) {
+      props["data-callout-arrow-x"] = "center";
+    }
+  }
   if (props.type === undefined) {
     // A picker with a popup of its own holds whatever the control inside it
     // holds — a boolean, a number, an id — and a field with no type is read
@@ -56448,7 +56798,9 @@ const PickerCustom = props => {
       // opens anything. Told a value — even an empty one — the picker owns it
       // and pushes it down instead, leaving the popup free to build its
       // content only when it is first opened (see popup_content_mount.js).
-      mountWhenClosed: !isControlValueGivenByProps(props),
+      // A caller who knows better says so with the popup's own props.
+      mountWhenClosed: props.mountWhenClosed ?? !isControlValueGivenByProps(props),
+      unmountWhenClosed: props.unmountWhenClosed,
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -56687,6 +57039,9 @@ const PickerContentInsidePopup = props => {
     // but popupProps is built explicitly here, so it only travels if named.
     // "popupLayer" rather than "layer": the picker itself is not the popup.
     popupLayer,
+    // Same reason: a `data-testid` on the picker names the trigger (see
+    // docs/testid.md) — this one names the popup.
+    popupTestId,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -56708,13 +57063,26 @@ const PickerContentInsidePopup = props => {
     // marginWithAnchor.
     dockedOnSmallTouchScreen,
     animation,
+    // mode="callout": what the callout says about what it holds, and paints
+    // in its border and icon — "none" for a plain tooltip (see the callout
+    // defaults in PickerCustomResolver). And whether it wears a cross: without
+    // one it still closes on Escape, a click outside, or a --navi-close of the
+    // content's own.
+    calloutStatus,
+    calloutIcon,
+    calloutCloseButton,
     ...rest
   } = props;
   const isPopover = mode === "popover";
+  const isCallout = mode === "callout";
   return jsx(Next, {
     "aria-haspopup": isPopover ? "listbox" : "dialog",
     "navi-popover-mode": isPopover ? popoverMode : undefined,
     ...rest,
+    // On popupProps already (see the picker's popup assembly); they mean
+    // nothing to the picker element.
+    mountWhenClosed: undefined,
+    unmountWhenClosed: undefined,
     onFocusOut: e => {
       if (!isPopover || !closeOnFocusOut) {
         return;
@@ -56739,8 +57107,19 @@ const PickerContentInsidePopup = props => {
         }
       });
     },
-    children: jsx(Popup, {
+    children: isCallout ? jsx(PickerCalloutPopup, {
       ...popupProps,
+      pickerRef: props.ref,
+      status: calloutStatus,
+      icon: calloutIcon,
+      closeButton: calloutCloseButton,
+      children: jsx(PopupModeContext.Provider, {
+        value: mode,
+        children: children
+      })
+    }) : jsx(Popup, {
+      ...popupProps,
+      "data-testid": popupTestId,
       mode: mode,
       layer: popupLayer,
       animation: animation,
@@ -56761,6 +57140,112 @@ const PickerContentInsidePopup = props => {
       })
     })
   });
+};
+
+// One token per picker rather than per instance: a callout manager belongs to
+// one control, so the key only has to be distinct from the other reasons that
+// control may have to show a callout (a failing constraint, a busy refusal, its
+// `error` prop). Those keep working on top of this one: opened while the
+// content is up they take the callout over, and give it back when they go.
+const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
+
+/**
+ * The popup of a `mode="callout"` picker: the picker's own callout — the one
+ * its constraints speak in — showing the picker's children instead of a
+ * message. A speech bubble on the trigger, for a tooltip that opens on a press.
+ *
+ * Wired the way Popover and Dialog are, through `openController.openEffect`:
+ * opening adds a token to the picker's callout manager, whose cleanup removes
+ * it. The callout has ways out of its own (its cross, a click outside, Escape,
+ * focus leaving the picker) and says so through the token's `onClose`, which
+ * closes the controller for real — the popup is already gone, there is no
+ * choice left to offer `requestClose`.
+ *
+ * The content is rendered through a portal into an element this component
+ * owns, handed to the callout as its message (a Node, appended as-is). It is
+ * rendered whether the callout is open or not, so what the content holds
+ * survives a close, the way a popup's `mountWhenClosed` keeps it. The element
+ * carries data-picker-content: the callout is appended inside the picker root,
+ * and a press in there must read as inside the popup, not on the trigger.
+ */
+const PickerCalloutPopup = ({
+  ref,
+  id,
+  anchor,
+  openController,
+  pickerRef,
+  status,
+  icon,
+  closeButton,
+  onnavi_request_open,
+  onnavi_request_close,
+  onnavi_request_confirm,
+  children
+}) => {
+  const hostRef = useRef(null);
+  if (!hostRef.current) {
+    const host = document.createElement("div");
+    host.setAttribute("data-picker-content", "");
+    hostRef.current = host;
+  }
+  // Reassigned on every render, like Popover's own, so it closes over the
+  // latest props.
+  openController.openEffect = openEvent => {
+    const pickerEl = pickerRef.current;
+    const calloutManager = getPickerInput(pickerEl).__uiStateController__.rules.callout;
+    // Only an anchor the caller named: left unsaid, the manager anchors on the
+    // picker's own input — which is where the data-callout-* attributes a
+    // caller puts on the picker land, and where the callout reads them.
+    const anchorElement = anchor === pickerRef ? undefined : anchor && "current" in anchor ? anchor.current : anchor;
+    calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
+      message: hostRef.current,
+      // "none" is the picker's word for it; the callout's is no status at all.
+      status: status === "none" ? undefined : status,
+      icon,
+      closeButton,
+      anchorElement,
+      // The request, chained to the press that made it: the callout reads the
+      // mousedown off it to wait for the release before listening for a click
+      // outside — the same gesture's own click would close it otherwise.
+      event: openEvent,
+      // Not skipped: the callout moves the focus into the picker when it is
+      // elsewhere, which is what lets Escape find the callout right away.
+      skipFocus: false,
+      onClose: ({
+        event
+      }) => {
+        openController.close(event);
+      }
+    });
+    // A --navi-confirm said inside the callout is aimed at the callout (its
+    // aria-expanded), not at the element the picker listens on: carried over,
+    // for a confirm picker whose question is a speech bubble.
+    const calloutElement = calloutManager.callout.element;
+    const forwardConfirm = e => {
+      onnavi_request_confirm?.(e);
+    };
+    calloutElement.addEventListener("navi_request_confirm", forwardConfirm);
+    return closeEvent => {
+      calloutElement.removeEventListener("navi_request_confirm", forwardConfirm);
+      calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
+    };
+  };
+  return (
+    // What the picker addresses (aria-controls, the request events it
+    // forwards); the callout itself lives where the callout manager puts it.
+    jsx(Box, {
+      as: "span",
+      ref: ref,
+      id: id,
+      style: {
+        display: "contents"
+      },
+      onnavi_request_open: onnavi_request_open,
+      onnavi_request_close: onnavi_request_close,
+      onnavi_request_confirm: onnavi_request_confirm,
+      children: createPortal(children, hostRef.current)
+    })
+  );
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -56811,6 +57296,8 @@ const PickerConfirmResolver = props => {
     message,
     confirmLabel,
     cancelLabel,
+    confirmTestId,
+    cancelTestId,
     focusOnOpen = "confirm",
     // A popover whatever the screen: the question is short and about the
     // control it points at, and a sheet sliding up for one sentence is too
@@ -56854,15 +57341,25 @@ const PickerConfirmResolver = props => {
     mode: mode,
     focusCapture: focusCapture,
     openWhileReadOnly: openWhileReadOnly,
-    onConfirm: onConfirm,
+    onConfirm: onConfirm
+    // A question holds no value to read before it is asked: the popup is
+    // built on the first open, like that of a picker told its value (see
+    // mountWhenClosed in picker_custom.jsx).
+    ,
+
+    mountWhenClosed: false,
     message: undefined,
     confirmLabel: undefined,
     cancelLabel: undefined,
+    confirmTestId: undefined,
+    cancelTestId: undefined,
     focusOnOpen: undefined,
     children: children === undefined ? jsx(PickerConfirmBody, {
       message: message,
       confirmLabel: confirmLabel,
       cancelLabel: cancelLabel,
+      confirmTestId: confirmTestId,
+      cancelTestId: cancelTestId,
       focusOnOpen: focusOnOpen
     }) : children
   });
@@ -56871,6 +57368,8 @@ const PickerConfirmBody = ({
   message,
   confirmLabel,
   cancelLabel,
+  confirmTestId,
+  cancelTestId,
   focusOnOpen
 }) => {
   return jsxs("div", {
@@ -56882,10 +57381,12 @@ const PickerConfirmBody = ({
       children: [jsx(Button, {
         command: "--navi-cancel",
         autoFocus: focusOnOpen === "cancel",
+        "data-testid": cancelTestId,
         children: cancelLabel
       }), jsx(Button, {
         command: "--navi-confirm",
         autoFocus: focusOnOpen === "confirm",
+        "data-testid": confirmTestId,
         children: confirmLabel
       })]
     })]
@@ -57847,6 +58348,9 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
   }
 `;
 const SelectableListMultipleContext = createContext(false);
+// A single-select list whose selected row, pressed again, lets go: what its
+// rows' radios need to know to answer the press (see `deselectable` on Input).
+const SelectableListDeselectableContext = createContext(false);
 // A row of a selectable list is selectable — the list is what decides, and a
 // row says nothing unless it wants out (`selectable={false}` on a row that is
 // only there to be read). Also set to false by a non-selectable list, so a list
@@ -57878,6 +58382,7 @@ const ListSelectable = props => {
   const {
     ref,
     multiple,
+    deselectable,
     focusGroupDirection,
     focusGroupWrap
   } = props;
@@ -58014,6 +58519,7 @@ const ListSelectable = props => {
     defaultValue: undefined,
     selectable: undefined,
     multiple: undefined,
+    deselectable: undefined,
     focusGroupDirection: undefined,
     focusGroupWrap: undefined
     // Track focus inside the list: whichever item gets focus becomes current.
@@ -58136,7 +58642,7 @@ const ListSelectable = props => {
       if (!currentId) {
         return;
       }
-      if (multiple) {
+      if (multiple || deselectable) {
         const inputId = `${currentId}_input`;
         const childController = uiGroupStateController.findChildById(inputId);
         const isSelected = childController && childController.uiState;
@@ -58160,7 +58666,10 @@ const ListSelectable = props => {
     value: true,
     children: jsx(SelectableListMultipleContext.Provider, {
       value: multiple,
-      children: listVnode
+      children: jsx(SelectableListDeselectableContext.Provider, {
+        value: Boolean(deselectable),
+        children: listVnode
+      })
     })
   });
 };
@@ -58209,6 +58718,8 @@ const ListItemSelectable = props => {
     ...rest
   } = props;
   const multiple = useContext(SelectableListMultipleContext);
+  // A checkbox toggles on its own; only a radio has to be told it may let go.
+  const deselectable = useContext(SelectableListDeselectableContext) && !multiple;
   // Whose reason it is that this row cannot be taken. Read-only reaching it
   // from above is the LIST's, and what is settled is then the whole answer —
   // said as the selection where several things are taken, as the choice where
@@ -58231,6 +58742,7 @@ const ListItemSelectable = props => {
     ref: inputRef,
     id: inputId,
     type: inputType,
+    deselectable,
     defaultChecked: defaultSelected,
     ...(hasSelectedProp ? {
       checked: selected
@@ -58249,9 +58761,10 @@ const ListItemSelectable = props => {
       type: inputType,
       checked,
       readOnly,
-      value
+      value,
+      deselectable
     };
-  }, [inputId, inputType, checked, readOnly, value]);
+  }, [inputId, inputType, checked, readOnly, value, deselectable]);
   return jsxs(Next, {
     id: id,
     index: index,
@@ -59489,6 +60002,7 @@ const ListFirstResolver = props => {
  * @type {import("ignore:preact").FunctionComponent<{
  *   selectable?: boolean,
  *   multiple?: boolean,
+ *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
  *   action?: (value: any) => void,
@@ -59613,6 +60127,11 @@ const ListFirstResolver = props => {
  *   Pass `true` for a list whose rows must stay live under the pointer while
  *   it scrolls. The trade of the default is the mirror one: right after a
  *   scroll, the row under the pointer lights up only once the pointer moves.
+ * @param {boolean} [props.deselectable]
+ *   A single-select list allowed to hold nothing: the selected row, pressed
+ *   again, lets go. Without it the list is a radio group — a choice, once
+ *   made, moves to another row but never goes away. A `multiple` list toggles
+ *   its rows already.
  * @param {number} [props.maxLength]
  *   How many items a `selectable multiple` list accepts — the same word, and
  *   the same behaviour, as `maxLength` on a text field: a rule the list is
@@ -64625,6 +65144,31 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
 
       text-align: center;
     }
+    /* text: a word in a sentence, marked by the dotted line under it — the way
+       a term one can ask about is marked. No box, no slot; the font is the
+       sentence's own, so the word sits in its line like the ones around it. */
+    &[data-variant="text"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+
+      font-size: inherit;
+      font-family: inherit;
+      text-decoration: underline dotted;
+      text-underline-offset: 0.2em;
+
+      &[data-hover] {
+        text-decoration-style: solid;
+      }
+    }
   }
 `;
 const PickerButton = props => {
@@ -64668,6 +65212,8 @@ const PickerButton = props => {
     error
   } = props;
   const isSingleLine = maxLines === 1;
+  // Same rule as the root: phrasing content inside a sentence.
+  const ContentTag = variant === "text" ? "span" : "div";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -64705,8 +65251,11 @@ const PickerButton = props => {
        as a value nobody may change. */
     jsx(ReadOnlyContext.Provider, {
       value: readOnlyResolved,
-      children: jsxs(Box, {
-        as: "div",
+      children: jsxs(Box
+      // A word in a sentence (variant="text") sits in a <p>, where a <div> is
+      // not allowed: phrasing content there, block content elsewhere.
+      , {
+        as: variant === "text" ? "span" : "div",
         ref: ref
         // The flow this element really has (.navi_picker is display:inline-flex).
         // Left unsaid, Box reads a <div> as block and resolves alignX into a
@@ -64856,7 +65405,7 @@ const PickerButton = props => {
             // picker behind it is.
             ,
 
-            "navi-placeholder": variant !== "button" && uiStateHoldsNothing(value) ? "" : undefined,
+            "navi-placeholder": variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
             maxLines: maxLines,
             children: jsx(PickerOwnContent, {
               children: jsx(PickerContext.Provider, {
@@ -64880,7 +65429,7 @@ const PickerButton = props => {
                 })
               })
             })
-          }), variant === "icon" || variant === "headless" || variant === "button" || ui === "default" ? null : jsx("span", {
+          }), variant === "icon" || variant === "headless" || variant === "button" || variant === "text" || ui === "default" ? null : jsx("span", {
             className: "navi_picker_right_slot",
             children: jsx(PickerOwnContent, {
               children: clearable && interactive && value !== undefined && value !== "" && clearConfirm !== undefined ?
@@ -64946,7 +65495,7 @@ const PickerButton = props => {
           })]
         }), jsx(ControlFacadeChildrenWrapper, {
           ...facadeChildrenProps,
-          children: jsx("div", {
+          children: jsx(ContentTag, {
             className: "navi_picker_content",
             "data-picker-content": "",
             children: children
@@ -68027,6 +68576,7 @@ const css$n = /* css */`
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   escapeEffect?: "cancel" | "close",
  *   popupLayer?: "top" | "local",
+ *   popupTestId?: string,
  *   [key: string]: any,
  * }>}
  * @param {Array<{value: any, label: import("ignore:preact").ComponentChildren}>} options
@@ -68068,7 +68618,7 @@ const css$n = /* css */`
  * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMinWidth`/`Height`,
  * `dialogMaxWidth`/`Height`,
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
- * `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
+ * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
  * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
@@ -68270,7 +68820,7 @@ const SplitButton = props => {
 // What the Picker's popup answers to — Picker's own popup props, named here so
 // a caller reaches all of them through the split button (see picker.jsx's JSDoc
 // for what each one says).
-const POPUP_PROP_SET = new Set(["mode", "popupLayer", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdropVariant", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
+const POPUP_PROP_SET = new Set(["mode", "popupLayer", "popupTestId", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdropVariant", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
 const splitPopupProps = props => {
   const popupProps = {};
   const boxProps = {};
@@ -75869,7 +76419,7 @@ const ErrorSvg = () => {
     })
   });
 };
-const InfoSvg = () => {
+const InfoSvg$1 = () => {
   return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
@@ -75952,7 +76502,7 @@ const MessageBox = ({
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
-    icon = status === "info" ? jsx(InfoSvg, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
+    icon = status === "info" ? jsx(InfoSvg$1, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
   } else if (typeof icon === "function") {
     const Comp = icon;
     icon = jsx(Comp, {});
@@ -78026,6 +78576,29 @@ const ExclamationSvg = () => {
   });
 };
 
+const InfoSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("circle", {
+      cx: "12",
+      cy: "12",
+      r: "10",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2"
+    }), jsx("circle", {
+      cx: "12",
+      cy: "7.6",
+      r: "1.4",
+      fill: "currentColor"
+    }), jsx("path", {
+      fill: "currentColor",
+      d: "M10.6 10.6h2.8V18h-2.8z"
+    })]
+  });
+};
+
 const EyeClosedSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
@@ -78101,5 +78674,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
