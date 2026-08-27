@@ -80,6 +80,27 @@ against: `charGuard="tel"`, `charGuard="slug"`, `charGuard="noEmoji"`. Refusing
 the keystroke and refusing the value are different jobs — the pair
 `maxLengthGuard`/`maxLength` is the same split — and a field usually wants both.
 
+## Reading the validity without submitting
+
+`useConstraintValidityState(ref)` gives the control's validity as it stands,
+re-read whenever it changes:
+
+```js
+const state = useConstraintValidityState(inputRef);
+state.valid; // false
+state.single_space.messageString; // the sentence
+state.reported; // "max_length" — the one the callout says
+```
+
+Several constraints fail at once and only one sentence is shown: the one with
+the highest priority — an `error` status first, then `required`, then the
+platform's own constraints, then navi's and the app's, ties going to the first
+registered. `reported` names it, so a summary drawn beside the field says the
+same thing as the callout rather than picking a second one.
+
+`src/control/demos/validation/text_rules_demo.html` is that, one rule per row: a
+value that breaks it, its message read live, and a submit to see the callout.
+
 ## Messages
 
 Every sentence navi says is a key in `naviI18n`, and the validation ones are

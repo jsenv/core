@@ -2,7 +2,16 @@ import { useLayoutEffect, useState } from "preact/hooks";
 
 import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../control_validation.js";
 
-const DEFAULT_VALIDITY_STATE = { valid: true };
+const DEFAULT_VALIDITY_STATE = { valid: true, reported: null };
+
+/**
+ * The control's constraint validity, re-read whenever it changes:
+ * `{ valid, reported, [constraintName]: null | failureInfo }`.
+ *
+ * `reported` names the constraint whose message the callout shows — the one
+ * navi picks when several fail at once. A failure info carries `messageString`,
+ * the sentence itself.
+ */
 export const useConstraintValidityState = (ref) => {
   const checkValue = () => {
     const element = ref.current;

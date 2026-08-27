@@ -281,6 +281,13 @@ export const createControlValidation = (
       }
     }
 
+    // Several constraints can fail at once and only one sentence is shown —
+    // naming it here lets whoever draws its own summary of the failures say the
+    // same thing as the callout instead of picking a second one.
+    newConstraintValidityState.reported = failedConstraintInfo
+      ? failedConstraintInfo.name
+      : null;
+
     const activeFailedConstraintInfo = failedConstraintInfo;
     if (activeFailedConstraintInfo) {
       const titleLess = controller.controlHostProps.title === undefined;

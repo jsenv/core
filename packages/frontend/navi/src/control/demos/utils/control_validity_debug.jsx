@@ -4,7 +4,9 @@ import { Box, useConstraintValidityState } from "@jsenv/navi";
 export const ControlValidityDebug = ({ inputRef, committedValue }) => {
   const state = useConstraintValidityState(inputRef);
 
-  const entries = Object.entries(state).filter(([key]) => key !== "valid");
+  const entries = Object.entries(state).filter(
+    ([key]) => key !== "valid" && key !== "reported",
+  );
   const failingEntries = entries.filter(([, v]) => v !== null);
   const passingEntries = entries.filter(([, v]) => v === null);
 

@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Text rules demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .rule-case {
+        padding: 14px 0;
+        border-top: 1px solid #eceff3;
+      }
+      .rule-case:first-of-type {
+        border-top: none;
+      }
+      .readout {
+        min-width: 300px;
+        padding: 8px 10px;
+        font-size: 0.78rem;
+        font-family: ui-monospace, monospace;
+        line-height: 1.6;
+        background: #f8f9fa;
+        border: 1px solid #dde3ec;
+        border-radius: 6px;
+      }
+      .readout[data-valid] {
+        border-color: #c3e6cb;
+      }
+      .readout-fail {
+        color: #c0392b;
+      }
+      .readout-pass {
+        color: #1c7a43;
+      }
+      .readout-reported {
+        padding: 0 4px;
+        color: #7a4a00;
+        background: #ffeec2;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Form,
+        Input,
+        Link,
+        Text,
+        Textarea,
+        useConstraintValidityState,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // What the field refuses, said as the field says it — read live, without
+      // submitting. `reported` names the one the callout picks.
+      const Readout = ({ inputRef }) => {
+        const state = useConstraintValidityState(inputRef);
+        const failing = Object.entries(state).filter(
+          ([key, info]) =>
+            key !== "valid" && key !== "reported" && info !== null,
+        );
+
+        if (state.valid) {
+          return (
+            <div className="readout" data-valid="">
+              <span className="readout-pass">valid</span>
+            </div>
+          );
+        }
+        return (
+          <Box className="readout" flex="y">
+            {failing.map(([name, info]) => (
+              <span key={name} className="readout-fail">
+                {name === state.reported ? (
+                  <span className="readout-reported">▸ {name}</span>
+                ) : (
+                  <span>{name}</span>
+                )}
+                {` — ${info.messageString}`}
+              </span>
+            ))}
+          </Box>
+        );
+      };
+
+      // One rule, a value that breaks it, and a submit to see the callout.
+      const RuleCase = ({ caption, children }) => {
+        const inputRef = useRef();
+        return (
+          <div className="rule-case">
+            <Text size="s" color="#666">
+              {caption}
+            </Text>
+            <Form action={() => {}}>
+              <Box
+                flex
+                spacing="l"
+                alignY="center"
+                style={{ marginTop: "6px" }}
+              >
+                <Box flex spacing="s" alignY="center">
+                  {children(inputRef)}
+                  <Button type="submit">Submit</Button>
+                </Box>
+                <Readout inputRef={inputRef} />
+              </Box>
+            </Form>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="Text rules" />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <LengthDemo />
+          <CharClassDemo />
+          <SingleSpaceDemo />
+          <DisplayableDemo />
+          <NoEmojiDemo />
+          <MaxLineBreaksDemo />
+          <GuardDemo />
+          <SeveralAtOnceDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const NominalDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="desc">
+            Les règles d'un champ de texte libre, toutes ensemble, sur une
+            valeur qui passe.
+          </p>
+          <RuleCase caption="maxLength · singleSpace · displayable · noEmoji">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="nominal"
+                width="320px"
+                defaultValue="Terrain 3, samedi matin"
+                maxLength={80}
+                singleSpace
+                displayable
+                noEmoji
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── Longueur ──────────────────────────────────────────────────────────
+
+      const LengthDemo = () => (
+        <div class="demo-section">
+          <Heading id="length">Longueur</Heading>
+          <RuleCase caption="maxLength={10}">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="max_length"
+                width="320px"
+                defaultValue="beaucoup trop long pour ce champ"
+                maxLength={10}
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="minLength={8}">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="min_length"
+                width="320px"
+                defaultValue="court"
+                minLength={8}
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── charClass ─────────────────────────────────────────────────────────
+
+      const CharClassDemo = () => (
+        <div class="demo-section">
+          <Heading id="char-class">Caractères autorisés</Heading>
+          <p class="desc">
+            Un preset nomme une classe ; une classe brute s'écrit à la main.
+          </p>
+          <RuleCase caption='charGuard="slug"'>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="slug"
+                width="320px"
+                defaultValue="Mon Beau Terrain"
+                charGuard="slug"
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption='charGuard="numeric"'>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="numeric"
+                width="320px"
+                defaultValue="12a34"
+                charGuard="numeric"
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption={'charGuard="[\\p{L} -]"'}>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="letters"
+                width="320px"
+                defaultValue="Jean-Michel 3"
+                charGuard="[\p{L} -]"
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── singleSpace ───────────────────────────────────────────────────────
+
+      const SingleSpaceDemo = () => (
+        <div class="demo-section">
+          <Heading id="single-space">singleSpace</Heading>
+          <RuleCase caption="espace au début">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="space_start"
+                width="320px"
+                defaultValue=" Camille"
+                singleSpace
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="espace à la fin">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="space_end"
+                width="320px"
+                defaultValue="Camille "
+                singleSpace
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="deux espaces d'affilée">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="space_double"
+                width="320px"
+                defaultValue="Camille  Dupont"
+                singleSpace
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── displayable ───────────────────────────────────────────────────────
+
+      const DisplayableDemo = () => (
+        <div class="demo-section">
+          <Heading id="displayable">displayable</Heading>
+          <p class="desc">
+            Chaque caractère est légitime seul ; c'est ce qu'ils dessinent
+            ensemble qui casse une ligne.
+          </p>
+          <RuleCase caption="signes empilés (zalgo)">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="zalgo"
+                width="320px"
+                defaultValue={"e\u0300\u0301\u0302\u0303\u0304\u0306\u0307x"}
+                displayable
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="maxStackedMarks={2} — un tilde et un accent suffisent à dépasser">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="zalgo_low"
+                width="320px"
+                defaultValue={"e\u0300\u0301\u0302"}
+                displayable
+                maxStackedMarks={2}
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="rien de visible (une espace insécable et un trait d'union conditionnel)">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="invisible"
+                width="320px"
+                defaultValue={"\u00a0\u00ad"}
+                displayable
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="lignes vides en série">
+            {(ref) => (
+              <Textarea
+                ref={ref}
+                name="blank_lines"
+                width="320px"
+                defaultValue={"Salut\n\n\n\nà demain"}
+                displayable
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="une liaison invisible qui ne relie rien (U+200D en fin de valeur)">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="dangling_joiner"
+                width="320px"
+                defaultValue={"Camille\u200d"}
+                displayable
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="la même liaison entre deux caractères fait son travail">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="joiner_ok"
+                width="320px"
+                defaultValue={"\u{1F468}\u200d\u{1F469}\u200d\u{1F467}"}
+                displayable
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── noEmoji ───────────────────────────────────────────────────────────
+
+      const NoEmojiDemo = () => (
+        <div class="demo-section">
+          <Heading id="no-emoji">noEmoji</Heading>
+          <RuleCase caption="un emoji">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="emoji"
+                width="320px"
+                defaultValue={"Terrain 3 \u{1F44D}"}
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="un drapeau (deux indicateurs régionaux)">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="flag"
+                width="320px"
+                defaultValue={"\u{1F1EB}\u{1F1F7}"}
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="© reste du texte">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="copyright_text"
+                width="320px"
+                defaultValue={"\u00a9 2026"}
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="le même caractère qui demande la présentation emoji (© + U+FE0F)">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="copyright_emoji"
+                width="320px"
+                defaultValue={"\u00a9\ufe0f 2026"}
+                noEmoji
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── maxLineBreaks ─────────────────────────────────────────────────────
+
+      const MaxLineBreaksDemo = () => (
+        <div class="demo-section">
+          <Heading id="max-line-breaks">maxLineBreaks</Heading>
+          <RuleCase caption="maxLineBreaks={2} — quatre lignes, donc trois retours">
+            {(ref) => (
+              <Textarea
+                ref={ref}
+                name="line_breaks"
+                width="320px"
+                defaultValue={"une\ndeux\ntrois\nquatre"}
+                maxLineBreaks={2}
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="maxLineBreaks={0}">
+            {(ref) => (
+              <Textarea
+                ref={ref}
+                name="line_breaks_none"
+                width="320px"
+                defaultValue={"une\ndeux"}
+                maxLineBreaks={0}
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── Les gardes ────────────────────────────────────────────────────────
+
+      const GuardDemo = () => (
+        <div class="demo-section">
+          <Heading id="guards">Refuser la frappe plutôt que la valeur</Heading>
+          <p class="desc">
+            Ces deux-là n'attendent pas le submit : taper une lettre dans le
+            premier, dépasser la limite dans le second.
+          </p>
+          <RuleCase caption='charGuard="numeric" — le champ part vide, tapez des lettres'>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="guard_numeric"
+                width="320px"
+                charGuard="numeric"
+                placeholder="Des chiffres uniquement"
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption='charGuard="noEmoji" — collez un emoji'>
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="guard_no_emoji"
+                width="320px"
+                charGuard="noEmoji"
+                placeholder="Pas d'emoji"
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="maxLengthGuard={10}">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="guard_max_length"
+                width="320px"
+                maxLengthGuard={10}
+                placeholder="Dix caractères"
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      // ── Plusieurs règles à la fois ────────────────────────────────────────
+
+      const SeveralAtOnceDemo = () => (
+        <div class="demo-section">
+          <Heading id="several">Plusieurs règles enfreintes à la fois</Heading>
+          <p class="desc">
+            Le champ signale tout ce qui échoue ; le callout n'en dit qu'un,
+            marqué ▸ dans le relevé.
+          </p>
+          <RuleCase caption="maxLength + singleSpace + noEmoji">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="several_standard"
+                width="320px"
+                defaultValue={"  Terrain  3 \u{1F44D} tout au bout du club"}
+                maxLength={10}
+                singleSpace
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="singleSpace + displayable + noEmoji : aucune n'est standard">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="several_navi"
+                width="320px"
+                defaultValue={
+                  " Camille\u0300\u0301\u0302\u0303\u0304\u0306 \u{1F44D}"
+                }
+                singleSpace
+                displayable
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="la même valeur, avec un maxLength en plus">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="several_navi_and_standard"
+                width="320px"
+                defaultValue={
+                  " Camille\u0300\u0301\u0302\u0303\u0304\u0306 \u{1F44D}"
+                }
+                maxLength={8}
+                singleSpace
+                displayable
+                noEmoji
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="displayableMessage remplace la phrase de cette règle, ici seulement">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="several_custom_message"
+                width="320px"
+                defaultValue={"Camille\u0300\u0301\u0302\u0303\u0304\u0306"}
+                displayable
+                displayableMessage="Ce pseudo ne tient pas sur une ligne."
+              />
+            )}
+          </RuleCase>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
