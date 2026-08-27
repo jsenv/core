@@ -572,7 +572,14 @@ const computeBox = (props, parentBoxFlow) => {
     rest["data-body"] = "";
     // Padding is what decides whether the content reaches the body's own
     // corners — see the corner claims in this file's CSS.
-    if (!PADDING_PROP_NAMES.some((name) => declaresSomething(rest[name]))) {
+    let flush = true;
+    for (const name of PADDING_PROP_SET) {
+      if (declaresSomething(rest[name])) {
+        flush = false;
+        break;
+      }
+    }
+    if (flush) {
       rest["data-body-flush"] = "";
     }
   }
@@ -580,14 +587,11 @@ const computeBox = (props, parentBoxFlow) => {
   // the frame at that spot: the corner claims coming from a Group are about
   // ITS corners and nothing inside reaches them, so they stop here — see this
   // file's CSS.
-  const paints = PAINTED_PROP_NAMES.some((name) =>
-    declaresSomething(rest[name]),
-  );
-  const insets = PADDING_PROP_NAMES.some((name) =>
-    declaresSomething(rest[name]),
-  );
-  if (paints || insets) {
-    rest["navi-box-frame"] = "";
+  for (const name of FRAME_PROP_SET) {
+    if (declaresSomething(rest[name])) {
+      rest["navi-box-frame"] = "";
+      break;
+    }
   }
 
   const defaultDisplay = getDefaultDisplay(TagName);
@@ -1103,7 +1107,7 @@ const shouldInjectSeparatorBetween = (left, right) => {
   return true;
 };
 
-const PADDING_PROP_NAMES = [
+const PADDING_PROP_SET = new Set([
   "padding",
   "paddingX",
   "paddingY",
@@ -1111,12 +1115,13 @@ const PADDING_PROP_NAMES = [
   "paddingRight",
   "paddingBottom",
   "paddingLeft",
-];
-/* What a box paints of its own. Deliberately without the radius props: a
-   radius alone paints nothing — it only says how a background or a border
-   already there is cut — so a box carrying just a radius is still a wrapper
-   around whatever draws. */
-const PAINTED_PROP_NAMES = [
+]);
+/* What makes a box the frame at its spot: what it paints of its own, and the
+   padding holding its content away from its corners. Deliberately without the
+   radius props: a radius alone paints nothing — it only says how a background
+   or a border already there is cut — so a box carrying just a radius is still
+   a wrapper around whatever draws. */
+const FRAME_PROP_SET = new Set([
   "background",
   "backgroundColor",
   "backgroundImage",
@@ -1128,7 +1133,8 @@ const PAINTED_PROP_NAMES = [
   "borderWidth",
   "borderColor",
   "borderStyle",
-];
+  ...PADDING_PROP_SET,
+]);
 const declaresSomething = (value) => {
   if (value === undefined || value === null || value === false) {
     return false;
