@@ -101,6 +101,7 @@ import {
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/text.jsx";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
+import { SlideContainerContext } from "./slide_container_context.js";
 import {
   readSlideContainerState,
   sameSlideContainerState,
@@ -385,9 +386,6 @@ const isWayOut = (element) =>
 // empty map, and a re-render changes nothing for them.
 const EMPTY_VALUE_BY_AREA = {};
 
-// What the container tells what is inside it: which way it travels, so a button
-// can point the right way without being told twice.
-const SlideContainerContext = createContext(null);
 // What a slide tells what is inside IT: whether leaving it is allowed right
 // now, so its own prev/next buttons say so instead of failing when pressed.
 const SlideContext = createContext(null);
@@ -1839,6 +1837,19 @@ export const SlideContainer = ({
   const paintWays = (currentElement) => {
     const ways = [];
     const held = [];
+    // Whether the slide being left says no, this way. The one gate again, read
+    // exactly as goToArea reads it at the moment of the travel — so what is
+    // published here and what would happen cannot disagree.
+    const holdsTowards = (forward) =>
+      currentElement?.hasAttribute(
+        forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
+      );
+    const say = (name, offered, forward) => {
+      if (!offered) {
+        return;
+      }
+      (holdsTowards(forward) ? held : ways).push(name);
+    };
     for (const direction of Object.keys(DIRECTIONS)) {
       const { dx, dy } = DIRECTIONS[direction];
       if (!mapAxes?.includes(dx ? "x" : "y")) {
@@ -1846,15 +1857,20 @@ export const SlideContainer = ({
         // would be saying it about every row on the page.
         continue;
       }
-      if (!areaTowards(dx, dy)) {
-        continue;
-      }
-      const forward = dx > 0 || dy > 0;
-      const isHeld = currentElement?.hasAttribute(
-        forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
-      );
-      (isHeld ? held : ways).push(direction);
+      say(direction, Boolean(areaTowards(dx, dy)), dx > 0 || dy > 0);
     }
+    // The two ends are ways out like the others — "all the way that way", said
+    // by the map's own order rather than by a direction (see goToEnd, and
+    // SlideContainer.First / .Last). Offered while one is not already standing
+    // there, and held by the same lock the direction they lie in would be.
+    const { order } = readMap();
+    const currentArea = currentElement ? readArea(currentElement) : undefined;
+    say("first", order.length > 0 && order[0] !== currentArea, false);
+    say(
+      "last",
+      order.length > 0 && order[order.length - 1] !== currentArea,
+      true,
+    );
     for (const element of travelPainters()) {
       if (ways.length) {
         element.setAttribute(SLIDE_WAYS_ATTRIBUTE, ways.join(" "));
@@ -2518,7 +2534,17 @@ export const SlideContainer = ({
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
-          value={{ vertical, answeredAreas, done, valueByArea, settleFocus }}
+          value={{
+            vertical,
+            answeredAreas,
+            done,
+            valueByArea,
+            settleFocus,
+            // The box itself, for what is written INSIDE it to read the same
+            // facts what is written outside reads by id (useSlideContainer):
+            // a way out is a way out on either side of the box.
+            containerRef,
+          }}
         >
           {children}
         </SlideContainerContext.Provider>
@@ -2731,16 +2757,21 @@ const SlideMove = ({ direction, ...rest }) => {
   const locks = useContext(SlideContext);
   const { dx, dy, command, Svg, label } = DIRECTIONS[direction];
   const forward = dx > 0 || dy > 0;
-  // The same fact, read from wherever this way out is written. Inside a slide it
-  // comes down as context — the slide holding the user is this button's
-  // ancestor. Written AROUND the box (only slides go in it, so a chevron pinned
-  // to the edge of a full-screen surface has to be), it is not, so it is read
-  // off the box this button already names to ask for the travel: one prop, and
-  // the way out behaves the same on either side of the box.
+  // What this way out would DO, read from wherever it is written: off the box it
+  // names when it is drawn around the box (only slides go in it, so a chevron
+  // pinned to the edge of a full-screen surface has to be), off the box above it
+  // otherwise. One answer on either side of the box.
   const slides = useSlideContainer(rest.commandFor);
-  const locked =
+  // Two reasons to be dead, and they are not the same thing to a reader: this
+  // slide holding on to them (worth explaining — see readOnly on SlideNavButton)
+  // and there being nothing that way at all (the end of the walk, which explains
+  // itself). The lock also comes down as context when this is written inside a
+  // slide, which is the same fact one commit earlier: the box publishes it after
+  // the render, and there is no frame where the way out is live for nothing.
+  const held =
     (forward ? locks?.preventNavNext : locks?.preventNavPrevious) ||
     slides.held(direction);
+  const locked = held || !slides.can(direction);
   return (
     <SlideNavButton
       command={command}
@@ -2754,15 +2785,23 @@ const SlideMove = ({ direction, ...rest }) => {
 
 // "All the way that way": the first slide of the walk, or the last one. Not a
 // direction — a map reads its own order — so it is its own component rather
-// than a fifth arrow.
-const SlideEnd = ({ last, ...rest }) => (
-  <SlideNavButton
-    command={last ? "--navi-last" : "--navi-first"}
-    ChevronSvg={last ? ChevronLastSvg : ChevronFirstSvg}
-    aria-label={last ? "Last slide" : "First slide"}
-    {...rest}
-  />
-);
+// than a fifth arrow. Which is exactly why it cannot work out on its own whether
+// it would do anything: only the box knows its order, so only the box can say
+// that one is already standing at that end. It says it in the same breath as the
+// rest (see paintWays).
+const SlideEnd = ({ last, ...rest }) => {
+  const slides = useSlideContainer(rest.commandFor);
+  const wayOut = last ? "last" : "first";
+  return (
+    <SlideNavButton
+      command={last ? "--navi-last" : "--navi-first"}
+      locked={slides.held(wayOut) || !slides.can(wayOut)}
+      ChevronSvg={last ? ChevronLastSvg : ChevronFirstSvg}
+      aria-label={last ? "Last slide" : "First slide"}
+      {...rest}
+    />
+  );
+};
 const SlideFirst = (props) => <SlideEnd {...props} last={false} />;
 const SlideLast = (props) => <SlideEnd {...props} last />;
 

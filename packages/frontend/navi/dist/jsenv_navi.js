@@ -39651,6 +39651,17 @@ const LinkCurrentIndicator = () => {
 markAsOutsideTextFlow(LinkCurrentIndicator);
 
 /**
+ * What the container tells what is inside it: which way it travels so a button
+ * can point the right way without being told twice, what a travel handed to a
+ * slide, and the box itself — which is how a way out written inside reads the
+ * same facts a way out written outside reads by id (see useSlideContainer).
+ *
+ * Its own module, tiny on purpose: the hook that reads a container and the
+ * container that fills this in would otherwise have to import each other.
+ */
+const SlideContainerContext = createContext(null);
+
+/**
  * What a SlideContainer is doing, read from outside it.
  *
  * Only slides go in the box, so everything drawn AROUND the travel is written
@@ -39689,14 +39700,16 @@ markAsOutsideTextFlow(LinkCurrentIndicator);
 // ([data-slide-ways~="right"]).
 const SLIDE_CURRENT_ATTRIBUTE = "data-slide-current";
 const SLIDE_TOWARD_ATTRIBUTE = "data-slide-travel-toward";
-// Where a travel WOULD go right now: there is a slide that way and the one on
-// screen lets go of it.
+// Every way out that would DO something right now, in the words the commands
+// use: a direction ("left", "right", "up", "down") when there is a slide that
+// way, plus "first" and "last" when one is not already standing at that end of
+// the walk — and, in all cases, the slide on screen letting go.
 const SLIDE_WAYS_ATTRIBUTE = "data-slide-ways";
-// …and where there is a slide that way but the one on screen holds on to the
-// user (preventNav, or a `required` step still unanswered). Two facts, not one:
-// a way out leading nowhere is not there, while a way out being held is there
-// and says no — which is why it stays visible and explainable rather than
-// hidden.
+// …and the ways out that are there and refused: the slide on screen holds on to
+// the user that way (preventNav, or a `required` step still unanswered). Two
+// facts, not one: a way out leading nowhere is not there at all, while a way
+// out being held IS there and says no — which is why it stays visible and
+// explainable rather than hidden. A way out is dead in both cases.
 const SLIDE_HELD_ATTRIBUTE = "data-slide-held";
 // …and the one word said out loud, on the box and on every follower of it, when
 // any of the above has actually changed. It carries the whole state as its
@@ -39704,7 +39717,11 @@ const SLIDE_HELD_ATTRIBUTE = "data-slide-held";
 const SLIDE_STATE_EVENT = "navi_slide_state";
 
 const NO_WAYS = [];
+// No box to read: not "a box with nothing in it". The difference is the whole
+// point — see `can` below, which must not answer "there is nowhere to go" to
+// the question "where can one go" when it has not been told anything yet.
 const NOTHING = {
+  known: false,
   current: undefined,
   toward: undefined,
   areas: NO_WAYS,
@@ -39718,11 +39735,13 @@ const wordsOf = (element, attribute) => {
 };
 
 const readSlideContainerState = (element) => ({
+  known: true,
   current: element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined,
   toward: element.getAttribute(SLIDE_TOWARD_ATTRIBUTE) ?? undefined,
-  // In DOM order, which is the order of the walk for a line and the order the
-  // areas were written in for a map — the same order everything else reads
-  // (see readMap).
+  // In DOM order — which is the order of the WALK for a line, and not
+  // necessarily for a map: there the order is the one the areas are written in
+  // (see parseAreas). Ask `can("first")` / `can("last")` about the ends rather
+  // than the two ends of this list.
   areas: Array.from(
     element.querySelectorAll(":scope > [data-slide-track] > [data-slide]"),
     (slideElement) =>
@@ -39733,6 +39752,7 @@ const readSlideContainerState = (element) => ({
 });
 
 const sameSlideContainerState = (a, b) =>
+  a.known === b.known &&
   a.current === b.current &&
   a.toward === b.toward &&
   a.areas.join(" ") === b.areas.join(" ") &&
@@ -39743,33 +39763,50 @@ const sameSlideContainerState = (a, b) =>
  * @param {string|Element|{current: Element}} [target] - the container: its id
  *   (the way everything else addresses one), the element, or a ref to it. Not a
  *   follower — a follower is painted for CSS to draw with, the box is what holds
- *   the walk. Nothing at all is allowed and answers "no container": a component
- *   that may or may not be wired to one calls this unconditionally, like every
- *   hook.
+ *   the walk. Left out, it is the box this is written INSIDE, if any: a way out
+ *   reads the same facts on either side of the box, which is the whole point of
+ *   there being one answer to "what would this do".
  * @returns {{
+ *   known: boolean,
  *   current: string|undefined,
  *   toward: string|undefined,
  *   areas: string[],
- *   can: (direction: "left"|"right"|"up"|"down") => boolean,
- *   held: (direction: "left"|"right"|"up"|"down") => boolean,
+ *   can: (wayOut: "left"|"right"|"up"|"down"|"first"|"last") => boolean,
+ *   held: (wayOut: "left"|"right"|"up"|"down"|"first"|"last") => boolean,
  * }} where the box stands. `current` is the slide on screen — the one being
  *   travelled TO while a travel plays, because that is what one is looking at;
  *   `toward` is the other slide in the frame while the picture is between two,
- *   and nothing at rest. `can` is "a travel that way would happen", `held` is
- *   "there is a slide that way and this one says no" — a chevron is dead in
- *   both cases and only the second is worth explaining.
+ *   and nothing at rest. `can` is "asking for it would do something", `held` is
+ *   "it is there and this slide says no" — a way out is dead in both cases, and
+ *   only the second is worth a word to the reader.
+ *   `known` is false until the box has been read: no box was named and none is
+ *   above, the id names nothing, or — for one commit — this mounted before the
+ *   box had painted. Until then `can` answers YES, because it is the answer that
+ *   degrades well: a way out offered for one frame and then taken away is a
+ *   button that did nothing once, while the reverse hides every way out of every
+ *   box that this cannot see and says nothing about it.
  */
 const useSlideContainer = (target) => {
   const [state, setState] = useState(NOTHING);
+  // The box this is written inside, when nothing names one. Read
+  // unconditionally, like every hook, and used only as a fallback.
+  const containerInContext = useContext(SlideContainerContext);
+  const fallbackRef = containerInContext?.containerRef;
 
   useLayoutEffect(() => {
+    const resolved = target ?? fallbackRef;
     const element =
-      typeof target === "string"
-        ? document.getElementById(target)
-        : target && "current" in target
-          ? target.current
-          : target;
+      typeof resolved === "string"
+        ? document.getElementById(resolved)
+        : resolved && "current" in resolved
+          ? resolved.current
+          : resolved;
     if (!element) {
+      if (typeof resolved === "string") {
+        console.warn(
+          `useSlideContainer("${resolved}") but no element with that id found`,
+        );
+      }
       setState(NOTHING);
       return undefined;
     }
@@ -39788,14 +39825,15 @@ const useSlideContainer = (target) => {
     return () => {
       element.removeEventListener(SLIDE_STATE_EVENT, read);
     };
-  }, [target]);
+  }, [target, fallbackRef]);
 
   return {
+    known: state.known,
     current: state.current,
     toward: state.toward,
     areas: state.areas,
-    can: (direction) => state.ways.includes(direction),
-    held: (direction) => state.held.includes(direction),
+    can: (wayOut) => !state.known || state.ways.includes(wayOut),
+    held: (wayOut) => state.held.includes(wayOut),
   };
 };
 
@@ -49901,9 +49939,6 @@ const isWayOut = element => Boolean(element && element.closest && element.closes
 // empty map, and a re-render changes nothing for them.
 const EMPTY_VALUE_BY_AREA = {};
 
-// What the container tells what is inside it: which way it travels, so a button
-// can point the right way without being told twice.
-const SlideContainerContext = createContext(null);
 // What a slide tells what is inside IT: whether leaving it is allowed right
 // now, so its own prev/next buttons say so instead of failing when pressed.
 const SlideContext = createContext(null);
@@ -51323,6 +51358,16 @@ const SlideContainer = ({
   const paintWays = currentElement => {
     const ways = [];
     const held = [];
+    // Whether the slide being left says no, this way. The one gate again, read
+    // exactly as goToArea reads it at the moment of the travel — so what is
+    // published here and what would happen cannot disagree.
+    const holdsTowards = forward => currentElement?.hasAttribute(forward ? "data-prevent-nav-next" : "data-prevent-nav-previous");
+    const say = (name, offered, forward) => {
+      if (!offered) {
+        return;
+      }
+      (holdsTowards(forward) ? held : ways).push(name);
+    };
     for (const direction of Object.keys(DIRECTIONS)) {
       const {
         dx,
@@ -51333,13 +51378,18 @@ const SlideContainer = ({
         // would be saying it about every row on the page.
         continue;
       }
-      if (!areaTowards(dx, dy)) {
-        continue;
-      }
-      const forward = dx > 0 || dy > 0;
-      const isHeld = currentElement?.hasAttribute(forward ? "data-prevent-nav-next" : "data-prevent-nav-previous");
-      (isHeld ? held : ways).push(direction);
+      say(direction, Boolean(areaTowards(dx, dy)), dx > 0 || dy > 0);
     }
+    // The two ends are ways out like the others — "all the way that way", said
+    // by the map's own order rather than by a direction (see goToEnd, and
+    // SlideContainer.First / .Last). Offered while one is not already standing
+    // there, and held by the same lock the direction they lie in would be.
+    const {
+      order
+    } = readMap();
+    const currentArea = currentElement ? readArea(currentElement) : undefined;
+    say("first", order.length > 0 && order[0] !== currentArea, false);
+    say("last", order.length > 0 && order[order.length - 1] !== currentArea, true);
     for (const element of travelPainters()) {
       if (ways.length) {
         element.setAttribute(SLIDE_WAYS_ATTRIBUTE, ways.join(" "));
@@ -52082,7 +52132,11 @@ const SlideContainer = ({
             answeredAreas,
             done,
             valueByArea,
-            settleFocus
+            settleFocus,
+            // The box itself, for what is written INSIDE it to read the same
+            // facts what is written outside reads by id (useSlideContainer):
+            // a way out is a way out on either side of the box.
+            containerRef
           },
           children: children
         })
@@ -52295,14 +52349,19 @@ const SlideMove = ({
     label
   } = DIRECTIONS[direction];
   const forward = dx > 0 || dy > 0;
-  // The same fact, read from wherever this way out is written. Inside a slide it
-  // comes down as context — the slide holding the user is this button's
-  // ancestor. Written AROUND the box (only slides go in it, so a chevron pinned
-  // to the edge of a full-screen surface has to be), it is not, so it is read
-  // off the box this button already names to ask for the travel: one prop, and
-  // the way out behaves the same on either side of the box.
+  // What this way out would DO, read from wherever it is written: off the box it
+  // names when it is drawn around the box (only slides go in it, so a chevron
+  // pinned to the edge of a full-screen surface has to be), off the box above it
+  // otherwise. One answer on either side of the box.
   const slides = useSlideContainer(rest.commandFor);
-  const locked = (forward ? locks?.preventNavNext : locks?.preventNavPrevious) || slides.held(direction);
+  // Two reasons to be dead, and they are not the same thing to a reader: this
+  // slide holding on to them (worth explaining — see readOnly on SlideNavButton)
+  // and there being nothing that way at all (the end of the walk, which explains
+  // itself). The lock also comes down as context when this is written inside a
+  // slide, which is the same fact one commit earlier: the box publishes it after
+  // the render, and there is no frame where the way out is live for nothing.
+  const held = (forward ? locks?.preventNavNext : locks?.preventNavPrevious) || slides.held(direction);
+  const locked = held || !slides.can(direction);
   return jsx(SlideNavButton, {
     command: command,
     locked: locked,
@@ -52314,16 +52373,24 @@ const SlideMove = ({
 
 // "All the way that way": the first slide of the walk, or the last one. Not a
 // direction — a map reads its own order — so it is its own component rather
-// than a fifth arrow.
+// than a fifth arrow. Which is exactly why it cannot work out on its own whether
+// it would do anything: only the box knows its order, so only the box can say
+// that one is already standing at that end. It says it in the same breath as the
+// rest (see paintWays).
 const SlideEnd = ({
   last,
   ...rest
-}) => jsx(SlideNavButton, {
-  command: last ? "--navi-last" : "--navi-first",
-  ChevronSvg: last ? ChevronLastSvg : ChevronFirstSvg,
-  "aria-label": last ? "Last slide" : "First slide",
-  ...rest
-});
+}) => {
+  const slides = useSlideContainer(rest.commandFor);
+  const wayOut = last ? "last" : "first";
+  return jsx(SlideNavButton, {
+    command: last ? "--navi-last" : "--navi-first",
+    locked: slides.held(wayOut) || !slides.can(wayOut),
+    ChevronSvg: last ? ChevronLastSvg : ChevronFirstSvg,
+    "aria-label": last ? "Last slide" : "First slide",
+    ...rest
+  });
+};
 const SlideFirst = props => jsx(SlideEnd, {
   ...props,
   last: false
