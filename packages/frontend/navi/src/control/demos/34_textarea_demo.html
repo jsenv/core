@@ -49,7 +49,7 @@
       .demo-placeholder-floor .navi_input.navi_textarea .navi_control_input {
         min-height: max(
           calc(var(--textarea-min-rows, 1.5) * 1lh),
-          var(--x-textarea-placeholder-height, 0px)
+          calc(var(--x-textarea-placeholder-rows, 0) * 1lh)
         );
       }
     </style>

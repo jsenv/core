@@ -186,6 +186,16 @@ clipped, and the same emoji displayed in a row, a bubble or a button does not
 push anything around. `text_emoji_demo.html` shows it by swapping the field and
 the rendering in place.
 
+A control takes it snapped to the pixel (`--navi-control-line-height`,
+`round(1.25em, 1px)`). The browser lays a line out at its exact height but
+paints the glyph on a pixel row, and at the default control size (13.333px)
+the line is 16.666px: the two-thirds that do not fit go entirely under the
+glyph, which then sits a pixel above the middle of its field — the placeholder
+looks too high. A whole number of pixels has no remainder to put anywhere, and
+a `Textarea` sized in `lh` lands on the same grid as the placeholder it
+measures. The page's text keeps the plain number: a length would stop
+following the font size the moment it is inherited.
+
 Change it on `:root` for a whole app. Do not unset it on a component, do not let
 one fall back to `normal`, and do not raise a local `lineHeight` because of an
 emoji: a `lineHeight` is a typographic choice for the text itself — a paragraph

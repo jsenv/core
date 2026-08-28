@@ -46,25 +46,26 @@ const css = /* css */ `
          And a line box under "normal" takes the height of the tallest font it
          holds, so the one line carrying an emoji stands taller than the ones
          around it — and a tighter line would cut the top off the glyph.
-         The number is the page's own (--navi-line-height, 1.25): a message
-         typed here and the same message displayed afterwards sit on the same
-         line, emoji included. Bound to the token rather than inherited so it
-         can never come back as "normal" from a container that sets one.
-         See docs/typography.md. */
-      line-height: var(--navi-line-height);
+         The number is the page's own (--navi-line-height, 1.25), snapped to
+         the pixel like every control's: a message typed here and the same
+         message displayed afterwards sit on the same line, emoji included.
+         Bound to the token rather than inherited so it can never come back as
+         "normal" from a container that sets one. See docs/typography.md. */
+      line-height: var(--navi-control-line-height);
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;
       /* A placeholder must be readable in full before anything is typed: a
          field that opens already scrolled reads as a field that already has
-         text in it. Its wrapped height is measured (see usePlaceholderHeight)
-         because it only exists once laid out, and it only raises the floor
-         while the placeholder is what is being shown — what is typed sizes the
-         box on its own. */
+         text in it. The lines it wraps to are counted (see
+         usePlaceholderHeight) because they only exist once laid out, and they
+         only raise the floor while the placeholder is what is being shown —
+         what is typed sizes the box on its own. A count of lines rather than
+         a height, so the floor is on the same grid as minRows. */
       &:placeholder-shown {
         min-height: max(
           calc(var(--textarea-min-rows, 1.5) * 1lh),
-          var(--x-textarea-placeholder-height, 0px)
+          calc(var(--x-textarea-placeholder-rows, 0) * 1lh)
         );
       }
     }
@@ -212,13 +213,13 @@ export const TextareaCharCount = ({ value, signal, maxLength, ...rest }) => {
 
 // `field-sizing: content` sizes the box from the value, and an empty field has
 // none — the placeholder is text the browser refuses to make room for. So the
-// height it wraps to is measured and published as --x-textarea-placeholder-height
+// lines it wraps to are counted and published as --x-textarea-placeholder-rows
 // for the CSS above to use as a floor.
 const usePlaceholderHeight = (ref, placeholder) => {
   useLayoutEffect(() => {
     const textareaEl = ref.current;
     if (!placeholder) {
-      textareaEl.style.removeProperty("--x-textarea-placeholder-height");
+      textareaEl.style.removeProperty("--x-textarea-placeholder-rows");
       return null;
     }
     let widthMeasured;
@@ -228,19 +229,29 @@ const usePlaceholderHeight = (ref, placeholder) => {
       if (textareaEl.value !== "") {
         return;
       }
-      const { paddingTop, paddingBottom } = getComputedStyle(textareaEl);
-      // Cleared before reading: scrollHeight can never report less than the
-      // height already applied, so measuring on top of a previous measure could
-      // only ever grow the box, never let it shrink back on a wider viewport.
-      textareaEl.style.setProperty("--x-textarea-placeholder-height", "0px");
+      const { paddingTop, paddingBottom, lineHeight } =
+        getComputedStyle(textareaEl);
+      // Read with no floor under the box: scrollHeight can never report less
+      // than the height the element already has, so a min-height still in
+      // place — minRows, or the previous measure — would be read back as
+      // lines of placeholder (a one-line placeholder over a 1.5-row floor
+      // would count as two), and the box could only ever grow, never shrink
+      // back on a wider viewport.
+      textareaEl.style.setProperty("min-height", "0px");
       const contentHeight =
         textareaEl.scrollHeight -
         parseFloat(paddingTop) -
         parseFloat(paddingBottom);
+      textareaEl.style.removeProperty("min-height");
+      // scrollHeight is a whole number of pixels where a line need not be: a
+      // height handed back as is would put the floor a fraction above the
+      // line grid, and the empty box and the one showing its placeholder
+      // would not be the same height. A count of lines has no fraction.
+      const rows = Math.round(contentHeight / parseFloat(lineHeight));
       widthMeasured = textareaEl.clientWidth;
       textareaEl.style.setProperty(
-        "--x-textarea-placeholder-height",
-        `${contentHeight}px`,
+        "--x-textarea-placeholder-rows",
+        String(rows),
       );
     };
     measure();

@@ -95,7 +95,7 @@ const css = /* css */ `
       /* A form control comes with a line of its own from the browser, and that
          line is "normal": a label holding an emoji would then be taller than
          the same label without one. The page's line, like the page's font. */
-      line-height: var(--navi-line-height);
+      line-height: var(--navi-control-line-height);
     }
   }
 

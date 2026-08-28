@@ -220,6 +220,17 @@ const css = /* css */ `
          See docs/typography.md. */
       --navi-line-height: 1.25;
       line-height: var(--navi-line-height);
+      /* The same line for a control, snapped to the pixel. The browser lays a
+         line out at its exact height but paints the glyph on a pixel row: at
+         the default control size (13.333px) the line is 16.666px, and the
+         two-thirds that do not fit go entirely under the glyph, which then
+         sits a pixel above the middle of its field. A whole number of pixels
+         has no remainder to put anywhere. Written with em so it resolves on
+         the control that uses it, at that control's own size. */
+      --navi-control-line-height: round(
+        calc(var(--navi-line-height) * 1em),
+        1px
+      );
 
       /* Color keywords.
            primary:   the ink of the paper, at full strength. An absolute

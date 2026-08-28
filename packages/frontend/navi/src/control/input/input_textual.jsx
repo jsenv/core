@@ -218,7 +218,7 @@ export const inputCss = /* css */ `
          the same line as what displays it afterwards, emoji included. */
       font-family: inherit;
       text-align: inherit;
-      line-height: var(--navi-line-height);
+      line-height: var(--navi-control-line-height);
       background: none;
       border: none;
       border-radius: inherit;

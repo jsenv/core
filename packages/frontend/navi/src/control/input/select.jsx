@@ -52,7 +52,7 @@ const css = /* css */ `
       /* Same line as every other field (see --navi-line-height): a select and
          an input side by side must be the same height, and lh units elsewhere
          in the box need a real number to resolve against. */
-      line-height: var(--navi-line-height);
+      line-height: var(--navi-control-line-height);
       /* The closed control is drawn by us so it matches the other fields; the
          list it opens is untouched and stays the system's. */
       appearance: none;
