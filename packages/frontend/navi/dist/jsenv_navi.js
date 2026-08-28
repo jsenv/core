@@ -4256,6 +4256,53 @@ const findControlProxy = (el) => {
   return firstProxy;
 };
 
+/**
+ * Typography reset shared by the surfaces a control opens: callout, popover,
+ * dialog.
+ *
+ * A surface is painted on top of the page but lives in the DOM subtree of the
+ * element it opens from, so every inherited text property of that element
+ * reaches it. The ink an element chose for its own background — centered,
+ * shadowed, uppercase, letter-spaced, kept on one line — arrives on paper that
+ * has none of that background, and the caller discovers it as a symptom
+ * (a blurred tooltip, a centered message) with nothing on screen pointing back
+ * to the rule three elements up. A surface writes its own text, on its own
+ * paper, in the document's terms.
+ *
+ * Every one of them is set to its initial value rather than `revert`: only
+ * `color` and `background-color` are declared by the UA on a `[popover]`/
+ * `<dialog>`, so `revert` on any of these would roll back to the inherited
+ * value — the very thing to stop. `text-align: initial` is `start`, which
+ * still reads the surface's own `direction`, so an RTL document keeps its
+ * side.
+ *
+ * `font-family` is deliberately absent: a surface keeps the face of what
+ * opened it, so a section written in a display font gets its tooltips in that
+ * font. `color`, `font-size` and `font-weight` are absent too — each surface
+ * answers those its own way (a popup writes in --navi-popup-color and follows
+ * the size of what opened it; a callout reverts to the document's ink and
+ * size).
+ *
+ * In `@layer navi` so an app that wants one of these back says so on the
+ * surface and wins, without having to out-specify anything.
+ */
+const surfaceTextCss = /* css */ `
+  @layer navi {
+    .navi_callout,
+    .navi_popover,
+    .navi_dialog {
+      font-style: initial;
+      text-align: initial;
+      text-indent: initial;
+      text-transform: initial;
+      text-shadow: none;
+      white-space: initial;
+      word-spacing: initial;
+      letter-spacing: initial;
+    }
+  }
+`;
+
 const CalloutContext = createContext();
 const useCalloutRequestClose = () => {
   return useContext(CalloutContext)?.requestClose;
@@ -4601,7 +4648,6 @@ const css$11 = /* css */`
           box-sizing: border-box;
           box-decoration-break: clone;
           align-self: center;
-          white-space: normal; /* Override in case ancetor sets nowrap */
           word-break: break-word;
           overflow-wrap: anywhere;
 
@@ -4670,6 +4716,8 @@ const css$11 = /* css */`
       }
     }
   }
+
+  ${surfaceTextCss}
 `;
 
 /**
@@ -39602,6 +39650,155 @@ const LinkCurrentIndicator = () => {
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);
 
+/**
+ * What a SlideContainer is doing, read from outside it.
+ *
+ * Only slides go in the box, so everything drawn AROUND the travel is written
+ * around it — a chevron pinned to the edge of a full-screen viewer, a "3 / 8"
+ * counter, a bar. Those need to know things the box alone knows: where one is,
+ * and whether there is anywhere to go that way. A container driven by nobody
+ * (no `current`, no `signal`) knows them and no one else does, so this is also
+ * what keeps such a container usable without lifting its state out of it.
+ *
+ * Two channels, and they answer two different questions. The attributes the box
+ * paints on itself are the STATE: they are there for whoever arrives later, and
+ * CSS draws with them without any of this ([data-slide-ways~="right"]). The
+ * event it dispatches is the NEWS: it says WHEN something changed, which no
+ * attribute can say. So this reads the first and listens to the second.
+ *
+ * Not watching the DOM for it, which is the tempting third way and the wrong
+ * one: a write is not a change. Under a finger the box writes where the picture
+ * leans on every frame, with the same value in it more often than not, and a
+ * watcher is woken for every one of them — while the box itself knows perfectly
+ * well whether anything is different, and says so once.
+ *
+ * Nothing is told to the box in return, and nothing has to be wired: it
+ * announces to itself and to its followers, so the thing doing the reading sits
+ * anywhere on the page — in a fixed bar, in the frame around the box, in a
+ * dialog holding it — and a container which never re-renders (a travel it drove
+ * itself) is still followed.
+ *
+ * Reading only. Asking for a travel is what it always was: a command aimed at
+ * the box (`commandFor={id}` + `--navi-right`, or triggerNaviCommand) — one way
+ * of asking, wherever the asking is written.
+ */
+
+
+// The vocabulary the box publishes, in one place: written by slide_container,
+// read here and by anything styling in CSS alone
+// ([data-slide-ways~="right"]).
+const SLIDE_CURRENT_ATTRIBUTE = "data-slide-current";
+const SLIDE_TOWARD_ATTRIBUTE = "data-slide-travel-toward";
+// Where a travel WOULD go right now: there is a slide that way and the one on
+// screen lets go of it.
+const SLIDE_WAYS_ATTRIBUTE = "data-slide-ways";
+// …and where there is a slide that way but the one on screen holds on to the
+// user (preventNav, or a `required` step still unanswered). Two facts, not one:
+// a way out leading nowhere is not there, while a way out being held is there
+// and says no — which is why it stays visible and explainable rather than
+// hidden.
+const SLIDE_HELD_ATTRIBUTE = "data-slide-held";
+// …and the one word said out loud, on the box and on every follower of it, when
+// any of the above has actually changed. It carries the whole state as its
+// detail, so `onnavi_slide_state` on the box is a way of hearing it too.
+const SLIDE_STATE_EVENT = "navi_slide_state";
+
+const NO_WAYS = [];
+const NOTHING = {
+  current: undefined,
+  toward: undefined,
+  areas: NO_WAYS,
+  ways: NO_WAYS,
+  held: NO_WAYS,
+};
+
+const wordsOf = (element, attribute) => {
+  const value = element.getAttribute(attribute);
+  return value ? value.split(" ") : NO_WAYS;
+};
+
+const readSlideContainerState = (element) => ({
+  current: element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined,
+  toward: element.getAttribute(SLIDE_TOWARD_ATTRIBUTE) ?? undefined,
+  // In DOM order, which is the order of the walk for a line and the order the
+  // areas were written in for a map — the same order everything else reads
+  // (see readMap).
+  areas: Array.from(
+    element.querySelectorAll(":scope > [data-slide-track] > [data-slide]"),
+    (slideElement) =>
+      slideElement.getAttribute("data-slide-area") || slideElement.id || "",
+  ),
+  ways: wordsOf(element, SLIDE_WAYS_ATTRIBUTE),
+  held: wordsOf(element, SLIDE_HELD_ATTRIBUTE),
+});
+
+const sameSlideContainerState = (a, b) =>
+  a.current === b.current &&
+  a.toward === b.toward &&
+  a.areas.join(" ") === b.areas.join(" ") &&
+  a.ways.join(" ") === b.ways.join(" ") &&
+  a.held.join(" ") === b.held.join(" ");
+
+/**
+ * @param {string|Element|{current: Element}} [target] - the container: its id
+ *   (the way everything else addresses one), the element, or a ref to it. Not a
+ *   follower — a follower is painted for CSS to draw with, the box is what holds
+ *   the walk. Nothing at all is allowed and answers "no container": a component
+ *   that may or may not be wired to one calls this unconditionally, like every
+ *   hook.
+ * @returns {{
+ *   current: string|undefined,
+ *   toward: string|undefined,
+ *   areas: string[],
+ *   can: (direction: "left"|"right"|"up"|"down") => boolean,
+ *   held: (direction: "left"|"right"|"up"|"down") => boolean,
+ * }} where the box stands. `current` is the slide on screen — the one being
+ *   travelled TO while a travel plays, because that is what one is looking at;
+ *   `toward` is the other slide in the frame while the picture is between two,
+ *   and nothing at rest. `can` is "a travel that way would happen", `held` is
+ *   "there is a slide that way and this one says no" — a chevron is dead in
+ *   both cases and only the second is worth explaining.
+ */
+const useSlideContainer = (target) => {
+  const [state, setState] = useState(NOTHING);
+
+  useLayoutEffect(() => {
+    const element =
+      typeof target === "string"
+        ? document.getElementById(target)
+        : target && "current" in target
+          ? target.current
+          : target;
+    if (!element) {
+      setState(NOTHING);
+      return undefined;
+    }
+    // Read off the DOM rather than taken from the event's detail, even though
+    // the two say the same thing: the first read has no event to take it from
+    // (the box was already standing somewhere when this mounted), and one way
+    // of reading is one thing that can be wrong.
+    const read = () => {
+      const nextState = readSlideContainerState(element);
+      setState((previous) =>
+        sameSlideContainerState(previous, nextState) ? previous : nextState,
+      );
+    };
+    read();
+    element.addEventListener(SLIDE_STATE_EVENT, read);
+    return () => {
+      element.removeEventListener(SLIDE_STATE_EVENT, read);
+    };
+  }, [target]);
+
+  return {
+    current: state.current,
+    toward: state.toward,
+    areas: state.areas,
+    can: (direction) => state.ways.includes(direction),
+    held: (direction) => state.held.includes(direction),
+  };
+};
+
 installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
@@ -40000,19 +40197,17 @@ const Nav = ({
     }
     slideContainerElementRef.current = containerElement;
     const readContainer = () => {
-      setCurrentSlideArea(containerElement.getAttribute("data-slide-current") ?? undefined);
+      setCurrentSlideArea(containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined);
       paintIndicatorGeometryRef.current();
     };
     readContainer();
-    // The container says where one is and what the picture leans on, and says
-    // it in the DOM: nothing here is told, everything is read — which is what
-    // lets this row sit anywhere on the page (above the box, in a fixed bar)
-    // rather than inside it.
-    const attributeObserver = new MutationObserver(readContainer);
-    attributeObserver.observe(containerElement, {
-      attributes: true,
-      attributeFilter: ["data-slide-current", "data-slide-travel-toward"]
-    });
+    // Where one is and what the picture leans on are written on the container,
+    // and the container says out loud when either has changed: this row is not
+    // in the box (it sits above it, in a fixed bar, anywhere), so it reads the
+    // first and listens to the second. Listening rather than watching the DOM
+    // because a write is not a change — the attribute the trait follows is
+    // written on every frame of a gesture with the same value in it.
+    containerElement.addEventListener(SLIDE_STATE_EVENT, readContainer);
     // A row whose tabs changed width — a badge count, a font that just
     // arrived, a window resized — is measured again: what was written is
     // pixels, and pixels go stale.
@@ -40021,7 +40216,7 @@ const Nav = ({
     });
     sizeObserver.observe(navRef.current);
     return () => {
-      attributeObserver.disconnect();
+      containerElement.removeEventListener(SLIDE_STATE_EVENT, readContainer);
       sizeObserver.disconnect();
       slideContainerElementRef.current = null;
     };
@@ -49916,6 +50111,13 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   screens are steps rather than places — so the keys keep the meaning the
  *   content gives them, and travelling stays something one asks for (a button,
  *   a command).
+ *   WHERE they are heard is a separate question, and it is not answered here: a
+ *   key only ever reaches what has the focus, so this box hears the ones pressed
+ *   inside it — and every follower of it hears the rest. A chevron pinned to the
+ *   edge of a full-screen surface is outside the box by necessity (only slides
+ *   go in it), so the surface says `data-slide-container-follows={id}` and the
+ *   arrows keep walking wherever the keyboard is in it. See the paragraph above
+ *   about what is drawn AROUND the travel.
  * @param {boolean|"x"|"y"|"xy"} [props.travelByDrag=true] - whether a pointer
  *   dragging the slides travels. On by default: slides side by side are
  *   something one expects to push around with a thumb. Off where the gesture
@@ -50236,7 +50438,7 @@ const SlideContainer = ({
   // there is nothing else for it to read — a slide the container holds by
   // itself is known to no one else.
   const paintCurrentArea = area => {
-    containerRef.current?.setAttribute("data-slide-current", area);
+    containerRef.current?.setAttribute(SLIDE_CURRENT_ATTRIBUTE, area);
   };
   const markAnswered = area => {
     const order = readMap().slideElements.map(readArea);
@@ -50559,6 +50761,14 @@ const SlideContainer = ({
     if (!stageRef.current) {
       drawnAreaRef.current = currentArea;
     }
+    // Said last, and after data-current has been written: what a travel would do
+    // is read off the map from the slide that is now current, and off the locks
+    // that slide is wearing in this very commit.
+    paintWays(currentElement);
+    // …and once everything this commit had to write is written, the box says so
+    // — a single announcement for a render that may have changed several of the
+    // facts at once.
+    announceState();
     // The finger has the last word: everything above drew the map at rest, and
     // where the track actually is right now is where the gesture put it.
     paintDrag();
@@ -51086,10 +51296,93 @@ const SlideContainer = ({
   const paintTravelToward = area => {
     for (const element of travelPainters()) {
       if (area) {
-        element.setAttribute("data-slide-travel-toward", area);
+        element.setAttribute(SLIDE_TOWARD_ATTRIBUTE, area);
       } else {
-        element.removeAttribute("data-slide-travel-toward");
+        element.removeAttribute(SLIDE_TOWARD_ATTRIBUTE);
       }
+    }
+    // The one fact that changes without a render behind it: under a finger this
+    // is written per frame, so the announcement is left to say whether any of
+    // those writes was a change.
+    announceState();
+  };
+
+  // What a travel would do right now, said in two lists because they are two
+  // different facts: `ways` is where one WOULD go — there is a slide that way
+  // and the one on screen lets go of it — and `held` is where there is a slide
+  // that way and this one holds on to the user (preventNav, a `required` step
+  // still unanswered). A way out leading nowhere is not there; a way out being
+  // held is there and says no, which is why it stays visible and explainable.
+  //
+  // Painted rather than rendered, and on the followers too: only slides go in
+  // this box, so the chevrons, the counters and the bars that go with it are
+  // written AROUND it — in CSS off these attributes
+  // ([data-slide-ways~="right"]), or through useSlideContainer, which watches
+  // them. Nothing is told, everything is read: it is what lets them sit
+  // anywhere, and what lets a container nobody drives still be followed.
+  const paintWays = currentElement => {
+    const ways = [];
+    const held = [];
+    for (const direction of Object.keys(DIRECTIONS)) {
+      const {
+        dx,
+        dy
+      } = DIRECTIONS[direction];
+      if (!mapAxes?.includes(dx ? "x" : "y")) {
+        // Not an axis this map has: a row has no up and no down, and saying so
+        // would be saying it about every row on the page.
+        continue;
+      }
+      if (!areaTowards(dx, dy)) {
+        continue;
+      }
+      const forward = dx > 0 || dy > 0;
+      const isHeld = currentElement?.hasAttribute(forward ? "data-prevent-nav-next" : "data-prevent-nav-previous");
+      (isHeld ? held : ways).push(direction);
+    }
+    for (const element of travelPainters()) {
+      if (ways.length) {
+        element.setAttribute(SLIDE_WAYS_ATTRIBUTE, ways.join(" "));
+      } else {
+        element.removeAttribute(SLIDE_WAYS_ATTRIBUTE);
+      }
+      if (held.length) {
+        element.setAttribute(SLIDE_HELD_ATTRIBUTE, held.join(" "));
+      } else {
+        element.removeAttribute(SLIDE_HELD_ATTRIBUTE);
+      }
+    }
+  };
+
+  // The news, as opposed to the state. Everything painted above IS the state:
+  // it is what anything arriving later reads, and what CSS draws with. What an
+  // attribute cannot say is WHEN it changed — and watching it is the wrong way
+  // to ask, because a write is not a change: `data-slide-travel-toward` is
+  // written on every frame of a gesture with the same value in it, and every
+  // watcher would be woken sixty times a second for nothing. So the box says it
+  // itself, once, and only when something is actually different.
+  //
+  // Said to its followers as well as to itself, exactly as the painting is: a
+  // frame drawn around the box hears what the box is doing without knowing its
+  // id, and a row of tabs beside it listens on the box by id. Not bubbling, like
+  // every other navi event — what is announced is about THIS box, and a box
+  // inside another must not be heard as the one around it.
+  const announcedRef = useRef(null);
+  const announceState = () => {
+    const containerEl = containerRef.current;
+    if (!containerEl) {
+      return;
+    }
+    const state = readSlideContainerState(containerEl);
+    const announced = announcedRef.current;
+    if (announced && sameSlideContainerState(announced, state)) {
+      return;
+    }
+    announcedRef.current = state;
+    for (const element of travelPainters()) {
+      dispatchCustomEvent(element, SLIDE_STATE_EVENT, {
+        ...state
+      });
     }
   };
 
@@ -52002,7 +52295,14 @@ const SlideMove = ({
     label
   } = DIRECTIONS[direction];
   const forward = dx > 0 || dy > 0;
-  const locked = forward ? locks?.preventNavNext : locks?.preventNavPrevious;
+  // The same fact, read from wherever this way out is written. Inside a slide it
+  // comes down as context — the slide holding the user is this button's
+  // ancestor. Written AROUND the box (only slides go in it, so a chevron pinned
+  // to the edge of a full-screen surface has to be), it is not, so it is read
+  // off the box this button already names to ask for the travel: one prop, and
+  // the way out behaves the same on either side of the box.
+  const slides = useSlideContainer(rest.commandFor);
+  const locked = (forward ? locks?.preventNavNext : locks?.preventNavPrevious) || slides.held(direction);
   return jsx(SlideNavButton, {
     command: command,
     locked: locked,
@@ -54555,6 +54855,7 @@ const css$E = /* css */`
     }
   }
 
+  ${surfaceTextCss}
   ${popupCss}
 `;
 
@@ -56052,6 +56353,7 @@ const css$D = /* css */`
     }
   }
 
+  ${surfaceTextCss}
   ${popupCss}
 `;
 
@@ -66172,6 +66474,20 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       pointer-events: none;
       user-select: none;
 
+      /* The value the picker draws itself is the control's own text, at the
+         control's font size: it keeps the control line, snapped to the pixel
+         like the field around it. A caller's "ui" is the caller's own drawing
+         of the control, and it is written on the page's line, as the number,
+         so each text it holds keeps a line relative to its own size. The
+         control line is a length (--navi-control-line-height), and inherited
+         it would arrive as the control's pixels: a 14px label under an 18px
+         picker's 23px line carries ~5px of leading above and below that no
+         glyph occupies and nothing on screen explains. Same reason a popup
+         takes the number — see .navi_popup in popup.jsx. */
+      &[data-picker-facade] {
+        line-height: var(--navi-line-height);
+      }
+
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
         font-style: var(--picker-placeholder-font-style);
@@ -66311,6 +66627,16 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       --x-corner-bottom-left-radius: initial;
 
       display: contents;
+      /* What opens from a control is a page of its own, not part of that
+         control's type scale: it is written at the control font by name,
+         rather than by inheriting the size the picker itself is drawn at. A
+         caller who sizes a picker to the façade it holds (so the padding, the
+         corners and the chevron the picker draws in em land on the text the
+         caller actually wrote) would otherwise take the popup down with it:
+         its title, and everything in it that does not state a size of its
+         own. Same reason the popup is written on the page's line rather than
+         the control's — see .navi_popup in popup.jsx. */
+      font-size: var(--navi-control-font-size);
       text-align: initial; /* Don't inherit picker text align */
     }
 
@@ -66714,6 +67040,12 @@ const PickerButton = props => {
             }
           }), variant === "headless" || ui === "default" ? null : jsx(Text, {
             className: "navi_picker_value"
+            // Tells the caller's own drawing of the control from the value
+            // the picker draws itself, so each is written on its own line
+            // (see .navi_picker_value in the CSS above).
+            ,
+
+            "data-picker-facade": ui === undefined ? undefined : ""
             // A button's label is not a placeholder, however empty the
             // picker behind it is.
             ,
@@ -78903,8 +79235,8 @@ const StepList = ({
     }
     const rootElement = rootRef.current;
     const read = () => {
-      const currentArea = containerElement.getAttribute("data-slide-current");
-      const towardArea = containerElement.getAttribute("data-slide-travel-toward");
+      const currentArea = containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+      const towardArea = containerElement.getAttribute(SLIDE_TOWARD_ATTRIBUTE);
       setContainerCurrent(currentArea ?? undefined);
       const currentIdx = currentArea === null ? -1 : indexOf(currentArea);
       if (currentIdx === -1) {
@@ -78928,13 +79260,12 @@ const StepList = ({
       rootElement.style.setProperty("--step-list-pos-dx", dx);
     };
     read();
-    const observer = new MutationObserver(read);
-    observer.observe(containerElement, {
-      attributes: true,
-      attributeFilter: ["data-slide-current", "data-slide-travel-toward"]
-    });
+    // Read off the container, and re-read when it says something has changed:
+    // a write is not a change, and the attribute the halo follows is written on
+    // every frame of a gesture with the same value in it.
+    containerElement.addEventListener(SLIDE_STATE_EVENT, read);
     return () => {
-      observer.disconnect();
+      containerElement.removeEventListener(SLIDE_STATE_EVENT, read);
     };
     // width: the dots move when the room does, and the written positions are
     // pixels of those dots.
@@ -79765,5 +80096,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

@@ -264,6 +264,20 @@ const css = /* css */ `
       pointer-events: none;
       user-select: none;
 
+      /* The value the picker draws itself is the control's own text, at the
+         control's font size: it keeps the control line, snapped to the pixel
+         like the field around it. A caller's "ui" is the caller's own drawing
+         of the control, and it is written on the page's line, as the number,
+         so each text it holds keeps a line relative to its own size. The
+         control line is a length (--navi-control-line-height), and inherited
+         it would arrive as the control's pixels: a 14px label under an 18px
+         picker's 23px line carries ~5px of leading above and below that no
+         glyph occupies and nothing on screen explains. Same reason a popup
+         takes the number — see .navi_popup in popup.jsx. */
+      &[data-picker-facade] {
+        line-height: var(--navi-line-height);
+      }
+
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
         font-style: var(--picker-placeholder-font-style);
@@ -403,6 +417,16 @@ const css = /* css */ `
       --x-corner-bottom-left-radius: initial;
 
       display: contents;
+      /* What opens from a control is a page of its own, not part of that
+         control's type scale: it is written at the control font by name,
+         rather than by inheriting the size the picker itself is drawn at. A
+         caller who sizes a picker to the façade it holds (so the padding, the
+         corners and the chevron the picker draws in em land on the text the
+         caller actually wrote) would otherwise take the popup down with it:
+         its title, and everything in it that does not state a size of its
+         own. Same reason the popup is written on the page's line rather than
+         the control's — see .navi_popup in popup.jsx. */
+      font-size: var(--navi-control-font-size);
       text-align: initial; /* Don't inherit picker text align */
     }
 
@@ -816,6 +840,10 @@ const PickerButton = (props) => {
           {variant === "headless" || ui === "default" ? null : (
             <Text
               className="navi_picker_value"
+              // Tells the caller's own drawing of the control from the value
+              // the picker draws itself, so each is written on its own line
+              // (see .navi_picker_value in the CSS above).
+              data-picker-facade={ui === undefined ? undefined : ""}
               // A button's label is not a placeholder, however empty the
               // picker behind it is.
               navi-placeholder={

@@ -34,6 +34,7 @@ import { isValidElement } from "preact";
 
 import { findControlHost, findControlRoot } from "../../control_dom.js";
 import { findControlProxy } from "../../control_proxy.js";
+import { surfaceTextCss } from "../../../layout/surface_text_css.js";
 import {
   clearCalloutMessage,
   renderHtmlIntoCallout,
@@ -222,7 +223,6 @@ const css = /* css */ `
           box-sizing: border-box;
           box-decoration-break: clone;
           align-self: center;
-          white-space: normal; /* Override in case ancetor sets nowrap */
           word-break: break-word;
           overflow-wrap: anywhere;
 
@@ -291,6 +291,8 @@ const css = /* css */ `
       }
     }
   }
+
+  ${surfaceTextCss}
 `;
 
 /**

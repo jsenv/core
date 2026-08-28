@@ -55,6 +55,11 @@ import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
 import { useFocusGroup } from "../utils/focus/use_focus_group.js";
+import {
+  SLIDE_CURRENT_ATTRIBUTE,
+  SLIDE_STATE_EVENT,
+  SLIDE_TOWARD_ATTRIBUTE,
+} from "./use_slide_container.js";
 
 const css = /* css */ `
   .navi_step_list {
@@ -397,10 +402,10 @@ export const StepList = ({
     }
     const rootElement = rootRef.current;
     const read = () => {
-      const currentArea = containerElement.getAttribute("data-slide-current");
-      const towardArea = containerElement.getAttribute(
-        "data-slide-travel-toward",
+      const currentArea = containerElement.getAttribute(
+        SLIDE_CURRENT_ATTRIBUTE,
       );
+      const towardArea = containerElement.getAttribute(SLIDE_TOWARD_ATTRIBUTE);
       setContainerCurrent(currentArea ?? undefined);
       const currentIdx = currentArea === null ? -1 : indexOf(currentArea);
       if (currentIdx === -1) {
@@ -424,13 +429,12 @@ export const StepList = ({
       rootElement.style.setProperty("--step-list-pos-dx", dx);
     };
     read();
-    const observer = new MutationObserver(read);
-    observer.observe(containerElement, {
-      attributes: true,
-      attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
-    });
+    // Read off the container, and re-read when it says something has changed:
+    // a write is not a change, and the attribute the halo follows is written on
+    // every frame of a gesture with the same value in it.
+    containerElement.addEventListener(SLIDE_STATE_EVENT, read);
     return () => {
-      observer.disconnect();
+      containerElement.removeEventListener(SLIDE_STATE_EVENT, read);
     };
     // width: the dots move when the room does, and the written positions are
     // pixels of those dots.

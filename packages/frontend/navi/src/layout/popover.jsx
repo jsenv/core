@@ -75,6 +75,7 @@ import {
 } from "./open_controller.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
+import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
@@ -394,6 +395,7 @@ const css = /* css */ `
     }
   }
 
+  ${surfaceTextCss}
   ${popupCss}
 `;
 

@@ -7,6 +7,10 @@ import { toChildArray } from "preact";
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import {
+  SLIDE_CURRENT_ATTRIBUTE,
+  SLIDE_STATE_EVENT,
+} from "../../layout/use_slide_container.js";
 import { observeTransitionDestination } from "../transition_destination.js";
 import { NavContext } from "./nav_context.js";
 
@@ -424,20 +428,18 @@ export const Nav = ({
     slideContainerElementRef.current = containerElement;
     const readContainer = () => {
       setCurrentSlideArea(
-        containerElement.getAttribute("data-slide-current") ?? undefined,
+        containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined,
       );
       paintIndicatorGeometryRef.current();
     };
     readContainer();
-    // The container says where one is and what the picture leans on, and says
-    // it in the DOM: nothing here is told, everything is read — which is what
-    // lets this row sit anywhere on the page (above the box, in a fixed bar)
-    // rather than inside it.
-    const attributeObserver = new MutationObserver(readContainer);
-    attributeObserver.observe(containerElement, {
-      attributes: true,
-      attributeFilter: ["data-slide-current", "data-slide-travel-toward"],
-    });
+    // Where one is and what the picture leans on are written on the container,
+    // and the container says out loud when either has changed: this row is not
+    // in the box (it sits above it, in a fixed bar, anywhere), so it reads the
+    // first and listens to the second. Listening rather than watching the DOM
+    // because a write is not a change — the attribute the trait follows is
+    // written on every frame of a gesture with the same value in it.
+    containerElement.addEventListener(SLIDE_STATE_EVENT, readContainer);
     // A row whose tabs changed width — a badge count, a font that just
     // arrived, a window resized — is measured again: what was written is
     // pixels, and pixels go stale.
@@ -446,7 +448,7 @@ export const Nav = ({
     });
     sizeObserver.observe(navRef.current);
     return () => {
-      attributeObserver.disconnect();
+      containerElement.removeEventListener(SLIDE_STATE_EVENT, readContainer);
       sizeObserver.disconnect();
       slideContainerElementRef.current = null;
     };

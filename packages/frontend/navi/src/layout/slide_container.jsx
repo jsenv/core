@@ -81,6 +81,7 @@ import {
 } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import {
+  dispatchCustomEvent,
   scrollRoomTowards,
   startDragToTravel,
   watchWheelTravel,
@@ -100,6 +101,16 @@ import {
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/text.jsx";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
+import {
+  readSlideContainerState,
+  sameSlideContainerState,
+  SLIDE_CURRENT_ATTRIBUTE,
+  SLIDE_HELD_ATTRIBUTE,
+  SLIDE_STATE_EVENT,
+  SLIDE_TOWARD_ATTRIBUTE,
+  SLIDE_WAYS_ATTRIBUTE,
+  useSlideContainer,
+} from "./use_slide_container.js";
 import { navTo } from "../nav/browser_integration/browser_integration.js";
 import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
 
@@ -580,6 +591,13 @@ const readArea = (slideElement) =>
  *   screens are steps rather than places — so the keys keep the meaning the
  *   content gives them, and travelling stays something one asks for (a button,
  *   a command).
+ *   WHERE they are heard is a separate question, and it is not answered here: a
+ *   key only ever reaches what has the focus, so this box hears the ones pressed
+ *   inside it — and every follower of it hears the rest. A chevron pinned to the
+ *   edge of a full-screen surface is outside the box by necessity (only slides
+ *   go in it), so the surface says `data-slide-container-follows={id}` and the
+ *   arrows keep walking wherever the keyboard is in it. See the paragraph above
+ *   about what is drawn AROUND the travel.
  * @param {boolean|"x"|"y"|"xy"} [props.travelByDrag=true] - whether a pointer
  *   dragging the slides travels. On by default: slides side by side are
  *   something one expects to push around with a thumb. Off where the gesture
@@ -918,7 +936,7 @@ export const SlideContainer = ({
   // there is nothing else for it to read — a slide the container holds by
   // itself is known to no one else.
   const paintCurrentArea = (area) => {
-    containerRef.current?.setAttribute("data-slide-current", area);
+    containerRef.current?.setAttribute(SLIDE_CURRENT_ATTRIBUTE, area);
   };
 
   const markAnswered = (area) => {
@@ -1284,6 +1302,14 @@ export const SlideContainer = ({
     if (!stageRef.current) {
       drawnAreaRef.current = currentArea;
     }
+    // Said last, and after data-current has been written: what a travel would do
+    // is read off the map from the slide that is now current, and off the locks
+    // that slide is wearing in this very commit.
+    paintWays(currentElement);
+    // …and once everything this commit had to write is written, the box says so
+    // — a single announcement for a render that may have changed several of the
+    // facts at once.
+    announceState();
     // The finger has the last word: everything above drew the map at rest, and
     // where the track actually is right now is where the gesture put it.
     paintDrag();
@@ -1786,10 +1812,90 @@ export const SlideContainer = ({
   const paintTravelToward = (area) => {
     for (const element of travelPainters()) {
       if (area) {
-        element.setAttribute("data-slide-travel-toward", area);
+        element.setAttribute(SLIDE_TOWARD_ATTRIBUTE, area);
       } else {
-        element.removeAttribute("data-slide-travel-toward");
+        element.removeAttribute(SLIDE_TOWARD_ATTRIBUTE);
       }
+    }
+    // The one fact that changes without a render behind it: under a finger this
+    // is written per frame, so the announcement is left to say whether any of
+    // those writes was a change.
+    announceState();
+  };
+
+  // What a travel would do right now, said in two lists because they are two
+  // different facts: `ways` is where one WOULD go — there is a slide that way
+  // and the one on screen lets go of it — and `held` is where there is a slide
+  // that way and this one holds on to the user (preventNav, a `required` step
+  // still unanswered). A way out leading nowhere is not there; a way out being
+  // held is there and says no, which is why it stays visible and explainable.
+  //
+  // Painted rather than rendered, and on the followers too: only slides go in
+  // this box, so the chevrons, the counters and the bars that go with it are
+  // written AROUND it — in CSS off these attributes
+  // ([data-slide-ways~="right"]), or through useSlideContainer, which watches
+  // them. Nothing is told, everything is read: it is what lets them sit
+  // anywhere, and what lets a container nobody drives still be followed.
+  const paintWays = (currentElement) => {
+    const ways = [];
+    const held = [];
+    for (const direction of Object.keys(DIRECTIONS)) {
+      const { dx, dy } = DIRECTIONS[direction];
+      if (!mapAxes?.includes(dx ? "x" : "y")) {
+        // Not an axis this map has: a row has no up and no down, and saying so
+        // would be saying it about every row on the page.
+        continue;
+      }
+      if (!areaTowards(dx, dy)) {
+        continue;
+      }
+      const forward = dx > 0 || dy > 0;
+      const isHeld = currentElement?.hasAttribute(
+        forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
+      );
+      (isHeld ? held : ways).push(direction);
+    }
+    for (const element of travelPainters()) {
+      if (ways.length) {
+        element.setAttribute(SLIDE_WAYS_ATTRIBUTE, ways.join(" "));
+      } else {
+        element.removeAttribute(SLIDE_WAYS_ATTRIBUTE);
+      }
+      if (held.length) {
+        element.setAttribute(SLIDE_HELD_ATTRIBUTE, held.join(" "));
+      } else {
+        element.removeAttribute(SLIDE_HELD_ATTRIBUTE);
+      }
+    }
+  };
+
+  // The news, as opposed to the state. Everything painted above IS the state:
+  // it is what anything arriving later reads, and what CSS draws with. What an
+  // attribute cannot say is WHEN it changed — and watching it is the wrong way
+  // to ask, because a write is not a change: `data-slide-travel-toward` is
+  // written on every frame of a gesture with the same value in it, and every
+  // watcher would be woken sixty times a second for nothing. So the box says it
+  // itself, once, and only when something is actually different.
+  //
+  // Said to its followers as well as to itself, exactly as the painting is: a
+  // frame drawn around the box hears what the box is doing without knowing its
+  // id, and a row of tabs beside it listens on the box by id. Not bubbling, like
+  // every other navi event — what is announced is about THIS box, and a box
+  // inside another must not be heard as the one around it.
+  const announcedRef = useRef(null);
+  const announceState = () => {
+    const containerEl = containerRef.current;
+    if (!containerEl) {
+      return;
+    }
+    const state = readSlideContainerState(containerEl);
+    const announced = announcedRef.current;
+    if (announced && sameSlideContainerState(announced, state)) {
+      return;
+    }
+    announcedRef.current = state;
+    for (const element of travelPainters()) {
+      dispatchCustomEvent(element, SLIDE_STATE_EVENT, { ...state });
     }
   };
 
@@ -2625,7 +2731,16 @@ const SlideMove = ({ direction, ...rest }) => {
   const locks = useContext(SlideContext);
   const { dx, dy, command, Svg, label } = DIRECTIONS[direction];
   const forward = dx > 0 || dy > 0;
-  const locked = forward ? locks?.preventNavNext : locks?.preventNavPrevious;
+  // The same fact, read from wherever this way out is written. Inside a slide it
+  // comes down as context — the slide holding the user is this button's
+  // ancestor. Written AROUND the box (only slides go in it, so a chevron pinned
+  // to the edge of a full-screen surface has to be), it is not, so it is read
+  // off the box this button already names to ask for the travel: one prop, and
+  // the way out behaves the same on either side of the box.
+  const slides = useSlideContainer(rest.commandFor);
+  const locked =
+    (forward ? locks?.preventNavNext : locks?.preventNavPrevious) ||
+    slides.held(direction);
   return (
     <SlideNavButton
       command={command}
