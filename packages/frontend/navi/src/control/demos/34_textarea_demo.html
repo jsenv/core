@@ -73,6 +73,7 @@
         TextareaCharCount,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { Measured, MeasureDelta } from "./utils/measure.jsx";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
@@ -121,6 +122,7 @@ et la troisième`;
           <BasicsDemo />
           <StatesDemo />
           <RowsDemo />
+          <HeightDemo />
           <PaddingDemo />
           <EmojiDemo />
           <LongPlaceholderDemo />
@@ -200,6 +202,111 @@ six`}
           </Box>
         </div>
       );
+
+      const HeightDemo = () => {
+        const [emptySize, setEmptySize] = useState(null);
+        const [placeholderSize, setPlaceholderSize] = useState(null);
+        const [valueSize, setValueSize] = useState(null);
+        const [defaultEmptySize, setDefaultEmptySize] = useState(null);
+        const [defaultPlaceholderSize, setDefaultPlaceholderSize] =
+          useState(null);
+        const [defaultValueSize, setDefaultValueSize] = useState(null);
+        const [longEmptySize, setLongEmptySize] = useState(null);
+        const [longTypedSize, setLongTypedSize] = useState(null);
+        const [typed, setTyped] = useState("");
+
+        return (
+          <div class="demo-section">
+            <Heading id="height">Hauteur, avec et sans valeur</Heading>
+            <p class="desc">
+              Une boîte vide, la même montrant son placeholder, la même portant
+              une ligne : les trois doivent faire la même hauteur.
+            </p>
+
+            <fieldset>
+              <legend>minRows={1}</legend>
+              <Box flex="y" spacing="s" alignX="start">
+                <Measured onMeasure={setEmptySize}>
+                  <Textarea minRows={1} />
+                </Measured>
+                <Measured onMeasure={setPlaceholderSize}>
+                  <Textarea minRows={1} placeholder="Un mot" />
+                </Measured>
+                <Measured onMeasure={setValueSize}>
+                  <Textarea minRows={1} defaultValue="Un mot" />
+                </Measured>
+              </Box>
+              <MeasureDelta
+                a={emptySize}
+                b={placeholderSize}
+                labelA="vide"
+                labelB="placeholder"
+              />
+              <MeasureDelta
+                a={emptySize}
+                b={valueSize}
+                labelA="vide"
+                labelB="valeur"
+              />
+            </fieldset>
+
+            <fieldset>
+              <legend>par défaut (minRows=1.5)</legend>
+              <Box flex="y" spacing="s" alignX="start">
+                <Measured onMeasure={setDefaultEmptySize}>
+                  <Textarea />
+                </Measured>
+                <Measured onMeasure={setDefaultPlaceholderSize}>
+                  <Textarea placeholder="Un mot" />
+                </Measured>
+                <Measured onMeasure={setDefaultValueSize}>
+                  <Textarea defaultValue="Un mot" />
+                </Measured>
+              </Box>
+              <MeasureDelta
+                a={defaultEmptySize}
+                b={defaultPlaceholderSize}
+                labelA="vide"
+                labelB="placeholder"
+              />
+              <MeasureDelta
+                a={defaultEmptySize}
+                b={defaultValueSize}
+                labelA="vide"
+                labelB="valeur"
+              />
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                placeholder qui passe à la ligne : la boîte le montre en entier,
+                puis retombe sur ce qui est tapé
+              </legend>
+              <Box flex="y" spacing="s" alignX="start">
+                <Measured onMeasure={setLongEmptySize}>
+                  <Textarea minRows={1} placeholder={LONG_PLACEHOLDER} />
+                </Measured>
+                <Measured onMeasure={setLongTypedSize}>
+                  <Textarea
+                    minRows={1}
+                    placeholder={LONG_PLACEHOLDER}
+                    value={typed}
+                    uiAction={(value) => {
+                      setTyped(value);
+                    }}
+                  />
+                </Measured>
+              </Box>
+              <MeasureDelta
+                a={longEmptySize}
+                b={longTypedSize}
+                labelA="placeholder"
+                labelB="ce qui est tapé"
+              />
+            </fieldset>
+          </div>
+        );
+      };
 
       const PaddingDemo = () => (
         <div class="demo-section">

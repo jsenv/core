@@ -48,6 +48,7 @@
         Icon,
         Input,
         MessageBox,
+        Picker,
         Text,
         Textarea,
         useEditionController,
@@ -197,6 +198,13 @@
         </Text>
       );
 
+      const PickerContent = () => (
+        <Box flex="y" spacing="xs" padding="s" alignX="start">
+          <Text>Sortie au parc de la Tête d'Or</Text>
+          <Text>Sortie au parc 🌳 de la Tête d'Or 🎉</Text>
+        </Box>
+      );
+
       const App = () => (
         <div>
           <h1>Emoji</h1>
@@ -273,6 +281,16 @@
           <Compare>
             <Textarea defaultValue={MESSAGE} width="18em" />
             <Textarea defaultValue={MESSAGE_EMOJI} width="18em" />
+          </Compare>
+
+          <h3>Picker</h3>
+          <Compare>
+            <Picker name="picker_plain" value={LINE} action={() => {}}>
+              <PickerContent />
+            </Picker>
+            <Picker name="picker_emoji" value={LINE_EMOJI} action={() => {}}>
+              <PickerContent />
+            </Picker>
           </Compare>
 
           <h3>MessageBox</h3>
