@@ -206,6 +206,15 @@ const css = /* css */ `
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
+      /* The size an emoji is drawn at wherever emojiAsIcon renders one (see
+         docs/typography.md). Smaller than the letters it sits among: an emoji
+         glyph fills its box edge to edge where a letter only fills its
+         x-height, so at the same font size it reads as an image dropped into
+         the sentence rather than as part of it. The app-wide lever — a page
+         that wants its emoji bigger sets it here rather than at every call
+         site; emojiAsIcon={{ size }} still decides for one text. */
+      --navi-emoji-size: var(--navi-typo-xs);
+
       /* Color keywords.
            primary:   the ink of the paper, at full strength. An absolute
                       rather than currentColor: it is what brings a run back

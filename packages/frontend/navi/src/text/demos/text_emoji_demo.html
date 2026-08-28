@@ -33,13 +33,31 @@
       .compare > * {
         outline: 1px dotted #6a8fd8;
       }
+      /* La line-height du textarea est fixée par le composant : la section
+         "même champ" la fait varier pour l'aligner sur celle du rendu. */
+      .demo_swap .navi_input.navi_textarea .navi_control_input {
+        line-height: var(--demo-swap-line-height);
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Badge, Box, Button, Icon, Text } from "@jsenv/navi";
+      import { useLayoutEffect } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import {
+        Badge,
+        Box,
+        Button,
+        Editable,
+        Icon,
+        Input,
+        Select,
+        Text,
+        Textarea,
+        useEditionController,
+      } from "@jsenv/navi";
 
       const PersonSvg = () => (
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -80,6 +98,278 @@
         </Compare>
       );
 
+      const SINGLE_LINE_PLAIN = "Salut on se retrouve au parc vers 19h ?";
+      const SINGLE_LINE = "Salut 👋 on se retrouve au parc 🌳 vers 19h 🎉 ?";
+
+      const SingleLine = ({ children = SINGLE_LINE, ...props }) => (
+        <Text
+          block
+          maxLines={1}
+          width="20em"
+          paddingX="s"
+          background="#dce7fb"
+          color="#1f3f8a"
+          {...props}
+        >
+          {children}
+        </Text>
+      );
+      const SizeRow = ({ label, emojiAsIcon, children }) => (
+        <Box flex alignY="center" spacing="m">
+          <Text block width="17em" size="s" color="#666" noWrap shrink={false}>
+            {label}
+          </Text>
+          <SingleLine emojiAsIcon={emojiAsIcon}>{children}</SingleLine>
+        </Box>
+      );
+      const EMOJI_SIZES = [
+        { label: "emojiAsIcon={false}", value: false },
+        { label: "emojiAsIcon", value: true },
+        { label: 'emojiAsIcon={{ size: "1em" }}', value: { size: "1em" } },
+        { label: 'emojiAsIcon={{ size: "0.8em" }}', value: { size: "0.8em" } },
+        { label: 'emojiAsIcon={{ size: "xxs" }}', value: { size: "xxs" } },
+        { label: 'emojiAsIcon={{ size: "xs" }}', value: { size: "xs" } },
+        { label: 'emojiAsIcon={{ size: "s" }}', value: { size: "s" } },
+        { label: 'emojiAsIcon={{ size: "m" }}', value: { size: "m" } },
+      ];
+
+      const SizePicker = ({ label, options, signal: valueSignal }) => (
+        <Box flex alignY="center" spacing="s">
+          <Text size="s" color="#666" noWrap>
+            {label}
+          </Text>
+          <Select signal={valueSignal}>
+            {Object.keys(options).map((key) => (
+              <option key={key} value={key}>
+                {key}
+              </option>
+            ))}
+          </Select>
+        </Box>
+      );
+
+      const EMOJI_SIZE_VARS = {
+        "défaut (xs)": "",
+        "xxs": "var(--navi-typo-xxs)",
+        "s": "var(--navi-typo-s)",
+        "m": "var(--navi-typo-m)",
+        "0.8em": "0.8em",
+        "1em": "1em",
+      };
+      const emojiSizeVarSignal = signal("défaut (xs)");
+      const EmojiSizeVar = () => {
+        const size = EMOJI_SIZE_VARS[emojiSizeVarSignal.value];
+        useLayoutEffect(() => {
+          const { style } = document.documentElement;
+          if (size) {
+            style.setProperty("--navi-emoji-size", size);
+          } else {
+            style.removeProperty("--navi-emoji-size");
+          }
+        }, [size]);
+
+        return (
+          <Box flex="y" spacing="m" alignX="start">
+            <SizePicker
+              label="--navi-emoji-size"
+              options={EMOJI_SIZE_VARS}
+              signal={emojiSizeVarSignal}
+            />
+            <SingleLine emojiAsIcon />
+            <Box flex alignY="center" spacing="s">
+              <Badge emojiAsIcon>Nouveau 🎉</Badge>
+              <Button>Envoyer 🚀</Button>
+            </Box>
+            <Paragraph emojiAsIcon>{MESSAGE_WITH_EMOJI}</Paragraph>
+          </Box>
+        );
+      };
+
+      // Le même champ, qui passe de l'un à l'autre. Tout ce que la section
+      // utilise est écrit ici, y compris ce qui ressemble à ce qu'une autre
+      // section fait déjà : on vient y changer des valeurs à la main.
+      const SWAP_PRESETS = {
+        compact: {
+          fontSize: "0.875rem",
+          paddingX: "4px",
+          paddingY: "2px",
+          lineHeight: "1.1",
+          emojiSize: "xxs",
+        },
+        défaut: {
+          fontSize: "1rem",
+          paddingX: "6px",
+          paddingY: "4px",
+          lineHeight: "1.25",
+          emojiSize: "défaut",
+        },
+        aéré: {
+          fontSize: "1.125rem",
+          paddingX: "12px",
+          paddingY: "8px",
+          lineHeight: "1.8",
+          emojiSize: "s",
+        },
+      };
+      const swapValueSignal = signal(
+        "Salut 👋 on se retrouve au parc 🌳 vers 19h 🎉 ? Ramène des chips 🍟 et ta bonne humeur 😄 !",
+      );
+      const swapEditingSignal = signal(true);
+      const swapFontSizeSignal = signal(SWAP_PRESETS["défaut"].fontSize);
+      const swapPaddingXSignal = signal(SWAP_PRESETS["défaut"].paddingX);
+      const swapPaddingYSignal = signal(SWAP_PRESETS["défaut"].paddingY);
+      const swapLineHeightSignal = signal(SWAP_PRESETS["défaut"].lineHeight);
+      const swapEmojiSizeSignal = signal(SWAP_PRESETS["défaut"].emojiSize);
+      const SwapDemo = () => {
+        const editing = swapEditingSignal.value;
+        const fontSize = swapFontSizeSignal.value;
+        const paddingX = swapPaddingXSignal.value;
+        const paddingY = swapPaddingYSignal.value;
+        const lineHeight = swapLineHeightSignal.value;
+        const emojiSize = swapEmojiSizeSignal.value;
+
+        return (
+          <Box
+            flex="y"
+            spacing="m"
+            alignX="start"
+            className="demo_swap"
+            style={{ "--demo-swap-line-height": lineHeight }}
+          >
+            <Box flex spacing="s" alignY="center">
+              {Object.keys(SWAP_PRESETS).map((name) => (
+                <Button
+                  key={name}
+                  onClick={() => {
+                    const preset = SWAP_PRESETS[name];
+                    swapFontSizeSignal.value = preset.fontSize;
+                    swapPaddingXSignal.value = preset.paddingX;
+                    swapPaddingYSignal.value = preset.paddingY;
+                    swapLineHeightSignal.value = preset.lineHeight;
+                    swapEmojiSizeSignal.value = preset.emojiSize;
+                  }}
+                >
+                  {name}
+                </Button>
+              ))}
+            </Box>
+
+            <Box flex flexWrap spacing="m" alignY="center">
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666" noWrap>
+                  font-size
+                </Text>
+                <Select signal={swapFontSizeSignal}>
+                  <option value="0.75rem">0.75rem</option>
+                  <option value="0.875rem">0.875rem</option>
+                  <option value="1rem">1rem</option>
+                  <option value="1.125rem">1.125rem</option>
+                  <option value="1.25rem">1.25rem</option>
+                </Select>
+              </Box>
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666" noWrap>
+                  padding X
+                </Text>
+                <Select signal={swapPaddingXSignal}>
+                  <option value="0px">0px</option>
+                  <option value="2px">2px</option>
+                  <option value="4px">4px</option>
+                  <option value="6px">6px</option>
+                  <option value="8px">8px</option>
+                  <option value="12px">12px</option>
+                </Select>
+              </Box>
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666" noWrap>
+                  padding Y
+                </Text>
+                <Select signal={swapPaddingYSignal}>
+                  <option value="0px">0px</option>
+                  <option value="1px">1px</option>
+                  <option value="2px">2px</option>
+                  <option value="4px">4px</option>
+                  <option value="8px">8px</option>
+                  <option value="12px">12px</option>
+                </Select>
+              </Box>
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666" noWrap>
+                  line-height
+                </Text>
+                <Select signal={swapLineHeightSignal}>
+                  <option value="1">1</option>
+                  <option value="1.1">1.1</option>
+                  <option value="1.25">1.25</option>
+                  <option value="1.5">1.5</option>
+                  <option value="1.8">1.8</option>
+                  <option value="2">2</option>
+                </Select>
+              </Box>
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666" noWrap>
+                  emoji
+                </Text>
+                <Select signal={swapEmojiSizeSignal}>
+                  <option value="défaut">défaut</option>
+                  <option value="aucun">aucun</option>
+                  <option value="xxs">xxs</option>
+                  <option value="xs">xs</option>
+                  <option value="s">s</option>
+                  <option value="m">m</option>
+                  <option value="0.8em">0.8em</option>
+                  <option value="1em">1em</option>
+                </Select>
+              </Box>
+            </Box>
+
+            <Button
+              onClick={() => {
+                swapEditingSignal.value = !editing;
+              }}
+            >
+              {editing ? "afficher" : "éditer"}
+            </Button>
+
+            {editing ? (
+              <Textarea
+                signal={swapValueSignal}
+                width="24em"
+                minRows={1}
+                fontSize={fontSize}
+                paddingX={paddingX}
+                paddingY={paddingY}
+                borderWidth="1px"
+                borderRadius="4px"
+              />
+            ) : (
+              // le rendu s'aligne sur le champ, jusqu'à sa police
+              <Text
+                block
+                preWrap
+                width="24em"
+                fontFamily="var(--navi-control-font-family)"
+                fontSize={fontSize}
+                lineHeight={lineHeight}
+                paddingX={paddingX}
+                paddingY={paddingY}
+                border="1px solid var(--navi-control-border-color)"
+                borderRadius="4px"
+                emojiAsIcon={
+                  emojiSize === "défaut"
+                    ? true
+                    : emojiSize === "aucun"
+                      ? false
+                      : { size: emojiSize }
+                }
+              >
+                {swapValueSignal.value}
+              </Text>
+            )}
+          </Box>
+        );
+      };
+
       const MESSAGE =
         "Salut, on se retrouve au parc vers 19h ? Ramène des chips et ta bonne humeur, il paraît qu'il y aura de la musique jusqu'à tard.";
       const MESSAGE_WITH_EMOJI =
@@ -113,10 +403,132 @@
         />
       );
 
+      // ── Une ligne : le champ, puis son rendu ───────────────────────────
+      const linePlainSignal = signal("Sortie au parc de la Tête d'Or");
+      const lineEmojiSignal = signal("Sortie au parc 🌳 de la Tête d'Or 🎉");
+      const AppRow = ({ width, children }) => (
+        <Box
+          flex
+          alignY="center"
+          spacing="s"
+          width={width}
+          paddingX="s"
+          paddingY="xxs"
+          background="#dce7fb"
+          color="#1f3f8a"
+        >
+          <Icon shrink={false}>
+            <PersonSvg />
+          </Icon>
+          <Text maxLines={1} expandX emojiAsIcon>
+            {children}
+          </Text>
+          <Badge shrink={false}>7-8</Badge>
+        </Box>
+      );
+      const LineCase = ({ signal: valueSignal }) => (
+        <Box flex="y" spacing="s" alignX="start">
+          <Input signal={valueSignal} width="24em" />
+          <AppRow width="24em">{valueSignal.value}</AppRow>
+          <AppRow width="13em">{valueSignal.value}</AppRow>
+        </Box>
+      );
+
+      // ── Modifier la ligne sur place ────────────────────────────────────
+      const editableValueSignal = signal(
+        "Sortie au parc 🌳 de la Tête d'Or 🎉",
+      );
+      const EditableRow = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const value = editableValueSignal.value;
+
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box
+              flex
+              alignY="center"
+              spacing="s"
+              width="24em"
+              paddingX="s"
+              paddingY="xxs"
+              background="#dce7fb"
+              color="#1f3f8a"
+            >
+              <Icon shrink={false}>
+                <PersonSvg />
+              </Icon>
+              <Box relative expandX minWidth="0" onDblClick={startEditing}>
+                <Editable
+                  editing={editing}
+                  value={value}
+                  action={(newValue) => {
+                    editableValueSignal.value = newValue;
+                  }}
+                  onEditEnd={stopEditing}
+                  expandX
+                >
+                  <Text maxLines={1} emojiAsIcon>
+                    {value}
+                  </Text>
+                </Editable>
+              </Box>
+              <Badge shrink={false}>7-8</Badge>
+            </Box>
+            <Button onClick={startEditing} disabled={Boolean(editing)}>
+              modifier
+            </Button>
+          </Box>
+        );
+      };
+
+      // ── Plusieurs lignes : une messagerie ──────────────────────────────
+      const chatPlainSignal = signal(MESSAGE);
+      const chatEmojiSignal = signal(MESSAGE_WITH_EMOJI);
+      const ChatCase = ({ signal: valueSignal }) => (
+        <Box flex="y" spacing="s" alignX="start" paddingRight="m">
+          <Textarea signal={valueSignal} width="18em" maxRows={8} />
+          <Text
+            block
+            preWrap
+            width="18em"
+            paddingX="s"
+            paddingY="xs"
+            borderRadius="10px"
+            background="#dce7fb"
+            color="#1f3f8a"
+            emojiAsIcon
+          >
+            {valueSignal.value}
+          </Text>
+        </Box>
+      );
+
       const App = () => {
         return (
           <div>
             <h1>Text emojiAsIcon</h1>
+
+            <h2>Une ligne : le champ, puis son rendu</h2>
+            <p class="caption">
+              Ce qu'on tape, la ligne au large, la même trop étroite pour tout
+              tenir.
+            </p>
+            <h3>Sans emoji</h3>
+            <LineCase signal={linePlainSignal} />
+            <h3>Avec emoji</h3>
+            <LineCase signal={lineEmojiSignal} />
+
+            <h2>Modifier la ligne sur place</h2>
+            <EditableRow />
+
+            <h2>Plusieurs lignes : une messagerie</h2>
+            <Compare>
+              <ChatCase signal={chatPlainSignal} />
+              <ChatCase signal={chatEmojiSignal} />
+            </Compare>
+
+            <h2>Le même champ, qui passe de l'un à l'autre</h2>
+            <SwapDemo />
 
             <h2>Une ligne tronquée (maxLines={1})</h2>
             <p class="caption">
@@ -129,6 +541,21 @@
             <RowCompare lineHeight="1.5" />
             <h3>emojiAsIcon</h3>
             <RowCompare emojiAsIcon />
+
+            <h2>Une ligne, taille des emojis</h2>
+            <p class="caption">
+              La même ligne, l'emoji dessiné plus petit que le texte autour de
+              lui.
+            </p>
+            <Box flex="y" spacing="s" alignX="start">
+              <SizeRow label="texte sans emoji">{SINGLE_LINE_PLAIN}</SizeRow>
+              {EMOJI_SIZES.map(({ label, value }) => (
+                <SizeRow key={label} label={label} emojiAsIcon={value} />
+              ))}
+            </Box>
+
+            <h2>--navi-emoji-size, pour toute la page</h2>
+            <EmojiSizeVar />
 
             <h2>Multi-ligne</h2>
             <h3>Rien</h3>

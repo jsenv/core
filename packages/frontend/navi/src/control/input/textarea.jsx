@@ -47,10 +47,12 @@ const css = /* css */ `
          holds, so the one line carrying an emoji stands taller than the ones
          around it — here, where the text is typed and no glyph can be wrapped
          the way emojiAsIcon wraps one, the line height is the only lever.
-         1.5 is also tall enough to contain an emoji's own box, so it is not
-         clipped either; a tighter value would keep the rows even and cut the
-         glyph. See docs/typography.md. */
-      line-height: 1.5;
+         The value is the compromise between the two neighbours it was picked
+         against: 1 glues the lines together and cuts the top off an emoji's
+         own box, 1.5 spaces the rows out more than reading them asks for.
+         Do not tighten it further — the rows stay even and the glyph gets
+         clipped. See docs/typography.md. */
+      line-height: 1.25;
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;

@@ -185,12 +185,22 @@ Where it is expected, `emojiAsIcon`:
 ```
 
 Every emoji found in the string children is rendered inside an `Icon`, which
-caps it at `1em` and centers it on the line like any glyph icon — the line keeps
-the height of its text, on one line or several. This is what chat apps do (an
-emoji is a 1em box, never a glyph with its own metrics). `Button` and
-`MessageBox` have it on by default — a label is one line whose height
+gives it a box of its own and centers it on the line like any glyph icon — the
+line keeps the height of its text, on one line or several. This is what chat
+apps do (an emoji is a box in the line, never a glyph with its own metrics).
+`Button` and `MessageBox` have it on by default — a label is one line whose height
 everything around it relies on, a message is free text; `Badge` forwards it,
 opt-in.
+
+**That box is smaller than the text around it** — `--navi-emoji-size`, `xs`
+(12px) by default. An emoji glyph fills its box edge to edge where a letter only
+fills its x-height, so at the same font size it draws as an image dropped into
+the sentence rather than as one of its characters. The var is the app-wide
+lever, a theme decision like a color: a page wanting bigger emoji sets it once
+on `:root`. `emojiAsIcon={{ size: "0.8em" }}` is the same decision for one text
+only — an object instead of `true` is the props the `Icon` receives, and a
+relative length there stays tied to the text it sits in where the typo tokens
+(`xs`, `s`) are fixed in rem.
 
 **It does not go through a component.** Only the strings the `Text` itself
 receives are rewritten, so `<Text emojiAsIcon><UserName /></Text>` does
@@ -228,6 +238,14 @@ either: a tighter one would keep the rows even and cut the top off the emoji.
 Do not remove it, and do not tighten it — `34_textarea_demo.html` shows the two
 side by side. The rule above still holds everywhere the text is rendered rather
 than typed.
+
+The price of that exception is a visible jump: what is typed draws at the font
+size of the field, and the same value displayed afterwards draws its emoji at
+`--navi-emoji-size` — the glyph shrinks the moment the field is left.
+`text_emoji_demo.html` puts the field and the rendering next to each other, and
+swaps one for the other in place, to show how much it costs; the alternative
+being an emoji that makes every line it lands on taller, it is the side worth
+taking.
 
 ## Text that must not move when its style changes
 
