@@ -14,9 +14,9 @@
  * https://developers.google.com/web/fundamentals/primers/service-workers/lifecycle
  * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
  *
- * Do not use relative self.importScripts in there because
- * they are resolved against self.location. It means
- * ./file.js would be resolved against the project root
+ * Do not add relative self.importScripts() calls in this file: importScripts
+ * resolves against self.location, the url of the worker file that loaded this
+ * one, not against this file. This file stays self-contained.
  */
 
 self.__sw__ = {};
@@ -25,6 +25,17 @@ const sw = self.__sw__;
 // define self.__sw__.registerActions()
 {
   const actions = {};
+  /**
+   * Registers handlers for the `{ action, payload }` messages a page sends
+   * with a MessageChannel port (what @jsenv/pwa `sendMessage` does). The
+   * handler receives `payload`; its return value (awaited) is posted back on
+   * the port as `{ actionResultStatus: "resolved", actionResultValue }`, a
+   * throw as `{ actionResultStatus: "rejected", actionResultValue: error }`.
+   * Payload and result travel by postMessage: structured-cloneable only.
+   * Can be called before or after `init`; `init({ actions })` is a shortcut.
+   *
+   * @param {Object<string, Function>} actions `{ [action]: (payload) => result }`
+   */
   self.addEventListener("message", async (messageEvent) => {
     const { data, ports } = messageEvent;
     if (typeof data !== "object") {
@@ -57,32 +68,55 @@ const sw = self.__sw__;
 {
   /**
    * Initializes the service worker: caches `resources` during "install",
-   * serves them from cache in "fetch", deletes previous caches during
+   * serves them from cache in "fetch", deletes the previous caches during
    * "activate" and answers the `{ action }` message protocol.
    *
+   * Requests for urls absent from `resources`, and non GET/HEAD requests, are
+   * left to the browser: this is a precache, not a runtime cache.
+   *
    * @param {Object} [options]
-   * @param {string} [options.name="jsenv"] Prefix identifying the caches
-   *   created by this service worker, so a new version can delete the caches
-   *   of the previous one during "activate".
-   * @param {string} [options.version="1"] Version of the service worker
-   *   implementation. Bump it when the new script must NOT be hot-updated by
-   *   @jsenv/pwa (a version change forces a full reload after update).
+   * @param {string} [options.name="jsenv"] Prefix of the caches created by this
+   *   service worker (`${name}_${hash}`). During "activate" the other caches
+   *   sharing the prefix — the previous versions — are deleted, so renaming
+   *   `name` leaves the old caches behind.
+   * @param {string} [options.version="1"] Version of the worker implementation,
+   *   part of the cache name and of what "inspect" returns. Bump it when the
+   *   new worker must force a page reload: @jsenv/pwa hot-replaces resources
+   *   only between two workers with the same `version`. Bumping it at every
+   *   build turns hot replacement off entirely.
    * @param {Object} [options.meta={}] Extra values returned to the page by the
-   *   "inspect" action (merged with name, version and resources).
-   * @param {string} [options.logLevel="warn"] "debug" | "info" | "warn" | "error"
-   * @param {string} [options.logBackgroundColor]
-   * @param {string} [options.logColor]
-   * @param {Object} [options.resources={ "/": {} }] Urls to put into the
-   *   browser cache during "install", and to serve from cache in "fetch".
-   *   Keys are urls (resolved against the service worker location); values are
-   *   `{}` for unversioned urls (refetched with cache: "reload" on every
-   *   install) or `{ version, versionedUrl }` for build-versioned urls.
-   *   When built by jsenv, `self.resourcesFromJsenvBuild` holds this object
-   *   pre-filled with every resource of the build.
-   * @param {Object} [options.actions={}] Extra `{ action: async fn }` handlers
-   *   callable from the page via @jsenv/pwa `sendMessage({ action, payload })`.
-   * @param {Function} [options.install] Called during the "install" event.
-   * @param {Function} [options.activate] Called during the "activate" event.
+   *   "inspect" action, merged with `{ name, version, resources }`. Sent with
+   *   postMessage, so it must be structured-cloneable.
+   * @param {"debug"|"info"|"warn"|"error"} [options.logLevel="warn"]
+   * @param {string} [options.logBackgroundColor="#ffdc00"] Background of the
+   *   "sw" badge in front of console logs.
+   * @param {string} [options.logColor="#000000"] Text color of that badge.
+   * @param {Object} [options.resources={ "/": {} }] Urls to put into the cache
+   *   during "install" and to serve from cache in "fetch". Keys are urls,
+   *   relative ones resolve against the worker url (other origins are allowed).
+   *   Values:
+   *   - `{}`: unversioned url, refetched at every install with
+   *     `cache: "reload"` so the HTTP cache cannot answer with a stale copy.
+   *   - `{ version, versionedUrl }`: build output; `versionedUrl` is fetched
+   *     normally (the HTTP cache may answer) and requests for either url are
+   *     served from cache. A missing or null `versionedUrl` means unversioned.
+   *   `version` takes part in the cache name and in @jsenv/pwa's update diff.
+   *   When built by jsenv, `self.resourcesFromJsenvBuild` holds every file of
+   *   the build in this shape, minus the worker script — never list the worker
+   *   itself: the browser must refetch it to detect an update. That object
+   *   lists the entry html (`/main.html`), not `/`: keep `"/": {}` when the
+   *   page is reached at the origin root.
+   * @param {Object<string, Function>} [options.actions={}] Extra handlers
+   *   callable from the page via @jsenv/pwa `sendMessage({ action, payload })`,
+   *   see `registerActions`. The built-in names ("inspect", "skipWaiting",
+   *   "claim", "postReloadAfterUpdateToClients", "refreshCacheKey",
+   *   "addCacheKey", "removeCacheKey") are reserved.
+   * @param {Function} [options.install] Called with the "install" event; a
+   *   returned promise is awaited (`event.waitUntil`). A throw or rejection
+   *   fails the install: the worker is discarded and the current one keeps
+   *   serving.
+   * @param {Function} [options.activate] Called with the "activate" event; a
+   *   returned promise is awaited (`event.waitUntil`).
    */
   sw.init = ({
     name = "jsenv",

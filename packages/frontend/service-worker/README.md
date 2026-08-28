@@ -17,7 +17,8 @@ Service workers enable web applications to work offline by caching resources.
 This package provides an implementation that:
 
 - Caches your resources during install and serves them from cache
-- Refetches only unversioned urls on update; versioned urls are cached once
+- Refetches unversioned urls at every install; versioned urls go through the
+  HTTP cache, so an unchanged file need not be downloaded again
 - Cleans up caches from previous worker versions on activate
 - Answers the message protocol used by `@jsenv/pwa` (inspect, skipWaiting,
   claim, custom actions)
@@ -34,9 +35,7 @@ npm install @jsenv/service-worker
 
 ```js
 // sw.js
-self.importScripts(
-  "./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js",
-);
+self.importScripts("@jsenv/service-worker");
 
 self.__sw__.init({
   name: "my-app",
@@ -46,6 +45,10 @@ self.__sw__.init({
   },
 });
 ```
+
+The bare specifier is resolved by jsenv (dev server and build). Outside jsenv,
+point at the file instead — the path is relative to the worker file's own url:
+`self.importScripts("./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js")`.
 
 ### 3. Register the service worker
 
@@ -67,7 +70,7 @@ self.__sw__.init({
 
   // Urls cached during install and served from cache.
   // {} -> unversioned: refetched from network on every install
-  // { version, versionedUrl } -> immutable: fetched once
+  // { version, versionedUrl } -> immutable: the HTTP cache may answer
   resources: {
     "/": {},
     "/assets/main.js": { version: "a7b3c9d" },
@@ -98,13 +101,16 @@ them as usual.
 ## Integration with jsenv build
 
 When building with [@jsenv/core](https://github.com/jsenv/core), the build
-detects the `navigator.serviceWorker.register(...)` call, bundles the worker
-script and prepends `self.resourcesFromJsenvBuild` to it — every resource of
-the build with its version and versioned url. Spreading it into `resources`
-(as in the Quick Start) is the whole integration:
+detects the `navigator.serviceWorker.register(...)` call and treats the worker
+as an entry point: what it loads with `importScripts` is copied to the build
+and versioned, and `self.resourcesFromJsenvBuild` is prepended to it — every
+file of the build (except the worker itself) with its version and versioned
+url. Spreading it into `resources` (as in the Quick Start) is the whole
+integration:
 
-- versioned urls (`/css/style.css?v=0e312d1c`) are cached once and survive
-  updates untouched
+- versioned urls (`/css/style.css?v=0e312d1c`) are served from cache and,
+  being immutable, can come from the HTTP cache at the next install instead of
+  being downloaded again
 - unversioned urls (like `/main.html`) get a computed `version`, so the worker
   script bytes change — and the browser detects an update — whenever their
   content changes

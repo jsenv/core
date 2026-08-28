@@ -13,7 +13,7 @@ const installPromise = new Promise((resolve, reject) => {
 });
 self.__sw__.registerActions({
   resolve_install: _resolveInstallPromise,
-  reject_instal: _rejectInstallPromise,
+  reject_install: _rejectInstallPromise,
 });
 let _resolveActivatePromise;
 let _rejectActivatePromise;
