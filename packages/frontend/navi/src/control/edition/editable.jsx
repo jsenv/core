@@ -33,6 +33,9 @@ const css = /* css */ `
     right: var(--inset-right);
     bottom: var(--inset-bottom);
     left: var(--inset-left);
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
     opacity: 0;
     pointer-events: none;
 

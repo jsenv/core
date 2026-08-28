@@ -454,6 +454,7 @@
               paddingY="xxs"
               background="#dce7fb"
               color="#1f3f8a"
+              lineHeight="1.25"
             >
               <Icon shrink={false}>
                 <PersonSvg />
@@ -475,9 +476,7 @@
                   expandX
                   padding="0"
                 >
-                  <Text maxLines={1} emojiAsIcon>
-                    {value}
-                  </Text>
+                  <Text maxLines={1}>{value}</Text>
                 </Editable>
               </Box>
               <Badge shrink={false}>7-8</Badge>
@@ -497,7 +496,13 @@
 
         return (
           <Box flex="y" spacing="s" alignX="start" paddingRight="m">
-            <Box relative width="18em" onDblClick={startEditing}>
+            <Box
+              relative
+              width="18em"
+              onDblClick={startEditing}
+              border="1px solid transparent"
+              borderRadius="10px"
+            >
               <Editable
                 multiline
                 minRows={1}
@@ -507,14 +512,13 @@
                 action={(newValue) => {
                   valueSignal.value = newValue;
                 }}
+                paddingX="s"
+                paddingY="xs"
                 onEditEnd={stopEditing}
               >
                 <Text
                   block
                   preWrap
-                  paddingX="s"
-                  paddingY="xs"
-                  borderRadius="10px"
                   background="#dce7fb"
                   color="#1f3f8a"
                   emojiAsIcon
