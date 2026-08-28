@@ -855,8 +855,8 @@ export const SlideContainer = ({
   // after it — a step that has been answered is not a step to stay on.
   const done = (area, event) => {
     markAnswered(area);
-    if (!moveNext(event)) {
-      movePrevious(event);
+    if (!moveNext(event, { released: true })) {
+      movePrevious(event, { released: true });
     }
   };
 
@@ -1213,14 +1213,25 @@ export const SlideContainer = ({
    * @returns {boolean} whether it moved — false is "there was nowhere to go",
    *   which is what lets a key that changes nothing keep its own meaning.
    */
-  const goToArea = (area, { forward, event, value, dx = 0, dy = 0 } = {}) => {
+  const goToArea = (
+    area,
+    { forward, event, value, released, dx = 0, dy = 0 } = {},
+  ) => {
     // A window mid-roll cannot travel yet: it is on its way somewhere and the
     // content that goes with it has not moved, so a second travel would be
     // about a picture nobody is looking at. The press is not lost though — it
     // waits for the roll to end, which is what makes three quick presses on a
     // carousel move three steps instead of one.
     if (rollingRef.current) {
-      pendingRollsRef.current.push({ area, forward, event, value, dx, dy });
+      pendingRollsRef.current.push({
+        area,
+        forward,
+        event,
+        value,
+        released,
+        dx,
+        dy,
+      });
       // And the one in flight is sent home: waiting out a travel at its own
       // pace before the next one starts is what makes a carousel feel
       // unresponsive — the press has to show on screen while the finger is
@@ -1248,10 +1259,14 @@ export const SlideContainer = ({
     // event dispatched by hand: a slide that holds on to the user holds them
     // whatever they press. Read off the slide being LEFT, because that is what
     // has a reason to keep them (an answer still missing, a step not taken).
+    // `released` is the slide letting go itself (--navi-done, see Slide): the
+    // one departure the forward hold does not apply to. Said here rather than
+    // by dropping the attribute, which stays the render's to write — a hold
+    // meant to stay (an explicit preventNavNext) is still there on the way back.
     if (
-      currentElement?.hasAttribute(
-        forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
-      )
+      forward
+        ? !released && currentElement?.hasAttribute("data-prevent-nav-next")
+        : currentElement?.hasAttribute("data-prevent-nav-previous")
     ) {
       return false;
     }
@@ -1384,12 +1399,13 @@ export const SlideContainer = ({
     if (noTravel || rollingRef.current || !pendingRollsRef.current.length) {
       return;
     }
-    const { area, dx, dy, event, value } = pendingRollsRef.current.shift();
+    const { area, dx, dy, event, value, released } =
+      pendingRollsRef.current.shift();
     if (dx || dy) {
-      move(dx, dy, event, value);
+      move(dx, dy, event, { value, released });
       return;
     }
-    goToArea(area, { event, value });
+    goToArea(area, { event, value, released });
   }, [noTravel]);
 
   // Hand the focus to a slide: what it was left on if it remembers something,
@@ -1511,11 +1527,12 @@ export const SlideContainer = ({
       return area;
     }
   };
-  const move = (dx, dy, event, value) =>
+  const move = (dx, dy, event, { value, released } = {}) =>
     goToArea(areaTowards(dx, dy), {
       forward: dx > 0 || dy > 0,
       event,
       value,
+      released,
       dx,
       dy,
     });
@@ -1525,14 +1542,14 @@ export const SlideContainer = ({
   // slides are. On a map they mean the same thing, and fall back to the other
   // axis when there is nothing that way — a step onwards, however the screens
   // happen to be arranged.
-  const moveNext = (event) =>
+  const moveNext = (event, options) =>
     vertical
-      ? move(0, 1, event) || move(1, 0, event)
-      : move(1, 0, event) || move(0, 1, event);
-  const movePrevious = (event) =>
+      ? move(0, 1, event, options) || move(1, 0, event, options)
+      : move(1, 0, event, options) || move(0, 1, event, options);
+  const movePrevious = (event, options) =>
     vertical
-      ? move(0, -1, event) || move(-1, 0, event)
-      : move(-1, 0, event) || move(0, -1, event);
+      ? move(0, -1, event, options) || move(-1, 0, event, options)
+      : move(-1, 0, event, options) || move(0, -1, event, options);
 
   // Where the track is right now, as the gesture left it: the resting place of
   // the slide being dragged, plus what the pointer has pulled since.
@@ -2128,7 +2145,7 @@ export const SlideContainer = ({
         // (a --navi-right command carries the click that ran it, that click its
         // own mousedown), and the focus transfer reads the whole chain to know
         // where the interaction started.
-        move(dx, dy, e, value);
+        move(dx, dy, e, { value });
       }}
       // By name rather than by direction (--navi-go-to-slide): the caller says
       // where, the map says nothing about it.
@@ -2260,11 +2277,6 @@ export const Slide = ({
           // see resolveAfterSend in commands.js). It says nothing about where to
           // go: that is read here, from this slide's own place in the walk.
           onnavi_done={(e) => {
-            // Dropped imperatively rather than left to the re-render this
-            // schedules: moving on happens in this same handler, and the gate it
-            // goes through reads this attribute off the DOM (see goToArea) — a
-            // render is a microtask away, the move is not.
-            e.currentTarget.removeAttribute("data-prevent-nav-next");
             container?.done(slideArea);
             rest.onnavi_done?.(e);
           }}

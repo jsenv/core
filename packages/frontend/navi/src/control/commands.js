@@ -286,7 +286,11 @@ registerNaviCommand("--navi-void", (source) => {
   };
 });
 
-registerNaviCommand("--navi-update", (source, event) => {
+// "--navi-update:smooth" asks the control to be SEEN moving to the value — a
+// wheel scrolls to it rather than swapping its digits — so a shortcut under
+// two wheels shows which one it changed, and by how much. The value itself is
+// set at once either way; only the drawing is concerned.
+registerNaviCommand("--navi-update", (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -304,6 +308,7 @@ registerNaviCommand("--navi-update", (source, event) => {
           const commandValue = resolveCommandValue(source, event);
           dispatchRequestSetUIState(target, commandValue, {
             event,
+            behavior: argument,
           });
         },
       });

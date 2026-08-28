@@ -124,7 +124,12 @@ const css = /* css */ `
           --picker-popup-border-radius,
           var(--picker-border-radius)
         );
-        --dialog-border-width: var(--picker-dialog-border-width);
+        /* Explicit fallback, for the same reason as --popover-background-color
+           above: the dialog paints border-width from this var with no fallback
+           of its own, so an unset dialogBorderWidth would leave the var
+           guaranteed-invalid and border-width at its initial "medium" (3px).
+           0px is the dialog's own default. */
+        --dialog-border-width: var(--picker-dialog-border-width, 0px);
         --dialog-border-color: var(--x-picker-border-color);
         /* The picker's own surface is not this one — see the popover branch,
            including why the fallback is spelled out. */

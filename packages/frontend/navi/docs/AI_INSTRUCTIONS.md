@@ -149,9 +149,9 @@ consistency across the app, not from any single call site.
   and why `value` and `signal` cannot both be passed. It also holds the answer
   to "a shortcut button beside a control" — `--navi-update`, gated like every
   interaction, against an `onClick` writing the signal, which is not and fires
-  on a read-only control. Read it before wiring a
-  control's value by hand with `value` + `uiAction`, and before writing a button
-  that proposes a value.
+  on a read-only control — and `--navi-update:smooth`, the control seen moving
+  to the value it was given. Read it before wiring a control's value by hand
+  with `value` + `uiAction`, and before writing a button that proposes a value.
 - `docs/create_and_edit.md` — the loop almost every app has: a screen that
   creates a resource, the page of what was created, a screen that edits it. The
   routes and why several match at once, one form for two modes, filling the edit

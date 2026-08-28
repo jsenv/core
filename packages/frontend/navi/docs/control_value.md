@@ -7,6 +7,7 @@ somewhere else in the app.
 - [The three answers](#the-three-answers)
 - [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
 - [A button that proposes a value is `--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
+  - [`--navi-update:smooth`: the control is seen answering](#--navi-updatesmooth-the-control-is-seen-answering)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
@@ -126,6 +127,48 @@ The id goes **on the control**, and a group is one — `ControlGroup`, `Form`,
 the command finds an element that holds no value; navi says so in dev rather
 than letting the press do nothing at all. An id that matches nothing is a dev
 warning too, naming the id it looked for.
+
+### `--navi-update:smooth`: the control is seen answering
+
+A shortcut sets the value at once, and on a phone the thumb covers the button
+while the eye is on the control: with two wheels above four shortcuts, « soir »
+swaps the digits and nothing shows which wheel changed, or by how much. The
+control should be the thing that answers — seen moving to the value the way it
+moves under a finger.
+
+That is what the `:smooth` argument asks for:
+
+```jsx
+<Button command="--navi-update:smooth" commandFor={hoursId} value={evening}>
+  soir
+</Button>
+```
+
+- **The value is set immediately, whatever moves on screen.** Whoever reads
+  the control right after the press (a form, `--navi-send`, a signal) gets the
+  new value; only the drawing takes its time. A control never lies about its
+  state to look like it is still travelling.
+- **The control decides how it moves.** The argument says nothing about
+  pixels or duration: a wheel scrolls to the row the way it glides after an
+  arrow key, the short way round when it loops; a slider would slide its
+  thumb; a control with nothing to move sets its value and that is all. A
+  control that does not know the argument is not broken — it answers like a
+  plain `--navi-update`.
+- **A gesture on the control itself is never fought.** A wheel being dragged
+  or flung keeps reporting its own rows; the requested value is where it goes
+  once the finger's movement is over. And a value the control did not choose
+  is not a choice: arriving on it fires no settle, no `action` — those belong
+  to the user's own inputs.
+- **`prefers-reduced-motion` keeps the instant swap.** The option describes
+  how the change is shown, and whoever asked to see less motion is answered
+  first.
+
+The same request is available from JS, for what is not a button —
+`dispatchRequestSetUIState(el, value, { behavior: "smooth" })` — and it
+survives a group: sent to a `TimeRangeWheel`, it reaches each of its wheels.
+
+_Reference: the wheel (`wheel.jsx`, `pendingBehaviorRef`) is the control
+honouring it today._
 
 ## `signal` + `defaultValue`: the answer and where it starts
 

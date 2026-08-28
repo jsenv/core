@@ -58,6 +58,7 @@ import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import {
   claimWheelGesture,
   dispatchPublicCustomEvent,
+  findEvent,
   releaseWheelGesture,
   wheelGestureIsTakenFrom,
 } from "@jsenv/dom";
@@ -674,7 +675,7 @@ const WheelGroupContext = createContext(null);
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
  * @param {boolean|number} [props.zoom] - Make the centered value stand out by size: the neighbours are drawn smaller, so a value grows as it slides into the window and shrinks as it leaves (the centered one keeps its natural size). `true` uses the default ratio (1.3); a number is the ratio itself (1.8 = the center reads 80% bigger than its neighbours). Inherited from a WheelGroup.
- * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
+ * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps, a value set with `--navi-update:smooth` and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
 export const Wheel = (props) => {
@@ -1421,6 +1422,23 @@ function WheelUI(props) {
   // faster, so a second press mid-glide reads as accelerating, not restarting.
   const targetPosRef = useRef(null);
   const glideRef = useRef(null);
+  // Who aimed the running glide. A value set from outside (`--navi-update:smooth`)
+  // is already committed by whoever set it: the wheel only catches up with it,
+  // and its arrival must not be reported as a settle — no navi_wheel_settle, no
+  // action. A user input is the opposite: its arrival IS the settle. Written at
+  // every motion start (settle, glideTo).
+  const glideFromOutsideRef = useRef(false);
+  // How the value that just arrived asked to be shown. A set request can say
+  // `behavior: "smooth"` (what `--navi-update:smooth` puts on it); the wheel
+  // then scrolls to the value instead of swapping the digits. Read off the
+  // navi_ui_state_change the controller dispatches — the request may have
+  // reached this wheel through a group distributing to its children, so it is
+  // looked up along the event chain. Consumed by the sync effect below.
+  const pendingBehaviorRef = useRef(null);
+  const onUIStateChange = (e) => {
+    const setRequest = findEvent(e, "navi_set_ui_state");
+    pendingBehaviorRef.current = setRequest ? setRequest.detail.behavior : null;
+  };
   // The glide loop is bound once (mount effect) but the speed can change live
   // (e.g. a demo control) — read it through a ref so it uses the latest.
   const glideSpeedRef = useRef(glideSpeed);
@@ -1627,11 +1645,11 @@ function WheelUI(props) {
       posRef.current = index * size;
       renderPos(vp);
     }
-    if (!interactive) {
+    centeredIndexRef.current = index;
+    if (!interactive || glideFromOutsideRef.current) {
       return;
     }
     const settleEvent = new CustomEvent("navi_wheel_settle");
-    centeredIndexRef.current = index;
     debugScroll(`settle: committed → ${trackedItemsRef.current[index].value}`);
     requestSelectValue(trackedItemsRef.current[index].value, settleEvent);
     // The value is now stable → commit the action. The wheel runs actionEvent
@@ -1713,13 +1731,19 @@ function WheelUI(props) {
   // glide speed so slower = gentler chase; clamped so it never crawls or snaps.
   const glideSpringFactor = () =>
     clampNumber(glideSpeedRef.current * 1.4, 0.06, 0.45);
-  const glideTo = (vp, target) => {
+  const glideTo = (vp, target, { fromOutside = false } = {}) => {
     // A discrete glide overrides any fling momentum.
     if (momentumRef.current !== null) {
       cancelAnimationFrame(momentumRef.current);
       momentumRef.current = null;
     }
     targetPosRef.current = target;
+    // A user input anywhere in the movement makes its arrival a user settle;
+    // an outside value re-aiming a glide the user started never takes that
+    // away from them (their tap still has to be answered with a settle).
+    if (glideRef.current === null || !fromOutside) {
+      glideFromOutsideRef.current = fromOutside;
+    }
     if (glideRef.current === null) {
       debugScroll("glide: start");
       glideRef.current = requestAnimationFrame(() =>
@@ -1737,6 +1761,7 @@ function WheelUI(props) {
   // overshoots only a handful of rows (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
+    glideFromOutsideRef.current = false;
     debugScroll(`settle: momentum start (v=${velocity}px/ms)`);
     // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
     // so a hard swipe carries across the list instead of being clipped to a few
@@ -1802,13 +1827,17 @@ function WheelUI(props) {
     glideTo(vp, target);
   };
 
-  // Center value `index` (external value / initial / keyboard / click). Smooth
-  // glides to the nearest copy (glideTargetFor) so a wrap goes the short way.
+  // Center value `index` for a value the wheel did not choose itself (first
+  // display, a value set from outside). "smooth" glides to the nearest copy
+  // (glideTargetFor) so a wrap goes the short way, and arrives silently (see
+  // glideFromOutsideRef); "auto" puts the row in place at once, stopping
+  // whatever was moving so no glide lands on top of it a frame later.
   const centerOnIndex = (vp, index, behavior) => {
     const target = glideTargetFor(vp, index);
     if (behavior === "smooth") {
-      glideTo(vp, target);
+      glideTo(vp, target, { fromOutside: true });
     } else {
+      cancelAnim();
       setPos(vp, target);
     }
   };
@@ -1820,7 +1849,7 @@ function WheelUI(props) {
   const glideToIndex = (vp, index, event) => {
     centeredIndexRef.current = index;
     requestSelectValue(trackedItemsRef.current[index].value, event);
-    centerOnIndex(vp, index, "smooth");
+    glideTo(vp, glideTargetFor(vp, index));
   };
   // Index we are heading to (the target, not the mid-glide visual center).
   const currentTargetIndex = (vp) => {
@@ -1849,14 +1878,12 @@ function WheelUI(props) {
   // Sync the center with the current value — used on first display and whenever
   // the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
-    // A glide or momentum in flight (tap, arrow, fling) is already taking the
-    // wheel to the right row. This runs on every controlled-value re-render, which
-    // lags a frame behind our own centeredIndexRef — so on rapid taps its guard
-    // below would miss and it would snap instantly mid-glide, leaving the wheel
-    // stuck off-center. Let the motion finish: commitSelection settles the value
-    // and the next render is a no-op. A genuine external change made during motion
-    // is honoured once it settles (centeredIndexRef then differs from selection).
-    if (glideRef.current !== null || momentumRef.current !== null) {
+    // A fling in flight reports its own value at every row crossing and commits
+    // on settle: the finger that threw it owns the wheel until then, and a value
+    // arriving meanwhile is re-stated by the next crossing anyway. A glide is
+    // different: its target is re-aimed below (glideTo never restarts the
+    // loop), so a value set from outside mid-glide is where the wheel ends up.
+    if (momentumRef.current !== null) {
       return;
     }
     if (trackedItemsRef.current.length === 0) {
@@ -1902,13 +1929,29 @@ function WheelUI(props) {
     [],
   );
 
-  // React to controlled value changes coming from outside.
+  // React to controlled value changes coming from outside. The row is put in
+  // place at once, unless the request asked for "smooth": the value is already
+  // set for whoever reads it, and the wheel scrolls to it so the eye can follow
+  // the change (a shortcut button under two wheels: which one moved, and by how
+  // much). Never on the first centering (no target yet → nothing to glide from,
+  // the displayed effect above handles it), nor under reduced motion.
   useLayoutEffect(() => {
+    const requestedBehavior = pendingBehaviorRef.current;
+    pendingBehaviorRef.current = null;
     const viewportEl = getViewport();
     if (!viewportEl || viewportEl.offsetParent === null) {
       return;
     }
-    syncCenterToSelection(viewportEl, "auto");
+    let behavior = "auto";
+    if (requestedBehavior === "smooth" && centeredIndexRef.current !== null) {
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      if (!prefersReducedMotion) {
+        behavior = "smooth";
+      }
+    }
+    syncCenterToSelection(viewportEl, behavior);
   });
 
   useWheelInteractions({
@@ -1981,6 +2024,7 @@ function WheelUI(props) {
       <Box
         as="input"
         {...controlHostProps}
+        onnavi_ui_state_change={onUIStateChange}
         tabindex={-1}
         aria-hidden="true"
         className="navi_wheel_input"
