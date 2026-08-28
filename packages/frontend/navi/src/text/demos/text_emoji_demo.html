@@ -458,7 +458,13 @@
               <Icon shrink={false}>
                 <PersonSvg />
               </Icon>
-              <Box relative expandX minWidth="0" onDblClick={startEditing}>
+              <Box
+                relative
+                expandX
+                minWidth="0"
+                onDblClick={startEditing}
+                border="1px solid transparent"
+              >
                 <Editable
                   editing={editing}
                   value={value}
@@ -468,7 +474,6 @@
                   onEditEnd={stopEditing}
                   expandX
                   padding="0"
-                  // borderWidth="1"
                 >
                   <Text maxLines={1} emojiAsIcon>
                     {value}

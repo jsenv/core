@@ -213,7 +213,7 @@ const css = /* css */ `
          the sentence rather than as part of it. The app-wide lever — a page
          that wants its emoji bigger sets it here rather than at every call
          site; emojiAsIcon={{ size }} still decides for one text. */
-      --navi-emoji-size: var(--navi-typo-xs);
+      --navi-emoji-size: inherit;
 
       /* Color keywords.
            primary:   the ink of the paper, at full strength. An absolute
