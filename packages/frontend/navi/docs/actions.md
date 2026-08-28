@@ -97,6 +97,20 @@ it — and why a run settles with its error rather than rejecting — is
 state at once — `{ idle, loading, completed, aborted, error, data, params }` —
 for a component that needs to look at it rather than render it.
 
+**Reading does not run.** `useAsyncData` waits for data someone else asked for
+— for a page, the route, through `routeAction`. A component reading an action
+that nobody ran suspends, and `<Loading>` draws nothing for an idle action (no
+spinner for a request nobody sent): the whole subtree stays blank, for good. The
+obvious fix does not work — a `useEffect` in that same component that would
+`run()` it never fires, because a suspended component has no effects, and the
+run it was about to start is exactly what the suspension waits for. So either
+the action is started **before** anything reads it — bound where the screen is
+decided: a `routeAction`, a `<Button action>`, the `action` of the `<Link>` one
+came in by — or the component owns its request and does not suspend on it: a
+folding panel, a slice a button asks for. That one reads `action.dataSignal` and
+`action.errorSignal` (or `useActionStatus`) directly, `run()`s the action from an
+effect, and draws its own skeleton until the data is there.
+
 `{ onLoad }` is what the screen does with the data **once, when it becomes
 known** — seed the fields someone is about to edit, focus something, remember
 where a list was:

@@ -134,7 +134,9 @@ Two things to know or the screen stays empty:
 - **Reading an action does not start it.** `useAsyncData` waits for data
   someone else asked for; what asks is the route (`routeAction`). A component
   reading an action nobody runs suspends forever, and the whole `<Loading>`
-  subtree stays blank.
+  subtree stays blank — and an effect in that component cannot rescue it, a
+  suspended component has no effects. What to do instead is under "Reading an
+  action" in [actions.md](./actions.md#reading-an-action).
 - **Handle the error where it happens**, or hand it to an `<ErrorBoundary>`:
   `useAsyncData(action, { loading: true, error: true })` returns
   `[data, loading, error]`, which is what lets a page draw its own "the server
