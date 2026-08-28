@@ -38845,7 +38845,6 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
-      --link-loading-outline-size: 1px;
       --link-outline-width: 2px;
 
       --link-current-indicator-size: 2px;
@@ -38904,12 +38903,7 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
     padding-right: var(--x-link-padding-right);
-    /* The loading underline is drawn inside the box: its own room is kept at
-       the bottom on top of whatever padding was asked for, so a link that
-       starts loading never reflows. */
-    padding-bottom: calc(
-      var(--x-link-padding-bottom) + var(--link-loading-outline-size)
-    );
+    padding-bottom: var(--x-link-padding-bottom);
     padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
@@ -49856,7 +49850,7 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   it says where one starts, not where one is — say `current` for that.
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
- * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
+ * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"url", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
  *   - the slide being shown has changed. `cause` says what asked for it, which
  *   is what tells a place browsed past from a place aimed at: a caller writing
  *   this into the URL pushes a history entry for a tab that was pressed and
@@ -49866,6 +49860,8 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   from — a guard that says no, a session that is gone. A promise refuses it
  *   late, once whatever it had to ask has answered; the travel plays meanwhile
  *   and is undone if the answer is no.
+ *   `cause: "url"` is the address asking (see `urlParam`) — a load on a link, a
+ *   traversal — rather than anything done inside the box.
  * @param {"now"|"rest"} [props.commit="now"] - when the change is told.
  *   "rest" waits for the travel to be over, and lets the container hold the
  *   slide it is going to meanwhile: the picture moves with the finger and the
@@ -49883,6 +49879,33 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   one that just travelled there. Called once the travel is over, and in the
  *   same render as the return to rest — anything later shows the old content
  *   for a frame.
+ * @param {string|{name: string, history?: "replace"|"push"}} [props.urlParam]
+ *   - the search param this container owns, and where it stands is written
+ *   into: `urlParam="step"` puts `?step=<area>` in the address on every travel,
+ *   and opens on the area it names on a load, a bookmark, a traversal, a link
+ *   from anywhere else in the application.
+ *   It is the answer to "the step should be readable and should survive a
+ *   reload" WITHOUT one route per slide: no route to declare, no route guard to
+ *   re-express the walk's own rules in, and no page transition — what travels
+ *   is the box, and the address is a label on where the box stands. Say it on a
+ *   container whose slides are places one may be sent to; a walk nobody links
+ *   into keeps its position to itself.
+ *   Written by REPLACEMENT: four steps that each stacked an entry would turn
+ *   one back-press into four, and the back arrow of a page means "leave this
+ *   page", not "one question back". `history: "push"` says the opposite for the
+ *   containers that mean it — slides that ARE places one came from, a gallery
+ *   one browses — and even there a slide reached by dragging replaces, so
+ *   swiping back and forth does not bury the way out.
+ *   The address is READ through the walk, not jumped to: it comes from outside
+ *   the box, so every slide between here and there is asked to let go the way a
+ *   key going that way would ask it, and the first one that holds
+ *   (`preventNav`, or a `required` step still unanswered) is where one stops —
+ *   `?step=done` cannot open a confirmation screen for something nobody sent.
+ *   Whatever comes of it, the address is then rewritten with the area actually
+ *   shown: it says where one IS, never where one asked to be. A step the app
+ *   knows is already answered on a reload is told so by its own `required`
+ *   (`required={!alreadyFilled}`) — the container remembers nothing across a
+ *   load, and cannot.
  * Each way of travelling can be shut off, or narrowed to one axis: `true`
  * (every axis the map has), `false`, `"x"`, `"y"`, `"xy"`.
  *
@@ -49928,6 +49951,7 @@ const SlideContainer = ({
   commit = "now",
   loop,
   onLoop,
+  urlParam,
   travelByKeyboard = true,
   travelByDrag = true,
   travelByScroll = "x",
@@ -50023,6 +50047,51 @@ const SlideContainer = ({
   const followerElementsRef = useRef([]);
   const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
   const current = rollingArea ?? provisionalArea ?? currentFromCaller ?? currentAreaState;
+  // The search param this container owns, when it owns one: the name it is
+  // written under, and whether going somewhere is somewhere one CAME from.
+  const urlParamName = typeof urlParam === "string" ? urlParam : urlParam?.name;
+  const urlParamHistory = urlParam?.history || "replace";
+  // What the address says right now. Read from the signal rather than from
+  // window.location so that a traversal — the browser's own back and forward —
+  // is a render like any other: the address moved, and the slides follow it.
+  // Read only when there is a param to read, so a container that owns none is
+  // not re-rendered by every navigation in the application.
+  const areaInUrl = urlParamName ? new URL(documentUrlSignal.value).searchParams.get(urlParamName) : null;
+  // The last thing this container knows the address said, whether it wrote it
+  // or read it. What makes a two-way binding stop turning: the address is only
+  // an INSTRUCTION when it changed by itself (a load, a traversal, a link), and
+  // what this container put there is not news. Without it, a container ahead of
+  // its own URL (commit="rest", where the picture arrives before the address is
+  // written) would read its own lateness as an order to go back.
+  const areaInUrlSeenRef = useRef(undefined);
+  // Where the container stands, said in the address. `replace` amends the entry
+  // one is on: a walk of four steps must not turn one back-press into four, and
+  // the back arrow of a page keeps meaning "leave this page". `push` is for
+  // slides that ARE places one came from — and even there a slide reached by
+  // DRAGGING replaces, because browsing back and forth with a thumb is not a
+  // trail one wants to walk home along.
+  const writeUrlParam = (area, cause, {
+    replace = false
+  } = {}) => {
+    if (!urlParamName) {
+      return;
+    }
+    areaInUrlSeenRef.current = area;
+    const urlObject = new URL(window.location.href);
+    if (urlObject.searchParams.get(urlParamName) === area) {
+      return;
+    }
+    urlObject.searchParams.set(urlParamName, area);
+    navTo(urlObject.href, {
+      replace: replace || urlParamHistory !== "push" || cause === "drag" ||
+      // The address already says it: reading it back is not a place one went.
+      cause === "url",
+      // What travels is the box, not the page: the address is a label on where
+      // the box stands, and a route transition would move the whole document
+      // for a slide that has already travelled by itself.
+      routeTransition: "none"
+    });
+  };
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
   const mapAxes = travelAxesOf(layout);
@@ -50625,7 +50694,7 @@ const SlideContainer = ({
     }
     const leftArea = readArea(currentElement);
     setCurrentAreaState(area);
-    if (!onCurrentChange && !currentSignal) {
+    if (!onCurrentChange && !currentSignal && !urlParamName) {
       return true;
     }
     // What asked for this, read off the interaction rather than carried down
@@ -50660,6 +50729,12 @@ const SlideContainer = ({
   // `onCurrentChange` is called, in that order, so a caller reading the signal
   // from inside its own handler reads where it now is.
   const tellCurrentChange = (area, detail, leftArea) => {
+    // The address first, because it is the one thing that must never disagree
+    // with the picture — and it is told here rather than by the caller so that
+    // it is told about the travels that HAPPENED and about no others: the ones
+    // a lock refused never reach this point, and one refused late is written
+    // back below (see goBackToRefusedArea).
+    writeUrlParam(area, detail.cause);
     if (currentSignal) {
       currentSignal.value = area;
     }
@@ -50693,7 +50768,61 @@ const SlideContainer = ({
     if (currentSignal) {
       currentSignal.value = leftArea;
     }
+    // Written over rather than stacked on, whatever this container does with
+    // the history otherwise: the entry the refused travel wrote is the one
+    // being corrected, and a refusal is not a place one was.
+    writeUrlParam(leftArea, "code", {
+      replace: true
+    });
   };
+
+  // The address asks for a slide. Read on every render it changes on rather
+  // than at mount alone, because the browser's own arrows are exactly that —
+  // the address moving by itself — and a link from elsewhere in the application
+  // is too. What follows is a travel like any other: the slides move, the
+  // caller is told, and the address ends up saying where the box actually
+  // stands.
+  useLayoutEffect(() => {
+    if (!urlParamName) {
+      return;
+    }
+    if (areaInUrl === areaInUrlSeenRef.current) {
+      // Not news: either nothing moved, or this container is reading back what
+      // it wrote itself.
+      return;
+    }
+    areaInUrlSeenRef.current = areaInUrl;
+    if (areaInUrl === null) {
+      // An address that says nothing is not an address saying "the first
+      // slide": a container opened without the param opens where it would have
+      // opened anyway, and the param appears the first time one travels.
+      return;
+    }
+    // Where the box IS, read off the DOM: `current` is undefined until someone
+    // names a slide, and the container standing on its first one is a fact only
+    // the map knows (see the layout effect that paints it).
+    const areaOnScreen = containerRef.current?.getAttribute("data-slide-current");
+    if (!areaOnScreen || areaInUrl === areaOnScreen) {
+      return;
+    }
+    const reached = reachableTowards(areaOnScreen, areaInUrl);
+    if (reached && reached !== areaOnScreen) {
+      // Told rather than asked: the walk above has already put every lock on
+      // the way the question goToArea would have put the first one, and this
+      // travel has no interaction behind it to hand a focus to — the slide
+      // arriving is handed the keyboard by the layout effect, the way it is for
+      // any travel nobody pressed anything for.
+      setCurrentAreaState(reached);
+      tellCurrentChange(reached, {
+        cause: "url"
+      }, areaOnScreen);
+      return;
+    }
+    // The param names nowhere this map knows, or somewhere the walk is not
+    // allowed to reach: the address is put back on the slide one is actually
+    // looking at, rather than left saying one is somewhere one is not.
+    writeUrlParam(areaOnScreen, "url");
+  }, [urlParamName, areaInUrl]);
 
   // The press kept during a roll, taken once the window rests and the travel is
   // given back (noTravel off): by direction when there was one, so it is read
@@ -50788,20 +50917,25 @@ const SlideContainer = ({
   };
 
   /**
+   * @param {number} dx
+   * @param {number} dy
+   * @param {string} [fromArea] - where to step from. The slide on screen when
+   *   nothing says otherwise; named only by a walk that is not standing there
+   *   (see reachableTowards).
    * @returns {string|undefined} the area one step that way, if there is one.
    *   Nothing there means the direction is simply not offered — no wrapping, no
    *   nearest-match: a map is read as a map, and a move landing nowhere would
    *   break that reading. Walks over its own cells first, so a spanning area
    *   leaves by its far edge rather than onto itself.
    */
-  const areaTowards = (dx, dy) => {
+  const areaTowards = (dx, dy, fromArea) => {
     const {
       slideElements,
       areaAt,
       placeOf
     } = readMap();
     const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
-    const currentArea = readArea(currentElement);
+    const currentArea = fromArea ?? readArea(currentElement);
     let {
       x,
       y
@@ -50859,6 +50993,64 @@ const SlideContainer = ({
   // happen to be arranged.
   const moveNext = (event, options) => vertical ? move(0, 1, event, options) || move(1, 0, event, options) : move(1, 0, event, options) || move(0, 1, event, options);
   const movePrevious = (event, options) => vertical ? move(0, -1, event, options) || move(-1, 0, event, options) : move(-1, 0, event, options) || move(0, -1, event, options);
+
+  /**
+   * How far the map lets one get towards an area, walking from where the
+   * container stands.
+   *
+   * What the ADDRESS asks for goes through here rather than straight to
+   * goToArea: a URL comes from OUTSIDE the walk — typed, shared, kept from a
+   * session that has moved on — so every slide on the way is asked to let go,
+   * exactly as a hand or a key going that way would ask it, and the first one
+   * that holds is where one stops. Jumped to instead, an address would open the
+   * one screen the walk itself cannot reach: the confirmation of something
+   * nobody sent. Stopping short is not a failure either — a wizard reopens as
+   * far along as it is allowed to, which is where the reader left off.
+   *
+   * @returns {string|undefined} the area one ends up on, undefined for a name
+   *   this map does not know.
+   */
+  const reachableTowards = (fromArea, targetArea) => {
+    const {
+      slideElements,
+      placeOf
+    } = readMap();
+    const target = placeOf.get(targetArea);
+    if (!target || !placeOf.has(fromArea)) {
+      return undefined;
+    }
+    if (loop) {
+      // A window has no walls to walk into: its slides are one endless line,
+      // and what they show is whoever owns the content to place.
+      return targetArea;
+    }
+    const holds = (area, forward) => {
+      const slideElement = slideElements.find(slideElement => readArea(slideElement) === area);
+      return slideElement?.hasAttribute(forward ? "data-prevent-nav-next" : "data-prevent-nav-previous");
+    };
+    let area = fromArea;
+    // A walk crosses each slide at most once — beyond that a map is reading
+    // itself in circles.
+    let stepsLeft = slideElements.length;
+    while (area !== targetArea && stepsLeft--) {
+      const place = placeOf.get(area);
+      // Along the row first, then down: the order a map is read in.
+      const dx = Math.sign(target.x - place.x);
+      const dy = dx ? 0 : Math.sign(target.y - place.y);
+      if (!dx && !dy) {
+        break;
+      }
+      if (holds(area, dx > 0 || dy > 0)) {
+        break;
+      }
+      const next = areaTowards(dx, dy, area);
+      if (!next) {
+        break;
+      }
+      area = next;
+    }
+    return area;
+  };
 
   // Where the track is right now, as the gesture left it: the resting place of
   // the slide being dragged, plus what the pointer has pulled since.
@@ -51113,8 +51305,8 @@ const SlideContainer = ({
         sign,
         target
       }) => {
-        const areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
-        const areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
+        let areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
+        let areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
         // Everything positional is read HERE rather than when the pointer
         // landed: the travel that was playing then may have arrived since, and
         // it is what the slides are doing at the moment the gesture takes them
@@ -51125,6 +51317,24 @@ const SlideContainer = ({
           placeOf
         } = readMap();
         const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
+        // The hold goToArea reads at the release, read again HERE, off the same
+        // slide and the same attribute: a slide that will refuse the arrival
+        // must not offer the journey. A locked direction simply has nowhere to
+        // go for the length of this gesture — the one case the gesture already
+        // knows, being the last slide of a walk. The hand then gets the wall it
+        // can lean on and never walk through (see drag_to_travel), the slide
+        // behind it stays offstage instead of being read on the way, and the
+        // release has nothing left to refuse.
+        // Nothing here about `released` (--navi-done): that is one particular
+        // departure letting go, decided as it happens, and a gesture armed
+        // before it has no such thing to read — the attribute as rendered is
+        // what the hand is answered from.
+        if (currentElement?.hasAttribute("data-prevent-nav-previous")) {
+          areaBack = undefined;
+        }
+        if (currentElement?.hasAttribute("data-prevent-nav-next")) {
+          areaOn = undefined;
+        }
         const box = track.getBoundingClientRect();
         if (!areaBack && !areaOn || !currentElement || !box.width || !box.height ||
         // Something else with a better claim on the gesture: a scroller
