@@ -828,6 +828,7 @@ const ListUI = (props) => {
     overflow,
     overflowX,
     overflowY,
+    virtual,
     ...rest
   } = props;
   // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
@@ -891,20 +892,8 @@ const ListUI = (props) => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
-  // A new pass every time the list's children are walked: they are about to
-  // say again, in order, which rows of the collection they stand for. Given
-  // back the very vnodes it already holds, preact skips them — the list
-  // re-rendered on its own and nothing is said again, so nothing is asked
-  // again either (see openPass).
-  const virtualRef = useRef(null);
-  if (!virtualRef.current) {
-    virtualRef.current = createListVirtual();
-  }
-  const virtual = virtualRef.current;
-  const childrenPreviousRef = useRef(undefined);
-  const childrenWalked = childrenPreviousRef.current !== children;
-  childrenPreviousRef.current = children;
-  virtual.openPass(renderBudget, scrolled ?? defaultScrolled, childrenWalked);
+  virtual.renderBudget = renderBudget;
+  virtual.scrolled = scrolled ?? defaultScrolled;
 
   const {
     virtualItemSizeSignal,
@@ -1157,6 +1146,24 @@ const ListFirstResolver = (props) => {
   props.ref = props.ref || refDefault;
   const idDefault = useId();
   props.id = props.id || idDefault;
+  // A new pass every time the caller walks the children: they are about to
+  // say again, in order, which rows of the collection they stand for. Decided
+  // here, on the children as the caller gave them. Further down the chain a
+  // resolver re-rendering on its own hands the rows down inside a vnode of its
+  // own (ListSelectable wraps them in the group's contexts) — but the rows are
+  // the very vnodes preact already holds, and it skips them: nothing is said
+  // again, so nothing may be asked again either (see createListVirtual).
+  const virtualRef = useRef(null);
+  if (!virtualRef.current) {
+    virtualRef.current = createListVirtual();
+  }
+  const virtual = virtualRef.current;
+  const childrenPreviousRef = useRef(undefined);
+  if (childrenPreviousRef.current !== props.children) {
+    childrenPreviousRef.current = props.children;
+    virtual.openPass();
+  }
+  props.virtual = virtual;
 
   return <Next {...props} />;
 };
@@ -3255,19 +3262,13 @@ const ListItemUI = (props) => {
   }
   const index = props.index;
   const listItemVnode = <ListItemReal {...props} />;
-  // For separator decision, we need to know "am I the first visible item?".
-  // We deliberately do NOT use tracker's visibleIndex here because, during a
-  // reorder render pass (e.g. items resorted by search score), other items
-  // still have stale keyToExplicitOrder values — the binary search reads
-  // those stale values and computes wrong indices. The result is that no
-  // item gets visibleIndex === 0 and a spurious <hr> appears at the top.
-  //
-  // Instead we use the parent-provided index, which is race-free:
-  //   - global list: props.index === 0 means "first by explicit order"
-  //     (parent passes sequential indices starting at 0; filtered items
-  //     are already pushed to the end by useSearchText)
-  //   - inside a group: each group has its own item tracker and group
-  //     items don't reorder, so groupVisibleIndex is reliable
+  // "Am I the first visible item?" is answered by the place the list handed
+  // out (virtual.take above), not by the tracker's visibleIndex: during a
+  // reorder render pass (items resorted by search score) the other items still
+  // carry stale keyToExplicitOrder values, the binary search reads them, no
+  // item comes out at 0 and a spurious separator appears at the top. Inside a
+  // group, each group has its own tracker and its items do not reorder, so
+  // groupVisibleIndex is reliable.
   const isFirstInList =
     groupVisibleIndex === null ? index === 0 : groupVisibleIndex === 0;
   if (!separator || isFirstInList) {
@@ -3614,9 +3615,10 @@ List.Item = ListItem;
 // A child knows how many rows it stands for but not what was declared before
 // it, so the list hands out the places as its children render — in order, which
 // is the only thing needed to place them. A child re-rendering ON ITS OWN (its
-// own state changed, the list did not render) keeps the place it was given:
-// nothing before it moved. Hence the pass — only a render of the list itself
-// opens a new one, and within a pass a child takes its place exactly once.
+// own state changed, the list was not given its children again) keeps the
+// place it was given: nothing before it moved. Hence the pass — only the
+// caller walking the children again opens a new one (see ListFirstResolver),
+// and within a pass a child takes its place exactly once.
 const createListVirtual = () => {
   const totalSignal = signal(0);
   // Bumped whenever a run takes in rows. The list itself has to hear about it:
@@ -3653,22 +3655,12 @@ const createListVirtual = () => {
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
-    openPass: (renderBudget, scrolled, childrenWalked) => {
-      virtual.renderBudget = renderBudget;
-      virtual.scrolled = scrolled;
-      // Places are handed out again only when the children are actually walked
-      // again. A list re-rendering on its own — the render window moved, its
-      // scroller resolved — hands preact the very children vnodes it already
-      // holds, and preact skips them: nobody says where they sit, so nobody
-      // may lose where they sat. Reopening the pass there would empty the
-      // places without anyone refilling them, and the next row to render on
-      // its own (an item being selected, a run following the window) would be
-      // handed the first place — drawing itself as the top of the list, its
-      // separator gone, and the one after it wearing a separator it should not
-      // have.
-      if (!childrenWalked) {
-        return;
-      }
+    // Reopening the pass when the rows are not about to render again would
+    // empty the places without anyone refilling them: the next row to render
+    // on its own (an item being selected, a run following the window) would be
+    // handed the first place — drawing itself as the top of the list, its
+    // separator gone, and the one after it wearing a separator it should not.
+    openPass: () => {
       passId++;
       nextIndex = 0;
     },
