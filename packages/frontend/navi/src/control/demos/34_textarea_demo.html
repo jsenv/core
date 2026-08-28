@@ -121,6 +121,7 @@ et la troisième`;
           <BasicsDemo />
           <StatesDemo />
           <RowsDemo />
+          <PaddingDemo />
           <EmojiDemo />
           <LongPlaceholderDemo />
           <CharCountDemo />
@@ -195,6 +196,41 @@ six`}
             </Variant>
             <Variant caption="resizable : la poignée verticale du navigateur">
               <Textarea resizable defaultValue={THREE_LINES} />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      const PaddingDemo = () => (
+        <div class="demo-section">
+          <Heading id="padding">padding</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <Textarea defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='padding="m"'>
+              <Textarea padding="m" defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='paddingX="l"'>
+              <Textarea paddingX="l" defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='paddingY="l"'>
+              <Textarea paddingY="l" defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='paddingLeft="xl" : un seul côté'>
+              <Textarea paddingLeft="xl" defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='padding="0"'>
+              <Textarea padding="0" defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='padding="m" minRows={4}'>
+              <Textarea padding="m" minRows={4} defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='padding="m" maxRows={2} : ce qui défile passe sous le padding'>
+              <Textarea padding="m" maxRows={2} defaultValue={THREE_LINES} />
+            </Variant>
+            <Variant caption='padding="m" placeholder : le plancher mesuré tient compte du padding'>
+              <Textarea padding="m" placeholder={LONG_PLACEHOLDER} />
             </Variant>
           </Box>
         </div>

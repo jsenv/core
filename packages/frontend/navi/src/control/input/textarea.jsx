@@ -88,6 +88,15 @@ const css = /* css */ `
   }
 `;
 
+// minRows/maxRows are read by the CSS above, so they travel the way every
+// other style of this box travels: a prop mapped to the custom property it
+// stands for, written by Box itself (see its styleCSSVars).
+const TextareaStyleCSSVars = {
+  ...InputStyleCSSVars,
+  minRows: "--textarea-min-rows",
+  maxRows: "--textarea-max-rows",
+};
+
 /**
  * @type {import("preact").FunctionComponent<{
  *   value?: string,
@@ -121,9 +130,7 @@ export const Textarea = ({
   // Destructured, never deleted off the props object: Preact reuses the same
   // props object when an internal state update re-renders the component, so a
   // delete would make these props vanish from the second render on (the box
-  // then jumps back to the default minRows at the first keystroke).
-  minRows = 1.5,
-  maxRows,
+  // then jumps back to its default size at the first keystroke).
   resizable,
   width = "35ch",
   ...props
@@ -150,20 +157,15 @@ export const Textarea = ({
       as="span"
       inline
       flex
-      baseClassName="navi_textarea"
+      baseClassName="navi_input navi_textarea"
       {...rootProps}
       basePseudoState={basePseudoState}
       data-resizable={resizable ? "" : undefined}
-      styleCSSVars={InputStyleCSSVars}
+      styleCSSVars={TextareaStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       data-callout-anchor=".navi_control_input"
-      style={{
-        "--textarea-min-rows": minRows,
-        "--textarea-max-rows": maxRows,
-        ...rootProps.style,
-      }}
     >
       <LoadingOutline
         loading={loading}
