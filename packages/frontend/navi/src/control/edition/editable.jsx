@@ -6,6 +6,10 @@
  *
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
+ * `multiline` swaps the Input for a Textarea — the same edition in place, for a
+ * value that is written on several lines (a message, a description). Enter then
+ * makes a line instead of validating: what is typed is committed when the field
+ * is left, and Escape gives up on it.
  */
 
 import { getBorderSizes } from "@jsenv/dom";
@@ -13,6 +17,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { Input } from "../input/input.jsx";
+import { Textarea } from "../input/textarea.jsx";
 
 const css = /* css */ `
   .navi_editable_wrapper {
@@ -29,9 +34,21 @@ const css = /* css */ `
     opacity: 0;
     pointer-events: none;
 
-    input {
+    /* The field takes the place of the text, so the text is what decides how
+       it is drawn — a control's own font (its size and family come from
+       --navi-control-*) would make the value change size the moment one edits
+       it. Unlayered, so it wins over the control's own sheet. */
+    .navi_input {
+      font-size: inherit;
+      font-family: inherit;
+    }
+    input,
+    textarea {
       font-weight: inherit;
+      font-size: inherit;
+      font-family: inherit;
       text-align: inherit;
+      line-height: inherit;
     }
 
     &[data-editing] {
@@ -71,6 +88,9 @@ export const Editable = (props) => {
     onEditEnd,
     constraints,
     type,
+    multiline,
+    minRows,
+    maxRows,
     required,
     readOnly,
     min,
@@ -124,68 +144,76 @@ export const Editable = (props) => {
     }
   }, [editing]);
 
-  const input = (
-    <Input
-      ref={ref}
-      {...rest}
-      type={type}
-      name={name}
-      value={value}
-      valueSignal={valueSignal}
-      autoFocus={editing}
-      autoFocusVisible
-      autoFocusSelect={autoFocusSelect}
-      cancelOnEscape
-      cancelOnBlurInvalid
-      constraints={constraints}
-      required={required}
-      readOnly={readOnly}
-      min={min}
-      max={max}
-      step={step}
-      minLength={minLength}
-      maxLength={maxLength}
-      pattern={pattern}
-      width={width}
-      height={height}
-      onCancel={(e) => {
-        if (valueSignal) {
-          valueSignal.value = valueWhenEditStartRef.current;
-        }
+  const controlProps = {
+    ref,
+    ...rest,
+    name,
+    value,
+    valueSignal,
+    autoFocus: editing,
+    autoFocusVisible: true,
+    autoFocusSelect,
+    cancelOnEscape: true,
+    cancelOnBlurInvalid: true,
+    constraints,
+    required,
+    readOnly,
+    minLength,
+    maxLength,
+    width,
+    height,
+    onCancel: (e) => {
+      if (valueSignal) {
+        valueSignal.value = valueWhenEditStartRef.current;
+      }
+      onEditEnd({
+        cancelled: true,
+        event: e,
+      });
+    },
+    onBlur: (e) => {
+      let inputValue;
+      const valueWhenEditStart = valueWhenEditStartRef.current;
+      let inputValueWhenEditStart;
+      if (type === "number") {
+        inputValue = e.target.valueAsNumber;
+        inputValueWhenEditStart = valueWhenEditStart;
+      } else {
+        inputValue = e.target.value;
+        inputValueWhenEditStart = Number.isNaN(valueWhenEditStart)
+          ? valueWhenEditStart
+          : String(valueWhenEditStart);
+      }
+      if (inputValue === inputValueWhenEditStart) {
         onEditEnd({
           cancelled: true,
           event: e,
         });
-      }}
-      onBlur={(e) => {
-        let inputValue;
-        const valueWhenEditStart = valueWhenEditStartRef.current;
-        let inputValueWhenEditStart;
-        if (type === "number") {
-          inputValue = e.target.valueAsNumber;
-          inputValueWhenEditStart = valueWhenEditStart;
-        } else {
-          inputValue = e.target.value;
-          inputValueWhenEditStart = Number.isNaN(valueWhenEditStart)
-            ? valueWhenEditStart
-            : String(valueWhenEditStart);
-        }
-        if (inputValue === inputValueWhenEditStart) {
-          onEditEnd({
-            cancelled: true,
-            event: e,
-          });
-          return;
-        }
-      }}
-      action={action || (() => {})}
-      actionAfterChange
-      onActionEnd={(e) => {
-        onEditEnd({
-          success: true,
-          event: e,
-        });
-      }}
+        return;
+      }
+    },
+    action: action || (() => {}),
+    actionAfterChange: true,
+    onActionEnd: (e) => {
+      onEditEnd({
+        success: true,
+        event: e,
+      });
+    },
+  };
+  // What is typed on several lines goes into a textarea; the props that only
+  // mean something to an <input> (its type and the bounds that come with it)
+  // stay on that side.
+  const control = multiline ? (
+    <Textarea {...controlProps} minRows={minRows} maxRows={maxRows} />
+  ) : (
+    <Input
+      {...controlProps}
+      type={type}
+      min={min}
+      max={max}
+      step={step}
+      pattern={pattern}
     />
   );
 
@@ -218,7 +246,7 @@ export const Editable = (props) => {
         inert={editing ? undefined : ""}
         data-editing={editing ? "" : undefined}
       >
-        {input}
+        {control}
       </Box>
     </>
   );

@@ -465,7 +465,7 @@
                     editableValueSignal.value = newValue;
                   }}
                   onEditEnd={stopEditing}
-                  expandX
+                  width="100%"
                 >
                   <Text maxLines={1} emojiAsIcon>
                     {value}
@@ -473,6 +473,46 @@
                 </Editable>
               </Box>
               <Badge shrink={false}>7-8</Badge>
+            </Box>
+            <Button onClick={startEditing} disabled={Boolean(editing)}>
+              modifier
+            </Button>
+          </Box>
+        );
+      };
+
+      const editableMessageSignal = signal(MESSAGE_WITH_EMOJI);
+      const EditableMessage = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const value = editableMessageSignal.value;
+
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box relative width="18em" onDblClick={startEditing}>
+              <Editable
+                multiline
+                minRows={1}
+                editing={editing}
+                value={value}
+                width="100%"
+                action={(newValue) => {
+                  editableMessageSignal.value = newValue;
+                }}
+                onEditEnd={stopEditing}
+              >
+                <Text
+                  block
+                  preWrap
+                  paddingX="s"
+                  paddingY="xs"
+                  borderRadius="10px"
+                  background="#dce7fb"
+                  color="#1f3f8a"
+                  emojiAsIcon
+                >
+                  {value}
+                </Text>
+              </Editable>
             </Box>
             <Button onClick={startEditing} disabled={Boolean(editing)}>
               modifier
@@ -518,14 +558,17 @@
             <h3>Avec emoji</h3>
             <LineCase signal={lineEmojiSignal} />
 
-            <h2>Modifier la ligne sur place</h2>
-            <EditableRow />
-
             <h2>Plusieurs lignes : une messagerie</h2>
             <Compare>
               <ChatCase signal={chatPlainSignal} />
               <ChatCase signal={chatEmojiSignal} />
             </Compare>
+
+            <h2>Modifier sur place</h2>
+            <h3>Une ligne</h3>
+            <EditableRow />
+            <h3>Plusieurs lignes</h3>
+            <EditableMessage />
 
             <h2>Le même champ, qui passe de l'un à l'autre</h2>
             <SwapDemo />
