@@ -20,7 +20,9 @@ retrofitted later:
 
 So the default shape of a tab row is routes: `<Nav>` + `<Link route>` +
 `<RouteTravel>`. `SlideContainer` is the exception, not the starting point — see
-[Tabs with no URL](#tabs-with-no-url) for the cases that genuinely are one.
+[Tabs that are not routes](#tabs-that-are-not-routes) for the cases that
+genuinely are one, and for the middle answer: a position READ from the URL and
+restored on reload, without a route and without a history entry per step.
 
 ## Declaring routes
 
@@ -531,11 +533,12 @@ one form, and a movement between them. It is assembled in
 rules that decide the shape of the `<Route>` tree are spelled out (several routes
 match at once; the first matching branch wins).
 
-## Tabs with no URL
+## Tabs that are not routes
 
 `SlideContainer` holds slides that replace one another in one box, with the same
-gestures and the same travelling bar, and nothing written to the URL. Use it when
-the position genuinely is not a place one should be able to link to:
+gestures and the same travelling bar, and — unless it is given a `urlParam`, see
+below — nothing written to the URL. Use it when the position genuinely is not a
+place one should be able to link to:
 
 - the steps of a wizard, or the screens of a picker, inside a dialog or a popover
   — a popup is promoted to the browser's top layer, so no container can hold two
@@ -561,5 +564,60 @@ route.
 page. It reads which slide is on screen from the container itself, and its bar
 follows the slides, a finger dragging them included. `<Link slide>` has no href
 and behaves like a button: this is not a link to anywhere.
+
+### The middle answer: a position in the URL that is not a place one came from
+
+"Should a link be able to open the app on this?" has a third answer, and a wizard
+is exactly it: **yes for reading and for reloading, no for history.** The step one
+is on should be legible in the address bar and should survive a reload —
+`/alerts/W-123/edit` reopening on "Lieu" because that is where the reader was —
+and it should NOT stack an entry per step, because the back arrow of a form means
+"leave this form", not "one question back". Four steps that each push turn one
+back-press into four, and walk the reader backwards through a form they thought
+they had left.
+
+Neither pure answer fits: routes would want one route per step, a real navigation
+per move (so a push per move), and the walk's own rules — a step held until it is
+answered, a confirmation reachable only by publishing — re-expressed as route
+guards. A plain `SlideContainer` writes nothing at all.
+
+`urlParam` is that middle answer: the container owns one search param, writes
+where it stands into it **by replacement**, and opens on what it names.
+
+```jsx
+<SlideContainer id="alert_editor" signal={stepSignal} urlParam="step">
+```
+
+Two things it does that a `useEffect` calling `history.replaceState` beside the
+container cannot, and they are the reason it lives inside:
+
+- it writes the travels that HAPPENED. A travel a lock refused, or one the caller
+  refused late, never reaches the address — or is written back when it does;
+- it READS the param through the walk rather than jumping to it. The address
+  comes from outside the box (typed, shared, kept from a session that has moved
+  on), so every slide between here and there is asked to let go the way a key
+  going that way would ask it, and the first one that holds is where one stops.
+  `?step=done` cannot open a confirmation screen for something nobody sent — and
+  the address is then rewritten with the area actually shown, so it never says
+  one is somewhere one is not.
+
+A container remembers nothing across a reload, so a step whose `required` the app
+knows is already satisfied says so itself (`required={!alreadyFilled}`); the same
+holds for a hold that a finished job lifts (`preventNavNext={!published}`).
+
+`history: "push"` is the other half, for slides that ARE places one came from — a
+gallery one browses:
+
+```jsx
+<SlideContainer urlParam={{ name: "photo", history: "push" }}>
+```
+
+Even there, a slide reached by DRAGGING replaces rather than pushes: swiping back
+and forth with a thumb is browsing, not a trail one wants to walk home along.
+
+What `urlParam` is not: a route. Nothing is declared, nothing matches, no page
+transition plays — what travels is the box, and the address is a label on where
+the box stands. A position several parts of the app must react to is still a
+route.
 
 Demo: [../src/layout/demos/8_slide_container_demo.html](../src/layout/demos/8_slide_container_demo.html).

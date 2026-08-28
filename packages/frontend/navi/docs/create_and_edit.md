@@ -418,8 +418,8 @@ cache, is what makes a screen already visited open instantly — and what a
 ## Movement between them
 
 The screens are places, so the movement between them is `RouteTravel` — not
-`SlideContainer`, which is for positions with no url (see
-[navigation.md](./navigation.md#tabs-with-no-url)).
+`SlideContainer`, which is for positions that are not routes (see
+[navigation.md](./navigation.md#tabs-that-are-not-routes)).
 
 A row says two things at once, and they are said apart. Its `<Route>` children
 are ordered by matching precision (above); `routes` is the order of the

@@ -33,6 +33,19 @@ and are referenced from here rather than restated.
   the distance decides, as usual.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
+- **A direction that will be refused is one of those walls, and it must be a
+  wall from the first pixel.** Whatever holds the user where they are — a slide
+  waiting for its answer, a step reachable only by finishing the one before —
+  the gesture has to read it where it is ARMED, not only when it is let go of.
+  Read at the release alone, the hold does half its job: it forbids the arrival
+  and allows the whole journey, so the screen one may not reach is walked to,
+  read on the way, and then taken back. A wall that shows what is behind it and
+  pushes you back reads as a bug even when it is a rule. What the consumer owes
+  the gesture is therefore not "is there a screen that way" but "may I go
+  there" — the same question its release gate asks, asked earlier. Said `false`
+  there, the direction is simply a dead end like any other, and everything else
+  follows for free: the rubber band, the screen kept off stage, and a release
+  with nothing left to refuse.
 - A hand can go further than one box, and those extra pixels are not owed back:
   once the end is reached the gesture is measured from where the finger IS, so
   turning around moves the picture at once. Measured from the origin instead, a

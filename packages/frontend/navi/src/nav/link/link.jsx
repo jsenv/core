@@ -54,7 +54,6 @@ const css = /* css */ `
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
-      --link-loading-outline-size: 1px;
       --link-outline-width: 2px;
 
       --link-current-indicator-size: 2px;
@@ -113,12 +112,7 @@ const css = /* css */ `
     aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
     padding-right: var(--x-link-padding-right);
-    /* The loading underline is drawn inside the box: its own room is kept at
-       the bottom on top of whatever padding was asked for, so a link that
-       starts loading never reflows. */
-    padding-bottom: calc(
-      var(--x-link-padding-bottom) + var(--link-loading-outline-size)
-    );
+    padding-bottom: var(--x-link-padding-bottom);
     padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
