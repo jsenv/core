@@ -435,15 +435,16 @@
       );
 
       // ── Modifier la ligne sur place ────────────────────────────────────
-      const editableValueSignal = signal(
+      const editableLinePlainSignal = signal("Sortie au parc de la Tête d'Or");
+      const editableLineEmojiSignal = signal(
         "Sortie au parc 🌳 de la Tête d'Or 🎉",
       );
-      const EditableRow = () => {
+      const EditableRow = ({ signal: valueSignal }) => {
         const { editing, startEditing, stopEditing } = useEditionController();
-        const value = editableValueSignal.value;
+        const value = valueSignal.value;
 
         return (
-          <Box flex="y" spacing="s" alignX="start">
+          <Box flex="y" spacing="s" alignX="start" paddingRight="m">
             <Box
               flex
               alignY="center"
@@ -462,10 +463,12 @@
                   editing={editing}
                   value={value}
                   action={(newValue) => {
-                    editableValueSignal.value = newValue;
+                    valueSignal.value = newValue;
                   }}
                   onEditEnd={stopEditing}
-                  width="100%"
+                  expandX
+                  padding="0"
+                  // borderWidth="1"
                 >
                   <Text maxLines={1} emojiAsIcon>
                     {value}
@@ -481,13 +484,14 @@
         );
       };
 
-      const editableMessageSignal = signal(MESSAGE_WITH_EMOJI);
-      const EditableMessage = () => {
+      const editableMessagePlainSignal = signal(MESSAGE);
+      const editableMessageEmojiSignal = signal(MESSAGE_WITH_EMOJI);
+      const EditableMessage = ({ signal: valueSignal }) => {
         const { editing, startEditing, stopEditing } = useEditionController();
-        const value = editableMessageSignal.value;
+        const value = valueSignal.value;
 
         return (
-          <Box flex="y" spacing="s" alignX="start">
+          <Box flex="y" spacing="s" alignX="start" paddingRight="m">
             <Box relative width="18em" onDblClick={startEditing}>
               <Editable
                 multiline
@@ -496,7 +500,7 @@
                 value={value}
                 width="100%"
                 action={(newValue) => {
-                  editableMessageSignal.value = newValue;
+                  valueSignal.value = newValue;
                 }}
                 onEditEnd={stopEditing}
               >
@@ -566,9 +570,15 @@
 
             <h2>Modifier sur place</h2>
             <h3>Une ligne</h3>
-            <EditableRow />
+            <Compare>
+              <EditableRow signal={editableLinePlainSignal} />
+              <EditableRow signal={editableLineEmojiSignal} />
+            </Compare>
             <h3>Plusieurs lignes</h3>
-            <EditableMessage />
+            <Compare>
+              <EditableMessage signal={editableMessagePlainSignal} />
+              <EditableMessage signal={editableMessageEmojiSignal} />
+            </Compare>
 
             <h2>Le même champ, qui passe de l'un à l'autre</h2>
             <SwapDemo />
