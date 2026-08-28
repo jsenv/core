@@ -179,7 +179,10 @@ every component.
 on `:root`, and the components that would otherwise come with a line of their
 own from the browser — `Button`, `Input`, `Textarea`, `Select` — are handed it
 by name: a form control inherits nothing from the page on its own, and what it
-starts from is `normal`, the one value the emoji breaks. That is what makes a
+starts from is `normal`, the one value the emoji breaks. `Picker` and the items
+of a selectable `List` take it too, though they are drawn by hand: they stand
+in a row with those, sized in `lh` like them, and have to be the same number
+of pixels tall. That is what makes a
 value keep its line, and its emoji its size, as it passes from the field it was
 typed in to whatever displays it afterwards — an emoji typed in an input is not
 clipped, and the same emoji displayed in a row, a bubble or a button does not

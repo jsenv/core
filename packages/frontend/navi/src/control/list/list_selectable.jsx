@@ -80,6 +80,10 @@ const css = /* css */ `
       position: relative;
       font-size: var(--navi-control-font-size);
       font-family: var(--navi-control-font-family);
+      /* A selectable item is a control: it stands in a row with pickers and
+         inputs (a horizontal list of choices), so it takes the control line
+         with the control font — the same number of pixels tall as them. */
+      line-height: var(--navi-control-line-height);
       -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
   }
