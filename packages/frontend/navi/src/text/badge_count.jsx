@@ -169,7 +169,11 @@ export const BadgeCount = ({
   integer,
   lang,
   loading,
-  textAnchor = "center",
+  // On the capitals rather than on the line box: a count sits beside a word,
+  // and the eye centers it on the letters, not on the leading around them —
+  // the line box center is above that, by half the leading plus what the
+  // font keeps above its capitals (see TextAnchor).
+  textAnchor = "char-center",
   lineLayout,
   ...props
 }) => {

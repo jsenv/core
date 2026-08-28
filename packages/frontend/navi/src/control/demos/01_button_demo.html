@@ -1153,7 +1153,7 @@
         );
       };
 
-      const SpacingButton = ({ spacing, flex }) => (
+      const SpacingButton = (props) => (
         <Box flex="y" alignY="center" spacing="s">
           <span
             style={{
@@ -1162,9 +1162,11 @@
               fontFamily: "monospace",
             }}
           >
-            {spacing !== undefined ? `spacing="${spacing}"` : "(not given)"}
+            {props.spacing !== undefined
+              ? `spacing="${props.spacing}"`
+              : "(not given)"}
           </span>
-          <Button flex={flex} spacing={spacing}>
+          <Button {...props}>
             <Icon>
               <svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
                 <rect x="0" y="0" width="10" height="10" fill="currentColor" />
@@ -1194,11 +1196,11 @@
             <fieldset>
               <legend>spacing prop with flex</legend>
               <div className="button-group">
-                <SpacingButton flex />
-                <SpacingButton flex spacing="0" />
-                <SpacingButton flex spacing="s" />
-                <SpacingButton flex spacing="m" />
-                <SpacingButton flex spacing="l" />
+                <SpacingButton flex alignY="center" />
+                <SpacingButton spacing="0" flex alignY="center" />
+                <SpacingButton spacing="s" flex alignY="center" />
+                <SpacingButton spacing="m" flex alignY="center" />
+                <SpacingButton spacing="l" flex alignY="center" />
               </div>
             </fieldset>
           </div>

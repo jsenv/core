@@ -298,12 +298,15 @@ const CustomWidthSpace = ({ value, useRealSpaceChar }) => {
     // copy-pasting the text produces an actual space, but we also want
     // full control over the visual width of that gap.
     // - First span: contains the real space but rendered at font-size:0 so it
-    //   takes up zero visual space.
+    //   takes up zero visual space. line-height:0 with it: a line-height
+    //   inherited as a length (a control's, snapped to the pixel) would give
+    //   this empty box that height, centered on the baseline — and its lower
+    //   half would push the line box down under the text.
     // - Second span: a zero-width joiner (&#8203;) with padding-left set to
     //   the desired gap size. This is the only visible part.
     return (
       <span>
-        <span style="font-size: 0"> </span>
+        <span style="font-size: 0; line-height: 0"> </span>
         <span style={`padding-left: ${value}`}>&#8203;</span>
       </span>
     );
@@ -791,12 +794,12 @@ const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
  *   meaning-bearing icon that needs to be exposed to assistive tech.
  * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
  *   interactive (`data-interactive`, pointer cursor) and non-decorative.
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
+ * @param {"line-top"|"char-top"|"center"|"char-center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
  *   - Vertical alignment within the surrounding text line for the inline
  *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
  *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
- *   centers on the line box, `"char-bottom"` sits on the baseline. See
- *   `text_anchor.jsx`.
+ *   centers on the line box, `"char-center"` on the capitals, `"char-bottom"`
+ *   sits on the baseline. See `text_anchor.jsx`.
  * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
  *   Describes the surrounding line context (font size / vertical-align),
  *   forwarded to `TextAnchor` so it recomputes the vertical correction when

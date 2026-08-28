@@ -43,10 +43,14 @@ const css = /* css */ `
  * the child so that its visual position matches the requested `textAnchor` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ * @param {"line-top"|"char-top"|"center"|"char-center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
  *   - `"line-top"`    — child top aligns with the top of the surrounding line box
  *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
  *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-center"` — child is vertically centered on the capitals: midway between the
+ *                       ink ascent and the baseline. What "centered on the text" means to
+ *                       the eye — the line box center sits above it, by half the leading
+ *                       plus whatever the font keeps above its capitals.
  *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
  *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
  * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
@@ -179,13 +183,17 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
   let desiredChildTopY = 0;
   if (textAnchor === "line-top") {
     desiredChildTopY = anchorRect.top;
-  } else if (textAnchor === "char-top") {
+  } else if (textAnchor === "char-top" || textAnchor === "char-center") {
     const anchorStyle = getComputedStyle(anchorEl);
     const ctx = charTopCanvas.getContext("2d");
     ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
     const m = ctx.measureText("M");
     const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
-    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+    const capTopY = baselineY - m.actualBoundingBoxAscent;
+    desiredChildTopY =
+      textAnchor === "char-top"
+        ? capTopY
+        : (capTopY + baselineY) / 2 - childH / 2;
   } else if (textAnchor === "center") {
     const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
     desiredChildTopY = anchorCenterY - childH / 2;
