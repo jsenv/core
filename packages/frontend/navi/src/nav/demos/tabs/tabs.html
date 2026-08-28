@@ -49,13 +49,11 @@
         background: white;
         border-bottom: 1px solid #ddd;
       }
+      /* The row fills the top bar without `expand` on the <Nav>: every tab
+         stays as wide as its own label, so the bar under the current one
+         changes width as it travels. */
       .tab_row {
         width: 100%;
-      }
-      /* Every tab as wide as its own label, so the bar under the current one
-         changes width as it travels. */
-      .tab_row .navi_link {
-        justify-content: center;
       }
       .travel_box {
         min-height: 0;
@@ -214,7 +212,6 @@
               className="tab_row"
               slideContainer={SLIDE_CONTAINER_ID}
               currentIndicator
-              expand
             >
               {SLIDE_TABS.map(({ area, label }) => (
                 <Link key={area} slide={area} variant="tab" padding="m">
@@ -242,7 +239,7 @@
         return (
           <div className="phone">
             <div className="top_bar">
-              <Nav className="tab_row" currentIndicator expand>
+              <Nav className="tab_row" currentIndicator>
                 {PATH_TABS.map(({ section, label }) => (
                   <Link
                     key={section}
@@ -283,7 +280,7 @@
       const SearchPhone = () => (
         <div className="phone">
           <div className="top_bar">
-            <Nav className="tab_row" currentIndicator expand>
+            <Nav className="tab_row" currentIndicator>
               {SEARCH_TABS.map(({ vue, label }) => (
                 <Link
                   key={vue}

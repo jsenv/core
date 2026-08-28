@@ -1459,28 +1459,20 @@ window.__supervisor__ = (() => {
       eventNameListened,
       eventCallback,
     ) => {
-      const eventCallbackSet = new Set();
-      object.addEventListener(eventNameListened, (event) => {
-        for (const callback of eventCallbackSet) {
-          callback(event);
-        }
-        eventCallback(event);
-      });
+      // Listeners are called in registration order, so "called last" means
+      // "registered last". Rather than swallowing the registrations done by the
+      // rest of the page (which would silently drop capture/once/passive/signal
+      // and break removeEventListener), let them register natively and move our
+      // own listener back to the end each time one shows up.
       const addEventListener = object.addEventListener;
       const removeEventListener = object.removeEventListener;
-      object.addEventListener = function (eventName, callback) {
-        if (eventName === eventNameListened) {
-          eventCallbackSet.add(callback);
-          return;
+      addEventListener.call(object, eventNameListened, eventCallback);
+      object.addEventListener = function (eventName, ...rest) {
+        addEventListener.call(this, eventName, ...rest);
+        if (this === object && eventName === eventNameListened) {
+          removeEventListener.call(object, eventNameListened, eventCallback);
+          addEventListener.call(object, eventNameListened, eventCallback);
         }
-        addEventListener.call(this, eventName, callback);
-      };
-      object.removeEventListener = function (eventName, callback) {
-        if (eventName === eventNameListened) {
-          eventCallbackSet.delete(callback);
-          return;
-        }
-        removeEventListener.call(this, eventName, callback);
       };
     };
     addEventListenerCalledLast(window, "error", (errorEvent) => {

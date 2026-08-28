@@ -150,12 +150,23 @@ const css = /* css */ `
       }
     }
 
-    &[data-expand] {
+    /* A nav asked to expand is a nav whose tabs share it: one equal slice each,
+       the label in the middle of the target that slice makes — a row that fills
+       its container while its tabs sit at their text width stops in the middle,
+       and gives every tab a different size to aim at.
+       The main axis only: a vertical nav expanding horizontally fills the width
+       (align-items below) rather than sharing its height between its tabs. */
+    &[data-expand-x] {
       flex-grow: 1;
 
-      .navi_tab {
+      &:not([data-vertical]) .navi_link {
         flex: 1;
-        justify-content: start;
+        justify-content: center;
+      }
+    }
+    &[data-expand-y][data-vertical] {
+      .navi_link {
+        flex: 1;
       }
     }
     /* Vertical layout */
@@ -163,17 +174,6 @@ const css = /* css */ `
       /* overflow-x: hidden; */
       /* overflow-y: auto; */
       align-items: stretch;
-
-      &[data-expand] {
-        .navi_tab {
-          align-items: stretch;
-        }
-      }
-      .navi_tab {
-        width: 100%;
-        flex-direction: row;
-        text-align: left;
-      }
     }
 
     /* Folder tabs: the current tab and the panel share one surface. Every tab
@@ -296,6 +296,7 @@ export const Nav = ({
   vertical,
   expand,
   expandX,
+  expandY,
   linkBorderRadiusInherit,
   currentIndicator,
   currentIndicatorSlides = true,
@@ -454,7 +455,8 @@ export const Nav = ({
       column={!vertical}
       baseClassName="navi_nav"
       data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
-      data-expand={expand || expandX ? "" : undefined}
+      data-expand-x={expand || expandX ? "" : undefined}
+      data-expand-y={expand || expandY ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
       data-nav-indicator={indicatorPosition ?? undefined}
@@ -468,6 +470,7 @@ export const Nav = ({
       aria-orientation={slideContainer && vertical ? "vertical" : undefined}
       expand={expand}
       expandX={expandX}
+      expandY={expandY}
       spacing={spacing}
       {...props}
       styleCSSVars={NavStyleCSSVars}

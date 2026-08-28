@@ -250,6 +250,12 @@ const css = /* css */ `
         overflow: visible;
       }
     }
+    /* An emoji rendered by emojiAsIcon. Its size is a theme decision, not a
+       call-site one, so it comes from a var rather than from the props; an
+       explicit size on the call writes an inline style and wins over this. */
+    &[data-emoji] {
+      font-size: var(--navi-emoji-size);
+    }
     &[data-flow-inline] {
       width: 1em;
       height: 1em;
@@ -465,7 +471,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   loading?: boolean,
  *   skeleton?: boolean,
  *   attachLastChild?: boolean,
- *   emojiAsIcon?: boolean,
+ *   emojiAsIcon?: boolean | Record<string, any>,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -505,13 +511,16 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
  *   `Link` sets it on its own whenever it renders an end icon.
  *
- * @param {boolean} [emojiAsIcon]
+ * @param {boolean|object} [emojiAsIcon]
  *   Renders every emoji found in the string children as an `Icon`, so it sits
  *   in the line like a character and never makes the line taller than the
  *   text. For free text a user typed (a message, a description); see
  *   `docs/typography.md`. Only the strings this `Text` receives are rewritten —
  *   a string a child component renders is out of reach, and that component
  *   calls `renderEmojiAsIcon()` itself instead.
+ *   The emoji is drawn at `--navi-emoji-size` (smaller than the text around
+ *   it); an object instead of `true` is passed to each `Icon` and decides for
+ *   this text alone: `emojiAsIcon={{ size: "0.8em" }}`, `{ size: "s" }`.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -662,7 +671,7 @@ const TextUI = (props) => {
   if (emojiAsIcon) {
     // After the spacing pass: an emoji glued to a word ("hello👋") must not
     // get a separator injected as if it were a child element.
-    children = renderEmojiAsIcon(children);
+    children = renderEmojiAsIcon(children, emojiAsIcon);
   }
 
   if (boldStable) {
@@ -963,17 +972,22 @@ const EMOJI_REGEX =
  * Children come back in the shape they arrived in: a string stays a string
  * when it holds no emoji, and the array is only built once a child actually
  * needs rewriting.
+ *
+ * `iconProps` is what the `Icon` around each emoji receives — `{ size: "s" }`
+ * to draw this text's emoji at another size than `--navi-emoji-size`. `true`
+ * (the prop value itself) is accepted and means "nothing to add".
  */
-export const renderEmojiAsIcon = (children) => {
+export const renderEmojiAsIcon = (children, iconProps) => {
+  const emojiIconProps = iconProps === true ? null : iconProps;
   if (typeof children === "string") {
-    return renderEmojiInString(children);
+    return renderEmojiInString(children, emojiIconProps);
   }
   const childArray = toChildArray(children);
   let result = null;
   let index = 0;
   for (const child of childArray) {
     if (typeof child === "string") {
-      const rendered = renderEmojiInString(child);
+      const rendered = renderEmojiInString(child, emojiIconProps);
       if (rendered !== child) {
         if (result === null) {
           result = childArray.slice(0, index);
@@ -995,7 +1009,7 @@ export const renderEmojiAsIcon = (children) => {
   }
   return result;
 };
-const renderEmojiInString = (string) => {
+const renderEmojiInString = (string, iconProps) => {
   let parts = null;
   let lastIndex = 0;
   for (const match of string.matchAll(EMOJI_REGEX)) {
@@ -1006,7 +1020,7 @@ const renderEmojiInString = (string) => {
       parts.push(string.slice(lastIndex, match.index));
     }
     parts.push(
-      <Icon decorative={false}>
+      <Icon decorative={false} data-emoji="" {...iconProps}>
         <span>{match[0]}</span>
       </Icon>,
     );

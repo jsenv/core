@@ -434,13 +434,17 @@ const singleLineEllipsisStyles = () => {
   };
 };
 // The lines beyond the clamp are still laid out, so the clip edge decides
-// whether the top of the first hidden one is visible: "overflow: hidden" clips
-// at the padding box and lets it show inside the block-end padding. Clipping at
-// the content box instead ends the element right after its last visible line.
+// whether the top of the first hidden one is visible: the padding box lets it
+// show inside the block-end padding, the content box ends the element right
+// after its last visible line. That box also ends the inline axis at the last
+// glyph's advance width, and a script or italic face draws past it, so the
+// clip is pushed back out by the half-leading: room for ink that leaves the
+// advance width on every side, still above the hidden line's own em box.
+// `overflow-clip-margin` has no per-axis form, hence one length for all four.
 const lineClampStyles = (value) => {
   return {
     "overflow": "clip",
-    "overflowClipMargin": "content-box",
+    "overflowClipMargin": "content-box calc((1lh - 1em) / 2)",
     "display": "-webkit-box",
     "-webkit-box-orient": "vertical",
     "-webkit-line-clamp": value,
