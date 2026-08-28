@@ -92,6 +92,10 @@ const css = /* css */ `
       display: inline-block; /* So box css can override when wanting to put button inline flex */
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
+      /* A form control comes with a line of its own from the browser, and that
+         line is "normal": a label holding an emoji would then be taller than
+         the same label without one. The page's line, like the page's font. */
+      line-height: var(--navi-line-height);
     }
   }
 
@@ -467,7 +471,6 @@ export const ButtonUI = (props) => {
     icon,
     cta,
     spacing,
-    emojiAsIcon = true,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -534,7 +537,6 @@ export const ButtonUI = (props) => {
       // without having to call preventDefault() on button clicks
       type="button"
       spacing={undefined}
-      emojiAsIcon={undefined}
       cta={undefined}
       pressEffect={undefined}
       loadingOutline={undefined}
@@ -585,21 +587,18 @@ export const ButtonUI = (props) => {
         color="var(--button-loader-color)"
       />
       <ControlChildrenWrapper {...controlChildrenWrapperProps}>
-        <ButtonContent spacing={spacing} emojiAsIcon={emojiAsIcon}>
-          {children}
-        </ButtonContent>
+        <ButtonContent spacing={spacing}>{children}</ButtonContent>
       </ControlChildrenWrapper>
     </Box>
   );
 };
-const ButtonContent = ({ spacing, emojiAsIcon, children }) => {
+const ButtonContent = ({ spacing, children }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return (
     <Text
       {...boxForwardedProps}
       display="inherit"
       spacing={spacing}
-      emojiAsIcon={emojiAsIcon}
       className="navi_button_content"
     >
       {children}

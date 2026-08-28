@@ -45,8 +45,7 @@ const css = /* css */ `
          character replaces the theory with a real line.
          And a line box under "normal" takes the height of the tallest font it
          holds, so the one line carrying an emoji stands taller than the ones
-         around it — here, where the text is typed and no glyph can be wrapped
-         the way emojiAsIcon wraps one, the line height is the only lever.
+         around it — and a tighter line would cut the top off the glyph.
          The number is the page's own (--navi-line-height, 1.25): a message
          typed here and the same message displayed afterwards sit on the same
          line, emoji included. Bound to the token rather than inherited so it

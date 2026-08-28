@@ -641,7 +641,7 @@ const css = /* css */ `
     gap: 8px;
     color: light-dark(#b91c1c, #fca5a5);
     font-size: 0.9em;
-    line-height: 1.4;
+    line-height: var(--navi-line-height);
     background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
     border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
     border-radius: 6px;
@@ -649,7 +649,7 @@ const css = /* css */ `
   .navi_list_error_icon {
     flex: none;
     font-size: 1em;
-    line-height: 1.4;
+    line-height: var(--navi-line-height);
   }
   /* Same rule as [data-scrollable] in box.jsx, said again for this scroller:
      what an item holds IS against the edge of the scroll container — the list

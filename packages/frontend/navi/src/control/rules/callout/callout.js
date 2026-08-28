@@ -66,11 +66,12 @@ const css = /* css */ `
       --callout-icon-color: black;
       --callout-padding: 8px;
       --callout-z-index: var(--navi-z-index-callout);
-      /* The callout's own, like its font: the icon and the cross are columns
-         one line tall (1lh), and that line has to be the message's first
-         line — which it is only if both read the same line-height, rather
-         than whatever the element the callout sits in happens to use. */
-      --callout-line-height: 1.5;
+      /* The page's line, said here rather than inherited: the icon and the
+         cross are columns one line tall (1lh), and that line has to be the
+         message's first line — which it is only if both read the same
+         line-height, rather than whatever the element the callout sits in
+         happens to use. */
+      --callout-line-height: var(--navi-line-height);
       /* The cross is furniture, not content: quieter than the message beside
          it, and the size of a glyph on the message's first line. */
       --callout-close-button-color: color-mix(

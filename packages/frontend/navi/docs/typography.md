@@ -159,100 +159,45 @@ Two things opt out of that flow:
 
 **An emoji is not a character the layout can absorb.** The system emoji fonts
 (Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji) have a taller
-ascent/descent than any text font, so the moment an emoji sits in a line, that
-line is taller than the ones around it: a row shifts down next to its
-neighbours, a paragraph's lines are unevenly spaced, a truncated label no
-longer lines up with its siblings.
+ascent/descent than any text font, and under `line-height: normal` a line box
+takes the height of the tallest font it holds. So the moment an emoji sits in a
+line, that line is taller than the ones around it: a row shifts down next to its
+neighbours, a paragraph's lines are unevenly spaced, a truncated label no longer
+lines up with its siblings. Tighten the line to get the rows even again and the
+glyph is clipped instead — its box is taller than a letter's, and what sticks
+out is simply cut.
 
-So, first: **an emoji is only expected in free text a user typed** — a message,
-a comment, a description. It has no business in a title, an identifier, a
-label, and a field holding one of those can refuse it outright rather than
-teaching every row of the app to survive it.
+**One number answers both: `--navi-line-height`, 1.25.** Tall enough to contain
+an emoji's own box, so nothing is clipped; tight enough that a line carrying one
+is exactly as tall as a line of plain text, so nothing moves. 1 cuts the top off
+the glyph, 1.5 spaces the rows out more than reading them asks for. **An app
+that displays what people typed cannot go below 1.25** — that is the floor this
+token encodes, and the reason it is a token rather than a number repeated in
+every component.
 
-A name is the exception worth stating: people are called what they are called,
-and a whitelist on a name field ends up refusing somebody's real name. An app
-taking that side puts `emojiAsIcon` on everything that renders a name, and
-keeps the name field itself to the rules that are about the layout rather than
-the alphabet — `data-displayable`, which refuses only what cannot be drawn:
-marks stacked into zalgo (the one thing `emojiAsIcon` does not rescue, since it
-draws over the row above), a value that shows nothing at all, blank lines in
-series.
+**Everything is written on that line, controls included.** The document sets it
+on `:root`, and the components that would otherwise come with a line of their
+own from the browser — `Button`, `Input`, `Textarea`, `Select` — are handed it
+by name: a form control inherits nothing from the page on its own, and what it
+starts from is `normal`, the one value the emoji breaks. That is what makes a
+value keep its line, and its emoji its size, as it passes from the field it was
+typed in to whatever displays it afterwards — an emoji typed in an input is not
+clipped, and the same emoji displayed in a row, a bubble or a button does not
+push anything around. `text_emoji_demo.html` shows it by swapping the field and
+the rendering in place.
 
-Where it is expected, `emojiAsIcon`:
+Change it on `:root` for a whole app. Do not unset it on a component, do not let
+one fall back to `normal`, and do not raise a local `lineHeight` because of an
+emoji: a `lineHeight` is a typographic choice for the text itself — a paragraph
+that wants air — never a workaround for a glyph that grew too tall.
 
-```jsx
-<Text emojiAsIcon>Salut 👋 on se retrouve au parc 🌳 ?</Text>
-```
-
-Every emoji found in the string children is rendered inside an `Icon`, which
-gives it a box of its own and centers it on the line like any glyph icon — the
-line keeps the height of its text, on one line or several. This is what chat
-apps do (an emoji is a box in the line, never a glyph with its own metrics).
-`Button` and `MessageBox` have it on by default — a label is one line whose height
-everything around it relies on, a message is free text; `Badge` forwards it,
-opt-in.
-
-**That box is smaller than the text around it** — `--navi-emoji-size`, `xs`
-(12px) by default. An emoji glyph fills its box edge to edge where a letter only
-fills its x-height, so at the same font size it draws as an image dropped into
-the sentence rather than as one of its characters. The var is the app-wide
-lever, a theme decision like a color: a page wanting bigger emoji sets it once
-on `:root`. `emojiAsIcon={{ size: "0.8em" }}` is the same decision for one text
-only — an object instead of `true` is the props the `Icon` receives, and a
-relative length there stays tied to the text it sits in where the typo tokens
-(`xs`, `s`) are fixed in rem.
-
-**It does not go through a component.** Only the strings the `Text` itself
-receives are rewritten, so `<Text emojiAsIcon><UserName /></Text>` does
-nothing at all: the string is inside `UserName`, and that is where
-`renderEmojiAsIcon()` has to be called. Doing it there also spares a `Text`
-that would inject a separator between the name and whatever follows it.
-
-There is no way to turn it on for a whole app, on purpose: most of an app's
-text is its own wording, where an emoji cannot appear, and the ones that do
-carry a typed value are known one by one. An app that renders such a value
-everywhere writes its own component around `Text` — the same place it already
-decides how a name is displayed.
-
-What it does not do, and that is accepted: under `maxLines` the `Text` clips at
-its own box — that is what truncation is — and an emoji drawn a little beyond
-its 1em box can lose a sliver at the top. The line stays aligned, which is the
-part that matters.
-
-**Do not raise `lineHeight` because of emoji.** The default line height keeps
-text compact and, with `emojiAsIcon`, holds up even when nearly every word is
-an emoji (see the dense cases in `text_emoji_demo.html`). A `lineHeight` is a
-typographic choice for the text itself — a paragraph that wants air — never a
-workaround for a glyph that grew too tall; that glyph gets `emojiAsIcon`.
-
-**A control one types in is the exception, and there the line height is the
-whole answer.** `emojiAsIcon` rewrites strings into markup, and there is no
-markup inside a `<textarea>` or an `<input>`: the value is raw text the browser
-draws itself, so no glyph in it can be wrapped in anything. Under
-`line-height: normal` a line box takes the height of the tallest font it holds,
-so the one line carrying an emoji stands taller than the ones around it — rows
-of uneven height, and a box sized in `lh` (`minRows`/`maxRows`) that jumps as
-soon as one is typed.
-
-**So there is one line for everything: `--navi-line-height`, 1.25.** A number
-rather than `normal`, tall enough to hold an emoji's own box without clipping it
-and tight enough not to space the rows out — 1 cuts the top off the glyph, 1.5
-reads as a paragraph. The document is written on it, and the fields are handed
-it by name (`Input`, `Textarea`, `Select`) because a form control inherits
-nothing from the page on its own. One number everywhere is what makes a value
-keep its line — and its emoji its size — as it passes from the field to what
-displays it. Change it on `:root` for a whole app; do not unset it on a field,
-and do not let one fall back to `normal` (`34_textarea_demo.html` shows what
-that costs). The rule above still holds everywhere the text is rendered rather
-than typed.
-
-The price of that exception is a visible jump: what is typed draws at the font
-size of the field, and the same value displayed afterwards draws its emoji at
-`--navi-emoji-size` — the glyph shrinks the moment the field is left.
-`text_emoji_demo.html` puts the field and the rendering next to each other, and
-swaps one for the other in place, to show how much it costs; the alternative
-being an emoji that makes every line it lands on taller, it is the side worth
-taking.
+**Where an emoji belongs is a separate question, and it is not a layout one.**
+A field can still refuse emoji outright (`noEmoji`) where the value is an
+identifier rather than free text. A name is the case worth stating: people are
+called what they are called, and a whitelist on a name field ends up refusing
+somebody's real name — a name field keeps to the rules that are about what can
+be drawn at all (`data-displayable`: marks stacked into zalgo, a value that
+shows nothing, blank lines in series).
 
 ## Text that must not move when its style changes
 

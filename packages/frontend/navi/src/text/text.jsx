@@ -9,7 +9,6 @@ import {
   isSizeSpacingKey,
   stringifySpacingStyle,
 } from "../box/box_style_util.js";
-import { setCalloutMessageTextRenderer } from "../control/rules/callout/callout.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { TextAnchor } from "./text_anchor.jsx";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
@@ -250,12 +249,6 @@ const css = /* css */ `
         overflow: visible;
       }
     }
-    /* An emoji rendered by emojiAsIcon. Its size is a theme decision, not a
-       call-site one, so it comes from a var rather than from the props; an
-       explicit size on the call writes an inline style and wins over this. */
-    &[data-emoji] {
-      font-size: var(--navi-emoji-size);
-    }
     &[data-flow-inline] {
       width: 1em;
       height: 1em;
@@ -471,7 +464,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   loading?: boolean,
  *   skeleton?: boolean,
  *   attachLastChild?: boolean,
- *   emojiAsIcon?: boolean | Record<string, any>,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -510,17 +502,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   prevent that break. For wrapping text; a child that must survive
  *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
  *   `Link` sets it on its own whenever it renders an end icon.
- *
- * @param {boolean|object} [emojiAsIcon]
- *   Renders every emoji found in the string children as an `Icon`, so it sits
- *   in the line like a character and never makes the line taller than the
- *   text. For free text a user typed (a message, a description); see
- *   `docs/typography.md`. Only the strings this `Text` receives are rewritten —
- *   a string a child component renders is out of reach, and that component
- *   calls `renderEmojiAsIcon()` itself instead.
- *   The emoji is drawn at `--navi-emoji-size` (smaller than the text around
- *   it); an object instead of `true` is passed to each `Icon` and decides for
- *   this text alone: `emojiAsIcon={{ size: "0.8em" }}`, `{ size: "s" }`.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -626,7 +607,6 @@ const TextUI = (props) => {
     spacing,
     preventSpaceUnderlines = false,
     attachLastChild = false,
-    emojiAsIcon = false,
     boldStable,
     holdSpaceForStyle,
     capitalize,
@@ -667,11 +647,6 @@ const TextUI = (props) => {
       resolvedSpacing,
       defaultSpace,
     );
-  }
-  if (emojiAsIcon) {
-    // After the spacing pass: an emoji glued to a word ("hello👋") must not
-    // get a separator injected as if it were a child element.
-    children = renderEmojiAsIcon(children, emojiAsIcon);
   }
 
   if (boldStable) {
@@ -954,86 +929,3 @@ export const Icon = ({
     </TextAnchor>
   );
 };
-
-// An emoji-presentation character (🌸), or a pictogram forced into emoji
-// presentation by VS16 (❤️), followed by its skin-tone modifiers and ZWJ
-// sequence. A flag is two regional indicators that must stay together.
-const EMOJI_REGEX =
-  /\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|[\p{Extended_Pictographic}--\p{Emoji_Presentation}]\uFE0F)(?:[\p{Emoji_Modifier}\uFE0F]|\u200D\p{Extended_Pictographic}\uFE0F?)*/gv;
-
-/**
- * What `emojiAsIcon` does, for something that renders text without going
- * through `Text` (a callout's message): every emoji in the string children
- * comes back wrapped in an `Icon`. The system emoji fonts have a taller
- * ascent/descent than text fonts, so a raw emoji glyph makes its line taller
- * than the lines around it; inside an Icon it is capped at 1em and centered on
- * the line like any glyph icon.
- *
- * Children come back in the shape they arrived in: a string stays a string
- * when it holds no emoji, and the array is only built once a child actually
- * needs rewriting.
- *
- * `iconProps` is what the `Icon` around each emoji receives — `{ size: "s" }`
- * to draw this text's emoji at another size than `--navi-emoji-size`. `true`
- * (the prop value itself) is accepted and means "nothing to add".
- */
-export const renderEmojiAsIcon = (children, iconProps) => {
-  const emojiIconProps = iconProps === true ? null : iconProps;
-  if (typeof children === "string") {
-    return renderEmojiInString(children, emojiIconProps);
-  }
-  const childArray = toChildArray(children);
-  let result = null;
-  let index = 0;
-  for (const child of childArray) {
-    if (typeof child === "string") {
-      const rendered = renderEmojiInString(child, emojiIconProps);
-      if (rendered !== child) {
-        if (result === null) {
-          result = childArray.slice(0, index);
-        }
-        for (const part of rendered) {
-          result.push(part);
-        }
-        index++;
-        continue;
-      }
-    }
-    if (result !== null) {
-      result.push(child);
-    }
-    index++;
-  }
-  if (result === null) {
-    return children;
-  }
-  return result;
-};
-const renderEmojiInString = (string, iconProps) => {
-  let parts = null;
-  let lastIndex = 0;
-  for (const match of string.matchAll(EMOJI_REGEX)) {
-    if (parts === null) {
-      parts = [];
-    }
-    if (match.index > lastIndex) {
-      parts.push(string.slice(lastIndex, match.index));
-    }
-    parts.push(
-      <Icon decorative={false} data-emoji="" {...iconProps}>
-        <span>{match[0]}</span>
-      </Icon>,
-    );
-    lastIndex = match.index + match[0].length;
-  }
-  if (parts === null) {
-    return string;
-  }
-  if (lastIndex < string.length) {
-    parts.push(string.slice(lastIndex));
-  }
-  return parts;
-};
-// A callout message is free text like any other; see callout.jsx for why it
-// cannot import this itself.
-setCalloutMessageTextRenderer(renderEmojiAsIcon);

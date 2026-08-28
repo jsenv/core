@@ -67,9 +67,6 @@ export const MessageBox = ({
   padding = "sm",
   icon,
   leftStripe,
-  // A message is free text: an emoji is expected in it, and must not push
-  // the first line down next to the icon and the close button.
-  emojiAsIcon = true,
   children,
   onClose,
   ...rest
@@ -126,7 +123,7 @@ export const MessageBox = ({
               {icon}
             </Icon>
           )}
-          <Text emojiAsIcon={emojiAsIcon}>{children}</Text>
+          <Text>{children}</Text>
           {onClose && (
             // A column as tall as the first line of the message, pinned to the
             // top, the button centered in it: the close button stays level

@@ -206,27 +206,20 @@ const css = /* css */ `
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
-      /* The line every text is written on, controls included. A number rather
-         than "normal": an emoji's box is taller than a letter's, and under
-         "normal" a line box takes the height of the tallest font it holds — so
-         the one line carrying an emoji stands taller than the ones around it.
-         1.25 is the value that answer was settled on: 1 cuts the top off the
-         emoji, 1.5 spaces the rows out more than reading them asks for.
-         Applied on the document and handed to the fields by hand (a form
-         control does not inherit it on its own), so a value keeps the same
-         line — and its emoji the same size — whether it is typed in an input
-         or drawn in the page. */
+      /* The line every text is written on, controls included. A number
+         rather than "normal", because of the emoji: its box is taller than a
+         letter's, so under "normal" the one line carrying one stands taller
+         than the lines around it, and under a tighter line its top is cut.
+         1.25 is where neither happens — 1 clips the glyph, 1.5 spaces the rows
+         out more than reading them asks for — which also makes it the floor
+         for an app that displays what people typed.
+         The document is written on it; the components that come with a line of
+         their own from the browser (Button, Input, Textarea, Select) are handed
+         it by name. One number everywhere is what keeps a value on the same
+         line whether it is typed in a field or drawn in the page.
+         See docs/typography.md. */
       --navi-line-height: 1.25;
       line-height: var(--navi-line-height);
-
-      /* The size an emoji is drawn at wherever emojiAsIcon renders one (see
-         docs/typography.md). Smaller than the letters it sits among: an emoji
-         glyph fills its box edge to edge where a letter only fills its
-         x-height, so at the same font size it reads as an image dropped into
-         the sentence rather than as part of it. The app-wide lever — a page
-         that wants its emoji bigger sets it here rather than at every call
-         site; emojiAsIcon={{ size }} still decides for one text. */
-      --navi-emoji-size: inherit;
 
       /* Color keywords.
            primary:   the ink of the paper, at full strength. An absolute

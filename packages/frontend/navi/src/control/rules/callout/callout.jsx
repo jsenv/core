@@ -1,14 +1,6 @@
 import { createContext, h, render } from "preact";
 import { useContext } from "preact/hooks";
 
-// The callout sits under Box in the import graph (Box → interactions →
-// control_callout → callout), so it cannot import Text or Icon: the text
-// module hands over its emoji renderer when it loads (see text.jsx).
-let renderMessageText = (text) => text;
-export const setCalloutMessageTextRenderer = (renderer) => {
-  renderMessageText = renderer;
-};
-
 // What a callout's own JSX may know about the callout around it: how to close
 // it, and the element — whose id is what `commandFor` needs when the button
 // closing it is not inside it (inside, `--navi-close` finds it on its own).
@@ -33,9 +25,10 @@ export const renderIntoCallout = (
   render(calloutJsx, calloutMessageElement);
 };
 
-// An HTML message is rendered through preact rather than innerHTML so that its
-// text can go through renderMessageText: an emoji in a validation message must
-// not make the first line taller than the icon and close button beside it.
+// An HTML message is rendered through preact rather than innerHTML: what a
+// message holds is then a preact tree like any other, so a callout's own JSX
+// (its context, its close button) works the same whether the message arrived
+// as markup or as elements.
 export const renderHtmlIntoCallout = (
   html,
   calloutMessageElement,
@@ -61,7 +54,7 @@ const domToVNodes = (node) => {
   const vnodes = [];
   for (const child of node.childNodes) {
     if (child.nodeType === Node.TEXT_NODE) {
-      vnodes.push(renderMessageText(child.data));
+      vnodes.push(child.data);
       continue;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) {

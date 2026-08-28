@@ -214,11 +214,11 @@ consistency across the app, not from any single call site.
   not it), what makes truncation actually happen in a flex row, and the two
   opposite shapes of "icon | text | icon" — the end icon kept outside the
   truncating text, or `attachLastChild` so it never lands alone on a line —
-  and why an emoji belongs only in free text, rendered with `emojiAsIcon` —
-  except in a control one types in, where there is no markup to wrap a glyph in
-  and the fixed line height is what keeps the rows even.
+  and why every text — controls included — is written on one line height
+  (`--navi-line-height`, 1.25): the number below which an emoji is clipped and
+  above which the rows drift apart.
   Read it before writing an overflowing label or a row with a trailing icon,
-  and before touching a text control's `line-height`.
+  and before touching any `line-height`.
 - `docs/i18n.md` — where the texts an app displays live: `interpolateText` /
   `<Interpolate>` for one sentence, `createI18n` for the app's registry,
   `naviI18n` for navi's own texts. Read it before writing a user-visible

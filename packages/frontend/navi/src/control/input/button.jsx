@@ -122,7 +122,6 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 /**
  * @type {import("preact").FunctionComponent<{
  *   ownTarget?: boolean | "refuse" | "always",
- *   emojiAsIcon?: boolean | Record<string, any>,
  *   replace?: boolean,
  *   [key: string]: any,
  * }>}
@@ -133,10 +132,6 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).
- * @param {boolean|object} [emojiAsIcon=true] Renders the emoji of the label as
- *   icons so the button keeps the height of its text — `Text`'s prop, on by
- *   default here. Pass `false` to let an emoji draw at its natural size, or an
- *   object of `Icon` props (`{ size: "0.8em" }`) to change how it is drawn.
  * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
  *   that belongs to another control — a chip's cross on a picker's façade, an
  *   eye on a pressable row, a diskette inside a slide that travels. The press is

@@ -79,7 +79,7 @@ const css = /* css */ `
       padding-right: var(--x-badge-count-padding-right);
       padding-bottom: var(--x-badge-count-padding-bottom);
       padding-left: var(--x-badge-count-padding-left);
-      line-height: normal;
+      line-height: var(--navi-line-height);
       background: var(--x-background);
       background-color: var(--x-background-color);
       border-radius: 1em;
