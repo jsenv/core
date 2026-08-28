@@ -12817,6 +12817,14 @@ const startDragToCarryCopy = (event, {
         const allItems = [];
         const items = [];
         for (const el of containerElement.querySelectorAll(itemSelector)) {
+          // The copy in hand is a clone of an item, attributes included, and it
+          // lives in this same parent: it matches the selector without being
+          // an item. Excluded here rather than by stripping attributes off the
+          // clone, because a custom itemSelector (a class, a tag) would still
+          // match it.
+          if (cloneWrapper.contains(el)) {
+            continue;
+          }
           allItems.push(el);
           if (el !== draggedElement) {
             items.push(el);
