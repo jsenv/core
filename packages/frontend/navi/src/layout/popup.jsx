@@ -33,6 +33,15 @@ const css = /* css */ `
       --popup-border-width: 1px;
       --popup-border-color: var(--navi-popup-border-color);
 
+      /* A popup is a page of its own, opened from a control: it is written on
+         the page's line, as the number, so each text it holds keeps a line
+         relative to its own size. Its element sits under the control that
+         opens it (a Picker holds its popup children inside its root), and
+         line-height inherits as computed: the control's line is a length
+         (--navi-control-line-height), and inherited it would arrive as that
+         control's pixels — a 12px caption on an 18px picker's 23px rows. */
+      line-height: var(--navi-line-height);
+
       &.navi_popover {
         --popover-border-radius: var(--popup-border-radius);
         --popover-border-width: var(--popup-border-width);
