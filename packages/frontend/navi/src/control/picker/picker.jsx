@@ -180,6 +180,11 @@ const css = /* css */ `
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
+    /* The control line, like the control font: a picker is drawn by hand next
+       to inputs that sit on it, and its box is sized in lh — the same number
+       of pixels, or a picker and an input in one row are not the same height
+       and their text is not on the same row. */
+    line-height: var(--navi-control-line-height);
     /* The frame is drawn by the box, but its radius is declared here, on the
        control root, like every other navi control does — so anything styling
        the picker from the outside (a Group squaring the corners it joins) has

@@ -163,6 +163,13 @@ export const inputCss = /* css */ `
     font-size: var(--font-size);
     font-family: var(--font-family);
     text-align: initial;
+    /* On the root, not only on the field: what sits beside the field — a unit
+       slot, a prefix, an icon — is text of the same box and has to land on
+       the same row as what is typed. A slot left on the page's line would sit
+       a fraction of a pixel away from the field's own, and read as misaligned
+       ("+33" next to a number). The field repeats it below because a form
+       control does not inherit it. */
+    line-height: var(--navi-control-line-height);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
