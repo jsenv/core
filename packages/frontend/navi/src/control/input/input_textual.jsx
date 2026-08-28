@@ -213,9 +213,12 @@ export const inputCss = /* css */ `
       font-size: inherit;
       /* A form control does not inherit the font on its own — the browser has
          one of its own for it, monospace for a <textarea> — so the box's font
-         (--navi-control-font-family) is handed down by hand. */
+         (--navi-control-font-family) is handed down by hand. Its line comes
+         from the page's token for the same reason: what is typed must sit on
+         the same line as what displays it afterwards, emoji included. */
       font-family: inherit;
       text-align: inherit;
+      line-height: var(--navi-line-height);
       background: none;
       border: none;
       border-radius: inherit;
@@ -251,10 +254,6 @@ export const inputCss = /* css */ `
       /* Nothing to read yet is still a line: the box may not collapse just
          because the value is empty. */
       min-height: 1lh;
-      /* A form control keeps a line of its own whatever line-height the page
-         is written in; the text that stands in for one has to say the same
-         number, or the box it is meant to match changes height. */
-      line-height: normal;
     }
     /* The value is cut by a box of its own, and that is the whole reason it
        exists: a field ends its text at the content edge, while an overflow set

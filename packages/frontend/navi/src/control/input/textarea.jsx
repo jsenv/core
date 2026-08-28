@@ -31,8 +31,8 @@ import {
 import { useAutoSelectReadOnly } from "./use_autoselect_read_only.js";
 
 const css = /* css */ `
-  .navi_input.navi_textarea {
-    .navi_control_input {
+  .navi_textarea {
+    textarea {
       min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
       /* Above maxRows the box stops growing and the content scrolls. The
          99999 fallback means "no cap" without needing a conditional rule. */
@@ -47,12 +47,12 @@ const css = /* css */ `
          holds, so the one line carrying an emoji stands taller than the ones
          around it — here, where the text is typed and no glyph can be wrapped
          the way emojiAsIcon wraps one, the line height is the only lever.
-         The value is the compromise between the two neighbours it was picked
-         against: 1 glues the lines together and cuts the top off an emoji's
-         own box, 1.5 spaces the rows out more than reading them asks for.
-         Do not tighten it further — the rows stay even and the glyph gets
-         clipped. See docs/typography.md. */
-      line-height: 1.25;
+         The number is the page's own (--navi-line-height, 1.25): a message
+         typed here and the same message displayed afterwards sit on the same
+         line, emoji included. Bound to the token rather than inherited so it
+         can never come back as "normal" from a container that sets one.
+         See docs/typography.md. */
+      line-height: var(--navi-line-height);
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;
@@ -69,14 +69,16 @@ const css = /* css */ `
         );
       }
     }
-    &[data-resizable] .navi_control_input {
-      height: calc(var(--textarea-min-rows, 1.5) * 1lh);
-      /* The two are exclusive: with field-sizing content the browser removes
+    &[data-resizable] {
+      .navi_control_input {
+        height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+        /* The two are exclusive: with field-sizing content the browser removes
          the resize handle (the size follows the content, there is nothing to
          drag). resizable means the hand takes over — fixed sizing, starting
          at minRows, and the drag writes its own inline height from there. */
-      field-sizing: fixed;
-      resize: vertical;
+        field-sizing: fixed;
+        resize: vertical;
+      }
     }
   }
   .navi_textarea_char_count {
@@ -148,8 +150,7 @@ export const Textarea = ({
       as="span"
       inline
       flex
-      baseClassName="navi_input"
-      className="navi_textarea"
+      baseClassName="navi_textarea"
       {...rootProps}
       basePseudoState={basePseudoState}
       data-resizable={resizable ? "" : undefined}

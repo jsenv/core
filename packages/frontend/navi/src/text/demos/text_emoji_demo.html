@@ -35,7 +35,7 @@
       }
       /* La line-height du textarea est fixée par le composant : la section
          "même champ" la fait varier pour l'aligner sur celle du rendu. */
-      .demo_swap .navi_input.navi_textarea .navi_control_input {
+      .demo_swap .navi_textarea textarea {
         line-height: var(--demo-swap-line-height);
       }
     </style>
@@ -502,6 +502,10 @@
               onDblClick={startEditing}
               border="1px solid transparent"
               borderRadius="10px"
+              paddingX="s"
+              paddingY="xs"
+              background="#dce7fb"
+              color="#1f3f8a"
             >
               <Editable
                 multiline
@@ -516,13 +520,7 @@
                 paddingY="xs"
                 onEditEnd={stopEditing}
               >
-                <Text
-                  block
-                  preWrap
-                  background="#dce7fb"
-                  color="#1f3f8a"
-                  emojiAsIcon
-                >
+                <Text block preWrap emojiAsIcon>
                   {value}
                 </Text>
               </Editable>

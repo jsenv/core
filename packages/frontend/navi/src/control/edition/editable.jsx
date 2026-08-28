@@ -36,6 +36,7 @@ const css = /* css */ `
     font-size: inherit;
     font-family: inherit;
     line-height: inherit;
+    border-radius: inherit;
     opacity: 0;
     pointer-events: none;
 
@@ -46,6 +47,7 @@ const css = /* css */ `
     .navi_input {
       font-size: inherit;
       font-family: inherit;
+      border-radius: inherit;
     }
     input,
     textarea {
@@ -54,6 +56,7 @@ const css = /* css */ `
       font-family: inherit;
       text-align: inherit;
       line-height: inherit;
+      border-radius: inherit;
     }
 
     &[data-editing] {

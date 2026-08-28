@@ -49,9 +49,10 @@ const css = /* css */ `
       /* Room for the chevron, which sits over the padding rather than beside
          the control — anything beside it would be a click that misses. */
       padding-right: calc(var(--x-padding-right) + 1em);
-      /* A form control keeps a line of its own whatever the page is written in,
-         and lh units elsewhere in the box are resolved against a real number. */
-      line-height: normal;
+      /* Same line as every other field (see --navi-line-height): a select and
+         an input side by side must be the same height, and lh units elsewhere
+         in the box need a real number to resolve against. */
+      line-height: var(--navi-line-height);
       /* The closed control is drawn by us so it matches the other fields; the
          list it opens is untouched and stays the system's. */
       appearance: none;

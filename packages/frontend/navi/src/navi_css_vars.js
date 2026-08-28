@@ -206,6 +206,19 @@ const css = /* css */ `
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
+      /* The line every text is written on, controls included. A number rather
+         than "normal": an emoji's box is taller than a letter's, and under
+         "normal" a line box takes the height of the tallest font it holds — so
+         the one line carrying an emoji stands taller than the ones around it.
+         1.25 is the value that answer was settled on: 1 cuts the top off the
+         emoji, 1.5 spaces the rows out more than reading them asks for.
+         Applied on the document and handed to the fields by hand (a form
+         control does not inherit it on its own), so a value keeps the same
+         line — and its emoji the same size — whether it is typed in an input
+         or drawn in the page. */
+      --navi-line-height: 1.25;
+      line-height: var(--navi-line-height);
+
       /* The size an emoji is drawn at wherever emojiAsIcon renders one (see
          docs/typography.md). Smaller than the letters it sits among: an emoji
          glyph fills its box edge to edge where a letter only fills its
