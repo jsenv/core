@@ -77,11 +77,8 @@ const css = /* css */ `
       --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
       --picker-color: currentColor;
-      --picker-placeholder-color: color-mix(
-        in srgb,
-        currentColor 60%,
-        transparent
-      );
+      --picker-placeholder-color: var(--navi-placeholder-color);
+      --picker-placeholder-font-style: var(--navi-placeholder-font-style);
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       /* Hover */
       --picker-border-color-hover: color-mix(
@@ -269,6 +266,7 @@ const css = /* css */ `
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
+        font-style: var(--picker-placeholder-font-style);
       }
 
       /* A <BadgeList> caps its own rows: it renders the badges that fit and a

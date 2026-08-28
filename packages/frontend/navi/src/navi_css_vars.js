@@ -251,6 +251,17 @@ const css = /* css */ `
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+
+      /* What a control shows while it holds nothing: the ::placeholder of an
+         input, the empty value slot of a picker. One place for the whole app:
+
+           :root {
+             --navi-placeholder-color: #8a94a6;
+             --navi-placeholder-font-style: italic;
+           }
+      */
+      --navi-placeholder-color: var(--navi-color-discrete);
+      --navi-placeholder-font-style: normal;
     }
 
     /* A popup is a new paper (see --navi-popup-color): primary is the ink it

@@ -223,7 +223,7 @@ export const PickerDateUI = (props) => {
       return (
         <Time
           type="date"
-          color="var(--picker-placeholder-color"
+          color="var(--picker-placeholder-color)"
           capitalize
           {...props}
         />
@@ -256,7 +256,7 @@ export const PickerMonthUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="month" color="var(--picker-placeholder-color" {...props} />
+        <Time type="month" color="var(--picker-placeholder-color)" {...props} />
       );
     }
     return renderSafe(placeholder);
@@ -286,7 +286,7 @@ export const PickerWeekUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="week" color="var(--picker-placeholder-color" {...props} />
+        <Time type="week" color="var(--picker-placeholder-color)" {...props} />
       );
     }
     return renderSafe(placeholder);
@@ -316,7 +316,7 @@ export const PickerTimeUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="time" color="var(--picker-placeholder-color" {...props} />
+        <Time type="time" color="var(--picker-placeholder-color)" {...props} />
       );
     }
     return renderSafe(placeholder);
@@ -347,7 +347,7 @@ export const PickerDurationUI = (props) => {
   if (!value) {
     if (!placeholder) {
       return (
-        <Time type="time" color="var(--picker-placeholder-color" {...props} />
+        <Time type="time" color="var(--picker-placeholder-color)" {...props} />
       );
     }
     return renderSafe(placeholder);
@@ -379,7 +379,7 @@ export const PickerDatetimeUI = (props) => {
       return (
         <Time
           type="datetime"
-          color="var(--picker-placeholder-color"
+          color="var(--picker-placeholder-color)"
           {...props}
         />
       );
