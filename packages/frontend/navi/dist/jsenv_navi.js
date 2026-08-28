@@ -4256,14 +4256,6 @@ const findControlProxy = (el) => {
   return firstProxy;
 };
 
-let renderMessageText = text => text;
-const setCalloutMessageTextRenderer = renderer => {
-  renderMessageText = renderer;
-};
-
-// What a callout's own JSX may know about the callout around it: how to close
-// it, and the element — whose id is what `commandFor` needs when the button
-// closing it is not inside it (inside, `--navi-close` finds it on its own).
 const CalloutContext = createContext();
 const useCalloutRequestClose = () => {
   return useContext(CalloutContext)?.requestClose;
@@ -4285,9 +4277,10 @@ const renderIntoCallout = (jsx$1, calloutMessageElement, {
   render(calloutJsx, calloutMessageElement);
 };
 
-// An HTML message is rendered through preact rather than innerHTML so that its
-// text can go through renderMessageText: an emoji in a validation message must
-// not make the first line taller than the icon and close button beside it.
+// An HTML message is rendered through preact rather than innerHTML: what a
+// message holds is then a preact tree like any other, so a callout's own JSX
+// (its context, its close button) works the same whether the message arrived
+// as markup or as elements.
 const renderHtmlIntoCallout = (html, calloutMessageElement, {
   requestClose,
   element
@@ -4311,7 +4304,7 @@ const domToVNodes = node => {
   const vnodes = [];
   for (const child of node.childNodes) {
     if (child.nodeType === Node.TEXT_NODE) {
-      vnodes.push(renderMessageText(child.data));
+      vnodes.push(child.data);
       continue;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) {
@@ -4452,11 +4445,12 @@ const css$11 = /* css */`
       --callout-icon-color: black;
       --callout-padding: 8px;
       --callout-z-index: var(--navi-z-index-callout);
-      /* The callout's own, like its font: the icon and the cross are columns
-         one line tall (1lh), and that line has to be the message's first
-         line — which it is only if both read the same line-height, rather
-         than whatever the element the callout sits in happens to use. */
-      --callout-line-height: 1.5;
+      /* The page's line, said here rather than inherited: the icon and the
+         cross are columns one line tall (1lh), and that line has to be the
+         message's first line — which it is only if both read the same
+         line-height, rather than whatever the element the callout sits in
+         happens to use. */
+      --callout-line-height: var(--navi-line-height);
       /* The cross is furniture, not content: quieter than the message beside
          it, and the size of a glyph on the message's first line. */
       --callout-close-button-color: color-mix(
@@ -17681,13 +17675,17 @@ const singleLineEllipsisStyles = () => {
   };
 };
 // The lines beyond the clamp are still laid out, so the clip edge decides
-// whether the top of the first hidden one is visible: "overflow: hidden" clips
-// at the padding box and lets it show inside the block-end padding. Clipping at
-// the content box instead ends the element right after its last visible line.
+// whether the top of the first hidden one is visible: the padding box lets it
+// show inside the block-end padding, the content box ends the element right
+// after its last visible line. That box also ends the inline axis at the last
+// glyph's advance width, and a script or italic face draws past it, so the
+// clip is pushed back out by the half-leading: room for ink that leaves the
+// advance width on every side, still above the hidden line's own em box.
+// `overflow-clip-margin` has no per-axis form, hence one length for all four.
 const lineClampStyles = (value) => {
   return {
     "overflow": "clip",
-    "overflowClipMargin": "content-box",
+    "overflowClipMargin": "content-box calc((1lh - 1em) / 2)",
     "display": "-webkit-box",
     "-webkit-box-orient": "vertical",
     "-webkit-line-clamp": value,
@@ -37537,10 +37535,14 @@ const css$Y = /* css */`
  * the child so that its visual position matches the requested `textAnchor` value — regardless of
  * font-size, display type (inline, inline-block, inline-flex…), or the active `vertical-align`.
  *
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
+ * @param {"line-top"|"char-top"|"center"|"char-center"|"char-bottom"|"line-bottom"} [textAnchor="char-bottom"]
  *   - `"line-top"`    — child top aligns with the top of the surrounding line box
  *   - `"char-top"`    — child top aligns with the top of visible characters (ink ascent)
  *   - `"center"`      — child is vertically centered on the surrounding line box
+ *   - `"char-center"` — child is vertically centered on the capitals: midway between the
+ *                       ink ascent and the baseline. What "centered on the text" means to
+ *                       the eye — the line box center sits above it, by half the leading
+ *                       plus whatever the font keeps above its capitals.
  *   - `"char-bottom"` — child bottom aligns to the text baseline (no correction, browser default)
  *   - `"line-bottom"` — child bottom aligns with the bottom of the surrounding line box
  * @param {{ size?: number, verticalAlign?: string }} [lineLayout]
@@ -37650,13 +37652,14 @@ const computeTopOffset = ({
   let desiredChildTopY = 0;
   if (textAnchor === "line-top") {
     desiredChildTopY = anchorRect.top;
-  } else if (textAnchor === "char-top") {
+  } else if (textAnchor === "char-top" || textAnchor === "char-center") {
     const anchorStyle = getComputedStyle(anchorEl);
     const ctx = charTopCanvas.getContext("2d");
     ctx.font = `${anchorStyle.fontWeight} ${anchorStyle.fontSize} ${anchorStyle.fontFamily}`;
     const m = ctx.measureText("M");
     const baselineY = anchorRect.bottom - m.fontBoundingBoxDescent;
-    desiredChildTopY = baselineY - m.actualBoundingBoxAscent;
+    const capTopY = baselineY - m.actualBoundingBoxAscent;
+    desiredChildTopY = textAnchor === "char-top" ? capTopY : (capTopY + baselineY) / 2 - childH / 2;
   } else if (textAnchor === "center") {
     const anchorCenterY = (anchorRect.top + anchorRect.bottom) / 2;
     desiredChildTopY = anchorCenterY - childH / 2;
@@ -38062,12 +38065,15 @@ const CustomWidthSpace = ({
     // copy-pasting the text produces an actual space, but we also want
     // full control over the visual width of that gap.
     // - First span: contains the real space but rendered at font-size:0 so it
-    //   takes up zero visual space.
+    //   takes up zero visual space. line-height:0 with it: a line-height
+    //   inherited as a length (a control's, snapped to the pixel) would give
+    //   this empty box that height, centered on the baseline — and its lower
+    //   half would push the line box down under the text.
     // - Second span: a zero-width joiner (&#8203;) with padding-left set to
     //   the desired gap size. This is the only visible part.
     return jsxs("span", {
       children: [jsx("span", {
-        style: "font-size: 0",
+        style: "font-size: 0; line-height: 0",
         children: " "
       }), jsx("span", {
         style: `padding-left: ${value}`,
@@ -38223,7 +38229,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   loading?: boolean,
  *   skeleton?: boolean,
  *   attachLastChild?: boolean,
- *   emojiAsIcon?: boolean,
  *   preventSpaceUnderlines?: boolean,
  *   holdSpaceForStyle?: import("ignore:preact").JSX.CSSProperties,
  *   boldStable?: boolean,
@@ -38262,14 +38267,6 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   prevent that break. For wrapping text; a child that must survive
  *   truncation belongs outside the `Text` instead (see `docs/typography.md`).
  *   `Link` sets it on its own whenever it renders an end icon.
- *
- * @param {boolean} [emojiAsIcon]
- *   Renders every emoji found in the string children as an `Icon`, so it sits
- *   in the line like a character and never makes the line taller than the
- *   text. For free text a user typed (a message, a description); see
- *   `docs/typography.md`. Only the strings this `Text` receives are rewritten —
- *   a string a child component renders is out of reach, and that component
- *   calls `renderEmojiAsIcon()` itself instead.
  *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
@@ -38385,7 +38382,6 @@ const TextUI = props => {
     spacing,
     preventSpaceUnderlines = false,
     attachLastChild = false,
-    emojiAsIcon = false,
     boldStable,
     holdSpaceForStyle,
     capitalize,
@@ -38415,11 +38411,6 @@ const TextUI = props => {
     boxProps.spacing = resolvedSpacing;
   } else {
     children = applySpacingOnTextChildren(children, resolvedSpacing, defaultSpace);
-  }
-  if (emojiAsIcon) {
-    // After the spacing pass: an emoji glued to a word ("hello👋") must not
-    // get a separator injected as if it were a child element.
-    children = renderEmojiAsIcon(children);
   }
   if (boldStable) {
     const {
@@ -38568,12 +38559,12 @@ const TextWithSelectRange = ({
  *   meaning-bearing icon that needs to be exposed to assistive tech.
  * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
  *   interactive (`data-interactive`, pointer cursor) and non-decorative.
- * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
+ * @param {"line-top"|"char-top"|"center"|"char-center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
  *   - Vertical alignment within the surrounding text line for the inline
  *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
  *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
- *   centers on the line box, `"char-bottom"` sits on the baseline. See
- *   `text_anchor.jsx`.
+ *   centers on the line box, `"char-center"` on the capitals, `"char-bottom"`
+ *   sits on the baseline. See `text_anchor.jsx`.
  * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
  *   Describes the surrounding line context (font size / vertical-align),
  *   forwarded to `TextAnchor` so it recomputes the vertical correction when
@@ -38696,84 +38687,6 @@ const Icon = ({
     })
   });
 };
-
-// An emoji-presentation character (🌸), or a pictogram forced into emoji
-// presentation by VS16 (❤️), followed by its skin-tone modifiers and ZWJ
-// sequence. A flag is two regional indicators that must stay together.
-const EMOJI_REGEX = /\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|[\p{Extended_Pictographic}--\p{Emoji_Presentation}]\uFE0F)(?:[\p{Emoji_Modifier}\uFE0F]|\u200D\p{Extended_Pictographic}\uFE0F?)*/gv;
-
-/**
- * What `emojiAsIcon` does, for something that renders text without going
- * through `Text` (a callout's message): every emoji in the string children
- * comes back wrapped in an `Icon`. The system emoji fonts have a taller
- * ascent/descent than text fonts, so a raw emoji glyph makes its line taller
- * than the lines around it; inside an Icon it is capped at 1em and centered on
- * the line like any glyph icon.
- *
- * Children come back in the shape they arrived in: a string stays a string
- * when it holds no emoji, and the array is only built once a child actually
- * needs rewriting.
- */
-const renderEmojiAsIcon = children => {
-  if (typeof children === "string") {
-    return renderEmojiInString(children);
-  }
-  const childArray = toChildArray(children);
-  let result = null;
-  let index = 0;
-  for (const child of childArray) {
-    if (typeof child === "string") {
-      const rendered = renderEmojiInString(child);
-      if (rendered !== child) {
-        if (result === null) {
-          result = childArray.slice(0, index);
-        }
-        for (const part of rendered) {
-          result.push(part);
-        }
-        index++;
-        continue;
-      }
-    }
-    if (result !== null) {
-      result.push(child);
-    }
-    index++;
-  }
-  if (result === null) {
-    return children;
-  }
-  return result;
-};
-const renderEmojiInString = string => {
-  let parts = null;
-  let lastIndex = 0;
-  for (const match of string.matchAll(EMOJI_REGEX)) {
-    if (parts === null) {
-      parts = [];
-    }
-    if (match.index > lastIndex) {
-      parts.push(string.slice(lastIndex, match.index));
-    }
-    parts.push(jsx(Icon, {
-      decorative: false,
-      children: jsx("span", {
-        children: match[0]
-      })
-    }));
-    lastIndex = match.index + match[0].length;
-  }
-  if (parts === null) {
-    return string;
-  }
-  if (lastIndex < string.length) {
-    parts.push(string.slice(lastIndex));
-  }
-  return parts;
-};
-// A callout message is free text like any other; see callout.jsx for why it
-// cannot import this itself.
-setCalloutMessageTextRenderer(renderEmojiAsIcon);
 
 /**
  * Hook that reactively checks if a URL is visited.
@@ -39782,12 +39695,23 @@ const css$V = /* css */`
       }
     }
 
-    &[data-expand] {
+    /* A nav asked to expand is a nav whose tabs share it: one equal slice each,
+       the label in the middle of the target that slice makes — a row that fills
+       its container while its tabs sit at their text width stops in the middle,
+       and gives every tab a different size to aim at.
+       The main axis only: a vertical nav expanding horizontally fills the width
+       (align-items below) rather than sharing its height between its tabs. */
+    &[data-expand-x] {
       flex-grow: 1;
 
-      .navi_tab {
+      &:not([data-vertical]) .navi_link {
         flex: 1;
-        justify-content: start;
+        justify-content: center;
+      }
+    }
+    &[data-expand-y][data-vertical] {
+      .navi_link {
+        flex: 1;
       }
     }
     /* Vertical layout */
@@ -39795,17 +39719,6 @@ const css$V = /* css */`
       /* overflow-x: hidden; */
       /* overflow-y: auto; */
       align-items: stretch;
-
-      &[data-expand] {
-        .navi_tab {
-          align-items: stretch;
-        }
-      }
-      .navi_tab {
-        width: 100%;
-        flex-direction: row;
-        text-align: left;
-      }
     }
 
     /* Folder tabs: the current tab and the panel share one surface. Every tab
@@ -39921,6 +39834,7 @@ const Nav = ({
   vertical,
   expand,
   expandX,
+  expandY,
   linkBorderRadiusInherit,
   currentIndicator,
   currentIndicatorSlides = true,
@@ -40057,7 +39971,8 @@ const Nav = ({
     column: !vertical,
     baseClassName: "navi_nav",
     "data-link-border-radius-inherit": linkBorderRadiusInherit ? "" : undefined,
-    "data-expand": expand || expandX ? "" : undefined,
+    "data-expand-x": expand || expandX ? "" : undefined,
+    "data-expand-y": expand || expandY ? "" : undefined,
     "data-vertical": vertical ? "" : undefined,
     "data-panel-position": panelPosition,
     "data-nav-indicator": indicatorPosition ?? undefined
@@ -40075,6 +39990,7 @@ const Nav = ({
     "aria-orientation": slideContainer && vertical ? "vertical" : undefined,
     expand: expand,
     expandX: expandX,
+    expandY: expandY,
     spacing: spacing,
     ...props,
     styleCSSVars: NavStyleCSSVars,
@@ -45533,6 +45449,10 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
       display: inline-block; /* So box css can override when wanting to put button inline flex */
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
+      /* A form control comes with a line of its own from the browser, and that
+         line is "normal": a label holding an emoji would then be taller than
+         the same label without one. The page's line, like the page's font. */
+      line-height: var(--navi-control-line-height);
     }
   }
 
@@ -45905,7 +45825,6 @@ const ButtonUI = props => {
     icon,
     cta,
     spacing,
-    emojiAsIcon = true,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -45969,7 +45888,6 @@ const ButtonUI = props => {
 
     type: "button",
     spacing: undefined,
-    emojiAsIcon: undefined,
     cta: undefined,
     pressEffect: undefined,
     loadingOutline: undefined,
@@ -46023,7 +45941,6 @@ const ButtonUI = props => {
       ...controlChildrenWrapperProps,
       children: jsx(ButtonContent, {
         spacing: spacing,
-        emojiAsIcon: emojiAsIcon,
         children: children
       })
     })]
@@ -46031,7 +45948,6 @@ const ButtonUI = props => {
 };
 const ButtonContent = ({
   spacing,
-  emojiAsIcon,
   children
 }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
@@ -46039,7 +45955,6 @@ const ButtonContent = ({
     ...boxForwardedProps,
     display: "inherit",
     spacing: spacing,
-    emojiAsIcon: emojiAsIcon,
     className: "navi_button_content",
     children: [children, jsx(ButtonShadow, {})]
   });
@@ -46198,7 +46113,6 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 /**
  * @type {import("ignore:preact").FunctionComponent<{
  *   ownTarget?: boolean | "refuse" | "always",
- *   emojiAsIcon?: boolean,
  *   replace?: boolean,
  *   [key: string]: any,
  * }>}
@@ -46209,9 +46123,6 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).
- * @param {boolean} [emojiAsIcon=true] Renders the emoji of the label as icons
- *   so the button keeps the height of its text — `Text`'s prop, on by default
- *   here. Pass `false` to let an emoji draw at its natural size.
  * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
  *   that belongs to another control — a chip's cross on a picker's façade, an
  *   eye on a pressable row, a diskette inside a slide that travels. The press is
@@ -46814,7 +46725,8 @@ const inputCss = /* css */`
       --background-color: var(--navi-surface-color);
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --placeholder-color: var(--color-dimmed);
+      --placeholder-color: var(--navi-placeholder-color);
+      --placeholder-font-style: var(--navi-placeholder-font-style);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
@@ -46852,6 +46764,7 @@ const inputCss = /* css */`
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
+    --x-placeholder-font-style: var(--placeholder-font-style);
     --x-padding-top: var(
       --padding-top,
       var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
@@ -46881,6 +46794,13 @@ const inputCss = /* css */`
     font-size: var(--font-size);
     font-family: var(--font-family);
     text-align: initial;
+    /* On the root, not only on the field: what sits beside the field — a unit
+       slot, a prefix, an icon — is text of the same box and has to land on
+       the same row as what is typed. A slot left on the page's line would sit
+       a fraction of a pixel away from the field's own, and read as misaligned
+       ("+33" next to a number). The field repeats it below because a form
+       control does not inherit it. */
+    line-height: var(--navi-control-line-height);
     background-color: var(--x-background-color);
     border-width: var(--border-width);
     border-style: solid;
@@ -46931,9 +46851,12 @@ const inputCss = /* css */`
       font-size: inherit;
       /* A form control does not inherit the font on its own — the browser has
          one of its own for it, monospace for a <textarea> — so the box's font
-         (--navi-control-font-family) is handed down by hand. */
+         (--navi-control-font-family) is handed down by hand. Its line comes
+         from the page's token for the same reason: what is typed must sit on
+         the same line as what displays it afterwards, emoji included. */
       font-family: inherit;
       text-align: inherit;
+      line-height: var(--navi-control-line-height);
       background: none;
       border: none;
       border-radius: inherit;
@@ -46942,6 +46865,7 @@ const inputCss = /* css */`
 
       &::placeholder {
         color: var(--x-placeholder-color);
+        font-style: var(--x-placeholder-font-style);
       }
       /* Webkit is putting a slight blue bckground on autofilled input */
       /* For now we override with out custom background color */
@@ -46969,10 +46893,6 @@ const inputCss = /* css */`
       /* Nothing to read yet is still a line: the box may not collapse just
          because the value is empty. */
       min-height: 1lh;
-      /* A form control keeps a line of its own whatever line-height the page
-         is written in; the text that stands in for one has to say the same
-         number, or the box it is meant to match changes height. */
-      line-height: normal;
     }
     /* The value is cut by a box of its own, and that is the whole reason it
        exists: a field ends its text at the content edge, while an overflow set
@@ -48014,15 +47934,321 @@ Input.UI = {
 };
 
 installImportMetaCssBuild(import.meta);/**
- * - We must keep the edited element in the DOM so that
- * the layout remains the same (especially important for table cells)
- * And the editable part is in absolute so that it takes the original content dimensions
- * AND for table cells it can actually take the table cell dimensions
+ * Multiline text control that grows with what is typed.
  *
- * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
+ * Autosize is native: `field-sizing: content` lets the browser size the
+ * textarea from its value — no hidden mirror textarea to measure against (the
+ * technique libraries used before the property existed). `minRows`/`maxRows`
+ * become min/max heights in `lh` units on top of it; past `maxRows` the
+ * content scrolls.
  *
+ * TextareaCharCount is the counter that goes with it, and the caller places
+ * it: under the box, in a form footer, next to a label — fed with the same
+ * value/signal as the textarea. The textarea draws no counter of its own.
+ *
+ * Styled as a `.navi_input` box (border, background, focus ring, readonly and
+ * disabled fades, variants): one look for everything one types into. The
+ * shared sheet is registered here too — a page may render a Textarea without
+ * any Input.
  */
 const css$I = /* css */`
+  .navi_textarea {
+    textarea {
+      min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+      /* Above maxRows the box stops growing and the content scrolls. The
+         99999 fallback means "no cap" without needing a conditional rule. */
+      max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
+      field-sizing: content;
+      /* Explicit, never normal, for two independent reasons.
+         minRows/maxRows are lengths in lh, and with line-height normal the lh
+         unit resolves to a theoretical value that does not match the real
+         rendered line — the box then jumps by a few pixels the moment the first
+         character replaces the theory with a real line.
+         And a line box under "normal" takes the height of the tallest font it
+         holds, so the one line carrying an emoji stands taller than the ones
+         around it — and a tighter line would cut the top off the glyph.
+         The number is the page's own (--navi-line-height, 1.25), snapped to
+         the pixel like every control's: a message typed here and the same
+         message displayed afterwards sit on the same line, emoji included.
+         Bound to the token rather than inherited so it can never come back as
+         "normal" from a container that sets one. See docs/typography.md. */
+      line-height: var(--navi-control-line-height);
+      /* The control grows itself; resizable below hands the handle back. */
+      resize: none;
+      overflow: auto;
+      /* A placeholder must be readable in full before anything is typed: a
+         field that opens already scrolled reads as a field that already has
+         text in it. The lines it wraps to are counted (see
+         usePlaceholderHeight) because they only exist once laid out, and they
+         only raise the floor while the placeholder is what is being shown —
+         what is typed sizes the box on its own. A count of lines rather than
+         a height, so the floor is on the same grid as minRows. */
+      &:placeholder-shown {
+        min-height: max(
+          calc(var(--textarea-min-rows, 1.5) * 1lh),
+          calc(var(--x-textarea-placeholder-rows, 0) * 1lh)
+        );
+      }
+    }
+    &[data-resizable] {
+      .navi_control_input {
+        height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+        /* The two are exclusive: with field-sizing content the browser removes
+         the resize handle (the size follows the content, there is nothing to
+         drag). resizable means the hand takes over — fixed sizing, starting
+         at minRows, and the drag writes its own inline height from there. */
+        field-sizing: fixed;
+        resize: vertical;
+      }
+    }
+  }
+  .navi_textarea_char_count {
+    color: color-mix(in srgb, currentColor 60%, transparent);
+    font-size: 0.75em;
+    user-select: none;
+  }
+`;
+
+// minRows/maxRows are read by the CSS above, so they travel the way every
+// other style of this box travels: a prop mapped to the custom property it
+// stands for, written by Box itself (see its styleCSSVars).
+const TextareaStyleCSSVars = {
+  ...InputStyleCSSVars,
+  minRows: "--textarea-min-rows",
+  maxRows: "--textarea-max-rows"
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   name?: string,
+ *   minRows?: number,
+ *   maxRows?: number,
+ *   resizable?: boolean,
+ *   maxLength?: number,
+ *   width?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [minRows=1.5] Height the empty control starts at, in lines.
+ *   The default shows half of a second line: enough to read "multiline" at a
+ *   glance without the height of a full extra row.
+ * @param {number} [maxRows] Lines after which the control stops growing and
+ *   scrolls instead. Without it the control grows with its content.
+ * @param {boolean} [resizable] Give the browser's vertical resize handle back.
+ *   An exchange, not an addition: the hand takes over from the automatic
+ *   growth, so the control stops following what is typed and stays at the
+ *   height it was last dragged to (starting at `minRows`).
+ * @param {number} [maxLength] The character limit, validated at submit. Pair
+ *   with `maxLengthGuard` to block typing past it, and render a
+ *   TextareaCharCount to show it.
+ * @param {string} [width="35ch"] The control's width. Fixed on purpose: with
+ *   field-sizing the width would otherwise follow the longest line, and a box
+ *   that widens while one types is a box one chases.
+ */
+const Textarea = ({
+  // Destructured, never deleted off the props object: Preact reuses the same
+  // props object when an internal state update re-renders the component, so a
+  // delete would make these props vanish from the second render on (the box
+  // then jumps back to its default size at the first keystroke).
+  resizable,
+  width = "35ch",
+  ...props
+}) => {
+  import.meta.css = [inputCss + css$I, "@jsenv/navi/src/control/input/textarea.jsx"];
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  usePlaceholderHeight(props.ref, props.placeholder);
+  const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
+    controlType: "input"
+  });
+  const {
+    basePseudoState,
+    children
+  } = hostProps;
+  // Children go through ControlChildrenWrapper below; inside the <textarea>
+  // element they would become its text content.
+  delete hostProps.children;
+  const loading = basePseudoState[":-navi-loading"];
+  delete rootProps.width;
+  hostProps.width = width;
+  return jsxs(Box, {
+    as: "span",
+    inline: true,
+    flex: true,
+    baseClassName: "navi_input navi_textarea",
+    ...rootProps,
+    basePseudoState: basePseudoState,
+    "data-resizable": resizable ? "" : undefined,
+    styleCSSVars: TextareaStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    "data-callout-anchor": ".navi_control_input",
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx(RealTextarea, {
+      ...hostProps
+    }), jsx(ControlChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: children
+    })]
+  });
+};
+
+/**
+ * The counter that goes with a Textarea: "50/200" — how many characters are
+ * typed over how many the limit allows, the way Material writes it (just the
+ * count when there is no `maxLength`). Where it goes is the caller's call,
+ * which is why it is a separate component rather than something the textarea
+ * draws: put it under the box, in a form footer, next to a label, and feed it
+ * the same value or signal as the textarea.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   maxLength?: number,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The text being counted. Say `signal` instead for a
+ *   two-way bound textarea: reading it here subscribes the count to it.
+ * @param {number} [maxLength] The limit, shown after the count ("50/200").
+ *   Without it the count stands alone.
+ */
+const TextareaCharCount = ({
+  value,
+  signal,
+  maxLength,
+  ...rest
+}) => {
+  import.meta.css = [css$I, "@jsenv/navi/src/control/input/textarea.jsx"];
+  const resolvedValue = signal ? signal.value : value;
+  const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
+  return jsx(Box, {
+    as: "span",
+    baseClassName: "navi_textarea_char_count",
+    ...rest,
+    children: maxLength === undefined ? length : `${length}/${maxLength}`
+  });
+};
+
+// `field-sizing: content` sizes the box from the value, and an empty field has
+// none — the placeholder is text the browser refuses to make room for. So the
+// lines it wraps to are counted and published as --x-textarea-placeholder-rows
+// for the CSS above to use as a floor.
+const usePlaceholderHeight = (ref, placeholder) => {
+  useLayoutEffect(() => {
+    const textareaEl = ref.current;
+    if (!placeholder) {
+      textareaEl.style.removeProperty("--x-textarea-placeholder-rows");
+      return null;
+    }
+    let widthMeasured;
+    const measure = () => {
+      // What is typed sizes the box itself; the placeholder is not displayed
+      // then, and scrollHeight would report the value's height instead.
+      if (textareaEl.value !== "") {
+        return;
+      }
+      const {
+        paddingTop,
+        paddingBottom,
+        lineHeight
+      } = getComputedStyle(textareaEl);
+      // Read with no floor under the box: scrollHeight can never report less
+      // than the height the element already has, so a min-height still in
+      // place — minRows, or the previous measure — would be read back as
+      // lines of placeholder (a one-line placeholder over a 1.5-row floor
+      // would count as two), and the box could only ever grow, never shrink
+      // back on a wider viewport.
+      textareaEl.style.setProperty("min-height", "0px");
+      const contentHeight = textareaEl.scrollHeight - parseFloat(paddingTop) - parseFloat(paddingBottom);
+      textareaEl.style.removeProperty("min-height");
+      // scrollHeight is a whole number of pixels where a line need not be: a
+      // height handed back as is would put the floor a fraction above the
+      // line grid, and the empty box and the one showing its placeholder
+      // would not be the same height. A count of lines has no fraction.
+      const rows = Math.round(contentHeight / parseFloat(lineHeight));
+      widthMeasured = textareaEl.clientWidth;
+      textareaEl.style.setProperty("--x-textarea-placeholder-rows", String(rows));
+    };
+    measure();
+    // Measuring writes the variable that sets this element's own height, and
+    // mutating layout from inside a resize callback is what makes the browser
+    // report "ResizeObserver loop completed with undelivered notifications".
+    // So the write waits for the frame that resize produced.
+    let measureFrame = null;
+    const requestMeasure = () => {
+      if (measureFrame !== null) {
+        return;
+      }
+      measureFrame = requestAnimationFrame(() => {
+        measureFrame = null;
+        measure();
+      });
+    };
+    // The placeholder wraps against the available width, so a new width is a
+    // new number of lines. Height changes are ignored: this measure is what
+    // causes them, and reacting to them would be reacting to ourselves.
+    const resizeObserver = new ResizeObserver(() => {
+      if (textareaEl.clientWidth !== widthMeasured) {
+        requestMeasure();
+      }
+    });
+    resizeObserver.observe(textareaEl);
+    // The width may have changed while the field held a value, when measuring
+    // was impossible — emptying it is when the placeholder comes back.
+    const onInput = () => {
+      if (textareaEl.value === "") {
+        measure();
+      }
+    };
+    textareaEl.addEventListener("input", onInput);
+    return () => {
+      if (measureFrame !== null) {
+        cancelAnimationFrame(measureFrame);
+      }
+      resizeObserver.disconnect();
+      textareaEl.removeEventListener("input", onInput);
+    };
+  }, [placeholder]);
+};
+const RealTextarea = ({
+  maxLength,
+  ...domProps
+}) => {
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
+  return jsx(Box, {
+    ...domProps,
+    as: "textarea",
+    baseClassName: "navi_control_input",
+    ...autoSelectReadOnlyProps,
+    // Native maxLength stays off, like RealInput in input_textual.jsx: the
+    // maxLengthGuard handles live blocking, the constraint validates at
+    // submit, and navi-max-length keeps the value readable from the DOM.
+    "navi-max-length": maxLength
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Edition in place: a value is read where it is written, and the field editing
+ * it is drawn exactly on that spot.
+ *
+ * The read text stays in the DOM the whole time and the field is laid over it,
+ * in absolute. That is what keeps the layout still: the text is what gives the
+ * box its size (a table cell especially, whose width belongs to the whole
+ * column), so taking it away would resize the box the moment one starts
+ * editing. The field is there at all times too — inert and transparent until
+ * edition starts — so appearing costs no mount.
+ *
+ * Being absolute, the field lands on the closest positioned ancestor. What it
+ * takes for it to land ON the text and not merely near it is the contract
+ * described on `Editable` below.
+ */
+const css$H = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -48034,12 +48260,30 @@ const css$I = /* css */`
     right: var(--inset-right);
     bottom: var(--inset-bottom);
     left: var(--inset-left);
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+    border-radius: inherit;
     opacity: 0;
     pointer-events: none;
 
-    input {
+    /* The field takes the place of the text, so the text is what decides how
+       it is drawn — a control's own font (its size and family come from
+       --navi-control-*) would make the value change size the moment one edits
+       it. Unlayered, so it wins over the control's own sheet. */
+    .navi_input {
+      font-size: inherit;
+      font-family: inherit;
+      border-radius: inherit;
+    }
+    input,
+    textarea {
       font-weight: inherit;
+      font-size: inherit;
+      font-family: inherit;
       text-align: inherit;
+      line-height: inherit;
+      border-radius: inherit;
     }
 
     &[data-editing] {
@@ -48048,6 +48292,15 @@ const css$I = /* css */`
     }
   }
 `;
+
+/**
+ * The state of "this thing is being edited", to hand to `Editable`.
+ *
+ * `startEditing` takes the event that asked for edition; `Editable` reads
+ * `event.detail.initialValue` from it and types it into the field as a first
+ * keystroke, which is how a table starts editing on a letter key instead of
+ * losing that letter.
+ */
 const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(event => {
@@ -48070,8 +48323,108 @@ const useEditionController = () => {
     editionJustEnded
   };
 };
+
+/**
+ * The value written in place, with the field that edits it drawn exactly over
+ * it: same first character, same font, same box.
+ *
+ * `Editable` renders the text (`children`, or `value` in a `<span>`) and, next
+ * to it, an absolutely positioned field. Landing that field on the text is a
+ * contract with the element around it:
+ *
+ * 1. **That element must be positioned** (`position: relative`) and must be the
+ *    one drawing the text. The field is absolute: it goes to the closest
+ *    positioned ancestor, so `Editable` belongs where the text is, never lifted
+ *    out of it.
+ * 2. **The text must start at the same place in both.** The field is pulled out
+ *    over the parent's border (its insets are the parent's border sizes,
+ *    negated) so it covers the parent's border box; from there, the field's own
+ *    border + padding must add up to the parent's border + padding, or the
+ *    first character moves by the difference. The way to say it is to repeat
+ *    both on `Editable` — `paddingLeft`, `paddingTop`, `borderWidth`, plus
+ *    `borderRadius` so the corners fall on the parent's. A parent that paints
+ *    no border of its own (a table cell drawing its grid with a pseudo-element)
+ *    needs `borderWidth="0"` here, otherwise the control's default border eats
+ *    into the text.
+ * 3. **The field must fill that box**: `width="100%"` (or `expandX`), and
+ *    `height="100%"` when the text sits in a box taller than a line. Horizontal
+ *    placement comes from the inherited `text-align`, and an inherited
+ *    alignment only means something in a box spanning the whole width.
+ *
+ * The font is not part of the contract: family, size, weight, line height and
+ * alignment are inherited from the text, so the value keeps its own appearance
+ * while being edited. Declaring one here is how a value changes size the moment
+ * one edits it.
+ *
+ * For reference, both ways of holding up that end: `Table`'s editable cells do
+ * it in CSS (the `[data-editing] input` rules in `control/table/table_css.js`),
+ * the demo `control/demos/action/8_editable_demo.html` does it with props.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   action: Function | object,
+ *   editing?: { event?: Event } | null,
+ *   onEditEnd?: (detail: { success?: boolean, cancelled?: boolean, event: Event }) => void,
+ *   name?: string,
+ *   value?: any,
+ *   valueSignal?: import("@preact/signals").Signal,
+ *   constraints?: any,
+ *   type?: string,
+ *   multiline?: boolean,
+ *   minRows?: number,
+ *   maxRows?: number,
+ *   required?: boolean,
+ *   readOnly?: boolean,
+ *   min?: number | string,
+ *   max?: number | string,
+ *   step?: number | string,
+ *   minLength?: number,
+ *   maxLength?: number,
+ *   pattern?: string,
+ *   wrapperProps?: object,
+ *   autoFocusSelect?: boolean,
+ *   width?: string | number,
+ *   height?: string | number,
+ *   [key: string]: any,
+ * }>}
+ *
+ * @param {Function|object} action
+ *   What saves the value; it receives what was typed. Edition ends on its
+ *   success, and a failure keeps the field open with what the user wrote.
+ *
+ * @param {{ event?: Event }|null} [editing]
+ *   Whether the field is open, and what asked for it — the object
+ *   `useEditionController` holds. Anything falsy leaves the text alone.
+ *
+ * @param {Function} [onEditEnd]
+ *   Called once edition is over, whichever way it went: `success` after the
+ *   action, `cancelled` on Escape, on a blur that changed nothing, or on a blur
+ *   leaving an invalid value.
+ *
+ * @param {import("@preact/signals").Signal} [valueSignal]
+ *   The value as a signal, when what is typed must be readable live by the rest
+ *   of the page. It is written as the user types and restored to what it was on
+ *   cancel; `value` alone is enough for the ordinary case.
+ *
+ * @param {boolean} [multiline]
+ *   Swaps the field for a `Textarea` — the same edition in place, for a value
+ *   written on several lines (a message, a description). Enter then makes a
+ *   line instead of validating: what is typed is saved when the field is left,
+ *   and Escape gives up on it. `minRows` / `maxRows` bound its height; the props
+ *   only an `<input>` understands (`type`, `min`, `max`, `step`, `pattern`) are
+ *   dropped.
+ *
+ * @param {boolean} [autoFocusSelect=true]
+ *   Selects the whole value when the field opens, so typing replaces it. Turn
+ *   it off to have the caret land in a value one comes to amend.
+ *
+ * @param {object} [wrapperProps]
+ *   Props for the absolutely positioned wrapper around the field, for the rare
+ *   case where its own box needs a say (a stacking context, an inset to nudge).
+ *   Every other unknown prop goes to the field itself, styling props included.
+ */
 const Editable = props => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -48082,6 +48435,9 @@ const Editable = props => {
     onEditEnd,
     constraints,
     type,
+    multiline,
+    minRows,
+    maxRows,
     required,
     readOnly,
     min,
@@ -48127,29 +48483,24 @@ const Editable = props => {
       }
     }
   }, [editing]);
-  const input = jsx(Input, {
-    ref: ref,
+  const controlProps = {
+    ref,
     ...rest,
-    type: type,
-    name: name,
-    value: value,
-    valueSignal: valueSignal,
+    name,
+    value,
+    valueSignal,
     autoFocus: editing,
     autoFocusVisible: true,
-    autoFocusSelect: autoFocusSelect,
+    autoFocusSelect,
     cancelOnEscape: true,
     cancelOnBlurInvalid: true,
-    constraints: constraints,
-    required: required,
-    readOnly: readOnly,
-    min: min,
-    max: max,
-    step: step,
-    minLength: minLength,
-    maxLength: maxLength,
-    pattern: pattern,
-    width: width,
-    height: height,
+    constraints,
+    required,
+    readOnly,
+    minLength,
+    maxLength,
+    width,
+    height,
     onCancel: e => {
       if (valueSignal) {
         valueSignal.value = valueWhenEditStartRef.current;
@@ -48186,6 +48537,21 @@ const Editable = props => {
         event: e
       });
     }
+  };
+  // What is typed on several lines goes into a textarea; the props that only
+  // mean something to an <input> (its type and the bounds that come with it)
+  // stay on that side.
+  const control = multiline ? jsx(Textarea, {
+    ...controlProps,
+    minRows: minRows,
+    maxRows: maxRows
+  }) : jsx(Input, {
+    ...controlProps,
+    type: type,
+    min: min,
+    max: max,
+    step: step,
+    pattern: pattern
   });
   const wrapperRef = useRef();
   useLayoutEffect(() => {
@@ -48213,7 +48579,7 @@ const Editable = props => {
       // - is ignored by screen readers
       inert: editing ? undefined : "",
       "data-editing": editing ? "" : undefined,
-      children: input
+      children: control
     })]
   });
 };
@@ -48620,7 +48986,7 @@ installImportMetaCssBuild(import.meta);/**
  * meet are drawn once instead of twice, and only the outer corners stay
  * rounded. See docs/control_group.md.
  */
-const css$H = /* css */`
+const css$G = /* css */`
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
 
@@ -48755,7 +49121,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined
@@ -48954,7 +49320,7 @@ installImportMetaCssBuild(import.meta);/**
  * So: nothing scrollable between the cap and the slides (a shared [data-body]
  * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
-const css$G = /* css */`
+const css$F = /* css */`
   /* Where the picture stands relative to the slide that is current, in boxes
      (see paintTravelProgress). Declared, so that it is a NUMBER the browser can
      interpolate: the trait an indicator draws has to travel with the slides,
@@ -49448,7 +49814,7 @@ const SlideContainer = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$G, "@jsenv/navi/src/layout/slide_container.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/layout/slide_container.jsx"];
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
   // The box itself: it is what takes the keyboard when what is on screen holds
@@ -53452,7 +53818,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$F = /* css */`
+const css$E = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -54040,7 +54406,7 @@ const css$F = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -55036,7 +55402,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$E = /* css */`
+const css$D = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -55496,7 +55862,7 @@ const css$E = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -56535,7 +56901,7 @@ installImportMetaCssBuild(import.meta);/**
  * and only under its own `sizeFromAnchor`) pass through untouched via
  * `...rest` to whichever of Popover/Dialog actually renders.
  */
-const css$D = /* css */`
+const css$C = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -56652,7 +57018,7 @@ const css$D = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/layout/popup.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -56713,7 +57079,7 @@ const Popup = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -56867,7 +57233,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -57727,7 +58093,7 @@ installImportMetaCssBuild(import.meta);/**
  * looking again. Anything else that closes the popup (the cancel button,
  * Escape, a click outside) is no.
  */
-const css$B = /* css */`
+const css$A = /* css */`
   .navi_picker_confirm_body {
     display: flex;
     min-width: 180px;
@@ -57744,7 +58110,7 @@ const css$B = /* css */`
   }
 `;
 const PickerConfirmResolver = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_confirm.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/control/picker/picker_confirm.jsx"];
   const Next = useNextResolver();
   if (props.type !== "confirm") {
     return jsx(Next, {
@@ -58052,7 +58418,7 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -58130,7 +58496,7 @@ const Separator = ({
   style,
   ...props
 }) => {
-  import.meta.css = [css$A, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -58623,7 +58989,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$y = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -58676,6 +59042,10 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
       position: relative;
       font-size: var(--navi-control-font-size);
       font-family: var(--navi-control-font-family);
+      /* A selectable item is a control: it stands in a row with pickers and
+         inputs (a horizontal list of choices), so it takes the control line
+         with the control font — the same number of pixels tall as them. */
+      line-height: var(--navi-control-line-height);
       -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
   }
@@ -58838,7 +59208,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$z, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -59481,7 +59851,7 @@ const ListVirtualContext = createContext(null);
 // that returning a component of one's own — instead of a bare <List.Item> —
 // works the same way.
 const ListRowContext = createContext(null);
-const css$y = /* css */`
+const css$x = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -60030,7 +60400,7 @@ const css$y = /* css */`
     gap: 8px;
     color: light-dark(#b91c1c, #fca5a5);
     font-size: 0.9em;
-    line-height: 1.4;
+    line-height: var(--navi-line-height);
     background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
     border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
     border-radius: 6px;
@@ -60038,7 +60408,7 @@ const css$y = /* css */`
   .navi_list_error_icon {
     flex: none;
     font-size: 1em;
-    line-height: 1.4;
+    line-height: var(--navi-line-height);
   }
   /* Same rule as [data-scrollable] in box.jsx, said again for this scroller:
      what an item holds IS against the edge of the scroll container — the list
@@ -60180,7 +60550,7 @@ const css$y = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -64021,7 +64391,7 @@ const createBadgeRegistry = () => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -64153,7 +64523,7 @@ const BadgeUI = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$x, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -64221,7 +64591,7 @@ const BadgeButtonUI = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -64362,7 +64732,7 @@ const useBadgeRegistry = (children, enabled) => {
  *   component grants (a <Picker>, see max_lines_context.js).
  */
 const BadgeList = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/text/badge_list.jsx"];
   const {
     maxLines,
     max,
@@ -64705,7 +65075,7 @@ const BadgeListContent = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -64736,7 +65106,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -65053,7 +65423,7 @@ const PickerDateUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "date",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         capitalize: true,
         ...props
       });
@@ -65085,7 +65455,7 @@ const PickerMonthUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "month",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         ...props
       });
     }
@@ -65116,7 +65486,7 @@ const PickerWeekUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "week",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         ...props
       });
     }
@@ -65147,7 +65517,7 @@ const PickerTimeUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "time",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         ...props
       });
     }
@@ -65178,7 +65548,7 @@ const PickerDurationUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "time",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         ...props
       });
     }
@@ -65208,7 +65578,7 @@ const PickerDatetimeUI = props => {
     if (!placeholder) {
       return jsx(Time, {
         type: "datetime",
-        color: "var(--picker-placeholder-color",
+        color: "var(--picker-placeholder-color)",
         ...props
       });
     }
@@ -65243,7 +65613,7 @@ const PickerFileUI = () => {
   return String(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -65261,11 +65631,8 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
       --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
       --picker-color: currentColor;
-      --picker-placeholder-color: color-mix(
-        in srgb,
-        currentColor 60%,
-        transparent
-      );
+      --picker-placeholder-color: var(--navi-placeholder-color);
+      --picker-placeholder-font-style: var(--navi-placeholder-font-style);
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       /* Hover */
       --picker-border-color-hover: color-mix(
@@ -65364,6 +65731,11 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
+    /* The control line, like the control font: a picker is drawn by hand next
+       to inputs that sit on it, and its box is sized in lh — the same number
+       of pixels, or a picker and an input in one row are not the same height
+       and their text is not on the same row. */
+    line-height: var(--navi-control-line-height);
     /* The frame is drawn by the box, but its radius is declared here, on the
        control root, like every other navi control does — so anything styling
        the picker from the outside (a Group squaring the corners it joins) has
@@ -65448,6 +65820,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
+        font-style: var(--picker-placeholder-font-style);
       }
 
       /* A <BadgeList> caps its own rows: it renders the badges that fit and a
@@ -65758,7 +66131,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -66328,7 +66701,7 @@ installImportMetaCssBuild(import.meta);/**
  * refuse it on purpose, which is what keeps the focus where the travel happens
  * instead of moving it into a slide that is about to leave.
  */
-const css$t = /* css */`
+const css$s = /* css */`
   @layer navi {
     .navi_picker_spin {
       /* A picker one steps through is still a picker: what themes every picker
@@ -66843,7 +67216,7 @@ const Spin = ({
   nextLabel,
   ...rest
 }) => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
   // What the group around it says, when there is one: how big the whole thing
   // is written is said once, on the group, and every spin in it follows.
@@ -67379,7 +67752,7 @@ const renderValueDefault = value => String(value ?? "");
  * are passed on to the spins sitting in them.
  */
 const SpinGroup = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const {
     size
   } = props;
@@ -67892,7 +68265,7 @@ const TimeRangeSpin = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$s = /* css */`
+const css$r = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -67933,7 +68306,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -67961,291 +68334,6 @@ const CheckboxGroupInterface = props => {
       ...childrenWrapperProps,
       children: props.children
     })
-  });
-};
-
-installImportMetaCssBuild(import.meta);/**
- * Multiline text control that grows with what is typed.
- *
- * Autosize is native: `field-sizing: content` lets the browser size the
- * textarea from its value — no hidden mirror textarea to measure against (the
- * technique libraries used before the property existed). `minRows`/`maxRows`
- * become min/max heights in `lh` units on top of it; past `maxRows` the
- * content scrolls.
- *
- * TextareaCharCount is the counter that goes with it, and the caller places
- * it: under the box, in a form footer, next to a label — fed with the same
- * value/signal as the textarea. The textarea draws no counter of its own.
- *
- * Styled as a `.navi_input` box (border, background, focus ring, readonly and
- * disabled fades, variants): one look for everything one types into. The
- * shared sheet is registered here too — a page may render a Textarea without
- * any Input.
- */
-const css$r = /* css */`
-  .navi_input.navi_textarea {
-    .navi_control_input {
-      min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
-      /* Above maxRows the box stops growing and the content scrolls. The
-         99999 fallback means "no cap" without needing a conditional rule. */
-      max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
-      field-sizing: content;
-      /* Explicit, never normal, for two independent reasons.
-         minRows/maxRows are lengths in lh, and with line-height normal the lh
-         unit resolves to a theoretical value that does not match the real
-         rendered line — the box then jumps by a few pixels the moment the first
-         character replaces the theory with a real line.
-         And a line box under "normal" takes the height of the tallest font it
-         holds, so the one line carrying an emoji stands taller than the ones
-         around it — here, where the text is typed and no glyph can be wrapped
-         the way emojiAsIcon wraps one, the line height is the only lever.
-         1.5 is also tall enough to contain an emoji's own box, so it is not
-         clipped either; a tighter value would keep the rows even and cut the
-         glyph. See docs/typography.md. */
-      line-height: 1.5;
-      /* The control grows itself; resizable below hands the handle back. */
-      resize: none;
-      overflow: auto;
-      /* A placeholder must be readable in full before anything is typed: a
-         field that opens already scrolled reads as a field that already has
-         text in it. Its wrapped height is measured (see usePlaceholderHeight)
-         because it only exists once laid out, and it only raises the floor
-         while the placeholder is what is being shown — what is typed sizes the
-         box on its own. */
-      &:placeholder-shown {
-        min-height: max(
-          calc(var(--textarea-min-rows, 1.5) * 1lh),
-          var(--x-textarea-placeholder-height, 0px)
-        );
-      }
-    }
-    &[data-resizable] .navi_control_input {
-      height: calc(var(--textarea-min-rows, 1.5) * 1lh);
-      /* The two are exclusive: with field-sizing content the browser removes
-         the resize handle (the size follows the content, there is nothing to
-         drag). resizable means the hand takes over — fixed sizing, starting
-         at minRows, and the drag writes its own inline height from there. */
-      field-sizing: fixed;
-      resize: vertical;
-    }
-  }
-  .navi_textarea_char_count {
-    color: color-mix(in srgb, currentColor 60%, transparent);
-    font-size: 0.75em;
-    user-select: none;
-  }
-`;
-
-/**
- * @type {import("ignore:preact").FunctionComponent<{
- *   value?: string,
- *   defaultValue?: string,
- *   signal?: import("@preact/signals").Signal<string>,
- *   name?: string,
- *   minRows?: number,
- *   maxRows?: number,
- *   resizable?: boolean,
- *   maxLength?: number,
- *   width?: string,
- *   [key: string]: any,
- * }>}
- * @param {number} [minRows=1.5] Height the empty control starts at, in lines.
- *   The default shows half of a second line: enough to read "multiline" at a
- *   glance without the height of a full extra row.
- * @param {number} [maxRows] Lines after which the control stops growing and
- *   scrolls instead. Without it the control grows with its content.
- * @param {boolean} [resizable] Give the browser's vertical resize handle back.
- *   An exchange, not an addition: the hand takes over from the automatic
- *   growth, so the control stops following what is typed and stays at the
- *   height it was last dragged to (starting at `minRows`).
- * @param {number} [maxLength] The character limit, validated at submit. Pair
- *   with `maxLengthGuard` to block typing past it, and render a
- *   TextareaCharCount to show it.
- * @param {string} [width="35ch"] The control's width. Fixed on purpose: with
- *   field-sizing the width would otherwise follow the longest line, and a box
- *   that widens while one types is a box one chases.
- */
-const Textarea = ({
-  // Destructured, never deleted off the props object: Preact reuses the same
-  // props object when an internal state update re-renders the component, so a
-  // delete would make these props vanish from the second render on (the box
-  // then jumps back to the default minRows at the first keystroke).
-  minRows = 1.5,
-  maxRows,
-  resizable,
-  width = "35ch",
-  ...props
-}) => {
-  import.meta.css = [inputCss + css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  usePlaceholderHeight(props.ref, props.placeholder);
-  const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
-    controlType: "input"
-  });
-  const {
-    basePseudoState,
-    children
-  } = hostProps;
-  // Children go through ControlChildrenWrapper below; inside the <textarea>
-  // element they would become its text content.
-  delete hostProps.children;
-  const loading = basePseudoState[":-navi-loading"];
-  delete rootProps.width;
-  hostProps.width = width;
-  return jsxs(Box, {
-    as: "span",
-    inline: true,
-    flex: true,
-    baseClassName: "navi_input",
-    className: "navi_textarea",
-    ...rootProps,
-    basePseudoState: basePseudoState,
-    "data-resizable": resizable ? "" : undefined,
-    styleCSSVars: InputStyleCSSVars,
-    pseudoStateSelector: ".navi_control_input",
-    pseudoClasses: InputPseudoClasses,
-    pseudoElements: InputPseudoElements,
-    "data-callout-anchor": ".navi_control_input",
-    style: {
-      "--textarea-min-rows": minRows,
-      "--textarea-max-rows": maxRows,
-      ...rootProps.style
-    },
-    children: [jsx(LoadingOutline, {
-      loading: loading,
-      color: "var(--loader-color)",
-      inset: -1
-    }), jsx(RealTextarea, {
-      ...hostProps
-    }), jsx(ControlChildrenWrapper, {
-      ...childrenWrapperProps,
-      children: children
-    })]
-  });
-};
-
-/**
- * The counter that goes with a Textarea: "50/200" — how many characters are
- * typed over how many the limit allows, the way Material writes it (just the
- * count when there is no `maxLength`). Where it goes is the caller's call,
- * which is why it is a separate component rather than something the textarea
- * draws: put it under the box, in a form footer, next to a label, and feed it
- * the same value or signal as the textarea.
- *
- * @type {import("ignore:preact").FunctionComponent<{
- *   value?: string,
- *   signal?: import("@preact/signals").Signal<string>,
- *   maxLength?: number,
- *   [key: string]: any,
- * }>}
- * @param {string} [value] The text being counted. Say `signal` instead for a
- *   two-way bound textarea: reading it here subscribes the count to it.
- * @param {number} [maxLength] The limit, shown after the count ("50/200").
- *   Without it the count stands alone.
- */
-const TextareaCharCount = ({
-  value,
-  signal,
-  maxLength,
-  ...rest
-}) => {
-  import.meta.css = [css$r, "@jsenv/navi/src/control/input/textarea.jsx"];
-  const resolvedValue = signal ? signal.value : value;
-  const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
-  return jsx(Box, {
-    as: "span",
-    baseClassName: "navi_textarea_char_count",
-    ...rest,
-    children: maxLength === undefined ? length : `${length}/${maxLength}`
-  });
-};
-
-// `field-sizing: content` sizes the box from the value, and an empty field has
-// none — the placeholder is text the browser refuses to make room for. So the
-// height it wraps to is measured and published as --x-textarea-placeholder-height
-// for the CSS above to use as a floor.
-const usePlaceholderHeight = (ref, placeholder) => {
-  useLayoutEffect(() => {
-    const textareaEl = ref.current;
-    if (!placeholder) {
-      textareaEl.style.removeProperty("--x-textarea-placeholder-height");
-      return null;
-    }
-    let widthMeasured;
-    const measure = () => {
-      // What is typed sizes the box itself; the placeholder is not displayed
-      // then, and scrollHeight would report the value's height instead.
-      if (textareaEl.value !== "") {
-        return;
-      }
-      const {
-        paddingTop,
-        paddingBottom
-      } = getComputedStyle(textareaEl);
-      // Cleared before reading: scrollHeight can never report less than the
-      // height already applied, so measuring on top of a previous measure could
-      // only ever grow the box, never let it shrink back on a wider viewport.
-      textareaEl.style.setProperty("--x-textarea-placeholder-height", "0px");
-      const contentHeight = textareaEl.scrollHeight - parseFloat(paddingTop) - parseFloat(paddingBottom);
-      widthMeasured = textareaEl.clientWidth;
-      textareaEl.style.setProperty("--x-textarea-placeholder-height", `${contentHeight}px`);
-    };
-    measure();
-    // Measuring writes the variable that sets this element's own height, and
-    // mutating layout from inside a resize callback is what makes the browser
-    // report "ResizeObserver loop completed with undelivered notifications".
-    // So the write waits for the frame that resize produced.
-    let measureFrame = null;
-    const requestMeasure = () => {
-      if (measureFrame !== null) {
-        return;
-      }
-      measureFrame = requestAnimationFrame(() => {
-        measureFrame = null;
-        measure();
-      });
-    };
-    // The placeholder wraps against the available width, so a new width is a
-    // new number of lines. Height changes are ignored: this measure is what
-    // causes them, and reacting to them would be reacting to ourselves.
-    const resizeObserver = new ResizeObserver(() => {
-      if (textareaEl.clientWidth !== widthMeasured) {
-        requestMeasure();
-      }
-    });
-    resizeObserver.observe(textareaEl);
-    // The width may have changed while the field held a value, when measuring
-    // was impossible — emptying it is when the placeholder comes back.
-    const onInput = () => {
-      if (textareaEl.value === "") {
-        measure();
-      }
-    };
-    textareaEl.addEventListener("input", onInput);
-    return () => {
-      if (measureFrame !== null) {
-        cancelAnimationFrame(measureFrame);
-      }
-      resizeObserver.disconnect();
-      textareaEl.removeEventListener("input", onInput);
-    };
-  }, [placeholder]);
-};
-const RealTextarea = ({
-  maxLength,
-  ...domProps
-}) => {
-  const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
-  return jsx(Box, {
-    ...domProps,
-    as: "textarea",
-    baseClassName: "navi_control_input",
-    ...autoSelectReadOnlyProps,
-    // Native maxLength stays off, like RealInput in input_textual.jsx: the
-    // maxLengthGuard handles live blocking, the constraint validates at
-    // submit, and navi-max-length keeps the value readable from the DOM.
-    "navi-max-length": maxLength
   });
 };
 
@@ -68988,9 +69076,10 @@ const css$o = /* css */`
       /* Room for the chevron, which sits over the padding rather than beside
          the control — anything beside it would be a click that misses. */
       padding-right: calc(var(--x-padding-right) + 1em);
-      /* A form control keeps a line of its own whatever the page is written in,
-         and lh units elsewhere in the box are resolved against a real number. */
-      line-height: normal;
+      /* Same line as every other field (see --navi-line-height): a select and
+         an input side by side must be the same height, and lh units elsewhere
+         in the box need a real number to resolve against. */
+      line-height: var(--navi-control-line-height);
       /* The closed control is drawn by us so it matches the other fields; the
          list it opens is untouched and stays the system's. */
       appearance: none;
@@ -76302,7 +76391,10 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --badge-count-padding-x-default: 0.5em;
-    --badge-count-padding-y-default: 0.2em;
+    /* Ink to edge: ~6px above and below the digits at the default size, for
+       ~7px on the sides — a little less than the sides, which is what reads
+       as balanced on a pill; 0.2em read as squashed. */
+    --badge-count-padding-y-default: 0.3em;
 
     /* Each side resolves the most specific value it was given, from the side
        itself down to the axis, the shorthand, then the default. */
@@ -76339,6 +76431,11 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
     color: var(--x-color);
     font-size: var(--font-size);
     font-variant-numeric: tabular-nums;
+    /* Its own line, relative to its own font: inherited from a control it
+       would arrive as that control's pixels (a button's 17px), and a badge
+       drawn bigger or smaller than the button's text would get a line box
+       that does not match its glyph — a digit off its circle's center. */
+    line-height: var(--navi-line-height);
     vertical-align: inherit;
 
     &[data-accent-needs-dark-fg] {
@@ -76362,7 +76459,6 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
       padding-right: var(--x-badge-count-padding-right);
       padding-bottom: var(--x-badge-count-padding-bottom);
       padding-left: var(--x-badge-count-padding-left);
-      line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color);
       border-radius: 1em;
@@ -76417,7 +76513,10 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-radius: 2em;
+        /* 1.8em of the badge font is 1.26em of the text's: inside the line
+           (1.25), so a circle beside a button's label does not make that
+           button taller than its neighbours. 2em did, by a pixel and a half. */
+        --x-radius: 1.8em;
         --x-number-font-size: unset;
       }
       &[data-three-chars] {
@@ -76451,7 +76550,11 @@ const BadgeCount = ({
   integer,
   lang,
   loading,
-  textAnchor = "center",
+  // On the capitals rather than on the line box: a count sits beside a word,
+  // and the eye centers it on the letters, not on the leading around them —
+  // the line box center is above that, by half the leading plus what the
+  // font keeps above its capitals (see TextAnchor).
+  textAnchor = "char-center",
   lineLayout,
   ...props
 }) => {
@@ -77084,9 +77187,6 @@ const MessageBox = ({
   padding = "sm",
   icon,
   leftStripe,
-  // A message is free text: an emoji is expected in it, and must not push
-  // the first line down next to the icon and the close button.
-  emojiAsIcon = true,
   children,
   onClose,
   ...rest
@@ -77130,7 +77230,6 @@ const MessageBox = ({
           aspectRatio: "auto",
           children: icon
         }), jsx(Text, {
-          emojiAsIcon: emojiAsIcon,
           children: children
         }), onClose &&
         // A column as tall as the first line of the message, pinned to the
@@ -79267,5 +79366,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, renderEmojiAsIcon, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

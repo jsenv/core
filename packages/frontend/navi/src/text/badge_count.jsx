@@ -19,7 +19,10 @@ const css = /* css */ `
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --badge-count-padding-x-default: 0.5em;
-    --badge-count-padding-y-default: 0.2em;
+    /* Ink to edge: ~6px above and below the digits at the default size, for
+       ~7px on the sides — a little less than the sides, which is what reads
+       as balanced on a pill; 0.2em read as squashed. */
+    --badge-count-padding-y-default: 0.3em;
 
     /* Each side resolves the most specific value it was given, from the side
        itself down to the axis, the shorthand, then the default. */
@@ -56,6 +59,11 @@ const css = /* css */ `
     color: var(--x-color);
     font-size: var(--font-size);
     font-variant-numeric: tabular-nums;
+    /* Its own line, relative to its own font: inherited from a control it
+       would arrive as that control's pixels (a button's 17px), and a badge
+       drawn bigger or smaller than the button's text would get a line box
+       that does not match its glyph — a digit off its circle's center. */
+    line-height: var(--navi-line-height);
     vertical-align: inherit;
 
     &[data-accent-needs-dark-fg] {
@@ -79,7 +87,6 @@ const css = /* css */ `
       padding-right: var(--x-badge-count-padding-right);
       padding-bottom: var(--x-badge-count-padding-bottom);
       padding-left: var(--x-badge-count-padding-left);
-      line-height: var(--navi-line-height);
       background: var(--x-background);
       background-color: var(--x-background-color);
       border-radius: 1em;
@@ -134,7 +141,10 @@ const css = /* css */ `
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-radius: 2em;
+        /* 1.8em of the badge font is 1.26em of the text's: inside the line
+           (1.25), so a circle beside a button's label does not make that
+           button taller than its neighbours. 2em did, by a pixel and a half. */
+        --x-radius: 1.8em;
         --x-number-font-size: unset;
       }
       &[data-three-chars] {

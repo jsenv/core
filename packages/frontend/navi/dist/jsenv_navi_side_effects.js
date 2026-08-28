@@ -564,6 +564,32 @@ const css = /* css */`
       --navi-typo-xl: 1.25rem; /* 20px at 16px base */
       --navi-typo-xxl: 1.5rem; /* 24px at 16px base */
 
+      /* The line every text is written on, controls included. A number
+         rather than "normal", because of the emoji: its box is taller than a
+         letter's, so under "normal" the one line carrying one stands taller
+         than the lines around it, and under a tighter line its top is cut.
+         1.25 is where neither happens — 1 clips the glyph, 1.5 spaces the rows
+         out more than reading them asks for — which also makes it the floor
+         for an app that displays what people typed.
+         The document is written on it; the components that come with a line of
+         their own from the browser (Button, Input, Textarea, Select) are handed
+         it by name. One number everywhere is what keeps a value on the same
+         line whether it is typed in a field or drawn in the page.
+         See docs/typography.md. */
+      --navi-line-height: 1.25;
+      line-height: var(--navi-line-height);
+      /* The same line for a control, snapped to the pixel. The browser lays a
+         line out at its exact height but paints the glyph on a pixel row: at
+         the default control size (13.333px) the line is 16.666px, and the
+         two-thirds that do not fit go entirely under the glyph, which then
+         sits a pixel above the middle of its field. A whole number of pixels
+         has no remainder to put anywhere. Written with em so it resolves on
+         the control that uses it, at that control's own size. */
+      --navi-control-line-height: round(
+        calc(var(--navi-line-height) * 1em),
+        1px
+      );
+
       /* Color keywords.
            primary:   the ink of the paper, at full strength. An absolute
                       rather than currentColor: it is what brings a run back
@@ -583,6 +609,17 @@ const css = /* css */`
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+
+      /* What a control shows while it holds nothing: the ::placeholder of an
+         input, the empty value slot of a picker. One place for the whole app:
+
+           :root {
+             --navi-placeholder-color: #8a94a6;
+             --navi-placeholder-font-style: italic;
+           }
+      */
+      --navi-placeholder-color: var(--navi-color-discrete);
+      --navi-placeholder-font-style: normal;
     }
 
     /* A popup is a new paper (see --navi-popup-color): primary is the ink it
