@@ -716,13 +716,7 @@ const LinkPlain = (props) => {
     currentIndicatorPosition === "right" ||
     currentIndicatorPosition === "top" ||
     currentIndicatorPosition === "bottom" ? (
-      <LinkCurrentIndicator
-        // Only the bar one can actually see carries the row's name, because a
-        // name belongs to one element at a time and every tab holds a bar. The
-        // browser then has the same thing in two places from one page to the
-        // next, and moves it — which is the whole of "the bar slides".
-        viewTransitionName={innerCurrent ? nav?.indicatorName : null}
-      />
+      <LinkCurrentIndicator />
     ) : null;
 
   const { onClick, preventDefault } = props;
@@ -844,12 +838,9 @@ const LinkPlain = (props) => {
   );
 };
 
-const LinkCurrentIndicator = ({ viewTransitionName }) => {
-  return (
-    <span
-      className="navi_current_indicator"
-      style={viewTransitionName ? { viewTransitionName } : undefined}
-    />
-  );
+// Named by the <Nav> around the link when the link is current, from its CSS:
+// that is what makes the bar glide from one tab to the next (see nav.jsx).
+const LinkCurrentIndicator = () => {
+  return <span className="navi_current_indicator" />;
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);

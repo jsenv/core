@@ -74,6 +74,10 @@ import {
   takeoverRoutingRenderingHold,
 } from "./rendering_hold.js";
 import {
+  holdTransitionDestination,
+  releaseTransitionDestination,
+} from "./transition_destination.js";
+import {
   holdTransitionWindow,
   releaseTransitionWindow,
 } from "./transition_window.js";
@@ -783,6 +787,7 @@ const rebuildWatcher = () => {
     }
     beginTransition({
       page: pages[index],
+      url: navigationUrl,
       // Which way it plays: what the navigation itself said first — the link
       // being pressed is where the way the app is being walked is known — then
       // the relation, and forward for a navigation that asked for a movement
@@ -804,11 +809,12 @@ const rebuildWatcher = () => {
 
 // What plays when no relation matched (see defineRouteDefaultTransition), what
 // the navigation now landing asked for on its own (see readNavigationRequest),
-// and whether it found an answer already — a relation's transition, a "none",
-// a RouteTravel travel. The last two are read at the start of every
-// navigation, so they are always about the latest one.
+// where it goes, and whether it found an answer already — a relation's
+// transition, a "none", a RouteTravel travel. The last three are read at the
+// start of every navigation, so they are always about the latest one.
 let defaultTransition = null;
 let navigationRequest = null;
+let navigationUrl = null;
 let navigationAnimated = false;
 
 // The two ends of every navigation, watched from here on. The picture of the
@@ -820,6 +826,7 @@ let navigationAnimated = false;
 observeBeforeRouting((details) => {
   navigationAnimated = false;
   navigationRequest = readNavigationRequest(details);
+  navigationUrl = details.url;
   if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
@@ -827,14 +834,17 @@ observeBeforeRouting((details) => {
 });
 observeAfterRouting(() => {
   const request = navigationRequest;
+  const url = navigationUrl;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
+  navigationUrl = null;
   if (!navigationAnimated && (request || defaultTransition)) {
     const { type, duration } = resolveTransition(request, defaultTransition);
     if (type !== "none") {
       beginTransition({
         page: null,
+        url,
         // A default has no direction: nothing says which of two arbitrary
         // pages is before the other, and the attribute is then worn empty —
         // present for whoever keys on "one of ours is playing", silent on the
@@ -877,7 +887,7 @@ const findRelation = (fromPage, toPage) => {
 // attributes over, and only their owner may take them off.
 let currentTransition = null;
 
-const beginTransition = ({ page, direction, type, duration }) => {
+const beginTransition = ({ page, url, direction, type, duration }) => {
   navigationAnimated = true;
   const documentElement = document.documentElement;
   // One navigation, one animator. A RouteTravel box already travelling this
@@ -892,6 +902,9 @@ const beginTransition = ({ page, direction, type, duration }) => {
   }
   const transition = {};
   currentTransition = transition;
+  // Said before the picture is taken: whoever names something for a movement
+  // between two pages decides on it now (see transition_destination.js).
+  holdTransitionDestination(transition, url);
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
@@ -1015,6 +1028,7 @@ const beginTransition = ({ page, direction, type, duration }) => {
       documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
       documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
       releaseTransitionWindow(transition);
+      releaseTransitionDestination(transition);
       if (restoreDuration) {
         restoreDuration();
       }

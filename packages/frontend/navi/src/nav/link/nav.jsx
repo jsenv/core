@@ -7,12 +7,16 @@ import { toChildArray } from "preact";
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { observeTransitionDestination } from "../transition_destination.js";
 import { NavContext } from "./nav_context.js";
 
 // A name of its own for the bar under the current tab, one per nav on the page:
 // two bars answering to the same name are two elements claiming one picture,
 // and the browser refuses the whole transition rather than pick.
 let navCount = 0;
+// Worn by a nav of routes while a route movement between two of its tabs is
+// pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
+const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
 
 const css = /* css */ `
   @layer navi {
@@ -91,6 +95,30 @@ const css = /* css */ `
     &[data-nav-indicator="right"] > .navi_nav_indicator {
       right: 0;
     }
+  }
+
+  /* The bar under the current tab of a nav made of routes is NAMED: a change
+     played as a view transition then finds it on both pictures and moves it
+     from the tab it was under to the tab it is under, which is all "the bar
+     slides" is. The name is the row's (--nav-indicator-name, absent when the
+     row asked for no slide) and only the bar one can see wears it: every tab
+     holds a bar, and a name belongs to one element at a time. */
+  .navi_nav .navi_link[data-href-current] .navi_current_indicator {
+    view-transition-name: var(--nav-indicator-name);
+  }
+  /* Named for a movement it takes part in, and for that alone. While the PAGES
+     are the ones moving — a route transition, a route travel — a name lifts the
+     bar out of its page's picture into a picture of its own, and a picture of
+     its own is precisely what does not travel: it stands where it was captured,
+     fading, while the row slides away under it. Right when the row is on both
+     sides and the bar has a tab to glide to; wrong anywhere else, where the bar
+     must leave or arrive with its row. So the name is dropped unless the
+     movement goes from a tab of this row to another one of its tabs (see
+     markIndicatorTakesPart). */
+  :root:is([data-navi-route-transition], [data-navi-route-travel])
+    .navi_nav:not([${BETWEEN_TABS_ATTRIBUTE}])
+    .navi_current_indicator {
+    view-transition-name: none;
   }
 
   .navi_nav {
@@ -281,9 +309,12 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   does so by being NAMED, which is all the browser needs: any change played as
  *   a view transition animates it on the same clock as everything else in that
  *   transition. Inside a `RouteTravel` that means it follows the pages, and the
- *   thumb dragging them, without either of them being told about the other. For
- *   a nav made of slides (`slideContainer`) the bar is one element for the whole
- *   row, and it reads the travel the container publishes.
+ *   thumb dragging them, without either of them being told about the other. It
+ *   is named for a movement between two tabs of the row and for nothing else:
+ *   when the pages move and the row is on one side only, the bar leaves or
+ *   arrives with its row. For a nav made of slides (`slideContainer`) the bar
+ *   is one element for the whole row, and it reads the travel the container
+ *   publishes.
  * @param {string} [props.slideContainer] - the id of a `<SlideContainer>` these
  *   tabs are about: each one says which slide it is (`<Link slide="…">`), the
  *   container says which one is on screen, and pressing a tab travels there.
@@ -427,23 +458,49 @@ export const Nav = ({
     paintIndicatorGeometry();
   });
 
+  // Whether the bar keeps its name for the route movement about to be pictured
+  // (see the CSS above). Written on the DOM as the movement is announced rather
+  // than rendered: rendering is held from a navigation's first word until the
+  // movement's first picture is taken (see rendering_hold.js), so a render
+  // would land on the second picture with the first already taken.
+  useLayoutEffect(() => {
+    const navElement = navRef.current;
+    const markIndicatorTakesPart = (destinationUrl) => {
+      if (destinationUrl === null) {
+        navElement.removeAttribute(BETWEEN_TABS_ATTRIBUTE);
+        return;
+      }
+      // From a tab of this row: the row still shows the page being left, and
+      // the tab it is on. To a tab of this row: one of its links aims at the
+      // page the movement goes to. A row mounted while the movement plays hears
+      // nothing here and stays unnamed, rightly: its bar is on the second
+      // picture alone, with nothing on the first to glide from.
+      const fromTab = navElement.querySelector("[data-href-current]");
+      let toTab = null;
+      for (const linkElement of navElement.querySelectorAll("a[href]")) {
+        if (linkElement.href === destinationUrl) {
+          toTab = linkElement;
+          break;
+        }
+      }
+      if (fromTab && toTab) {
+        navElement.setAttribute(BETWEEN_TABS_ATTRIBUTE, "");
+      } else {
+        navElement.removeAttribute(BETWEEN_TABS_ATTRIBUTE);
+      }
+    };
+    return observeTransitionDestination(markIndicatorTakesPart);
+  }, []);
+
   const navContextValue = useMemo(
     () => ({
       // The bar belongs to the row itself when the tabs are slides, so the
       // links draw none of their own.
       currentIndicator: slideContainer ? undefined : currentIndicator,
-      // Read by the link that is current, and by it alone: a name belongs to
-      // one element at a time, and the bar exists in every tab.
-      indicatorName: currentIndicatorSlides ? indicatorNameRef.current : null,
       slideContainer,
       currentSlideArea,
     }),
-    [
-      currentIndicator,
-      currentIndicatorSlides,
-      slideContainer,
-      currentSlideArea,
-    ],
+    [currentIndicator, slideContainer, currentSlideArea],
   );
 
   children = toChildArray(children);
@@ -473,6 +530,14 @@ export const Nav = ({
       expandY={expandY}
       spacing={spacing}
       {...props}
+      // The name the bar of the current tab wears, handed to the CSS above
+      // rather than to the links: which bar wears it, and when, is decided
+      // there.
+      style={
+        currentIndicatorSlides && !slideContainer
+          ? { ...props.style, "--nav-indicator-name": indicatorNameRef.current }
+          : props.style
+      }
       styleCSSVars={NavStyleCSSVars}
     >
       {indicatorPosition && <span className="navi_nav_indicator" />}

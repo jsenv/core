@@ -49,6 +49,10 @@ import {
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
 import {
+  holdTransitionDestination,
+  releaseTransitionDestination,
+} from "./transition_destination.js";
+import {
   holdTransitionWindow,
   releaseTransitionWindow,
 } from "./transition_window.js";
@@ -556,8 +560,12 @@ export const RouteTravel = ({
     travelRef.current = travel;
     // Taken before the picture is: the browser reads the name off the DOM as it
     // stands when the transition starts, and this box is only a picture of its
-    // own for as long as it is the one travelling.
+    // own for as long as it is the one travelling. Where it travels to is said
+    // at the same moment and for the same reason: whoever names something for
+    // a movement between two pages decides on it now (see
+    // transition_destination.js).
     nameForTravel(elementRef.current);
+    holdTransitionDestination(travel, page.route.buildUrl(page.params));
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
     document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
     if (scrub) {
@@ -926,6 +934,7 @@ export const RouteTravel = ({
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
       releaseTransitionWindow(travel);
+      releaseTransitionDestination(travel);
     }
   };
 
