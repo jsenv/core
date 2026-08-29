@@ -497,6 +497,13 @@ const css = /* css */ `
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
       --x-picker-icon-color: currentColor;
+
+      /* The value holds nothing but the icon, so it takes the icon's width
+         rather than the box's: the box's justify-content is then what places
+         it, and alignX means something. */
+      .navi_picker_value {
+        flex-grow: 0;
+      }
     }
     /* discrete: no box at rest, a background on hover — the same word Button
        uses, and the same drawing. What is read is the value, not the field
@@ -624,7 +631,7 @@ const PickerButton = (props) => {
     rightSlot,
     placeholder,
     ui,
-    maxLines = 1,
+    maxLines: maxLinesProp = 1,
     // By default the popover is at least as wide as the trigger (min-width:
     // --anchor-width). Set true when the CONTENT should dictate the popover width
     // (e.g. a Wheel) instead of being stretched to the trigger — see
@@ -643,6 +650,10 @@ const PickerButton = (props) => {
     readOnly,
     error,
   } = props;
+  // A word in a sentence is never truncated — and the clamp's overflow: hidden
+  // would cut its dotted underline, which sits on the edge of the line box
+  // (WebKit drops it or not depending on the subpixel position of the line).
+  const maxLines = variant === "text" ? undefined : maxLinesProp;
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";

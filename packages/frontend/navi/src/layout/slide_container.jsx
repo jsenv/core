@@ -1145,6 +1145,11 @@ export const SlideContainer = ({
     }
     const track = trackRef.current;
     const offset = `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`;
+    // The travel that was ASKED for is still one box, whatever is left of it to
+    // cover: a slide dragged most of the way there finishes in what is left of
+    // the duration rather than taking a full one over a few pixels.
+    const offsetTargetBefore = offsetRef.current;
+    const targetMoves = offset !== offsetTargetBefore;
     // Where the track IS, read before anything is written: a travel asked for
     // while another is still playing must carry on from what is on screen. The
     // previous TARGET is where the last travel was going, not where it got to —
@@ -1155,24 +1160,36 @@ export const SlideContainer = ({
     // var just below) and not the moving one — the animation being replaced
     // does not contribute to it. So the position on screen is a thing to go and
     // fetch, and having it in hand is also what allows the pace below.
+    // Measured off the box, in px, and not read off the computed `translate`:
+    // see trackOffsetPx for what that value looks like mid-animation.
     const travelInFlight = trackAnimationRef.current?.playState === "running";
-    const offsetOnScreen = travelInFlight
-      ? getComputedStyle(track).translate
-      : undefined;
+    let offsetOnScreen;
+    if (travelInFlight) {
+      const onScreenPx = trackOffsetPx(track, containerRef.current);
+      offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
+    }
     // …and where a slide let go of halfway was left, which is the same fact
     // said by the gesture that put it there: the track is at rest as far as any
-    // animation is concerned, so nothing else could tell.
-    const offsetDragged = travelFromRef.current;
-    travelFromRef.current = null;
+    // animation is concerned, so nothing else could tell. Taken by the render
+    // that moves the track and by no other: a `current` held outside catches up
+    // with the gesture a render late (a parent's state, set from a handler that
+    // runs after the address is written and read back), and a render still
+    // standing on the slide being left would otherwise carry the finger's
+    // offset back to it — a travel home nobody asked for.
+    const offsetDragged = targetMoves ? travelFromRef.current : null;
+    if (targetMoves) {
+      travelFromRef.current = null;
+    }
     const offsetBefore = offsetDragged ?? offsetOnScreen ?? offsetRef.current;
-    // The travel that was ASKED for is still one box, whatever is left of it to
-    // cover: a slide dragged most of the way there finishes in what is left of
-    // the duration rather than taking a full one over a few pixels.
-    const offsetTargetBefore = offsetRef.current;
     offsetRef.current = offset;
     // Where the track ends up, always — the animation below only covers the way
-    // there, and when it is over this is what holds.
-    track.style.setProperty("--slide-container-offset", offset);
+    // there, and when it is over this is what holds. Except under a hand-off
+    // still waiting for its travel: the track stays where the finger left it,
+    // until the render that moves it or the frame after which the gesture gives
+    // up on it (see returnToRest in onEnd).
+    if (!travelFromRef.current) {
+      track.style.setProperty("--slide-container-offset", offset);
+    }
     // A travel to this very offset is already playing: left to play. Same
     // courtesy as the stage above — a re-render in the middle of a travel (a
     // signal read higher up answering) changes nothing here, and setting off
@@ -1456,19 +1473,21 @@ export const SlideContainer = ({
     return true;
   };
 
-  // The caller learns where the container went: the bound signal is written and
-  // `onCurrentChange` is called, in that order, so a caller reading the signal
-  // from inside its own handler reads where it now is.
+  // The caller learns where the container went: the bound signal is written,
+  // then the address, then `onCurrentChange` is called — in that order, so a
+  // caller reading either from inside its own handler reads where it now is.
+  // The signal before the address because writing the address can render on
+  // the spot (a navigation lets go of what Preact had queued, see
+  // rendering_hold.js), and that render must already find `current` moved.
   const tellCurrentChange = (area, detail, leftArea) => {
-    // The address first, because it is the one thing that must never disagree
-    // with the picture — and it is told here rather than by the caller so that
-    // it is told about the travels that HAPPENED and about no others: the ones
-    // a lock refused never reach this point, and one refused late is written
-    // back below (see goBackToRefusedArea).
-    writeUrlParam(area, detail.cause);
     if (currentSignal) {
       currentSignal.value = area;
     }
+    // The address is told here rather than by the caller so that it is told
+    // about the travels that HAPPENED and about no others: the ones a lock
+    // refused never reach this point, and one refused late is written back
+    // below (see goBackToRefusedArea).
+    writeUrlParam(area, detail.cause);
     if (!onCurrentChange) {
       return;
     }
@@ -2227,9 +2246,10 @@ export const SlideContainer = ({
           returnToRest(drag);
           return;
         }
-        // A container whose `current` is held outside and was not moved:
-        // nothing rendered, so nothing drew the travel and the track is still
-        // under where the finger left it. One frame is all it takes to know.
+        // A container whose `current` is held outside and was not moved: no
+        // render moved the track, so the hand-off is still waiting and the
+        // track still under where the finger left it. One frame is all it
+        // takes to know.
         requestAnimationFrame(() => {
           if (travelFromRef.current) {
             travelFromRef.current = null;

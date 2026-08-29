@@ -52,6 +52,7 @@
     "database:stop": "npx @jsenv/database stop",
     "dev": "node --watch --conditions=dev:jsenv ./scripts/dev/dev.mjs",
     "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/backend/server/tests/route_inspector/start_server.js",
+    "dev:webkit": "node ./scripts/dev/webkit.mjs",
     "eslint": "npx eslint .",
     "https:setup": "npx @jsenv/https-local setup",
     "md:build": "node ./docs/build.js",

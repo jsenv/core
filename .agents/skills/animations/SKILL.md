@@ -89,9 +89,12 @@ move that never finished, then travels back. Two traps:
 - **Do not** leave the "from" keyframe implicit hoping the browser will use
   the current position. An animation with only a "to" keyframe starts from the
   _underlying_ value (the resting style): the animation being replaced does
-  not contribute to it. Go fetch the position on screen
-  (`getComputedStyle(el).translate`) — and fetch it **before** cancelling the
-  running animation or writing the new resting value.
+  not contribute to it. Go fetch the position on screen — and fetch it
+  **before** cancelling the running animation or writing the new resting
+  value. Measure it (`getBoundingClientRect()` against the box it moves in)
+  rather than reading `getComputedStyle(el).translate`: mid-animation between
+  a px keyframe and a % one the computed value is a `calc(-19% - 210px)` that
+  no simple parse survives, and a `NaN` duration handed to `animate()` throws.
 - An already-moving element gets `ease-out`, not `ease`: an ease-in from a
   moving state stalls it for an instant right where the eye is following it.
 
