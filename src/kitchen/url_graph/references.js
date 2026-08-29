@@ -634,20 +634,37 @@ const checkForDependencyRemovalEffects = (reference) => {
 };
 
 const traceFromUrlSite = (urlSite) => {
-  const codeFrame = urlSite.content
-    ? generateContentFrame({
-        content: urlSite.content,
-        line: urlSite.line,
-        column: urlSite.column,
-      })
-    : "";
-  return {
-    codeFrame,
-    message: stringifyUrlSite(urlSite),
-    url: urlSite.url,
-    line: urlSite.line,
-    column: urlSite.column,
+  const { url, line, column, content } = urlSite;
+  const trace = { url, line, column };
+  // A file references many urls and an error on one of them is rare: the code
+  // frame (and the message embedding it) is built the first time it is read,
+  // not for every reference found.
+  defineLazyProperty(trace, "codeFrame", () =>
+    content ? generateContentFrame({ content, line, column }) : "",
+  );
+  defineLazyProperty(trace, "message", () => stringifyUrlSite(urlSite));
+  return trace;
+};
+
+const defineLazyProperty = (object, property, compute) => {
+  const setValue = (value) => {
+    Object.defineProperty(object, property, {
+      enumerable: true,
+      configurable: true,
+      writable: true,
+      value,
+    });
   };
+  Object.defineProperty(object, property, {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const value = compute();
+      setValue(value);
+      return value;
+    },
+    set: setValue,
+  });
 };
 
 const adjustUrlSite = (urlInfo, { url, line, column }) => {

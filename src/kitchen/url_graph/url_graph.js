@@ -185,7 +185,6 @@ const createUrlInfo = (url, context) => {
     dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
-    isWatched: false,
     isValid: () => false,
     data: {}, // plugins can put whatever they want here
     referenceToOthersSet: new Set(),

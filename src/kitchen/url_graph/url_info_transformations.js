@@ -1,4 +1,4 @@
-import { writeFileSync } from "@jsenv/filesystem";
+import { writeFile, writeFileSync } from "@jsenv/filesystem";
 import {
   composeTwoSourcemaps,
   generateSourcemapDataUrl,
@@ -260,20 +260,55 @@ export const createUrlInfoTransformer = ({
 
   const applyContentEffects = (urlInfo) => {
     applySourcemapOnContent(urlInfo);
-    writeInsideOutDirectory(urlInfo);
+    return writeInsideOutDirectory(urlInfo);
+  };
+
+  // The out directory is a debug aid. During dev a request must not be held
+  // by a write blocking the event loop (every other request waits too), so
+  // the file is written asynchronously; the response still waits for it, so
+  // what is on disk is what was served. Per file, writes stay ordered: a file
+  // cooked twice in a row ends up holding its latest content.
+  // During build nothing waits behind a write: it is done synchronously.
+  const pendingWritePromiseMap = new Map();
+  const writeOutFile = (urlInfo, fileUrl, content) => {
+    if (!urlInfo.context.dev) {
+      writeFileSync(fileUrl, content, { force: true });
+      return undefined;
+    }
+    const previousWritePromise =
+      pendingWritePromiseMap.get(fileUrl) || Promise.resolve();
+    const writePromise = previousWritePromise.then(async () => {
+      try {
+        await writeFile(fileUrl, content);
+      } catch {
+        try {
+          // a directory where the file goes, or a file where a directory goes
+          writeFileSync(fileUrl, content, { force: true });
+        } catch (e) {
+          logger.debug(`error while writing ${fileUrl}: ${e.message}`);
+        }
+      }
+    });
+    pendingWritePromiseMap.set(fileUrl, writePromise);
+    writePromise.then(() => {
+      if (pendingWritePromiseMap.get(fileUrl) === writePromise) {
+        pendingWritePromiseMap.delete(fileUrl);
+      }
+    });
+    return writePromise;
   };
 
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
-      return;
+      return undefined;
     }
     const { generatedUrl } = urlInfo;
     if (!generatedUrl) {
-      return;
+      return undefined;
     }
     if (!generatedUrl.startsWith("file:")) {
-      return;
+      return undefined;
     }
     if (urlToPathname(generatedUrl).endsWith("/")) {
       // when users explicitely request a directory
@@ -281,12 +316,13 @@ export const createUrlInfoTransformer = ({
       // because it would try to write a directory
       // ideally we would decide a filename for this
       // for now we just don't write anything
-      return;
+      return undefined;
     }
     if (urlInfo.type === "directory") {
       // no need to write the directory
-      return;
+      return undefined;
     }
+    const writePromises = [];
     // if (urlInfo.content === undefined) {
     //   // Some error might lead to urlInfo.content to be null
     //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
@@ -311,15 +347,19 @@ export const createUrlInfoTransformer = ({
       const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
       let outFilePath = urlToFileSystemPath(outFileUrl);
       outFilePath = truncate(outFilePath, 2055); // for windows
-      writeFileSync(outFilePath, urlInfo.content, { force: true });
+      writePromises.push(writeOutFile(urlInfo, outFilePath, urlInfo.content));
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
-      writeFileSync(
-        new URL(sourcemapGeneratedUrl),
-        sourcemapReference.urlInfo.content,
+      writePromises.push(
+        writeOutFile(
+          urlInfo,
+          sourcemapGeneratedUrl,
+          sourcemapReference.urlInfo.content,
+        ),
       );
     }
+    return Promise.all(writePromises);
   };
 
   const applySourcemapOnContent = (
@@ -426,8 +466,9 @@ export const createUrlInfoTransformer = ({
       );
       applyTransformations(urlInfo, injectionTransformations);
     }
-    applyContentEffects(urlInfo);
+    const contentEffectsPromise = applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;
+    return contentEffectsPromise;
   };
 
   return {

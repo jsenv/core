@@ -478,11 +478,6 @@ const addRelationshipWithPackageJson = ({
       String(packageJsonContentAsBuffer),
     );
   }
-  // Checked on disk at every validation rather than trusted to the watcher:
-  // what this file decides (the package version, hence the ?v= importers
-  // embed) ends up in the browser's immutable cache, so a request racing the
-  // watcher must never be answered from a stale package.json.
-  packageJsonReference.urlInfo.revalidateOnFileSystem = true;
 };
 
 const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {

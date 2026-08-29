@@ -20,6 +20,7 @@ import { jsenvPluginImportMetaCss } from "./import_meta_css/jsenv_plugin_import_
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
+import { jsenvPluginModulepreload } from "./modulepreload/jsenv_plugin_modulepreload.js";
 import { jsenvPluginDependencyStatus } from "./dependency_status/jsenv_plugin_dependency_status.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
 import { jsenvPluginCustomElementsRedefine } from "./custom_elements_redefine/jsenv_plugin_custom_elements_redefine.js";
@@ -56,6 +57,7 @@ export const getCorePlugins = ({
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
+  modulepreload = false,
   dependencyStatus,
   cacheControl,
   scenarioPlaceholders = true,
@@ -157,6 +159,7 @@ export const getCorePlugins = ({
     ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
       : []),
+    ...(modulepreload ? [jsenvPluginModulepreload()] : []),
     ...(dependencyStatus
       ? [jsenvPluginDependencyStatus(dependencyStatus)]
       : []),

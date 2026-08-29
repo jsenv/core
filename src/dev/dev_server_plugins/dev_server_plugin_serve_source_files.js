@@ -1,9 +1,8 @@
 import { bufferToEtag } from "@jsenv/filesystem";
 import { formatError } from "@jsenv/humanize";
 import { composeTwoResponses, fetchDirectory } from "@jsenv/server";
-import { URL_META } from "@jsenv/url-meta";
 import { normalizeUrl } from "@jsenv/urls";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 import { watchSourceFiles } from "../../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../../helpers/web_url_converter.js";
@@ -56,11 +55,10 @@ export const devServerPluginServeSourceFiles = ({
     if (existing) {
       return existing;
     }
-    const watchAssociations = URL_META.resolveAssociations(
-      { watch: stopWatchingSourceFiles.watchPatterns },
-      sourceDirectoryUrl,
-    );
     let kitchen;
+    // per url info, the file stat under which its content was last compared
+    // with the file on disk and found identical (see isValid)
+    const fileStatValidatedMap = new WeakMap();
     clientFileChangeEventEmitter.on(({ url, event }) => {
       const urlInfo = kitchen.graph.getUrlInfo(url);
       if (urlInfo) {
@@ -101,11 +99,6 @@ export const devServerPluginServeSourceFiles = ({
       packageDirectory,
     });
     kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-      const { watch } = URL_META.applyAssociations({
-        url: urlInfoCreated.url,
-        associations: watchAssociations,
-      });
-      urlInfoCreated.isWatched = watch;
       // when an url depends on many others, we check all these (like package.json)
       urlInfoCreated.isValid = () => {
         const seenSet = new Set();
@@ -125,36 +118,63 @@ export const devServerPluginServeSourceFiles = ({
             //   was compared using etag and it has changed
             return false;
           }
-          // Watched files trust the watcher — except the ones marked
-          // revalidateOnFileSystem (package.json files, see node_esm_resolver):
-          // the watcher fires a beat AFTER a change, and what these files
-          // decide (a package version, hence the ?v= the importer embeds) is
-          // cached as immutable by the browser — a request racing the watcher
-          // must not win a stale answer it would then keep forever.
-          if (!urlInfo.isWatched || urlInfo.revalidateOnFileSystem) {
-            // check the filesystem
-            let fileContentAsBuffer;
+          // The content held in memory is the file as it was read; a request
+          // must never win a stale answer, whatever the watcher's latency,
+          // and the ?v= a package.json decides even ends up in the browser's
+          // immutable cache. So the file is checked on disk at every
+          // validation — cheaply: a stat, compared with the one taken when
+          // the content was read (or last found identical). Only a file
+          // whose stat moved is read and hashed again.
+          // Inline content (a <script> inside an html) has no file of its
+          // own: it is as fresh as the html holding it, checked by the caller.
+          if (!urlInfo.isInline) {
+            let fileStat;
             try {
-              fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
-            } catch (e) {
-              if (e.code === "ENOENT") {
-                urlInfo.onModified();
-                return false;
-              }
+              fileStat = statSync(new URL(urlInfo.url), {
+                throwIfNoEntry: false,
+              });
+            } catch {
               return false;
             }
-            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-            if (fileContentEtag !== urlInfo.originalContentEtag) {
+            if (!fileStat) {
               urlInfo.onModified();
-              // restore content to be able to compare it again later
-              urlInfo.kitchen.urlInfoTransformer.setContent(
-                urlInfo,
-                String(fileContentAsBuffer),
-                {
-                  contentEtag: fileContentEtag,
-                },
-              );
               return false;
+            }
+            const fileStatKnown =
+              fileStatValidatedMap.get(urlInfo) || urlInfo.data.fileStat;
+            const fileUnchanged =
+              fileStatKnown &&
+              fileStatKnown.mtimeMs === fileStat.mtimeMs &&
+              fileStatKnown.size === fileStat.size;
+            if (!fileUnchanged) {
+              let fileContentAsBuffer;
+              try {
+                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  urlInfo.onModified();
+                  return false;
+                }
+                return false;
+              }
+              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+              if (fileContentEtag !== urlInfo.originalContentEtag) {
+                fileStatValidatedMap.delete(urlInfo);
+                urlInfo.onModified();
+                // restore content to be able to compare it again later
+                urlInfo.kitchen.urlInfoTransformer.setContent(
+                  urlInfo,
+                  String(fileContentAsBuffer),
+                  {
+                    contentEtag: fileContentEtag,
+                  },
+                );
+                return false;
+              }
+              fileStatValidatedMap.set(urlInfo, {
+                mtimeMs: fileStat.mtimeMs,
+                size: fileStat.size,
+              });
             }
           }
           for (const implicitUrl of urlInfo.implicitUrlSet) {
@@ -271,6 +291,40 @@ export const devServerPluginServeSourceFiles = ({
           const ifNoneMatch = request.headers["if-none-match"];
           const inlineParentUrlInfo = urlInfo.findParentIfInline();
           const urlInfoTargetedByCache = inlineParentUrlInfo || urlInfo;
+          // The content held in memory is the response when it is finalized
+          // and still valid. Content can be defined while a cook is still in
+          // flight (a file watcher invalidation re-cooking in the background,
+          // for instance): at that point it holds the raw fetched content,
+          // transformations not applied yet. Serving that would send an html
+          // without any of the injected scripts. An inline url info (a
+          // <script> inside an html) is cooked again whenever the html
+          // containing it is cooked: its content is as fresh as the html's,
+          // so both must be valid.
+          const hasFreshContent = (urlInfo) =>
+            urlInfo.content !== undefined &&
+            urlInfo.contentFinalized &&
+            urlInfo.isValid();
+          const memoryContentIsFresh = () =>
+            inlineParentUrlInfo
+              ? hasFreshContent(urlInfo) && hasFreshContent(inlineParentUrlInfo)
+              : hasFreshContent(urlInfo);
+          // a 304 goes through the hooks too: its headers stand for the
+          // cached response's, they must say the same
+          const augmentResponse = (response) => {
+            const augmentResponseInfo = {
+              ...kitchen.context,
+              reference,
+              urlInfo,
+            };
+            kitchen.jsenvPluginsController.callHooks(
+              "augmentResponse",
+              augmentResponseInfo,
+              (returnValue) => {
+                response = composeTwoResponses(response, returnValue);
+              },
+            );
+            return response;
+          };
           const respondWithNotModified = () => {
             const headers = {
               "cache-control": `private,max-age=0,must-revalidate`,
@@ -280,23 +334,21 @@ export const devServerPluginServeSourceFiles = ({
                 headers[key] = urlInfo.headers[key];
               }
             });
-            return {
+            return augmentResponse({
               status: 304,
               headers,
-            };
+            });
           };
 
           try {
-            // an inline url info is cooked again every time the file containing it
-            // is cooked, so its content is only known after cooking; its etag is
-            // compared below, once cooked
-            if (!urlInfo.error && ifNoneMatch && !inlineParentUrlInfo) {
+            if (!urlInfo.error && ifNoneMatch) {
               const [clientOriginalContentEtag, clientContentEtag] =
                 ifNoneMatch.split("_");
               if (
-                urlInfo.originalContentEtag === clientOriginalContentEtag &&
+                urlInfoTargetedByCache.originalContentEtag ===
+                  clientOriginalContentEtag &&
                 urlInfo.contentEtag === clientContentEtag &&
-                urlInfo.isValid()
+                memoryContentIsFresh()
               ) {
                 return respondWithNotModified();
               }
@@ -314,18 +366,9 @@ export const devServerPluginServeSourceFiles = ({
             // client etag to match).
             const servableFromMemory =
               !urlInfo.error &&
-              !inlineParentUrlInfo &&
               !urlInfo.response &&
-              urlInfo.content !== undefined &&
-              // content can be defined while a cook is still in flight (a file
-              // watcher invalidation re-cooking in the background, for
-              // instance): at that point it holds the raw fetched content,
-              // transformations not applied yet. Serving that would send an
-              // html without any of the injected scripts. Only finalized
-              // content is a complete response; anything else must go through
-              // cook() below, which joins the pending cook (see debounceCook).
-              urlInfo.contentFinalized &&
               !cacheIsDisabledInResponseHeader(urlInfo) &&
+              !cacheIsDisabledInResponseHeader(urlInfoTargetedByCache) &&
               // a "?hot" request exists to bypass every cache, this one
               // included: it must be cooked, because cooking is what rewrites
               // its references so "?hot" cascades to the modified files below
@@ -344,7 +387,7 @@ export const devServerPluginServeSourceFiles = ({
               // signal registry throwing on duplicate ids). Re-cooking under
               // the normal request rewrites the references clean.
               !urlInfo.contentCookedForHotRequest &&
-              urlInfo.isValid();
+              memoryContentIsFresh();
             if (!servableFromMemory) {
               await urlInfo.cook({ request, reference });
               urlInfo.contentCookedForHotRequest =
@@ -402,19 +445,7 @@ export const devServerPluginServeSourceFiles = ({
                 ? { "served from memory cache": null }
                 : urlInfo.timing,
             };
-            const augmentResponseInfo = {
-              ...kitchen.context,
-              reference,
-              urlInfo,
-            };
-            kitchen.jsenvPluginsController.callHooks(
-              "augmentResponse",
-              augmentResponseInfo,
-              (returnValue) => {
-                response = composeTwoResponses(response, returnValue);
-              },
-            );
-            return response;
+            return augmentResponse(response);
           } catch (error) {
             const originalError = error ? error.cause || error : error;
             if (originalError.asResponse) {
@@ -492,6 +523,14 @@ export const devServerPluginServeSourceFiles = ({
                 "cache-control": "no-store",
               },
             };
+          } finally {
+            // What the request put on the url info context is for this
+            // request only: a cook happening later for another reason (the
+            // html holding an inline script is cooked again) must not see a
+            // stale "requestedUrl" and take the inline script for a direct
+            // request, which would make it pick the content of a previous
+            // reference (see jsenv:inline_content_fetcher).
+            forgetRequestFromContext(urlInfo.context);
           }
         },
       },
@@ -499,6 +538,15 @@ export const devServerPluginServeSourceFiles = ({
   };
 
   return [devServerPluginRoutes, ...devServerJsenvPluginStore.allServerPlugins];
+};
+
+const forgetRequestFromContext = (context) => {
+  // own properties only: what is inherited from the owner context stays
+  for (const key of ["request", "requestedUrl", "reference"]) {
+    if (Object.hasOwn(context, key)) {
+      delete context[key];
+    }
+  }
 };
 
 const cacheIsDisabledInResponseHeader = (urlInfo) => {

@@ -171,6 +171,82 @@ Note that scoping to an ancestor is not enough: `.my-sidebar { --link-color-pres
 
 When a component default deserves to be themed globally, promote it: declare a `--navi-<component>-<thing>` in [navi_css_vars.js](../src/navi_css_vars.js) and make the component default read `var(--navi-…)`.
 
+#### A surface is a new paper: what reaches a popup from its opener
+
+A popup (`Dialog`, `Popover`, everything built on them) and a callout are
+painted in the top layer but live in the DOM subtree of what opened them. For
+the cascade they are descendants of that element: every inherited property and
+every custom property declared on an ancestor reaches them, the top layer
+changing nothing about it. A dark card that writes in white, declared on the
+card, is the color a dialog opened from that card starts with.
+
+Navi takes back what it knows a surface needs of its own — declared on the
+surface element itself, so it beats whatever an ancestor declared, whatever
+the layer (see the table above):
+
+| taken back                                                                                  | where                                                                                                         |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| the ink (`color`)                                                                           | `--navi-popup-color` on `.navi_popover` / `.navi_dialog`; `revert` (the UA's `CanvasText`) on `.navi_callout` |
+| text properties that belong to the opener (alignment, transform, shadow, spacing, wrapping) | `surface_text_css.js`, which also says what is deliberately kept                                              |
+| the five color keywords `--navi-color-primary/secondary/emphasis/discrete/hint`             | re-declared on each surface in `navi_css_vars.js`                                                             |
+
+Everything else declared on a container is inherited by the popup it opens.
+That is the shape of the bug to expect: a token an app pinned on a container
+for that container's paper — a background, a border color, a spacing, one of
+its own `--app-*` — arriving on a popup that has a different paper. When it
+hits, the answers are, in order:
+
+1. the token is about the paper and navi owns it: re-declare it on the surface,
+   next to the color keywords;
+2. the token is the app's: the app declares it on the popup too
+   (`.navi_dialog { --app-thing: … }`, unlayered), or writes it against the ink
+   (`currentColor`) so it follows whatever ink the surface writes in.
+
+##### Ink, ratio, paper: the color keywords
+
+`primary` is an absolute (the surface's ink, `--navi-surface-text-color`). The
+other four are formulas on `currentColor` — `secondary` is
+`color-mix(in srgb, currentColor 80%, transparent)` — so they follow the ink of
+whatever writes them: a dark card sets `color: white` and nothing else, and its
+secondary is white at 80%. Which is also what lets a surface re-declare the
+same formulas and have them come out right: on a popup writing in black, they
+mix black.
+
+The share of ink in each is a token: `--navi-color-secondary-mix` (80%),
+`--navi-color-emphasis-mix` (50%), `--navi-color-discrete-mix` (60%),
+`--navi-color-hint-mix` (25%). A theme that wants a fainter secondary sets the
+ratio on `:root`, and the page and its popups agree:
+
+```css
+:root {
+  --navi-color-secondary-mix: 70%;
+}
+```
+
+The ratio is a `:root` knob only, and this is the trap to know about. A `var()`
+inside a custom property is substituted where **that** property is declared,
+not where it is read: `--navi-color-secondary` is declared on `:root` (and on
+each surface), so the `80%` is baked in there and a card inherits the
+already-mixed formula. A ratio set on a container changes nothing for the
+container's own text — and it _is_ read by the next surface opened from it,
+which re-declares the formula and resolves the `var()` against the inherited
+ratio:
+
+```css
+.card {
+  /* ❌ the card stays at 80%; the dialog it opens goes to 88% */
+  --navi-color-secondary-mix: 88%;
+  /* ✅ the card's paper — stops at the next surface */
+  --navi-color-secondary: rgb(255 255 255 / 88%);
+}
+```
+
+So a theme is a number on `:root`; a paper is a color, pinned on the container,
+and it stops at the surface. What must not be done to make container ratios
+work is declaring the formulas on `*` so they resolve on every element: the
+pinned keyword above would then be overwritten on each of the card's children,
+and a paper could no longer say anything.
+
 #### An app narrower than the screen
 
 An app that never spans the whole window — a phone-shaped column centered in a
@@ -246,11 +322,13 @@ Overriding the actual CSS rules (not the variables) is intentionally hard — th
 
 ## Summary
 
-| What you want to change      | How to do it                                                               |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| One component instance       | Component prop or `style` attribute                                        |
-| All instances of a component | `--component-*` in unlayered app CSS, on a selector matching the component |
-| A global design token        | `--navi-*` on `:root`                                                      |
-| How wide popups may ever get | `--navi-app-max-width` on `:root`                                          |
-| A structural layout rule     | Expose a new CSS variable (contribute)                                     |
-| What a variant decided       | A prop — a variant only ever moves defaults, so props keep winning         |
+| What you want to change                                      | How to do it                                                                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| One component instance                                       | Component prop or `style` attribute                                                                                            |
+| All instances of a component                                 | `--component-*` in unlayered app CSS, on a selector matching the component                                                     |
+| A global design token                                        | `--navi-*` on `:root`                                                                                                          |
+| The share of ink in `secondary`/`emphasis`/`discrete`/`hint` | `--navi-color-*-mix` on `:root` — never on a container                                                                         |
+| A container's own paper (a dark card)                        | `color` on the container, plus a `--navi-color-*` keyword pinned if its formula reads wrong there; both stop at the next popup |
+| How wide popups may ever get                                 | `--navi-app-max-width` on `:root`                                                                                              |
+| A structural layout rule                                     | Expose a new CSS variable (contribute)                                                                                         |
+| What a variant decided                                       | A prop — a variant only ever moves defaults, so props keep winning                                                             |

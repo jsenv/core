@@ -23,7 +23,11 @@
  *
  */
 
-import { applyBabelPlugins } from "@jsenv/ast";
+import {
+  applyBabelPlugins,
+  getImportMetaPropertyName,
+  visitJsAstUntil,
+} from "@jsenv/ast";
 
 export const jsenvPluginImportMetaCss = () => {
   const importMetaCssDevClientFileUrl = import.meta
@@ -47,15 +51,10 @@ export const jsenvPluginImportMetaCss = () => {
         if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataUsesImportMetaCss],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
+        const importMetaCssNode = visitJsAstUntil(urlInfo.contentAst, {
+          MemberExpression: (node) => getImportMetaPropertyName(node) === "css",
         });
-        const { usesImportMetaCss } = metadata;
-        if (!usesImportMetaCss) {
+        if (!importMetaCssNode) {
           return null;
         }
         if (urlInfo.context.build) {
@@ -130,37 +129,6 @@ const babelPluginRewriteImportMetaCssAssignment = (
           right,
           t.stringLiteral(relativeUrl),
         ]);
-      },
-    },
-  };
-};
-
-const babelPluginMetadataUsesImportMetaCss = () => {
-  return {
-    name: "metadata-uses-import-meta-css",
-    visitor: {
-      Program(programPath, state) {
-        let usesImportMetaCss = false;
-        programPath.traverse({
-          MemberExpression(path) {
-            const { node } = path;
-            const { object } = node;
-            if (object.type !== "MetaProperty") {
-              return;
-            }
-            const { property: objectProperty } = object;
-            if (objectProperty.name !== "meta") {
-              return;
-            }
-            const { property } = node;
-            const { name } = property;
-            if (name === "css") {
-              usesImportMetaCss = true;
-              path.stop();
-            }
-          },
-        });
-        state.file.metadata.usesImportMetaCss = usesImportMetaCss;
       },
     },
   };

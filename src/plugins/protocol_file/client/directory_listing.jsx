@@ -56,10 +56,31 @@ const DirectoryListing = () => {
 };
 
 const ErrorMessage = () => {
-  const { filePathExisting, filePathNotFound } = enoentDetails;
+  const { filePathExisting, filePathNotFound, spaFallbackFilePaths } =
+    enoentDetails;
 
   let errorText;
   let errorSuggestion;
+  let spaExplanation = null;
+  if (spaFallbackFilePaths) {
+    spaExplanation = (
+      <>
+        <strong>SPA mode:</strong> a url without extension is a route, served
+        with the closest html file. None of these exists:
+        <ul
+          className="spa_fallback_list"
+          style="margin: 6px 0 0; padding-left: 20px;"
+        >
+          {spaFallbackFilePaths.map((filePath) => (
+            <li key={filePath}>
+              <code>{filePath}</code>
+              {filePath === `/${mainFilePath}` ? " (main file)" : ""}
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  }
   errorText = (
     <>
       <strong>File not found:</strong>&nbsp;
@@ -82,6 +103,11 @@ const ErrorMessage = () => {
   return (
     <div className="error_message">
       <p className="error_text">{errorText}</p>
+      {spaExplanation ? (
+        <p className="error_spa" style="margin-top: 10px;">
+          {spaExplanation}
+        </p>
+      ) : null}
       <p
         className="error_suggestion"
         style="font-size: 0.8em; margin-top: 10px;"

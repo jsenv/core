@@ -99,9 +99,11 @@ consistency across the app, not from any single call site.
   before writing a constraint of your own: if the sentence would make sense in a
   server's response, the rule belongs in validity and the constraint is only its
   browser-side caller.
-- `docs/css_architecture.md` — how Navi's CSS layering works, and the
-  supported ways to override component styles (props > CSS variables > direct
-  rule overrides, in that preference order).
+- `docs/css_architecture.md` — how Navi's CSS layering works, the supported
+  ways to override component styles (props > CSS variables > direct rule
+  overrides, in that preference order), and what a popup inherits from the
+  element that opened it: which tokens a surface takes back, the color
+  keywords and their `-mix` ratios, and why a ratio is a `:root` knob only.
 - `docs/safe_area.md` — where the app is in the window and what covers it:
   the two inset families (`--navi-app-inset-*` for what is pinned to an edge,
   `--navi-safe-area-inset-*` for what flows inside), how an app declares itself

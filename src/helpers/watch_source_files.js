@@ -2,24 +2,27 @@ import {
   lookupPackageDirectory,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const getDirectoryWatchPatterns = (
   directoryUrl,
   watchedDirectoryUrl,
-  { sourceFilesConfig },
+  { sourceFilesConfig, defaultPatterns = true },
 ) => {
   const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl(
     directoryUrl,
     watchedDirectoryUrl,
   );
-  const watchPatterns = {
-    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
-  };
+  const watchPatterns = {};
+  if (defaultPatterns) {
+    Object.assign(watchPatterns, {
+      [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
+      [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
+      [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
+      [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
+    });
+  }
   for (const key of Object.keys(sourceFilesConfig)) {
     watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
       sourceFilesConfig[key];
@@ -40,11 +43,12 @@ export const watchSourceFiles = (
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {};
   let watchedDirectoryUrl = "";
-  const addDirectoryToWatch = (directoryUrl) => {
+  const addDirectoryToWatch = (directoryUrl, { defaultPatterns } = {}) => {
     Object.assign(
       watchPatterns,
       getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
         sourceFilesConfig,
+        defaultPatterns,
       }),
     );
   };
@@ -76,7 +80,6 @@ export const watchSourceFiles = (
         },
       },
     );
-    stopWatchingSourceFiles.watchPatterns = watchPatterns;
     return stopWatchingSourceFiles;
   };
 
@@ -96,16 +99,18 @@ export const watchSourceFiles = (
     }
     watchedDirectoryUrl = packageDirectoryUrl;
     for (const workspace of workspaces) {
-      if (workspace.endsWith("*")) {
-        const workspaceDirectoryUrl = new URL(
-          workspace.slice(0, -1),
-          packageDirectoryUrl,
-        );
-        addDirectoryToWatch(workspaceDirectoryUrl);
-      } else {
-        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
-        addDirectoryToWatch(workspaceRelativeUrl);
-      }
+      const workspaceDirectoryUrl = workspace.endsWith("*")
+        ? new URL(workspace.slice(0, -1), packageDirectoryUrl)
+        : new URL(workspace, packageDirectoryUrl);
+      addDirectoryToWatch(workspaceDirectoryUrl, {
+        // The source directory patterns already cover a workspace inside it.
+        // Every pattern is tested against every file found while watching, so
+        // the same patterns rooted at each workspace only multiply that work.
+        defaultPatterns: !urlIsOrIsInsideOf(
+          workspaceDirectoryUrl,
+          sourceDirectoryUrl,
+        ),
+      });
     }
     // we are updating the root directory
     // we must make the patterns relative to source directory relative to the new root directory

@@ -32,12 +32,14 @@ import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsOrIsInsideOf,
+  urlToExtension,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "../../kitchen/file_and_server_urls_converter.js";
+import { listSpaFallbackFileUrls } from "./jsenv_plugin_fs_redirection.js";
 
 const htmlFileUrlForDirectory = import.meta
   .resolve("./client/directory_listing.html");
@@ -391,6 +393,24 @@ const generateDirectoryListingInjection = (
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
     });
+    // a url without extension nor trailing slash is a route: in spa mode it
+    // was answered with the closest html file, the 404 means none was found
+    const urlNotFoundObject = new URL(urlNotFound);
+    if (
+      spa &&
+      !urlToExtension(urlNotFoundObject) &&
+      !urlNotFoundObject.pathname.endsWith("/")
+    ) {
+      enoentDetails.spaFallbackFilePaths = listSpaFallbackFileUrls(
+        urlNotFound,
+        { rootDirectoryUrl: serverRootDirectoryUrl, mainFilePath },
+      ).map((fileUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+          fileUrl,
+          serverRootDirectoryUrl,
+        ),
+      );
+    }
   }
 
   return {

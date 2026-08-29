@@ -24,14 +24,31 @@ const controlDefaultFontFamily = computedStyle.fontFamily;
 const controlDefaultFontSize = computedStyle.fontSize;
 document.body.removeChild(button);
 
-// The color keywords derived from the ink. Written once and declared twice:
-// on :root as the theme's defaults, and on a popup — a new paper — so what a
-// container pinned for its own paper does not reach the popup.
+// The color keywords derived from the ink. Written once and declared on every
+// paper — :root, and each surface that is a new one (popup, callout) — so what
+// a container pinned for its own paper does not reach the surface. The -mix
+// ratios (see :root) are read where this is declared.
 const INK_DERIVED_COLOR_TOKENS_CSS = `
-  --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
-  --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
-  --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
-  --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+  --navi-color-secondary: color-mix(
+    in srgb,
+    currentColor var(--navi-color-secondary-mix),
+    transparent
+  );
+  --navi-color-emphasis: color-mix(
+    in srgb,
+    currentColor var(--navi-color-emphasis-mix),
+    black
+  );
+  --navi-color-discrete: color-mix(
+    in srgb,
+    currentColor var(--navi-color-discrete-mix),
+    transparent
+  );
+  --navi-color-hint: color-mix(
+    in srgb,
+    currentColor var(--navi-color-hint-mix),
+    transparent
+  );
 `;
 
 const css = /* css */ `
@@ -253,10 +270,19 @@ const css = /* css */ `
            hint:      barely-there color, watermarks, ghost placeholders
          The last four mix currentColor toward transparent or black, so they
          follow whatever ink a container writes in: a dark card sets color and
-         nothing else. A container may pin one for ITS paper (a white at
-         88% where 80% of white reads too faint on a colored resin); that is a
-         paper's value, not a theme's, and a popup opened from the container
-         re-declares all five for its own paper (see the popup rule below). */
+         nothing else. The share of ink in each is the theme's knob, a -mix
+         token read wherever the formulas are declared — here and on each
+         surface that re-declares them (rules below) — so a ratio set on :root
+         reaches the page and its popups alike. Set on a container it reaches
+         none of that container's own text, a var() resolving where its custom
+         property is declared; a container that wants one keyword otherwise
+         for ITS paper (a white at 88% where 80% of white reads too faint on a
+         colored resin) pins the keyword itself, and that value stops at the
+         next surface. */
+      --navi-color-secondary-mix: 80%;
+      --navi-color-emphasis-mix: 50%;
+      --navi-color-discrete-mix: 60%;
+      --navi-color-hint-mix: 25%;
       --navi-color-primary: var(--navi-surface-text-color);
       ${INK_DERIVED_COLOR_TOKENS_CSS}
 
@@ -272,16 +298,22 @@ const css = /* css */ `
       --navi-placeholder-font-style: normal;
     }
 
-    /* A popup is a new paper (see --navi-popup-color): its color keywords are
-       computed against the ink it writes in, not the container's — the same
-       formulas as :root, re-declared so a container's own value for one of
-       them stops at the popup. On the element itself, so it beats that value
-       whatever the layer; an app that wants a popup to keep its container's
-       ink, or that themes one of these on :root, says so on the popup,
-       unlayered, and wins in turn. */
+    /* A surface is a new paper: its color keywords are computed against the
+       ink it writes in, not the container's — the :root formulas again,
+       re-declared so a container's own value for one of them stops here. On
+       the element itself, so it beats that value whatever the layer; an app
+       that wants a surface to keep its container's ink says so on the
+       surface, unlayered, and wins in turn.
+       A popup writes in --navi-popup-color. */
     .navi_popover,
     .navi_dialog {
       --navi-color-primary: var(--navi-popup-color);
+      ${INK_DERIVED_COLOR_TOKENS_CSS}
+    }
+    /* A callout writes in the UA's own ink: callout.js sets color: revert on
+       a [popover] element, which the UA styles CanvasText. */
+    .navi_callout {
+      --navi-color-primary: CanvasText;
       ${INK_DERIVED_COLOR_TOKENS_CSS}
     }
   }

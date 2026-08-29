@@ -13,8 +13,16 @@ base/client/intermediate.js:2:7
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at async run (base/js_import_not_found_build.test.mjs:6:3)
-  at async base/js_import_not_found_build.test.mjs:19:1
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)
+  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:140:14)
+  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:579:13)
+  at async timePhase (@jsenv/core/src/kitchen/kitchen.js:653:13)
+  at async @jsenv/core/src/kitchen/kitchen.js:658:11
+  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)
+  at async @jsenv/core/src/kitchen/kitchen.js:647:9
+  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:842:5)
+  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:747:7)
+  at async Promise.all (index 0)
 ```
 
 ---

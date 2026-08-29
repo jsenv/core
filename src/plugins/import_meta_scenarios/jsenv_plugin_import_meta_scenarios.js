@@ -10,7 +10,7 @@
  * TODO: ideally during dev we would keep import.meta.dev and ensure we set it to true rather than replacing it with true?
  */
 
-import { applyBabelPlugins } from "@jsenv/ast";
+import { getImportMetaPropertyName, visitJsAst } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
 
 export const jsenvPluginImportMetaScenarios = () => {
@@ -18,7 +18,7 @@ export const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo) => {
+      js_module: (urlInfo) => {
         // Do not scan node modules for import.meta.dev/import.meta.build
         // - node modules won't have this in their code
         // - ;or should use other an other technic as this one won't be available
@@ -34,80 +34,46 @@ export const jsenvPluginImportMetaScenarios = () => {
         ) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
+        const importMetaScenarioNodes = { dev: [], build: [] };
+        visitJsAst(urlInfo.contentAst, {
+          MemberExpression: (node) => {
+            const name = getImportMetaPropertyName(node);
+            if (name === "dev" || name === "build") {
+              importMetaScenarioNodes[name].push(node);
+            }
+          },
         });
-        const { dev = [], build = [] } = metadata.importMetaScenarios;
+        const { dev, build } = importMetaScenarioNodes;
         const replacements = [];
-        const replace = (path, value) => {
-          replacements.push({ path, value });
+        const replace = (node, value) => {
+          replacements.push({ node, value });
         };
         if (urlInfo.context.build) {
           // during build ensure replacement for tree-shaking
-          dev.forEach((path) => {
-            replace(path, "undefined");
+          dev.forEach((node) => {
+            replace(node, "undefined");
           });
-          build.forEach((path) => {
-            replace(path, "true");
+          build.forEach((node) => {
+            replace(node, "true");
           });
         } else {
           // during dev we can let "import.meta.build" untouched
           // it will be evaluated to undefined.
           // Moreover it can be surprising to see some "undefined"
           // when source file contains "import.meta.build"
-          dev.forEach((path) => {
-            replace(path, "true");
+          dev.forEach((node) => {
+            replace(node, "true");
           });
         }
         const magicSource = createMagicSource(urlInfo.content);
-        replacements.forEach(({ path, value }) => {
+        replacements.forEach(({ node, value }) => {
           magicSource.replace({
-            start: path.node.start,
-            end: path.node.end,
+            start: node.start,
+            end: node.end,
             replacement: value,
           });
         });
         return magicSource.toContentAndSourcemap();
-      },
-    },
-  };
-};
-
-const babelPluginMetadataImportMetaScenarios = () => {
-  return {
-    name: "metadata-import-meta-scenarios",
-    visitor: {
-      Program(programPath, state) {
-        const importMetas = {};
-        programPath.traverse({
-          MemberExpression(path) {
-            const { node } = path;
-            const { object } = node;
-            if (object.type !== "MetaProperty") {
-              return;
-            }
-            const { property: objectProperty } = object;
-            if (objectProperty.name !== "meta") {
-              return;
-            }
-            const { property } = node;
-            const { name } = property;
-            const importMetaPaths = importMetas[name];
-            if (importMetaPaths) {
-              importMetaPaths.push(path);
-            } else {
-              importMetas[name] = [path];
-            }
-          },
-        });
-        state.file.metadata.importMetaScenarios = {
-          dev: importMetas.dev,
-          build: importMetas.build,
-        };
       },
     },
   };

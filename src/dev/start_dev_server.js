@@ -8,8 +8,13 @@ import {
   serverPluginCORS,
   startServer,
 } from "@jsenv/server";
-import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  urlIsOrIsInsideOf,
+  urlToFileSystemPath,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
@@ -50,6 +55,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean|object} [params.ribbon=true] - The "ribbon" overlay marking the page as non-production. As an object: `text` (defaults to `"DEV"`), `color` (background, defaults to `"orange"`), `textColor` (defaults to dark or light depending on `color`), `href` (turns the ribbon into a link; only then does it capture clicks), `target` (defaults to `"_blank"`), `position` (`"top-right"` (default), `"top-left"`, `"bottom-right"`, `"bottom-left"` draw a diagonal corner ribbon; `"top"`, `"bottom"` draw a full width band), `htmlInclude` (defaults to `"/**\/*.html"`).
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
+ * @param {boolean} [params.modulepreload=false] - Send `Link: <url>; rel=modulepreload` response headers listing the static import graph of a page (as far as the graph knows it). Off by default, to enable once the server runs on http/2 or http/3: over http/1.1 the preloads take the 6 connections per origin ahead of the render-blocking scripts, and pages get slower (the why, with measures, in jsenv_plugin_modulepreload.js).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
  * @param {object} [params.injections] - Values to inject into files, as `{ urlPattern: getInjections }`. Keys are url patterns relative to sourceDirectoryUrl (`"./index.html"`, `"**\/*.js"`), values are functions receiving `urlInfo` and returning (or resolving to) an object of placeholders to replace, named `__LIKE_THIS__` by convention. In JS the value is injected as a JS literal (a string brings its own quotes), everywhere else as-is so it can be concatenated: `href="__BACKEND_URL__/users/me"`. An html url pattern also covers what is inlined in that html, so `<script>window.backendUrl = __BACKEND_URL__;</script>` shares the value with every js file of the page. See `INJECTIONS.optional` and `INJECTIONS.global`.
  * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
@@ -91,6 +97,7 @@ export const startDevServer = async ({
   sourceFilesConfig = {},
   clientAutoreload = true,
   clientAutoreloadOnServerRestart = true,
+  modulepreload = false,
   // server-timing response headers: devtools show how the time to answer is
   // spent (cook measures come from the kitchen, see urlInfo.timing). Entries
   // under minDuration are dropped so a human reads the measures that matter;
@@ -181,9 +188,12 @@ export const startDevServer = async ({
   }
 
   const logger = createLogger({ logLevel });
-  const startDevServerTask = createTaskLog("start dev server", {
-    disabled: !logger.levels.info,
-  });
+  const startDevServerTask = createTaskLog(
+    `start dev server for ${humanizeSourceDirectory(sourceDirectoryUrl)}`,
+    {
+      disabled: !logger.levels.info,
+    },
+  );
 
   const serverStopCallbackSet = new Set();
   const serverStopAbortController = new AbortController();
@@ -262,6 +272,7 @@ export const startDevServer = async ({
 
       clientAutoreload,
       clientAutoreloadOnServerRestart,
+      modulepreload,
       dependencyStatus: {
         dependencyProblemEventEmitter,
         getDependencyProblems: dependencyWatcher.getProblems,
@@ -365,4 +376,13 @@ export const startDevServer = async ({
     },
     kitchenCache,
   };
+};
+
+// "./src/" when inside the current working directory, the full path otherwise
+const humanizeSourceDirectory = (sourceDirectoryUrl) => {
+  const cwdUrl = pathToFileURL(`${process.cwd()}/`).href;
+  if (urlIsOrIsInsideOf(sourceDirectoryUrl, cwdUrl)) {
+    return `./${urlToRelativeUrl(sourceDirectoryUrl, cwdUrl)}`;
+  }
+  return urlToFileSystemPath(sourceDirectoryUrl);
 };

@@ -1,8 +1,8 @@
-import { applyBabelPlugins, parseHtml } from "@jsenv/ast";
+import { parseHtml } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
 
-import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js";
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
+import { analyzeImportMetaHot } from "./import_meta_hot_analysis.js";
 
 export const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta
@@ -52,7 +52,7 @@ export const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptSelf = false;
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
-      js_module: async (urlInfo) => {
+      js_module: (urlInfo) => {
         // Do not scan node modules for import.meta.hot
         // - unlikely to be there
         // - we don't watch node modules (too expensive)
@@ -64,27 +64,22 @@ export const jsenvPluginImportMetaHot = () => {
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaHot],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
-        });
         const {
-          importMetaHotPaths,
+          importMetaHotNodes,
           hotDecline,
           hotAcceptSelf,
-          hotAcceptDependencies,
-        } = metadata;
+          hotAcceptSpecifiers,
+        } = analyzeImportMetaHot(urlInfo.contentAst);
         urlInfo.data.hotDecline = hotDecline;
         urlInfo.data.hotAcceptSelf = hotAcceptSelf;
-        urlInfo.data.hotAcceptDependencies = hotAcceptDependencies;
-        if (importMetaHotPaths.length === 0) {
+        urlInfo.data.hotAcceptDependencies = hotAcceptSpecifiers.map(
+          (specifier) => resolveHotAcceptSpecifier(urlInfo, specifier),
+        );
+        if (importMetaHotNodes.length === 0) {
           return null;
         }
         if (urlInfo.context.build) {
-          return removeImportMetaHots(urlInfo, importMetaHotPaths);
+          return removeImportMetaHots(urlInfo, importMetaHotNodes);
         }
         return injectImportMetaHot(urlInfo, importMetaHotClientFileUrl);
       },
@@ -92,12 +87,32 @@ export const jsenvPluginImportMetaHot = () => {
   };
 };
 
-const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
+// The specifier given to import.meta.hot.accept() is one the file imports,
+// so its url is known from that import (autoreload compares urls). A
+// specifier the file does not import accepts nothing: it is kept as a plain
+// url, never resolved as a dependency (that could throw on a bare specifier).
+const resolveHotAcceptSpecifier = (urlInfo, specifier) => {
+  for (const referenceToOther of urlInfo.referenceToOthersSet) {
+    if (
+      referenceToOther.type === "js_import" &&
+      referenceToOther.specifier === specifier
+    ) {
+      return referenceToOther.url;
+    }
+  }
+  try {
+    return new URL(specifier, urlInfo.url).href;
+  } catch {
+    return specifier;
+  }
+};
+
+const removeImportMetaHots = (urlInfo, importMetaHotNodes) => {
   const magicSource = createMagicSource(urlInfo.content);
-  importMetaHotPaths.forEach((path) => {
+  importMetaHotNodes.forEach((node) => {
     magicSource.replace({
-      start: path.node.start,
-      end: path.node.end,
+      start: node.start,
+      end: node.end,
       replacement: "undefined",
     });
   });

@@ -1,7 +1,7 @@
 import { readEntryStatSync } from "@jsenv/filesystem";
 import { ensurePathnameTrailingSlash } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "../../kitchen/file_and_server_urls_converter.js";
 import { createHtmlPageLister } from "./html_pages.js";
 import { jsenvPluginDirectoryListing } from "./jsenv_plugin_directory_listing.js";
@@ -160,7 +160,16 @@ export const jsenvPluginProtocolFile = ({
         }
         const serveFile = (url) => {
           const contentType = CONTENT_TYPE.fromUrlExtension(url);
-          const fileBuffer = readFileSync(new URL(url));
+          const urlObject = new URL(url);
+          // taken before the read: a write landing in between moves the
+          // stat past this one, so the dev server sees the content as
+          // outdated (see isValid in the dev server) rather than the reverse
+          const fileStat = statSync(urlObject);
+          const fileBuffer = readFileSync(urlObject);
+          urlInfo.data.fileStat = {
+            mtimeMs: fileStat.mtimeMs,
+            size: fileStat.size,
+          };
           const content = CONTENT_TYPE.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer;

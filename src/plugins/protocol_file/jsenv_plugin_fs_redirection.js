@@ -201,25 +201,42 @@ const getSpaFallbackUrl = (reference) => {
     // the SPA fallback answers a request; during build there is none
     return null;
   }
-  const closestHtmlRootFile = getClosestHtmlRootFile(
-    requestedUrl,
+  const spaFallbackFileUrls = listSpaFallbackFileUrls(requestedUrl, {
     rootDirectoryUrl,
-  );
-  if (closestHtmlRootFile) {
-    return closestHtmlRootFile;
+    mainFilePath,
+  });
+  for (const spaFallbackFileUrl of spaFallbackFileUrls) {
+    if (existsSync(new URL(spaFallbackFileUrl))) {
+      return spaFallbackFileUrl;
+    }
   }
-  return String(new URL(mainFilePath, rootDirectoryUrl));
+  // none exists: the main file it is, and the 404 answering for it lists
+  // what was tried (see directory listing)
+  return new URL(mainFilePath, rootDirectoryUrl).href;
 };
-const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
-  let directoryUrl = new URL("./", requestedUrl);
-  while (true) {
-    const directoryEntryFileUrl = getDirectoryEntryFileUrl(directoryUrl);
-    if (directoryEntryFileUrl) {
-      return directoryEntryFileUrl;
+// The html files that can answer a route, closest first: the entry file of
+// the route's own directory ("index.html", then "<dirname>.html"), then of
+// each directory above it up to the server root, then the main file.
+export const listSpaFallbackFileUrls = (
+  requestedUrl,
+  { rootDirectoryUrl, mainFilePath },
+) => {
+  const fileUrls = [];
+  let directoryUrl = new URL("./", requestedUrl).href;
+  while (urlIsOrIsInsideOf(directoryUrl, rootDirectoryUrl)) {
+    fileUrls.push(new URL("index.html", directoryUrl).href);
+    const filename = urlToFilename(directoryUrl);
+    if (filename) {
+      fileUrls.push(new URL(`${filename}.html`, directoryUrl).href);
     }
-    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
-      return null;
+    if (directoryUrl === String(rootDirectoryUrl)) {
+      break;
     }
-    directoryUrl = new URL("../", directoryUrl);
+    directoryUrl = new URL("../", directoryUrl).href;
   }
+  const mainFileUrl = new URL(mainFilePath, rootDirectoryUrl).href;
+  if (!fileUrls.includes(mainFileUrl)) {
+    fileUrls.push(mainFileUrl);
+  }
+  return fileUrls;
 };
