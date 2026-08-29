@@ -24,6 +24,16 @@ const controlDefaultFontFamily = computedStyle.fontFamily;
 const controlDefaultFontSize = computedStyle.fontSize;
 document.body.removeChild(button);
 
+// The color keywords derived from the ink. Written once and declared twice:
+// on :root as the theme's defaults, and on a popup — a new paper — so what a
+// container pinned for its own paper does not reach the popup.
+const INK_DERIVED_COLOR_TOKENS_CSS = `
+  --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
+  --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
+  --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
+  --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+`;
+
 const css = /* css */ `
   @layer navi {
     :root {
@@ -243,14 +253,12 @@ const css = /* css */ `
            hint:      barely-there color, watermarks, ghost placeholders
          The last four mix currentColor toward transparent or black, so they
          follow whatever ink a container writes in: a dark card sets color and
-         nothing else. Theme tokens, like everything on :root — a container
-         that overrides one for ITS paper is heard by every popup opened from
-         it too, a popup having no way to tell a theme from a paper. */
+         nothing else. A container may pin one for ITS paper (a white at
+         88% where 80% of white reads too faint on a colored resin); that is a
+         paper's value, not a theme's, and a popup opened from the container
+         re-declares all five for its own paper (see the popup rule below). */
       --navi-color-primary: var(--navi-surface-text-color);
-      --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
-      --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
-      --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
-      --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
+      ${INK_DERIVED_COLOR_TOKENS_CSS}
 
       /* What a control shows while it holds nothing: the ::placeholder of an
          input, the empty value slot of a picker. One place for the whole app:
@@ -264,14 +272,17 @@ const css = /* css */ `
       --navi-placeholder-font-style: normal;
     }
 
-    /* A popup is a new paper (see --navi-popup-color): primary is the ink it
-       writes in, not the ink of the container it was opened from. On the
-       element itself, so it beats a container's own override whatever the
-       layer; an app that wants a popup to keep its container's ink says so on
-       the popup, unlayered, and wins in turn. */
+    /* A popup is a new paper (see --navi-popup-color): its color keywords are
+       computed against the ink it writes in, not the container's — the same
+       formulas as :root, re-declared so a container's own value for one of
+       them stops at the popup. On the element itself, so it beats that value
+       whatever the layer; an app that wants a popup to keep its container's
+       ink, or that themes one of these on :root, says so on the popup,
+       unlayered, and wins in turn. */
     .navi_popover,
     .navi_dialog {
       --navi-color-primary: var(--navi-popup-color);
+      ${INK_DERIVED_COLOR_TOKENS_CSS}
     }
   }
 
