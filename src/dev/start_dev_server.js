@@ -220,15 +220,29 @@ export const startDevServer = async ({
     onChange: (problems) => {
       dependencyProblemEventEmitter.emit(problems);
     },
-    onProblem: ({ packageName, declaredVersion, installedVersion, state }) => {
-      logger.warn(
+    onProblem: ({
+      packageName,
+      declaredVersion,
+      installedVersion,
+      declaredIn,
+      state,
+      severity,
+    }) => {
+      const message =
         state === "missing"
           ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
-          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
-      );
+          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion} in ${declaredIn}, run npm install`;
+      if (severity === "warning") {
+        logger.warn(message);
+      } else {
+        logger.info(message);
+      }
     },
-    onInstalled: ({ packageName, declaredVersion }) => {
+    onInstalled: ({ packageName, declaredVersion, severity }) => {
       logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      if (severity !== "warning") {
+        return;
+      }
       reloadRequestEventEmitter.emit({
         cause: `${packageName}@${declaredVersion} installed`,
         reason: `a dependency became available in node_modules`,
