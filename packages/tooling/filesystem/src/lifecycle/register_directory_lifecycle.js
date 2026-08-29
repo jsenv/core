@@ -95,12 +95,18 @@ export const registerDirectoryLifecycle = (
   };
   const tracker = trackResources();
   const infoMap = new Map();
-  const readEntryInfo = (url) => {
+  // type is given when already known (from the directory listing it comes
+  // from): there is then no need to stat the entry, which matters when
+  // indexing a large tree at startup
+  const readEntryInfo = (url, { type } = {}) => {
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      const stat = readEntryStatSync(new URL(url));
-      const type = statsToType(stat);
+      let stat = null;
+      if (type === undefined) {
+        stat = readEntryStatSync(new URL(url));
+        type = statsToType(stat);
+      }
       const patternValue = previousInfo
         ? previousInfo.patternValue
         : getWatchPatternValue({ url, type });
@@ -257,10 +263,12 @@ export const registerDirectoryLifecycle = (
         const directoryUrl = entryInfo.url.endsWith("/")
           ? entryInfo.url
           : `${entryInfo.url}/`;
-        let entryNameArray;
+        let direntArray;
         try {
           const directoryUrlObject = new URL(directoryUrl);
-          entryNameArray = readdirSync(directoryUrlObject);
+          direntArray = readdirSync(directoryUrlObject, {
+            withFileTypes: true,
+          });
         } catch (e) {
           if (
             e.code === "ENOENT" ||
@@ -272,12 +280,17 @@ export const registerDirectoryLifecycle = (
           }
           throw e;
         }
-        for (const entryName of entryNameArray) {
-          const childEntryUrl = new URL(entryName, directoryUrl).href;
+        for (const dirent of direntArray) {
+          const childEntryUrl = new URL(dirent.name, directoryUrl).href;
           if (seenSet.has(childEntryUrl)) {
             continue;
           }
-          const childEntryInfo = readEntryInfo(childEntryUrl);
+          // the stat is read (and its mtime reported) only when the entry is
+          // notified; a symlink or an exotic entry is stat'ed too, so that it
+          // is typed as what it points to, as for any later event
+          const childEntryInfo = readEntryInfo(childEntryUrl, {
+            type: notify ? undefined : direntToType(dirent),
+          });
           if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
             applyEntryDiscoveredEffects(childEntryInfo);
           }
@@ -319,7 +332,7 @@ export const registerDirectoryLifecycle = (
           relativeUrl: entryInfo.relativeUrl,
           type: entryInfo.type,
           patternValue: entryInfo.patternValue,
-          mtime: entryInfo.stat.mtimeMs,
+          mtime: entryInfo.stat ? entryInfo.stat.mtimeMs : undefined,
         });
       }
     };
@@ -333,7 +346,7 @@ export const registerDirectoryLifecycle = (
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.stat.mtimeMs,
+        mtime: entryInfo.stat ? entryInfo.stat.mtimeMs : undefined,
       });
     }
   };
@@ -345,7 +358,9 @@ export const registerDirectoryLifecycle = (
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
         mtime: entryInfo.stat.mtimeMs,
-        previousMtime: entryInfo.previousInfo.stat.mtimeMs,
+        previousMtime: entryInfo.previousInfo.stat
+          ? entryInfo.previousInfo.stat.mtimeMs
+          : undefined,
       });
     }
   };
@@ -381,8 +396,21 @@ ${relativeUrls.join("\n")}`,
   return tracker.cleanup;
 };
 
+const direntToType = (dirent) => {
+  if (dirent.isFile()) {
+    return "file";
+  }
+  if (dirent.isDirectory()) {
+    return "directory";
+  }
+  return undefined;
+};
+
 const shouldCallUpdated = (entryInfo) => {
   const { stat, previousInfo } = entryInfo;
+  if (!previousInfo.stat) {
+    return true;
+  }
   if (!stat.atimeMs) {
     return true;
   }
