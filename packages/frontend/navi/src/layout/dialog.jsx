@@ -282,6 +282,12 @@ const css = /* css */ `
         var(--container-position-remaining-width, var(--dialog-maxmax-width)),
         var(--dialog-maxmax-width)
       );
+      /* The sheet rests on the screen's bottom edge, which on a phone is the
+         home indicator and, since iOS 26, Safari's own floating bar — a band
+         the browser does not paint fixed content into. The surface still
+         reaches the edge (the sheet comes out from behind the bar); what it
+         holds stops above it. */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local

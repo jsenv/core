@@ -15008,16 +15008,68 @@ window.addEventListener("resize", (event) => {
 const getVisibleViewportRect = () => {
   const visualViewport = window.visualViewport;
   const documentElement = document.documentElement;
-  const height = visualViewport
-    ? visualViewport.height
-    : documentElement.clientHeight;
+  if (!visualViewport) {
+    return {
+      left: 0,
+      top: 0,
+      width: documentElement.clientWidth,
+      height: Math.max(
+        0,
+        documentElement.clientHeight - getVirtualKeyboardOverlayHeight(),
+      ),
+    };
+  }
+  let { offsetLeft, offsetTop, width, height } = visualViewport;
+  // The visual viewport only drifts from the layout viewport while the page is
+  // pinch-zoomed or an on-screen keyboard is up (Safari/Firefox shrink and
+  // pan it to keep the field in view). Neither can be the case at scale 1
+  // with nothing editable focused — an on-screen keyboard is dismissed by
+  // blurring the field — so an offset reported then is a stale one. iOS 26.0
+  // keeps the last keyboard offset and height after the keyboard went away
+  // (https://developer.apple.com/forums/thread/800125): trusted as-is, that
+  // offset sends a bottom-docked sheet past the bottom edge, out of sight.
+  if (
+    visualViewport.scale === 1 &&
+    !isEditableElement(document.activeElement)
+  ) {
+    offsetLeft = 0;
+    offsetTop = 0;
+    if (window.innerHeight > height) {
+      height = window.innerHeight;
+    }
+  }
   return {
-    left: visualViewport ? visualViewport.offsetLeft : 0,
-    top: visualViewport ? visualViewport.offsetTop : 0,
-    width: visualViewport ? visualViewport.width : documentElement.clientWidth,
+    left: offsetLeft,
+    top: offsetTop,
+    width,
     height: Math.max(0, height - getVirtualKeyboardOverlayHeight()),
   };
 };
+
+const isEditableElement = (element) => {
+  if (!element) {
+    return false;
+  }
+  if (element.tagName === "TEXTAREA" || element.isContentEditable) {
+    return true;
+  }
+  if (element.tagName === "INPUT") {
+    return !NON_TYPING_INPUT_TYPES.has(element.type);
+  }
+  return false;
+};
+const NON_TYPING_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "hidden",
+  "image",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+]);
 
 // Minimum fraction of element width/height that must be visible on the preferred side
 // before flipping to the opposite side. Prevents flickering near the flip threshold.
