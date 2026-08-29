@@ -10,6 +10,11 @@ import { createKitchen } from "../../kitchen/kitchen.js";
 import { createJsenvPluginsController } from "../../plugins/jsenv_plugins_controller.js";
 import { getRuntimeFromRequest } from "./runtime_from_request.js";
 
+// What the newest browser supports, and nothing less: the source untouched.
+// A version no browser has, so that every feature known to runtime-compat
+// counts as supported.
+const UNKNOWN_CLIENT_RUNTIME_COMPAT = { chrome: "9999.0.0" };
+
 export const devServerPluginServeSourceFiles = ({
   packageDirectory,
   sourceDirectoryUrl,
@@ -70,14 +75,16 @@ export const devServerPluginServeSourceFiles = ({
       }
     });
     // A client we cannot identify (curl, fetch, a healthcheck, a proxy dropping
-    // the user agent) is assumed to be one of the runtimes the project targets.
-    // Treating it as a runtime supporting nothing would serve it the js module
-    // fallback, breaking tooling perfectly capable of ES modules; an actual
-    // ancient browser hiding its identity fails loudly instead, which is the
-    // cheaper of the two mistakes.
+    // the user agent, the WebKit inspector re-requesting a page's resources
+    // under its own agent) is served the source as it is written. Taking the
+    // build targets instead would hand it the js module fallback and a heavy
+    // transpilation — and, when the same page mixes identified and
+    // unidentified requests, two incompatible versions of one module. An
+    // actual ancient browser hiding its identity fails loudly instead, which
+    // is the right failure for dev.
     const clientRuntimeCompat =
       runtimeName === "unknown"
-        ? runtimeCompat
+        ? UNKNOWN_CLIENT_RUNTIME_COMPAT
         : { [runtimeName]: runtimeVersion };
 
     kitchen = createKitchen({
@@ -271,6 +278,41 @@ export const devServerPluginServeSourceFiles = ({
             request.resource,
             parentUrl,
           );
+          if (!reference) {
+            // Inline content ("page.html@L10C7-L14C16.js") has no file of its
+            // own: it is served from the reference its parent creates when it
+            // is cooked. Without a usable referer the parent is not known —
+            // devtools re-fetching a resource on its own, a second kitchen for
+            // the same page (the WebKit inspector sends its own user agent) —
+            // so it is derived from the url and cooked first.
+            const inlineParentUrl = getInlineContentParentUrl(requestedUrl);
+            if (inlineParentUrl) {
+              if (!kitchen.graph.getUrlInfo(inlineParentUrl)) {
+                const rootUrlInfo = kitchen.graph.rootUrlInfo;
+                const inlineParentWebUrl = WEB_URL_CONVERTER.asWebUrl(
+                  inlineParentUrl,
+                  {
+                    origin: request.origin,
+                    rootDirectoryUrl: sourceDirectoryUrl,
+                  },
+                );
+                const parentReference =
+                  rootUrlInfo.dependencies.createResolveAndFinalize({
+                    trace: { message: parentUrl },
+                    type: "http_request",
+                    specifier: inlineParentWebUrl.slice(request.origin.length),
+                  });
+                await parentReference.urlInfo.cook({
+                  request,
+                  reference: parentReference,
+                });
+              }
+              reference = kitchen.graph.inferReference(
+                request.resource,
+                inlineParentUrl,
+              );
+            }
+          }
           if (reference) {
             reference.urlInfo.context.request = request;
             reference.urlInfo.context.requestedUrl = requestedUrl;
@@ -554,4 +596,19 @@ const cacheIsDisabledInResponseHeader = (urlInfo) => {
     urlInfo.headers["cache-control"] === "no-store" ||
     urlInfo.headers["cache-control"] === "no-cache"
   );
+};
+
+// "dir/page.html@L10C7-L14C16.js" -> "dir/page.html" (search kept: it is the
+// parent's). Null for anything else — the inline url grammar is the one
+// generateUrlForInlineContent writes (@jsenv/ast).
+const getInlineContentParentUrl = (url) => {
+  const urlObject = new URL(url);
+  const match = /^(.+)@[^@/]*?L\d+C\d+(?:-L\d+C\d+)?\.[a-z0-9]+$/.exec(
+    urlObject.pathname,
+  );
+  if (!match) {
+    return null;
+  }
+  urlObject.pathname = match[1];
+  return urlObject.href;
 };
