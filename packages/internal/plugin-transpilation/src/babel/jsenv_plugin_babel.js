@@ -82,6 +82,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins,
       options: {
+        sourceMaps: urlInfo.context.sourcemapsEnabled,
         generatorOpts: {
           retainLines: urlInfo.context.dev,
         },

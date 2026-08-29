@@ -7,6 +7,7 @@ export const convertJsClassicToJsModule = async ({
   inputSourcemap,
   inputUrl,
   outputUrl,
+  generateSourcemap = true,
 }) => {
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [[babelPluginReplaceTopLevelThis, { isWebWorker }]],
@@ -14,6 +15,7 @@ export const convertJsClassicToJsModule = async ({
     inputIsJsModule: false,
     inputUrl,
     outputUrl,
+    options: { sourceMaps: generateSourcemap },
   });
   const sourcemap = composeTwoSourcemaps(inputSourcemap, map);
   return {

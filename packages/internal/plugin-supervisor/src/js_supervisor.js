@@ -55,6 +55,7 @@ export const injectSupervisorIntoJs = async ({
     input: content,
     inputIsJsModule: type === "js_module",
     inputUrl: url,
+    options: { sourceMaps: sourcemaps === "inline" },
   });
   let code = result.code;
   if (sourcemaps === "inline") {

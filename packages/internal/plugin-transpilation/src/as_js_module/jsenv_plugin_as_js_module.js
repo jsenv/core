@@ -48,6 +48,7 @@ export const jsenvPluginAsJsModule = () => {
         inputUrl: jsClassicUrlInfo.url,
         outputUrl: jsClassicUrlInfo.generatedUrl,
         isWebWorker: isWebWorkerUrlInfo(urlInfo),
+        generateSourcemap: urlInfo.context.sourcemapsEnabled,
       });
       return {
         content,

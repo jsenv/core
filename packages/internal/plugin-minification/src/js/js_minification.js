@@ -12,11 +12,14 @@ export const minifyJs = async (jsUrlInfo, options) => {
       [url]: content,
     },
     {
-      sourceMap: {
-        ...(sourcemap ? { content: JSON.stringify(sourcemap) } : {}),
-        asObject: true,
-        includeSources: true,
-      },
+      // a map costs terser ~20% of its time, only when the kitchen keeps it
+      sourceMap: jsUrlInfo.context.sourcemapsEnabled
+        ? {
+            ...(sourcemap ? { content: JSON.stringify(sourcemap) } : {}),
+            asObject: true,
+            includeSources: true,
+          }
+        : false,
       module: isJsModule,
       // We need to preserve "new __InlineContent__()" calls to be able to recognize them
       // after minification in order to version urls inside inline content text

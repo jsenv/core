@@ -118,6 +118,7 @@ export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
         outputUrl: urlInfo.url,
         outputFormat,
         remapImportSpecifier,
+        generateSourcemap: urlInfo.context.sourcemapsEnabled,
       });
       return {
         content,

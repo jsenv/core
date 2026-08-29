@@ -18,6 +18,7 @@ export const convertJsModuleToJsClassic = async ({
   inputSourcemap,
   inputUrl,
   outputUrl,
+  generateSourcemap = true,
   outputFormat = "system", // "systemjs" or "umd"
   preferAbsoluteSpecifiers,
   remapImportSpecifier = (specifier) => specifier,
@@ -95,6 +96,7 @@ export const convertJsModuleToJsClassic = async ({
     inputIsJsModule: true,
     inputUrl,
     outputUrl,
+    options: { sourceMaps: generateSourcemap },
   });
   const sourcemap = composeTwoSourcemaps(inputSourcemap, map);
   return {

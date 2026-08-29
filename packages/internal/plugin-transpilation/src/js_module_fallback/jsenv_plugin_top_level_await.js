@@ -48,6 +48,7 @@ export const jsenvPluginTopLevelAwait = ({ needJsModuleFallback }) => {
           inputIsJsModule: true,
           inputUrl: urlInfo.originalUrl,
           outputUrl: urlInfo.generatedUrl,
+          options: { sourceMaps: urlInfo.context.sourcemapsEnabled },
         });
         return {
           content: code,

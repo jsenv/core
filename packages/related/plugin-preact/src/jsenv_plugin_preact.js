@@ -143,6 +143,7 @@ export const jsenvPluginPreact = ({
           inputIsJsModule: true,
           inputUrl: urlInfo.url,
           outputUrl: urlInfo.generatedUrl,
+          options: { sourceMaps: urlInfo.context.sourcemapsEnabled },
         });
         if (jsxEnabled) {
           const magicSource = createMagicSource(code);
