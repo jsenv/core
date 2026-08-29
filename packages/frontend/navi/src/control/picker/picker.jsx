@@ -757,10 +757,6 @@ const PickerButton = (props) => {
             // eslint-disable-next-line react/no-children-prop
             children={undefined} // we will render children into the div
             ui={ui}
-            onFocus={(e) => {
-              inputProps.onFocus?.(e);
-              e.target.select();
-            }}
             onCopy={(e) => {
               const pickerEl = ref.current;
               if (isWithinPickerContent(e.target, pickerEl)) {
