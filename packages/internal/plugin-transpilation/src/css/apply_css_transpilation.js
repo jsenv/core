@@ -21,12 +21,23 @@ export const applyCssTranspilation = async ({
   return { content: String(code), sourcemap: map };
 };
 
+// runtimeCompat names on the left, lightningcss target names on the right
+// (https://lightningcss.dev/transpilation.html#targets)
+const LIGHTNINGCSS_TARGET_NAMES = {
+  chrome: "chrome",
+  firefox: "firefox",
+  ie: "ie",
+  ios_safari: "ios_saf",
+  opera: "opera",
+  safari: "safari",
+};
+
 const runtimeCompatToTargets = (runtimeCompat) => {
   const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+  Object.keys(LIGHTNINGCSS_TARGET_NAMES).forEach((runtimeName) => {
     const version = runtimeCompat[runtimeName];
     if (version) {
-      targets[runtimeName] = versionToBits(version);
+      targets[LIGHTNINGCSS_TARGET_NAMES[runtimeName]] = versionToBits(version);
     }
   });
   return targets;

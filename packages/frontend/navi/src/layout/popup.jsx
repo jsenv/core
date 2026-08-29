@@ -25,6 +25,7 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 import { PopupModeContext, useResolvedPopupMode } from "./popup_mode.jsx";
+import { PopupClose } from "./popup_close.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -221,3 +222,5 @@ export const Popup = (props) => {
     </Popover>
   );
 };
+
+Popup.Close = PopupClose;

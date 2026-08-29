@@ -6,7 +6,6 @@ export const browserDefaultRuntimeCompat = {
   chrome: "64",
   edge: "79",
   firefox: "67",
-  ios: "12",
   ios_safari: "12",
   opera: "51",
   safari: "11.3",

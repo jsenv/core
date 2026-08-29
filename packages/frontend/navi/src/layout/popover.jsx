@@ -85,6 +85,7 @@ import {
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
+import { PopupClose } from "./popup_close.jsx";
 
 // Custom renderer only (layer="local") — count of currently-open instances,
 // see --popover-stack-order's own CSS comment for why a plain "last shown"
@@ -1635,3 +1636,5 @@ const resolvePositionAreaAndAnimationKind = ({
 // suppressPointerEventsDuringTransition/armPointerDownOutsideClose moved to
 // popup_shared.js — same helpers Dialog's own custom renderer needs, no
 // Popover-specific knowledge in either.
+
+Popover.Close = PopupClose;

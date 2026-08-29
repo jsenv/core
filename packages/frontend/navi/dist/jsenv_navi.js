@@ -54501,6 +54501,27 @@ const sizeOf = (element, axis) => {
 const translateOf = (axis, distance) =>
   axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
 
+const PopupClose = ({
+  label,
+  ...rest
+}) => {
+  return jsx(Button, {
+    command: "--navi-close",
+    icon: true,
+    variant: "discrete"
+    // The cross is drawn at the control size, which is a few millimetres
+    // wide; the padding is what makes it a target a thumb can hit.
+    ,
+    paddingX: "s",
+    paddingY: "s",
+    "aria-label": label === undefined ? naviI18n("button.close") : label,
+    ...rest,
+    children: jsx(Icon, {
+      children: jsx(CloseSvg, {})
+    })
+  });
+};
+
 installImportMetaCssBuild(import.meta);/**
  * A dialog is a surface, not a control: it holds no value, has no action and
  * aggregates nothing. Fields and a submit go in a `<Form>` inside it, exactly
@@ -56096,6 +56117,7 @@ const DIALOG_STYLE_CSS_VARS = {
   minHeight: "--dialog-min-height",
   maxHeight: "--dialog-max-height"
 };
+Dialog.Close = PopupClose;
 
 installImportMetaCssBuild(import.meta);/**
  * A popover is a surface, not a control: it holds no value, has no action and
@@ -57622,6 +57644,8 @@ const resolvePositionAreaAndAnimationKind = ({
 // popup_shared.js — same helpers Dialog's own custom renderer needs, no
 // Popover-specific knowledge in either.
 
+Popover.Close = PopupClose;
+
 installImportMetaCssBuild(import.meta);/**
  * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
  * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
@@ -57830,6 +57854,7 @@ const Popup = props => {
     children: childrenWithMode
   });
 };
+Popup.Close = PopupClose;
 
 installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_picker {

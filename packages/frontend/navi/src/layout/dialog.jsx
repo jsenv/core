@@ -96,6 +96,7 @@ import {
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
+import { PopupClose } from "./popup_close.jsx";
 
 // Same need popover.jsx has for its own local renderer (see its
 // openLocalPopoverCount): a layer="local" dialog is a plain positioned element
@@ -1710,3 +1711,5 @@ const DIALOG_STYLE_CSS_VARS = {
   minHeight: "--dialog-min-height",
   maxHeight: "--dialog-max-height",
 };
+
+Dialog.Close = PopupClose;

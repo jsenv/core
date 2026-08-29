@@ -1264,8 +1264,15 @@
               header
             </Button>
             <Dialog id="sheet_grip_dialog" dockedOnSmallTouchScreen animation>
-              <Box header padding="s" className="demo-overflow-part">
+              <Box
                 header
+                padding="s"
+                flex="x"
+                alignY="center"
+                className="demo-overflow-part"
+              >
+                <Box expandX>header</Box>
+                <Dialog.Close />
               </Box>
               <Box padding="m" flex="y" spacing="s">
                 <SheetBoard>
