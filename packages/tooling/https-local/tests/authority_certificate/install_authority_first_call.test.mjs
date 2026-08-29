@@ -5,6 +5,12 @@ import {
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 import { UNICODE } from "@jsenv/humanize";
+import { listBootedIosSimulators } from "@jsenv/https-local/src/internal/mac/ios_simulator.js";
+
+const { simctlAvailable, bootedSimulators } =
+  process.platform === "darwin"
+    ? await listBootedIosSimulators()
+    : { simctlAvailable: false, bootedSimulators: [] };
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
@@ -51,6 +57,9 @@ const expect = {
       darwin: [
         `${UNICODE.INFO} You should add certificate to mac keychain`,
         `${UNICODE.INFO} You should add certificate to firefox`,
+        ...(bootedSimulators.length
+          ? [`${UNICODE.INFO} You should add certificate to iOS simulator`]
+          : []),
       ],
       win32: [
         `${UNICODE.INFO} You should add certificate to windows`,
@@ -88,6 +97,14 @@ const expect = {
         status: "not_trusted",
         reason: "certificate is new and tryToTrust is disabled",
       },
+      iosSimulator: !simctlAvailable
+        ? { status: "other", reason: "xcrun simctl not available" }
+        : bootedSimulators.length === 0
+          ? { status: "other", reason: "no booted iOS simulator" }
+          : {
+              status: "not_trusted",
+              reason: "certificate is new and tryToTrust is disabled",
+            },
     },
     win32: {
       windows: {

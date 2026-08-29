@@ -7,6 +7,7 @@ import {
   uninstallCertificateAuthority,
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
+import { listBootedIosSimulators } from "@jsenv/https-local/src/internal/mac/ios_simulator.js";
 
 const nssInstalledOnMac = () => {
   try {
@@ -17,6 +18,10 @@ const nssInstalledOnMac = () => {
   }
 };
 const darwinNssInstalled = process.platform === "darwin" && nssInstalledOnMac();
+const { simctlAvailable, bootedSimulators } =
+  process.platform === "darwin"
+    ? await listBootedIosSimulators()
+    : { simctlAvailable: false, bootedSimulators: [] };
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
@@ -76,6 +81,14 @@ const expect = {
           status: "not_trusted",
           reason: "certificate not found in mac keychain",
         },
+        iosSimulator: !simctlAvailable
+          ? { status: "other", reason: "xcrun simctl not available" }
+          : bootedSimulators.length === 0
+            ? { status: "other", reason: "no booted iOS simulator" }
+            : {
+                status: "not_trusted",
+                reason: "certificate not found in iOS simulator",
+              },
       },
       win32: {
         windows: {
@@ -128,6 +141,10 @@ const expect = {
             : [
                 `${UNICODE.FAILURE} cannot check if certificate is in firefox\n--- reason ---\n"nss" is not installed`,
               ]),
+          ...bootedSimulators.flatMap((simulator) => [
+            `Check if certificate is in iOS simulator "${simulator.name}"...`,
+            `${UNICODE.INFO} certificate not found in iOS simulator "${simulator.name}"`,
+          ]),
         ],
         win32: [
           "Check if certificate is in windows...",

@@ -6,6 +6,7 @@
 
 import { executeTrustQueryOnChrome } from "./chrome_mac.js";
 import { executeTrustQueryOnFirefox } from "./firefox_mac.js";
+import { executeTrustQueryOnIosSimulator } from "./ios_simulator.js";
 import { executeTrustQueryOnMacKeychain } from "./mac_keychain.js";
 import { executeTrustQueryOnSafari } from "./safari.js";
 
@@ -48,10 +49,20 @@ export const executeTrustQuery = async ({
     macTrustInfo,
   });
 
+  // simulators have their own trust store, the mac keychain does not reach them
+  const iosSimulatorTrustInfo = await executeTrustQueryOnIosSimulator({
+    logger,
+    certificateFileUrl,
+    certificateIsNew,
+    certificate,
+    verb,
+  });
+
   return {
     mac: macTrustInfo,
     chrome: chromeTrustInfo,
     firefox: firefoxTrustInfo,
     safari: safariTrustInfo,
+    iosSimulator: iosSimulatorTrustInfo,
   };
 };

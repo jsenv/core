@@ -5,6 +5,7 @@ Generate locally trusted HTTPS certificates for local development.
 🔒 Certificates trusted by your operating system and browsers  
 🌐 Perfect for local HTTPS development  
 🖥️ Works on macOS, Linux, and Windows  
+📱 Trusted by iOS simulators too  
 ⚡ Simple CLI and JavaScript API
 
 ## Table of Contents
@@ -14,6 +15,7 @@ Generate locally trusted HTTPS certificates for local development.
   - [Quick Start](#quick-start)
   - [CLI](#cli)
     - [init](#init)
+      - [iOS simulator](#ios-simulator)
     - [generate](#generate)
     - [cleanup](#cleanup)
   - [Certificate Expiration](#certificate-expiration)
@@ -59,7 +61,7 @@ const server = createServer(
 npx @jsenv/https-local init
 ```
 
-Installs a root certificate authority, trusts it in your OS and browsers, and ensures `localhost` is mapped to `127.0.0.1` in your hosts file. Safe to re-run — subsequent runs report the current status.
+Installs a root certificate authority, trusts it in your OS, your browsers and the [iOS simulators](#ios-simulator) currently booted, and ensures `localhost` is mapped to `127.0.0.1` in your hosts file. Safe to re-run — subsequent runs report the current status.
 
 <details>
   <summary>First execution (macOS)</summary>
@@ -76,6 +78,11 @@ Password:
 ✔ certificate added to mac keychain
 Adding certificate to firefox...
 ✔ certificate added to Firefox
+Check if certificate is in iOS simulator "iPhone 17"...
+ℹ certificate not found in iOS simulator "iPhone 17"
+Adding certificate to iOS simulator "iPhone 17"...
+❯ xcrun simctl keychain 3353AABB-2A54-49FA-B69D-AA4454350523 add-root-cert "/Users/you/https_local/https_local_root_certificate.crt"
+✔ certificate added to iOS simulator "iPhone 17"
 Check hosts file content...
 ✔ all ip mappings found in hosts file
 ```
@@ -97,11 +104,25 @@ Check if certificate is in mac keychain...
 ✔ certificate found in mac keychain
 Check if certificate is in Firefox...
 ✔ certificate found in Firefox
+Check if certificate is in iOS simulator "iPhone 17"...
+✔ certificate found in iOS simulator "iPhone 17"
 Check hosts file content...
 ✔ all ip mappings found in hosts file
 ```
 
 </details>
+
+#### iOS simulator
+
+An iOS simulator has a trust store of its own: a certificate trusted by the mac keychain is still refused by Safari inside the simulator, and a `fetch` towards another origin fails with `TypeError: Load failed` — WebKit only offers the "Visit website" exception for the page itself, not for cross-origin requests.
+
+`init` adds the root certificate to every simulator booted at the time it runs, with full trust: there is nothing to enable in Settings › General › About › Certificate Trust Settings afterwards (that toggle is for certificates installed from a profile). Boot the simulator, then run `init` again; or add it by hand, `booted` standing for every running simulator:
+
+```console
+xcrun simctl keychain booted add-root-cert "$HOME/Library/Application Support/https_local/https_local_root_certificate.crt"
+```
+
+The certificate stays in the simulator across reboots. It cannot be removed on its own, so `cleanup` leaves it there; `xcrun simctl keychain <udid> reset` wipes the whole simulator keychain.
 
 ### generate
 

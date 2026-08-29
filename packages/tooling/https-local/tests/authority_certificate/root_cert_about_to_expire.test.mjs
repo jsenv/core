@@ -5,8 +5,14 @@ import {
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 import { UNICODE } from "@jsenv/humanize";
+import { listBootedIosSimulators } from "@jsenv/https-local/src/internal/mac/ios_simulator.js";
 
 process.exit(0);
+
+const { bootedSimulators } =
+  process.platform === "darwin"
+    ? await listBootedIosSimulators()
+    : { bootedSimulators: [] };
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
@@ -45,6 +51,9 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
         darwin: [
           `${UNICODE.INFO} You should add certificate to mac keychain`,
           `${UNICODE.INFO} You should add certificate to firefox`,
+          ...(bootedSimulators.length
+            ? [`${UNICODE.INFO} You should add certificate to iOS simulator`]
+            : []),
         ],
         win32: [
           `${UNICODE.INFO} You should add certificate to windows`,

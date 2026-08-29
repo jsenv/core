@@ -37,7 +37,8 @@ if (values.help || positionals.length === 0) {
 Usage:
 
 npx @jsenv/https-local init
-  Install root certificate, trust it and ensure localhost is mapped to 127.0.0.1
+  Install root certificate, trust it (os, browsers, booted iOS simulators)
+  and ensure localhost is mapped to 127.0.0.1
 
 npx @jsenv/https-local cleanup
   Uninstall root certificate and remove its trust from os and browsers
@@ -52,7 +53,7 @@ Advanced commands:
 
 npx @jsenv/https-local install --trust
   Install root certificate on the filesystem
-  - trust: Try to add root certificate to os and browser trusted stores
+  - trust: Try to add root certificate to os, browser and booted iOS simulator trusted stores
 
 npx @jsenv/https-local uninstall
   Uninstall root certificate from the filesystem
