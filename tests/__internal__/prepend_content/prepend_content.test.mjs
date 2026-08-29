@@ -7,6 +7,7 @@ await prependContent(
     type: "js_module",
     content: `console.log("hello");`,
     originalUrl: new URL("./a.js", import.meta.url).href,
+    context: { sourcemapsEnabled: false },
     mutateContent: ({ content }) => {
       result = content;
     },
