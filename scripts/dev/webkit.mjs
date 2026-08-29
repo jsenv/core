@@ -2,14 +2,15 @@
  * Opens a URL in WebKit (Safari's engine) through Playwright, to look at a page
  * the way Safari draws it. The window stays open until it is closed.
  *
- * node ./scripts/dev/webkit.mjs <url>
- * node ./scripts/dev/webkit.mjs <url> --iphone       # iPhone 15 emulation
+ * node ./scripts/dev/webkit.mjs <url>                # as an iPhone 15
  * node ./scripts/dev/webkit.mjs <url> --device="iPad Pro 11"
+ * node ./scripts/dev/webkit.mjs <url> --desktop      # a plain window
  *
- * A device emulation sets the viewport, the device pixel ratio, touch
+ * The device emulation sets the viewport, the device pixel ratio, touch
  * (pointer: coarse), and an iOS user agent — it is what puts navi in its
- * phone layout (bottom sheets, touch targets). The engine stays the WebKit
- * Playwright ships, which is more recent than any iPhone's.
+ * phone layout (bottom sheets, touch targets) and what makes the dev server
+ * serve the code an iPhone gets. The engine stays the WebKit Playwright
+ * ships, which is more recent than any iPhone's.
  */
 
 import { devices, webkit } from "playwright";
@@ -18,10 +19,10 @@ const DEFAULT_URL = "http://127.0.0.1:3456/";
 const DEFAULT_DEVICE = "iPhone 15";
 
 let url = DEFAULT_URL;
-let deviceName;
+let deviceName = DEFAULT_DEVICE;
 for (const arg of process.argv.slice(2)) {
-  if (arg === "--iphone") {
-    deviceName = DEFAULT_DEVICE;
+  if (arg === "--desktop") {
+    deviceName = undefined;
   } else if (arg.startsWith("--device=")) {
     deviceName = arg.slice("--device=".length);
   } else {
