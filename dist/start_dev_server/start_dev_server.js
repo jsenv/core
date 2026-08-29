@@ -1,12 +1,12 @@
-import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, composeTwoResponses, fetchDirectory, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
-import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
+import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, fetchDirectory, composeTwoResponses, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
+import { existsSync, readFileSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, writeFile, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
-import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
+import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
-import { pathToFileURL } from "node:url";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 import { randomUUID } from "node:crypto";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
@@ -3129,11 +3129,6 @@ const addRelationshipWithPackageJson = ({
       String(packageJsonContentAsBuffer),
     );
   }
-  // Checked on disk at every validation rather than trusted to the watcher:
-  // what this file decides (the package version, hence the ?v= importers
-  // embed) ends up in the browser's immutable cache, so a request racing the
-  // watcher must never be answered from a stale package.json.
-  packageJsonReference.urlInfo.revalidateOnFileSystem = true;
 };
 
 const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {
@@ -3506,18 +3501,21 @@ const createHtmlPageLister = ({ rootDirectoryUrl }) => {
 const getDirectoryWatchPatterns = (
   directoryUrl,
   watchedDirectoryUrl,
-  { sourceFilesConfig },
+  { sourceFilesConfig, defaultPatterns = true },
 ) => {
   const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl(
     directoryUrl,
     watchedDirectoryUrl,
   );
-  const watchPatterns = {
-    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
-    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
-  };
+  const watchPatterns = {};
+  if (defaultPatterns) {
+    Object.assign(watchPatterns, {
+      [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
+      [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
+      [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
+      [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
+    });
+  }
   for (const key of Object.keys(sourceFilesConfig)) {
     watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
       sourceFilesConfig[key];
@@ -3538,11 +3536,12 @@ const watchSourceFiles = (
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {};
   let watchedDirectoryUrl = "";
-  const addDirectoryToWatch = (directoryUrl) => {
+  const addDirectoryToWatch = (directoryUrl, { defaultPatterns } = {}) => {
     Object.assign(
       watchPatterns,
       getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
         sourceFilesConfig,
+        defaultPatterns,
       }),
     );
   };
@@ -3574,7 +3573,6 @@ const watchSourceFiles = (
         },
       },
     );
-    stopWatchingSourceFiles.watchPatterns = watchPatterns;
     return stopWatchingSourceFiles;
   };
 
@@ -3594,16 +3592,18 @@ const watchSourceFiles = (
     }
     watchedDirectoryUrl = packageDirectoryUrl;
     for (const workspace of workspaces) {
-      if (workspace.endsWith("*")) {
-        const workspaceDirectoryUrl = new URL(
-          workspace.slice(0, -1),
-          packageDirectoryUrl,
-        );
-        addDirectoryToWatch(workspaceDirectoryUrl);
-      } else {
-        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
-        addDirectoryToWatch(workspaceRelativeUrl);
-      }
+      const workspaceDirectoryUrl = workspace.endsWith("*")
+        ? new URL(workspace.slice(0, -1), packageDirectoryUrl)
+        : new URL(workspace, packageDirectoryUrl);
+      addDirectoryToWatch(workspaceDirectoryUrl, {
+        // The source directory patterns already cover a workspace inside it.
+        // Every pattern is tested against every file found while watching, so
+        // the same patterns rooted at each workspace only multiply that work.
+        defaultPatterns: !urlIsOrIsInsideOf(
+          workspaceDirectoryUrl,
+          sourceDirectoryUrl,
+        ),
+      });
     }
     // we are updating the root directory
     // we must make the patterns relative to source directory relative to the new root directory
@@ -3614,6 +3614,240 @@ const watchSourceFiles = (
   watchedDirectoryUrl = sourceDirectoryUrl;
   addDirectoryToWatch(sourceDirectoryUrl);
   return watch();
+};
+
+const jsenvPluginFsRedirection = ({
+  spa,
+  directoryContentMagicName,
+  magicExtensions = ["inherit", ".js"],
+  magicDirectoryIndex = true,
+  preserveSymlinks = false,
+}) => {
+  return {
+    name: "jsenv:fs_redirection",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      if (reference.url === "file:///") {
+        return `ignore:file:///`;
+      }
+      if (reference.url === "file://") {
+        return `ignore:file://`;
+      }
+      // ignore all new URL second arg
+      if (reference.subtype === "new_url_second_arg") {
+        if (reference.original) {
+          return `ignore:${reference.original.specifier}`;
+        }
+        return `ignore:${reference.specifier}`;
+      }
+      // http, https, data, about, ...
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+      if (reference.original && !reference.original.url.startsWith("file:")) {
+        return null;
+      }
+      if (reference.isInline) {
+        return null;
+      }
+
+      if (
+        reference.specifierPathname.endsWith(`/${directoryContentMagicName}`)
+      ) {
+        const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
+        const directoryUrl = new URL(
+          reference.specifierPathname
+            .replace(`/${directoryContentMagicName}`, "/")
+            .slice(1),
+          rootDirectoryUrl,
+        ).href;
+        return directoryUrl;
+      }
+      // ignore "./" on new URL("./")
+      // if (
+      //   reference.subtype === "new_url_first_arg" &&
+      //   reference.specifier === "./"
+      // ) {
+      //   return `ignore:${reference.url}`;
+      // }
+      const urlObject = new URL(reference.url);
+      let fsStat = readEntryStatSync(urlObject, { nullIfNotFound: true });
+      reference.fsStat = fsStat;
+      const { search, hash } = urlObject;
+      urlObject.search = "";
+      urlObject.hash = "";
+      // must be read before applyFsStatEffectsOnUrlObject which forces the
+      // trailing slash on directories
+      const specifierUsesTrailingSlash = urlObject.pathname.endsWith("/");
+      applyFsStatEffectsOnUrlObject(urlObject, fsStat);
+      const shouldApplyFilesystemMagicResolution =
+        reference.type === "js_import";
+      if (shouldApplyFilesystemMagicResolution) {
+        const filesystemResolution = applyFileSystemMagicResolution(
+          urlObject.href,
+          {
+            fileStat: fsStat,
+            magicDirectoryIndex,
+            magicExtensions: getExtensionsToTry(
+              magicExtensions,
+              reference.ownerUrlInfo.url,
+            ),
+          },
+        );
+        if (filesystemResolution.stat) {
+          fsStat = filesystemResolution.stat;
+          reference.fsStat = fsStat;
+          urlObject.href = filesystemResolution.url;
+          applyFsStatEffectsOnUrlObject(urlObject, fsStat);
+        }
+      }
+      if (spa) {
+        // for SPA we want to serve the root HTML file most of the time
+        if (!fsStat) {
+          if (urlToExtension(urlObject)) {
+            // url has an extension, we assume it's a file request -> let 404 happen
+            return null;
+          }
+          if (specifierUsesTrailingSlash) {
+            // the trailing slash asks for a directory and there is none here
+            // -> let 404 happen (same reasoning as the extension above)
+            return null;
+          }
+          const spaFallbackUrl = getSpaFallbackUrl(reference);
+          if (spaFallbackUrl) {
+            return spaFallbackUrl;
+          }
+          return null;
+        }
+        if (fsStat.isDirectory()) {
+          // When requesting a directory, check if we have an HTML entry file for that directory
+          const directoryEntryFileUrl = getDirectoryEntryFileUrl(urlObject);
+          if (directoryEntryFileUrl) {
+            reference.fsStat = readEntryStatSync(directoryEntryFileUrl);
+            return directoryEntryFileUrl;
+          }
+          if (!specifierUsesTrailingSlash) {
+            // the trailing slash is what tells a directory apart from a route:
+            // "/join/" is the directory, "/join" is a route owned by the SPA
+            // even when "join/" exists in the source files.
+            // Without this a source directory would shadow the route having
+            // the same name and the SPA would be unreachable in dev while
+            // being perfectly fine once built
+            const spaFallbackUrl = getSpaFallbackUrl(reference);
+            if (spaFallbackUrl) {
+              reference.fsStat = readEntryStatSync(spaFallbackUrl, {
+                nullIfNotFound: true,
+              });
+              return spaFallbackUrl;
+            }
+          }
+        }
+      }
+      if (!fsStat) {
+        return null;
+      }
+      const urlBeforeSymlinkResolution = urlObject.href;
+      if (preserveSymlinks) {
+        return `${urlBeforeSymlinkResolution}${search}${hash}`;
+      }
+      const urlAfterSymlinkResolution = resolveSymlink(
+        urlBeforeSymlinkResolution,
+      );
+      if (urlAfterSymlinkResolution !== urlBeforeSymlinkResolution) {
+        reference.leadsToASymlink = true;
+        // reference.baseUrl = urlBeforeSymlinkResolution;
+      }
+      const resolvedUrl = `${urlAfterSymlinkResolution}${search}${hash}`;
+      return resolvedUrl;
+    },
+  };
+};
+
+const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
+  if (!fsStat) {
+    return;
+  }
+  const { pathname } = urlObject;
+  const pathnameUsesTrailingSlash = pathname.endsWith("/");
+  // force trailing slash on directories
+  if (fsStat.isDirectory()) {
+    if (!pathnameUsesTrailingSlash) {
+      urlObject.pathname = `${pathname}/`;
+    }
+  } else if (pathnameUsesTrailingSlash) {
+    // otherwise remove trailing slash if any
+    // a warning here? (because it's strange to reference a file with a trailing slash)
+    urlObject.pathname = pathname.slice(0, -1);
+  }
+};
+
+const resolveSymlink = (fileUrl) => {
+  const urlObject = new URL(fileUrl);
+  const realpath = realpathSync(urlObject);
+  const realUrlObject = pathToFileURL(realpath);
+  if (urlObject.pathname.endsWith("/")) {
+    realUrlObject.pathname += `/`;
+  }
+  return realUrlObject.href;
+};
+
+const getDirectoryEntryFileUrl = (directoryUrl) => {
+  const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
+  if (existsSync(indexHtmlFileUrl)) {
+    return indexHtmlFileUrl.href;
+  }
+  const filename = urlToFilename(directoryUrl);
+  const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
+  if (existsSync(htmlFileUrlCandidate)) {
+    return htmlFileUrlCandidate.href;
+  }
+  return null;
+};
+const getSpaFallbackUrl = (reference) => {
+  const { requestedUrl, rootDirectoryUrl, mainFilePath } =
+    reference.ownerUrlInfo.context;
+  if (!requestedUrl) {
+    // the SPA fallback answers a request; during build there is none
+    return null;
+  }
+  const spaFallbackFileUrls = listSpaFallbackFileUrls(requestedUrl, {
+    rootDirectoryUrl,
+    mainFilePath,
+  });
+  for (const spaFallbackFileUrl of spaFallbackFileUrls) {
+    if (existsSync(new URL(spaFallbackFileUrl))) {
+      return spaFallbackFileUrl;
+    }
+  }
+  // none exists: the main file it is, and the 404 answering for it lists
+  // what was tried (see directory listing)
+  return new URL(mainFilePath, rootDirectoryUrl).href;
+};
+// The html files that can answer a route, closest first: the entry file of
+// the route's own directory ("index.html", then "<dirname>.html"), then of
+// each directory above it up to the server root, then the main file.
+const listSpaFallbackFileUrls = (
+  requestedUrl,
+  { rootDirectoryUrl, mainFilePath },
+) => {
+  const fileUrls = [];
+  let directoryUrl = new URL("./", requestedUrl).href;
+  while (urlIsOrIsInsideOf(directoryUrl, rootDirectoryUrl)) {
+    fileUrls.push(new URL("index.html", directoryUrl).href);
+    const filename = urlToFilename(directoryUrl);
+    if (filename) {
+      fileUrls.push(new URL(`${filename}.html`, directoryUrl).href);
+    }
+    if (directoryUrl === String(rootDirectoryUrl)) {
+      break;
+    }
+    directoryUrl = new URL("../", directoryUrl).href;
+  }
+  const mainFileUrl = new URL(mainFilePath, rootDirectoryUrl).href;
+  if (!fileUrls.includes(mainFileUrl)) {
+    fileUrls.push(mainFileUrl);
+  }
+  return fileUrls;
 };
 
 /*
@@ -3993,6 +4227,24 @@ const generateDirectoryListingInjection = (
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
     });
+    // a url without extension nor trailing slash is a route: in spa mode it
+    // was answered with the closest html file, the 404 means none was found
+    const urlNotFoundObject = new URL(urlNotFound);
+    if (
+      spa &&
+      !urlToExtension(urlNotFoundObject) &&
+      !urlNotFoundObject.pathname.endsWith("/")
+    ) {
+      enoentDetails.spaFallbackFilePaths = listSpaFallbackFileUrls(
+        urlNotFound,
+        { rootDirectoryUrl: serverRootDirectoryUrl, mainFilePath },
+      ).map((fileUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+          fileUrl,
+          serverRootDirectoryUrl,
+        ),
+      );
+    }
   }
 
   return {
@@ -4062,223 +4314,6 @@ const getDirectoryContentItems = ({
     });
   }
   return items;
-};
-
-const jsenvPluginFsRedirection = ({
-  spa,
-  directoryContentMagicName,
-  magicExtensions = ["inherit", ".js"],
-  magicDirectoryIndex = true,
-  preserveSymlinks = false,
-}) => {
-  return {
-    name: "jsenv:fs_redirection",
-    appliesDuring: "*",
-    redirectReference: (reference) => {
-      if (reference.url === "file:///") {
-        return `ignore:file:///`;
-      }
-      if (reference.url === "file://") {
-        return `ignore:file://`;
-      }
-      // ignore all new URL second arg
-      if (reference.subtype === "new_url_second_arg") {
-        if (reference.original) {
-          return `ignore:${reference.original.specifier}`;
-        }
-        return `ignore:${reference.specifier}`;
-      }
-      // http, https, data, about, ...
-      if (!reference.url.startsWith("file:")) {
-        return null;
-      }
-      if (reference.original && !reference.original.url.startsWith("file:")) {
-        return null;
-      }
-      if (reference.isInline) {
-        return null;
-      }
-
-      if (
-        reference.specifierPathname.endsWith(`/${directoryContentMagicName}`)
-      ) {
-        const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
-        const directoryUrl = new URL(
-          reference.specifierPathname
-            .replace(`/${directoryContentMagicName}`, "/")
-            .slice(1),
-          rootDirectoryUrl,
-        ).href;
-        return directoryUrl;
-      }
-      // ignore "./" on new URL("./")
-      // if (
-      //   reference.subtype === "new_url_first_arg" &&
-      //   reference.specifier === "./"
-      // ) {
-      //   return `ignore:${reference.url}`;
-      // }
-      const urlObject = new URL(reference.url);
-      let fsStat = readEntryStatSync(urlObject, { nullIfNotFound: true });
-      reference.fsStat = fsStat;
-      const { search, hash } = urlObject;
-      urlObject.search = "";
-      urlObject.hash = "";
-      // must be read before applyFsStatEffectsOnUrlObject which forces the
-      // trailing slash on directories
-      const specifierUsesTrailingSlash = urlObject.pathname.endsWith("/");
-      applyFsStatEffectsOnUrlObject(urlObject, fsStat);
-      const shouldApplyFilesystemMagicResolution =
-        reference.type === "js_import";
-      if (shouldApplyFilesystemMagicResolution) {
-        const filesystemResolution = applyFileSystemMagicResolution(
-          urlObject.href,
-          {
-            fileStat: fsStat,
-            magicDirectoryIndex,
-            magicExtensions: getExtensionsToTry(
-              magicExtensions,
-              reference.ownerUrlInfo.url,
-            ),
-          },
-        );
-        if (filesystemResolution.stat) {
-          fsStat = filesystemResolution.stat;
-          reference.fsStat = fsStat;
-          urlObject.href = filesystemResolution.url;
-          applyFsStatEffectsOnUrlObject(urlObject, fsStat);
-        }
-      }
-      if (spa) {
-        // for SPA we want to serve the root HTML file most of the time
-        if (!fsStat) {
-          if (urlToExtension(urlObject)) {
-            // url has an extension, we assume it's a file request -> let 404 happen
-            return null;
-          }
-          if (specifierUsesTrailingSlash) {
-            // the trailing slash asks for a directory and there is none here
-            // -> let 404 happen (same reasoning as the extension above)
-            return null;
-          }
-          const spaFallbackUrl = getSpaFallbackUrl(reference);
-          if (spaFallbackUrl) {
-            return spaFallbackUrl;
-          }
-          return null;
-        }
-        if (fsStat.isDirectory()) {
-          // When requesting a directory, check if we have an HTML entry file for that directory
-          const directoryEntryFileUrl = getDirectoryEntryFileUrl(urlObject);
-          if (directoryEntryFileUrl) {
-            reference.fsStat = readEntryStatSync(directoryEntryFileUrl);
-            return directoryEntryFileUrl;
-          }
-          if (!specifierUsesTrailingSlash) {
-            // the trailing slash is what tells a directory apart from a route:
-            // "/join/" is the directory, "/join" is a route owned by the SPA
-            // even when "join/" exists in the source files.
-            // Without this a source directory would shadow the route having
-            // the same name and the SPA would be unreachable in dev while
-            // being perfectly fine once built
-            const spaFallbackUrl = getSpaFallbackUrl(reference);
-            if (spaFallbackUrl) {
-              reference.fsStat = readEntryStatSync(spaFallbackUrl, {
-                nullIfNotFound: true,
-              });
-              return spaFallbackUrl;
-            }
-          }
-        }
-      }
-      if (!fsStat) {
-        return null;
-      }
-      const urlBeforeSymlinkResolution = urlObject.href;
-      if (preserveSymlinks) {
-        return `${urlBeforeSymlinkResolution}${search}${hash}`;
-      }
-      const urlAfterSymlinkResolution = resolveSymlink(
-        urlBeforeSymlinkResolution,
-      );
-      if (urlAfterSymlinkResolution !== urlBeforeSymlinkResolution) {
-        reference.leadsToASymlink = true;
-        // reference.baseUrl = urlBeforeSymlinkResolution;
-      }
-      const resolvedUrl = `${urlAfterSymlinkResolution}${search}${hash}`;
-      return resolvedUrl;
-    },
-  };
-};
-
-const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
-  if (!fsStat) {
-    return;
-  }
-  const { pathname } = urlObject;
-  const pathnameUsesTrailingSlash = pathname.endsWith("/");
-  // force trailing slash on directories
-  if (fsStat.isDirectory()) {
-    if (!pathnameUsesTrailingSlash) {
-      urlObject.pathname = `${pathname}/`;
-    }
-  } else if (pathnameUsesTrailingSlash) {
-    // otherwise remove trailing slash if any
-    // a warning here? (because it's strange to reference a file with a trailing slash)
-    urlObject.pathname = pathname.slice(0, -1);
-  }
-};
-
-const resolveSymlink = (fileUrl) => {
-  const urlObject = new URL(fileUrl);
-  const realpath = realpathSync(urlObject);
-  const realUrlObject = pathToFileURL(realpath);
-  if (urlObject.pathname.endsWith("/")) {
-    realUrlObject.pathname += `/`;
-  }
-  return realUrlObject.href;
-};
-
-const getDirectoryEntryFileUrl = (directoryUrl) => {
-  const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
-  if (existsSync(indexHtmlFileUrl)) {
-    return indexHtmlFileUrl.href;
-  }
-  const filename = urlToFilename(directoryUrl);
-  const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
-  if (existsSync(htmlFileUrlCandidate)) {
-    return htmlFileUrlCandidate.href;
-  }
-  return null;
-};
-const getSpaFallbackUrl = (reference) => {
-  const { requestedUrl, rootDirectoryUrl, mainFilePath } =
-    reference.ownerUrlInfo.context;
-  if (!requestedUrl) {
-    // the SPA fallback answers a request; during build there is none
-    return null;
-  }
-  const closestHtmlRootFile = getClosestHtmlRootFile(
-    requestedUrl,
-    rootDirectoryUrl,
-  );
-  if (closestHtmlRootFile) {
-    return closestHtmlRootFile;
-  }
-  return String(new URL(mainFilePath, rootDirectoryUrl));
-};
-const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
-  let directoryUrl = new URL("./", requestedUrl);
-  while (true) {
-    const directoryEntryFileUrl = getDirectoryEntryFileUrl(directoryUrl);
-    if (directoryEntryFileUrl) {
-      return directoryEntryFileUrl;
-    }
-    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
-      return null;
-    }
-    directoryUrl = new URL("../", directoryUrl);
-  }
 };
 
 const directoryContentMagicName = "...";
@@ -4434,7 +4469,16 @@ const jsenvPluginProtocolFile = ({
         }
         const serveFile = (url) => {
           const contentType = CONTENT_TYPE.fromUrlExtension(url);
-          const fileBuffer = readFileSync(new URL(url));
+          const urlObject = new URL(url);
+          // taken before the read: a write landing in between moves the
+          // stat past this one, so the dev server sees the content as
+          // outdated (see isValid in the dev server) rather than the reverse
+          const fileStat = statSync(urlObject);
+          const fileBuffer = readFileSync(urlObject);
+          urlInfo.data.fileStat = {
+            mtimeMs: fileStat.mtimeMs,
+            size: fileStat.size,
+          };
           const content = CONTENT_TYPE.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer;
@@ -5934,7 +5978,7 @@ const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo) => {
+      js_module: (urlInfo) => {
         // Do not scan node modules for import.meta.dev/import.meta.build
         // - node modules won't have this in their code
         // - ;or should use other an other technic as this one won't be available
@@ -5950,80 +5994,46 @@ const jsenvPluginImportMetaScenarios = () => {
         ) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
+        const importMetaScenarioNodes = { dev: [], build: [] };
+        visitJsAst(urlInfo.contentAst, {
+          MemberExpression: (node) => {
+            const name = getImportMetaPropertyName(node);
+            if (name === "dev" || name === "build") {
+              importMetaScenarioNodes[name].push(node);
+            }
+          },
         });
-        const { dev = [], build = [] } = metadata.importMetaScenarios;
+        const { dev, build } = importMetaScenarioNodes;
         const replacements = [];
-        const replace = (path, value) => {
-          replacements.push({ path, value });
+        const replace = (node, value) => {
+          replacements.push({ node, value });
         };
         if (urlInfo.context.build) {
           // during build ensure replacement for tree-shaking
-          dev.forEach((path) => {
-            replace(path, "undefined");
+          dev.forEach((node) => {
+            replace(node, "undefined");
           });
-          build.forEach((path) => {
-            replace(path, "true");
+          build.forEach((node) => {
+            replace(node, "true");
           });
         } else {
           // during dev we can let "import.meta.build" untouched
           // it will be evaluated to undefined.
           // Moreover it can be surprising to see some "undefined"
           // when source file contains "import.meta.build"
-          dev.forEach((path) => {
-            replace(path, "true");
+          dev.forEach((node) => {
+            replace(node, "true");
           });
         }
         const magicSource = createMagicSource(urlInfo.content);
-        replacements.forEach(({ path, value }) => {
+        replacements.forEach(({ node, value }) => {
           magicSource.replace({
-            start: path.node.start,
-            end: path.node.end,
+            start: node.start,
+            end: node.end,
             replacement: value,
           });
         });
         return magicSource.toContentAndSourcemap();
-      },
-    },
-  };
-};
-
-const babelPluginMetadataImportMetaScenarios = () => {
-  return {
-    name: "metadata-import-meta-scenarios",
-    visitor: {
-      Program(programPath, state) {
-        const importMetas = {};
-        programPath.traverse({
-          MemberExpression(path) {
-            const { node } = path;
-            const { object } = node;
-            if (object.type !== "MetaProperty") {
-              return;
-            }
-            const { property: objectProperty } = object;
-            if (objectProperty.name !== "meta") {
-              return;
-            }
-            const { property } = node;
-            const { name } = property;
-            const importMetaPaths = importMetas[name];
-            if (importMetaPaths) {
-              importMetaPaths.push(path);
-            } else {
-              importMetas[name] = [path];
-            }
-          },
-        });
-        state.file.metadata.importMetaScenarios = {
-          dev: importMetas.dev,
-          build: importMetas.build,
-        };
       },
     },
   };
@@ -6127,15 +6137,10 @@ const jsenvPluginImportMetaCss = () => {
         if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataUsesImportMetaCss],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
+        const importMetaCssNode = visitJsAstUntil(urlInfo.contentAst, {
+          MemberExpression: (node) => getImportMetaPropertyName(node) === "css",
         });
-        const { usesImportMetaCss } = metadata;
-        if (!usesImportMetaCss) {
+        if (!importMetaCssNode) {
           return null;
         }
         if (urlInfo.context.build) {
@@ -6215,37 +6220,6 @@ const babelPluginRewriteImportMetaCssAssignment = (
   };
 };
 
-const babelPluginMetadataUsesImportMetaCss = () => {
-  return {
-    name: "metadata-uses-import-meta-css",
-    visitor: {
-      Program(programPath, state) {
-        let usesImportMetaCss = false;
-        programPath.traverse({
-          MemberExpression(path) {
-            const { node } = path;
-            const { object } = node;
-            if (object.type !== "MetaProperty") {
-              return;
-            }
-            const { property: objectProperty } = object;
-            if (objectProperty.name !== "meta") {
-              return;
-            }
-            const { property } = node;
-            const { name } = property;
-            if (name === "css") {
-              usesImportMetaCss = true;
-              path.stop();
-            }
-          },
-        });
-        state.file.metadata.usesImportMetaCss = usesImportMetaCss;
-      },
-    },
-  };
-};
-
 const injectImportMetaCss = (
   urlInfo,
   { content, importFrom, importName, importAs, hot },
@@ -6286,104 +6260,6 @@ ${importVariableName}(import.meta);
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
   };
-};
-
-// https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md#toc-stages-of-babel
-// https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
-// https://github.com/babel/babel/blob/f4edf62f6beeab8ae9f2b7f0b82f1b3b12a581af/packages/babel-helper-module-imports/src/index.js#L7
-
-const babelPluginMetadataImportMetaHot = () => {
-  return {
-    name: "metadata-import-meta-hot",
-    visitor: {
-      Program(programPath, state) {
-        Object.assign(
-          state.file.metadata,
-          collectImportMetaHotProperties(programPath),
-        );
-      },
-    },
-  };
-};
-const collectImportMetaHotProperties = (programPath) => {
-  const importMetaHotPaths = [];
-  let hotDecline = false;
-  let hotAcceptSelf = false;
-  let hotAcceptDependencies = [];
-  programPath.traverse({
-    MemberExpression(path) {
-      const { node } = path;
-      const { object } = node;
-      if (object.type !== "MetaProperty") {
-        return;
-      }
-      const { property: objectProperty } = object;
-      if (objectProperty.name !== "meta") {
-        return;
-      }
-      const { property } = node;
-      const { name } = property;
-      if (name === "hot") {
-        importMetaHotPaths.push(path);
-      }
-    },
-    CallExpression(path) {
-      if (isImportMetaHotMethodCall(path, "accept")) {
-        const callNode = path.node;
-        const args = callNode.arguments;
-        if (args.length === 0) {
-          hotAcceptSelf = true;
-          return;
-        }
-        const firstArg = args[0];
-        if (firstArg.type === "StringLiteral") {
-          hotAcceptDependencies = [
-            {
-              specifierPath: path.get("arguments")[0],
-            },
-          ];
-          return;
-        }
-        if (firstArg.type === "ArrayExpression") {
-          const firstArgPath = path.get("arguments")[0];
-          hotAcceptDependencies = firstArg.elements.map((arrayNode, index) => {
-            if (arrayNode.type !== "StringLiteral") {
-              throw new Error(
-                `all array elements must be strings in "import.meta.hot.accept(array)"`,
-              );
-            }
-            return {
-              specifierPath: firstArgPath.get(String(index)),
-            };
-          });
-          return;
-        }
-        // accept first arg can be "anything" such as
-        // `const cb = () => {}; import.meta.accept(cb)`
-        hotAcceptSelf = true;
-      }
-      if (isImportMetaHotMethodCall(path, "decline")) {
-        hotDecline = true;
-      }
-    },
-  });
-  return {
-    importMetaHotPaths,
-    hotDecline,
-    hotAcceptSelf,
-    hotAcceptDependencies,
-  };
-};
-const isImportMetaHotMethodCall = (path, methodName) => {
-  const { property, object } = path.node.callee;
-  return (
-    property &&
-    property.name === methodName &&
-    object &&
-    object.property &&
-    object.property.name === "hot" &&
-    object.object.type === "MetaProperty"
-  );
 };
 
 // Some "smart" default applied to decide what should hot reload / fullreload:
@@ -6533,6 +6409,75 @@ const htmlNodeCanHotReload = (node) => {
   ].includes(node.nodeName);
 };
 
+const analyzeImportMetaHot = (ast) => {
+  const importMetaHotNodes = [];
+  let hotDecline = false;
+  let hotAcceptSelf = false;
+  let hotAcceptSpecifiers = [];
+  visitJsAst(ast, {
+    MemberExpression: (node) => {
+      if (getImportMetaPropertyName(node) === "hot") {
+        importMetaHotNodes.push(node);
+      }
+    },
+    CallExpression: (node) => {
+      const methodName = getImportMetaHotMethodName(node);
+      if (methodName === "accept") {
+        const args = node.arguments;
+        if (args.length === 0) {
+          hotAcceptSelf = true;
+          return;
+        }
+        const [firstArg] = args;
+        if (isStringLiteral(firstArg)) {
+          hotAcceptSpecifiers = [firstArg.value];
+          return;
+        }
+        if (firstArg.type === "ArrayExpression") {
+          hotAcceptSpecifiers = firstArg.elements.map((element) => {
+            if (!isStringLiteral(element)) {
+              throw new Error(
+                `all array elements must be strings in "import.meta.hot.accept(array)"`,
+              );
+            }
+            return element.value;
+          });
+          return;
+        }
+        // accept first arg can be "anything" such as
+        // `const cb = () => {}; import.meta.hot.accept(cb)`
+        hotAcceptSelf = true;
+        return;
+      }
+      if (methodName === "decline") {
+        hotDecline = true;
+      }
+    },
+  });
+  return {
+    importMetaHotNodes,
+    hotDecline,
+    hotAcceptSelf,
+    hotAcceptSpecifiers,
+  };
+};
+
+// "import.meta.hot.<method>(...)"
+const getImportMetaHotMethodName = (callNode) => {
+  const { callee } = callNode;
+  if (callee.type !== "MemberExpression" || callee.computed) {
+    return null;
+  }
+  if (getImportMetaPropertyName(callee.object) !== "hot") {
+    return null;
+  }
+  return callee.property.name;
+};
+
+const isStringLiteral = (node) => {
+  return node.type === "Literal" && typeof node.value === "string";
+};
+
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta
     .resolve("../client/import_meta_hot/import_meta_hot.js");
@@ -6581,7 +6526,7 @@ const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptSelf = false;
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
-      js_module: async (urlInfo) => {
+      js_module: (urlInfo) => {
         // Do not scan node modules for import.meta.hot
         // - unlikely to be there
         // - we don't watch node modules (too expensive)
@@ -6593,27 +6538,22 @@ const jsenvPluginImportMetaHot = () => {
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaHot],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
-        });
         const {
-          importMetaHotPaths,
+          importMetaHotNodes,
           hotDecline,
           hotAcceptSelf,
-          hotAcceptDependencies,
-        } = metadata;
+          hotAcceptSpecifiers,
+        } = analyzeImportMetaHot(urlInfo.contentAst);
         urlInfo.data.hotDecline = hotDecline;
         urlInfo.data.hotAcceptSelf = hotAcceptSelf;
-        urlInfo.data.hotAcceptDependencies = hotAcceptDependencies;
-        if (importMetaHotPaths.length === 0) {
+        urlInfo.data.hotAcceptDependencies = hotAcceptSpecifiers.map(
+          (specifier) => resolveHotAcceptSpecifier(urlInfo, specifier),
+        );
+        if (importMetaHotNodes.length === 0) {
           return null;
         }
         if (urlInfo.context.build) {
-          return removeImportMetaHots(urlInfo, importMetaHotPaths);
+          return removeImportMetaHots(urlInfo, importMetaHotNodes);
         }
         return injectImportMetaHot(urlInfo, importMetaHotClientFileUrl);
       },
@@ -6621,12 +6561,32 @@ const jsenvPluginImportMetaHot = () => {
   };
 };
 
-const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
+// The specifier given to import.meta.hot.accept() is one the file imports,
+// so its url is known from that import (autoreload compares urls). A
+// specifier the file does not import accepts nothing: it is kept as a plain
+// url, never resolved as a dependency (that could throw on a bare specifier).
+const resolveHotAcceptSpecifier = (urlInfo, specifier) => {
+  for (const referenceToOther of urlInfo.referenceToOthersSet) {
+    if (
+      referenceToOther.type === "js_import" &&
+      referenceToOther.specifier === specifier
+    ) {
+      return referenceToOther.url;
+    }
+  }
+  try {
+    return new URL(specifier, urlInfo.url).href;
+  } catch {
+    return specifier;
+  }
+};
+
+const removeImportMetaHots = (urlInfo, importMetaHotNodes) => {
   const magicSource = createMagicSource(urlInfo.content);
-  importMetaHotPaths.forEach((path) => {
+  importMetaHotNodes.forEach((node) => {
     magicSource.replace({
-      start: path.node.start,
-      end: path.node.end,
+      start: node.start,
+      end: node.end,
       replacement: "undefined",
     });
   });
@@ -7154,6 +7114,192 @@ const jsenvPluginAutoreload = ({
     }),
   ];
 };
+
+const urlSpecifierEncoding = {
+  encode: (reference) => {
+    const { generatedSpecifier } = reference;
+    if (generatedSpecifier.then) {
+      return generatedSpecifier.then((value) => {
+        reference.generatedSpecifier = value;
+        return urlSpecifierEncoding.encode(reference);
+      });
+    }
+    // allow plugin to return a function to bypas default formatting
+    // (which is to use JSON.stringify when url is referenced inside js)
+    if (typeof generatedSpecifier === "function") {
+      return generatedSpecifier();
+    }
+    const formatter = formatters[reference.type];
+    const value = formatter
+      ? formatter.encode(generatedSpecifier)
+      : generatedSpecifier;
+    if (reference.escape) {
+      return reference.escape(value);
+    }
+    return value;
+  },
+  decode: (reference) => {
+    const formatter = formatters[reference.type];
+    return formatter
+      ? formatter.decode(reference.generatedSpecifier)
+      : reference.generatedSpecifier;
+  },
+};
+const formatters = {
+  "js_import": { encode: JSON.stringify, decode: JSON.parse },
+  "js_url": { encode: JSON.stringify, decode: JSON.parse },
+  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
+  // https://github.com/webpack-contrib/css-loader/pull/627/files
+  "css_url": {
+    encode: (url) => {
+      // If url is already wrapped in quotes, remove them
+      url = formatters.css_url.decode(url);
+      // Should url be wrapped?
+      // See https://drafts.csswg.org/css-values-3/#urls
+      if (/["'() \t\n]/.test(url)) {
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+      }
+      return url;
+    },
+    decode: (url) => {
+      const firstChar = url[0];
+      const lastChar = url[url.length - 1];
+      if (firstChar === `"` && lastChar === `"`) {
+        return url.slice(1, -1);
+      }
+      if (firstChar === `'` && lastChar === `'`) {
+        return url.slice(1, -1);
+      }
+      return url;
+    },
+  },
+};
+
+/*
+ * Tells the browser the static import graph of a page's module scripts, as
+ * `Link: <url>; rel=modulepreload` response headers, so it can fetch every
+ * module as soon as the page's headers arrive, without waiting to discover
+ * them level by level (each level costing a round trip and, the first time,
+ * a cook).
+ *
+ * Only what the graph already knows is listed: a module never cooked has no
+ * known imports. The header is computed at each response from the graph as it
+ * is then: a page gets its full list from its second load on, the first load
+ * keeps the plain waterfall.
+ *
+ * Headers rather than <link> elements written into the page: the page content
+ * stays what it is (served from memory, revalidated by etag) and the list can
+ * grow without cooking the page again. And not references either: a reference
+ * from the html to every module would make the html a dependent of each of
+ * them, and a hot update propagating up the importers would reach the html
+ * (which declines) instead of stopping at the module accepting it.
+ *
+ * OFF BY DEFAULT, to be enabled once the dev server speaks http/2 or http/3.
+ * Over http/1.1 it makes pages slower — measured on a 500 modules page: first
+ * paint 32ms -> 868ms, load 626ms -> 985ms. Knowing the urls earlier gives the
+ * browser no extra resource: what it has is 6 connections per origin, and
+ * every request goes through them in the order it was learned.
+ * - Without the header, requests come in execution order: the parser asks
+ *   for the render-blocking supervisor script first and gets a connection at
+ *   once; transfer and execution overlap, a module executing and discovering
+ *   its imports while the others download. On localhost the server answers
+ *   from memory in 0.1ms, so the 6 connections are busy from the start.
+ * - With the header, hundreds of requests take the 6 connections before the
+ *   parser asks for the supervisor script, which then waits for a free
+ *   connection behind 1MB+ transfers (520ms measured, 2s with 20ms of RTT).
+ *   Meanwhile nothing renders and nothing executes: transfer, then execution,
+ *   serialized. http/1.1 cannot reprioritize a queued request, and a
+ *   modulepreload has the same priority as a script.
+ * - And there is nothing to hide: the discovery latency a preload removes is
+ *   ~1ms per graph level on localhost; with a real RTT a wide graph (more
+ *   than 6 modules pending at any time) keeps the 6 connections saturated
+ *   anyway, and the load takes requests / 6 * RTT whatever the order.
+ * It pays off for a deep and narrow graph (connections idle, waiting for a
+ * response to learn the next level), and over http/2 or http/3: no
+ * connection limit, and the browser prioritizes the blocking script.
+ */
+
+
+const jsenvPluginModulepreload = () => {
+  return {
+    name: "jsenv:modulepreload",
+    appliesDuring: "dev",
+    augmentResponse: ({ urlInfo }) => {
+      if (urlInfo.type !== "html") {
+        return null;
+      }
+      const hrefs = collectStaticImportHrefs(urlInfo);
+      if (hrefs.length === 0) {
+        return null;
+      }
+      return {
+        headers: {
+          link: hrefs.map((href) => `<${href}>; rel=modulepreload`).join(", "),
+        },
+      };
+    },
+  };
+};
+
+const collectStaticImportHrefs = (htmlUrlInfo) => {
+  const hrefSet = new Set();
+  const visitedSet = new Set();
+  const addHref = (reference) => {
+    const specifier = urlSpecifierEncoding.decode(reference);
+    if (typeof specifier !== "string") {
+      return;
+    }
+    // "?hot" belongs to the request that cooked the importer, the page loading
+    // now imports the url without it
+    hrefSet.add(injectQueryParamsIntoSpecifier(specifier, { hot: undefined }));
+  };
+  const visitJsModule = (jsModuleUrlInfo) => {
+    if (visitedSet.has(jsModuleUrlInfo)) {
+      return;
+    }
+    visitedSet.add(jsModuleUrlInfo);
+    for (const reference of jsModuleUrlInfo.referenceToOthersSet) {
+      if (
+        reference.type !== "js_import" ||
+        reference.isWeak ||
+        reference.isImplicit ||
+        !STATIC_IMPORT_SUBTYPES.includes(reference.subtype) ||
+        !reference.url.startsWith("file:")
+      ) {
+        continue;
+      }
+      const importedUrlInfo = reference.urlInfo;
+      // never cooked: its content, hence its own imports, are unknown
+      if (importedUrlInfo.type !== "js_module") {
+        continue;
+      }
+      addHref(reference);
+      visitJsModule(importedUrlInfo);
+    }
+  };
+  for (const reference of htmlUrlInfo.referenceToOthersSet) {
+    if (
+      reference.type !== "script" ||
+      reference.expectedType !== "js_module" ||
+      // the scripts jsenv adds to every page are few, small and in memory
+      reference.injected ||
+      reference.isWeak
+    ) {
+      continue;
+    }
+    const scriptUrlInfo = reference.urlInfo;
+    if (scriptUrlInfo.type !== "js_module") {
+      continue;
+    }
+    if (!reference.isInline && reference.url.startsWith("file:")) {
+      addHref(reference);
+    }
+    visitJsModule(scriptUrlInfo);
+  }
+  return Array.from(hrefSet);
+};
+
+const STATIC_IMPORT_SUBTYPES = ["import_static", "export_named", "export_all"];
 
 /*
  * Tells the browser about the dependencies declared in package.json that
@@ -7796,6 +7942,7 @@ const getCorePlugins = ({
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
+  modulepreload = false,
   dependencyStatus,
   cacheControl,
   scenarioPlaceholders = true,
@@ -7897,6 +8044,7 @@ const getCorePlugins = ({
     ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
       : []),
+    ...(modulepreload ? [jsenvPluginModulepreload()] : []),
     ...(dependencyStatus
       ? [jsenvPluginDependencyStatus(dependencyStatus)]
       : []),
@@ -8952,20 +9100,37 @@ const checkForDependencyRemovalEffects = (reference) => {
 };
 
 const traceFromUrlSite = (urlSite) => {
-  const codeFrame = urlSite.content
-    ? generateContentFrame({
-        content: urlSite.content,
-        line: urlSite.line,
-        column: urlSite.column,
-      })
-    : "";
-  return {
-    codeFrame,
-    message: stringifyUrlSite(urlSite),
-    url: urlSite.url,
-    line: urlSite.line,
-    column: urlSite.column,
+  const { url, line, column, content } = urlSite;
+  const trace = { url, line, column };
+  // A file references many urls and an error on one of them is rare: the code
+  // frame (and the message embedding it) is built the first time it is read,
+  // not for every reference found.
+  defineLazyProperty(trace, "codeFrame", () =>
+    content ? generateContentFrame({ content, line, column }) : "",
+  );
+  defineLazyProperty(trace, "message", () => stringifyUrlSite(urlSite));
+  return trace;
+};
+
+const defineLazyProperty = (object, property, compute) => {
+  const setValue = (value) => {
+    Object.defineProperty(object, property, {
+      enumerable: true,
+      configurable: true,
+      writable: true,
+      value,
+    });
   };
+  Object.defineProperty(object, property, {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const value = compute();
+      setValue(value);
+      return value;
+    },
+    set: setValue,
+  });
 };
 
 const adjustUrlSite = (urlInfo, { url, line, column }) => {
@@ -9227,66 +9392,6 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
   seen.clear();
 };
 
-const urlSpecifierEncoding = {
-  encode: (reference) => {
-    const { generatedSpecifier } = reference;
-    if (generatedSpecifier.then) {
-      return generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value;
-        return urlSpecifierEncoding.encode(reference);
-      });
-    }
-    // allow plugin to return a function to bypas default formatting
-    // (which is to use JSON.stringify when url is referenced inside js)
-    if (typeof generatedSpecifier === "function") {
-      return generatedSpecifier();
-    }
-    const formatter = formatters[reference.type];
-    const value = formatter
-      ? formatter.encode(generatedSpecifier)
-      : generatedSpecifier;
-    if (reference.escape) {
-      return reference.escape(value);
-    }
-    return value;
-  },
-  decode: (reference) => {
-    const formatter = formatters[reference.type];
-    return formatter
-      ? formatter.decode(reference.generatedSpecifier)
-      : reference.generatedSpecifier;
-  },
-};
-const formatters = {
-  "js_import": { encode: JSON.stringify, decode: JSON.parse },
-  "js_url": { encode: JSON.stringify, decode: JSON.parse },
-  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
-  // https://github.com/webpack-contrib/css-loader/pull/627/files
-  "css_url": {
-    encode: (url) => {
-      // If url is already wrapped in quotes, remove them
-      url = formatters.css_url.decode(url);
-      // Should url be wrapped?
-      // See https://drafts.csswg.org/css-values-3/#urls
-      if (/["'() \t\n]/.test(url)) {
-        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
-      }
-      return url;
-    },
-    decode: (url) => {
-      const firstChar = url[0];
-      const lastChar = url[url.length - 1];
-      if (firstChar === `"` && lastChar === `"`) {
-        return url.slice(1, -1);
-      }
-      if (firstChar === `'` && lastChar === `'`) {
-        return url.slice(1, -1);
-      }
-      return url;
-    },
-  },
-};
-
 const createUrlGraph = ({
   rootDirectoryUrl,
   kitchen,
@@ -9464,7 +9569,6 @@ const createUrlInfo = (url, context) => {
     dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
-    isWatched: false,
     isValid: () => false,
     data: {}, // plugins can put whatever they want here
     referenceToOthersSet: new Set(),
@@ -10129,20 +10233,55 @@ const createUrlInfoTransformer = ({
 
   const applyContentEffects = (urlInfo) => {
     applySourcemapOnContent(urlInfo);
-    writeInsideOutDirectory(urlInfo);
+    return writeInsideOutDirectory(urlInfo);
+  };
+
+  // The out directory is a debug aid. During dev a request must not be held
+  // by a write blocking the event loop (every other request waits too), so
+  // the file is written asynchronously; the response still waits for it, so
+  // what is on disk is what was served. Per file, writes stay ordered: a file
+  // cooked twice in a row ends up holding its latest content.
+  // During build nothing waits behind a write: it is done synchronously.
+  const pendingWritePromiseMap = new Map();
+  const writeOutFile = (urlInfo, fileUrl, content) => {
+    if (!urlInfo.context.dev) {
+      writeFileSync(fileUrl, content, { force: true });
+      return undefined;
+    }
+    const previousWritePromise =
+      pendingWritePromiseMap.get(fileUrl) || Promise.resolve();
+    const writePromise = previousWritePromise.then(async () => {
+      try {
+        await writeFile(fileUrl, content);
+      } catch {
+        try {
+          // a directory where the file goes, or a file where a directory goes
+          writeFileSync(fileUrl, content, { force: true });
+        } catch (e) {
+          logger.debug(`error while writing ${fileUrl}: ${e.message}`);
+        }
+      }
+    });
+    pendingWritePromiseMap.set(fileUrl, writePromise);
+    writePromise.then(() => {
+      if (pendingWritePromiseMap.get(fileUrl) === writePromise) {
+        pendingWritePromiseMap.delete(fileUrl);
+      }
+    });
+    return writePromise;
   };
 
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
-      return;
+      return undefined;
     }
     const { generatedUrl } = urlInfo;
     if (!generatedUrl) {
-      return;
+      return undefined;
     }
     if (!generatedUrl.startsWith("file:")) {
-      return;
+      return undefined;
     }
     if (urlToPathname(generatedUrl).endsWith("/")) {
       // when users explicitely request a directory
@@ -10150,12 +10289,13 @@ const createUrlInfoTransformer = ({
       // because it would try to write a directory
       // ideally we would decide a filename for this
       // for now we just don't write anything
-      return;
+      return undefined;
     }
     if (urlInfo.type === "directory") {
       // no need to write the directory
-      return;
+      return undefined;
     }
+    const writePromises = [];
     // if (urlInfo.content === undefined) {
     //   // Some error might lead to urlInfo.content to be null
     //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
@@ -10180,15 +10320,19 @@ const createUrlInfoTransformer = ({
       const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
       let outFilePath = urlToFileSystemPath(outFileUrl);
       outFilePath = truncate(outFilePath, 2055); // for windows
-      writeFileSync(outFilePath, urlInfo.content, { force: true });
+      writePromises.push(writeOutFile(urlInfo, outFilePath, urlInfo.content));
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
-      writeFileSync(
-        new URL(sourcemapGeneratedUrl),
-        sourcemapReference.urlInfo.content,
+      writePromises.push(
+        writeOutFile(
+          urlInfo,
+          sourcemapGeneratedUrl,
+          sourcemapReference.urlInfo.content,
+        ),
       );
     }
+    return Promise.all(writePromises);
   };
 
   const applySourcemapOnContent = (
@@ -10295,8 +10439,9 @@ const createUrlInfoTransformer = ({
       );
       applyTransformations(urlInfo, injectionTransformations);
     }
-    applyContentEffects(urlInfo);
+    const contentEffectsPromise = applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;
+    return contentEffectsPromise;
   };
 
   return {
@@ -10949,7 +11094,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "finalizeUrlContent",
           urlInfo,
         );
-      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
+      const outDirectoryWritePromise = urlInfoTransformer.endTransformations(
+        urlInfo,
+        finalizeReturnValue,
+      );
+      return { outDirectoryWritePromise };
     } catch (error) {
       throw createFinalizeUrlContentError({
         jsenvPluginsController,
@@ -10983,8 +11132,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // to cook a file goes (fetch vs transform vs finalize).
           const timePhase = async (name, phase) => {
             const start = performance.now();
-            await phase();
+            const result = await phase();
             urlInfo.timing[name] = performance.now() - start;
+            return result;
           };
 
           // "fetchUrlContent" hook
@@ -10994,7 +11144,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           await timePhase("transform", () => urlInfo.transformContent());
 
           // "finalize" hook
-          await timePhase("finalize", () => urlInfo.finalizeContent());
+          const { outDirectoryWritePromise } = await timePhase("finalize", () =>
+            urlInfo.finalizeContent(),
+          );
+
+          // Timed apart: it is disk I/O the response waits for (see
+          // writeInsideOutDirectory), not part of cooking.
+          if (outDirectoryWritePromise) {
+            await timePhase(
+              "write in out directory",
+              () => outDirectoryWritePromise,
+            );
+          }
         });
       } catch (e) {
         urlInfo.error = e;
@@ -11282,11 +11443,10 @@ const devServerPluginServeSourceFiles = ({
     if (existing) {
       return existing;
     }
-    const watchAssociations = URL_META.resolveAssociations(
-      { watch: stopWatchingSourceFiles.watchPatterns },
-      sourceDirectoryUrl,
-    );
     let kitchen;
+    // per url info, the file stat under which its content was last compared
+    // with the file on disk and found identical (see isValid)
+    const fileStatValidatedMap = new WeakMap();
     clientFileChangeEventEmitter.on(({ url, event }) => {
       const urlInfo = kitchen.graph.getUrlInfo(url);
       if (urlInfo) {
@@ -11327,11 +11487,6 @@ const devServerPluginServeSourceFiles = ({
       packageDirectory,
     });
     kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-      const { watch } = URL_META.applyAssociations({
-        url: urlInfoCreated.url,
-        associations: watchAssociations,
-      });
-      urlInfoCreated.isWatched = watch;
       // when an url depends on many others, we check all these (like package.json)
       urlInfoCreated.isValid = () => {
         const seenSet = new Set();
@@ -11351,36 +11506,63 @@ const devServerPluginServeSourceFiles = ({
             //   was compared using etag and it has changed
             return false;
           }
-          // Watched files trust the watcher — except the ones marked
-          // revalidateOnFileSystem (package.json files, see node_esm_resolver):
-          // the watcher fires a beat AFTER a change, and what these files
-          // decide (a package version, hence the ?v= the importer embeds) is
-          // cached as immutable by the browser — a request racing the watcher
-          // must not win a stale answer it would then keep forever.
-          if (!urlInfo.isWatched || urlInfo.revalidateOnFileSystem) {
-            // check the filesystem
-            let fileContentAsBuffer;
+          // The content held in memory is the file as it was read; a request
+          // must never win a stale answer, whatever the watcher's latency,
+          // and the ?v= a package.json decides even ends up in the browser's
+          // immutable cache. So the file is checked on disk at every
+          // validation — cheaply: a stat, compared with the one taken when
+          // the content was read (or last found identical). Only a file
+          // whose stat moved is read and hashed again.
+          // Inline content (a <script> inside an html) has no file of its
+          // own: it is as fresh as the html holding it, checked by the caller.
+          if (!urlInfo.isInline) {
+            let fileStat;
             try {
-              fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
-            } catch (e) {
-              if (e.code === "ENOENT") {
-                urlInfo.onModified();
-                return false;
-              }
+              fileStat = statSync(new URL(urlInfo.url), {
+                throwIfNoEntry: false,
+              });
+            } catch {
               return false;
             }
-            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-            if (fileContentEtag !== urlInfo.originalContentEtag) {
+            if (!fileStat) {
               urlInfo.onModified();
-              // restore content to be able to compare it again later
-              urlInfo.kitchen.urlInfoTransformer.setContent(
-                urlInfo,
-                String(fileContentAsBuffer),
-                {
-                  contentEtag: fileContentEtag,
-                },
-              );
               return false;
+            }
+            const fileStatKnown =
+              fileStatValidatedMap.get(urlInfo) || urlInfo.data.fileStat;
+            const fileUnchanged =
+              fileStatKnown &&
+              fileStatKnown.mtimeMs === fileStat.mtimeMs &&
+              fileStatKnown.size === fileStat.size;
+            if (!fileUnchanged) {
+              let fileContentAsBuffer;
+              try {
+                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  urlInfo.onModified();
+                  return false;
+                }
+                return false;
+              }
+              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+              if (fileContentEtag !== urlInfo.originalContentEtag) {
+                fileStatValidatedMap.delete(urlInfo);
+                urlInfo.onModified();
+                // restore content to be able to compare it again later
+                urlInfo.kitchen.urlInfoTransformer.setContent(
+                  urlInfo,
+                  String(fileContentAsBuffer),
+                  {
+                    contentEtag: fileContentEtag,
+                  },
+                );
+                return false;
+              }
+              fileStatValidatedMap.set(urlInfo, {
+                mtimeMs: fileStat.mtimeMs,
+                size: fileStat.size,
+              });
             }
           }
           for (const implicitUrl of urlInfo.implicitUrlSet) {
@@ -11497,6 +11679,40 @@ const devServerPluginServeSourceFiles = ({
           const ifNoneMatch = request.headers["if-none-match"];
           const inlineParentUrlInfo = urlInfo.findParentIfInline();
           const urlInfoTargetedByCache = inlineParentUrlInfo || urlInfo;
+          // The content held in memory is the response when it is finalized
+          // and still valid. Content can be defined while a cook is still in
+          // flight (a file watcher invalidation re-cooking in the background,
+          // for instance): at that point it holds the raw fetched content,
+          // transformations not applied yet. Serving that would send an html
+          // without any of the injected scripts. An inline url info (a
+          // <script> inside an html) is cooked again whenever the html
+          // containing it is cooked: its content is as fresh as the html's,
+          // so both must be valid.
+          const hasFreshContent = (urlInfo) =>
+            urlInfo.content !== undefined &&
+            urlInfo.contentFinalized &&
+            urlInfo.isValid();
+          const memoryContentIsFresh = () =>
+            inlineParentUrlInfo
+              ? hasFreshContent(urlInfo) && hasFreshContent(inlineParentUrlInfo)
+              : hasFreshContent(urlInfo);
+          // a 304 goes through the hooks too: its headers stand for the
+          // cached response's, they must say the same
+          const augmentResponse = (response) => {
+            const augmentResponseInfo = {
+              ...kitchen.context,
+              reference,
+              urlInfo,
+            };
+            kitchen.jsenvPluginsController.callHooks(
+              "augmentResponse",
+              augmentResponseInfo,
+              (returnValue) => {
+                response = composeTwoResponses(response, returnValue);
+              },
+            );
+            return response;
+          };
           const respondWithNotModified = () => {
             const headers = {
               "cache-control": `private,max-age=0,must-revalidate`,
@@ -11506,23 +11722,21 @@ const devServerPluginServeSourceFiles = ({
                 headers[key] = urlInfo.headers[key];
               }
             });
-            return {
+            return augmentResponse({
               status: 304,
               headers,
-            };
+            });
           };
 
           try {
-            // an inline url info is cooked again every time the file containing it
-            // is cooked, so its content is only known after cooking; its etag is
-            // compared below, once cooked
-            if (!urlInfo.error && ifNoneMatch && !inlineParentUrlInfo) {
+            if (!urlInfo.error && ifNoneMatch) {
               const [clientOriginalContentEtag, clientContentEtag] =
                 ifNoneMatch.split("_");
               if (
-                urlInfo.originalContentEtag === clientOriginalContentEtag &&
+                urlInfoTargetedByCache.originalContentEtag ===
+                  clientOriginalContentEtag &&
                 urlInfo.contentEtag === clientContentEtag &&
-                urlInfo.isValid()
+                memoryContentIsFresh()
               ) {
                 return respondWithNotModified();
               }
@@ -11540,18 +11754,9 @@ const devServerPluginServeSourceFiles = ({
             // client etag to match).
             const servableFromMemory =
               !urlInfo.error &&
-              !inlineParentUrlInfo &&
               !urlInfo.response &&
-              urlInfo.content !== undefined &&
-              // content can be defined while a cook is still in flight (a file
-              // watcher invalidation re-cooking in the background, for
-              // instance): at that point it holds the raw fetched content,
-              // transformations not applied yet. Serving that would send an
-              // html without any of the injected scripts. Only finalized
-              // content is a complete response; anything else must go through
-              // cook() below, which joins the pending cook (see debounceCook).
-              urlInfo.contentFinalized &&
               !cacheIsDisabledInResponseHeader(urlInfo) &&
+              !cacheIsDisabledInResponseHeader(urlInfoTargetedByCache) &&
               // a "?hot" request exists to bypass every cache, this one
               // included: it must be cooked, because cooking is what rewrites
               // its references so "?hot" cascades to the modified files below
@@ -11570,7 +11775,7 @@ const devServerPluginServeSourceFiles = ({
               // signal registry throwing on duplicate ids). Re-cooking under
               // the normal request rewrites the references clean.
               !urlInfo.contentCookedForHotRequest &&
-              urlInfo.isValid();
+              memoryContentIsFresh();
             if (!servableFromMemory) {
               await urlInfo.cook({ request, reference });
               urlInfo.contentCookedForHotRequest =
@@ -11628,19 +11833,7 @@ const devServerPluginServeSourceFiles = ({
                 ? { "served from memory cache": null }
                 : urlInfo.timing,
             };
-            const augmentResponseInfo = {
-              ...kitchen.context,
-              reference,
-              urlInfo,
-            };
-            kitchen.jsenvPluginsController.callHooks(
-              "augmentResponse",
-              augmentResponseInfo,
-              (returnValue) => {
-                response = composeTwoResponses(response, returnValue);
-              },
-            );
-            return response;
+            return augmentResponse(response);
           } catch (error) {
             const originalError = error ? error.cause || error : error;
             if (originalError.asResponse) {
@@ -11718,6 +11911,14 @@ const devServerPluginServeSourceFiles = ({
                 "cache-control": "no-store",
               },
             };
+          } finally {
+            // What the request put on the url info context is for this
+            // request only: a cook happening later for another reason (the
+            // html holding an inline script is cooked again) must not see a
+            // stale "requestedUrl" and take the inline script for a direct
+            // request, which would make it pick the content of a previous
+            // reference (see jsenv:inline_content_fetcher).
+            forgetRequestFromContext(urlInfo.context);
           }
         },
       },
@@ -11725,6 +11926,15 @@ const devServerPluginServeSourceFiles = ({
   };
 
   return [devServerPluginRoutes, ...devServerJsenvPluginStore.allServerPlugins];
+};
+
+const forgetRequestFromContext = (context) => {
+  // own properties only: what is inherited from the owner context stays
+  for (const key of ["request", "requestedUrl", "reference"]) {
+    if (Object.hasOwn(context, key)) {
+      delete context[key];
+    }
+  }
 };
 
 const cacheIsDisabledInResponseHeader = (urlInfo) => {
@@ -11758,6 +11968,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean|object} [params.ribbon=true] - The "ribbon" overlay marking the page as non-production. As an object: `text` (defaults to `"DEV"`), `color` (background, defaults to `"orange"`), `textColor` (defaults to dark or light depending on `color`), `href` (turns the ribbon into a link; only then does it capture clicks), `target` (defaults to `"_blank"`), `position` (`"top-right"` (default), `"top-left"`, `"bottom-right"`, `"bottom-left"` draw a diagonal corner ribbon; `"top"`, `"bottom"` draw a full width band), `htmlInclude` (defaults to `"/**\/*.html"`).
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
+ * @param {boolean} [params.modulepreload=false] - Send `Link: <url>; rel=modulepreload` response headers listing the static import graph of a page (as far as the graph knows it). Off by default, to enable once the server runs on http/2 or http/3: over http/1.1 the preloads take the 6 connections per origin ahead of the render-blocking scripts, and pages get slower (the why, with measures, in jsenv_plugin_modulepreload.js).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
  * @param {object} [params.injections] - Values to inject into files, as `{ urlPattern: getInjections }`. Keys are url patterns relative to sourceDirectoryUrl (`"./index.html"`, `"**\/*.js"`), values are functions receiving `urlInfo` and returning (or resolving to) an object of placeholders to replace, named `__LIKE_THIS__` by convention. In JS the value is injected as a JS literal (a string brings its own quotes), everywhere else as-is so it can be concatenated: `href="__BACKEND_URL__/users/me"`. An html url pattern also covers what is inlined in that html, so `<script>window.backendUrl = __BACKEND_URL__;</script>` shares the value with every js file of the page. See `INJECTIONS.optional` and `INJECTIONS.global`.
  * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
@@ -11799,6 +12010,7 @@ const startDevServer = async ({
   sourceFilesConfig = {},
   clientAutoreload = true,
   clientAutoreloadOnServerRestart = true,
+  modulepreload = false,
   // server-timing response headers: devtools show how the time to answer is
   // spent (cook measures come from the kitchen, see urlInfo.timing). Entries
   // under minDuration are dropped so a human reads the measures that matter;
@@ -11888,9 +12100,12 @@ const startDevServer = async ({
   }
 
   const logger = createLogger({ logLevel });
-  const startDevServerTask = createTaskLog("start dev server", {
-    disabled: !logger.levels.info,
-  });
+  const startDevServerTask = createTaskLog(
+    `start dev server for ${humanizeSourceDirectory(sourceDirectoryUrl)}`,
+    {
+      disabled: !logger.levels.info,
+    },
+  );
 
   const serverStopCallbackSet = new Set();
   const serverStopAbortController = new AbortController();
@@ -11969,6 +12184,7 @@ const startDevServer = async ({
 
       clientAutoreload,
       clientAutoreloadOnServerRestart,
+      modulepreload,
       dependencyStatus: {
         dependencyProblemEventEmitter,
         getDependencyProblems: dependencyWatcher.getProblems,
@@ -12072,6 +12288,15 @@ const startDevServer = async ({
     },
     kitchenCache,
   };
+};
+
+// "./src/" when inside the current working directory, the full path otherwise
+const humanizeSourceDirectory = (sourceDirectoryUrl) => {
+  const cwdUrl = pathToFileURL(`${process.cwd()}/`).href;
+  if (urlIsOrIsInsideOf(sourceDirectoryUrl, cwdUrl)) {
+    return `./${urlToRelativeUrl(sourceDirectoryUrl, cwdUrl)}`;
+  }
+  return urlToFileSystemPath(sourceDirectoryUrl);
 };
 
 export { startDevServer };

@@ -46,10 +46,27 @@ const DirectoryListing = () => {
 const ErrorMessage = () => {
   const {
     filePathExisting,
-    filePathNotFound
+    filePathNotFound,
+    spaFallbackFilePaths
   } = enoentDetails;
   let errorText;
   let errorSuggestion;
+  let spaExplanation = null;
+  if (spaFallbackFilePaths) {
+    spaExplanation = u($, {
+      children: [u("strong", {
+        children: "SPA mode:"
+      }), " a url without extension is a route, served with the closest html file. None of these exists:", u("ul", {
+        className: "spa_fallback_list",
+        style: "margin: 6px 0 0; padding-left: 20px;",
+        children: spaFallbackFilePaths.map(filePath => u("li", {
+          children: [u("code", {
+            children: filePath
+          }), filePath === `/${mainFilePath}` ? " (main file)" : ""]
+        }, filePath))
+      })]
+    });
+  }
   errorText = u($, {
     children: [u("strong", {
       children: "File not found:"
@@ -79,7 +96,11 @@ const ErrorMessage = () => {
     children: [u("p", {
       className: "error_text",
       children: errorText
-    }), u("p", {
+    }), spaExplanation ? u("p", {
+      className: "error_spa",
+      style: "margin-top: 10px;",
+      children: spaExplanation
+    }) : null, u("p", {
       className: "error_suggestion",
       style: "font-size: 0.8em; margin-top: 10px;",
       children: errorSuggestion
