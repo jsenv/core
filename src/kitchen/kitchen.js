@@ -616,11 +616,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "finalizeUrlContent",
           urlInfo,
         );
-      const outDirectoryWritePromise = urlInfoTransformer.endTransformations(
-        urlInfo,
-        finalizeReturnValue,
-      );
-      return { outDirectoryWritePromise };
+      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
         jsenvPluginsController,
@@ -654,9 +650,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // to cook a file goes (fetch vs transform vs finalize).
           const timePhase = async (name, phase) => {
             const start = performance.now();
-            const result = await phase();
+            await phase();
             urlInfo.timing[name] = performance.now() - start;
-            return result;
           };
 
           // "fetchUrlContent" hook
@@ -666,18 +661,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           await timePhase("transform", () => urlInfo.transformContent());
 
           // "finalize" hook
-          const { outDirectoryWritePromise } = await timePhase("finalize", () =>
-            urlInfo.finalizeContent(),
-          );
-
-          // Timed apart: it is disk I/O the response waits for (see
-          // writeInsideOutDirectory), not part of cooking.
-          if (outDirectoryWritePromise) {
-            await timePhase(
-              "write in out directory",
-              () => outDirectoryWritePromise,
-            );
-          }
+          await timePhase("finalize", () => urlInfo.finalizeContent());
         });
       } catch (e) {
         urlInfo.error = e;

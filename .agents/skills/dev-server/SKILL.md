@@ -79,3 +79,15 @@ return {
 The browser URL stays as requested (the redirect is internal). `?search` is carried through, so a page can read `location.search`. Inline `<script type="module">` in such a page is externalized/supervised exactly like any app page — that is expected, the code still runs.
 
 If a `transformUrlContent.html` hook injects into every page (like the devices client), exclude your own internal pages by matching their file URL (`asUrlWithoutSearch(urlInfo.url) === pageFileUrl`), since after cooking their url is the template file url, not the `/.internal/...` request path.
+
+## Out directory (`.jsenv/`) writes stay synchronous
+
+Every cooked file is written into `outDirectoryUrl` (a debug aid, on by
+default). Making these writes asynchronous is tempting and has been tried more
+than once; it loses, measured on a 500-file cold load: synchronous writes block
+the event loop ~160ms in total, asynchronous ones queue in the threadpool behind
+tens of MB (content + sourcemaps) and a response waiting for its own write waits
+~36ms on average — 18s summed. Fire-and-forget is not an option: the last write
+lands after the test that cooked it has ended and the side-effect snapshots lose
+it. Details at `writeInsideOutDirectory` in
+[url_info_transformations.js](../../../src/kitchen/url_graph/url_info_transformations.js).

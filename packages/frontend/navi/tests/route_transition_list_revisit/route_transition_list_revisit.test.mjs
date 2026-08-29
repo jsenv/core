@@ -92,7 +92,8 @@ const readAsks = (page) =>
   });
 // The transition runs 300ms; the ask that a revalidation sends is looked for
 // well past it, so "not yet" and "never" cannot be read as the same thing.
-const settle = (page) => page.waitForTimeout(1500);
+// This wait is paid eleven times per walk: a second is the margin, not more.
+const settle = (page) => page.waitForTimeout(1000);
 // Nothing is measured on the page opened on the way out — only the movement
 // has to have played out before the way back begins.
 const settleLeaving = (page) => page.waitForTimeout(400);

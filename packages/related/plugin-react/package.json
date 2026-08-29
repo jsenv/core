@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "type": "module",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "@babel/plugin-transform-react-jsx-development": "7.29.7",
     "@babel/plugin-transform-react-jsx-source": "7.29.7",
     "@jsenv/ast": "6.9.2",
-    "@jsenv/plugin-commonjs": "2.11.21",
+    "@jsenv/plugin-commonjs": "2.11.22",
     "@jsenv/sourcemap": "1.4.2",
     "@jsenv/url-meta": "8.5.7",
     "react-refresh": "0.18.0"

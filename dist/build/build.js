@@ -4,7 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
-import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, writeFile, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
@@ -2981,55 +2981,20 @@ const createUrlInfoTransformer = ({
 
   const applyContentEffects = (urlInfo) => {
     applySourcemapOnContent(urlInfo);
-    return writeInsideOutDirectory(urlInfo);
-  };
-
-  // The out directory is a debug aid. During dev a request must not be held
-  // by a write blocking the event loop (every other request waits too), so
-  // the file is written asynchronously; the response still waits for it, so
-  // what is on disk is what was served. Per file, writes stay ordered: a file
-  // cooked twice in a row ends up holding its latest content.
-  // During build nothing waits behind a write: it is done synchronously.
-  const pendingWritePromiseMap = new Map();
-  const writeOutFile = (urlInfo, fileUrl, content) => {
-    if (!urlInfo.context.dev) {
-      writeFileSync(fileUrl, content, { force: true });
-      return undefined;
-    }
-    const previousWritePromise =
-      pendingWritePromiseMap.get(fileUrl) || Promise.resolve();
-    const writePromise = previousWritePromise.then(async () => {
-      try {
-        await writeFile(fileUrl, content);
-      } catch {
-        try {
-          // a directory where the file goes, or a file where a directory goes
-          writeFileSync(fileUrl, content, { force: true });
-        } catch (e) {
-          logger.debug(`error while writing ${fileUrl}: ${e.message}`);
-        }
-      }
-    });
-    pendingWritePromiseMap.set(fileUrl, writePromise);
-    writePromise.then(() => {
-      if (pendingWritePromiseMap.get(fileUrl) === writePromise) {
-        pendingWritePromiseMap.delete(fileUrl);
-      }
-    });
-    return writePromise;
+    writeInsideOutDirectory(urlInfo);
   };
 
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
-      return undefined;
+      return;
     }
     const { generatedUrl } = urlInfo;
     if (!generatedUrl) {
-      return undefined;
+      return;
     }
     if (!generatedUrl.startsWith("file:")) {
-      return undefined;
+      return;
     }
     if (urlToPathname(generatedUrl).endsWith("/")) {
       // when users explicitely request a directory
@@ -3037,13 +3002,12 @@ const createUrlInfoTransformer = ({
       // because it would try to write a directory
       // ideally we would decide a filename for this
       // for now we just don't write anything
-      return undefined;
+      return;
     }
     if (urlInfo.type === "directory") {
       // no need to write the directory
-      return undefined;
+      return;
     }
-    const writePromises = [];
     // if (urlInfo.content === undefined) {
     //   // Some error might lead to urlInfo.content to be null
     //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
@@ -3068,19 +3032,15 @@ const createUrlInfoTransformer = ({
       const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
       let outFilePath = urlToFileSystemPath(outFileUrl);
       outFilePath = truncate(outFilePath, 2055); // for windows
-      writePromises.push(writeOutFile(urlInfo, outFilePath, urlInfo.content));
+      writeFileSync(outFilePath, urlInfo.content, { force: true });
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
-      writePromises.push(
-        writeOutFile(
-          urlInfo,
-          sourcemapGeneratedUrl,
-          sourcemapReference.urlInfo.content,
-        ),
+      writeFileSync(
+        new URL(sourcemapGeneratedUrl),
+        sourcemapReference.urlInfo.content,
       );
     }
-    return Promise.all(writePromises);
   };
 
   const applySourcemapOnContent = (
@@ -3187,9 +3147,8 @@ const createUrlInfoTransformer = ({
       );
       applyTransformations(urlInfo, injectionTransformations);
     }
-    const contentEffectsPromise = applyContentEffects(urlInfo);
+    applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;
-    return contentEffectsPromise;
   };
 
   return {
@@ -3842,11 +3801,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "finalizeUrlContent",
           urlInfo,
         );
-      const outDirectoryWritePromise = urlInfoTransformer.endTransformations(
-        urlInfo,
-        finalizeReturnValue,
-      );
-      return { outDirectoryWritePromise };
+      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
         jsenvPluginsController,
@@ -3880,9 +3835,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // to cook a file goes (fetch vs transform vs finalize).
           const timePhase = async (name, phase) => {
             const start = performance.now();
-            const result = await phase();
+            await phase();
             urlInfo.timing[name] = performance.now() - start;
-            return result;
           };
 
           // "fetchUrlContent" hook
@@ -3892,18 +3846,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           await timePhase("transform", () => urlInfo.transformContent());
 
           // "finalize" hook
-          const { outDirectoryWritePromise } = await timePhase("finalize", () =>
-            urlInfo.finalizeContent(),
-          );
-
-          // Timed apart: it is disk I/O the response waits for (see
-          // writeInsideOutDirectory), not part of cooking.
-          if (outDirectoryWritePromise) {
-            await timePhase(
-              "write in out directory",
-              () => outDirectoryWritePromise,
-            );
-          }
+          await timePhase("finalize", () => urlInfo.finalizeContent());
         });
       } catch (e) {
         urlInfo.error = e;

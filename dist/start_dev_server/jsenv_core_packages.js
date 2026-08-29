@@ -1,7 +1,7 @@
 import { createSupportsColor, isUnicodeSupported, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_core_node_modules.js";
 import { stripVTControlCharacters } from "node:util";
-import { readFileSync, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, writeFile as writeFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, watch, realpathSync } from "node:fs";
-import { dirname, extname, basename } from "node:path";
+import { readFileSync, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, watch, realpathSync } from "node:fs";
+import { extname, basename, dirname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
@@ -3541,83 +3541,6 @@ const statsToType = (stats) => {
   return undefined;
 };
 
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
-const { mkdir } = promises;
-
-const writeDirectory = async (
-  destination,
-  { recursive = true, allowUseless = false } = {},
-) => {
-  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-
-  const destinationStats = await readEntryStat(destinationUrl, {
-    nullIfNotFound: true,
-    followLink: false,
-  });
-
-  if (destinationStats) {
-    if (destinationStats.isDirectory()) {
-      if (allowUseless) {
-        return;
-      }
-      throw new Error(`directory already exists at ${destinationPath}`);
-    }
-
-    const destinationType = statsToType(destinationStats);
-    throw new Error(
-      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
-    );
-  }
-
-  try {
-    await mkdir(destinationPath, { recursive });
-  } catch (error) {
-    if (allowUseless && error.code === "EEXIST") {
-      return;
-    }
-    throw error;
-  }
-};
-
-const ensureParentDirectories = async (destination) => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationParentPath = dirname(destinationPath);
-
-  await writeDirectory(destinationParentPath, {
-    recursive: true,
-    allowUseless: true,
-  });
-};
-
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    await writeFileNaive(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNaive(destinationUrlObject, content);
-      return;
-    }
-    throw error;
-  }
-};
-
-const writeFileNaive = (urlObject, content) => {
-  return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
 const mediaTypeInfos = {
   "application/json": {
     extensions: ["json", "map"],
@@ -4364,18 +4287,12 @@ const registerDirectoryLifecycle = (
   };
   const tracker = trackResources();
   const infoMap = new Map();
-  // type is given when already known (from the directory listing it comes
-  // from): there is then no need to stat the entry, which matters when
-  // indexing a large tree at startup
-  const readEntryInfo = (url, { type } = {}) => {
+  const readEntryInfo = (url) => {
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      let stat = null;
-      if (type === undefined) {
-        stat = readEntryStatSync(new URL(url));
-        type = statsToType(stat);
-      }
+      const stat = readEntryStatSync(new URL(url));
+      const type = statsToType(stat);
       const patternValue = previousInfo
         ? previousInfo.patternValue
         : getWatchPatternValue({ url, type });
@@ -4532,12 +4449,10 @@ const registerDirectoryLifecycle = (
         const directoryUrl = entryInfo.url.endsWith("/")
           ? entryInfo.url
           : `${entryInfo.url}/`;
-        let direntArray;
+        let entryNameArray;
         try {
           const directoryUrlObject = new URL(directoryUrl);
-          direntArray = readdirSync(directoryUrlObject, {
-            withFileTypes: true,
-          });
+          entryNameArray = readdirSync(directoryUrlObject);
         } catch (e) {
           if (
             e.code === "ENOENT" ||
@@ -4549,17 +4464,12 @@ const registerDirectoryLifecycle = (
           }
           throw e;
         }
-        for (const dirent of direntArray) {
-          const childEntryUrl = new URL(dirent.name, directoryUrl).href;
+        for (const entryName of entryNameArray) {
+          const childEntryUrl = new URL(entryName, directoryUrl).href;
           if (seenSet.has(childEntryUrl)) {
             continue;
           }
-          // the stat is read (and its mtime reported) only when the entry is
-          // notified; a symlink or an exotic entry is stat'ed too, so that it
-          // is typed as what it points to, as for any later event
-          const childEntryInfo = readEntryInfo(childEntryUrl, {
-            type: notify ? undefined : direntToType(dirent),
-          });
+          const childEntryInfo = readEntryInfo(childEntryUrl);
           if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
             applyEntryDiscoveredEffects(childEntryInfo);
           }
@@ -4601,7 +4511,7 @@ const registerDirectoryLifecycle = (
           relativeUrl: entryInfo.relativeUrl,
           type: entryInfo.type,
           patternValue: entryInfo.patternValue,
-          mtime: entryInfo.stat ? entryInfo.stat.mtimeMs : undefined,
+          mtime: entryInfo.stat.mtimeMs,
         });
       }
     };
@@ -4615,7 +4525,7 @@ const registerDirectoryLifecycle = (
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.stat ? entryInfo.stat.mtimeMs : undefined,
+        mtime: entryInfo.stat.mtimeMs,
       });
     }
   };
@@ -4627,9 +4537,7 @@ const registerDirectoryLifecycle = (
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
         mtime: entryInfo.stat.mtimeMs,
-        previousMtime: entryInfo.previousInfo.stat
-          ? entryInfo.previousInfo.stat.mtimeMs
-          : undefined,
+        previousMtime: entryInfo.previousInfo.stat.mtimeMs,
       });
     }
   };
@@ -4665,21 +4573,8 @@ ${relativeUrls.join("\n")}`,
   return tracker.cleanup;
 };
 
-const direntToType = (dirent) => {
-  if (dirent.isFile()) {
-    return "file";
-  }
-  if (dirent.isDirectory()) {
-    return "directory";
-  }
-  return undefined;
-};
-
 const shouldCallUpdated$1 = (entryInfo) => {
   const { stat, previousInfo } = entryInfo;
-  if (!previousInfo.stat) {
-    return true;
-  }
   if (!stat.atimeMs) {
     return true;
   }
@@ -7467,4 +7362,4 @@ const isResponseEligibleForIntegrityValidation = (response) => {
   return ["basic", "cors", "default"].includes(response.type);
 };
 
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, collectFiles, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFile, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, collectFiles, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

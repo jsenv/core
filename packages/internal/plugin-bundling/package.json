@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.10.17",
+  "version": "2.10.18",
   "type": "module",
   "repository": {
     "type": "git",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@jsenv/humanize": "1.7.8",
-    "@jsenv/node-esm-resolution": "1.3.4",
+    "@jsenv/node-esm-resolution": "1.3.5",
     "@jsenv/sourcemap": "1.4.2",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.10",

@@ -104,7 +104,10 @@ await executeTestPlan({
             fileRelativeUrl.endsWith("react_build.test.mjs") ||
             fileRelativeUrl.endsWith("react_refresh.test.mjs") ||
             fileRelativeUrl.endsWith("toolbar_basic.test.mjs") ||
-            fileRelativeUrl.endsWith("react_dev.test.mjs")
+            fileRelativeUrl.endsWith("react_dev.test.mjs") ||
+            // ten revisits per page, each waiting for a transition to have
+            // played and a revalidation to have had time to ask
+            fileRelativeUrl.endsWith("route_transition_list_revisit.test.mjs")
           ) {
             return 90_000;
           }

@@ -1,4 +1,4 @@
-import { writeFile, writeFileSync } from "@jsenv/filesystem";
+import { writeFileSync } from "@jsenv/filesystem";
 import {
   composeTwoSourcemaps,
   generateSourcemapDataUrl,
@@ -260,61 +260,28 @@ export const createUrlInfoTransformer = ({
 
   const applyContentEffects = (urlInfo) => {
     applySourcemapOnContent(urlInfo);
-    return writeInsideOutDirectory(urlInfo);
+    writeInsideOutDirectory(urlInfo);
   };
 
-  // The out directory is a debug aid. During dev a request must not be held
-  // by a write blocking the event loop (every other request waits too), so
-  // the file is written asynchronously; the response still waits for it, so
-  // what is on disk is what was served. Per file, writes stay ordered: a file
-  // cooked twice in a row ends up holding its latest content.
-  // During build nothing waits behind a write: it is done synchronously.
-  const pendingWritePromiseMap = new Map();
-  const writeOutFile = (urlInfo, fileUrl, content) => {
-    if (!urlInfo.context.dev) {
-      writeFileSync(fileUrl, content, { force: true });
-      return undefined;
-    }
-    // keyed by the file on disk: two urls differing by their search params
-    // ("file.css.map" and "file.css.map?side_effect") land in the same file,
-    // and two writes racing on it would interleave their bytes
-    const filePath = isFileSystemPath(fileUrl)
-      ? fileUrl
-      : urlToFileSystemPath(fileUrl);
-    const previousWritePromise =
-      pendingWritePromiseMap.get(filePath) || Promise.resolve();
-    const writePromise = previousWritePromise.then(async () => {
-      try {
-        await writeFile(fileUrl, content);
-      } catch {
-        try {
-          // a directory where the file goes, or a file where a directory goes
-          writeFileSync(fileUrl, content, { force: true });
-        } catch (e) {
-          logger.debug(`error while writing ${fileUrl}: ${e.message}`);
-        }
-      }
-    });
-    pendingWritePromiseMap.set(filePath, writePromise);
-    writePromise.then(() => {
-      if (pendingWritePromiseMap.get(filePath) === writePromise) {
-        pendingWritePromiseMap.delete(filePath);
-      }
-    });
-    return writePromise;
-  };
-
+  // Written synchronously on purpose, and measured: async is the tempting
+  // choice, but here it loses. A cold load cooks hundreds of files; their
+  // synchronous writes block the event loop ~160ms in total, while
+  // asynchronous writes queue in the threadpool behind tens of MB of content
+  // and sourcemaps, and a response that waits for its own write then waits
+  // ~36ms on average (18s summed over 500 responses). Not waiting is not an
+  // option either: the last write lands after the test that cooked it has
+  // ended, and the side-effect snapshots lose it.
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
-      return undefined;
+      return;
     }
     const { generatedUrl } = urlInfo;
     if (!generatedUrl) {
-      return undefined;
+      return;
     }
     if (!generatedUrl.startsWith("file:")) {
-      return undefined;
+      return;
     }
     if (urlToPathname(generatedUrl).endsWith("/")) {
       // when users explicitely request a directory
@@ -322,13 +289,12 @@ export const createUrlInfoTransformer = ({
       // because it would try to write a directory
       // ideally we would decide a filename for this
       // for now we just don't write anything
-      return undefined;
+      return;
     }
     if (urlInfo.type === "directory") {
       // no need to write the directory
-      return undefined;
+      return;
     }
-    const writePromises = [];
     // if (urlInfo.content === undefined) {
     //   // Some error might lead to urlInfo.content to be null
     //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
@@ -353,19 +319,15 @@ export const createUrlInfoTransformer = ({
       const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
       let outFilePath = urlToFileSystemPath(outFileUrl);
       outFilePath = truncate(outFilePath, 2055); // for windows
-      writePromises.push(writeOutFile(urlInfo, outFilePath, urlInfo.content));
+      writeFileSync(outFilePath, urlInfo.content, { force: true });
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
-      writePromises.push(
-        writeOutFile(
-          urlInfo,
-          sourcemapGeneratedUrl,
-          sourcemapReference.urlInfo.content,
-        ),
+      writeFileSync(
+        new URL(sourcemapGeneratedUrl),
+        sourcemapReference.urlInfo.content,
       );
     }
-    return Promise.all(writePromises);
   };
 
   const applySourcemapOnContent = (
@@ -472,9 +434,8 @@ export const createUrlInfoTransformer = ({
       );
       applyTransformations(urlInfo, injectionTransformations);
     }
-    const contentEffectsPromise = applyContentEffects(urlInfo);
+    applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;
-    return contentEffectsPromise;
   };
 
   return {
