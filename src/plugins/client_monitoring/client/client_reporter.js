@@ -178,11 +178,19 @@ const setup = () => {
   // only carries the id, tab, activities and log entries.
   let pendingLogs = [];
   let pendingActivities = [];
+  // The server answering that the endpoint does not exist means there is no
+  // monitoring behind this origin anymore (the dev server was restarted
+  // without it, a test server took the port): reporting stops for the rest of
+  // this page's life rather than knocking at every heartbeat.
+  let endpointGone = false;
   const post = async ({ beacon = false, closing = false } = {}) => {
     const logs = pendingLogs;
     const activities = pendingActivities;
     pendingLogs = [];
     pendingActivities = [];
+    if (endpointGone) {
+      return;
+    }
     const payload = JSON.stringify({
       clientId,
       // The server reads browser/OS from the request headers, but a headless
@@ -201,12 +209,15 @@ const setup = () => {
       return;
     }
     try {
-      await nativeFetch(REPORT_ENDPOINT, {
+      const response = await nativeFetch(REPORT_ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: payload,
         keepalive: true,
       });
+      if (response.status === 404 || response.status === 405) {
+        endpointGone = true;
+      }
     } catch {
       // dev server gone or offline — dropping the report is acceptable.
     }

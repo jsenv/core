@@ -355,7 +355,10 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
           }
         }
         if (!route.matchMethod(request.method)) {
-          if (!route.isFallback) {
+          // a 405 asserts the resource exists with other methods: a route
+          // matching any resource ("GET *") cannot assert that, so it does
+          // not turn an unknown resource into a 405
+          if (!route.isFallback && route.resource !== "*") {
             wouldHaveMatched.methodSet.add(route.method);
           }
           continue;

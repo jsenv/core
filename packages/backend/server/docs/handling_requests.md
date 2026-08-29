@@ -32,7 +32,7 @@ Routes are tried in order. `fetch` can be async; returning `null` or `undefined`
 
 When no route answers, the router builds the response from what almost matched:
 
-- **405 Method Not Allowed** (with an `allow` header) when the resource matched routes for other methods,
+- **405 Method Not Allowed** (with an `allow` header) when the resource matched routes for other methods — a catch-all `*` route does not count, it says nothing about the resource,
 - **415 Unsupported Media Type** when a POST/PATCH/PUT route wanted another `content-type` (see `acceptedMediaTypes` below),
 - **406 Not Acceptable** when the route cannot produce what the request accepts (see [content negotiation](./content_negotiation.md)),
 - **426 Upgrade Required** for a websocket route requested without an upgrade,
