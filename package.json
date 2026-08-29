@@ -75,10 +75,10 @@
     "@jsenv/ast": "6.9.2",
     "@jsenv/js-module-fallback": "1.5.1",
     "@jsenv/plugin-bundling": "2.10.18",
-    "@jsenv/plugin-minification": "1.7.9",
+    "@jsenv/plugin-minification": "1.7.10",
     "@jsenv/plugin-supervisor": "1.8.13",
     "@jsenv/plugin-transpilation": "1.6.1",
-    "@jsenv/server": "17.6.1",
+    "@jsenv/server": "17.6.2",
     "@jsenv/sourcemap": "1.4.2",
     "react-table": "7.8.0"
   },

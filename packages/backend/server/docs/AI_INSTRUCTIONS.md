@@ -22,4 +22,6 @@ An http server for Node.js: `startServer({ routes, plugins })` where a route is 
 - A plain response object must give `status` (it defaults to 404). `statusMessage` is not `statusText`: it feeds the body of 4xx/5xx responses.
 - Without a plugin implementing `handleError` (`serverPluginErrorHandler`), a route that throws makes the process exit.
 - `canExposeSensitiveData: true` is for development on the developer's machine only (see [security.md](./security.md)).
+- A request whose `host` header is not a name of the server gets 403: a custom hostname goes in `hostname` or `allowedHosts`.
+- `request.json()` and the other readers answer 413 past 1 MiB (`requestBodyMaxSize`, or `{ maxSize }` per call).
 - Running from the jsenv/core repository: `node --conditions=dev:jsenv <file>`, otherwise the stale `dist/` bundle is used.

@@ -20,7 +20,7 @@
     "@jsenv/assert": "4.5.7",
     "@jsenv/core": "41.4.19",
     "@jsenv/plugin-bundling": "2.10.18",
-    "@jsenv/plugin-minification": "1.7.9",
+    "@jsenv/plugin-minification": "1.7.10",
     "@jsenv/eslint-config-relax": "1.9.0",
     "@jsenv/test": "3.7.34",
     "eslint": "9.39.2",

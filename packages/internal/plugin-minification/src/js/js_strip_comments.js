@@ -3,21 +3,24 @@ import { createMagicSource } from "@jsenv/sourcemap";
 // Comments are taken out in place, leaving every line where it is: the line
 // numbers a stack trace shows stay those of the source. A comment sharing its
 // line with code is replaced by spaces, so the code keeps its columns too.
+// A license notice stays (@license, @preserve): the code it covers is
+// shipped, the notice must be too.
 export const stripJsComments = (urlInfo) => {
   const { content } = urlInfo;
-  const comments = urlInfo.contentAst.comments || [];
+  const allComments = urlInfo.contentAst.comments || [];
+  const comments = allComments.filter((comment) => !mustKeepComment(comment));
   const magicSource = createMagicSource(content);
   // Whatever trails the last code (comments, blank lines) goes: the file
   // ends right after its last token, the way a generated file does.
   let tailStart = content.length;
-  let commentsFromEnd = comments.slice().sort((a, b) => b.end - a.end);
+  const allCommentsFromEnd = allComments.slice().sort((a, b) => b.end - a.end);
   let tailCommentIndex = 0;
   while (true) {
     while (tailStart > 0 && /\s/.test(content[tailStart - 1])) {
       tailStart--;
     }
-    const comment = commentsFromEnd[tailCommentIndex];
-    if (comment && comment.end === tailStart) {
+    const comment = allCommentsFromEnd[tailCommentIndex];
+    if (comment && comment.end === tailStart && !mustKeepComment(comment)) {
       tailStart = comment.start;
       tailCommentIndex++;
       continue;
@@ -71,4 +74,8 @@ export const stripJsComments = (urlInfo) => {
     });
   }
   return magicSource.toContentAndSourcemap();
+};
+
+const mustKeepComment = ({ text }) => {
+  return text.includes("@license") || text.includes("@preserve");
 };

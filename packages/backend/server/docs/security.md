@@ -5,6 +5,8 @@ What the server takes care of, and what it leaves to the code around it.
 ## What it does
 
 - A malformed header (`forwarded`, `cookie`, `referer`, `accept`…) never takes the server down: a request that cannot be read is answered 500 and logged.
+- **The `host` header is checked.** A request whose host is not one of the names the server is reached at (localhost, `hostname`, the machine name and ips, `allowedHosts`) is answered 403. Without this a page served by another site reads the responses once its DNS name is rebound to this machine — the request comes from the developer's own browser, so listening on localhost is no protection. A custom name (an `/etc/hosts` entry, a tunnel) goes in `hostname` or `allowedHosts`; `allowedHosts: true` disables the check.
+- **Request bodies are bounded.** `request.json()`, `text()`, `buffer()` and `queryString()` answer 413 past `requestBodyMaxSize` (1 MiB by default), from the `content-length` when there is one, else while reading; the rest of the body is drained for a few seconds so that the client gets the 413, then the connection is cut. A route accepting more passes its own `{ maxSize }`. `request.body` (the observable) is never limited: who streams it takes the responsibility. `formData()` is bounded by formidable (200 MB per file, 20 MB of fields).
 - What a response echoes from the request (the url in a 404 message, a file path in a status text) is escaped in the html error pages, and status texts are reduced to what a status line accepts.
 - `createFileSystemFetch` refuses to leave its directory (403).
 - A route declaring permissions hides every route that declares none: forgetting `permissionsRequired` cannot expose a route ([handling requests](./handling_requests.md)).
@@ -24,8 +26,7 @@ This option lets the server hand out what belongs to the machine it runs on. It 
 
 ## What it leaves to you
 
-- **The `host` header is not checked.** Any name pointing at the machine reaches the server: a site can rebind its DNS to `127.0.0.1` and, from the browser of a developer running a server with `canExposeSensitiveData`, read what it serves and open files in the editor. Bind to `localhost` (the default) rather than `acceptAnyIp`, and put a reverse proxy in front for anything public.
 - **Forwarded headers are trusted as-is.** `request.ipForwarded`, `protoForwarded` and `hostForwarded` are what the `forwarded` / `x-forwarded-*` headers say; any client can send them. Read them only behind a proxy you control, `request.ip` is the socket address.
-- **Request bodies have no size limit.** `request.json()`, `text()`, `buffer()` read everything; `formData()` writes uploaded files to the temp directory and does not delete them. For untrusted clients, read `request.body` (an observable of chunks) and stop past your limit, or check `content-length` first.
+- **Uploaded files are not cleaned up.** `formData()` writes them to the temp directory and leaves them there.
 - **A route that throws with no error handler exits the process.** Always run with `serverPluginErrorHandler` (or a `handleError` plugin), see [handling errors](./handling_errors.md).
 - **No rate limiting, no authentication.** `grantPermissions` is where a session or a token becomes permissions; what it checks is up to you.

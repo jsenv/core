@@ -801,7 +801,7 @@ export const createBuildSpecifierManager = ({
           }
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
-            const { content, sourcemap } = placeholderAPI.replaceAll(
+            const replaceResult = placeholderAPI.replaceAll(
               contentBeforeReplace,
               (placeholder) => {
                 const reference = placeholderToReferenceMap.get(placeholder);
@@ -809,7 +809,7 @@ export const createBuildSpecifierManager = ({
                 return value;
               },
             );
-            urlInfo.mutateContent({ content, sourcemap });
+            urlInfo.mutateContent(replaceResult);
           }
         },
       );

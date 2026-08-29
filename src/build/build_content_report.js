@@ -19,11 +19,12 @@ ${createRepartitionMessage(buildContentReport, { indent })}
 --------------------`;
 };
 
-const humanizeProcessCpuUsage = (ratio) => {
-  const percentageAsNumber = ratio * 100;
-  const percentageAsNumberRounded = Math.round(percentageAsNumber);
-  const percentage = `${percentageAsNumberRounded}%`;
-  return percentage;
+// a phase can be a few milliseconds long (refine, mostly): shown as such
+const humanizePhaseDuration = (ms) => {
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  return humanizeDuration(ms, { short: true });
 };
 const humanizeProcessMemoryUsage = (value) => {
   return humanizeMemory(value, { short: true, decimals: 0 });
@@ -32,7 +33,8 @@ export const renderBuildDoneLog = ({
   entryPointArray,
   duration,
   buildFileContents,
-  processCpuUsage,
+  cpuUsage,
+  phaseTimings,
   processMemoryUsage,
 }) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
@@ -47,15 +49,10 @@ export const renderBuildDoneLog = ({
     title = `build done (${entryPointCount} entry points)`;
   }
 
-  // cpu usage
-  let cpuUsageLine = "cpu: ";
-  cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
-  cpuUsageLine += renderDetails({
-    med: humanizeProcessCpuUsage(processCpuUsage.median),
-    min: humanizeProcessCpuUsage(processCpuUsage.min),
-    max: humanizeProcessCpuUsage(processCpuUsage.max),
-  });
-  lines.push(cpuUsageLine);
+  // cpu: the process cpu time over the build duration, 100% being one core
+  // busy the whole time (more when a native module works on other threads)
+  const cpuMs = (cpuUsage.user + cpuUsage.system) / 1000;
+  lines.push(`cpu: ${Math.round((cpuMs / duration) * 100)}%`);
 
   // memory usage
   let memoryUsageLine = "memory: ";
@@ -70,6 +67,16 @@ export const renderBuildDoneLog = ({
   // duration
   let durationLine = `duration: `;
   durationLine += humanizeDuration(duration, { short: true });
+  if (phaseTimings) {
+    durationLine += renderDetails(
+      Object.fromEntries(
+        Object.keys(phaseTimings).map((phaseName) => [
+          phaseName,
+          humanizePhaseDuration(phaseTimings[phaseName]),
+        ]),
+      ),
+    );
+  }
   lines.push(durationLine);
 
   // content
@@ -269,6 +276,8 @@ const createBuildContentReport = (buildFileContents) => {
 };
 
 const determineCategory = (buildRelativeUrl) => {
+  // a versioned url ("main.js?v=abc") is categorized by its file
+  buildRelativeUrl = buildRelativeUrl.replace(/[?#].*$/, "");
   if (buildRelativeUrl.endsWith(".map")) {
     return "sourcemap";
   }

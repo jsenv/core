@@ -190,6 +190,5 @@ const parseAndTransformJsReferences = async (
   for (const sequentialAction of sequentialActions) {
     await sequentialAction();
   }
-  const { content, sourcemap } = magicSource.toContentAndSourcemap();
-  return { content, sourcemap };
+  return magicSource.toContentAndSourcemap();
 };

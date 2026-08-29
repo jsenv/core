@@ -67,10 +67,9 @@ const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
-  const sourcemap = composeTwoSourcemaps(
-    jsUrlInfo.sourcemap,
-    magicResult.sourcemap,
-  );
+  const sourcemap = jsUrlInfo.context.sourcemapsEnabled
+    ? composeTwoSourcemaps(jsUrlInfo.sourcemap, magicResult.sourcemap)
+    : null;
   jsUrlInfo.mutateContent({
     content: magicResult.content,
     sourcemap,
@@ -88,6 +87,7 @@ const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
     input: jsUrlInfo.content,
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
+    options: { sourceMaps: jsUrlInfo.context.sourcemapsEnabled },
   });
   jsUrlInfo.mutateContent({
     content: code,

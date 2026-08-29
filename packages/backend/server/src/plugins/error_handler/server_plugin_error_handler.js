@@ -20,9 +20,8 @@ const readInternalErrorHtmlTemplate = () => {
  * response (html, text or json depending on what the request accepts).
  * Without a plugin handling errors, a route that throws makes the process
  * exit. Put it last: it catches every error, so plugins handling a subset of
- * them must come before.
- *
- * An error exposing an `asResponse()` method is answered with what it returns.
+ * them must come before. (An error exposing `asResponse()` never reaches it:
+ * the server answers it directly.)
  *
  * @param {Object} [params]
  * @param {boolean} [params.sendErrorDetails=false] - Put the error stack (and
@@ -37,9 +36,6 @@ export const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
         serverInternalError === null ||
         (typeof serverInternalError !== "object" &&
           typeof serverInternalError !== "function");
-      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse();
-      }
       const dataToSend = serverInternalErrorIsAPrimitive
         ? {
             code: "VALUE_THROWED",

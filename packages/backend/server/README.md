@@ -25,6 +25,7 @@ await startServer({
 - WebSocket and Server-Sent Events, with a broadcast helper
 - HTTPS, with http → https redirection; http2 as an option
 - CORS, server timing and error pages as plugins
+- Host header check (DNS rebinding) and bounded request bodies
 - A route inspector at `/.internal/route_inspector`
 
 # Installation

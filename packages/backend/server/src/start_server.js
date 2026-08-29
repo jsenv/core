@@ -13,6 +13,7 @@ import {
   composeTwoHeaders,
   composeTwoHeaderValues,
 } from "./internal/headers_composition.js";
+import { createHostChecker } from "./internal/allowed_hosts.js";
 import { listen, stopListening } from "./internal/listen.js";
 import { listenEvent } from "./internal/listen_event.js";
 import { listenRequest } from "./internal/listen_request.js";
@@ -91,6 +92,11 @@ const TIMING_NOOP = () => {
  *   so that other machines on the network can reach the server; `server.origins.externalip`
  *   then tells the address to use from there.
  * @param {boolean} [params.preferIpv6] - Favor ipv6 addresses in `server.origins`.
+ * @param {Array<string>|true} [params.allowedHosts=[]] - Names the server may be requested
+ *   with (the `host` header), on top of localhost, `hostname`, the machine name and ips,
+ *   and every ip when `acceptAnyIp`. `".example.com"` covers the subdomains. Any other
+ *   host is answered 403: a page served elsewhere cannot read the responses by rebinding
+ *   its DNS name to this machine. `true` disables the check.
  * @param {Object|false} [params.https=false] - `{ certificate, privateKey }` (PEM strings) to serve https.
  * @param {boolean} [params.redirectHttpToHttps] - With https, answer http requests with a 301
  *   to the https origin. Defaults to true unless `allowHttpRequestOnHttps` is set.
@@ -133,6 +139,9 @@ const TIMING_NOOP = () => {
  * @param {Function} [params.requestWaitingCallback] - `({ request, requestWaitingMs })`, logs a warning by default.
  * @param {number} [params.responseTimeout=600000] - Ms a route can take to start responding
  *   before a 504 is sent instead (10 minutes).
+ * @param {number} [params.requestBodyMaxSize=1048576] - Bytes `request.json()`, `text()`,
+ *   `buffer()` and `queryString()` accept before answering 413 (1 MiB). A route can pass
+ *   its own `{ maxSize }` to these readers; `request.body` is never limited.
  *
  * @returns {Promise<Object>} The server: `{ origin, origins, port, hostname, nodeServer,
  *   webSocketOrigin, stop, stoppedPromise, getStatus, addEffect }`.
@@ -159,6 +168,7 @@ export const startServer = async ({
   allowHttpRequestOnHttps = false,
   acceptAnyIp = false,
   preferIpv6,
+  allowedHosts = [],
   hostname = "localhost",
   port = 0, // assign a random available port
   portHint,
@@ -189,6 +199,7 @@ export const startServer = async ({
     );
   },
   responseTimeout = 60_000 * 10, // 10 minutes
+  requestBodyMaxSize = 1024 * 1024,
   ...rest
 } = {}) => {
   // param validations
@@ -212,6 +223,11 @@ export const startServer = async ({
     }
     if (http2 && !https) {
       throw new Error(`http2 needs https`);
+    }
+    if (allowedHosts !== true && !Array.isArray(allowedHosts)) {
+      throw new TypeError(
+        `allowedHosts must be an array of hosts or true, got ${allowedHosts}`,
+      );
     }
   }
   const logger = createLogger({ logLevel });
@@ -352,6 +368,12 @@ export const startServer = async ({
   //   so we prefer https://locahost or https://local_hostname
   //   over the ip
   const serverOrigin = serverOrigins.local;
+  const isHostAllowed = createHostChecker({
+    allowedHosts,
+    hostname,
+    serverOrigins,
+    acceptAnyIp,
+  });
 
   // now the server is started (listening) it cannot be aborted anymore
   // (otherwise an AbortError is thrown to the code calling "startServer")
@@ -660,6 +682,21 @@ export const startServer = async ({
         // let it propagate to the caller that should catch this
         throw e;
       }
+      // an error carrying its own response (a request body too large for
+      // instance) is not an internal error: it is answered as such, whatever
+      // the plugins
+      if (e && typeof e.asResponse === "function") {
+        const responseProperties = composeTwoResponses(
+          {
+            status: 500,
+            headers: {
+              "cache-control": "no-store",
+            },
+          },
+          await e.asResponse(),
+        );
+        return finalizeResponseProperties(responseProperties);
+      }
       // internal error, create 500 response
       if (
         // stopOnInternalError stops server only if requestToResponse generated
@@ -697,6 +734,22 @@ export const startServer = async ({
       return finalizeResponseProperties(responseProperties);
     }
   };
+  // When a response is sent before the request body was read (a 413, a 404
+  // on an upload...) node keeps draining what the client sends so that the
+  // client gets to read the response, as nginx does with its lingering close.
+  // A client that has not finished sending after that delay is cut off:
+  // draining a body forever is what the 413 was meant to avoid.
+  const lingerAfterEarlyResponse = (nodeRequest) => {
+    if (nodeRequest.complete) {
+      return;
+    }
+    const lingerTimeout = setTimeout(() => {
+      nodeRequest.socket.destroy();
+    }, REQUEST_BODY_LINGER_MS).unref();
+    nodeRequest.once("close", () => {
+      clearTimeout(lingerTimeout);
+    });
+  };
   const sendResponse = async (
     responseStream,
     responseProperties,
@@ -733,6 +786,15 @@ export const startServer = async ({
 
   request: {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
+      const requestHost = nodeRequest.authority || nodeRequest.headers.host;
+      if (!isHostAllowed(requestHost)) {
+        logger.warn(
+          `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,
+        );
+        nodeResponse.writeHead(403, { "content-type": "text/plain" });
+        nodeResponse.end("Host not allowed");
+        return;
+      }
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
           location: `${serverOrigin}${nodeRequest.url}`,
@@ -757,6 +819,7 @@ export const startServer = async ({
           signal: stopAbortSignal,
           serverOrigin,
           logger,
+          requestBodyMaxSize,
         });
       } catch (e) {
         // the request cannot even be read: there is nothing to hand to the routes
@@ -786,6 +849,7 @@ export const startServer = async ({
           signal: sendResponseOperation.signal,
           request,
         });
+        lingerAfterEarlyResponse(nodeRequest);
       } finally {
         await sendResponseOperation.end();
       }
@@ -827,12 +891,24 @@ export const startServer = async ({
     };
     // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
+      const requestHost = nodeRequest.headers.host;
+      if (!isHostAllowed(requestHost)) {
+        logger.warn(
+          `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,
+        );
+        socket.write(
+          `HTTP/1.1 403 Forbidden\r\ncontent-type: text/plain\r\ncontent-length: 16\r\n\r\nHost not allowed`,
+        );
+        socket.destroy();
+        return;
+      }
       let request;
       try {
         request = fromNodeRequest(nodeRequest, {
           signal: stopAbortSignal,
           serverOrigin,
           logger,
+          requestBodyMaxSize,
         });
       } catch (e) {
         logger.error(
@@ -971,6 +1047,8 @@ const createNodeServer = async ({
   const { createServer } = await import("node:http");
   return createServer();
 };
+
+const REQUEST_BODY_LINGER_MS = 5_000;
 
 const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGHUP: STOP_REASON_PROCESS_SIGHUP,

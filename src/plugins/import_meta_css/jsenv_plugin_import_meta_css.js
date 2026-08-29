@@ -75,6 +75,8 @@ export const jsenvPluginImportMetaCss = () => {
             inputIsJsModule: true,
             inputUrl: urlInfo.originalUrl,
             outputUrl: urlInfo.generatedUrl,
+            // the map would be dropped: the content sent back carries none
+            options: { sourceMaps: false },
           });
           if (code === urlInfo.content) {
             // all assignments were already in array form (pre-built file) — nothing to do

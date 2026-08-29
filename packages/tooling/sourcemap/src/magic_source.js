@@ -32,14 +32,22 @@ export const createMagicSource = (content) => {
         };
       }
       const code = magicString.toString();
-      const map = magicString.generateMap({
-        hires: true,
-        includeContent: true,
-        source,
-      });
+      // The map is generated when first read, not here: a consumer that
+      // throws sourcemaps away (a build with sourcemaps "none") never reads
+      // it, and generating a high resolution map costs as much as the edit.
+      let map;
       return {
         content: code,
-        sourcemap: map,
+        get sourcemap() {
+          if (map === undefined) {
+            map = magicString.generateMap({
+              hires: true,
+              includeContent: true,
+              source,
+            });
+          }
+          return map;
+        },
       };
     },
   };

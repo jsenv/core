@@ -18,7 +18,7 @@ base/client/main.html:15:40
   at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:78:23)
   at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:151:25)
   at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:203:27)
-  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:357:32)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:363:32)
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)

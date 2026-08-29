@@ -2467,8 +2467,7 @@ const parseAndTransformJsReferences = async (
   for (const sequentialAction of sequentialActions) {
     await sequentialAction();
   }
-  const { content, sourcemap } = magicSource.toContentAndSourcemap();
-  return { content, sourcemap };
+  return magicSource.toContentAndSourcemap();
 };
 
 const jsenvPluginReferenceExpectedTypes = () => {
@@ -6161,6 +6160,8 @@ const jsenvPluginImportMetaCss = () => {
             inputIsJsModule: true,
             inputUrl: urlInfo.originalUrl,
             outputUrl: urlInfo.generatedUrl,
+            // the map would be dropped: the content sent back carries none
+            options: { sourceMaps: false },
           });
           if (code === urlInfo.content) {
             // all assignments were already in array form (pre-built file) — nothing to do
@@ -8241,7 +8242,10 @@ const devServerPluginOmegaErrorHandler = () => {
               status: 403,
             };
           }
-          return convertFileSystemErrorToResponseProperties(error);
+          // the dev server runs with canExposeSensitiveData: file paths are welcome
+          return convertFileSystemErrorToResponseProperties(error, {
+            canExposeSensitiveData: true,
+          });
         };
         const response = getResponseForError();
         if (!response) {
@@ -8427,10 +8431,9 @@ const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
-  const sourcemap = composeTwoSourcemaps(
-    jsUrlInfo.sourcemap,
-    magicResult.sourcemap,
-  );
+  const sourcemap = jsUrlInfo.context.sourcemapsEnabled
+    ? composeTwoSourcemaps(jsUrlInfo.sourcemap, magicResult.sourcemap)
+    : null;
   jsUrlInfo.mutateContent({
     content: magicResult.content,
     sourcemap,
@@ -8448,6 +8451,7 @@ const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
     input: jsUrlInfo.content,
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
+    options: { sourceMaps: jsUrlInfo.context.sourcemapsEnabled },
   });
   jsUrlInfo.mutateContent({
     content: code,
@@ -10172,7 +10176,6 @@ const createUrlInfoTransformer = ({
       contentAst, // undefined most of the time
       contentEtag, // in practice always undefined
       contentLength,
-      sourcemap,
       sourcemapIsWrong,
       contentInjections,
     } = transformations;
@@ -10199,11 +10202,14 @@ const createUrlInfoTransformer = ({
         contentLength,
       });
     }
-    if (
-      sourcemap &&
-      mayHaveSourcemap(urlInfo) &&
-      shouldHandleSourcemap(urlInfo)
-    ) {
+    // "sourcemap" is read last, and only when it will be used: a plugin can
+    // hand it back as a getter that generates the map on first read, so that
+    // nothing is generated for a kitchen that throws sourcemaps away
+    const sourcemap =
+      mayHaveSourcemap(urlInfo) && shouldHandleSourcemap(urlInfo)
+        ? transformations.sourcemap
+        : null;
+    if (sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
@@ -10236,6 +10242,14 @@ const createUrlInfoTransformer = ({
     writeInsideOutDirectory(urlInfo);
   };
 
+  // Written synchronously on purpose, and measured: async is the tempting
+  // choice, but here it loses. A cold load cooks hundreds of files; their
+  // synchronous writes block the event loop ~160ms in total, while
+  // asynchronous writes queue in the threadpool behind tens of MB of content
+  // and sourcemaps, and a response that waits for its own write then waits
+  // ~36ms on average (18s summed over 500 responses). Not waiting is not an
+  // option either: the last write lands after the test that cooked it has
+  // ended, and the side-effect snapshots lose it.
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
@@ -10555,6 +10569,12 @@ const createKitchen = ({
       INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
+      // a plugin producing a sourcemap can skip the work when it would be
+      // thrown away (see shouldHandleSourcemap in url_info_transformations.js)
+      sourcemapsEnabled:
+        sourcemaps === "inline" ||
+        sourcemaps === "file" ||
+        sourcemaps === "programmatic",
       outDirectoryUrl,
     },
     resolve: (specifier, importer = rootDirectoryUrl) => {

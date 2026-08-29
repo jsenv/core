@@ -118,6 +118,12 @@ export const createKitchen = ({
       INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
+      // a plugin producing a sourcemap can skip the work when it would be
+      // thrown away (see shouldHandleSourcemap in url_info_transformations.js)
+      sourcemapsEnabled:
+        sourcemaps === "inline" ||
+        sourcemaps === "file" ||
+        sourcemaps === "programmatic",
       outDirectoryUrl,
     },
     resolve: (specifier, importer = rootDirectoryUrl) => {

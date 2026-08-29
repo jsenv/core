@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
 import { startServer } from "@jsenv/server";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
@@ -21,7 +20,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     url: response.url,
     status: response.status,
     statusText: response.statusText,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {
@@ -48,7 +47,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     url: response.url,
     status: response.status,
     statusText: response.statusText,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {
@@ -75,7 +74,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     url: response.url,
     status: response.status,
     statusText: response.statusText,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {
@@ -119,7 +118,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     url: response.url,
     status: response.status,
     statusText: response.statusText,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {

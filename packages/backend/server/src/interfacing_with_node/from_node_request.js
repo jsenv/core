@@ -24,7 +24,7 @@ import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, logger },
+  { serverOrigin, signal, logger, requestBodyMaxSize = Infinity },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
     const logFunction = logger[type];
@@ -83,9 +83,15 @@ export const fromNodeRequest = (
 
   // check the following parsers if we want to support more request body content types
   // https://github.com/node-formidable/formidable/tree/master/src/parsers
-  const buffer = async () => {
+  // Every reader below buffers the body in memory: past maxSize it throws an
+  // error the server answers with 413 (see RequestBodyTooLargeError).
+  const buffer = async ({ maxSize = requestBodyMaxSize } = {}) => {
     // here we don't really need to warn, one might want to read anything as binary
-    const requestBodyBuffer = await readBody(body, { as: "buffer" });
+    const requestBodyBuffer = await readBody(body, {
+      as: "buffer",
+      maxSize,
+      headers,
+    });
     return requestBodyBuffer;
   };
   // maybe we could use https://github.com/form-data/form-data
@@ -104,35 +110,47 @@ export const fromNodeRequest = (
     const requestBodyFormData = { fields, files };
     return requestBodyFormData;
   };
-  const text = async () => {
+  const text = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (!CONTENT_TYPE.isTextual(contentType)) {
       console.warn(
         `text() called on a request with content-type "${contentType}". A textual content-type was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     return requestBodyString;
   };
-  const json = async () => {
+  const json = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (!CONTENT_TYPE.isJson(contentType)) {
       console.warn(
         `json() called on a request with content-type "${contentType}". A json content-type was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     const requestBodyJSON = JSON.parse(requestBodyString);
     return requestBodyJSON;
   };
-  const queryString = async () => {
+  const queryString = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (contentType !== "application/x-www-form-urlencoded") {
       console.warn(
         `queryString() called on a request with content-type "${contentType}". application/x-www-form-urlencoded was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     const requestBodyQueryStringParsed = parse(requestBodyString);
     return requestBodyQueryStringParsed;
   };
@@ -298,35 +316,68 @@ const prefixLines = (string, prefix) => {
   return string.replace(/^(?!\s*$)/gm, prefix);
 };
 
-const readBody = (body, { as }) => {
+const readBody = (body, { as, maxSize, headers }) => {
   return new Promise((resolve, reject) => {
+    const contentLength = headers["content-length"];
+    if (contentLength !== undefined && Number(contentLength) > maxSize) {
+      reject(new RequestBodyTooLargeError({ maxSize }));
+      return;
+    }
     const bufferArray = [];
-    body.subscribe({
-      error: reject,
-      next: (buffer) => {
-        bufferArray.push(buffer);
+    let length = 0;
+    const abortController = new AbortController();
+    body.subscribe(
+      {
+        error: reject,
+        next: (buffer) => {
+          length += buffer.length;
+          if (length > maxSize) {
+            abortController.abort();
+            reject(new RequestBodyTooLargeError({ maxSize }));
+            return;
+          }
+          bufferArray.push(buffer);
+        },
+        complete: () => {
+          const bodyAsBuffer = Buffer.concat(bufferArray);
+          if (as === "buffer") {
+            resolve(bodyAsBuffer);
+            return;
+          }
+          if (as === "string") {
+            const bodyAsString = bodyAsBuffer.toString();
+            resolve(bodyAsString);
+            return;
+          }
+          if (as === "json") {
+            const bodyAsString = bodyAsBuffer.toString();
+            const bodyAsJSON = JSON.parse(bodyAsString);
+            resolve(bodyAsJSON);
+            return;
+          }
+        },
       },
-      complete: () => {
-        const bodyAsBuffer = Buffer.concat(bufferArray);
-        if (as === "buffer") {
-          resolve(bodyAsBuffer);
-          return;
-        }
-        if (as === "string") {
-          const bodyAsString = bodyAsBuffer.toString();
-          resolve(bodyAsString);
-          return;
-        }
-        if (as === "json") {
-          const bodyAsString = bodyAsBuffer.toString();
-          const bodyAsJSON = JSON.parse(bodyAsString);
-          resolve(bodyAsJSON);
-          return;
-        }
-      },
-    });
+      { signal: abortController.signal },
+    );
   });
 };
+
+class RequestBodyTooLargeError extends Error {
+  constructor({ maxSize }) {
+    super(`request body exceeds ${maxSize} bytes`);
+    this.name = "RequestBodyTooLargeError";
+    this.code = "REQUEST_BODY_TOO_LARGE";
+    this.maxSize = maxSize;
+  }
+
+  asResponse() {
+    return {
+      status: 413,
+      statusText: "Payload Too Large",
+      statusMessage: `The request body exceeds ${this.maxSize} bytes.`,
+    };
+  }
+}
 // exported for unit tests
 export const readRequestBody = (request, { as }) => {
   if (as === "string") {

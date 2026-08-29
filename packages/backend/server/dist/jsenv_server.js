@@ -1,16 +1,17 @@
 import cluster from "node:cluster";
-import net, { Socket, createServer, isIP } from "node:net";
 import { extname } from "node:path";
 import { parse } from "node:querystring";
-import { Readable, Stream, Writable } from "node:stream";
-import http from "node:http";
+import http, { STATUS_CODES } from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { createReadStream, readFileSync, existsSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
+import net, { Socket, createServer, isIP } from "node:net";
+import { Stream, Writable, Readable } from "node:stream";
+import { hostname, networkInterfaces } from "node:os";
+import { lookup } from "node:dns";
+import { readFileSync, existsSync, readdirSync, lstatSync, createReadStream } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { performance as performance$1 } from "node:perf_hooks";
-import { lookup } from "node:dns";
-import { networkInterfaces } from "node:os";
+import { stat, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 const createCallbackListNotifiedOnce = () => {
@@ -559,14 +560,14 @@ const errorToHTML = (error) => {
 
   if (errorIsAPrimitive) {
     if (typeof error === "string") {
-      return `<pre>${escapeHtml(error)}</pre>`;
+      return `<pre>${escapeHtml$1(error)}</pre>`;
     }
     return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
   }
-  return `<pre>${escapeHtml(error.stack)}</pre>`;
+  return `<pre>${escapeHtml$1(error.stack)}</pre>`;
 };
 
-const escapeHtml = (string) => {
+const escapeHtml$1 = (string) => {
   return string
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -1017,17 +1018,31 @@ const parseMultipleHeader = (
   return multipleHeader;
 };
 
+// "for=192.0.2.60;proto=http;by=203.0.113.43", the shape of a Forwarded
+// header element (RFC 7239). Several elements, one per proxy, can be joined
+// with a comma: only the first one, the closest to the client, is read.
+// Attributes without "=" are ignored, values may be quoted.
 const parseSingleHeaderWithAttributes = (
   string,
   { validateAttribute = () => true } = {},
 ) => {
   const props = {};
-  const attributes = string.split(";");
-  for (const attr of attributes) {
-    let [name, value] = attr.split("=");
-    name = name.trim();
-    value = value.trim();
-    if (validateAttribute({ name, value })) {
+  const [firstElement] = string.split(",");
+  for (const attribute of firstElement.split(";")) {
+    const equalIndex = attribute.indexOf("=");
+    if (equalIndex === -1) {
+      continue;
+    }
+    const name = attribute.slice(0, equalIndex).trim();
+    let value = attribute.slice(equalIndex + 1).trim();
+    if (
+      value.length > 1 &&
+      value[0] === '"' &&
+      value[value.length - 1] === '"'
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (name && validateAttribute({ name, value })) {
       props[name] = value;
     }
   }
@@ -1037,10 +1052,15 @@ const parseSingleHeaderWithAttributes = (
 const parseHeaderProperties = (headerProperties, { validateProperty }) => {
   const properties = {};
   for (const propertySource of headerProperties) {
-    const [propertyName, propertyValueString] = propertySource
-      .trim()
-      .split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const equalIndex = propertySource.indexOf("=");
+    // "text/html;foo": a property without value is kept as a flag
+    const propertyName = (
+      equalIndex === -1 ? propertySource : propertySource.slice(0, equalIndex)
+    ).trim();
+    const propertyValue =
+      equalIndex === -1
+        ? true
+        : parseHeaderPropertyValue(propertySource.slice(equalIndex + 1).trim());
     const property = { name: propertyName, value: propertyValue };
     const propertyValidation = validateProperty(property);
     if (!propertyValidation) {
@@ -1052,6 +1072,9 @@ const parseHeaderProperties = (headerProperties, { validateProperty }) => {
 };
 
 const parseHeaderPropertyValue = (headerPropertyValueString) => {
+  if (headerPropertyValueString === "") {
+    return "";
+  }
   const firstChar = headerPropertyValueString[0];
   const lastChar =
     headerPropertyValueString[headerPropertyValueString.length - 1];
@@ -1217,76 +1240,54 @@ const isObservable = (value) => {
 
 // https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
 
-const observableFromNodeStream = (
-  nodeStream,
-  { readableLifetime } = {},
-) => {
-  const observable = createObservable(
-    ({ next, error, complete, addTeardown }) => {
-      const errorEventCallback = (e) => {
-        error(e);
-      };
-      const dataEventCallback = (data) => {
-        next(data);
-      };
-      const closeEventCallback = () => {
-        complete();
-      };
-      const endEventCallback = () => {
-        complete();
-      };
-      nodeStream.once("error", errorEventCallback);
-      nodeStream.on("data", dataEventCallback);
-      nodeStream.once("end", endEventCallback);
-      nodeStream.once("close", closeEventCallback); // not sure it's required
-      addTeardown(() => {
-        nodeStream.removeListener("error", errorEventCallback);
-        nodeStream.removeListener("data", dataEventCallback);
-        nodeStream.removeListener("end", endEventCallback);
-        nodeStream.removeListener("close", closeEventCallback); // not sure it's required
-      });
-      if (nodeStream.isPaused()) {
-        nodeStream.resume();
-      } else if (nodeStream.complete) {
-        complete();
-      }
-    },
-  );
-
-  if (readableLifetime && nodeStream instanceof Readable) {
-    const timeout = setTimeout(() => {
-      // disabled for now
-      // process.emitWarning(
-      //   `Readable stream not used after ${readableLifetime / 1000} seconds.`,
-      //   {
-      //     CODE: "READABLE_STREAM_TIMEOUT",
-      //     // url is for http client request
-      //     detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
-      //   },
-      // );
-    }, readableLifetime).unref();
-    onceReadableStreamUsedOrClosed(nodeStream, () => {
-      clearTimeout(timeout);
+const observableFromNodeStream = (nodeStream) => {
+  return createObservable(({ next, error, complete, addTeardown }) => {
+    const errorEventCallback = (e) => {
+      error(e);
+    };
+    const dataEventCallback = (data) => {
+      next(data);
+    };
+    const closeEventCallback = () => {
+      complete();
+    };
+    const endEventCallback = () => {
+      complete();
+    };
+    nodeStream.once("error", errorEventCallback);
+    nodeStream.on("data", dataEventCallback);
+    nodeStream.once("end", endEventCallback);
+    nodeStream.once("close", closeEventCallback); // not sure it's required
+    addTeardown(() => {
+      nodeStream.removeListener("error", errorEventCallback);
+      nodeStream.removeListener("data", dataEventCallback);
+      nodeStream.removeListener("end", endEventCallback);
+      nodeStream.removeListener("close", closeEventCallback); // not sure it's required
     });
-    observable.timeout = timeout;
-  }
-
-  return observable;
+    if (nodeStream.isPaused()) {
+      nodeStream.resume();
+    } else if (nodeStream.complete) {
+      complete();
+    }
+  });
 };
 
-const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
-  const dataOrCloseCallback = () => {
-    readableStream.removeListener("data", dataOrCloseCallback);
-    readableStream.removeListener("close", dataOrCloseCallback);
-    callback();
-  };
-  readableStream.on("data", dataOrCloseCallback);
-  readableStream.once("close", dataOrCloseCallback);
-};
+/*
+ * Builds the `request` object handed to routes from a node request (http or
+ * http2 compat api). It is frozen: a plugin wanting another request returns
+ * new properties from "redirectRequest" and gets a copy (see
+ * applyRedirectionToRequest). The shape is described in
+ * docs/handling_requests.md.
+ *
+ * The values read from headers (`forwarded`, `cookie`...) come from the
+ * network: the parsers must never throw on garbage, a request that cannot
+ * be read would otherwise escape the request handler.
+ */
+
 
 const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, requestBodyLifetime, logger, nagle },
+  { serverOrigin, signal, logger, requestBodyMaxSize = Infinity },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
     const logFunction = logger[type];
@@ -1326,12 +1327,7 @@ const fromNodeRequest = (
   // Without this the request body readable stream
   // might be closed when we'll try to attach "data" and "end" listeners to it
   nodeRequest.pause();
-  if (!nagle) {
-    nodeRequest.connection.setNoDelay(true);
-  }
-  const body = observableFromNodeStream(nodeRequest, {
-    readableLifetime: requestBodyLifetime,
-  });
+  const body = observableFromNodeStream(nodeRequest);
 
   let requestOrigin;
   if (nodeRequest.upgrade) {
@@ -1350,15 +1346,15 @@ const fromNodeRequest = (
 
   // check the following parsers if we want to support more request body content types
   // https://github.com/node-formidable/formidable/tree/master/src/parsers
-  const buffer = async () => {
+  // Every reader below buffers the body in memory: past maxSize it throws an
+  // error the server answers with 413 (see RequestBodyTooLargeError).
+  const buffer = async ({ maxSize = requestBodyMaxSize } = {}) => {
     // here we don't really need to warn, one might want to read anything as binary
-    // const contentType = headers["content-type"];
-    // if (!CONTENT_TYPE.isBinary(contentType)) {
-    //   console.warn(
-    //     `buffer() called on a request with content-type: "${contentType}". A binary content-type was expected.`,
-    //   );
-    // }
-    const requestBodyBuffer = await readBody(body, { as: "buffer" });
+    const requestBodyBuffer = await readBody(body, {
+      as: "buffer",
+      maxSize,
+      headers,
+    });
     return requestBodyBuffer;
   };
   // maybe we could use https://github.com/form-data/form-data
@@ -1372,40 +1368,52 @@ const fromNodeRequest = (
     }
     const { formidable } = await import("./formidable_index/formidable_index.js");
     const form = formidable({});
-    nodeRequest.resume(); // was paused in line #53
+    nodeRequest.resume(); // paused above, formidable reads the node stream directly
     const [fields, files] = await form.parse(nodeRequest);
     const requestBodyFormData = { fields, files };
     return requestBodyFormData;
   };
-  const text = async () => {
+  const text = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (!CONTENT_TYPE.isTextual(contentType)) {
       console.warn(
         `text() called on a request with content-type "${contentType}". A textual content-type was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     return requestBodyString;
   };
-  const json = async () => {
+  const json = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (!CONTENT_TYPE.isJson(contentType)) {
       console.warn(
         `json() called on a request with content-type "${contentType}". A json content-type was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     const requestBodyJSON = JSON.parse(requestBodyString);
     return requestBodyJSON;
   };
-  const queryString = async () => {
+  const queryString = async ({ maxSize = requestBodyMaxSize } = {}) => {
     const contentType = headers["content-type"];
     if (contentType !== "application/x-www-form-urlencoded") {
       console.warn(
         `queryString() called on a request with content-type "${contentType}". application/x-www-form-urlencoded was expected.`,
       );
     }
-    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyString = await readBody(body, {
+      as: "string",
+      maxSize,
+      headers,
+    });
     const requestBodyQueryStringParsed = parse(requestBodyString);
     return requestBodyQueryStringParsed;
   };
@@ -1413,6 +1421,7 @@ const fromNodeRequest = (
   // request.ip          -> request ip as received by the server
   // request.ipForwarded -> ip of the client before proxying, undefined when there is no proxy
   // same applies on request.proto and request.host
+  // These forwarded values are what the headers say: any client can send them.
   let ip = nodeRequest.socket.remoteAddress;
   let proto = requestOrigin.startsWith("http:") ? "http" : "https";
   let host = headers["host"];
@@ -1431,7 +1440,7 @@ const fromNodeRequest = (
     const forwardedHost = headers["x-forwarded-host"];
     if (forwardedFor) {
       // format is <client-ip>, <proxy1>, <proxy2>
-      ipForwarded = forwardedFor.split(",")[0];
+      ipForwarded = forwardedFor.split(",")[0].trim();
     }
     if (forwardedProto) {
       protoForwarded = forwardedProto;
@@ -1469,52 +1478,27 @@ const fromNodeRequest = (
   });
 };
 
+// Handling a request is asynchronous: its logs are buffered until the
+// response headers are sent (or the request is dropped) so that the logs of
+// concurrent requests do not interleave.
 const createRequestLogger = (nodeRequest, write) => {
-  // Handling request is asynchronous, we buffer logs for that request
-  // until we know what happens with that request
-  // It delays logs until we know of the request will be handled
-  // but it's mandatory to make logs readable.
-
   const logArray = [];
-  const childArray = [];
-  const add = ({ type, value }) => {
+  const add = (type, value) => {
     logArray.push({ type, value });
   };
 
   const requestLogger = {
-    logArray,
-    childArray,
-    hasPushChild: false,
-    forPush: () => {
-      const childLogBuffer = createRequestLogger(nodeRequest, write);
-      childLogBuffer.isChild = true;
-      childArray.push(childLogBuffer);
-      requestLogger.hasPushChild = true;
-      return childLogBuffer;
-    },
     debug: (value) => {
-      add({
-        type: "debug",
-        value,
-      });
+      add("debug", value);
     },
     info: (value) => {
-      add({
-        type: "info",
-        value,
-      });
+      add("info", value);
     },
     warn: (value) => {
-      add({
-        type: "warn",
-        value,
-      });
+      add("warn", value);
     },
     error: (value) => {
-      add({
-        type: "error",
-        value,
-      });
+      add("error", value);
     },
     onHeadersSent: ({ status, statusText }) => {
       const isFaviconNotFound =
@@ -1530,8 +1514,8 @@ const createRequestLogger = (nodeRequest, write) => {
       if (statusText) {
         message += ` ${statusText}`;
       }
-      add({
-        type: isFaviconNotFound
+      add(
+        isFaviconNotFound
           ? "debug"
           : {
               information: "info",
@@ -1540,8 +1524,8 @@ const createRequestLogger = (nodeRequest, write) => {
               client_error: "warn",
               server_error: "error",
             }[statusType] || "error",
-        value: message,
-      });
+        message,
+      );
     },
     ended: false,
     end: () => {
@@ -1549,19 +1533,24 @@ const createRequestLogger = (nodeRequest, write) => {
         return;
       }
       requestLogger.ended = true;
-      if (requestLogger.isChild) {
-        // keep buffering until root request write logs for everyone
+      if (logArray.length === 0) {
         return;
       }
-      const prefixLines = (string, prefix) => {
-        return string.replace(/^(?!\s*$)/gm, prefix);
-      };
-      const writeLog = (
-        { type, value },
-        { someLogIsError, someLogIsWarn, depth },
-      ) => {
-        if (depth > 0) {
-          value = prefixLines(value, "  ".repeat(depth));
+      let someLogIsError = false;
+      let someLogIsWarn = false;
+      for (const log of logArray) {
+        if (log.type === "error") {
+          someLogIsError = true;
+        }
+        if (log.type === "warn") {
+          someLogIsWarn = true;
+        }
+      }
+      // every info log of a request that went wrong is written at the
+      // warn/error level, so that it shows up next to what went wrong
+      const writeLog = ({ type, value }, { indent }) => {
+        if (indent) {
+          value = prefixLines(value, "  ");
         }
         if (type === "info") {
           if (someLogIsError) {
@@ -1572,83 +1561,86 @@ const createRequestLogger = (nodeRequest, write) => {
         }
         write(type, value);
       };
-      const writeLogs = (loggerToWrite, depth) => {
-        const logArray = loggerToWrite.logArray;
-        if (logArray.length === 0) {
-          return;
-        }
-        let someLogIsError = false;
-        let someLogIsWarn = false;
-        for (const log of loggerToWrite.logArray) {
-          if (log.type === "error") {
-            someLogIsError = true;
-          }
-          if (log.type === "warn") {
-            someLogIsWarn = true;
-          }
-        }
-        const firstLog = logArray.shift();
-        const lastLog = logArray.pop();
-        const middleLogs = logArray;
-        writeLog(firstLog, {
-          someLogIsError,
-          someLogIsWarn,
-          depth,
-        });
-        for (const middleLog of middleLogs) {
-          writeLog(middleLog, {
-            someLogIsError,
-            someLogIsWarn,
-            depth,
-          });
-        }
-        for (const childLoggerToWrite of loggerToWrite.childArray) {
-          writeLogs(childLoggerToWrite, depth + 1);
-        }
-        if (lastLog) {
-          writeLog(lastLog, {
-            someLogIsError,
-            someLogIsWarn,
-            depth: depth + 1,
-          });
-        }
-      };
-      writeLogs(requestLogger, 0);
+      // the last log is the response status, shown under the request line
+      const lastLog = logArray.length > 1 ? logArray.pop() : null;
+      for (const log of logArray) {
+        writeLog(log, { indent: false });
+      }
+      if (lastLog) {
+        writeLog(lastLog, { indent: true });
+      }
     },
   };
 
   return requestLogger;
 };
 
-const readBody = (body, { as }) => {
+const prefixLines = (string, prefix) => {
+  return string.replace(/^(?!\s*$)/gm, prefix);
+};
+
+const readBody = (body, { as, maxSize, headers }) => {
   return new Promise((resolve, reject) => {
+    const contentLength = headers["content-length"];
+    if (contentLength !== undefined && Number(contentLength) > maxSize) {
+      reject(new RequestBodyTooLargeError({ maxSize }));
+      return;
+    }
     const bufferArray = [];
-    body.subscribe({
-      error: reject,
-      next: (buffer) => {
-        bufferArray.push(buffer);
+    let length = 0;
+    const abortController = new AbortController();
+    body.subscribe(
+      {
+        error: reject,
+        next: (buffer) => {
+          length += buffer.length;
+          if (length > maxSize) {
+            abortController.abort();
+            reject(new RequestBodyTooLargeError({ maxSize }));
+            return;
+          }
+          bufferArray.push(buffer);
+        },
+        complete: () => {
+          const bodyAsBuffer = Buffer.concat(bufferArray);
+          if (as === "buffer") {
+            resolve(bodyAsBuffer);
+            return;
+          }
+          if (as === "string") {
+            const bodyAsString = bodyAsBuffer.toString();
+            resolve(bodyAsString);
+            return;
+          }
+          if (as === "json") {
+            const bodyAsString = bodyAsBuffer.toString();
+            const bodyAsJSON = JSON.parse(bodyAsString);
+            resolve(bodyAsJSON);
+            return;
+          }
+        },
       },
-      complete: () => {
-        const bodyAsBuffer = Buffer.concat(bufferArray);
-        if (as === "buffer") {
-          resolve(bodyAsBuffer);
-          return;
-        }
-        if (as === "string") {
-          const bodyAsString = bodyAsBuffer.toString();
-          resolve(bodyAsString);
-          return;
-        }
-        if (as === "json") {
-          const bodyAsString = bodyAsBuffer.toString();
-          const bodyAsJSON = JSON.parse(bodyAsString);
-          resolve(bodyAsJSON);
-          return;
-        }
-      },
-    });
+      { signal: abortController.signal },
+    );
   });
 };
+
+class RequestBodyTooLargeError extends Error {
+  constructor({ maxSize }) {
+    super(`request body exceeds ${maxSize} bytes`);
+    this.name = "RequestBodyTooLargeError";
+    this.code = "REQUEST_BODY_TOO_LARGE";
+    this.maxSize = maxSize;
+  }
+
+  asResponse() {
+    return {
+      status: 413,
+      statusText: "Payload Too Large",
+      statusMessage: `The request body exceeds ${this.maxSize} bytes.`,
+    };
+  }
+}
 
 const parseRequestCookieHeader = (cookieHeader) => {
   const map = new Map();
@@ -1661,10 +1653,20 @@ const parseRequestCookieHeader = (cookieHeader) => {
       continue;
     }
     const name = pair.slice(0, eqIndex).trim();
-    const value = decodeURIComponent(pair.slice(eqIndex + 1).trim());
+    const value = decodeCookieValue(pair.slice(eqIndex + 1).trim());
     map.set(name, value);
   }
   return map;
+};
+
+// a cookie value is not necessarily percent-encoded: a malformed sequence
+// keeps the raw value
+const decodeCookieValue = (value) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 };
 
 const applyRedirectionToRequest = (
@@ -1705,41 +1707,22 @@ const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
   });
 };
 
-const createPushRequest = (
-  request,
-  { signal, pathname, method, logger },
-) => {
-  const pushRequest = Object.freeze({
-    ...request,
-    logger,
-    parent: request,
-    signal,
-    http2: true,
-    ...(pathname
-      ? getPropertiesFromPathname({
-          pathname,
-          baseUrl: request.url,
-        })
-      : {}),
-    method: method || request.method,
-    headers: getHeadersInheritedByPushRequest(request),
-    body: undefined,
-  });
-  return pushRequest;
+// An HTTP/1.1 reason phrase allows HTAB, SP, VCHAR and obs-text (0x80-0xFF),
+// see RFC 9112 section 4. Node's writeHead and the Response constructor both
+// throw on anything else. A status text often echoes a request (a file path
+// decoded from the url for instance), so the characters outside that set are
+// percent-encoded rather than dropped: the text stays readable and reversible.
+const asReasonPhrase = (value) => {
+  return String(value).replace(/[^\t\x20-\x7e\x80-\xff]/g, encodeChar);
 };
 
-const getHeadersInheritedByPushRequest = (request) => {
-  const headersInherited = { ...request.headers };
-  // mtime sent by the client in request headers concerns the main request
-  // Time remains valid for request to other resources so we keep it
-  // in child requests
-  // delete childHeaders["if-modified-since"]
-
-  // eTag sent by the client in request headers concerns the main request
-  // A request made to an other resource must not inherit the eTag
-  delete headersInherited["if-none-match"];
-
-  return headersInherited;
+const encodeChar = (char) => {
+  try {
+    return encodeURIComponent(char);
+  } catch {
+    // lone surrogate
+    return "%3F";
+  }
 };
 
 const isFileHandle = (value) => {
@@ -1751,23 +1734,7 @@ const observableFromFileHandle = (fileHandle) => {
 };
 
 const fileHandleToReadableStream = (fileHandle) => {
-  const fileReadableStream =
-    typeof fileHandle.createReadStream === "function"
-      ? fileHandle.createReadStream()
-      : createReadStream(
-          "/toto", // is it ok to pass a fake path like this?
-          {
-            fd: fileHandle.fd,
-            emitClose: true,
-            // autoClose: true
-          },
-        );
-  // I suppose it's required only when doing fs.createReadStream()
-  // and not fileHandle.createReadStream()
-  // fileReadableStream.on("end", () => {
-  //   fileHandle.close()
-  // })
-  return fileReadableStream;
+  return fileHandle.createReadStream();
 };
 
 const getObservableValueType = (value) => {
@@ -1884,22 +1851,9 @@ const observableFromValue = (value) => {
 
 const writeNodeResponse = async (
   responseStream,
-  { status, statusText, headers, body, bodyEncoding },
+  { status, statusText, headers, body },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  const isNetSocket = responseStream instanceof Socket;
-  if (
-    body &&
-    body.isObservableBody &&
-    headers["connection"] === undefined &&
-    headers["content-length"] === undefined
-  ) {
-    headers["transfer-encoding"] = "chunked";
-  }
-  // if (body && headers["content-length"] === undefined) {
-  //   headers["transfer-encoding"] = "chunked";
-  // }
-
   const bodyObservableType = getObservableValueType(body);
   const destroyBody = () => {
     if (bodyObservableType === "file_handle") {
@@ -1943,46 +1897,8 @@ const writeNodeResponse = async (
     return;
   }
 
-  if (bodyEncoding && !isNetSocket) {
-    responseStream.setEncoding(bodyEncoding);
-  }
-
   await new Promise((resolve) => {
-    const observable = observableFromValue(body);
     const abortController = new AbortController();
-    signal.addEventListener("abort", () => {
-      abortController.abort();
-    });
-    observable.subscribe(
-      {
-        next: (data) => {
-          try {
-            responseStream.write(data);
-          } catch (e) {
-            // Something inside Node.js sometimes puts stream
-            // in a state where .write() throw despites nodeResponse.destroyed
-            // being undefined and "close" event not being emitted.
-            // I have tested if we are the one calling destroy
-            // (I have commented every .destroy() call)
-            // but issue still occurs
-            // For the record it's "hard" to reproduce but can be by running
-            // a lot of tests against a browser in the context of @jsenv/core testing
-            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-              return;
-            }
-            responseStream.emit("error", e);
-          }
-        },
-        error: (value) => {
-          responseStream.emit("error", value);
-        },
-        complete: () => {
-          responseStream.end();
-        },
-      },
-      { signal: abortController.signal },
-    );
-
     raceCallbacks(
       {
         abort: (cb) => {
@@ -2043,6 +1959,46 @@ const writeNodeResponse = async (
         raceEffects[winner.name](winner.data);
       },
     );
+
+    // a string or a buffer is written and ended in one go
+    if (typeof body === "string" || body instanceof Uint8Array) {
+      responseStream.end(body);
+      return;
+    }
+
+    const observable = observableFromValue(body);
+    signal.addEventListener("abort", () => {
+      abortController.abort();
+    });
+    observable.subscribe(
+      {
+        next: (data) => {
+          try {
+            responseStream.write(data);
+          } catch (e) {
+            // Something inside Node.js sometimes puts stream
+            // in a state where .write() throw despites nodeResponse.destroyed
+            // being undefined and "close" event not being emitted.
+            // I have tested if we are the one calling destroy
+            // (I have commented every .destroy() call)
+            // but issue still occurs
+            // For the record it's "hard" to reproduce but can be by running
+            // a lot of tests against a browser in the context of @jsenv/core testing
+            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+              return;
+            }
+            responseStream.emit("error", e);
+          }
+        },
+        error: (value) => {
+          responseStream.emit("error", value);
+        },
+        complete: () => {
+          responseStream.end();
+        },
+      },
+      { signal: abortController.signal },
+    );
   });
 };
 
@@ -2053,38 +2009,23 @@ const writeHead = (
   const responseIsNetSocket = responseStream instanceof Socket;
   const responseIsHttp2ServerResponse =
     responseStream instanceof Http2ServerResponse;
-  const responseIsServerHttp2Stream =
-    responseStream.constructor.name === "ServerHttp2Stream";
-  let nodeHeaders = headersToNodeHeaders(headers, {
+  const nodeHeaders = headersToNodeHeaders(headers, {
     // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
-    ignoreConnectionHeader:
-      responseIsHttp2ServerResponse || responseIsServerHttp2Stream,
+    ignoreConnectionHeader: responseIsHttp2ServerResponse,
   });
-  if (statusText === undefined) {
-    statusText = statusTextFromStatus(status);
-  } else {
-    statusText = statusText.replace(/\n/g, "").replaceAll("✅", "");
-  }
-  if (responseIsServerHttp2Stream) {
-    nodeHeaders = {
-      ...nodeHeaders,
-      ":status": status,
-    };
-    responseStream.respond(nodeHeaders);
-    onHeadersSent({ nodeHeaders, status, statusText });
-    return;
-  }
-  // nodejs strange signature for writeHead force this
-  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
-  if (
-    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
-    responseIsHttp2ServerResponse
-  ) {
+  statusText =
+    statusText === undefined
+      ? statusTextFromStatus(status)
+      : asReasonPhrase(statusText);
+  if (responseIsHttp2ServerResponse) {
+    // http2 has no reason phrase: statusText only reaches the logs
     responseStream.writeHead(status, nodeHeaders);
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
   if (responseIsNetSocket) {
+    // a websocket upgrade request answered with something else than 101:
+    // the response is written by hand on the socket
     const headersString = Object.keys(nodeHeaders)
       .map((h) => `${h}: ${nodeHeaders[h]}`)
       .join("\r\n");
@@ -2094,20 +2035,7 @@ const writeHead = (
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
-
-  try {
-    responseStream.writeHead(status, statusText, nodeHeaders);
-  } catch (e) {
-    if (
-      e.code === "ERR_INVALID_CHAR" &&
-      e.message.includes("Invalid character in statusMessage")
-    ) {
-      throw new Error(`Invalid character in statusMessage
---- status message ---
-${statusText}`);
-    }
-    throw e;
-  }
+  responseStream.writeHead(status, statusText, nodeHeaders);
   onHeadersSent({ nodeHeaders, status, statusText });
 };
 
@@ -2116,19 +2044,13 @@ const statusTextFromStatus = (status) =>
 
 const headersToNodeHeaders = (headers, { ignoreConnectionHeader }) => {
   const nodeHeaders = {};
-
-  Object.keys(headers).forEach((name) => {
-    if (name === "connection" && ignoreConnectionHeader) return;
-    const nodeHeaderName = name in mapping ? mapping[name] : name;
-    nodeHeaders[nodeHeaderName] = headers[name];
-  });
-
+  for (const name of Object.keys(headers)) {
+    if (name === "connection" && ignoreConnectionHeader) {
+      continue;
+    }
+    nodeHeaders[name] = headers[name];
+  }
   return nodeHeaders;
-};
-
-const mapping = {
-  // "content-type": "Content-Type",
-  // "last-modified": "Last-Modified",
 };
 
 const composeTwoObjects = (
@@ -2340,6 +2262,90 @@ const HEADER_NAMES_COMPOSITION = {
   },
 };
 
+// The Host header of a request is compared to the names the server can
+// legitimately be reached at. Without this a page served by another site
+// reads the responses once its DNS name is rebound to this machine (DNS
+// rebinding): the request then comes from the developer's own browser, so
+// listening on localhost does not help, only the Host name tells.
+const createHostChecker = ({
+  allowedHosts,
+  hostname: hostname$1,
+  serverOrigins,
+  acceptAnyIp,
+}) => {
+  if (allowedHosts === true) {
+    return () => true;
+  }
+
+  const allowedHostSet = new Set();
+  const allowedHostSuffixes = [];
+  const allow = (host) => {
+    if (host.startsWith(".")) {
+      // ".example.com" allows example.com and every subdomain
+      allowedHostSuffixes.push(host.toLowerCase());
+      allowedHostSet.add(host.slice(1).toLowerCase());
+      return;
+    }
+    const hostNormalized = normalizeHost(host);
+    if (hostNormalized) {
+      allowedHostSet.add(hostNormalized);
+    }
+  };
+
+  allow("localhost");
+  allow("127.0.0.1");
+  allow("[::1]");
+  allow(hostname$1);
+  for (const origin of Object.values(serverOrigins)) {
+    allow(new URL(origin).hostname);
+  }
+  // the name other machines use for this one (mDNS gives "name.local")
+  const machineName = hostname();
+  allow(machineName);
+  if (!machineName.endsWith(".local")) {
+    allow(`${machineName}.local`);
+  }
+  if (acceptAnyIp) {
+    for (const addresses of Object.values(networkInterfaces())) {
+      for (const { address, family } of addresses) {
+        allow(family === "IPv6" || family === 6 ? `[${address}]` : address);
+      }
+    }
+  }
+  for (const allowedHost of allowedHosts) {
+    allow(allowedHost);
+  }
+
+  return (host) => {
+    if (host === undefined) {
+      // an http/1.0 client; a browser always sends the header
+      return true;
+    }
+    const hostNormalized = normalizeHost(host);
+    if (hostNormalized === null) {
+      return false;
+    }
+    if (allowedHostSet.has(hostNormalized)) {
+      return true;
+    }
+    for (const suffix of allowedHostSuffixes) {
+      if (hostNormalized.endsWith(suffix)) {
+        return true;
+      }
+    }
+    return false;
+  };
+};
+
+// "example.com:3456" or "[::1]:3456": the port is not part of the name
+const normalizeHost = (host) => {
+  const url = `http://${host}`;
+  if (!URL.canParse(url)) {
+    return null;
+  }
+  return new URL(url).hostname.toLowerCase();
+};
+
 const listen = async ({
   signal = new AbortController().signal,
   server,
@@ -2370,6 +2376,19 @@ const listen = async ({
   }
 };
 
+/**
+ * Find a port nobody listens to on the given hostname, trying `initialPort`
+ * first then the following ones.
+ *
+ * @param {number} [initialPort=1] - First port to try.
+ * @param {Object} [options]
+ * @param {AbortSignal} [options.signal]
+ * @param {string} [options.hostname="127.0.0.1"] - Interface the port must be free on.
+ * @param {number} [options.min=1]
+ * @param {number} [options.max=65534] - Give up (throw) past this port.
+ * @param {(port: number) => number} [options.next] - How to pick the next port to try.
+ * @returns {Promise<number>}
+ */
 const findFreePort = async (
   initialPort = 1,
   {
@@ -2432,20 +2451,34 @@ const portIsFree = async (port, hostname) => {
 
 const startListening = ({ server, port, hostname }) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("listening", () => {
+    const onError = (error) => {
+      server.removeListener("listening", onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.removeListener("error", onError);
       // in case port is 0 (randomly assign an available port)
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port);
-    });
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
     server.listen(port, hostname);
   });
 };
 
 const stopListening = (server) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
+    const onError = (error) => {
+      server.removeListener("close", onClose);
+      reject(error);
+    };
+    const onClose = () => {
+      server.removeListener("error", onError);
+      resolve();
+    };
+    server.once("error", onError);
+    server.once("close", onClose);
     server.close();
   });
 };
@@ -2541,12 +2574,22 @@ const asResponseProperties = (value) => {
       statusText: value.statusText,
       headers: Object.fromEntries(value.headers),
       body: value.body,
-      bodyEncoding: value.bodyEncoding,
     };
   }
   return value;
 };
 
+/**
+ * Merge two responses into one. Each can be a `Response` instance or a plain
+ * `{ status, statusText, statusMessage, headers, body, timing }` object.
+ * The second response wins for status, statusText, statusMessage and body;
+ * headers are composed (list headers such as `vary` or `allow` accumulate
+ * their values, `set-cookie` becomes an array) and `timing` objects are merged.
+ *
+ * @param {Response|Object} firstResponse
+ * @param {Response|Object} secondResponse
+ * @returns {Object} Plain response properties.
+ */
 const composeTwoResponses = (firstResponse, secondResponse) => {
   firstResponse = asResponseProperties(firstResponse);
   secondResponse = asResponseProperties(secondResponse);
@@ -2563,17 +2606,227 @@ const RESPONSE_KEYS_COMPOSITION = {
   statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
-  bodyEncoding: (prevEncoding, encoding) => encoding,
   // measures a response hands back, merged into the server-timing header when
   // the server has serverTiming enabled (see finalizeResponseProperties)
   timing: (prevTiming, timing) => ({ ...prevTiming, ...timing }),
 };
 
-/**
+// The imports are dynamic so that "node:http2" / "node:https" are only parsed
+// when a secure server is actually created.
+const createSecureServer = async ({
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed,
+}) => {
+  if (http2) {
+    const { createSecureServer } = await import("node:http2");
+    return createSecureServer({
+      cert: certificate,
+      key: privateKey,
+      allowHTTP1: http1Allowed,
+    });
+  }
+  const { createServer } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey,
+  });
+};
 
-https://stackoverflow.com/a/42019773/2634179
+const applyDnsResolution = async (
+  hostname,
+  { verbatim = false } = {},
+) => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, { verbatim }, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ address, family });
+      }
+    });
+  });
+  return dnsResolution;
+};
 
-*/
+const parseHostname = (hostname) => {
+  if (hostname === "0.0.0.0") {
+    return {
+      type: "ip",
+      label: "unspecified",
+      version: 4,
+    };
+  }
+  if (
+    hostname === "::" ||
+    hostname === "0000:0000:0000:0000:0000:0000:0000:0000"
+  ) {
+    return {
+      type: "ip",
+      label: "unspecified",
+      version: 6,
+    };
+  }
+  if (hostname === "127.0.0.1") {
+    return {
+      type: "ip",
+      label: "loopback",
+      version: 4,
+    };
+  }
+  if (
+    hostname === "::1" ||
+    hostname === "0000:0000:0000:0000:0000:0000:0000:0001"
+  ) {
+    return {
+      type: "ip",
+      label: "loopback",
+      version: 6,
+    };
+  }
+  const ipVersion = isIP(hostname);
+  if (ipVersion === 0) {
+    return {
+      type: "hostname",
+    };
+  }
+  return {
+    type: "ip",
+    version: ipVersion,
+  };
+};
+
+const createIpGetters = () => {
+  const networkAddresses = [];
+  const networkInterfaceMap = networkInterfaces();
+  for (const key of Object.keys(networkInterfaceMap)) {
+    for (const networkAddress of networkInterfaceMap[key]) {
+      networkAddresses.push(networkAddress);
+    }
+  }
+  return {
+    getFirstInternalIp: ({ preferIpv6 }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstInternalIp;
+      for (const networkAddress of networkAddresses) {
+        if (networkAddress.internal) {
+          firstInternalIp = networkAddress.address;
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
+      }
+      return firstInternalIp;
+    },
+    getFirstExternalIp: ({ preferIpv6 }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstExternalIp;
+      for (const networkAddress of networkAddresses) {
+        if (!networkAddress.internal) {
+          firstExternalIp = networkAddress.address;
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
+      }
+      return firstExternalIp;
+    },
+  };
+};
+
+const isIpV4 = (networkAddress) => {
+  // node 18.5
+  if (typeof networkAddress.family === "number") {
+    return networkAddress.family === 4;
+  }
+  return networkAddress.family === "IPv4";
+};
+
+const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
+
+// Decides what the server listens to and the origins it can be reached at:
+// - local: favors the hostname (an https certificate is for a hostname, not an ip)
+// - localip: the ip behind the hostname
+// - externalip: the machine ip on the network, when the server accepts it
+// The port is not known yet: the origins are completed once listening.
+const resolveServerOrigins = async ({
+  https,
+  hostname,
+  acceptAnyIp,
+  preferIpv6,
+}) => {
+  const createOrigin = (host) => {
+    const protocol = https ? "https" : "http";
+    if (isIP(host) === 6) {
+      return `${protocol}://[${host}]`;
+    }
+    return `${protocol}://${host}`;
+  };
+
+  const serverOrigins = {
+    local: "",
+  };
+  const ipGetters = createIpGetters();
+  let hostnameToListen;
+  if (acceptAnyIp) {
+    const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
+    serverOrigins.local = createOrigin(firstInternalIp);
+    serverOrigins.localip = createOrigin(firstInternalIp);
+    const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
+    serverOrigins.externalip = createOrigin(firstExternalIp);
+    hostnameToListen = preferIpv6 ? "::" : "0.0.0.0";
+  } else {
+    hostnameToListen = hostname;
+  }
+  const hostnameInfo = parseHostname(hostname);
+  if (hostnameInfo.type === "ip") {
+    if (acceptAnyIp) {
+      throw new Error(
+        `hostname cannot be an ip when acceptAnyIp is enabled, got ${hostname}`,
+      );
+    }
+
+    preferIpv6 = hostnameInfo.version === 6;
+    const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
+    serverOrigins.local = createOrigin(firstInternalIp);
+    serverOrigins.localip = createOrigin(firstInternalIp);
+    if (hostnameInfo.label === "unspecified") {
+      const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
+      serverOrigins.externalip = createOrigin(firstExternalIp);
+    } else if (hostnameInfo.label === "loopback") ; else {
+      serverOrigins.local = createOrigin(hostname);
+    }
+  } else {
+    const hostnameDnsResolution = await applyDnsResolution(hostname, {
+      verbatim: true,
+    });
+    if (hostnameDnsResolution) {
+      const hostnameIp = hostnameDnsResolution.address;
+      serverOrigins.localip = createOrigin(hostnameIp);
+      serverOrigins.local = createOrigin(hostname);
+    } else {
+      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
+      // fallback to internal ip because there is no ip
+      // associated to this hostname on operating system (in hosts file)
+      hostname = firstInternalIp;
+      hostnameToListen = firstInternalIp;
+      serverOrigins.local = createOrigin(firstInternalIp);
+    }
+  }
+  return { hostname, hostnameToListen, serverOrigins };
+};
+
+/*
+ * A net server accepting both http and tls on the same port: the first byte
+ * of each connection tells which one it is (0x16 is a TLS handshake) and the
+ * socket is handed to the matching http or tls server.
+ * https://stackoverflow.com/a/42019773/2634179
+ *
+ * The http and tls servers are exposed as _httpServer/_tlsServer because
+ * "request", "upgrade" and "clientError" are emitted on them, not on the net
+ * server (see listen_request.js).
+ */
 
 
 const createPolyglotServer = async ({
@@ -2628,38 +2881,11 @@ const createPolyglotServer = async ({
   return netServer;
 };
 
-// The async part is just to lazyly import "http2" or "https"
-// so that these module are parsed only if used.
-// https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions
-const createSecureServer = async ({
-  certificate,
-  privateKey,
-  http2,
-  http1Allowed,
-}) => {
-  if (http2) {
-    const { createSecureServer } = await import("node:http2");
-    return createSecureServer({
-      cert: certificate,
-      key: privateKey,
-      allowHTTP1: http1Allowed,
-    });
-  }
-
-  const { createServer } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey,
-  });
-};
-
 const detectSocketProtocol = (socket, protocolDetectedCallback) => {
-  let removeOnceReadableListener = () => {};
-
   const tryToRead = () => {
     const buffer = socket.read(1);
     if (buffer === null) {
-      removeOnceReadableListener = socket.once("readable", tryToRead);
+      socket.once("readable", tryToRead);
       return;
     }
 
@@ -2677,23 +2903,9 @@ const detectSocketProtocol = (socket, protocolDetectedCallback) => {
   };
 
   tryToRead();
-
-  return () => {
-    removeOnceReadableListener();
-  };
 };
 
-const trackServerPendingConnections = (nodeServer, { http2 }) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingConnections(nodeServer);
-  }
-  return trackHttp1ServerPendingConnections(nodeServer);
-};
-
-// const trackHttp2ServerPendingSessions = () => {}
-
-const trackHttp1ServerPendingConnections = (nodeServer) => {
+const trackServerPendingConnections = (nodeServer) => {
   const pendingConnections = new Set();
 
   const removeConnectionListener = listenEvent(
@@ -2716,10 +2928,9 @@ const trackHttp1ServerPendingConnections = (nodeServer) => {
     removeConnectionListener();
     const pendingConnectionsArray = Array.from(pendingConnections);
     pendingConnections.clear();
-
     await Promise.all(
-      pendingConnectionsArray.map(async (pendingConnection) => {
-        await destroyConnection(pendingConnection, reason);
+      pendingConnectionsArray.map((pendingConnection) => {
+        return destroyConnection(pendingConnection, reason);
       }),
     );
   };
@@ -2743,99 +2954,7 @@ const destroyConnection = (connection, reason) => {
   });
 };
 
-// export const trackServerPendingStreams = (nodeServer) => {
-//   const pendingClients = new Set()
-
-//   const streamListener = (http2Stream, headers, flags) => {
-//     const client = { http2Stream, headers, flags }
-
-//     pendingClients.add(client)
-//     http2Stream.on("close", () => {
-//       pendingClients.delete(client)
-//     })
-//   }
-
-//   nodeServer.on("stream", streamListener)
-
-//   const stop = ({
-//     status,
-//     // reason
-//   }) => {
-//     nodeServer.removeListener("stream", streamListener)
-
-//     return Promise.all(
-//       Array.from(pendingClients).map(({ http2Stream }) => {
-//         if (http2Stream.sentHeaders === false) {
-//           http2Stream.respond({ ":status": status }, { endStream: true })
-//         }
-
-//         return new Promise((resolve, reject) => {
-//           if (http2Stream.closed) {
-//             resolve()
-//           } else {
-//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
-//               if (error) {
-//                 reject(error)
-//               } else {
-//                 resolve()
-//               }
-//             })
-//           }
-//         })
-//       }),
-//     )
-//   }
-
-//   return { stop }
-// }
-
-// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
-//   const pendingSessions = new Set()
-
-//   const sessionListener = (session) => {
-//     session.on("close", () => {
-//       pendingSessions.delete(session)
-//     })
-//     session.on("error", onSessionError)
-//     pendingSessions.add(session)
-//   }
-
-//   nodeServer.on("session", sessionListener)
-
-//   const stop = async (reason) => {
-//     nodeServer.removeListener("session", sessionListener)
-
-//     await Promise.all(
-//       Array.from(pendingSessions).map((pendingSession) => {
-//         return new Promise((resolve, reject) => {
-//           pendingSession.close((error) => {
-//             if (error) {
-//               if (error === reason || error.code === "ENOTCONN") {
-//                 resolve()
-//               } else {
-//                 reject(error)
-//               }
-//             } else {
-//               resolve()
-//             }
-//           })
-//         })
-//       }),
-//     )
-//   }
-
-//   return { stop }
-// }
-
-const trackServerPendingRequests = (nodeServer, { http2 }) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingRequests(nodeServer);
-  }
-  return trackHttp1ServerPendingRequests(nodeServer);
-};
-
-const trackHttp1ServerPendingRequests = (nodeServer) => {
+const trackServerPendingRequests = (nodeServer) => {
   const pendingClients = new Set();
 
   const removeRequestListener = listenRequest(
@@ -2854,38 +2973,24 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
     const pendingClientsArray = Array.from(pendingClients);
     pendingClients.clear();
     await Promise.all(
-      pendingClientsArray.map(({ nodeResponse }) => {
+      pendingClientsArray.map(({ nodeRequest, nodeResponse }) => {
         if (nodeResponse.headersSent === false) {
-          nodeResponse.writeHead(status, String(reason));
+          if (nodeRequest.stream) {
+            // http2 has no reason phrase
+            nodeResponse.writeHead(status);
+          } else {
+            nodeResponse.writeHead(status, asReasonPhrase(reason));
+          }
         }
-
-        // http2
-        if (nodeResponse.close) {
-          return new Promise((resolve, reject) => {
-            if (nodeResponse.closed) {
-              resolve();
-            } else {
-              nodeResponse.close((error) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve();
-                }
-              });
-            }
-          });
-        }
-
-        // http
         return new Promise((resolve) => {
           if (nodeResponse.destroyed) {
             resolve();
-          } else {
-            nodeResponse.once("close", () => {
-              resolve();
-            });
-            nodeResponse.destroy();
+            return;
           }
+          nodeResponse.once("close", () => {
+            resolve();
+          });
+          nodeResponse.destroy();
         });
       }),
     );
@@ -3275,7 +3380,9 @@ const createServerEvents = ({
     if (history) {
       addEventToHistory(event);
     }
-    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    logger.debug(
+      `send "${event.type}" event to ${clientArray.length} client(s)`,
+    );
     for (const client of clientArray) {
       client.sendEvent(event);
     }
@@ -3573,6 +3680,16 @@ const pickAcceptedContent = ({
   return availableWithHighestScore;
 };
 
+/**
+ * Pick, among the media types the server can produce, the one the request
+ * prefers according to its `accept` header (quality values honored, `text/*`
+ * style wildcards understood).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableContentTypes - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The media type to respond with, `null` when the request
+ *   accepts none of them or has no `accept` header.
+ */
 const pickContentType = (request, availableContentTypes) => {
   const { headers = {} } = request;
   const requestAcceptHeader = headers.accept;
@@ -3634,6 +3751,18 @@ const decomposeContentType = (fullType) => {
   return [type, subtype];
 };
 
+const HTML_ESCAPES = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+const escapeHtml = (value) => {
+  return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+};
+
 const replacePlaceholdersInHtml = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
@@ -3648,6 +3777,16 @@ const replacePlaceholdersInHtml = (html, replacers) => {
 };
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/default_body_4xx_5xx/4xx.html");
+let clientErrorHtmlTemplate;
+const readClientErrorHtmlTemplate = () => {
+  if (clientErrorHtmlTemplate === undefined) {
+    clientErrorHtmlTemplate = readFileSync(
+      new URL(clientErrorHtmlTemplateFileUrl),
+      "utf8",
+    );
+  }
+  return clientErrorHtmlTemplate;
+};
 
 const serverPluginDefaultBody4xx5xx = () => {
   return {
@@ -3657,10 +3796,7 @@ const serverPluginDefaultBody4xx5xx = () => {
       if (responseProperties.body !== undefined) {
         return null;
       }
-      if (responseProperties.status >= 400 && responseProperties.status < 500) {
-        return generateBadStatusResponse(request, responseProperties);
-      }
-      if (responseProperties.status >= 500 && responseProperties.status < 600) {
+      if (responseProperties.status >= 400 && responseProperties.status < 600) {
         return generateBadStatusResponse(request, responseProperties);
       }
       return null;
@@ -3672,38 +3808,17 @@ const generateBadStatusResponse = (
   request,
   { status, statusText, statusMessage },
 ) => {
+  statusText = asReasonPhrase(statusText || STATUS_CODES[status] || "");
   const contentTypeNegotiated = pickContentType(request, [
     "text/html",
     "text/plain",
     "application/json",
   ]);
   if (contentTypeNegotiated === "text/html") {
-    const htmlTemplate = readFileSync(
-      new URL(clientErrorHtmlTemplateFileUrl),
-      "utf8",
-    );
-    if (statusMessage) {
-      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
-        return `<a href="${url}">${url}</a>`;
-      });
-      statusMessage = statusMessage.replace(
-        /(^|\s)(\/\S+)/g,
-        (match, startOrSpace, resource) => {
-          let end = "";
-          if (resource[resource.length - 1] === ".") {
-            resource = resource.slice(0, -1);
-            end = ".";
-          }
-          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
-        },
-      );
-      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
-    }
-
-    const html = replacePlaceholdersInHtml(htmlTemplate, {
+    const html = replacePlaceholdersInHtml(readClientErrorHtmlTemplate(), {
       status,
-      statusText,
-      statusMessage: statusMessage || "",
+      statusText: escapeHtml(statusText),
+      statusMessage: statusMessage ? statusMessageToHtml(statusMessage) : "",
     });
     return new Response(html, {
       headers: { "content-type": "text/html" },
@@ -3724,6 +3839,25 @@ const generateBadStatusResponse = (
       statusText,
     },
   );
+};
+
+// A status message echoes the request (its url for instance): it is escaped
+// before urls and resources are turned into links.
+const statusMessageToHtml = (statusMessage) => {
+  let html = escapeHtml(statusMessage);
+  html = html.replace(/https?:\/\/\S+/g, (url) => {
+    return `<a href="${url}">${url}</a>`;
+  });
+  html = html.replace(/(^|\s)(\/\S+)/g, (match, startOrSpace, resource) => {
+    let end = "";
+    if (resource[resource.length - 1] === ".") {
+      resource = resource.slice(0, -1);
+      end = ".";
+    }
+    return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
+  });
+  html = html.replace(/\r\n|\r|\n/g, "<br />");
+  return html;
 };
 
 const jsenvServerRootDirectoryUrl = import.meta.resolve("./");
@@ -4046,6 +4180,16 @@ const serverPluginOpenFile = () => {
 
 const routeInspectorHtmlFileUrl = import.meta
   .resolve("./client/route_inspector/route_inspector.html");
+let routeInspectorHtml;
+const readRouteInspectorHtml = () => {
+  if (routeInspectorHtml === undefined) {
+    routeInspectorHtml = readFileSync(
+      new URL(routeInspectorHtmlFileUrl),
+      "utf8",
+    );
+  }
+  return routeInspectorHtml;
+};
 
 const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
   return {
@@ -4058,11 +4202,7 @@ const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
         availableMediaTypes: ["text/html"],
         declarationSource: import.meta.url,
         fetch: () => {
-          const inspectorHtml = readFileSync(
-            new URL(routeInspectorHtmlFileUrl),
-            "utf8",
-          );
-          return new Response(inspectorHtml, {
+          return new Response(readRouteInspectorHtml(), {
             headers: { "content-type": "text/html" },
           });
         },
@@ -4467,25 +4607,92 @@ const defaultGetHookFunction = (hook, info = {}) => {
   return hookValue;
 };
 
+// The hooks a server plugin can implement, in the order they run for a
+// request. See docs/plugins.md for what each one is meant for.
+const SERVER_PLUGIN_PROPERTIES = {
+  // ({ port }) once the server listens
+  serverListening: { type: "hook" },
+  // (request) => { resource | pathname, ...requestProperties } | null
+  redirectRequest: { type: "hook" },
+  // async (request, helpers) => { ...helpersToAdd } | null
+  augmentRouteFetchSecondArg: { type: "hook" },
+  // async (request) => ["permission", ...] | null, called lazily and at most
+  // once per request when a route declares permissions
+  grantPermissions: { type: "hook" },
+  // async (error, { request }) => response | null
+  handleError: { type: "hook" },
+  // (request, { response, warn }) to look at the response before it is sent
+  inspectResponse: { type: "hook" },
+  // (request, response) => responseToCompose | null
+  injectResponseProperties: { type: "hook" },
+  // ({ reason }) once the server is stopped
+  serverStopped: { type: "hook" },
+  // route descriptors, appended after the routes given to startServer
+  routes: {},
+};
+
 const createServerPluginsController = async (serverPlugins) => {
-  const jsenvServerPluginsController = await createPluginsController({
+  const serverPluginsController = await createPluginsController({
     plugins: serverPlugins,
     pluginDescription: {
       name: "server plugin",
-      properties: {
-        serverListening: { type: "hook" },
-        redirectRequest: { type: "hook" },
-        augmentRouteFetchSecondArg: { type: "hook" },
-        grantPermissions: { type: "hook" },
-        handleError: { type: "hook" },
-        onResponsePush: { type: "hook" },
-        injectResponseProperties: { type: "hook" },
-        serverStopped: { type: "hook" },
-        routes: {}, // routes are handled separately (used to populate the router)
-      },
+      properties: SERVER_PLUGIN_PROPERTIES,
     },
   });
-  return jsenvServerPluginsController;
+  return serverPluginsController;
+};
+
+const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
+  for (const permission of permissionsRequired) {
+    if (!permissionsSet.has(permission)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Both helpers share one cursor over the "grantPermissions" hooks so that each
+// plugin runs at most once per request: hasPermissions stops as soon as the
+// required permissions are all granted, getAllPermissions drains the plugins
+// left.
+const createPermissionHelpers = (serverPluginsController, request) => {
+  const permissionsSet = new Set();
+  const nextPermissionsHook = serverPluginsController.createAsyncHookIterator(
+    "grantPermissions",
+    request,
+  );
+  const drainPermissionsUntil = async (permissionsRequired) => {
+    for (;;) {
+      if (
+        permissionsRequired !== undefined &&
+        permissionsSatisfy(permissionsSet, permissionsRequired)
+      ) {
+        return true;
+      }
+      const { done, value } = await nextPermissionsHook();
+      if (done) {
+        break;
+      }
+      if (Array.isArray(value)) {
+        for (const permission of value) {
+          permissionsSet.add(permission);
+        }
+      }
+    }
+    return false;
+  };
+
+  const getAllPermissions = async () => {
+    await drainPermissionsUntil(undefined);
+    return permissionsSet;
+  };
+  const hasPermissions = async (permissionsRequired) => {
+    if (permissionsRequired.length === 0) {
+      return true;
+    }
+    return drainPermissionsUntil(permissionsRequired);
+  };
+  return { getAllPermissions, hasPermissions };
 };
 
 // This file is used just for test and internal tests
@@ -5693,6 +5900,16 @@ const createResourcePattern = (pattern) => {
 //   return resource;
 // };
 
+/**
+ * Pick, among the encodings the server can produce, the one the request
+ * prefers according to its `accept-encoding` header (`br` and `brotli` are
+ * synonyms).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableEncodings - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The encoding to respond with, `null` when the request
+ *   accepts none of them or has no `accept-encoding` header.
+ */
 const pickContentEncoding = (request, availableEncodings) => {
   const { headers = {} } = request;
   const requestAcceptEncodingHeader = headers["accept-encoding"];
@@ -5749,6 +5966,16 @@ const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
   return -1;
 };
 
+/**
+ * Pick, among the languages the server can produce, the one the request
+ * prefers according to its `accept-language` header. An exact match
+ * (`fr-FR`) scores higher than a primary language match (`fr` for `fr-CA`).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableLanguages - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The language to respond with, `null` when the request
+ *   accepts none of them or has no `accept-language` header.
+ */
 const pickContentLanguage = (request, availableLanguages) => {
   const { headers = {} } = request;
   const requestAcceptLanguageHeader = headers["accept-language"];
@@ -5900,7 +6127,7 @@ const HTTP_METHODS = [
 
 const createRouter = (
   routeDescriptionArray,
-  { optionsFallback, logLevel, redirect = "manual" } = {},
+  { optionsFallback, logLevel } = {},
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
@@ -6157,7 +6384,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
       if (fetchReturnValue instanceof Response) {
         status = fetchReturnValue.status;
-        statusText = fetchReturnValue.statusText;
+        // a Response built without statusText has an empty one: the standard
+        // phrase for that status is used instead
+        statusText = fetchReturnValue.statusText || undefined;
         headers = Object.fromEntries(fetchReturnValue.headers);
         body = fetchReturnValue.body;
       } else if (
@@ -6165,7 +6394,10 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         typeof fetchReturnValue === "object"
       ) {
         status = fetchReturnValue.status || 404;
-        statusText = fetchReturnValue.statusText;
+        statusText =
+          fetchReturnValue.statusText === undefined
+            ? undefined
+            : asReasonPhrase(fetchReturnValue.statusText);
         statusMessage = fetchReturnValue.statusMessage;
         headers = fetchReturnValue.headers || {};
         body = fetchReturnValue.body;
@@ -6174,30 +6406,6 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         throw new TypeError(
           `response must be a Response, or an Object, received ${fetchReturnValue}`,
         );
-      }
-
-      if (
-        redirect === "follow" &&
-        isRedirectStatus(status) &&
-        headers["location"]
-      ) {
-        const redirectUrl = new URL(headers["location"], request.url);
-        if (redirectUrl.origin === new URL(request.url).origin) {
-          const redirectRequest = {
-            ...request,
-            url: redirectUrl.href,
-            resource:
-              redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
-            // GET for 301/302/303, preserve method for 307/308
-            method: status === 307 || status === 308 ? request.method : "GET",
-            params: {},
-          };
-          const redirectedResponse = await matchRoutes(redirectRequest);
-          onRouteMatch(route);
-          onResponseHeaders(request, route, redirectedResponse.headers || {});
-          return redirectedResponse;
-        }
-        // redirect to other origins are left to the client to handle
       }
 
       onRouteMatch(route);
@@ -6461,7 +6669,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
                 const permsSet = await fetchSecondArg.getAllPermissions();
                 normallyCanSee =
                   permissionsToSee.length === 0 ||
-                  permissionsSatisfy$1(permsSet, permissionsToSee);
+                  permissionsSatisfy(permsSet, permissionsToSee);
               }
               if (!normallyCanSee && !canExposeSensitiveData) {
                 continue;
@@ -6519,25 +6727,13 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
   return router;
 };
 
-/**
- * Adds a route to the router.
- *
- * @param {Object} params - Route configuration object
- * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
- * @param {Object} [params.headers] - Optional headers pattern to match
- * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
- * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
- * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
- * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
- * @param {Function} params.fetch - Function to generate response for matching requests
- * @throws {TypeError} If endpoint is not a string
- * @returns {void}
- */
+// Turns a route descriptor (documented on startServer's `routes` param) into
+// a route: matchers for the method, the resource and the headers, plus what
+// the inspector shows. Throws on a malformed descriptor.
 const createRoute = ({
   endpoint,
   description,
   headers,
-  service,
   serverPlugin,
   permissionsRequired,
   permissionsToSee,
@@ -6549,7 +6745,6 @@ const createRoute = ({
   fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
   clientCodeExample,
   isFallback,
-  subroutes,
   declarationSource,
 }) => {
   if (!endpoint || typeof endpoint !== "string") {
@@ -6589,7 +6784,6 @@ const createRoute = ({
     method,
     resource,
     description,
-    service,
     serverPlugin,
     permissionsRequired,
     permissionsToSee,
@@ -6672,13 +6866,9 @@ const createRoute = ({
     resourcePattern,
     isForWebSocket,
     isFallback,
-    subroutes,
   };
   return route;
 };
-
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
 
 // Returns a denied response if the request does not satisfy route access/visible config.
 // Returns null if access is granted.
@@ -6709,20 +6899,11 @@ const checkRouteAccess = async (
   const permsSet = await fetchSecondArg.getAllPermissions();
   if (
     permissionsToSee.length === 0 ||
-    permissionsSatisfy$1(permsSet, permissionsToSee)
+    permissionsSatisfy(permsSet, permissionsToSee)
   ) {
     return createForbiddenResponse();
   }
   return createRouteNotFoundResponse(request);
-};
-
-const permissionsSatisfy$1 = (permissionsSet, permissionsRequired) => {
-  for (const p of permissionsRequired) {
-    if (!permissionsSet.has(p)) {
-      return false;
-    }
-  }
-  return true;
 };
 
 const createForbiddenResponse = () => {
@@ -6800,18 +6981,12 @@ const createNotAcceptableResponse = (
 ) => {
   const unsupported = [];
   const headers = {};
-  const data = {};
 
   if (availableMediaTypes.length) {
     const requestAcceptHeader = request.headers["accept"];
 
     // Use a non-standard but semantic header name
     headers["available-media-types"] = availableMediaTypes.join(", ");
-
-    Object.assign(data, {
-      requestAcceptHeader,
-      availableMediaTypes,
-    });
 
     unsupported.push({
       type: "content-type",
@@ -6825,11 +7000,6 @@ Available media types: ${availableMediaTypes.join(", ")}.`,
     // Use a non-standard but semantic header name
     headers["available-languages"] = availableLanguages.join(", ");
 
-    Object.assign(data, {
-      requestAcceptLanguageHeader,
-      availableLanguages,
-    });
-
     unsupported.push({
       type: "language",
       message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
@@ -6842,11 +7012,6 @@ Available languages: ${availableLanguages.join(", ")}.`,
     // Use a non-standard but semantic header name
     headers["available-versions"] = availableVersions.join(", ");
 
-    Object.assign(data, {
-      requestAcceptVersionHeader,
-      availableLanguages,
-    });
-
     unsupported.push({
       type: "version",
       message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
@@ -6858,11 +7023,6 @@ Available versions: ${availableVersions.join(", ")}.`,
 
     // Use a non-standard but semantic header name
     headers["available-encodings"] = availableEncodings.join(", ");
-
-    Object.assign(data, {
-      requestAcceptEncodingHeader,
-      availableEncodings,
-    });
 
     unsupported.push({
       type: "encoding",
@@ -6900,7 +7060,7 @@ const createMethodNotAllowedResponse = (
   return {
     status: 405,
     statusText: "Method Not Allowed",
-    statusmessage: `The HTTP method "${request.method}" is not supported for this resource.
+    statusMessage: `The HTTP method "${request.method}" is not supported for this resource.
 Allowed methods: ${allowedMethods.join(", ")}`,
     headers: {
       allow: allowedMethods.join(", "),
@@ -7038,182 +7198,114 @@ const STOP_REASON_PROCESS_BEFORE_EXIT = createReason(
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const applyDnsResolution = async (
-  hostname,
-  { verbatim = false } = {},
-) => {
-  const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, { verbatim }, (error, address, family) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({ address, family });
-      }
-    });
-  });
-  return dnsResolution;
-};
-
-const parseHostname = (hostname) => {
-  if (hostname === "0.0.0.0") {
-    return {
-      type: "ip",
-      label: "unspecified",
-      version: 4,
-    };
-  }
-  if (
-    hostname === "::" ||
-    hostname === "0000:0000:0000:0000:0000:0000:0000:0000"
-  ) {
-    return {
-      type: "ip",
-      label: "unspecified",
-      version: 6,
-    };
-  }
-  if (hostname === "127.0.0.1") {
-    return {
-      type: "ip",
-      label: "loopback",
-      version: 4,
-    };
-  }
-  if (
-    hostname === "::1" ||
-    hostname === "0000:0000:0000:0000:0000:0000:0000:0001"
-  ) {
-    return {
-      type: "ip",
-      label: "loopback",
-      version: 6,
-    };
-  }
-  const ipVersion = isIP(hostname);
-  if (ipVersion === 0) {
-    return {
-      type: "hostname",
-    };
-  }
-  return {
-    type: "ip",
-    version: ipVersion,
-  };
-};
-
-const createIpGetters = () => {
-  const networkAddresses = [];
-  const networkInterfaceMap = networkInterfaces();
-  for (const key of Object.keys(networkInterfaceMap)) {
-    for (const networkAddress of networkInterfaceMap[key]) {
-      networkAddresses.push(networkAddress);
-    }
-  }
-  return {
-    getFirstInternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4;
-      let firstInternalIp;
-      for (const networkAddress of networkAddresses) {
-        if (networkAddress.internal) {
-          firstInternalIp = networkAddress.address;
-          if (isPref(networkAddress)) {
-            break;
-          }
-        }
-      }
-      return firstInternalIp;
-    },
-    getFirstExternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4;
-      let firstExternalIp;
-      for (const networkAddress of networkAddresses) {
-        if (!networkAddress.internal) {
-          firstExternalIp = networkAddress.address;
-          if (isPref(networkAddress)) {
-            break;
-          }
-        }
-      }
-      return firstExternalIp;
-    },
-  };
-};
-
-const isIpV4 = (networkAddress) => {
-  // node 18.5
-  if (typeof networkAddress.family === "number") {
-    return networkAddress.family === 4;
-  }
-  return networkAddress.family === "IPv4";
-};
-
-const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
-
 const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
-const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
-  for (const p of permissionsRequired) {
-    if (!permissionsSet.has(p)) {
-      return false;
-    }
-  }
-  return true;
-};
-
 /**
- * Starts an HTTP (or HTTPS/HTTP2) server.
+ * Start an http server (https and http2 optional) answering each request with
+ * the first route producing a response.
  *
- * @param {Object} params
+ * @param {Object} [params={}]
+ * @param {Array<Object>} [params.routes=[]] - Route descriptors, tried in order. Each has:
+ *   - `endpoint` {string} — Required. `"GET /users/:id"`: an http method (or `*` for any)
+ *     and a resource pattern. `:name` captures a segment and `*` a run of segments, both
+ *     land in `request.params`; `?page=:page` captures a search param. `"*"` alone
+ *     matches everything. An endpoint ending in `.websocket` marks a websocket route.
+ *   - `fetch` {Function} — Required. `(request, helpers) => response`, async or not.
+ *     Returns a `Response`, a plain `{ status, statusText, statusMessage, headers, body,
+ *     timing }` object (`status` defaults to 404, `statusMessage` feeds the body of 4xx/5xx
+ *     responses), a `WebSocketResponse`, or `null`/`undefined` to let the next route try.
+ *     `request` is described in docs/handling_requests.md. `helpers` holds `timing(name)`,
+ *     `injectResponseHeader(name, value)`, `contentNegotiation` (`{ mediaType, language,
+ *     version, encoding }` picked from the `available*` lists below), `responseCookies`
+ *     (`set`/`delete`), `hasPermissions`, `getAllPermissions`, `router`,
+ *     `canExposeSensitiveData`, plus whatever plugins add with "augmentRouteFetchSecondArg".
+ *   - `headers` {Object} — Header pattern the request must match
+ *     (`{ upgrade: "websocket" }` marks a websocket route).
+ *   - `availableMediaTypes`, `availableLanguages`, `availableVersions`, `availableEncodings`
+ *     {Array} — What the route can produce, in order of preference. Drives content
+ *     negotiation, the `vary` header and 406 responses. Media types are inferred from the
+ *     endpoint extension when omitted.
+ *   - `acceptedMediaTypes` {Array<string>} — Request body media types accepted by
+ *     POST/PATCH/PUT (415 otherwise).
+ *   - `permissionsRequired` {Array<string>} — Permissions (granted by "grantPermissions"
+ *     plugins) needed to access the route; `[]` opens it to everyone. Once any route
+ *     declares permissions, a route without them is hidden (404) from everyone.
+ *   - `permissionsToSee` {Array<string>} — Permissions needed to learn the route exists
+ *     (403 instead of 404 when access is denied); `[]` makes it visible to everyone.
+ *   - `description` {string}, `clientCodeExample` {string|Function}, `declarationSource`
+ *     {string} — Shown by the route inspector at `/.internal/route_inspector`.
  *
- * @param {Array<Object>} [params.routes=[]] - Route definitions for the server.
- *   Each route is an object with the following properties:
- *   - `endpoint` {string} — Required. A string like `"GET /users/:id"` combining the HTTP method
- *     and the resource path. Use `"*"` as the method to match all methods, and URL patterns
- *     such as `:param` for named segments or `*` for wildcards.
- *   - `fetch` {Function} — Required. `(request, helpers) => response`. Must return a `Response`,
- *     a response-like object `{ status, headers, body }`, or `null`/`undefined` to skip the route.
- *   - `description` {string} — Optional human-readable description shown in the route inspector.
- *   - `permissionsRequired` {Array<string>} — Optional. Permissions the client must hold to
- *     access the route. An empty array means anyone can access. When omitted the route is hidden
- *     by default (404 for everyone).
- *   - `permissionsToSee` {Array<string>} — Optional. Permissions needed to know the route exists
- *     (403 instead of 404 when access is denied). An empty array means the route is visible to
- *     everyone even when access is denied.
- *   - `availableMediaTypes` {Array<string>} — Content-types this route can produce (drives
- *     `Accept` content negotiation).
- *   - `availableLanguages` {Array<string>} — Languages this route can respond with.
- *   - `availableEncodings` {Array<string>} — Encodings this route supports.
- *   - `acceptedMediaTypes` {Array<string>} — Content-types accepted for request bodies
- *     (POST/PATCH/PUT).
- *   - `clientCodeExample` {string|Function} — Optional code snippet displayed in the route
- *     inspector as a usage example.
- *   - `declarationSource` {string} — Optional file URL of where the route is declared, shown
- *     in the route inspector when `canExposeSensitiveData` is enabled.
- *   - `headers` {Object} — Optional header pattern that must match for the route to be selected.
+ * @param {Array<Object>} [params.plugins=[]] - Server plugins, see docs/plugins.md.
+ * @param {number} [params.port=0] - `0` lets the OS pick a free port.
+ * @param {number} [params.portHint] - With `port: 0`, try this port first, then the next ones.
+ * @param {string} [params.hostname="localhost"] - Hostname or ip to listen to; `server.origin` is built from it.
+ * @param {boolean} [params.acceptAnyIp=false] - Listen on every interface (`0.0.0.0` or `::`)
+ *   so that other machines on the network can reach the server; `server.origins.externalip`
+ *   then tells the address to use from there.
+ * @param {boolean} [params.preferIpv6] - Favor ipv6 addresses in `server.origins`.
+ * @param {Array<string>|true} [params.allowedHosts=[]] - Names the server may be requested
+ *   with (the `host` header), on top of localhost, `hostname`, the machine name and ips,
+ *   and every ip when `acceptAnyIp`. `".example.com"` covers the subdomains. Any other
+ *   host is answered 403: a page served elsewhere cannot read the responses by rebinding
+ *   its DNS name to this machine. `true` disables the check.
+ * @param {Object|false} [params.https=false] - `{ certificate, privateKey }` (PEM strings) to serve https.
+ * @param {boolean} [params.redirectHttpToHttps] - With https, answer http requests with a 301
+ *   to the https origin. Defaults to true unless `allowHttpRequestOnHttps` is set.
+ * @param {boolean} [params.allowHttpRequestOnHttps=false] - With https, also serve plain http
+ *   requests on the same port (`request.origin` tells them apart).
+ * @param {boolean} [params.http2=false] - Serve http2 (needs `https`, http/1.1 clients are still
+ *   accepted). Brings nothing on localhost; a page loading many modules from another machine
+ *   loads several times faster. Http2 has no reason phrase: `statusText` then only reaches the
+ *   logs and the body of 4xx/5xx responses.
+ * @param {boolean} [params.http1Allowed=true] - With http2, still accept http/1.1 clients.
+ * @param {string} [params.logLevel] - `"debug"`, `"info"` (default), `"warn"`, `"error"` or `"off"`.
+ * @param {string} [params.routerLogLevel] - Same, for the router logs (which route matched).
+ * @param {boolean} [params.startLog=true] - Log "server started at …" once listening.
+ * @param {string} [params.serverName="server"] - Name used in the logs.
+ * @param {AbortSignal} [params.signal] - Cancels the start (an AbortError is thrown). Once
+ *   listening the server is stopped with `stop`.
+ * @param {boolean} [params.stopOnSIGINT] - Stop on SIGINT (ctrl+c). Defaults to true, except
+ *   inside a cluster worker where the primary process is in charge.
+ * @param {boolean} [params.stopOnExit=true] - Stop on SIGHUP, SIGTERM, beforeExit and exit.
+ * @param {boolean} [params.stopOnInternalError=false] - Stop when a route throws (after the
+ *   "handleError" plugins answered).
+ * @param {boolean} [params.keepProcessAlive=true] - When false the server alone does not keep
+ *   the process alive.
+ * @param {boolean} [params.canExposeSensitiveData=false] - Lets the server hand out what
+ *   belongs to the machine it runs on. Development only, never in production. It unlocks:
+ *   - file paths in status texts (a 404 from `createFileSystemFetch` says which path);
+ *   - the declaration source of every route in the route inspector, where every route is
+ *     listed whatever its permissions;
+ *   - `GET /.internal/open_file/*`, opening a file of the machine in the editor;
+ *   - `GET /@jsenv/server/*`, serving this package's own client files;
+ *   - `/.internal/alive.websocket` and `/.internal/alive.eventsource`, which a client
+ *     subscribes to in order to reload when the server restarts.
+ * @param {boolean|Object} [params.serverTiming=false] - `true` or `{ minDuration }` to send
+ *   `server-timing` response headers: the time to start responding, the routing of each
+ *   plugin, what routes measure with `helpers.timing` and the `timing` a response hands
+ *   back. `minDuration` (ms) drops the entries that took less: 0 keeps everything (what a
+ *   test wants), a human reading devtools usually wants the sub-millisecond noise gone.
+ * @param {number} [params.requestWaitingMs=0] - Call `requestWaitingCallback` when a request
+ *   still has no response after that many ms (0 disables).
+ * @param {Function} [params.requestWaitingCallback] - `({ request, requestWaitingMs })`, logs a warning by default.
+ * @param {number} [params.responseTimeout=600000] - Ms a route can take to start responding
+ *   before a 504 is sent instead (10 minutes).
+ * @param {number} [params.requestBodyMaxSize=1048576] - Bytes `request.json()`, `text()`,
+ *   `buffer()` and `queryString()` accept before answering 413 (1 MiB). A route can pass
+ *   its own `{ maxSize }` to these readers; `request.body` is never limited.
  *
- * @param {Array<Object>} [params.plugins=[]] - Server plugins that extend behaviour (hooks such
- *   as `grantPermissions`, `redirectRequest`, `handleError`, etc.). See plugin documentation for
- *   the exact shape; plugins are not described here in detail.
- *
- * @param {number} [params.port=0] - Port to listen on. Defaults to `0` which lets the OS assign
- *   a random available port — useful in tests to avoid port conflicts. A fixed port such as
- *   `3000` can be passed for a predictable address.
- *
- * @param {boolean} [params.acceptAnyIp=false] - When `true` the server binds to all network
- *   interfaces (`0.0.0.0` / `::`), making it reachable from other machines on the network.
- *   When `false` (default) it only listens on the configured `hostname`.
- *
- * @param {boolean} [params.canExposeSensitiveData=false] - Unlocks developer-facing features that
- *   should never be enabled in production:
- *   - Declaration source links in the route inspector (shows where each route is defined).
- *   - The `/.internal/open_file` endpoint that can open files on the server machine.
- *   - Auto-reload client notification when the server restarts.
- *   - All routes are visible in the route inspector regardless of permission configuration.
- *   Set to `true` during local development for a better DX.
- *
- * @returns {Promise<Object>} Resolves to the running server object with `{ origin, port, stop, … }`.
+ * @returns {Promise<Object>} The server: `{ origin, origins, port, hostname, nodeServer,
+ *   webSocketOrigin, stop, stoppedPromise, getStatus, addEffect }`.
+ *   - `origins`: `{ local, localip, externalip }`, `origin` being `origins.local`.
+ *   - `stop(reason)`: resolves once every connection is closed; `reason` can be anything
+ *     and defaults to `STOP_REASON_NOT_SPECIFIED`.
+ *   - `stoppedPromise`: resolves with the reason the server stopped for (one of the
+ *     `STOP_REASON_*` exports or what was given to `stop`).
+ *   - `getStatus()`: `"starting"`, `"opened"`, `"stopping"` or `"stopped"`.
+ *   - `addEffect(callback)`: runs `callback` right away; the function it returns runs
+ *     when the server stops.
  */
 const startServer = async ({
   signal = new AbortController().signal,
@@ -7229,6 +7321,7 @@ const startServer = async ({
   allowHttpRequestOnHttps = false,
   acceptAnyIp = false,
   preferIpv6,
+  allowedHosts = [],
   hostname = "localhost",
   port = 0, // assign a random available port
   portHint,
@@ -7244,17 +7337,7 @@ const startServer = async ({
   keepProcessAlive = true,
   routes = [],
   plugins = [],
-  // When enabled, the server gives more power:
-  // - each route show the source where it was declared
-  // - server can be requested to open a file on the machine
-  // - client can subscribe to server to detect when it restarts
-  // This param should be enabled ONLY during development on your machine
   canExposeSensitiveData = false,
-  nagle = true,
-  // false | true | { minDuration }: server-timing response headers.
-  // minDuration (ms) drops entries that took less — 0 keeps everything, which
-  // is what a test wants; a human reading devtools usually wants the noise
-  // gone (the jsenv dev server passes 0.5 for that).
   serverTiming = false,
   requestWaitingMs = 0,
   requestWaitingCallback = ({ request, requestWaitingMs }) => {
@@ -7268,13 +7351,8 @@ const startServer = async ({
       ),
     );
   },
-  // timeAllocated to start responding to a request
-  // after this delay the server will respond with 504
-  responseTimeout = 60_000 * 10, // 10s
-  // time allocated to server code to start reading the request body
-  // after this delay the underlying stream is destroyed, attempting to read it would throw
-  // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
-  requestBodyLifetime = 60_000 * 2, // 2s
+  responseTimeout = 60_000 * 10, // 10 minutes
+  requestBodyMaxSize = 1024 * 1024,
   ...rest
 } = {}) => {
   // param validations
@@ -7298,6 +7376,11 @@ const startServer = async ({
     }
     if (http2 && !https) {
       throw new Error(`http2 needs https`);
+    }
+    if (allowedHosts !== true && !Array.isArray(allowedHosts)) {
+      throw new TypeError(
+        `allowedHosts must be an array of hosts or true, got ${allowedHosts}`,
+      );
     }
   }
   const logger = createLogger({ logLevel });
@@ -7370,9 +7453,7 @@ const startServer = async ({
   let nodeServer;
   const startServerOperation = Abort.startOperation();
   const stopCallbackSet = new Set();
-  const serverOrigins = {
-    local: "", // favors hostname when possible
-  };
+  let serverOrigins;
 
   try {
     startServerOperation.addAbortSignal(signal);
@@ -7397,63 +7478,15 @@ const startServer = async ({
       nodeServer.unref();
     }
 
-    const createOrigin = (hostname) => {
-      const protocol = https ? "https" : "http";
-      if (isIP(hostname) === 6) {
-        return `${protocol}://[${hostname}]`;
-      }
-      return `${protocol}://${hostname}`;
-    };
-
-    const ipGetters = createIpGetters();
-    let hostnameToListen;
-    if (acceptAnyIp) {
-      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-      serverOrigins.local = createOrigin(firstInternalIp);
-      serverOrigins.localip = createOrigin(firstInternalIp);
-      const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
-      serverOrigins.externalip = createOrigin(firstExternalIp);
-      hostnameToListen = preferIpv6 ? "::" : "0.0.0.0";
-    } else {
-      hostnameToListen = hostname;
-    }
-    const hostnameInfo = parseHostname(hostname);
-    if (hostnameInfo.type === "ip") {
-      if (acceptAnyIp) {
-        throw new Error(
-          `hostname cannot be an ip when acceptAnyIp is enabled, got ${hostname}`,
-        );
-      }
-
-      preferIpv6 = hostnameInfo.version === 6;
-      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-      serverOrigins.local = createOrigin(firstInternalIp);
-      serverOrigins.localip = createOrigin(firstInternalIp);
-      if (hostnameInfo.label === "unspecified") {
-        const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
-        serverOrigins.externalip = createOrigin(firstExternalIp);
-      } else if (hostnameInfo.label === "loopback") {
-        // nothing
-      } else {
-        serverOrigins.local = createOrigin(hostname);
-      }
-    } else {
-      const hostnameDnsResolution = await applyDnsResolution(hostname, {
-        verbatim: true,
-      });
-      if (hostnameDnsResolution) {
-        const hostnameIp = hostnameDnsResolution.address;
-        serverOrigins.localip = createOrigin(hostnameIp);
-        serverOrigins.local = createOrigin(hostname);
-      } else {
-        const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-        // fallback to internal ip because there is no ip
-        // associated to this hostname on operating system (in hosts file)
-        hostname = firstInternalIp;
-        hostnameToListen = firstInternalIp;
-        serverOrigins.local = createOrigin(firstInternalIp);
-      }
-    }
+    const resolved = await resolveServerOrigins({
+      https,
+      hostname,
+      acceptAnyIp,
+      preferIpv6,
+    });
+    hostname = resolved.hostname;
+    serverOrigins = resolved.serverOrigins;
+    const hostnameToListen = resolved.hostnameToListen;
 
     port = await listen({
       signal: startServerOperation.signal,
@@ -7488,6 +7521,12 @@ const startServer = async ({
   //   so we prefer https://locahost or https://local_hostname
   //   over the ip
   const serverOrigin = serverOrigins.local;
+  const isHostAllowed = createHostChecker({
+    allowedHosts,
+    hostname,
+    serverOrigins,
+    acceptAnyIp,
+  });
 
   // now the server is started (listening) it cannot be aborted anymore
   // (otherwise an AbortError is thrown to the code calling "startServer")
@@ -7551,15 +7590,11 @@ const startServer = async ({
   );
   stopCallbackSet.add(removeConnectionErrorListener);
 
-  const connectionsTracker = trackServerPendingConnections(nodeServer, {
-    http2,
-  });
+  const connectionsTracker = trackServerPendingConnections(nodeServer);
   // opened connection must be shutdown before the close event is emitted
   stopCallbackSet.add(connectionsTracker.stop);
 
-  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
-    http2,
-  });
+  const pendingRequestsTracker = trackServerPendingRequests(nodeServer);
   // ensure pending requests got a response from the server
   stopCallbackSet.add((reason) => {
     pendingRequestsTracker.stop({
@@ -7612,7 +7647,7 @@ const startServer = async ({
     serverTiming && typeof serverTiming === "object"
       ? serverTiming.minDuration || 0
       : 0;
-  const getResponseProperties = async (request, { pushResponse }) => {
+  const getResponseProperties = async (request) => {
     const timings = {};
     const timing = serverTiming
       ? (name) => {
@@ -7633,9 +7668,7 @@ const startServer = async ({
     request.logger.info(
       request.headers["upgrade"] === "websocket"
         ? `GET ${request.url} ${websocketSuffixColorized}`
-        : request.parent
-          ? `Push ${request.resource}`
-          : `${request.method} ${request.url}`,
+        : `${request.method} ${request.url}`,
     );
     let requestWaitingTimeout;
     if (requestWaitingMs) {
@@ -7715,23 +7748,22 @@ const startServer = async ({
           );
         },
       );
-      // the node request readable stream is never closed because
-      // the response headers contains "connection: keep-alive"
-      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-      if (
-        responseProperties.headers.connection === "keep-alive" &&
-        request.body
-      ) {
-        clearTimeout(request.body.timeout);
-      }
+      serverPluginsController.callHooks("inspectResponse", request, {
+        response: responseProperties,
+        warn: (message) => {
+          request.logger.warn(message);
+        },
+      });
       return responseProperties;
     };
 
     let timeout;
+    let timedOut = false;
     try {
       request = applyRequestInternalRedirection(request);
       const timeoutResponsePropertiesPromise = new Promise((resolve) => {
         timeout = setTimeout(() => {
+          timedOut = true;
           resolve({
             // the correct status code should be 500 because it's
             // we don't really know what takes time
@@ -7747,7 +7779,7 @@ const startServer = async ({
       const routerResponsePropertiesPromise = (async () => {
         const fetchSecondArg = {
           timing,
-          pushResponse,
+          canExposeSensitiveData,
           injectResponseHeader: (name, value) => {
             if (!headersToInject) {
               headersToInject = {};
@@ -7769,54 +7801,28 @@ const startServer = async ({
             }
           },
         );
-        // Build permission helpers, lazily per request.
-        // A single shared iterator ensures each plugin is called at most once.
-        // hasPermissions stops early once the rule is satisfied;
-        // getAllPermissions drains all remaining plugins.
-        const permissionsSet = new Set();
-        const nextPermissionsHook =
-          serverPluginsController.createAsyncHookIterator(
-            "grantPermissions",
-            request,
-          );
-        const drainPermissionsUntil = async (permissionsRequired) => {
-          for (;;) {
-            if (
-              permissionsRequired !== undefined &&
-              permissionsSatisfy(permissionsSet, permissionsRequired)
-            ) {
-              return true;
-            }
-            const { done, value } = await nextPermissionsHook();
-            if (done) {
-              break;
-            }
-            if (Array.isArray(value)) {
-              for (const p of value) {
-                permissionsSet.add(p);
-              }
-            }
-          }
-          return false;
-        };
-        const getAllPermissions = async () => {
-          await drainPermissionsUntil(undefined);
-          return permissionsSet;
-        };
-        const hasPermissions = async (permissionsRequired) => {
-          if (permissionsRequired.length === 0) {
-            return true;
-          }
-          return drainPermissionsUntil(permissionsRequired);
-        };
-        fetchSecondArg.getAllPermissions = getAllPermissions;
-        fetchSecondArg.hasPermissions = hasPermissions;
+        Object.assign(
+          fetchSecondArg,
+          createPermissionHelpers(serverPluginsController, request),
+        );
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,
         );
         return routerResponseProperties;
       })();
+      // once the 504 is sent the route keeps running: what it throws
+      // afterwards would have nobody to reject to
+      routerResponsePropertiesPromise.catch((e) => {
+        if (timedOut) {
+          logger.error(
+            createDetailedMessage(`error after the 504 timeout response`, {
+              "request url": request.url,
+              "error stack": e.stack,
+            }),
+          );
+        }
+      });
       const responseProperties = await Promise.race([
         timeoutResponsePropertiesPromise,
         routerResponsePropertiesPromise,
@@ -7828,6 +7834,21 @@ const startServer = async ({
       if (e.name === "AbortError" && request.signal.aborted) {
         // let it propagate to the caller that should catch this
         throw e;
+      }
+      // an error carrying its own response (a request body too large for
+      // instance) is not an internal error: it is answered as such, whatever
+      // the plugins
+      if (e && typeof e.asResponse === "function") {
+        const responseProperties = composeTwoResponses(
+          {
+            status: 500,
+            headers: {
+              "cache-control": "no-store",
+            },
+          },
+          await e.asResponse(),
+        );
+        return finalizeResponseProperties(responseProperties);
       }
       // internal error, create 500 response
       if (
@@ -7866,20 +7887,28 @@ const startServer = async ({
       return finalizeResponseProperties(responseProperties);
     }
   };
+  // When a response is sent before the request body was read (a 413, a 404
+  // on an upload...) node keeps draining what the client sends so that the
+  // client gets to read the response, as nginx does with its lingering close.
+  // A client that has not finished sending after that delay is cut off:
+  // draining a body forever is what the 413 was meant to avoid.
+  const lingerAfterEarlyResponse = (nodeRequest) => {
+    if (nodeRequest.complete) {
+      return;
+    }
+    const lingerTimeout = setTimeout(() => {
+      nodeRequest.socket.destroy();
+    }, REQUEST_BODY_LINGER_MS).unref();
+    nodeRequest.once("close", () => {
+      clearTimeout(lingerTimeout);
+    });
+  };
   const sendResponse = async (
     responseStream,
     responseProperties,
     { signal, request },
   ) => {
-    // When "pushResponse" is called and the parent response has no body
-    // the parent response is immediatly ended. It means child responses (pushed streams)
-    // won't get a chance to be pushed.
-    // To let a chance to pushed streams we wait a little before sending the response
     const ignoreBody = request.method === "HEAD";
-    const bodyIsEmpty = !responseProperties.body || ignoreBody;
-    if (bodyIsEmpty && request.logger.hasPushChild) {
-      await new Promise((resolve) => setTimeout(resolve));
-    }
     await writeNodeResponse(responseStream, responseProperties, {
       signal,
       ignoreBody,
@@ -7910,6 +7939,15 @@ const startServer = async ({
 
   {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
+      const requestHost = nodeRequest.authority || nodeRequest.headers.host;
+      if (!isHostAllowed(requestHost)) {
+        logger.warn(
+          `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,
+        );
+        nodeResponse.writeHead(403, { "content-type": "text/plain" });
+        nodeResponse.end("Host not allowed");
+        return;
+      }
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
           location: `${serverOrigin}${nodeRequest.url}`,
@@ -7928,164 +7966,29 @@ const startServer = async ({
 
       const [receiveRequestOperation, sendResponseOperation] =
         prepareHandleRequestOperations(nodeRequest, nodeResponse);
-      const request = fromNodeRequest(nodeRequest, {
-        signal: stopAbortSignal,
-        serverOrigin,
-        requestBodyLifetime,
-        logger,
-        nagle,
-      });
+      let request;
+      try {
+        request = fromNodeRequest(nodeRequest, {
+          signal: stopAbortSignal,
+          serverOrigin,
+          logger,
+          requestBodyMaxSize,
+        });
+      } catch (e) {
+        // the request cannot even be read: there is nothing to hand to the routes
+        logger.error(
+          createDetailedMessage(`error while reading request`, {
+            "request url": nodeRequest.url,
+            "error stack": e.stack,
+          }),
+        );
+        nodeResponse.writeHead(500);
+        nodeResponse.end();
+        return;
+      }
 
       try {
-        const responseProperties = await getResponseProperties(request, {
-          pushResponse: async ({ path, method }) => {
-            const pushRequestLogger = request.logger.forPush();
-            if (typeof path !== "string" || path[0] !== "/") {
-              pushRequestLogger.warn(
-                `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-              );
-              return;
-            }
-            if (!request.http2) {
-              pushRequestLogger.warn(
-                `response push ignored because request is not http2`,
-              );
-              return;
-            }
-            const canPushStream = testCanPushStream(nodeResponse.stream);
-            if (!canPushStream.can) {
-              pushRequestLogger.debug(
-                `response push ignored because ${canPushStream.reason}`,
-              );
-              return;
-            }
-
-            let preventedByPlugin = null;
-            const prevent = () => {
-              preventedByPlugin = serverPluginsController.getCurrentPlugin();
-            };
-            serverPluginsController.callHooksUntil(
-              "onResponsePush",
-              { path, method },
-              { request, prevent },
-              () => preventedByPlugin,
-            );
-            if (preventedByPlugin) {
-              pushRequestLogger.debug(
-                `response push prevented by "${preventedByPlugin.name}" plugin`,
-              );
-              return;
-            }
-
-            const http2Stream = nodeResponse.stream;
-
-            // being able to push a stream is nice to have
-            // so when it fails it's not critical
-            const onPushStreamError = (e) => {
-              pushRequestLogger.error(
-                createDetailedMessage(
-                  `An error occured while pushing a stream to the response for ${request.resource}`,
-                  {
-                    "error stack": e.stack,
-                  },
-                ),
-              );
-            };
-
-            // not aborted, let's try to push a stream into that response
-            // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
-            let pushStream;
-            try {
-              pushStream = await new Promise((resolve, reject) => {
-                http2Stream.pushStream(
-                  {
-                    ":path": path,
-                    ...(method ? { ":method": method } : {}),
-                  },
-                  async (
-                    error,
-                    pushStream,
-                    // headers
-                  ) => {
-                    if (error) {
-                      reject(error);
-                    }
-                    resolve(pushStream);
-                  },
-                );
-              });
-            } catch (e) {
-              onPushStreamError(e);
-              return;
-            }
-
-            const abortController = new AbortController();
-            // It's possible to get NGHTTP2_REFUSED_STREAM errors here
-            // https://github.com/nodejs/node/issues/20824
-            const pushErrorCallback = (error) => {
-              onPushStreamError(error);
-              abortController.abort();
-            };
-            pushStream.on("error", pushErrorCallback);
-            sendResponseOperation.addEndCallback(() => {
-              pushStream.removeListener("error", onPushStreamError);
-            });
-
-            await sendResponseOperation.withSignal(async (signal) => {
-              const pushResponseOperation = Abort.startOperation();
-              pushResponseOperation.addAbortSignal(signal);
-              pushResponseOperation.addAbortSignal(abortController.signal);
-
-              const pushRequest = createPushRequest(request, {
-                signal: pushResponseOperation.signal,
-                pathname: path,
-                method,
-                logger: pushRequestLogger,
-              });
-
-              try {
-                const responseProperties = await getResponseProperties(
-                  pushRequest,
-                  {
-                    pushResponse: () => {
-                      pushRequest.logger.warn(
-                        `response push ignored because nested push is not supported`,
-                      );
-                    },
-                  },
-                );
-                if (!abortController.signal.aborted) {
-                  if (pushStream.destroyed) {
-                    abortController.abort();
-                  } else if (!http2Stream.pushAllowed) {
-                    abortController.abort();
-                  } else if (responseProperties.requestAborted) {
-                  } else {
-                    const responseLength =
-                      responseProperties.headers["content-length"] || 0;
-                    const { effectiveRecvDataLength, remoteWindowSize } =
-                      http2Stream.session.state;
-                    if (
-                      effectiveRecvDataLength + responseLength >
-                      remoteWindowSize
-                    ) {
-                      pushRequest.logger.debug(
-                        `Aborting stream to prevent exceeding remoteWindowSize`,
-                      );
-                      abortController.abort();
-                    }
-                  }
-                }
-                await sendResponse(pushStream, responseProperties, {
-                  signal: pushResponseOperation.signal,
-                  request: pushRequest,
-                });
-              } finally {
-                await pushResponseOperation.end();
-              }
-            });
-          },
-        });
+        const responseProperties = await getResponseProperties(request);
         const webSocketHandler = getWebSocketHandler(responseProperties);
         if (webSocketHandler) {
           throw new Error(
@@ -8099,6 +8002,7 @@ const startServer = async ({
           signal: sendResponseOperation.signal,
           request,
         });
+        lingerAfterEarlyResponse(nodeRequest);
       } finally {
         await sendResponseOperation.end();
       }
@@ -8135,22 +8039,39 @@ const startServer = async ({
     };
     // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
-      let request = fromNodeRequest(nodeRequest, {
-        signal: stopAbortSignal,
-        serverOrigin,
-        requestBodyLifetime,
-        logger,
-        nagle,
-      });
+      const requestHost = nodeRequest.headers.host;
+      if (!isHostAllowed(requestHost)) {
+        logger.warn(
+          `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,
+        );
+        socket.write(
+          `HTTP/1.1 403 Forbidden\r\ncontent-type: text/plain\r\ncontent-length: 16\r\n\r\nHost not allowed`,
+        );
+        socket.destroy();
+        return;
+      }
+      let request;
+      try {
+        request = fromNodeRequest(nodeRequest, {
+          signal: stopAbortSignal,
+          serverOrigin,
+          logger,
+          requestBodyMaxSize,
+        });
+      } catch (e) {
+        logger.error(
+          createDetailedMessage(`error while reading upgrade request`, {
+            "request url": nodeRequest.url,
+            "error stack": e.stack,
+          }),
+        );
+        socket.write(`HTTP/1.1 500 Internal Server Error\r\n\r\n`);
+        socket.destroy();
+        return;
+      }
       const [receiveRequestOperation, sendResponseOperation] =
         prepareHandleRequestOperations(nodeRequest, socket);
-      const responseProperties = await getResponseProperties(request, {
-        pushResponse: () => {
-          request.logger.warn(
-            `pushResponse ignored because it's not supported in websocket`,
-          );
-        },
-      });
+      const responseProperties = await getResponseProperties(request);
       if (receiveRequestOperation.signal.aborted) {
         return;
       }
@@ -8202,7 +8123,7 @@ const startServer = async ({
       }
       return;
     };
-    // see server-polyglot.js, upgrade must be listened on https server when used
+    // see server_polyglot.js, upgrade must be listened on https server when used
     const facadeServer = nodeServer._tlsServer || nodeServer;
     const removeUpgradeCallback = listenEvent(
       facadeServer,
@@ -8219,9 +8140,9 @@ const startServer = async ({
   }
 
   if (startLog) {
-    if (serverOrigins.network) {
+    if (serverOrigins.externalip) {
       logger.info(
-        `${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`,
+        `${serverName} started at ${serverOrigins.local} (${serverOrigins.externalip})`,
       );
     } else {
       logger.info(`${serverName} started at ${serverOrigins.local}`);
@@ -8264,38 +8185,18 @@ const createNodeServer = async ({
         http1Allowed,
       });
     }
-    const { createServer } = await import("node:https");
-    return createServer({
-      cert: certificate,
-      key: privateKey,
+    return createSecureServer({
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed,
     });
   }
   const { createServer } = await import("node:http");
   return createServer();
 };
 
-const testCanPushStream = (http2Stream) => {
-  if (!http2Stream.pushAllowed) {
-    return {
-      can: false,
-      reason: `stream.pushAllowed is false`,
-    };
-  }
-
-  // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
-  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
-  const { remoteWindowSize } = http2Stream.session.state;
-  if (remoteWindowSize === 0) {
-    return {
-      can: false,
-      reason: `no more remoteWindowSize`,
-    };
-  }
-
-  return {
-    can: true,
-  };
-};
+const REQUEST_BODY_LINGER_MS = 5_000;
 
 const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGHUP: STOP_REASON_PROCESS_SIGHUP,
@@ -8306,7 +8207,30 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
 };
 
 const internalErrorHtmlFileUrl = import.meta.resolve("./client/error_handler/500.html");
+let internalErrorHtmlTemplate;
+const readInternalErrorHtmlTemplate = () => {
+  if (internalErrorHtmlTemplate === undefined) {
+    internalErrorHtmlTemplate = readFileSync(
+      new URL(internalErrorHtmlFileUrl),
+      "utf8",
+    );
+  }
+  return internalErrorHtmlTemplate;
+};
 
+/**
+ * Server plugin turning an error thrown while handling a request into a 500
+ * response (html, text or json depending on what the request accepts).
+ * Without a plugin handling errors, a route that throws makes the process
+ * exit. Put it last: it catches every error, so plugins handling a subset of
+ * them must come before. (An error exposing `asResponse()` never reaches it:
+ * the server answers it directly.)
+ *
+ * @param {Object} [params]
+ * @param {boolean} [params.sendErrorDetails=false] - Put the error stack (and
+ *   its own properties for json) in the response. Development only: a stack
+ *   reveals file paths and code.
+ */
 const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
     name: "jsenv:error_handler",
@@ -8315,9 +8239,6 @@ const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
         serverInternalError === null ||
         (typeof serverInternalError !== "object" &&
           typeof serverInternalError !== "function");
-      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse();
-      }
       const dataToSend = serverInternalErrorIsAPrimitive
         ? {
             code: "VALUE_THROWED",
@@ -8336,18 +8257,14 @@ const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
       const availableContentTypes = {
         "text/html": () => {
           const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+            return `<p>Details not available: to enable them use serverPluginErrorHandler({ sendErrorDetails: true }).</p>`;
           };
           const renderHtmlForErrorWithDetails = () => {
             return errorToHTML(serverInternalError);
           };
 
-          const internalErrorHtmlTemplate = readFileSync(
-            new URL(internalErrorHtmlFileUrl),
-            "utf8",
-          );
           const internalErrorHtml = replacePlaceholdersInHtml(
-            internalErrorHtmlTemplate,
+            readInternalErrorHtmlTemplate(),
             {
               errorMessage: serverInternalErrorIsAPrimitive
                 ? `Code inside server has thrown a literal.`
@@ -8381,7 +8298,7 @@ const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
               internalErrorMessage += `\n${serverInternalError.stack}`;
             }
           } else {
-            internalErrorMessage += `\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).`;
+            internalErrorMessage += `\nDetails not available: to enable them use serverPluginErrorHandler({ sendErrorDetails: true }).`;
           }
 
           return {
@@ -8412,6 +8329,30 @@ const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
   };
 };
 
+/**
+ * A response whose body is written over time (long polling, progress
+ * reporting). Return it from a route `fetch`: the headers are sent right away
+ * and the handler writes the body chunks whenever it wants.
+ *
+ * @param {(body: { write: (chunk: string|Uint8Array) => void, end: () => void }) => void | (() => void)} responseBodyHandler
+ *   Receives `write` and `end`. If it returns a function, that function runs
+ *   when the client disconnects before `end` was called (cleanup).
+ * @param {Object} [init]
+ * @param {number} [init.status=200]
+ * @param {string} [init.statusText]
+ * @param {Object} [init.headers] - `content-type` decides whether the first
+ *   (empty) chunk is text or binary; defaults to text/plain.
+ *
+ * @example
+ * {
+ *   endpoint: "GET /progress",
+ *   fetch: () => new ProgressiveResponse(({ write, end }) => {
+ *     const interval = setInterval(() => write("."), 100);
+ *     setTimeout(() => { clearInterval(interval); end(); }, 1000);
+ *     return () => clearInterval(interval);
+ *   }),
+ * }
+ */
 class ProgressiveResponse {
   constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
     const contentType = headers ? headers["content-type"] : "text/plain";
@@ -8463,6 +8404,32 @@ const jsenvAccessControlAllowedMethods = [
   "OPTIONS",
 ];
 
+/**
+ * Server plugin adding the CORS response headers to every response, including
+ * errors (a browser treats a 500 without them as a CORS failure). Disabled
+ * (returns no plugin) unless `accessControlAllowRequestOrigin` is true or
+ * `accessControlAllowedOrigins` is non empty.
+ *
+ * @param {Object} [params]
+ * @param {Array<string>} [params.accessControlAllowedOrigins=[]] - Origins allowed to
+ *   read responses. `*` stands for any run of characters except "/":
+ *   `"https://pr-*-my-app.fly.dev"` matches every preview deployment.
+ * @param {Array<string>} [params.accessControlAllowedMethods] - Defaults to
+ *   GET, POST, PUT, DELETE, OPTIONS.
+ * @param {Array<string>} [params.accessControlAllowedHeaders] - Defaults to `["x-requested-with"]`.
+ * @param {boolean} [params.accessControlAllowRequestOrigin=false] - Reflect any request
+ *   origin, whatever `accessControlAllowedOrigins` says.
+ * @param {boolean} [params.accessControlAllowRequestMethod=false] - Also allow the method a
+ *   preflight asks for (`access-control-request-method`).
+ * @param {boolean} [params.accessControlAllowRequestHeaders=false] - Also allow the headers a
+ *   preflight asks for (`access-control-request-headers`).
+ * @param {boolean} [params.accessControlAllowCredentials=false] - Send
+ *   `access-control-allow-credentials: true`.
+ * @param {number} [params.accessControlMaxAge=600] - Seconds a browser may cache the preflight.
+ * @param {boolean} [params.timingAllowOrigin=false] - Send `timing-allow-origin` so the
+ *   allowed origin can read resource timing.
+ * @returns {Object|Array} The plugin, or `[]` when CORS stays disabled.
+ */
 const serverPluginCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
@@ -8576,12 +8543,7 @@ const generateAccessControlHeaders = ({
   // If no origin matches we fall back to "*" (only when not using credentials).
   let allowOrigin = null;
 
-  const requestOrigin =
-    "origin" in headers && headers.origin !== "null"
-      ? headers.origin
-      : "referer" in headers
-        ? new URL(headers.referer).origin
-        : null;
+  const requestOrigin = readRequestOrigin(headers);
 
   if (requestOrigin) {
     if (allowedOriginChecker.isAllowed(requestOrigin)) {
@@ -8642,6 +8604,18 @@ const generateAccessControlHeaders = ({
   };
 };
 
+// the referer is a fallback for clients not sending "origin"; it comes from
+// the network and may not be a url at all
+const readRequestOrigin = (headers) => {
+  if ("origin" in headers && headers.origin !== "null") {
+    return headers.origin;
+  }
+  if ("referer" in headers && URL.canParse(headers.referer)) {
+    return new URL(headers.referer).origin;
+  }
+  return null;
+};
+
 const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
 
 const bufferToEtag = (buffer) => {
@@ -8663,6 +8637,17 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+/**
+ * Response listing a directory, as json (an array of names) or as an html
+ * page of links depending on what the request accepts (json by default).
+ *
+ * @param {string|URL} url - The directory.
+ * @param {Object} [params]
+ * @param {Object} [params.headers={}] - Request headers, read for `accept`.
+ * @param {string|URL} [params.rootDirectoryUrl] - Directory served at "/", so
+ *   that the html links are relative to the server.
+ * @returns {{ status: number, headers: Object, body: string }}
+ */
 const fetchDirectory = (
   url,
   { headers = {}, rootDirectoryUrl } = {},
@@ -8681,7 +8666,7 @@ const fetchDirectory = (
         status: 200,
         headers: {
           "content-type": "application/json",
-          "content-length": directoryContentJson.length,
+          "content-length": Buffer.byteLength(directoryContentJson),
         },
         body: directoryContentJson,
       };
@@ -8696,7 +8681,7 @@ const fetchDirectory = (
   </head>
 
   <body>
-    <h1>Content of directory ${url}</h1>
+    <h1>Content of directory ${escapeHtml(url)}</h1>
     <ul>
       ${directoryContentArray.map((filename) => {
         const fileUrlObject = new URL(filename, url);
@@ -8707,8 +8692,9 @@ const fetchDirectory = (
         if (lstatSync(fileUrlObject).isDirectory()) {
           fileUrlRelativeToServer += "/";
         }
+        const linkHtml = escapeHtml(fileUrlRelativeToServer);
         return `<li>
-        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+        <a href="/${linkHtml}">${linkHtml}</a>
       </li>`;
       }).join(`
       `)}
@@ -8733,24 +8719,30 @@ const fetchDirectory = (
   return responseProducers[bestContentType || "application/json"]();
 };
 
-const convertFileSystemErrorToResponseProperties = (error) => {
+// The file path belongs to the server machine: it joins the status text only
+// when the server was started with canExposeSensitiveData.
+const convertFileSystemErrorToResponseProperties = (
+  error,
+  { canExposeSensitiveData },
+) => {
+  const location = canExposeSensitiveData ? ` at ${error.path}` : "";
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
     return {
       status: 403,
-      statusText: `EACCES: No permission to read file at ${error.path}`,
+      statusText: `EACCES: No permission to read file${location}`,
     };
   }
   if (isErrorWithCode(error, "EPERM")) {
     return {
       status: 403,
-      statusText: `EPERM: No permission to read file at ${error.path}`,
+      statusText: `EPERM: No permission to read file${location}`,
     };
   }
   if (isErrorWithCode(error, "ENOENT")) {
     return {
       status: 404,
-      statusText: `ENOENT: File not found at ${error.path}`,
+      statusText: `ENOENT: File not found${location}`,
     };
   }
   // file access may be temporarily blocked
@@ -8758,7 +8750,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EBUSY")) {
     return {
       status: 503,
-      statusText: `EBUSY: File is busy ${error.path}`,
+      statusText: `EBUSY: File is busy${location}`,
       headers: {
         "retry-after": 0.01, // retry in 10ms
       },
@@ -8777,7 +8769,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EISDIR")) {
     return {
       status: 500,
-      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
+      statusText: `EISDIR: Unexpected directory operation${location}`,
     };
   }
   return null;
@@ -8819,18 +8811,66 @@ const fileSystemPathToUrl = (value) => {
 };
 
 /*
- * This function returns response properties in a plain object like
- * { status: 200, body: "Hello world" }.
- * It is meant to be used inside "requestToResponse"
+ * Turns a request for a file into response properties: content type, client
+ * cache (etag or mtime), compression, directory listing or main file. The
+ * response is a plain object so that it composes with what the router and
+ * the plugins add.
  */
 
 
+/**
+ * A route `fetch` serving the files of a directory. The part of the url
+ * captured by the endpoint `*` (or the whole resource when there is none) is
+ * resolved inside `directoryUrl`; a url escaping it is answered with 403.
+ *
+ * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
+ * @param {Object} [options] - See {@link fetchFileSystem}.
+ * @returns {(request: Object, helpers: Object) => Promise<Object|null>}
+ *
+ * @example
+ * {
+ *   endpoint: "GET /assets/*",
+ *   fetch: createFileSystemFetch(import.meta.resolve("./assets/"), { etagEnabled: true }),
+ * }
+ */
 const createFileSystemFetch = (directoryUrl, options) => {
   return (request, helpers) => {
     return fetchFileSystem(request, helpers, directoryUrl, options);
   };
 };
 
+/**
+ * Serve a file of `directoryUrl` for `request`. Declines (`null`) any method
+ * other than GET and HEAD. File paths appear in the status text only when the
+ * server runs with `canExposeSensitiveData`.
+ *
+ * @param {Object} request - The request given to a route `fetch`.
+ * @param {Object} [helpers] - The helpers given to a route `fetch` (used for `timing` and `canExposeSensitiveData`).
+ * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
+ * @param {Object} [options]
+ * @param {string} [options.mainFileRelativeUrl] - File served for the directory itself and,
+ *   as a fallback, for extension-less urls that do not exist (client side routing).
+ * @param {boolean} [options.etagEnabled=false] - Send an `etag` (hash of the content) and
+ *   answer 304 to a matching `if-none-match`.
+ * @param {boolean} [options.etagMemory=true] - Remember etags per file (invalidated when the
+ *   file stats change) so that a file is hashed once.
+ * @param {number} [options.etagMemoryMaxSize=1000] - Files remembered at most.
+ * @param {boolean} [options.mtimeEnabled=false] - Send `last-modified` and answer 304 to
+ *   `if-modified-since` (second precision). Ignored when `etagEnabled` is set.
+ * @param {boolean} [options.compressionEnabled=false] - Compress textual files with brotli,
+ *   gzip or deflate according to `accept-encoding`.
+ * @param {number} [options.compressionSizeThreshold=1024] - Files smaller than that (bytes) are not compressed.
+ * @param {string|((request: Object) => string)} [options.cacheControl] - The `cache-control`
+ *   response header. Defaults to 30 days immutable for versioned urls (see `isVersioned`) and
+ *   `private,max-age=0,must-revalidate` otherwise. `"no-store"` disables etag and mtime.
+ * @param {(request: Object) => boolean} [options.isVersioned] - Tells if a url is versioned
+ *   (its content never changes). Defaults to "has a `v` search param".
+ * @param {boolean} [options.canReadDirectory=false] - Answer a directory with its listing
+ *   (json or html, see {@link fetchDirectory}) instead of 403.
+ * @param {() => string|URL|null} [options.ENOENTFallback] - Called when the file does not exist;
+ *   the file url it returns is served instead.
+ * @returns {Promise<Object|null>} Response properties, `null` when the method is not GET/HEAD.
+ */
 const fetchFileSystem = async (
   request,
   helpers,
@@ -8863,6 +8903,9 @@ const fetchFileSystem = async (
   if (!directoryUrlString.endsWith("/")) {
     directoryUrlString = `${directoryUrlString}/`;
   }
+  const canExposeSensitiveData = Boolean(
+    helpers && helpers.canExposeSensitiveData,
+  );
   let resource;
   if (request.params && "0" in request.params) {
     resource = request.params["0"];
@@ -8913,15 +8956,14 @@ const fetchFileSystem = async (
   const serveFile = async (fileUrl) => {
     try {
       const readStatTiming = helpers?.timing("file service>read file stat");
-      const fileStat = statSync(new URL(fileUrl));
+      const fileStat = await stat(new URL(fileUrl));
       readStatTiming?.end();
 
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
           return fetchDirectory(fileUrl, {
             headers: request.headers,
-            canReadDirectory,
-            rootDirectoryUrl: directoryUrl,
+            rootDirectoryUrl: directoryUrlString,
           });
         }
         if (mainFileRelativeUrl && fileUrl === directoryUrlString) {
@@ -9017,7 +9059,9 @@ const fetchFileSystem = async (
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
           },
         },
-        convertFileSystemErrorToResponseProperties(e) || {},
+        convertFileSystemErrorToResponseProperties(e, {
+          canExposeSensitiveData,
+        }) || {},
       );
     }
   };
@@ -9119,20 +9163,13 @@ const computeEtag = async ({
       return etagMemoryEntry.eTag;
     }
   }
-  const fileContentAsBuffer = await new Promise((resolve, reject) => {
-    readFile(new URL(fileUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
+  const fileContentAsBuffer = await readFile(new URL(fileUrl));
   const eTag = bufferToEtag(fileContentAsBuffer);
   if (etagMemory) {
     if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
-      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
-      ETAG_MEMORY_MAP.delete(firstKey);
+      // a Map iterates in insertion order: the first key is the oldest entry
+      const oldestKey = ETAG_MEMORY_MAP.keys().next().value;
+      ETAG_MEMORY_MAP.delete(oldestKey);
     }
     ETAG_MEMORY_MAP.set(fileUrl, { fileStat, eTag });
   }
@@ -9224,10 +9261,23 @@ const fileUrlToReadableStream = (fileUrl) => {
   });
 };
 
+// Brotli's default quality (11) is meant for compressing assets once, ahead
+// of time: it is an order of magnitude slower than gzip. For compression at
+// request time, quality 4 costs about as much cpu as gzip while still
+// compressing better.
+const BROTLI_QUALITY_FOR_ON_THE_FLY_COMPRESSION = 4;
+
 const availableCompressionFormats = {
   br: async (fileReadableStream) => {
-    const { createBrotliCompress } = await import("node:zlib");
-    return fileReadableStream.pipe(createBrotliCompress());
+    const { constants, createBrotliCompress } = await import("node:zlib");
+    return fileReadableStream.pipe(
+      createBrotliCompress({
+        params: {
+          [constants.BROTLI_PARAM_QUALITY]:
+            BROTLI_QUALITY_FOR_ON_THE_FLY_COMPRESSION,
+        },
+      }),
+    );
   },
   deflate: async (fileReadableStream) => {
     const { createDeflate } = await import("node:zlib");
@@ -9286,6 +9336,11 @@ const defaultIsVersioned = (request) => {
   return new URL(request.url).searchParams.has("v");
 };
 
+/**
+ * Server plugin logging a warning when a response does not honor what the
+ * request accepts (`accept`, `accept-language`, `accept-encoding`). A
+ * development aid: it changes nothing in the response.
+ */
 const serverPluginResponseAcceptanceCheck = () => {
   return {
     name: "jsenv:response_acceptance_check",
@@ -9327,9 +9382,9 @@ ${requestAcceptLanguageHeader}`);
   const requestAcceptEncodingHeader = request.headers["accept-encoding"];
   const responseContentEncodingHeader = response.headers["content-encoding"];
   if (
-    requestAcceptLanguageHeader &&
-    responseContentLanguageHeader &&
-    !pickContentEncoding(request, [responseContentLanguageHeader])
+    requestAcceptEncodingHeader &&
+    responseContentEncodingHeader &&
+    !pickContentEncoding(request, [responseContentEncodingHeader])
   ) {
     warn(`response encoding is not in the request accepted encoding.
 --- response content-encoding header ---
@@ -9339,6 +9394,14 @@ ${requestAcceptEncodingHeader}`);
   }
 };
 
+/**
+ * Server plugin rewriting request resources before routing, from url
+ * patterns to their replacement: `{ "/old/*": "/new/*", "/index": "/" }`
+ * (patterns as in @jsenv/url-meta). The search params of the request are
+ * kept unless the replacement has its own.
+ *
+ * @param {Object<string, string>} resourceAliases
+ */
 const serverPluginRequestAliases = (resourceAliases) => {
   const aliases = {};
   Object.keys(resourceAliases).forEach((key) => {

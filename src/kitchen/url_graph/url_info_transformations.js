@@ -199,7 +199,6 @@ export const createUrlInfoTransformer = ({
       contentAst, // undefined most of the time
       contentEtag, // in practice always undefined
       contentLength,
-      sourcemap,
       sourcemapIsWrong,
       contentInjections,
     } = transformations;
@@ -226,11 +225,14 @@ export const createUrlInfoTransformer = ({
         contentLength,
       });
     }
-    if (
-      sourcemap &&
-      mayHaveSourcemap(urlInfo) &&
-      shouldHandleSourcemap(urlInfo)
-    ) {
+    // "sourcemap" is read last, and only when it will be used: a plugin can
+    // hand it back as a getter that generates the map on first read, so that
+    // nothing is generated for a kitchen that throws sourcemaps away
+    const sourcemap =
+      mayHaveSourcemap(urlInfo) && shouldHandleSourcemap(urlInfo)
+        ? transformations.sourcemap
+        : null;
+    if (sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(

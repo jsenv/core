@@ -38,10 +38,7 @@ import {
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
-import {
-  startMonitoringCpuUsage,
-  startMonitoringMemoryUsage,
-} from "@jsenv/os-metrics";
+import { startMonitoringMemoryUsage } from "@jsenv/os-metrics";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -395,13 +392,12 @@ entryPoints: {
     });
   }
 
-  const cpuMonitoring = startMonitoringCpuUsage();
-  operation.addEndCallback(cpuMonitoring.stop);
-  const [processCpuUsageMonitoring] = cpuMonitoring;
+  // cpu is not sampled: cooking, rollup and terser hold the event loop for
+  // seconds at a time, a sampler only runs in the gaps and would report the
+  // idle time. What the build cost is process.cpuUsage() over its duration.
   const memoryMonitoring = startMonitoringMemoryUsage();
   const [processMemoryUsageMonitoring] = memoryMonitoring;
   const interval = setInterval(() => {
-    processCpuUsageMonitoring.measure();
     processMemoryUsageMonitoring.measure();
   }, 500).unref();
   operation.addEndCallback(() => {
@@ -471,19 +467,24 @@ entryPoints: {
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = ({ duration, buildFileContents }) => {
+  const renderBuildEndLog = ({
+    duration,
+    buildFileContents,
+    cpuUsage,
+    phaseTimings,
+  }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
 
-    processCpuUsageMonitoring.end();
     processMemoryUsageMonitoring.end();
 
     return renderBuildDoneLog({
       entryPointArray,
       duration,
       buildFileContents,
-      processCpuUsage: processCpuUsageMonitoring.info,
+      cpuUsage,
+      phaseTimings,
       processMemoryUsage: processMemoryUsageMonitoring.info,
     });
   };
@@ -558,13 +559,25 @@ entryPoints: {
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: ({ buildFileContents, duration }) => {
+        onBuildEnd: ({
+          buildFileContents,
+          duration,
+          cpuUsage,
+          phaseTimings,
+        }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog({ duration, buildFileContents }));
+          logger.info(
+            renderBuildEndLog({
+              duration,
+              buildFileContents,
+              cpuUsage,
+              phaseTimings,
+            }),
+          );
         },
       };
     };
@@ -591,8 +604,20 @@ entryPoints: {
             );
           };
         },
-        onBuildEnd: ({ buildFileContents, duration }) => {
-          logger.info(renderBuildEndLog({ duration, buildFileContents }));
+        onBuildEnd: ({
+          buildFileContents,
+          duration,
+          cpuUsage,
+          phaseTimings,
+        }) => {
+          logger.info(
+            renderBuildEndLog({
+              duration,
+              buildFileContents,
+              cpuUsage,
+              phaseTimings,
+            }),
+          );
         },
       };
     };
@@ -642,6 +667,7 @@ entryPoints: {
 
   const runBuild = async ({ signal }) => {
     const startDate = Date.now();
+    const cpuUsageAtStart = process.cpuUsage();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -750,6 +776,7 @@ entryPoints: {
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
             entryBuildInfo.buildSideEffectFiles = result.buildSideEffectFiles;
+            entryBuildInfo.phaseTimings = result.phaseTimings;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
@@ -854,11 +881,19 @@ entryPoints: {
         }
       }
     }
+    // entry points are built concurrently, interleaved on the same thread:
+    // their phases overlap and only a single one can be told apart
+    const phaseTimings =
+      entryBuildInfoMap.size === 1
+        ? entryBuildInfoMap.values().next().value.phaseTimings
+        : null;
     onBuildEnd({
       buildFileContents,
       buildInlineContents,
       buildManifest,
       duration: Date.now() - startDate,
+      cpuUsage: process.cpuUsage(cpuUsageAtStart),
+      phaseTimings,
     });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
@@ -1222,6 +1257,14 @@ const prepareEntryPointBuild = async (
   return {
     entryReference,
     buildEntryPoint: async ({ getOtherEntryBuildInfo }) => {
+      const phaseTimings = {};
+      let phaseStartMs = Date.now();
+      const endPhase = (name) => {
+        const nowMs = Date.now();
+        phaseTimings[name] = nowMs - phaseStartMs;
+        phaseStartMs = nowMs;
+      };
+
       craft: {
         _getOtherEntryBuildInfo = getOtherEntryBuildInfo;
         if (outDirectoryUrl) {
@@ -1229,6 +1272,7 @@ const prepareEntryPointBuild = async (
         }
         await rawRootUrlInfo.cookDependencies({ operation: buildOperation });
       }
+      endPhase("craft");
 
       const finalKitchen = createKitchen({
         name: "shape",
@@ -1443,6 +1487,8 @@ const prepareEntryPointBuild = async (
         }
       }
 
+      endPhase("bundle");
+
       shape: {
         finalKitchen.context.buildStep = "shape";
         if (outDirectoryUrl) {
@@ -1461,6 +1507,8 @@ const prepareEntryPointBuild = async (
           operation: buildOperation,
         });
       }
+
+      endPhase("shape");
 
       const buildSideEffectFiles = [];
       refine: {
@@ -1569,6 +1617,8 @@ const prepareEntryPointBuild = async (
           }
         }
       }
+      endPhase("refine");
+
       const {
         buildFileContents,
         buildFileVersions,
@@ -1588,6 +1638,7 @@ const prepareEntryPointBuild = async (
         buildInlineContents,
         buildManifest,
         buildSideEffectFiles,
+        phaseTimings,
       };
     },
   };

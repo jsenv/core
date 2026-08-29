@@ -20,7 +20,7 @@ run npm install, the page will reload once "not_found" is installed
 "jsenv:node_esm_resolution"
   at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:21:26)
   at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:53:14)
-  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:401:13)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:407:13)
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)

@@ -4,7 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
-import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
@@ -910,10 +910,9 @@ const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
-  const sourcemap = composeTwoSourcemaps(
-    jsUrlInfo.sourcemap,
-    magicResult.sourcemap,
-  );
+  const sourcemap = jsUrlInfo.context.sourcemapsEnabled
+    ? composeTwoSourcemaps(jsUrlInfo.sourcemap, magicResult.sourcemap)
+    : null;
   jsUrlInfo.mutateContent({
     content: magicResult.content,
     sourcemap,
@@ -931,6 +930,7 @@ const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
     input: jsUrlInfo.content,
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
+    options: { sourceMaps: jsUrlInfo.context.sourcemapsEnabled },
   });
   jsUrlInfo.mutateContent({
     content: code,
@@ -2920,7 +2920,6 @@ const createUrlInfoTransformer = ({
       contentAst, // undefined most of the time
       contentEtag, // in practice always undefined
       contentLength,
-      sourcemap,
       sourcemapIsWrong,
       contentInjections,
     } = transformations;
@@ -2947,11 +2946,14 @@ const createUrlInfoTransformer = ({
         contentLength,
       });
     }
-    if (
-      sourcemap &&
-      mayHaveSourcemap(urlInfo) &&
-      shouldHandleSourcemap(urlInfo)
-    ) {
+    // "sourcemap" is read last, and only when it will be used: a plugin can
+    // hand it back as a getter that generates the map on first read, so that
+    // nothing is generated for a kitchen that throws sourcemaps away
+    const sourcemap =
+      mayHaveSourcemap(urlInfo) && shouldHandleSourcemap(urlInfo)
+        ? transformations.sourcemap
+        : null;
+    if (sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
@@ -2984,6 +2986,14 @@ const createUrlInfoTransformer = ({
     writeInsideOutDirectory(urlInfo);
   };
 
+  // Written synchronously on purpose, and measured: async is the tempting
+  // choice, but here it loses. A cold load cooks hundreds of files; their
+  // synchronous writes block the event loop ~160ms in total, while
+  // asynchronous writes queue in the threadpool behind tens of MB of content
+  // and sourcemaps, and a response that waits for its own write then waits
+  // ~36ms on average (18s summed over 500 responses). Not waiting is not an
+  // option either: the last write lands after the test that cooked it has
+  // ended, and the side-effect snapshots lose it.
   const writeInsideOutDirectory = (urlInfo) => {
     // writing result inside ".jsenv" directory (debug purposes)
     if (!outDirectoryUrl) {
@@ -3303,6 +3313,12 @@ const createKitchen = ({
       INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
+      // a plugin producing a sourcemap can skip the work when it would be
+      // thrown away (see shouldHandleSourcemap in url_info_transformations.js)
+      sourcemapsEnabled:
+        sourcemaps === "inline" ||
+        sourcemaps === "file" ||
+        sourcemaps === "programmatic",
       outDirectoryUrl,
     },
     resolve: (specifier, importer = rootDirectoryUrl) => {
@@ -5772,8 +5788,7 @@ const parseAndTransformJsReferences = async (
   for (const sequentialAction of sequentialActions) {
     await sequentialAction();
   }
-  const { content, sourcemap } = magicSource.toContentAndSourcemap();
-  return { content, sourcemap };
+  return magicSource.toContentAndSourcemap();
 };
 
 const jsenvPluginReferenceExpectedTypes = () => {
@@ -8327,6 +8342,8 @@ const jsenvPluginImportMetaCss = () => {
             inputIsJsModule: true,
             inputUrl: urlInfo.originalUrl,
             outputUrl: urlInfo.generatedUrl,
+            // the map would be dropped: the content sent back carries none
+            options: { sourceMaps: false },
           });
           if (code === urlInfo.content) {
             // all assignments were already in array form (pre-built file) — nothing to do
@@ -10165,11 +10182,12 @@ const getCorePlugins = ({
   ];
 };
 
-const humanizeProcessCpuUsage = (ratio) => {
-  const percentageAsNumber = ratio * 100;
-  const percentageAsNumberRounded = Math.round(percentageAsNumber);
-  const percentage = `${percentageAsNumberRounded}%`;
-  return percentage;
+// a phase can be a few milliseconds long (refine, mostly): shown as such
+const humanizePhaseDuration = (ms) => {
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  return humanizeDuration(ms, { short: true });
 };
 const humanizeProcessMemoryUsage = (value) => {
   return humanizeMemory(value, { short: true, decimals: 0 });
@@ -10178,7 +10196,8 @@ const renderBuildDoneLog = ({
   entryPointArray,
   duration,
   buildFileContents,
-  processCpuUsage,
+  cpuUsage,
+  phaseTimings,
   processMemoryUsage,
 }) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
@@ -10193,15 +10212,10 @@ const renderBuildDoneLog = ({
     title = `build done (${entryPointCount} entry points)`;
   }
 
-  // cpu usage
-  let cpuUsageLine = "cpu: ";
-  cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
-  cpuUsageLine += renderDetails({
-    med: humanizeProcessCpuUsage(processCpuUsage.median),
-    min: humanizeProcessCpuUsage(processCpuUsage.min),
-    max: humanizeProcessCpuUsage(processCpuUsage.max),
-  });
-  lines.push(cpuUsageLine);
+  // cpu: the process cpu time over the build duration, 100% being one core
+  // busy the whole time (more when a native module works on other threads)
+  const cpuMs = (cpuUsage.user + cpuUsage.system) / 1000;
+  lines.push(`cpu: ${Math.round((cpuMs / duration) * 100)}%`);
 
   // memory usage
   let memoryUsageLine = "memory: ";
@@ -10216,6 +10230,16 @@ const renderBuildDoneLog = ({
   // duration
   let durationLine = `duration: `;
   durationLine += humanizeDuration(duration, { short: true });
+  if (phaseTimings) {
+    durationLine += renderDetails(
+      Object.fromEntries(
+        Object.keys(phaseTimings).map((phaseName) => [
+          phaseName,
+          humanizePhaseDuration(phaseTimings[phaseName]),
+        ]),
+      ),
+    );
+  }
   lines.push(durationLine);
 
   // content
@@ -10406,6 +10430,8 @@ const createBuildContentReport = (buildFileContents) => {
 };
 
 const determineCategory = (buildRelativeUrl) => {
+  // a versioned url ("main.js?v=abc") is categorized by its file
+  buildRelativeUrl = buildRelativeUrl.replace(/[?#].*$/, "");
   if (buildRelativeUrl.endsWith(".map")) {
     return "sourcemap";
   }
@@ -11332,7 +11358,7 @@ const createBuildSpecifierManager = ({
           }
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
-            const { content, sourcemap } = placeholderAPI.replaceAll(
+            const replaceResult = placeholderAPI.replaceAll(
               contentBeforeReplace,
               (placeholder) => {
                 const reference = placeholderToReferenceMap.get(placeholder);
@@ -11340,7 +11366,7 @@ const createBuildSpecifierManager = ({
                 return value;
               },
             );
-            urlInfo.mutateContent({ content, sourcemap });
+            urlInfo.mutateContent(replaceResult);
           }
         },
       );
@@ -12581,13 +12607,12 @@ entryPoints: {
     });
   }
 
-  const cpuMonitoring = startMonitoringCpuUsage();
-  operation.addEndCallback(cpuMonitoring.stop);
-  const [processCpuUsageMonitoring] = cpuMonitoring;
+  // cpu is not sampled: cooking, rollup and terser hold the event loop for
+  // seconds at a time, a sampler only runs in the gaps and would report the
+  // idle time. What the build cost is process.cpuUsage() over its duration.
   const memoryMonitoring = startMonitoringMemoryUsage();
   const [processMemoryUsageMonitoring] = memoryMonitoring;
   const interval = setInterval(() => {
-    processCpuUsageMonitoring.measure();
     processMemoryUsageMonitoring.measure();
   }, 500).unref();
   operation.addEndCallback(() => {
@@ -12657,19 +12682,24 @@ entryPoints: {
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = ({ duration, buildFileContents }) => {
+  const renderBuildEndLog = ({
+    duration,
+    buildFileContents,
+    cpuUsage,
+    phaseTimings,
+  }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
 
-    processCpuUsageMonitoring.end();
     processMemoryUsageMonitoring.end();
 
     return renderBuildDoneLog({
       entryPointArray,
       duration,
       buildFileContents,
-      processCpuUsage: processCpuUsageMonitoring.info,
+      cpuUsage,
+      phaseTimings,
       processMemoryUsage: processMemoryUsageMonitoring.info,
     });
   };
@@ -12744,13 +12774,25 @@ entryPoints: {
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: ({ buildFileContents, duration }) => {
+        onBuildEnd: ({
+          buildFileContents,
+          duration,
+          cpuUsage,
+          phaseTimings,
+        }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog({ duration, buildFileContents }));
+          logger.info(
+            renderBuildEndLog({
+              duration,
+              buildFileContents,
+              cpuUsage,
+              phaseTimings,
+            }),
+          );
         },
       };
     };
@@ -12777,8 +12819,20 @@ entryPoints: {
             );
           };
         },
-        onBuildEnd: ({ buildFileContents, duration }) => {
-          logger.info(renderBuildEndLog({ duration, buildFileContents }));
+        onBuildEnd: ({
+          buildFileContents,
+          duration,
+          cpuUsage,
+          phaseTimings,
+        }) => {
+          logger.info(
+            renderBuildEndLog({
+              duration,
+              buildFileContents,
+              cpuUsage,
+              phaseTimings,
+            }),
+          );
         },
       };
     };
@@ -12827,6 +12881,7 @@ entryPoints: {
 
   const runBuild = async ({ signal }) => {
     const startDate = Date.now();
+    const cpuUsageAtStart = process.cpuUsage();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -12935,6 +12990,7 @@ entryPoints: {
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
             entryBuildInfo.buildSideEffectFiles = result.buildSideEffectFiles;
+            entryBuildInfo.phaseTimings = result.phaseTimings;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
@@ -13039,11 +13095,19 @@ entryPoints: {
         }
       }
     }
+    // entry points are built concurrently, interleaved on the same thread:
+    // their phases overlap and only a single one can be told apart
+    const phaseTimings =
+      entryBuildInfoMap.size === 1
+        ? entryBuildInfoMap.values().next().value.phaseTimings
+        : null;
     onBuildEnd({
       buildFileContents,
       buildInlineContents,
       buildManifest,
       duration: Date.now() - startDate,
+      cpuUsage: process.cpuUsage(cpuUsageAtStart),
+      phaseTimings,
     });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
@@ -13407,6 +13471,14 @@ const prepareEntryPointBuild = async (
   return {
     entryReference,
     buildEntryPoint: async ({ getOtherEntryBuildInfo }) => {
+      const phaseTimings = {};
+      let phaseStartMs = Date.now();
+      const endPhase = (name) => {
+        const nowMs = Date.now();
+        phaseTimings[name] = nowMs - phaseStartMs;
+        phaseStartMs = nowMs;
+      };
+
       {
         _getOtherEntryBuildInfo = getOtherEntryBuildInfo;
         if (outDirectoryUrl) {
@@ -13414,6 +13486,7 @@ const prepareEntryPointBuild = async (
         }
         await rawRootUrlInfo.cookDependencies({ operation: buildOperation });
       }
+      endPhase("craft");
 
       const finalKitchen = createKitchen({
         name: "shape",
@@ -13626,6 +13699,8 @@ const prepareEntryPointBuild = async (
         }
       }
 
+      endPhase("bundle");
+
       {
         finalKitchen.context.buildStep = "shape";
         if (outDirectoryUrl) {
@@ -13644,6 +13719,8 @@ const prepareEntryPointBuild = async (
           operation: buildOperation,
         });
       }
+
+      endPhase("shape");
 
       const buildSideEffectFiles = [];
       {
@@ -13752,6 +13829,8 @@ const prepareEntryPointBuild = async (
           }
         }
       }
+      endPhase("refine");
+
       const {
         buildFileContents,
         buildFileVersions,
@@ -13771,6 +13850,7 @@ const prepareEntryPointBuild = async (
         buildInlineContents,
         buildManifest,
         buildSideEffectFiles,
+        phaseTimings,
       };
     },
   };

@@ -3,8 +3,8 @@ import { extname } from "node:path";
 import { readFileSync as readFileSync$1, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { cpus, totalmem, freemem } from "node:os";
-import { cpuUsage, memoryUsage } from "node:process";
+import { totalmem, freemem } from "node:os";
+import { memoryUsage } from "node:process";
 import { stripVTControlCharacters } from "node:util";
 
 const createCallbackListNotifiedOnce = () => {
@@ -6548,174 +6548,6 @@ const getExtensionsToTry = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
-const startMeasuringTotalCpuUsage = () => {
-  let previousCpuArray = cpus();
-  let previousMs = Date.now();
-  let previousCpuUsage = cpuUsage();
-
-  const overall = {
-    inactive: 100,
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const thisProcess = {
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const details = previousCpuArray.map(() => {
-    return {
-      inactive: 100,
-      active: 0,
-      system: 0,
-      user: 0,
-    };
-  });
-
-  const samples = [];
-  const interval = setInterval(() => {
-    let cpuArray = cpus();
-    const ms = Date.now();
-    const ellapsedMs = ms - previousMs;
-    const cpuUsageSampleArray = [];
-    let overallSystemMs = 0;
-    let overallUserMs = 0;
-    let overallInactiveMs = 0;
-    let overallActiveMs = 0;
-    let overallMsEllapsed = 0;
-    let index = 0;
-    for (const cpu of cpuArray) {
-      const previousCpuTimes = previousCpuArray[index].times;
-      const cpuTimes = cpu.times;
-      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
-      const userMs = cpuTimes.user - previousCpuTimes.user;
-      const activeMs = systemMs + userMs;
-      const inactiveMs = ellapsedMs - activeMs;
-      const cpuUsageSample = {
-        inactive: inactiveMs / ellapsedMs,
-        active: activeMs / ellapsedMs,
-        system: systemMs / ellapsedMs,
-        user: userMs / ellapsedMs,
-      };
-      cpuUsageSampleArray.push(cpuUsageSample);
-
-      overallSystemMs += systemMs;
-      overallUserMs += userMs;
-      overallInactiveMs += inactiveMs;
-      overallActiveMs += activeMs;
-      overallMsEllapsed += ellapsedMs;
-      index++;
-    }
-    const overallUsageSample = {
-      inactive: overallInactiveMs / overallMsEllapsed,
-      active: overallActiveMs / overallMsEllapsed,
-      system: overallSystemMs / overallMsEllapsed,
-      user: overallUserMs / overallMsEllapsed,
-    };
-    previousCpuArray = cpuArray;
-    previousMs = ms;
-
-    const processCpuUsage = cpuUsage();
-    const thisProcessSystemMs = Math.round(
-      (processCpuUsage.system - previousCpuUsage.system) / 1000,
-    );
-    const thisProcessUserMs = Math.round(
-      (processCpuUsage.user - previousCpuUsage.user) / 1000,
-    );
-    previousCpuUsage = processCpuUsage;
-
-    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
-    const thisProcessSample = {
-      inactive: thisProcessInactiveMs / overallMsEllapsed,
-      active: thisProcessActiveMs / overallMsEllapsed,
-      system: thisProcessSystemMs / overallMsEllapsed,
-      user: thisProcessUserMs / overallMsEllapsed,
-    };
-    samples.push({
-      cpuUsageSampleArray,
-      overallUsageSample,
-      thisProcessSample,
-    });
-    if (samples.length === 10) {
-      {
-        let index = 0;
-        for (const detail of details) {
-          let systemSum = 0;
-          let userSum = 0;
-          let inactiveSum = 0;
-          let activeSum = 0;
-          for (const sample of samples) {
-            const { cpuUsageSampleArray } = sample;
-            const cpuUsageSample = cpuUsageSampleArray[index];
-            inactiveSum += cpuUsageSample.inactive;
-            activeSum += cpuUsageSample.active;
-            systemSum += cpuUsageSample.system;
-            userSum += cpuUsageSample.user;
-          }
-          Object.assign(detail, {
-            inactive: inactiveSum / samples.length,
-            active: activeSum / samples.length,
-            system: systemSum / samples.length,
-            user: userSum / samples.length,
-          });
-          index++;
-        }
-      }
-      {
-        let overallSystemSum = 0;
-        let overallUserSum = 0;
-        let overallInactiveSum = 0;
-        let overallActiveSum = 0;
-        for (const sample of samples) {
-          const { overallUsageSample } = sample;
-          overallSystemSum += overallUsageSample.system;
-          overallUserSum += overallUsageSample.user;
-          overallInactiveSum += overallUsageSample.inactive;
-          overallActiveSum += overallUsageSample.active;
-        }
-        Object.assign(overall, {
-          inactive: overallInactiveSum / samples.length,
-          active: overallActiveSum / samples.length,
-          system: overallSystemSum / samples.length,
-          user: overallUserSum / samples.length,
-        });
-      }
-      {
-        let thisProcessSystemSum = 0;
-        let thisProcessUserSum = 0;
-        let thisProcessInactiveSum = 0;
-        let thisProcessActiveSum = 0;
-        for (const sample of samples) {
-          const { thisProcessSample } = sample;
-          thisProcessSystemSum += thisProcessSample.system;
-          thisProcessUserSum += thisProcessSample.user;
-          thisProcessInactiveSum += thisProcessSample.inactive;
-          thisProcessActiveSum += thisProcessSample.active;
-        }
-        Object.assign(thisProcess, {
-          inactive: thisProcessInactiveSum / samples.length,
-          active: thisProcessActiveSum / samples.length,
-          system: thisProcessSystemSum / samples.length,
-          user: thisProcessUserSum / samples.length,
-        });
-      }
-      samples.length = 0;
-    }
-  }, 15);
-  interval.unref();
-
-  return {
-    overall,
-    thisProcess,
-    details,
-    stop: () => {
-      clearInterval(interval);
-    },
-  };
-};
-
 const startMonitoringMetric = (measure) => {
   const metrics = [];
   const takeMeasure = () => {
@@ -6759,22 +6591,6 @@ const medianFromSortedArray = (array) => {
   const rightMiddleNumber = array[rightMiddleNumberIndex];
   const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
   return medianNumber;
-};
-
-// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
-
-
-const startMonitoringCpuUsage = () => {
-  const cpuUsage = startMeasuringTotalCpuUsage();
-  const processCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.thisProcess.active;
-  });
-  const osCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.overall.active;
-  });
-  const result = [processCpuUsageMonitoring, osCpuUsageMonitoring];
-  result.stop = cpuUsage.stop;
-  return result;
 };
 
 const startMonitoringMemoryUsage = () => {
@@ -11231,4 +11047,4 @@ const escapeRegexpSpecialChars = (string) => {
   });
 };
 
-export { ANSI, Abort, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, UNICODE, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, bufferToEtag, clearDirectorySync, collectFiles, compareFileUrls, comparePathnames, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createDynamicLog, createLogger, createLookupPackageDirectory, createTaskLog, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, escapeRegexpSpecialChars, generateContentFrame, getCallerPosition, getExtensionsToTry, humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, nodeDefaultRuntimeCompat, normalizeImportMap, normalizeUrl, raceProcessTeardownEvents, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite, updateJsonFileSync, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, Abort, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, UNICODE, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, bufferToEtag, clearDirectorySync, collectFiles, compareFileUrls, comparePathnames, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createDynamicLog, createLogger, createLookupPackageDirectory, createTaskLog, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, escapeRegexpSpecialChars, generateContentFrame, getCallerPosition, getExtensionsToTry, humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, nodeDefaultRuntimeCompat, normalizeImportMap, normalizeUrl, raceProcessTeardownEvents, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, startMonitoringMemoryUsage, stringifyUrlSite, updateJsonFileSync, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

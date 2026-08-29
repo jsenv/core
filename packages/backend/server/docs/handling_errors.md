@@ -52,7 +52,7 @@ await startServer({
 });
 ```
 
-An error exposing an `asResponse()` method is answered with what it returns: a way for a domain error to carry its own status.
+An error exposing an `asResponse()` method is answered with what it returns, with or without an error plugin: a way for a domain error to carry its own status (a request body too large is answered 413 that way).
 
 A route can also decide not to throw:
 

@@ -43,6 +43,8 @@ export const fetchUrl = async (
         resource: new URL(url).pathname,
       },
       {
+        // reading the local filesystem: the path belongs in the status text
+        canExposeSensitiveData: true,
         timing: () => {
           return { end: () => {} };
         },

@@ -112,6 +112,7 @@ const jsenvPluginJsxAndRefresh = ({
           inputIsJsModule: true,
           inputUrl: urlInfo.url,
           outputUrl: urlInfo.generatedUrl,
+          options: { sourceMaps: urlInfo.context.sourcemapsEnabled },
         });
         const magicSource = createMagicSource(code);
         if (jsxEnabled) {

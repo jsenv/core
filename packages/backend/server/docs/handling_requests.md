@@ -71,7 +71,7 @@ Reading the body, each returns a promise:
 - `request.queryString()` for `application/x-www-form-urlencoded`
 - `request.body` is an observable of chunks, for streaming or for reading with a size limit
 
-Nothing limits the size of what `json()`, `text()` and `buffer()` read: read `request.body` yourself when the client is not trusted (see [security](./security.md)).
+`json()`, `text()`, `buffer()` and `queryString()` refuse a body bigger than `requestBodyMaxSize` (1 MiB by default) with a 413 response; a route accepting more passes its own limit: `request.json({ maxSize: 50 * 1024 * 1024 })`. `request.body` is never limited (see [security](./security.md)).
 
 A route reading its body declares `acceptedMediaTypes`: an unsupported `content-type` is refused with 415 before `fetch` runs.
 

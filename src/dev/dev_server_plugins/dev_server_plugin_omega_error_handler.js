@@ -15,7 +15,10 @@ export const devServerPluginOmegaErrorHandler = () => {
               status: 403,
             };
           }
-          return convertFileSystemErrorToResponseProperties(error);
+          // the dev server runs with canExposeSensitiveData: file paths are welcome
+          return convertFileSystemErrorToResponseProperties(error, {
+            canExposeSensitiveData: true,
+          });
         };
         const response = getResponseForError();
         if (!response) {
