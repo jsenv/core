@@ -1,6 +1,10 @@
-import { computed, effect, signal } from "@preact/signals";
+import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { createAction } from "../../action/actions.js";
+import {
+  OfflineError,
+  peekNetworkPolicyReason,
+} from "../../action/network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
@@ -166,9 +170,54 @@ export const resource = (
     store,
     declarationSite,
   });
+  // The row a GET's params designate, when the store already holds it: the
+  // value under idKey may be the id or any unique key (a route opening a user
+  // by id or by slug names both `id`), and a unique key may be given under its
+  // own name. Answers a GET under a network policy (see applyNetworkPolicy).
+  const selectByAnyKey = (value) => {
+    const item = store.select(value);
+    if (item) {
+      return item;
+    }
+    for (const uniqueKey of uniqueKeys) {
+      const itemByUniqueKey = store.select(uniqueKey, value);
+      if (itemByUniqueKey) {
+        return itemByUniqueKey;
+      }
+    }
+    return null;
+  };
+  const findItemInStore = (params) => {
+    return untracked(() => {
+      if (primitiveCanBeId(params)) {
+        return selectByAnyKey(params);
+      }
+      if (!isProps(params)) {
+        return null;
+      }
+      const idParam = params[idKey];
+      if (idParam !== undefined) {
+        const item = selectByAnyKey(idParam);
+        if (item) {
+          return item;
+        }
+      }
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyParam = params[uniqueKey];
+        if (uniqueKeyParam !== undefined) {
+          const item = store.select(uniqueKey, uniqueKeyParam);
+          if (item) {
+            return item;
+          }
+        }
+      }
+      return null;
+    });
+  };
   return createResource(name, {
     idKey,
     uniqueKeys,
+    findItemInStore,
     restCallbacks: {
       GET,
       GET_MANY,
@@ -196,6 +245,7 @@ const createResource = (
   {
     idKey,
     uniqueKeys = [],
+    findItemInStore,
     restCallbacks,
     store,
     addItemSetup,
@@ -285,6 +335,7 @@ const createResource = (
     return createResource(name, {
       idKey,
       uniqueKeys,
+      findItemInStore,
       restCallbacks,
       store,
       addItemSetup,
@@ -1116,7 +1167,7 @@ const createResource = (
       // (see resource_range_reader.js).
       stateFacade.GET_RANGE = createRangeReader(
         `${name}.GET_RANGE`,
-        restCallback,
+        applyNetworkPolicy(restCallback, { verb: "GET", isMany: true }),
         { store, params },
       );
       resourceLifecycleManager.registerRangeReader(
@@ -1129,7 +1180,12 @@ const createResource = (
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    let restAction = createRestAction(verb, restCallback, {
+    const restCallbackUnderPolicy = applyNetworkPolicy(restCallback, {
+      verb,
+      isMany,
+      findItemInStore,
+    });
+    let restAction = createRestAction(verb, restCallbackUnderPolicy, {
       isMany,
       onActionComplete,
       paramScope,
@@ -1257,6 +1313,32 @@ const createRestActionFactoryForRoot = (
   };
 
   return createActionForRoot;
+};
+
+// Under a network policy no callback is called (see network_policy.js). A GET
+// of a root resource answers with the row the store holds for its params —
+// handing the item back is an upsert without effect, so the action completes
+// with what it had and nothing is asked. A relationship GET has no row of its
+// own to answer with, and a write has nothing to answer: both settle with an
+// OfflineError carrying the policy's reason. A completed GET asked to rerun
+// never gets here (actions.js holds it).
+const applyNetworkPolicy = (
+  restCallback,
+  { verb, isMany, findItemInStore },
+) => {
+  return (params, context) => {
+    const reason = peekNetworkPolicyReason();
+    if (reason === null) {
+      return restCallback(params, context);
+    }
+    if (verb === "GET" && !isMany && findItemInStore) {
+      const item = findItemInStore(params);
+      if (item) {
+        return item;
+      }
+    }
+    throw new OfflineError(reason);
+  };
 };
 
 // Captures the "file:line:column" of the user code that invoked the public

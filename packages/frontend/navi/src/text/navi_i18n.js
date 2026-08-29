@@ -24,6 +24,7 @@ import { createI18n } from "./i18n.js";
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
  *   - `"constraint.*"` — every field validation message
+ *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
  *
  * Unit names get two derived keys, both optional: `<unit>__plural` and
  * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
@@ -410,6 +411,14 @@ naviI18n.addAll({
   "constraint.readonly.awaiting_change": {
     fr: "Cette action attend une modification.",
     en: "This action is waiting for a change.",
+  },
+  "constraint.readonly.network_policy": {
+    fr: "Hors ligne : ça ne peut pas partir.",
+    en: "Offline: this cannot be sent.",
+  },
+  "network_policy.offline": {
+    fr: "Hors ligne : rien n'a été demandé.",
+    en: "Offline: nothing was requested.",
   },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",

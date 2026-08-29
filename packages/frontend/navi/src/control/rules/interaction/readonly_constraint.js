@@ -1,3 +1,4 @@
+import { getNetworkPolicyReadOnlyMessage } from "@jsenv/navi/src/action/network_policy.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { MAX_LENGTH_CONSTRAINT } from "../validation/standard_constraints.js";
@@ -57,14 +58,20 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
 
 const readOnlyMessage = (field) => {
-  // Read-only for a reason the control named itself. Only one so far: a send
-  // button held back by the form above it, which holds nothing new (see
+  // Read-only for a reason the control named itself, read off the reason
+  // rather than off the surrounding state: a button read-only for its own
+  // reasons, inside a form that happens to be unchanged, is not waiting for
+  // anything.
+  const reason = field.controlHostProps["data-readonly-reason"];
+  // Held by the network policy: the write it asks for cannot leave (see
+  // network_policy.js), in the policy's own words.
+  if (reason === "network-policy") {
+    return getNetworkPolicyReadOnlyMessage();
+  }
+  // A send button held back by the form above it, which holds nothing new (see
   // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
   // button, it is the form still waiting for a change, so that is what it says.
-  // Read off the reason rather than off the form's state: a button read-only for
-  // its own reasons, inside a form that happens to be unchanged, is not waiting
-  // for anything.
-  if (field.controlHostProps["data-readonly-reason"] === "form-unchanged") {
+  if (reason === "form-unchanged") {
     return naviI18n("constraint.readonly.awaiting_change");
   }
   if (field.controlType === "button") {

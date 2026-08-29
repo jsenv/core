@@ -234,6 +234,13 @@ const css = /* css */ `
       var(--x-dialog-max-width)
     );
     max-width: var(--x-dialog-max-width);
+    /* The UA gives <dialog> height: fit-content. A percentage height inside
+       it (Box's expandY fallback, height: 100%) is meant to read as auto
+       against that indefinite size, and does — except in WebKit since
+       iOS 26.5, which resolves it to 0 and then wraps the sheet around a 0px
+       child: the dialog opens with no height at all. auto is the same size
+       (min/max-height still bound it) minus the keyword iOS trips on. */
+    height: auto;
     min-height: min(
       max(var(--anchor-height, 0px), var(--dialog-min-height, 0px)),
       var(--x-dialog-max-height)

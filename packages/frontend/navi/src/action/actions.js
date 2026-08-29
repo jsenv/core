@@ -22,6 +22,7 @@ import {
   markErrorAsDisplayedBy,
   reportErrorIfNobodyDisplaysIt,
 } from "./action_error_report.js";
+import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 /*
@@ -348,6 +349,19 @@ ${lines.join("\n")}`,
       const isPrerun = requestType === "prerun";
       const isRerun = requestType === "rerun";
 
+      if (
+        isRerun &&
+        action.runningState === COMPLETED &&
+        !willResetSet.has(action) &&
+        isRerunHeldByNetworkPolicy(action)
+      ) {
+        // A completed read is the answer under a network policy: rerunning it
+        // would only ask the network again (see network_policy.js).
+        action.debug(
+          `"${action}": rerun held by the network policy, stays completed`,
+        );
+        return;
+      }
       if (
         action.runningState === RUNNING ||
         action.runningState === COMPLETED
@@ -1414,7 +1428,7 @@ const createActionProxyFromSignal = (
     },
     replaceParams: null, // Will be set below
     toString: () => actionProxy.callSource,
-    meta: {},
+    meta: action.meta,
 
     paramsSignal: proxyParamsSignal,
     isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
@@ -1453,6 +1467,7 @@ const createActionProxyFromSignal = (
     actionProxy.value = currentAction.value;
     actionProxy.data = currentAction.data;
     actionProxy.completed = currentAction.completed;
+    actionProxy.meta = currentAction.meta;
   });
 
   proxy_private_props: {

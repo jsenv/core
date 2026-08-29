@@ -6,8 +6,8 @@ import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visua
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
-import { signal, computed, effect, batch, useComputed, untracked, useSignal } from "@preact/signals";
-import { isValidElement, createContext, render, h, Fragment, toChildArray, options, cloneElement } from "preact";
+import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
+import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
@@ -1574,6 +1574,1548 @@ const weakEffect = (values, callback) => {
   return dispose;
 };
 
+/**
+ * Interpolates a template string, replacing `[key]` placeholders with values.
+ *
+ * Usable on its own — no i18n instance required — whenever a sentence should
+ * stay readable as one string instead of being cut into JSX expressions or
+ * concatenations. `<Interpolate>` is the JSX form of this function, and
+ * `createI18n` runs every translation through it. See `docs/i18n.md`.
+ *
+ * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
+ * because it does not conflict with JSX syntax, JavaScript template literals,
+ * or common punctuation in translated strings.
+ *
+ * @param {string} template
+ *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
+ *   untouched, as is any template when `replacements` is missing.
+ * @param {object} [replacements]
+ *   Values keyed by placeholder name. A key can be:
+ *   - a direct name — `[name]` ← `{ name: "Alice" }`
+ *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
+ *     `"item.label"` key wins over the path)
+ *
+ *   A value that is a function is called at that point, so an expensive or
+ *   lazily-known replacement is only computed when the placeholder is actually
+ *   present in this language's template.
+ *
+ *   A placeholder with no matching value is left in the output as-is
+ *   (`"[name]"`), making the gap visible rather than silently empty.
+ * @param {object} [options]
+ * @param {boolean} [options.allowJsx=false]
+ *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
+ *   value warns and is coerced to a string.
+ * @returns {string|import("preact").VNode}
+ *   A plain string when every replacement is a string, a Preact fragment when
+ *   at least one VNode was interpolated with `allowJsx`.
+ */
+const interpolateText = (
+  template,
+  replacements,
+  { allowJsx = false } = {},
+) => {
+  if (!replacements || typeof template !== "string") {
+    return template;
+  }
+  const parts = template.split(/(\[[^\]]+\])/);
+  let hasVnode = false;
+  const resolved = [];
+  for (const part of parts) {
+    const match = part.match(/^\[([^\]]+)\]$/);
+    if (!match) {
+      resolved.push(part);
+      continue;
+    }
+    const key = match[1];
+    let value = resolveValue(replacements, key, part);
+    if (typeof value === "function") {
+      value = value();
+    }
+    if (isValidElement(value)) {
+      if (allowJsx) {
+        hasVnode = true;
+      } else {
+        console.warn(
+          `interpolateText: VNode passed for placeholder [${match[1]}] but allowJsx is false — value coerced to string`,
+        );
+      }
+    }
+    resolved.push(value);
+  }
+  if (!hasVnode) {
+    return resolved.join("");
+  }
+  // h(Fragment) instead of JSX (<>{resolved}</>) to keep this file as .js
+  return h(Fragment, null, resolved);
+};
+
+// Resolves a placeholder key against the replacements object.
+// 1. Direct lookup: replacements["item.name"]
+// 2. Dot-path lookup: replacements["item"]["name"]
+// 3. Fallback: the original placeholder string (e.g. "[item.name]")
+const resolveValue = (replacements, key, fallback) => {
+  if (key in replacements) {
+    return replacements[key];
+  }
+  const dotIndex = key.indexOf(".");
+  if (dotIndex !== -1) {
+    const head = key.slice(0, dotIndex);
+    const tail = key.slice(dotIndex + 1);
+    const parent = replacements[head];
+    if (parent && typeof parent === "object") {
+      const nested = parent[tail];
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+  return fallback;
+};
+
+const DEFAULT_LANG = "en";
+
+/**
+ * The browser's own language preferences, most preferred first — read from
+ * `navigator.languages` (falling back to the single `navigator.language`,
+ * then to DEFAULT_LANG when neither is available, e.g. during SSR). Kept as
+ * its own signal, independent from what this app actually supports — see
+ * `supportedLanguagesSignal` below for the allow-list that filters it, and
+ * `languagesSignal` for the final, ready-to-use combination of the two (plus
+ * `preferredLanguageSignal`).
+ */
+const getRuntimeLanguages = () => {
+  if (typeof window === "undefined") {
+    return [DEFAULT_LANG];
+  }
+  const { navigator } = window;
+  if (typeof navigator === "undefined") {
+    return [DEFAULT_LANG];
+  }
+  const { languages } = navigator;
+  if (Array.isArray(languages) && languages.length > 0) {
+    return languages;
+  }
+  const { language } = navigator;
+  if (typeof language === "string") {
+    return [language];
+  }
+  return [DEFAULT_LANG];
+};
+
+const runtimeLanguagesSignal = signal(getRuntimeLanguages());
+
+if (typeof window !== "undefined") {
+  window.addEventListener("languagechange", () => {
+    runtimeLanguagesSignal.value = getRuntimeLanguages();
+  });
+}
+
+/**
+ * The languages this app actually offers, e.g. `["en", "fr"]` — an allow-list
+ * `languagesSignal` below filters everything else against (runtime languages the
+ * browser reports, and `preferredLanguageSignal`'s own override), so a site
+ * that only supports English/French never ends up resolving to German just
+ * because that happens to be the browser's or the user's own preference.
+ *
+ * `null` (the default) means no restriction at all: every language the
+ * browser/user prefers is allowed through.
+ */
+const supportedLanguagesSignal = signal(null);
+
+/**
+ * @param {string[]|null} languages - e.g. `["en", "fr"]`. Pass `null`/`[]`
+ *   to lift the restriction again (allow everything).
+ */
+const setSupportedLanguages = (languages) => {
+  supportedLanguagesSignal.value =
+    languages && languages.length ? languages : null;
+};
+
+/**
+ * A single language the user explicitly chose (e.g. via an in-app language
+ * picker), overriding whatever the browser itself reports — takes priority
+ * over `runtimeLanguagesSignal` in `languagesSignal` below, but is still subject
+ * to `supportedLanguagesSignal`'s own allow-list.
+ *
+ * Deliberately a single language, not an ordered list: reordering *among*
+ * several preferred languages is real complexity real users essentially
+ * never want — the practical need `languagesSignal` needs to serve is "let this
+ * one user pick their one preferred language instead of the browser's",
+ * nothing more.
+ */
+const preferredLanguageSignal = signal(null);
+
+/**
+ * @param {string|null} language - BCP 47 tag, e.g. "fr". Pass `null` to
+ *   go back to following the browser's own language.
+ */
+const setPreferredLanguage = (language) => {
+  preferredLanguageSignal.value = language || null;
+};
+
+const getPrimarySubtag = (lang) => lang.split("-")[0];
+
+const isLanguageSupported = (lang, supportedLanguages) => {
+  const primarySubtag = getPrimarySubtag(lang);
+  return supportedLanguages.some(
+    (supportedLanguage) =>
+      getPrimarySubtag(supportedLanguage) === primarySubtag,
+  );
+};
+
+/**
+ * The ordered, ready-to-use language preference list every navi
+ * component/util defaults to (naviI18n, formatNumber, the Time components,
+ * validation messages…), live on every read. Combines, in priority order:
+ *
+ * 1. `preferredLanguageSignal` (the user's own explicit pick, if any)
+ * 2. `runtimeLanguagesSignal` (the browser's own ordered preferences)
+ *
+ * then filters the result through `supportedLanguagesSignal` (if set) so
+ * only languages this app actually offers ever come out — e.g. a browser
+ * preferring `["de", "fr", "en"]` on a site that only supports `["en",
+ * "fr"]` resolves to `["fr", "en"]`, never touching German. If filtering
+ * would leave nothing at all (none of the browser's/user's preferences are
+ * supported), falls back to `supportedLanguagesSignal` itself so callers
+ * still get *something* usable rather than an empty array.
+ *
+ * Consumers that accept either a single lang or an ordered array (this
+ * package's own `matchBestLang`/`createI18n`, and native `Intl.NumberFormat`/
+ * `Intl.DateTimeFormat`) can pass this straight through: anything not
+ * covered by the first entry falls through to the next, rather than
+ * jumping straight to an unrelated default like "en".
+ */
+const languagesSignal = computed(() => {
+  const preferredLanguage = preferredLanguageSignal.value;
+  const runtimeLanguages = runtimeLanguagesSignal.value;
+  const supportedLanguages = supportedLanguagesSignal.value;
+
+  const orderedLanguages = preferredLanguage
+    ? [preferredLanguage, ...runtimeLanguages]
+    : runtimeLanguages;
+  const dedupedLanguages = [...new Set(orderedLanguages)];
+
+  if (!supportedLanguages) {
+    return dedupedLanguages;
+  }
+  const filteredLanguages = dedupedLanguages.filter((lang) =>
+    isLanguageSupported(lang, supportedLanguages),
+  );
+  return filteredLanguages.length > 0 ? filteredLanguages : supportedLanguages;
+});
+
+/**
+ * Creates a lightweight i18n instance: a central place where an app declares
+ * its texts once and reads them back translated into the active language.
+ *
+ * Worth using even in a single-language app — one registry beats strings
+ * scattered across components, and adding a second language later becomes a
+ * data change instead of a refactor. See `docs/i18n.md` for how to choose
+ * between the two key styles below and how this relates to `naviI18n`.
+ *
+ * @param {object} [options]
+ * @param {string} [options.keyLang]
+ *   When set, each key also serves as its own translation for `keyLang`.
+ *   This allows writing keys directly in that language (typically the language
+ *   the app is written in) so only *other* languages need registering:
+ *
+ *   ```js
+ *   const i18n = createI18n({ keyLang: "en" });
+ *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
+ *   ```
+ *
+ *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
+ *   registered stays opaque and comes back as-is.
+ *
+ *   Without `keyLang`, keys are opaque identifiers and every language
+ *   (including the one the app was written in) must be registered explicitly:
+ *
+ *   ```js
+ *   const i18n = createI18n();
+ *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
+ *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   ```
+ *
+ * @param {string} [options.fallbackLang]
+ *   Language consulted when the active language has no translation for a key
+ *   — per key, not per language: a partially translated language falls through
+ *   to `fallbackLang` only for the keys it is missing. Without it, a missing
+ *   translation returns the key itself.
+ *
+ * @param {string|string[]} [options.runtimeLang]
+ *   The active language (BCP 47 tag or ordered array of tags) — named
+ *   "runtime" rather than "system" because there is no actual access to the
+ *   OS/user's system language from a browser, only `navigator.languages` (or
+ *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
+ *   fresh on every `format()`/`has()` call (not frozen at creation time) —
+ *   so overriding the language app-wide via `setPreferredLanguage()`/
+ *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
+ *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
+ *   this instance's whole lifetime.
+ *
+ * ---
+ *
+ * ## Registration
+ *
+ * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
+ *
+ * **`i18n.addAll({ key: { lang: "translation" }, ... })`** — multiple keys at once.
+ *
+ * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
+ * (useful when loading a JSON translation file).
+ *
+ * All three accumulate: registering a key that already exists overwrites that
+ * one key and leaves the rest of the language untouched. This is what lets an
+ * app override a single built-in navi text without redeclaring the others.
+ *
+ * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
+ * parent (`"fr"`) that it does not explicitly override:
+ * ```js
+ * i18n.addLangKeys("fr", { hello: "Bonjour !" });
+ * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
+ * ```
+ * Inheritance is resolved at registration time, so register the parent first.
+ *
+ * ---
+ *
+ * ## Reading
+ *
+ * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
+ * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
+ * Returns `key` itself when nothing matches, so an untranslated string still
+ * renders something readable. `i18n.format` is an alias of this call.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
+ * i.e. how to tell "no translation" apart from "translation equal to the key".
+ *
+ * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
+ */
+const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
+  const languageMap = new Map();
+  // Bumped by addLangKeys — the only thing besides the active lang itself
+  // that could change what getActiveLang()/getResolvedFallbackLang() below
+  // resolve to, so it's what invalidates their own small caches.
+  let languageMapVersion = 0;
+
+  // Without an explicit runtimeLang, languagesSignal.value is re-read fresh on
+  // every call rather than frozen here via languagesSignal.peek() — freezing it
+  // would silently ignore setPreferredLanguage()/setSupportedLanguages() (see
+  // lang_signal.js) for the rest of this instance's life.
+  const hasExplicitRuntimeLang = runtimeLang !== undefined;
+
+  // matchBestLang does real work (a Map lookup per candidate, a possible
+  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
+  // format()/has() call in the common case, since what it resolves to only
+  // ever changes when languageMap itself changes (addLangKeys) or, for the
+  // non-explicit case, when languagesSignal.value itself changes (preferred
+  // language, supported languages, or "languagechange" — see lang_signal.js,
+  // languagesSignal is a computed() so its reference is stable when none of its
+  // own dependencies actually changed) — comparing those two cheaply
+  // (===) is enough to know the cached result below is still valid.
+  let cachedActiveLang;
+  let cachedActiveLangRuntimeLang;
+  let cachedActiveLangVersion = -1;
+  const getActiveLang = () => {
+    const currentRuntimeLang = hasExplicitRuntimeLang
+      ? runtimeLang
+      : languagesSignal.value;
+    if (
+      cachedActiveLangVersion === languageMapVersion &&
+      cachedActiveLangRuntimeLang === currentRuntimeLang
+    ) {
+      return cachedActiveLang;
+    }
+    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
+    cachedActiveLangVersion = languageMapVersion;
+    cachedActiveLangRuntimeLang = currentRuntimeLang;
+    return cachedActiveLang;
+  };
+
+  // fallbackLang is a plain, never-reactive option set once at creation —
+  // its own resolution only ever needs recomputing when languageMap does.
+  let cachedResolvedFallbackLang;
+  let cachedResolvedFallbackLangVersion = -1;
+  const getResolvedFallbackLang = () => {
+    if (!fallbackLang) {
+      return null;
+    }
+    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
+      return cachedResolvedFallbackLang;
+    }
+    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
+    cachedResolvedFallbackLangVersion = languageMapVersion;
+    return cachedResolvedFallbackLang;
+  };
+
+  const addLangKeys = (lang, translations) => {
+    // Accumulate: merge with any existing translations for this lang
+    const existing = languageMap.get(lang);
+    if (existing) {
+      translations = { ...existing, ...translations };
+    }
+    // A regional variant inherits all keys not explicitly overridden
+    // e.g. "fr-CA" inherits from "fr"
+    const dashIndex = lang.indexOf("-");
+    if (dashIndex !== -1) {
+      const parentLang = lang.slice(0, dashIndex);
+      const parentTranslations = languageMap.get(parentLang);
+      if (parentTranslations) {
+        translations = { ...parentTranslations, ...translations };
+      }
+    }
+    languageMap.set(lang, translations);
+    languageMapVersion++;
+  };
+
+  const add = (key, langTranslations) => {
+    if (keyLang && !(keyLang in langTranslations)) {
+      // Auto-register the key itself as the translation for keyLang
+      addLangKeys(keyLang, { [key]: key });
+    }
+    for (const [lang, value] of Object.entries(langTranslations)) {
+      addLangKeys(lang, { [key]: value });
+    }
+  };
+
+  const addAll = (keyMap) => {
+    for (const [key, langTranslations] of Object.entries(keyMap)) {
+      add(key, langTranslations);
+    }
+  };
+
+  const _getTemplate = (key, lang) => {
+    // matchBestLang, not matchLang directly: lang can be an array (e.g.
+    // languagesSignal.value is always an ordered array — see lang_signal.js) and
+    // matchLang alone assumes a plain string, throwing
+    // on .split() otherwise.
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      const translated = translations[key];
+      if (translated !== undefined) {
+        return translated;
+      }
+    }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      const fallbackTranslated = fallbackTranslations[key];
+      if (fallbackTranslated !== undefined) {
+        return fallbackTranslated;
+      }
+    }
+    // No translation found — return key as-is (opaque fallback)
+    return key;
+  };
+
+  const format = (key, values, { lang = getActiveLang() } = {}) => {
+    const template = _getTemplate(key, lang);
+    return interpolateText(template, values);
+  };
+
+  const has = (key, { lang = getActiveLang() } = {}) => {
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      if (translations && key in translations) {
+        return true;
+      }
+    }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      if (fallbackTranslations && key in fallbackTranslations) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // The i18n instance is itself a callable function
+  const i18n = (key, values, opts) => format(key, values, opts);
+  i18n.add = add;
+  i18n.addAll = addAll;
+  i18n.addLangKeys = addLangKeys;
+  i18n.has = has;
+  i18n.format = format;
+  i18n.languageMap = languageMap;
+
+  return i18n;
+};
+
+// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
+const matchLang = (lang, languageMap) => {
+  if (languageMap.has(lang)) {
+    return lang;
+  }
+  const parts = lang.split("-");
+  while (parts.length > 1) {
+    parts.pop();
+    const candidate = parts.join("-");
+    if (languageMap.has(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+// lang can be a string or an ordered array of preference strings
+const matchBestLang = (lang, languageMap) => {
+  if (!lang) {
+    return null;
+  }
+  const candidates = Array.isArray(lang) ? lang : [lang];
+  for (const candidate of candidates) {
+    const match = matchLang(candidate, languageMap);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+/**
+ * The shared i18n instance holding every text @jsenv/navi components display
+ * on their own — validation messages, button labels, empty-list messages,
+ * relative time wording…
+ *
+ * It is navi's texts, not the application's: an app registers its own texts in
+ * its own `createI18n()` instance and reaches for `naviI18n` only to change
+ * what navi itself says, or to add a language navi does not ship. Keys here are
+ * opaque identifiers (`"list.empty"`), never the English sentence — the
+ * opposite of what an app is advised to do. `docs/i18n.md` explains why.
+ *
+ * The active language is read from `languagesSignal` (see lang_signal.js —
+ * combines the browser's own `navigator.languages`, an optional
+ * `setPreferredLanguage()` user override, and an optional
+ * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
+ *
+ * Built-in key namespaces, all overridable — the registrations below are the
+ * exhaustive list, read them to find the exact key to override:
+ *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
+ *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
+ *   - `"spin.*"`       — the ends of a steppable range
+ *   - `"list.*"`       — empty/no-match/failed-rows messages
+ *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"constraint.*"` — every field validation message
+ *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
+ *
+ * Unit names get two derived keys, both optional: `<unit>__plural` and
+ * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
+ * derived key is missing, and to `Intl.NumberFormat` when the unit itself is
+ * not registered at all — so only units Intl gets wrong need registering.
+ *
+ * @example
+ * import { naviI18n } from "@jsenv/navi";
+ *
+ * // Override a built-in text:
+ * naviI18n.add("time.ongoing", { fr: "En cours…" });
+ *
+ * // Teach navi a language it does not ship:
+ * naviI18n.addLangKeys("ja", { "list.empty": "項目がありません。" });
+ *
+ * // Register unit translations used by <Quantity>/<Unit>:
+ * naviI18n.addAll({
+ *   ticket:         { en: "ticket",  fr: "billet"  },
+ *   ticket__plural: { en: "tickets", fr: "billets" },
+ * });
+ */
+const naviI18n = createI18n();
+
+naviI18n.addAll({
+  "button.clear": {
+    en: "Clear",
+    fr: "Effacer",
+  },
+  "button.reset": {
+    en: "Reset",
+    fr: "Réinitialiser",
+  },
+  "button.send": {
+    en: "Send",
+    fr: "Envoyer",
+  },
+  "button.open": {
+    en: "Open",
+    fr: "Ouvrir",
+  },
+  "button.close": {
+    en: "Close",
+    fr: "Fermer",
+  },
+  "button.cancel": {
+    en: "Cancel",
+    fr: "Annuler",
+  },
+  "button.define": {
+    en: "Define",
+    fr: "Définir",
+  },
+  "button.confirm": {
+    en: "Confirm",
+    fr: "Confirmer",
+  },
+  "confirm.message": {
+    en: "Are you sure you want to do this?",
+    fr: "Êtes-vous sûr de vouloir faire cette action ?",
+  },
+  "button.more_actions": {
+    en: "More actions",
+    fr: "Autres actions",
+  },
+  "button.remove": {
+    en: "Remove",
+    fr: "Retirer",
+  },
+});
+
+// Default built-in translations — apps can override any key via add()
+naviI18n.addAll({
+  "time.less_than_minute": {
+    en: "in less than a minute",
+    fr: "dans moins d'une minute",
+    de: "in weniger als einer Minute",
+    es: "en menos de un minuto",
+    it: "in meno di un minuto",
+    pt: "em menos de um minuto",
+    nl: "over minder dan een minuut",
+  },
+  "time.ongoing": {
+    en: "Ongoing",
+    fr: "En cours",
+    de: "Laufend",
+    es: "En curso",
+    it: "In corso",
+    pt: "Em andamento",
+    nl: "Bezig",
+  },
+  // [day] and [time] are replaced at runtime with the localized day/time strings
+  "time.tomorrow_at": {
+    en: "[day] at [time]",
+    fr: "[day] à [time]",
+    de: "[day] um [time]",
+    es: "[day] a las [time]",
+    it: "[day] alle [time]",
+    pt: "[day] às [time]",
+    nl: "[day] om [time]",
+  },
+  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
+  "time.in_duration": {
+    en: "in [duration]",
+    fr: "dans [duration]",
+    de: "in [duration]",
+    es: "en [duration]",
+    it: "tra [duration]",
+    pt: "em [duration]",
+    nl: "over [duration]",
+  },
+  // Substituted in place of the "0 heure(s)" part of an Intl-generated
+  // duration string when <Time type="time" format="long"> renders midnight
+  // — see time.jsx's own TimeTime for why midnight can't just fall through
+  // to formatMinuteDuration like every other hour does, and how this word
+  // gets spliced in (formatToParts, not string concatenation) so the rest
+  // of the sentence (conjunction, minutes) still comes out in whatever
+  // grammar/word order this language's own Intl.DurationFormat produces.
+  // Languages without an entry here fall back to that language's own
+  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
+  "time.midnight": {
+    en: "midnight",
+    fr: "minuit",
+    de: "Mitternacht",
+    es: "medianoche",
+    it: "mezzanotte",
+    pt: "meia-noite",
+    nl: "middernacht",
+  },
+  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
+  "time.duration.year_symbol": {
+    en: "y",
+    fr: "a",
+    de: "J",
+    es: "a",
+    it: "a",
+    pt: "a",
+    nl: "j",
+    ja: "年",
+    zh: "年",
+    ko: "년",
+  },
+  "time.duration.month_symbol": {
+    en: "mo",
+    fr: "mo",
+    de: "Mo",
+    es: "mo",
+    it: "mo",
+    pt: "mo",
+    nl: "mo",
+    ja: "月",
+    zh: "月",
+    ko: "월",
+  },
+  "time.duration.week_symbol": {
+    en: "w",
+    fr: "sem",
+    de: "W",
+    es: "sem",
+    it: "sett",
+    pt: "sem",
+    nl: "w",
+    ja: "週",
+    zh: "周",
+    ko: "주",
+  },
+  "time.duration.day_symbol": {
+    en: "d",
+    fr: "j",
+    de: "T",
+    es: "d",
+    it: "g",
+    pt: "d",
+    nl: "d",
+    ja: "日",
+    zh: "天",
+    ko: "일",
+  },
+  "time.duration.hour_symbol": {
+    en: "h",
+    fr: "h",
+    de: "h",
+    es: "h",
+    it: "h",
+    pt: "h",
+    nl: "u",
+    ja: "時間",
+    zh: "小时",
+    ko: "시간",
+  },
+  "time.duration.minute_symbol": {
+    en: "min",
+    fr: "min",
+    de: "min",
+    es: "min",
+    it: "min",
+    pt: "min",
+    nl: "min",
+    ja: "分",
+    zh: "分",
+    ko: "분",
+  },
+  "time.duration.second_symbol": {
+    en: "s",
+    fr: "s",
+    de: "s",
+    es: "s",
+    it: "s",
+    pt: "s",
+    nl: "s",
+    ja: "秒",
+    zh: "秒",
+    ko: "초",
+  },
+  "time.duration.millisecond_symbol": {
+    en: "ms",
+    fr: "ms",
+    de: "ms",
+    es: "ms",
+    it: "ms",
+    pt: "ms",
+    nl: "ms",
+    ja: "ms",
+    zh: "ms",
+    ko: "ms",
+  },
+});
+
+// Spin messages — the ends of what one steps through, said without naming
+// what it is made of: the same words fit days, months, pages or sizes.
+naviI18n.addAll({
+  "spin.previous": {
+    en: "Previous",
+    fr: "Précédent",
+  },
+  "spin.next": {
+    en: "Next",
+    fr: "Suivant",
+  },
+  "spin.nothing_before": {
+    en: "No item before this one.",
+    fr: "Pas d'élément avant celui-ci.",
+  },
+  "spin.nothing_after": {
+    en: "No item after this one.",
+    fr: "Pas d'élément après celui-ci.",
+  },
+});
+
+// Time spin messages — what a clock writes between an hour and its minutes,
+// and how the two ends of a span are named.
+naviI18n.addAll({
+  "time.hour_separator": {
+    en: ":",
+    fr: "h",
+  },
+  "time.hour_label": {
+    en: "Hours",
+    fr: "Heures",
+  },
+  "time.minute_label": {
+    en: "Minutes",
+    fr: "Minutes",
+  },
+  "time_range.from": {
+    en: "From",
+    fr: "De",
+  },
+  "time_range.to": {
+    en: "to",
+    fr: "à",
+  },
+});
+
+// List messages — override any key to customize list messages
+naviI18n.addAll({
+  "list.empty": {
+    en: "No items in this list.",
+    fr: "Aucun élément dans cette liste.",
+  },
+  "list.no_match": {
+    en: "No item matches this search.",
+    fr: "Aucun élément ne correspond à cette recherche.",
+  },
+  "list.no_match_rest_shown": {
+    en: "No item matches this search. The rest is shown below.",
+    fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
+  },
+  "list.rows_failed": {
+    en: "These elements could not be loaded.",
+    fr: "Ces élements n'ont pas pu être chargées.",
+  },
+  "list.rows_retry": {
+    en: "Retry",
+    fr: "Réessayer",
+  },
+});
+
+// Badge list messages
+naviI18n.addAll({
+  "badge_list.more": {
+    en: "+[count] more",
+    fr: "+[count] de plus",
+  },
+});
+
+// Constraint validation messages — override any key to customize error messages
+naviI18n.addAll({
+  "constraint.available": {
+    fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
+    en: '"[value]" is already taken. Please enter a different value.',
+  },
+  "constraint.required.date": {
+    fr: "Veuillez sélectionner une date.",
+    en: "Please select a date.",
+  },
+  "constraint.required.month": {
+    fr: "Veuillez sélectionner un mois.",
+    en: "Please select a month.",
+  },
+  "constraint.required.week": {
+    fr: "Veuillez sélectionner une semaine.",
+    en: "Please select a week.",
+  },
+  "constraint.required.time": {
+    fr: "Veuillez sélectionner une heure.",
+    en: "Please select a time.",
+  },
+  "constraint.required.number": {
+    fr: "Veuillez saisir un nombre.",
+    en: "Please enter a number.",
+  },
+  "constraint.required.datetime": {
+    fr: "Veuillez sélectionner une date et une heure.",
+    en: "Please select a date and time.",
+  },
+  "constraint.required.color": {
+    fr: "Veuillez sélectionner une couleur.",
+    en: "Please select a color.",
+  },
+  "constraint.required.file": {
+    fr: "Veuillez sélectionner un fichier.",
+    en: "Please select a file.",
+  },
+  "constraint.required.file.multiple": {
+    fr: "Veuillez sélectionner au moins un fichier.",
+    en: "Please select at least one file.",
+  },
+  "constraint.disabled.checkbox": {
+    fr: "Cette case est désactivée.",
+    en: "This checkbox is disabled.",
+  },
+  "constraint.disabled.radio": {
+    fr: "Cette option est désactivée.",
+    en: "This option is disabled.",
+  },
+  "constraint.disabled.default": {
+    fr: "Ce champ est désactivé.",
+    en: "This field is disabled.",
+  },
+  "constraint.readonly.button": {
+    fr: "Cette action n'est pas disponible pour l'instant.",
+    en: "This action is not available right now.",
+  },
+  "constraint.readonly.option": {
+    fr: "Cette option n'est pas disponible.",
+    en: "This option is not available.",
+  },
+  "constraint.readonly.selection": {
+    fr: "La sélection ne peut plus être modifiée.",
+    en: "This selection cannot be changed.",
+  },
+  "constraint.readonly.choice": {
+    fr: "Ce choix ne peut plus être changé.",
+    en: "This choice cannot be changed.",
+  },
+  "constraint.readonly.item": {
+    fr: "Cet élément n'est pas disponible.",
+    en: "This item is not available.",
+  },
+  "constraint.readonly.default": {
+    fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
+    en: "This element is read-only and cannot be modified.",
+  },
+  "constraint.readonly.awaiting_change": {
+    fr: "Cette action attend une modification.",
+    en: "This action is waiting for a change.",
+  },
+  "constraint.readonly.network_policy": {
+    fr: "Hors ligne : ça ne peut pas partir.",
+    en: "Offline: this cannot be sent.",
+  },
+  "network_policy.offline": {
+    fr: "Hors ligne : rien n'a été demandé.",
+    en: "Offline: nothing was requested.",
+  },
+  "constraint.busy.button": {
+    fr: "Cette action est en cours...",
+    en: "This action is in progress...",
+  },
+  "constraint.busy.item": {
+    fr: "Cet élément est en cours de synchronisation.",
+    en: "This item is being synchronized.",
+  },
+  "constraint.busy.item.adding": {
+    fr: "Cet élément est en cours d'ajout.",
+    en: "This item is being added.",
+  },
+  "constraint.busy.item.removing": {
+    fr: "Cet élément est en cours de suppression.",
+    en: "This item is being removed.",
+  },
+  "constraint.busy.default": {
+    fr: "Cet élément est occupé.",
+    en: "This element is busy.",
+  },
+  "constraint.one_of.no_match": {
+    fr: "Aucune suggestion ne correspond à votre saisie.",
+    en: "No suggestion matches your input.",
+  },
+  "constraint.one_of.default": {
+    fr: "Veuillez choisir une valeur parmi les suggestions.",
+    en: "Please choose a value from the suggestions.",
+  },
+  "constraint.same_as.password": {
+    fr: "Ce mot de passe doit être identique au précédent.",
+    en: "This password must match the previous one.",
+  },
+  "constraint.same_as.email": {
+    fr: "Cette adresse e-mail doit être identique a la précédente.",
+    en: "This email address must match the previous one.",
+  },
+  "constraint.same_as.default": {
+    fr: "Ce champ doit être identique au précédent.",
+    en: "This field must match the previous one.",
+  },
+  "constraint.time_after.default": {
+    fr: "L'heure de fin ne peut pas être avant l'heure de début.",
+    en: "The end time cannot be before the start time.",
+  },
+  "constraint.time_after.min_duration": {
+    fr: "La plage doit durer au moins <strong>[duration]</strong> minutes.",
+    en: "The span must last at least <strong>[duration]</strong> minutes.",
+  },
+  "constraint.required.checkbox": {
+    fr: "Veuillez cocher cette case.",
+    en: "Please check this box.",
+  },
+  "constraint.required.checkbox_group": {
+    fr: "Veuillez sélectionner au moins une option.",
+    en: "Please select at least one option.",
+  },
+  "constraint.required.radio": {
+    fr: "Veuillez sélectionner une option.",
+    en: "Please select an option.",
+  },
+  "constraint.required.password": {
+    fr: "Veuillez saisir un mot de passe.",
+    en: "Please enter a password.",
+  },
+  "constraint.required.password.confirm": {
+    fr: "Veuillez confirmer le mot de passe.",
+    en: "Please confirm the password.",
+  },
+  "constraint.required.email": {
+    fr: "Veuillez saisir une adresse e-mail.",
+    en: "Please enter an email address.",
+  },
+  "constraint.required.email.confirm": {
+    fr: "Veuillez confirmer l'adresse e-mail.",
+    en: "Please confirm the email address.",
+  },
+  "constraint.required.confirm": {
+    fr: "Veuillez confirmer le champ précédent.",
+    en: "Please confirm the previous field.",
+  },
+  "constraint.required.default": {
+    fr: "Veuillez remplir ce champ.",
+    en: "Please fill in this field.",
+  },
+  "constraint.pattern.password": {
+    fr: "Ce mot de passe ne correspond pas au format requis.",
+    en: "This password does not match the required format.",
+  },
+  "constraint.pattern.email": {
+    fr: "Cette adresse e-mail ne correspond pas au format requis.",
+    en: "This email address does not match the required format.",
+  },
+  "constraint.pattern.default": {
+    fr: "Ce champ ne correspond pas au format requis.",
+    en: "This field does not match the required format.",
+  },
+  "constraint.type.email.at": {
+    fr: 'Veuillez inclure "@" dans l\'adresse e-mail. Il manque un symbole "@" dans [value].',
+    en: 'Please include "@" in the email address. "@" is missing in [value].',
+  },
+  "constraint.type.email.invalid": {
+    fr: "Veuillez saisir une adresse e-mail valide.",
+    en: "Please enter a valid email address.",
+  },
+  "constraint.min_length.singular.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This password must contain at least [min] character (it currently contains only one character).",
+  },
+  "constraint.min_length.singular.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This email address must contain at least [min] character (it currently contains only one character).",
+  },
+  "constraint.min_length.singular.default": {
+    fr: "Ce champ doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
+    en: "This field must contain at least [min] character (it currently contains only one character).",
+  },
+  "constraint.min_length.plural.password": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at least [min] characters (it currently contains [count] characters).",
+  },
+  "constraint.min_length.plural.email": {
+    fr: "Cette adresse e-mail doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at least [min] characters (it currently contains [count] characters).",
+  },
+  "constraint.min_length.plural.default": {
+    fr: "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at least [min] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.password": {
+    fr: "Ce mot de passe doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This password must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.email": {
+    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This email address must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.default": {
+    fr: "Ce champ doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    en: "This field must contain at most [max] characters (it currently contains [count] characters).",
+  },
+  "constraint.max_length.selection": {
+    fr: "Sélectionnez au maximum [max] choix ([count] actuellement).",
+    en: "Select at most [max] choices ([count] currently).",
+  },
+  "constraint.type.number.default": {
+    fr: "Ce champ doit être un nombre.",
+    en: "This field must be a number.",
+  },
+  "constraint.type.hour.default": {
+    fr: "Ce champ doit contenir un nombre d'heures.",
+    en: "This field must contain a number of hours.",
+  },
+  "constraint.type.minute.default": {
+    fr: "Ce champ doit contenir un nombre de minutes.",
+    en: "This field must contain a number of minutes.",
+  },
+  "constraint.type.second.default": {
+    fr: "Ce champ doit contenir un nombre de secondes.",
+    en: "This field must contain a number of seconds.",
+  },
+  "constraint.type.percentage.default": {
+    fr: "Ce champ doit contenir un pourcentage.",
+    en: "This field must contain a percentage.",
+  },
+  "constraint.min.number.default": {
+    fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
+    en: "This number must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.hour.default": {
+    fr: "Le nombre d'heures doit être <strong>[min]</strong> ou plus.",
+    en: "The number of hours must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.minute.default": {
+    fr: "Le nombre de minutes doit être <strong>[min]</strong> ou plus.",
+    en: "The number of minutes must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.second.default": {
+    fr: "Le nombre de secondes doit être <strong>[min]</strong> ou plus.",
+    en: "The number of seconds must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.percentage.default": {
+    fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
+    en: "The percentage must be <strong>[min]</strong> or greater.",
+  },
+  "constraint.min.duration.default": {
+    fr: "La durée doit être d'au moins <strong>[min]</strong>.",
+    en: "The duration must be at least <strong>[min]</strong>.",
+  },
+  "constraint.max.duration.default": {
+    fr: "La durée ne doit pas dépasser <strong>[max]</strong>.",
+    en: "The duration must not exceed <strong>[max]</strong>.",
+  },
+  "constraint.step.duration.default": {
+    fr: "La durée doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The duration must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.min.time.default": {
+    fr: "L'heure doit être <strong>[min]</strong> ou plus.",
+    en: "The time must be <strong>[min]</strong> or later.",
+  },
+  "constraint.min.date.today.default": {
+    fr: "La date doit être aujourd'hui ou dans le futur.",
+    en: "The date must be today or in the future.",
+  },
+  "constraint.min.date.default": {
+    fr: "La date doit être à partir du <strong>[min]</strong>.",
+    en: "The date must be on or after <strong>[min]</strong>.",
+  },
+  "constraint.max.date.today.default": {
+    fr: "La date doit être aujourd'hui ou dans le passé.",
+    en: "The date must be today or in the past.",
+  },
+  "constraint.max.date.default": {
+    fr: "La date doit être au plus tard le <strong>[max]</strong>.",
+    en: "The date must be on or before <strong>[max]</strong>.",
+  },
+  "constraint.max.number.default": {
+    fr: "Max <strong>[max]</strong>.",
+    en: "Max <strong>[max]</strong>.",
+  },
+  "constraint.max.hour.default": {
+    fr: "Max <strong>[max]</strong> heures.",
+    en: "Max <strong>[max]</strong> hours.",
+  },
+  "constraint.max.minute.default": {
+    fr: "Max <strong>[max]</strong> minutes.",
+    en: "Max <strong>[max]</strong> minutes.",
+  },
+  "constraint.max.second.default": {
+    fr: "Max <strong>[max]</strong> secondes.",
+    en: "Max <strong>[max]</strong> secondes.",
+  },
+  "constraint.max.percentage.default": {
+    fr: "Max <strong>[max]</strong>%.",
+    en: "Max <strong>[max]</strong>%.",
+  },
+  "constraint.step.number.default": {
+    fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.hour.default": {
+    fr: "Le nombre d'heures doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.minute.default": {
+    fr: "Le nombre de minutes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.second.default": {
+    fr: "Le nombre de secondes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The number of seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.percentage.default": {
+    fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.hour": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.minute": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.time.second": {
+    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.date.default": {
+    fr: "La date doit correspondre à un intervalle de <strong>[step]</strong> jour(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The date must correspond to an interval of <strong>[step]</strong> day(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.max.time.default": {
+    fr: "L'heure doit être <strong>[max]</strong> ou moins.",
+    en: "The time must be <strong>[max]</strong> or earlier.",
+  },
+  "constraint.single_space.start": {
+    fr: "Ce champ ne doit pas commencer par un espace.",
+    en: "This field must not start with a space.",
+  },
+  "constraint.single_space.end": {
+    fr: "Ce champ ne doit pas finir par un espace.",
+    en: "This field must not end with a space.",
+  },
+  "constraint.single_space.consecutive": {
+    fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
+    en: "This field must not contain consecutive spaces.",
+  },
+  // [sample] is the offending character with its marks — a stack is invisible
+  // as a description and obvious as a sample.
+  "constraint.displayable.stacked_marks.singular": {
+    fr: "Ce champ contient un caractère qui empile plus de <strong>[max]</strong> signes : « [sample] ».",
+    en: "This field contains a character stacking more than <strong>[max]</strong> marks: “[sample]”.",
+  },
+  "constraint.displayable.stacked_marks.plural": {
+    fr: "Ce champ contient [count] caractères qui empilent plus de <strong>[max]</strong> signes (tel que « [sample] »).",
+    en: "This field contains [count] characters stacking more than <strong>[max]</strong> marks (such as “[sample]”).",
+  },
+  "constraint.displayable.invisible": {
+    fr: "Ce champ doit contenir au moins un caractère visible.",
+    en: "This field must contain at least one visible character.",
+  },
+  "constraint.displayable.blank_lines": {
+    fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
+    en: "This field must not contain consecutive blank lines.",
+  },
+  "constraint.displayable.dangling_joiner": {
+    fr: "Ce champ contient un caractère de liaison invisible qui ne relie rien.",
+    en: "This field contains an invisible joiner that joins nothing.",
+  },
+  "constraint.no_emoji.default": {
+    fr: "Ce champ ne doit pas contenir d'emoji.",
+    en: "This field must not contain emoji.",
+  },
+  "constraint.max_line_breaks.default": {
+    fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
+    en: "This field must not contain more than [max] line break[s].",
+  },
+  "constraint.min_lower_letter.password.singular": {
+    fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
+    en: "This password must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.password.plural": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
+    en: "This password must contain at least [min] lowercase letters.",
+  },
+  "constraint.min_lower_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre minuscule.",
+    en: "This field must contain at least one lowercase letter.",
+  },
+  "constraint.min_lower_letter.default.plural": {
+    fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
+    en: "This field must contain at least [min] lowercase letters.",
+  },
+  "constraint.min_upper_letter.password.singular": {
+    fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
+    en: "This password must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.password.plural": {
+    fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
+    en: "This password must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_upper_letter.default.singular": {
+    fr: "Ce champ doit contenir au moins une lettre majuscule.",
+    en: "This field must contain at least one uppercase letter.",
+  },
+  "constraint.min_upper_letter.default.plural": {
+    fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
+    en: "This field must contain at least [min] uppercase letters.",
+  },
+  "constraint.min_digit.password.singular": {
+    fr: "Ce mot de passe doit contenir au moins un chiffre.",
+    en: "This password must contain at least one digit.",
+  },
+  "constraint.min_digit.password.plural": {
+    fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
+    en: "This password must contain at least [min] digits.",
+  },
+  "constraint.min_digit.default.singular": {
+    fr: "Ce champ doit contenir au moins un chiffre.",
+    en: "This field must contain at least one digit.",
+  },
+  "constraint.min_digit.default.plural": {
+    fr: "Ce champ doit contenir au moins [min] chiffres.",
+    en: "This field must contain at least [min] digits.",
+  },
+  "constraint.min_special_char.password.singular": {
+    fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
+    en: "This password must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.password.plural": {
+    fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This password must contain at least [min] special characters. ([charset])",
+  },
+  "constraint.min_special_char.default.singular": {
+    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+    en: "This field must contain at least one special character. ([charset])",
+  },
+  "constraint.min_special_char.default.plural": {
+    fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
+    en: "This field must contain at least [min] special characters. ([charset])",
+  },
+});
+
+// Character class and maxLengthGuard messages. The char class keys are
+// @jsenv/validity's own ("char_class.slug"), prefixed with "constraint." —
+// the same sentence refuses a keystroke in a callout and a whole value in a
+// constraint, so there is one key for both.
+naviI18n.addAll({
+  // Preset-specific char messages — more informative than the generic fallback
+  "constraint.char_class.numeric": {
+    fr: "Ce champ ne peut contenir que des chiffres.",
+    en: "This field can only contain digits.",
+  },
+  "constraint.char_class.alpha": {
+    fr: "Ce champ ne peut contenir que des lettres.",
+    en: "This field can only contain letters.",
+  },
+  "constraint.char_class.alphanumeric": {
+    fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
+    en: "This field can only contain letters and digits.",
+  },
+  "constraint.char_class.uppercase": {
+    fr: "Ce champ ne peut contenir que des lettres majuscules.",
+    en: "This field can only contain uppercase letters.",
+  },
+  "constraint.char_class.hex": {
+    fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
+    en: "This field can only contain hexadecimal digits (0-9, A-F).",
+  },
+  "constraint.char_class.slug": {
+    fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
+    en: "This field can only contain lowercase letters, digits, and hyphens.",
+  },
+  // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
+  "constraint.char_class.no_emoji": {
+    fr: "Ce champ ne peut pas contenir d'emoji.",
+    en: "This field cannot contain emoji.",
+  },
+  "constraint.char_class.default": {
+    fr: "Ce champ ne peut contenir que les caractères autorisés.",
+    en: "This field can only contain allowed characters.",
+  },
+  // maxLength: keydown blocked (one character would exceed the limit)
+  "constraint.guard.max_length.typing": {
+    fr: "Longueur maximale de [max] caractère[s] atteinte.",
+    en: "Maximum length of [max] character[s] reached.",
+  },
+  // maxLength: paste/set truncated to maxLength (autofix always applied)
+  "constraint.guard.max_length.value": {
+    fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
+    en: "This field cannot contain more than [max] character[s]; the value was truncated.",
+  },
+  // maxLengthGuard on a multiple selection: one more item would exceed the limit
+  "constraint.guard.max_length.selection": {
+    fr: "[max] max.",
+    en: "[max] max.",
+  },
+});
+
+// Date/time placeholder tokens — shown when no value is selected
+// Override any key to adapt to your language conventions
+naviI18n.addAll({
+  "time.placeholder.day": {
+    fr: "jj",
+    en: "dd",
+    de: "TT",
+    es: "dd",
+    it: "gg",
+    pt: "dd",
+    nl: "dd",
+  },
+  "time.placeholder.month": {
+    fr: "mm",
+    en: "mm",
+    de: "MM",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.year": {
+    fr: "aaaa",
+    en: "yyyy",
+    de: "JJJJ",
+    es: "aaaa",
+    it: "aaaa",
+    pt: "aaaa",
+    nl: "jjjj",
+  },
+  "time.placeholder.hour": {
+    fr: "hh",
+    en: "hh",
+    de: "hh",
+    es: "hh",
+    it: "hh",
+    pt: "hh",
+    nl: "uu",
+  },
+  "time.placeholder.minute": {
+    fr: "mm",
+    en: "mm",
+    de: "mm",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.week": {
+    fr: "sem.",
+    en: "wk",
+    de: "KW",
+    es: "sem.",
+    it: "sett.",
+    pt: "sem.",
+    nl: "wk",
+  },
+});
+
+/*
+ * The network policy: one declaration saying whether a request may go out,
+ * read by the action layer rather than by every callback.
+ *
+ * Under a policy (a truthy reason):
+ * - a resource GET answers with the row its store holds for its params and
+ *   asks nothing (resource_graph.js, applyNetworkPolicy); a completed read
+ *   asked to rerun stays completed (actions.js, handleActionRequest);
+ *   anything else settles with an OfflineError carrying the reason;
+ * - a control bound to a write — or inside a form bound to one — is read-only
+ *   and says why (control_hooks.jsx, readonly_constraint.js).
+ *
+ * The reason is a value rather than a boolean because "no network" and
+ * "offline mode" are not said the same way to the user: the error and the
+ * read-only message both carry it, and the app decides the words.
+ *
+ * Only actions declaring a verb (`meta.verb`, which every resource action
+ * has) are subject to the policy: a plain `createAction` may not touch the
+ * network at all, and navi has no way to tell.
+ */
+
+const WRITE_VERB_SET = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+const networkPolicySignal = signal({
+  source: null,
+  readOnlyMessage: undefined,
+});
+
+/**
+ * Declares whether requests may go out.
+ *
+ * @param {import("@preact/signals").Signal | Function | any} source - where the
+ *   reason is read from: a signal (followed live), a function (called on each
+ *   read), or a plain value. A falsy reason means "go to the network"; any
+ *   truthy value means "do not", and is handed to the `OfflineError` an action
+ *   settles with (`error.reason`) so a screen can say which kind of offline it is.
+ * @param {Object} [options]
+ * @param {string | ((reason: any) => string)} [options.readOnlyMessage] - what a
+ *   control held back by the policy answers when pressed; defaults to navi's
+ *   `constraint.readonly.network_policy` text.
+ * @see docs/offline.md
+ *
+ * @example
+ * const offlineReasonSignal = computed(() =>
+ *   offlineChosenSignal.value ? "chosen" : deviceOfflineSignal.value ? "device" : null,
+ * );
+ * setNetworkPolicy(offlineReasonSignal, {
+ *   readOnlyMessage: (reason) =>
+ *     reason === "device" ? "No network: this cannot be sent." : "Offline mode: this cannot be sent.",
+ * });
+ */
+const setNetworkPolicy = (source, { readOnlyMessage } = {}) => {
+  networkPolicySignal.value = { source, readOnlyMessage };
+};
+
+/**
+ * The policy's reason, `null` when requests may go out. Read in a component
+ * render, it follows the policy as it changes.
+ */
+const useNetworkPolicyReason = () => {
+  return readReason(networkPolicySignal.value.source);
+};
+
+// For the action layer: the same answer without subscribing whoever asks.
+const peekNetworkPolicyReason = () => {
+  return untracked(() => readReason(networkPolicySignal.peek().source));
+};
+
+const isRerunHeldByNetworkPolicy = (action) => {
+  return action.meta.verb === "GET" && peekNetworkPolicyReason() !== null;
+};
+
+const isWriteAction = (action) => {
+  return WRITE_VERB_SET.has(action.meta.verb);
+};
+
+const getNetworkPolicyReadOnlyMessage = () => {
+  const { readOnlyMessage } = networkPolicySignal.peek();
+  if (typeof readOnlyMessage === "function") {
+    return readOnlyMessage(peekNetworkPolicyReason());
+  }
+  if (readOnlyMessage) {
+    return readOnlyMessage;
+  }
+  return naviI18n("constraint.readonly.network_policy");
+};
+
+/**
+ * The error of a request that never left: the policy said not to.
+ * `reason` is the policy's value at that moment.
+ */
+class OfflineError extends Error {
+  constructor(reason, message = naviI18n("network_policy.offline")) {
+    super(message);
+    this.name = "OfflineError";
+    this.reason = reason;
+    // A flag beside the class: the error crosses layers that may copy it, and
+    // instanceof does not survive a copy.
+    this.offline = true;
+  }
+}
+
+const isOfflineError = (error) => {
+  return Boolean(error && error.offline);
+};
+
+const readReason = (source) => {
+  if (!source) {
+    return null;
+  }
+  let reason;
+  if (isSignal(source)) {
+    reason = source.value;
+  } else if (typeof source === "function") {
+    reason = source();
+  } else {
+    reason = source;
+  }
+  return reason || null;
+};
+
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
 /*
@@ -1831,6 +3373,19 @@ ${lines.join("\n")}`,
       const isPrerun = requestType === "prerun";
       const isRerun = requestType === "rerun";
 
+      if (
+        isRerun &&
+        action.runningState === COMPLETED &&
+        !willResetSet.has(action) &&
+        isRerunHeldByNetworkPolicy(action)
+      ) {
+        // A completed read is the answer under a network policy: rerunning it
+        // would only ask the network again (see network_policy.js).
+        action.debug(
+          `"${action}": rerun held by the network policy, stays completed`,
+        );
+        return;
+      }
       if (
         action.runningState === RUNNING ||
         action.runningState === COMPLETED
@@ -2884,7 +4439,7 @@ const createActionProxyFromSignal = (
     },
     replaceParams: null, // Will be set below
     toString: () => actionProxy.callSource,
-    meta: {},
+    meta: action.meta,
 
     paramsSignal: proxyParamsSignal,
     isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
@@ -2923,6 +4478,7 @@ const createActionProxyFromSignal = (
     actionProxy.value = currentAction.value;
     actionProxy.data = currentAction.data;
     actionProxy.completed = currentAction.completed;
+    actionProxy.meta = currentAction.meta;
   });
 
   {
@@ -6162,1418 +7718,6 @@ const createCalloutManager = (
   return calloutManager;
 };
 
-/**
- * Interpolates a template string, replacing `[key]` placeholders with values.
- *
- * Usable on its own — no i18n instance required — whenever a sentence should
- * stay readable as one string instead of being cut into JSX expressions or
- * concatenations. `<Interpolate>` is the JSX form of this function, and
- * `createI18n` runs every translation through it. See `docs/i18n.md`.
- *
- * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
- * because it does not conflict with JSX syntax, JavaScript template literals,
- * or common punctuation in translated strings.
- *
- * @param {string} template
- *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
- *   untouched, as is any template when `replacements` is missing.
- * @param {object} [replacements]
- *   Values keyed by placeholder name. A key can be:
- *   - a direct name — `[name]` ← `{ name: "Alice" }`
- *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
- *     `"item.label"` key wins over the path)
- *
- *   A value that is a function is called at that point, so an expensive or
- *   lazily-known replacement is only computed when the placeholder is actually
- *   present in this language's template.
- *
- *   A placeholder with no matching value is left in the output as-is
- *   (`"[name]"`), making the gap visible rather than silently empty.
- * @param {object} [options]
- * @param {boolean} [options.allowJsx=false]
- *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
- *   value warns and is coerced to a string.
- * @returns {string|import("preact").VNode}
- *   A plain string when every replacement is a string, a Preact fragment when
- *   at least one VNode was interpolated with `allowJsx`.
- */
-const interpolateText = (
-  template,
-  replacements,
-  { allowJsx = false } = {},
-) => {
-  if (!replacements || typeof template !== "string") {
-    return template;
-  }
-  const parts = template.split(/(\[[^\]]+\])/);
-  let hasVnode = false;
-  const resolved = [];
-  for (const part of parts) {
-    const match = part.match(/^\[([^\]]+)\]$/);
-    if (!match) {
-      resolved.push(part);
-      continue;
-    }
-    const key = match[1];
-    let value = resolveValue(replacements, key, part);
-    if (typeof value === "function") {
-      value = value();
-    }
-    if (isValidElement(value)) {
-      if (allowJsx) {
-        hasVnode = true;
-      } else {
-        console.warn(
-          `interpolateText: VNode passed for placeholder [${match[1]}] but allowJsx is false — value coerced to string`,
-        );
-      }
-    }
-    resolved.push(value);
-  }
-  if (!hasVnode) {
-    return resolved.join("");
-  }
-  // h(Fragment) instead of JSX (<>{resolved}</>) to keep this file as .js
-  return h(Fragment, null, resolved);
-};
-
-// Resolves a placeholder key against the replacements object.
-// 1. Direct lookup: replacements["item.name"]
-// 2. Dot-path lookup: replacements["item"]["name"]
-// 3. Fallback: the original placeholder string (e.g. "[item.name]")
-const resolveValue = (replacements, key, fallback) => {
-  if (key in replacements) {
-    return replacements[key];
-  }
-  const dotIndex = key.indexOf(".");
-  if (dotIndex !== -1) {
-    const head = key.slice(0, dotIndex);
-    const tail = key.slice(dotIndex + 1);
-    const parent = replacements[head];
-    if (parent && typeof parent === "object") {
-      const nested = parent[tail];
-      if (nested !== undefined) {
-        return nested;
-      }
-    }
-  }
-  return fallback;
-};
-
-const DEFAULT_LANG = "en";
-
-/**
- * The browser's own language preferences, most preferred first — read from
- * `navigator.languages` (falling back to the single `navigator.language`,
- * then to DEFAULT_LANG when neither is available, e.g. during SSR). Kept as
- * its own signal, independent from what this app actually supports — see
- * `supportedLanguagesSignal` below for the allow-list that filters it, and
- * `languagesSignal` for the final, ready-to-use combination of the two (plus
- * `preferredLanguageSignal`).
- */
-const getRuntimeLanguages = () => {
-  if (typeof window === "undefined") {
-    return [DEFAULT_LANG];
-  }
-  const { navigator } = window;
-  if (typeof navigator === "undefined") {
-    return [DEFAULT_LANG];
-  }
-  const { languages } = navigator;
-  if (Array.isArray(languages) && languages.length > 0) {
-    return languages;
-  }
-  const { language } = navigator;
-  if (typeof language === "string") {
-    return [language];
-  }
-  return [DEFAULT_LANG];
-};
-
-const runtimeLanguagesSignal = signal(getRuntimeLanguages());
-
-if (typeof window !== "undefined") {
-  window.addEventListener("languagechange", () => {
-    runtimeLanguagesSignal.value = getRuntimeLanguages();
-  });
-}
-
-/**
- * The languages this app actually offers, e.g. `["en", "fr"]` — an allow-list
- * `languagesSignal` below filters everything else against (runtime languages the
- * browser reports, and `preferredLanguageSignal`'s own override), so a site
- * that only supports English/French never ends up resolving to German just
- * because that happens to be the browser's or the user's own preference.
- *
- * `null` (the default) means no restriction at all: every language the
- * browser/user prefers is allowed through.
- */
-const supportedLanguagesSignal = signal(null);
-
-/**
- * @param {string[]|null} languages - e.g. `["en", "fr"]`. Pass `null`/`[]`
- *   to lift the restriction again (allow everything).
- */
-const setSupportedLanguages = (languages) => {
-  supportedLanguagesSignal.value =
-    languages && languages.length ? languages : null;
-};
-
-/**
- * A single language the user explicitly chose (e.g. via an in-app language
- * picker), overriding whatever the browser itself reports — takes priority
- * over `runtimeLanguagesSignal` in `languagesSignal` below, but is still subject
- * to `supportedLanguagesSignal`'s own allow-list.
- *
- * Deliberately a single language, not an ordered list: reordering *among*
- * several preferred languages is real complexity real users essentially
- * never want — the practical need `languagesSignal` needs to serve is "let this
- * one user pick their one preferred language instead of the browser's",
- * nothing more.
- */
-const preferredLanguageSignal = signal(null);
-
-/**
- * @param {string|null} language - BCP 47 tag, e.g. "fr". Pass `null` to
- *   go back to following the browser's own language.
- */
-const setPreferredLanguage = (language) => {
-  preferredLanguageSignal.value = language || null;
-};
-
-const getPrimarySubtag = (lang) => lang.split("-")[0];
-
-const isLanguageSupported = (lang, supportedLanguages) => {
-  const primarySubtag = getPrimarySubtag(lang);
-  return supportedLanguages.some(
-    (supportedLanguage) =>
-      getPrimarySubtag(supportedLanguage) === primarySubtag,
-  );
-};
-
-/**
- * The ordered, ready-to-use language preference list every navi
- * component/util defaults to (naviI18n, formatNumber, the Time components,
- * validation messages…), live on every read. Combines, in priority order:
- *
- * 1. `preferredLanguageSignal` (the user's own explicit pick, if any)
- * 2. `runtimeLanguagesSignal` (the browser's own ordered preferences)
- *
- * then filters the result through `supportedLanguagesSignal` (if set) so
- * only languages this app actually offers ever come out — e.g. a browser
- * preferring `["de", "fr", "en"]` on a site that only supports `["en",
- * "fr"]` resolves to `["fr", "en"]`, never touching German. If filtering
- * would leave nothing at all (none of the browser's/user's preferences are
- * supported), falls back to `supportedLanguagesSignal` itself so callers
- * still get *something* usable rather than an empty array.
- *
- * Consumers that accept either a single lang or an ordered array (this
- * package's own `matchBestLang`/`createI18n`, and native `Intl.NumberFormat`/
- * `Intl.DateTimeFormat`) can pass this straight through: anything not
- * covered by the first entry falls through to the next, rather than
- * jumping straight to an unrelated default like "en".
- */
-const languagesSignal = computed(() => {
-  const preferredLanguage = preferredLanguageSignal.value;
-  const runtimeLanguages = runtimeLanguagesSignal.value;
-  const supportedLanguages = supportedLanguagesSignal.value;
-
-  const orderedLanguages = preferredLanguage
-    ? [preferredLanguage, ...runtimeLanguages]
-    : runtimeLanguages;
-  const dedupedLanguages = [...new Set(orderedLanguages)];
-
-  if (!supportedLanguages) {
-    return dedupedLanguages;
-  }
-  const filteredLanguages = dedupedLanguages.filter((lang) =>
-    isLanguageSupported(lang, supportedLanguages),
-  );
-  return filteredLanguages.length > 0 ? filteredLanguages : supportedLanguages;
-});
-
-/**
- * Creates a lightweight i18n instance: a central place where an app declares
- * its texts once and reads them back translated into the active language.
- *
- * Worth using even in a single-language app — one registry beats strings
- * scattered across components, and adding a second language later becomes a
- * data change instead of a refactor. See `docs/i18n.md` for how to choose
- * between the two key styles below and how this relates to `naviI18n`.
- *
- * @param {object} [options]
- * @param {string} [options.keyLang]
- *   When set, each key also serves as its own translation for `keyLang`.
- *   This allows writing keys directly in that language (typically the language
- *   the app is written in) so only *other* languages need registering:
- *
- *   ```js
- *   const i18n = createI18n({ keyLang: "en" });
- *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
- *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
- *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
- *   ```
- *
- *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
- *   registered stays opaque and comes back as-is.
- *
- *   Without `keyLang`, keys are opaque identifiers and every language
- *   (including the one the app was written in) must be registered explicitly:
- *
- *   ```js
- *   const i18n = createI18n();
- *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
- *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
- *   ```
- *
- * @param {string} [options.fallbackLang]
- *   Language consulted when the active language has no translation for a key
- *   — per key, not per language: a partially translated language falls through
- *   to `fallbackLang` only for the keys it is missing. Without it, a missing
- *   translation returns the key itself.
- *
- * @param {string|string[]} [options.runtimeLang]
- *   The active language (BCP 47 tag or ordered array of tags) — named
- *   "runtime" rather than "system" because there is no actual access to the
- *   OS/user's system language from a browser, only `navigator.languages` (or
- *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
- *   fresh on every `format()`/`has()` call (not frozen at creation time) —
- *   so overriding the language app-wide via `setPreferredLanguage()`/
- *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
- *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
- *   this instance's whole lifetime.
- *
- * ---
- *
- * ## Registration
- *
- * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
- *
- * **`i18n.addAll({ key: { lang: "translation" }, ... })`** — multiple keys at once.
- *
- * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
- * (useful when loading a JSON translation file).
- *
- * All three accumulate: registering a key that already exists overwrites that
- * one key and leaves the rest of the language untouched. This is what lets an
- * app override a single built-in navi text without redeclaring the others.
- *
- * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
- * parent (`"fr"`) that it does not explicitly override:
- * ```js
- * i18n.addLangKeys("fr", { hello: "Bonjour !" });
- * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
- * ```
- * Inheritance is resolved at registration time, so register the parent first.
- *
- * ---
- *
- * ## Reading
- *
- * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
- * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
- * Returns `key` itself when nothing matches, so an untranslated string still
- * renders something readable. `i18n.format` is an alias of this call.
- *
- * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
- * i.e. how to tell "no translation" apart from "translation equal to the key".
- *
- * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
- */
-const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
-  const languageMap = new Map();
-  // Bumped by addLangKeys — the only thing besides the active lang itself
-  // that could change what getActiveLang()/getResolvedFallbackLang() below
-  // resolve to, so it's what invalidates their own small caches.
-  let languageMapVersion = 0;
-
-  // Without an explicit runtimeLang, languagesSignal.value is re-read fresh on
-  // every call rather than frozen here via languagesSignal.peek() — freezing it
-  // would silently ignore setPreferredLanguage()/setSupportedLanguages() (see
-  // lang_signal.js) for the rest of this instance's life.
-  const hasExplicitRuntimeLang = runtimeLang !== undefined;
-
-  // matchBestLang does real work (a Map lookup per candidate, a possible
-  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
-  // format()/has() call in the common case, since what it resolves to only
-  // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when languagesSignal.value itself changes (preferred
-  // language, supported languages, or "languagechange" — see lang_signal.js,
-  // languagesSignal is a computed() so its reference is stable when none of its
-  // own dependencies actually changed) — comparing those two cheaply
-  // (===) is enough to know the cached result below is still valid.
-  let cachedActiveLang;
-  let cachedActiveLangRuntimeLang;
-  let cachedActiveLangVersion = -1;
-  const getActiveLang = () => {
-    const currentRuntimeLang = hasExplicitRuntimeLang
-      ? runtimeLang
-      : languagesSignal.value;
-    if (
-      cachedActiveLangVersion === languageMapVersion &&
-      cachedActiveLangRuntimeLang === currentRuntimeLang
-    ) {
-      return cachedActiveLang;
-    }
-    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
-    cachedActiveLangVersion = languageMapVersion;
-    cachedActiveLangRuntimeLang = currentRuntimeLang;
-    return cachedActiveLang;
-  };
-
-  // fallbackLang is a plain, never-reactive option set once at creation —
-  // its own resolution only ever needs recomputing when languageMap does.
-  let cachedResolvedFallbackLang;
-  let cachedResolvedFallbackLangVersion = -1;
-  const getResolvedFallbackLang = () => {
-    if (!fallbackLang) {
-      return null;
-    }
-    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
-      return cachedResolvedFallbackLang;
-    }
-    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-    cachedResolvedFallbackLangVersion = languageMapVersion;
-    return cachedResolvedFallbackLang;
-  };
-
-  const addLangKeys = (lang, translations) => {
-    // Accumulate: merge with any existing translations for this lang
-    const existing = languageMap.get(lang);
-    if (existing) {
-      translations = { ...existing, ...translations };
-    }
-    // A regional variant inherits all keys not explicitly overridden
-    // e.g. "fr-CA" inherits from "fr"
-    const dashIndex = lang.indexOf("-");
-    if (dashIndex !== -1) {
-      const parentLang = lang.slice(0, dashIndex);
-      const parentTranslations = languageMap.get(parentLang);
-      if (parentTranslations) {
-        translations = { ...parentTranslations, ...translations };
-      }
-    }
-    languageMap.set(lang, translations);
-    languageMapVersion++;
-  };
-
-  const add = (key, langTranslations) => {
-    if (keyLang && !(keyLang in langTranslations)) {
-      // Auto-register the key itself as the translation for keyLang
-      addLangKeys(keyLang, { [key]: key });
-    }
-    for (const [lang, value] of Object.entries(langTranslations)) {
-      addLangKeys(lang, { [key]: value });
-    }
-  };
-
-  const addAll = (keyMap) => {
-    for (const [key, langTranslations] of Object.entries(keyMap)) {
-      add(key, langTranslations);
-    }
-  };
-
-  const _getTemplate = (key, lang) => {
-    // matchBestLang, not matchLang directly: lang can be an array (e.g.
-    // languagesSignal.value is always an ordered array — see lang_signal.js) and
-    // matchLang alone assumes a plain string, throwing
-    // on .split() otherwise.
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      const translated = translations[key];
-      if (translated !== undefined) {
-        return translated;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      const fallbackTranslated = fallbackTranslations[key];
-      if (fallbackTranslated !== undefined) {
-        return fallbackTranslated;
-      }
-    }
-    // No translation found — return key as-is (opaque fallback)
-    return key;
-  };
-
-  const format = (key, values, { lang = getActiveLang() } = {}) => {
-    const template = _getTemplate(key, lang);
-    return interpolateText(template, values);
-  };
-
-  const has = (key, { lang = getActiveLang() } = {}) => {
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      if (translations && key in translations) {
-        return true;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      if (fallbackTranslations && key in fallbackTranslations) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // The i18n instance is itself a callable function
-  const i18n = (key, values, opts) => format(key, values, opts);
-  i18n.add = add;
-  i18n.addAll = addAll;
-  i18n.addLangKeys = addLangKeys;
-  i18n.has = has;
-  i18n.format = format;
-  i18n.languageMap = languageMap;
-
-  return i18n;
-};
-
-// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
-const matchLang = (lang, languageMap) => {
-  if (languageMap.has(lang)) {
-    return lang;
-  }
-  const parts = lang.split("-");
-  while (parts.length > 1) {
-    parts.pop();
-    const candidate = parts.join("-");
-    if (languageMap.has(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-};
-
-// lang can be a string or an ordered array of preference strings
-const matchBestLang = (lang, languageMap) => {
-  if (!lang) {
-    return null;
-  }
-  const candidates = Array.isArray(lang) ? lang : [lang];
-  for (const candidate of candidates) {
-    const match = matchLang(candidate, languageMap);
-    if (match) {
-      return match;
-    }
-  }
-  return null;
-};
-
-/**
- * The shared i18n instance holding every text @jsenv/navi components display
- * on their own — validation messages, button labels, empty-list messages,
- * relative time wording…
- *
- * It is navi's texts, not the application's: an app registers its own texts in
- * its own `createI18n()` instance and reaches for `naviI18n` only to change
- * what navi itself says, or to add a language navi does not ship. Keys here are
- * opaque identifiers (`"list.empty"`), never the English sentence — the
- * opposite of what an app is advised to do. `docs/i18n.md` explains why.
- *
- * The active language is read from `languagesSignal` (see lang_signal.js —
- * combines the browser's own `navigator.languages`, an optional
- * `setPreferredLanguage()` user override, and an optional
- * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
- *
- * Built-in key namespaces, all overridable — the registrations below are the
- * exhaustive list, read them to find the exact key to override:
- *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
- *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
- *   - `"spin.*"`       — the ends of a steppable range
- *   - `"list.*"`       — empty/no-match/failed-rows messages
- *   - `"badge_list.*"` — the "+[count] more" overflow badge
- *   - `"constraint.*"` — every field validation message
- *
- * Unit names get two derived keys, both optional: `<unit>__plural` and
- * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
- * derived key is missing, and to `Intl.NumberFormat` when the unit itself is
- * not registered at all — so only units Intl gets wrong need registering.
- *
- * @example
- * import { naviI18n } from "@jsenv/navi";
- *
- * // Override a built-in text:
- * naviI18n.add("time.ongoing", { fr: "En cours…" });
- *
- * // Teach navi a language it does not ship:
- * naviI18n.addLangKeys("ja", { "list.empty": "項目がありません。" });
- *
- * // Register unit translations used by <Quantity>/<Unit>:
- * naviI18n.addAll({
- *   ticket:         { en: "ticket",  fr: "billet"  },
- *   ticket__plural: { en: "tickets", fr: "billets" },
- * });
- */
-const naviI18n = createI18n();
-
-naviI18n.addAll({
-  "button.clear": {
-    en: "Clear",
-    fr: "Effacer",
-  },
-  "button.reset": {
-    en: "Reset",
-    fr: "Réinitialiser",
-  },
-  "button.send": {
-    en: "Send",
-    fr: "Envoyer",
-  },
-  "button.open": {
-    en: "Open",
-    fr: "Ouvrir",
-  },
-  "button.close": {
-    en: "Close",
-    fr: "Fermer",
-  },
-  "button.cancel": {
-    en: "Cancel",
-    fr: "Annuler",
-  },
-  "button.define": {
-    en: "Define",
-    fr: "Définir",
-  },
-  "button.confirm": {
-    en: "Confirm",
-    fr: "Confirmer",
-  },
-  "confirm.message": {
-    en: "Are you sure you want to do this?",
-    fr: "Êtes-vous sûr de vouloir faire cette action ?",
-  },
-  "button.more_actions": {
-    en: "More actions",
-    fr: "Autres actions",
-  },
-  "button.remove": {
-    en: "Remove",
-    fr: "Retirer",
-  },
-});
-
-// Default built-in translations — apps can override any key via add()
-naviI18n.addAll({
-  "time.less_than_minute": {
-    en: "in less than a minute",
-    fr: "dans moins d'une minute",
-    de: "in weniger als einer Minute",
-    es: "en menos de un minuto",
-    it: "in meno di un minuto",
-    pt: "em menos de um minuto",
-    nl: "over minder dan een minuut",
-  },
-  "time.ongoing": {
-    en: "Ongoing",
-    fr: "En cours",
-    de: "Laufend",
-    es: "En curso",
-    it: "In corso",
-    pt: "Em andamento",
-    nl: "Bezig",
-  },
-  // [day] and [time] are replaced at runtime with the localized day/time strings
-  "time.tomorrow_at": {
-    en: "[day] at [time]",
-    fr: "[day] à [time]",
-    de: "[day] um [time]",
-    es: "[day] a las [time]",
-    it: "[day] alle [time]",
-    pt: "[day] às [time]",
-    nl: "[day] om [time]",
-  },
-  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
-  "time.in_duration": {
-    en: "in [duration]",
-    fr: "dans [duration]",
-    de: "in [duration]",
-    es: "en [duration]",
-    it: "tra [duration]",
-    pt: "em [duration]",
-    nl: "over [duration]",
-  },
-  // Substituted in place of the "0 heure(s)" part of an Intl-generated
-  // duration string when <Time type="time" format="long"> renders midnight
-  // — see time.jsx's own TimeTime for why midnight can't just fall through
-  // to formatMinuteDuration like every other hour does, and how this word
-  // gets spliced in (formatToParts, not string concatenation) so the rest
-  // of the sentence (conjunction, minutes) still comes out in whatever
-  // grammar/word order this language's own Intl.DurationFormat produces.
-  // Languages without an entry here fall back to that language's own
-  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
-  "time.midnight": {
-    en: "midnight",
-    fr: "minuit",
-    de: "Mitternacht",
-    es: "medianoche",
-    it: "mezzanotte",
-    pt: "meia-noite",
-    nl: "middernacht",
-  },
-  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
-  "time.duration.year_symbol": {
-    en: "y",
-    fr: "a",
-    de: "J",
-    es: "a",
-    it: "a",
-    pt: "a",
-    nl: "j",
-    ja: "年",
-    zh: "年",
-    ko: "년",
-  },
-  "time.duration.month_symbol": {
-    en: "mo",
-    fr: "mo",
-    de: "Mo",
-    es: "mo",
-    it: "mo",
-    pt: "mo",
-    nl: "mo",
-    ja: "月",
-    zh: "月",
-    ko: "월",
-  },
-  "time.duration.week_symbol": {
-    en: "w",
-    fr: "sem",
-    de: "W",
-    es: "sem",
-    it: "sett",
-    pt: "sem",
-    nl: "w",
-    ja: "週",
-    zh: "周",
-    ko: "주",
-  },
-  "time.duration.day_symbol": {
-    en: "d",
-    fr: "j",
-    de: "T",
-    es: "d",
-    it: "g",
-    pt: "d",
-    nl: "d",
-    ja: "日",
-    zh: "天",
-    ko: "일",
-  },
-  "time.duration.hour_symbol": {
-    en: "h",
-    fr: "h",
-    de: "h",
-    es: "h",
-    it: "h",
-    pt: "h",
-    nl: "u",
-    ja: "時間",
-    zh: "小时",
-    ko: "시간",
-  },
-  "time.duration.minute_symbol": {
-    en: "min",
-    fr: "min",
-    de: "min",
-    es: "min",
-    it: "min",
-    pt: "min",
-    nl: "min",
-    ja: "分",
-    zh: "分",
-    ko: "분",
-  },
-  "time.duration.second_symbol": {
-    en: "s",
-    fr: "s",
-    de: "s",
-    es: "s",
-    it: "s",
-    pt: "s",
-    nl: "s",
-    ja: "秒",
-    zh: "秒",
-    ko: "초",
-  },
-  "time.duration.millisecond_symbol": {
-    en: "ms",
-    fr: "ms",
-    de: "ms",
-    es: "ms",
-    it: "ms",
-    pt: "ms",
-    nl: "ms",
-    ja: "ms",
-    zh: "ms",
-    ko: "ms",
-  },
-});
-
-// Spin messages — the ends of what one steps through, said without naming
-// what it is made of: the same words fit days, months, pages or sizes.
-naviI18n.addAll({
-  "spin.previous": {
-    en: "Previous",
-    fr: "Précédent",
-  },
-  "spin.next": {
-    en: "Next",
-    fr: "Suivant",
-  },
-  "spin.nothing_before": {
-    en: "No item before this one.",
-    fr: "Pas d'élément avant celui-ci.",
-  },
-  "spin.nothing_after": {
-    en: "No item after this one.",
-    fr: "Pas d'élément après celui-ci.",
-  },
-});
-
-// Time spin messages — what a clock writes between an hour and its minutes,
-// and how the two ends of a span are named.
-naviI18n.addAll({
-  "time.hour_separator": {
-    en: ":",
-    fr: "h",
-  },
-  "time.hour_label": {
-    en: "Hours",
-    fr: "Heures",
-  },
-  "time.minute_label": {
-    en: "Minutes",
-    fr: "Minutes",
-  },
-  "time_range.from": {
-    en: "From",
-    fr: "De",
-  },
-  "time_range.to": {
-    en: "to",
-    fr: "à",
-  },
-});
-
-// List messages — override any key to customize list messages
-naviI18n.addAll({
-  "list.empty": {
-    en: "No items in this list.",
-    fr: "Aucun élément dans cette liste.",
-  },
-  "list.no_match": {
-    en: "No item matches this search.",
-    fr: "Aucun élément ne correspond à cette recherche.",
-  },
-  "list.no_match_rest_shown": {
-    en: "No item matches this search. The rest is shown below.",
-    fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
-  },
-  "list.rows_failed": {
-    en: "These elements could not be loaded.",
-    fr: "Ces élements n'ont pas pu être chargées.",
-  },
-  "list.rows_retry": {
-    en: "Retry",
-    fr: "Réessayer",
-  },
-});
-
-// Badge list messages
-naviI18n.addAll({
-  "badge_list.more": {
-    en: "+[count] more",
-    fr: "+[count] de plus",
-  },
-});
-
-// Constraint validation messages — override any key to customize error messages
-naviI18n.addAll({
-  "constraint.available": {
-    fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
-    en: '"[value]" is already taken. Please enter a different value.',
-  },
-  "constraint.required.date": {
-    fr: "Veuillez sélectionner une date.",
-    en: "Please select a date.",
-  },
-  "constraint.required.month": {
-    fr: "Veuillez sélectionner un mois.",
-    en: "Please select a month.",
-  },
-  "constraint.required.week": {
-    fr: "Veuillez sélectionner une semaine.",
-    en: "Please select a week.",
-  },
-  "constraint.required.time": {
-    fr: "Veuillez sélectionner une heure.",
-    en: "Please select a time.",
-  },
-  "constraint.required.number": {
-    fr: "Veuillez saisir un nombre.",
-    en: "Please enter a number.",
-  },
-  "constraint.required.datetime": {
-    fr: "Veuillez sélectionner une date et une heure.",
-    en: "Please select a date and time.",
-  },
-  "constraint.required.color": {
-    fr: "Veuillez sélectionner une couleur.",
-    en: "Please select a color.",
-  },
-  "constraint.required.file": {
-    fr: "Veuillez sélectionner un fichier.",
-    en: "Please select a file.",
-  },
-  "constraint.required.file.multiple": {
-    fr: "Veuillez sélectionner au moins un fichier.",
-    en: "Please select at least one file.",
-  },
-  "constraint.disabled.checkbox": {
-    fr: "Cette case est désactivée.",
-    en: "This checkbox is disabled.",
-  },
-  "constraint.disabled.radio": {
-    fr: "Cette option est désactivée.",
-    en: "This option is disabled.",
-  },
-  "constraint.disabled.default": {
-    fr: "Ce champ est désactivé.",
-    en: "This field is disabled.",
-  },
-  "constraint.readonly.button": {
-    fr: "Cette action n'est pas disponible pour l'instant.",
-    en: "This action is not available right now.",
-  },
-  "constraint.readonly.option": {
-    fr: "Cette option n'est pas disponible.",
-    en: "This option is not available.",
-  },
-  "constraint.readonly.selection": {
-    fr: "La sélection ne peut plus être modifiée.",
-    en: "This selection cannot be changed.",
-  },
-  "constraint.readonly.choice": {
-    fr: "Ce choix ne peut plus être changé.",
-    en: "This choice cannot be changed.",
-  },
-  "constraint.readonly.item": {
-    fr: "Cet élément n'est pas disponible.",
-    en: "This item is not available.",
-  },
-  "constraint.readonly.default": {
-    fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
-    en: "This element is read-only and cannot be modified.",
-  },
-  "constraint.readonly.awaiting_change": {
-    fr: "Cette action attend une modification.",
-    en: "This action is waiting for a change.",
-  },
-  "constraint.busy.button": {
-    fr: "Cette action est en cours...",
-    en: "This action is in progress...",
-  },
-  "constraint.busy.item": {
-    fr: "Cet élément est en cours de synchronisation.",
-    en: "This item is being synchronized.",
-  },
-  "constraint.busy.item.adding": {
-    fr: "Cet élément est en cours d'ajout.",
-    en: "This item is being added.",
-  },
-  "constraint.busy.item.removing": {
-    fr: "Cet élément est en cours de suppression.",
-    en: "This item is being removed.",
-  },
-  "constraint.busy.default": {
-    fr: "Cet élément est occupé.",
-    en: "This element is busy.",
-  },
-  "constraint.one_of.no_match": {
-    fr: "Aucune suggestion ne correspond à votre saisie.",
-    en: "No suggestion matches your input.",
-  },
-  "constraint.one_of.default": {
-    fr: "Veuillez choisir une valeur parmi les suggestions.",
-    en: "Please choose a value from the suggestions.",
-  },
-  "constraint.same_as.password": {
-    fr: "Ce mot de passe doit être identique au précédent.",
-    en: "This password must match the previous one.",
-  },
-  "constraint.same_as.email": {
-    fr: "Cette adresse e-mail doit être identique a la précédente.",
-    en: "This email address must match the previous one.",
-  },
-  "constraint.same_as.default": {
-    fr: "Ce champ doit être identique au précédent.",
-    en: "This field must match the previous one.",
-  },
-  "constraint.time_after.default": {
-    fr: "L'heure de fin ne peut pas être avant l'heure de début.",
-    en: "The end time cannot be before the start time.",
-  },
-  "constraint.time_after.min_duration": {
-    fr: "La plage doit durer au moins <strong>[duration]</strong> minutes.",
-    en: "The span must last at least <strong>[duration]</strong> minutes.",
-  },
-  "constraint.required.checkbox": {
-    fr: "Veuillez cocher cette case.",
-    en: "Please check this box.",
-  },
-  "constraint.required.checkbox_group": {
-    fr: "Veuillez sélectionner au moins une option.",
-    en: "Please select at least one option.",
-  },
-  "constraint.required.radio": {
-    fr: "Veuillez sélectionner une option.",
-    en: "Please select an option.",
-  },
-  "constraint.required.password": {
-    fr: "Veuillez saisir un mot de passe.",
-    en: "Please enter a password.",
-  },
-  "constraint.required.password.confirm": {
-    fr: "Veuillez confirmer le mot de passe.",
-    en: "Please confirm the password.",
-  },
-  "constraint.required.email": {
-    fr: "Veuillez saisir une adresse e-mail.",
-    en: "Please enter an email address.",
-  },
-  "constraint.required.email.confirm": {
-    fr: "Veuillez confirmer l'adresse e-mail.",
-    en: "Please confirm the email address.",
-  },
-  "constraint.required.confirm": {
-    fr: "Veuillez confirmer le champ précédent.",
-    en: "Please confirm the previous field.",
-  },
-  "constraint.required.default": {
-    fr: "Veuillez remplir ce champ.",
-    en: "Please fill in this field.",
-  },
-  "constraint.pattern.password": {
-    fr: "Ce mot de passe ne correspond pas au format requis.",
-    en: "This password does not match the required format.",
-  },
-  "constraint.pattern.email": {
-    fr: "Cette adresse e-mail ne correspond pas au format requis.",
-    en: "This email address does not match the required format.",
-  },
-  "constraint.pattern.default": {
-    fr: "Ce champ ne correspond pas au format requis.",
-    en: "This field does not match the required format.",
-  },
-  "constraint.type.email.at": {
-    fr: 'Veuillez inclure "@" dans l\'adresse e-mail. Il manque un symbole "@" dans [value].',
-    en: 'Please include "@" in the email address. "@" is missing in [value].',
-  },
-  "constraint.type.email.invalid": {
-    fr: "Veuillez saisir une adresse e-mail valide.",
-    en: "Please enter a valid email address.",
-  },
-  "constraint.min_length.singular.password": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This password must contain at least [min] character (it currently contains only one character).",
-  },
-  "constraint.min_length.singular.email": {
-    fr: "Cette adresse e-mail doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This email address must contain at least [min] character (it currently contains only one character).",
-  },
-  "constraint.min_length.singular.default": {
-    fr: "Ce champ doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This field must contain at least [min] character (it currently contains only one character).",
-  },
-  "constraint.min_length.plural.password": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This password must contain at least [min] characters (it currently contains [count] characters).",
-  },
-  "constraint.min_length.plural.email": {
-    fr: "Cette adresse e-mail doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This email address must contain at least [min] characters (it currently contains [count] characters).",
-  },
-  "constraint.min_length.plural.default": {
-    fr: "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This field must contain at least [min] characters (it currently contains [count] characters).",
-  },
-  "constraint.max_length.password": {
-    fr: "Ce mot de passe doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
-    en: "This password must contain at most [max] characters (it currently contains [count] characters).",
-  },
-  "constraint.max_length.email": {
-    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
-    en: "This email address must contain at most [max] characters (it currently contains [count] characters).",
-  },
-  "constraint.max_length.default": {
-    fr: "Ce champ doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
-    en: "This field must contain at most [max] characters (it currently contains [count] characters).",
-  },
-  "constraint.max_length.selection": {
-    fr: "Sélectionnez au maximum [max] choix ([count] actuellement).",
-    en: "Select at most [max] choices ([count] currently).",
-  },
-  "constraint.type.number.default": {
-    fr: "Ce champ doit être un nombre.",
-    en: "This field must be a number.",
-  },
-  "constraint.type.hour.default": {
-    fr: "Ce champ doit contenir un nombre d'heures.",
-    en: "This field must contain a number of hours.",
-  },
-  "constraint.type.minute.default": {
-    fr: "Ce champ doit contenir un nombre de minutes.",
-    en: "This field must contain a number of minutes.",
-  },
-  "constraint.type.second.default": {
-    fr: "Ce champ doit contenir un nombre de secondes.",
-    en: "This field must contain a number of seconds.",
-  },
-  "constraint.type.percentage.default": {
-    fr: "Ce champ doit contenir un pourcentage.",
-    en: "This field must contain a percentage.",
-  },
-  "constraint.min.number.default": {
-    fr: "Ce nombre doit être <strong>[min]</strong> ou plus.",
-    en: "This number must be <strong>[min]</strong> or greater.",
-  },
-  "constraint.min.hour.default": {
-    fr: "Le nombre d'heures doit être <strong>[min]</strong> ou plus.",
-    en: "The number of hours must be <strong>[min]</strong> or greater.",
-  },
-  "constraint.min.minute.default": {
-    fr: "Le nombre de minutes doit être <strong>[min]</strong> ou plus.",
-    en: "The number of minutes must be <strong>[min]</strong> or greater.",
-  },
-  "constraint.min.second.default": {
-    fr: "Le nombre de secondes doit être <strong>[min]</strong> ou plus.",
-    en: "The number of seconds must be <strong>[min]</strong> or greater.",
-  },
-  "constraint.min.percentage.default": {
-    fr: "Le pourcentage doit être <strong>[min]</strong> ou plus.",
-    en: "The percentage must be <strong>[min]</strong> or greater.",
-  },
-  "constraint.min.duration.default": {
-    fr: "La durée doit être d'au moins <strong>[min]</strong>.",
-    en: "The duration must be at least <strong>[min]</strong>.",
-  },
-  "constraint.max.duration.default": {
-    fr: "La durée ne doit pas dépasser <strong>[max]</strong>.",
-    en: "The duration must not exceed <strong>[max]</strong>.",
-  },
-  "constraint.step.duration.default": {
-    fr: "La durée doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The duration must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.min.time.default": {
-    fr: "L'heure doit être <strong>[min]</strong> ou plus.",
-    en: "The time must be <strong>[min]</strong> or later.",
-  },
-  "constraint.min.date.today.default": {
-    fr: "La date doit être aujourd'hui ou dans le futur.",
-    en: "The date must be today or in the future.",
-  },
-  "constraint.min.date.default": {
-    fr: "La date doit être à partir du <strong>[min]</strong>.",
-    en: "The date must be on or after <strong>[min]</strong>.",
-  },
-  "constraint.max.date.today.default": {
-    fr: "La date doit être aujourd'hui ou dans le passé.",
-    en: "The date must be today or in the past.",
-  },
-  "constraint.max.date.default": {
-    fr: "La date doit être au plus tard le <strong>[max]</strong>.",
-    en: "The date must be on or before <strong>[max]</strong>.",
-  },
-  "constraint.max.number.default": {
-    fr: "Max <strong>[max]</strong>.",
-    en: "Max <strong>[max]</strong>.",
-  },
-  "constraint.max.hour.default": {
-    fr: "Max <strong>[max]</strong> heures.",
-    en: "Max <strong>[max]</strong> hours.",
-  },
-  "constraint.max.minute.default": {
-    fr: "Max <strong>[max]</strong> minutes.",
-    en: "Max <strong>[max]</strong> minutes.",
-  },
-  "constraint.max.second.default": {
-    fr: "Max <strong>[max]</strong> secondes.",
-    en: "Max <strong>[max]</strong> secondes.",
-  },
-  "constraint.max.percentage.default": {
-    fr: "Max <strong>[max]</strong>%.",
-    en: "Max <strong>[max]</strong>%.",
-  },
-  "constraint.step.number.default": {
-    fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "This number must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.hour.default": {
-    fr: "Le nombre d'heures doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The number of hours must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.minute.default": {
-    fr: "Le nombre de minutes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The number of minutes must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.second.default": {
-    fr: "Le nombre de secondes doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The number of seconds must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.percentage.default": {
-    fr: "Le pourcentage doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The percentage must be a multiple of <strong>[step]</strong> (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.time.hour": {
-    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> heure(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The time must be within an interval of <strong>[step]</strong> hour(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.time.minute": {
-    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> minute(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The time must be within an interval of <strong>[step]</strong> minute(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.time.second": {
-    fr: "L'heure doit être dans un intervalle de <strong>[step]</strong> seconde(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The time must be within an interval of <strong>[step]</strong> second(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.step.date.default": {
-    fr: "La date doit correspondre à un intervalle de <strong>[step]</strong> jour(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
-    en: "The date must correspond to an interval of <strong>[step]</strong> day(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
-  },
-  "constraint.max.time.default": {
-    fr: "L'heure doit être <strong>[max]</strong> ou moins.",
-    en: "The time must be <strong>[max]</strong> or earlier.",
-  },
-  "constraint.single_space.start": {
-    fr: "Ce champ ne doit pas commencer par un espace.",
-    en: "This field must not start with a space.",
-  },
-  "constraint.single_space.end": {
-    fr: "Ce champ ne doit pas finir par un espace.",
-    en: "This field must not end with a space.",
-  },
-  "constraint.single_space.consecutive": {
-    fr: "Ce champ ne doit pas contenir plusieurs espaces consécutifs.",
-    en: "This field must not contain consecutive spaces.",
-  },
-  // [sample] is the offending character with its marks — a stack is invisible
-  // as a description and obvious as a sample.
-  "constraint.displayable.stacked_marks.singular": {
-    fr: "Ce champ contient un caractère qui empile plus de <strong>[max]</strong> signes : « [sample] ».",
-    en: "This field contains a character stacking more than <strong>[max]</strong> marks: “[sample]”.",
-  },
-  "constraint.displayable.stacked_marks.plural": {
-    fr: "Ce champ contient [count] caractères qui empilent plus de <strong>[max]</strong> signes (tel que « [sample] »).",
-    en: "This field contains [count] characters stacking more than <strong>[max]</strong> marks (such as “[sample]”).",
-  },
-  "constraint.displayable.invisible": {
-    fr: "Ce champ doit contenir au moins un caractère visible.",
-    en: "This field must contain at least one visible character.",
-  },
-  "constraint.displayable.blank_lines": {
-    fr: "Ce champ ne doit pas contenir plusieurs lignes vides consécutives.",
-    en: "This field must not contain consecutive blank lines.",
-  },
-  "constraint.displayable.dangling_joiner": {
-    fr: "Ce champ contient un caractère de liaison invisible qui ne relie rien.",
-    en: "This field contains an invisible joiner that joins nothing.",
-  },
-  "constraint.no_emoji.default": {
-    fr: "Ce champ ne doit pas contenir d'emoji.",
-    en: "This field must not contain emoji.",
-  },
-  "constraint.max_line_breaks.default": {
-    fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
-    en: "This field must not contain more than [max] line break[s].",
-  },
-  "constraint.min_lower_letter.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
-    en: "This password must contain at least one lowercase letter.",
-  },
-  "constraint.min_lower_letter.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
-    en: "This password must contain at least [min] lowercase letters.",
-  },
-  "constraint.min_lower_letter.default.singular": {
-    fr: "Ce champ doit contenir au moins une lettre minuscule.",
-    en: "This field must contain at least one lowercase letter.",
-  },
-  "constraint.min_lower_letter.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
-    en: "This field must contain at least [min] lowercase letters.",
-  },
-  "constraint.min_upper_letter.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
-    en: "This password must contain at least one uppercase letter.",
-  },
-  "constraint.min_upper_letter.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
-    en: "This password must contain at least [min] uppercase letters.",
-  },
-  "constraint.min_upper_letter.default.singular": {
-    fr: "Ce champ doit contenir au moins une lettre majuscule.",
-    en: "This field must contain at least one uppercase letter.",
-  },
-  "constraint.min_upper_letter.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
-    en: "This field must contain at least [min] uppercase letters.",
-  },
-  "constraint.min_digit.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins un chiffre.",
-    en: "This password must contain at least one digit.",
-  },
-  "constraint.min_digit.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
-    en: "This password must contain at least [min] digits.",
-  },
-  "constraint.min_digit.default.singular": {
-    fr: "Ce champ doit contenir au moins un chiffre.",
-    en: "This field must contain at least one digit.",
-  },
-  "constraint.min_digit.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] chiffres.",
-    en: "This field must contain at least [min] digits.",
-  },
-  "constraint.min_special_char.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
-    en: "This password must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "This password must contain at least [min] special characters. ([charset])",
-  },
-  "constraint.min_special_char.default.singular": {
-    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
-    en: "This field must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "This field must contain at least [min] special characters. ([charset])",
-  },
-});
-
-// Character class and maxLengthGuard messages. The char class keys are
-// @jsenv/validity's own ("char_class.slug"), prefixed with "constraint." —
-// the same sentence refuses a keystroke in a callout and a whole value in a
-// constraint, so there is one key for both.
-naviI18n.addAll({
-  // Preset-specific char messages — more informative than the generic fallback
-  "constraint.char_class.numeric": {
-    fr: "Ce champ ne peut contenir que des chiffres.",
-    en: "This field can only contain digits.",
-  },
-  "constraint.char_class.alpha": {
-    fr: "Ce champ ne peut contenir que des lettres.",
-    en: "This field can only contain letters.",
-  },
-  "constraint.char_class.alphanumeric": {
-    fr: "Ce champ ne peut contenir que des lettres et des chiffres.",
-    en: "This field can only contain letters and digits.",
-  },
-  "constraint.char_class.uppercase": {
-    fr: "Ce champ ne peut contenir que des lettres majuscules.",
-    en: "This field can only contain uppercase letters.",
-  },
-  "constraint.char_class.hex": {
-    fr: "Ce champ ne peut contenir que des chiffres hexadécimaux (0-9, A-F).",
-    en: "This field can only contain hexadecimal digits (0-9, A-F).",
-  },
-  "constraint.char_class.slug": {
-    fr: "Ce champ ne peut contenir que des lettres minuscules, des chiffres et des tirets.",
-    en: "This field can only contain lowercase letters, digits, and hyphens.",
-  },
-  // Generic fallback for custom char classes and other presets (tel, card, postal, iban…)
-  "constraint.char_class.no_emoji": {
-    fr: "Ce champ ne peut pas contenir d'emoji.",
-    en: "This field cannot contain emoji.",
-  },
-  "constraint.char_class.default": {
-    fr: "Ce champ ne peut contenir que les caractères autorisés.",
-    en: "This field can only contain allowed characters.",
-  },
-  // maxLength: keydown blocked (one character would exceed the limit)
-  "constraint.guard.max_length.typing": {
-    fr: "Longueur maximale de [max] caractère[s] atteinte.",
-    en: "Maximum length of [max] character[s] reached.",
-  },
-  // maxLength: paste/set truncated to maxLength (autofix always applied)
-  "constraint.guard.max_length.value": {
-    fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
-    en: "This field cannot contain more than [max] character[s]; the value was truncated.",
-  },
-  // maxLengthGuard on a multiple selection: one more item would exceed the limit
-  "constraint.guard.max_length.selection": {
-    fr: "[max] max.",
-    en: "[max] max.",
-  },
-});
-
-// Date/time placeholder tokens — shown when no value is selected
-// Override any key to adapt to your language conventions
-naviI18n.addAll({
-  "time.placeholder.day": {
-    fr: "jj",
-    en: "dd",
-    de: "TT",
-    es: "dd",
-    it: "gg",
-    pt: "dd",
-    nl: "dd",
-  },
-  "time.placeholder.month": {
-    fr: "mm",
-    en: "mm",
-    de: "MM",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.year": {
-    fr: "aaaa",
-    en: "yyyy",
-    de: "JJJJ",
-    es: "aaaa",
-    it: "aaaa",
-    pt: "aaaa",
-    nl: "jjjj",
-  },
-  "time.placeholder.hour": {
-    fr: "hh",
-    en: "hh",
-    de: "hh",
-    es: "hh",
-    it: "hh",
-    pt: "hh",
-    nl: "uu",
-  },
-  "time.placeholder.minute": {
-    fr: "mm",
-    en: "mm",
-    de: "mm",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.week": {
-    fr: "sem.",
-    en: "wk",
-    de: "KW",
-    es: "sem.",
-    it: "sett.",
-    pt: "sem.",
-    nl: "wk",
-  },
-});
-
 const BUSY_CONSTRAINT = {
   name: "busy",
   messageAttribute: "data-busy-message",
@@ -9374,14 +9518,20 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
 
 const readOnlyMessage = (field) => {
-  // Read-only for a reason the control named itself. Only one so far: a send
-  // button held back by the form above it, which holds nothing new (see
+  // Read-only for a reason the control named itself, read off the reason
+  // rather than off the surrounding state: a button read-only for its own
+  // reasons, inside a form that happens to be unchanged, is not waiting for
+  // anything.
+  const reason = field.controlHostProps["data-readonly-reason"];
+  // Held by the network policy: the write it asks for cannot leave (see
+  // network_policy.js), in the policy's own words.
+  if (reason === "network-policy") {
+    return getNetworkPolicyReadOnlyMessage();
+  }
+  // A send button held back by the form above it, which holds nothing new (see
   // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
   // button, it is the form still waiting for a change, so that is what it says.
-  // Read off the reason rather than off the form's state: a button read-only for
-  // its own reasons, inside a form that happens to be unchanged, is not waiting
-  // for anything.
-  if (field.controlHostProps["data-readonly-reason"] === "form-unchanged") {
+  if (reason === "form-unchanged") {
     return naviI18n("constraint.readonly.awaiting_change");
   }
   if (field.controlType === "button") {
@@ -14727,9 +14877,54 @@ const resource = (
     store,
     declarationSite,
   });
+  // The row a GET's params designate, when the store already holds it: the
+  // value under idKey may be the id or any unique key (a route opening a user
+  // by id or by slug names both `id`), and a unique key may be given under its
+  // own name. Answers a GET under a network policy (see applyNetworkPolicy).
+  const selectByAnyKey = (value) => {
+    const item = store.select(value);
+    if (item) {
+      return item;
+    }
+    for (const uniqueKey of uniqueKeys) {
+      const itemByUniqueKey = store.select(uniqueKey, value);
+      if (itemByUniqueKey) {
+        return itemByUniqueKey;
+      }
+    }
+    return null;
+  };
+  const findItemInStore = (params) => {
+    return untracked(() => {
+      if (primitiveCanBeId(params)) {
+        return selectByAnyKey(params);
+      }
+      if (!isProps(params)) {
+        return null;
+      }
+      const idParam = params[idKey];
+      if (idParam !== undefined) {
+        const item = selectByAnyKey(idParam);
+        if (item) {
+          return item;
+        }
+      }
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyParam = params[uniqueKey];
+        if (uniqueKeyParam !== undefined) {
+          const item = store.select(uniqueKey, uniqueKeyParam);
+          if (item) {
+            return item;
+          }
+        }
+      }
+      return null;
+    });
+  };
   return createResource(name, {
     idKey,
     uniqueKeys,
+    findItemInStore,
     restCallbacks: {
       GET,
       GET_MANY,
@@ -14757,6 +14952,7 @@ const createResource = (
   {
     idKey,
     uniqueKeys = [],
+    findItemInStore,
     restCallbacks,
     store,
     addItemSetup,
@@ -14846,6 +15042,7 @@ const createResource = (
     return createResource(name, {
       idKey,
       uniqueKeys,
+      findItemInStore,
       restCallbacks,
       store,
       addItemSetup,
@@ -15671,7 +15868,7 @@ const createResource = (
       // (see resource_range_reader.js).
       stateFacade.GET_RANGE = createRangeReader(
         `${name}.GET_RANGE`,
-        restCallback,
+        applyNetworkPolicy(restCallback, { verb: "GET", isMany: true }),
         { store, params },
       );
       resourceLifecycleManager.registerRangeReader(
@@ -15684,7 +15881,12 @@ const createResource = (
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    let restAction = createRestAction(verb, restCallback, {
+    const restCallbackUnderPolicy = applyNetworkPolicy(restCallback, {
+      verb,
+      isMany,
+      findItemInStore,
+    });
+    let restAction = createRestAction(verb, restCallbackUnderPolicy, {
       isMany,
       onActionComplete,
       paramScope,
@@ -15812,6 +16014,32 @@ const createRestActionFactoryForRoot = (
   };
 
   return createActionForRoot;
+};
+
+// Under a network policy no callback is called (see network_policy.js). A GET
+// of a root resource answers with the row the store holds for its params —
+// handing the item back is an upsert without effect, so the action completes
+// with what it had and nothing is asked. A relationship GET has no row of its
+// own to answer with, and a write has nothing to answer: both settle with an
+// OfflineError carrying the policy's reason. A completed GET asked to rerun
+// never gets here (actions.js holds it).
+const applyNetworkPolicy = (
+  restCallback,
+  { verb, isMany, findItemInStore },
+) => {
+  return (params, context) => {
+    const reason = peekNetworkPolicyReason();
+    if (reason === null) {
+      return restCallback(params, context);
+    }
+    if (verb === "GET" && !isMany && findItemInStore) {
+      const item = findItemInStore(params);
+      if (item) {
+        return item;
+      }
+    }
+    throw new OfflineError(reason);
+  };
 };
 
 // Captures the "file:line:column" of the user code that invoked the public
@@ -35164,7 +35392,9 @@ const useInteractiveProps = (props, {
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext$1);
     const parentActionRequester = useContext(ActionRequesterContext);
+    const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
+    const networkPolicyReason = useNetworkPolicyReason();
     const {
       disabled,
       required,
@@ -35194,7 +35424,12 @@ const useInteractiveProps = (props, {
     // at, focused and pressed — and answers why (see readonly_constraint.js) —
     // but cannot be taken.
     const readOnlyFromParentMaxLengthGuard = Boolean(zoneStateApplies && uiStateController.parentUIStateController?.isChildBlockedByMaxLengthGuard?.(uiStateController));
-    const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || controlInfo.readOnlyUncontrolled;
+    // A write cannot leave under a network policy, so the control asking for
+    // one — or sitting in a form that does — refuses before the press and says
+    // why (see network_policy.js): a press that looks accepted and fails after
+    // is what the policy exists to avoid.
+    const heldByNetworkPolicy = networkPolicyReason !== null && (isWriteAction(boundAction) || Boolean(zoneStateApplies && parentAction && isWriteAction(parentAction)));
+    const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || controlInfo.readOnlyUncontrolled || heldByNetworkPolicy;
     // An optimistic control trusts its action to succeed: the state the user
     // just set stays visible and interactive while the action runs — no
     // loading, no readonly. On failure resetOnError rolls the state back and
@@ -35229,6 +35464,11 @@ const useInteractiveProps = (props, {
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
+    }
+    if (heldByNetworkPolicy) {
+      // Read by READONLY_CONSTRAINT; wins over any other reason the control
+      // carries — nothing leaves, whatever else was holding it.
+      controlHostProps["data-readonly-reason"] = "network-policy";
     }
     if (controlInfo.disabledSupported) {
       controlHostProps.disabled = disabledResolved;
@@ -38102,6 +38342,12 @@ const css$X = /* css */`
 
     &[data-icon-char] {
       aspect-ratio: 1/1;
+      /* The width is stated, not left to the aspect ratio. Derived through the
+         ratio it would be capped by max-width: 100% of a content-sized parent
+         (a button's content, a picker's slot) whose width depends on the icon —
+         a cyclic percentage that iOS WebKit resolves to 0, collapsing the icon
+         and the parent with it. */
+      width: round(1em, 1px);
       min-width: 0;
       height: round(1em, 1px);
       max-height: round(1em, 1px);
@@ -38114,6 +38360,7 @@ const css$X = /* css */`
          which is what an icon standing on its own in a control's slot wants,
          where a glyph sitting among letters wants to match their size. */
       &[data-fill-line] {
+        width: round(1lh, 1px);
         height: round(1lh, 1px);
         max-height: round(1lh, 1px);
       }
@@ -38138,6 +38385,15 @@ const css$X = /* css */`
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
+  }
+
+  /* A block icon whose width follows from its height through the aspect ratio
+     has nothing for max-width: 100% to measure against when the parent is
+     content-sized (same cyclic percentage as above); the height already bounds
+     it. data-width-fixed alone (an explicit width) keeps the cap. */
+  .navi_icon[data-height-fixed]:not([data-width-fixed]),
+  .navi_icon[data-width-fixed][data-height-fixed] {
+    max-width: none;
   }
 
   .navi_icon > svg,
@@ -44664,6 +44920,11 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
       border-radius: 50%;
 
       svg {
+        /* A viewBox gives the svg a ratio but no size; without an explicit
+           size some engines fall back to the 300x150 default of a replaced
+           element (WebKit trunk / iOS 26.5) and the ring paints huge. */
+        width: 100%;
+        height: 100%;
         overflow: visible;
       }
 
@@ -44675,8 +44936,6 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
         display: none;
       }
       .navi_radio_marker {
-        width: 100%;
-        height: 100%;
         opacity: 0;
         fill: var(--x-radiomark-color);
         transform: scale(0.3);
@@ -54708,6 +54967,13 @@ const css$E = /* css */`
       var(--x-dialog-max-width)
     );
     max-width: var(--x-dialog-max-width);
+    /* The UA gives <dialog> height: fit-content. A percentage height inside
+       it (Box's expandY fallback, height: 100%) is meant to read as auto
+       against that indefinite size, and does — except in WebKit since
+       iOS 26.5, which resolves it to 0 and then wraps the sheet around a 0px
+       child: the dialog opens with no height at all. auto is the same size
+       (min/max-height still bound it) minus the keyword iOS trips on. */
+    height: auto;
     min-height: min(
       max(var(--anchor-height, 0px), var(--dialog-min-height, 0px)),
       var(--x-dialog-max-height)
@@ -80227,5 +80493,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

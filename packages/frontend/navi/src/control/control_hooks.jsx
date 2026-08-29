@@ -29,6 +29,10 @@ import {
 
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
+import {
+  isWriteAction,
+  useNetworkPolicyReason,
+} from "@jsenv/navi/src/action/network_policy.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
 import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
@@ -1569,7 +1573,9 @@ const useInteractiveProps = (
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext);
     const parentActionRequester = useContext(ActionRequesterContext);
+    const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
+    const networkPolicyReason = useNetworkPolicyReason();
     const { disabled, required, readOnly, loading, optimistic } = props;
 
     // `ownTarget="always"`: an affordance that writes nothing to the control it
@@ -1601,12 +1607,23 @@ const useInteractiveProps = (
         uiStateController,
       ),
     );
+    // A write cannot leave under a network policy, so the control asking for
+    // one — or sitting in a form that does — refuses before the press and says
+    // why (see network_policy.js): a press that looks accepted and fails after
+    // is what the policy exists to avoid.
+    const heldByNetworkPolicy =
+      networkPolicyReason !== null &&
+      (isWriteAction(boundAction) ||
+        Boolean(
+          zoneStateApplies && parentAction && isWriteAction(parentAction),
+        ));
     const readOnlyBase =
       readOnly ||
       controlReadOnly ||
       loadingBase ||
       readOnlyFromParentMaxLengthGuard ||
-      controlInfo.readOnlyUncontrolled;
+      controlInfo.readOnlyUncontrolled ||
+      heldByNetworkPolicy;
     // An optimistic control trusts its action to succeed: the state the user
     // just set stays visible and interactive while the action runs — no
     // loading, no readonly. On failure resetOnError rolls the state back and
@@ -1642,6 +1659,11 @@ const useInteractiveProps = (
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
+    }
+    if (heldByNetworkPolicy) {
+      // Read by READONLY_CONSTRAINT; wins over any other reason the control
+      // carries — nothing leaves, whatever else was holding it.
+      controlHostProps["data-readonly-reason"] = "network-policy";
     }
     if (controlInfo.disabledSupported) {
       controlHostProps.disabled = disabledResolved;

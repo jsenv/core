@@ -361,3 +361,5 @@ an action is callable: `GAME.DELETE({ id })` is
 - [list_refresh.md](./list_refresh.md) — what re-runs after a write, and what
   stays on screen while it does
 - [actions.md](./actions.md) — action lifecycle, `bindParams`, `useAsyncData`
+- [offline.md](./offline.md) — what the store already keeps when the network
+  is gone, and the policy that keeps requests from going out

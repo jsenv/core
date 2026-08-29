@@ -224,6 +224,12 @@ const css = /* css */ `
 
     &[data-icon-char] {
       aspect-ratio: 1/1;
+      /* The width is stated, not left to the aspect ratio. Derived through the
+         ratio it would be capped by max-width: 100% of a content-sized parent
+         (a button's content, a picker's slot) whose width depends on the icon —
+         a cyclic percentage that iOS WebKit resolves to 0, collapsing the icon
+         and the parent with it. */
+      width: round(1em, 1px);
       min-width: 0;
       height: round(1em, 1px);
       max-height: round(1em, 1px);
@@ -236,6 +242,7 @@ const css = /* css */ `
          which is what an icon standing on its own in a control's slot wants,
          where a glyph sitting among letters wants to match their size. */
       &[data-fill-line] {
+        width: round(1lh, 1px);
         height: round(1lh, 1px);
         max-height: round(1lh, 1px);
       }
@@ -260,6 +267,15 @@ const css = /* css */ `
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
+  }
+
+  /* A block icon whose width follows from its height through the aspect ratio
+     has nothing for max-width: 100% to measure against when the parent is
+     content-sized (same cyclic percentage as above); the height already bounds
+     it. data-width-fixed alone (an explicit width) keeps the cap. */
+  .navi_icon[data-height-fixed]:not([data-width-fixed]),
+  .navi_icon[data-width-fixed][data-height-fixed] {
+    max-width: none;
   }
 
   .navi_icon > svg,

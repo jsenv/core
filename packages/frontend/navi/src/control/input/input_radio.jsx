@@ -212,6 +212,11 @@ const css = /* css */ `
       border-radius: 50%;
 
       svg {
+        /* A viewBox gives the svg a ratio but no size; without an explicit
+           size some engines fall back to the 300x150 default of a replaced
+           element (WebKit trunk / iOS 26.5) and the ring paints huge. */
+        width: 100%;
+        height: 100%;
         overflow: visible;
       }
 
@@ -223,8 +228,6 @@ const css = /* css */ `
         display: none;
       }
       .navi_radio_marker {
-        width: 100%;
-        height: 100%;
         opacity: 0;
         fill: var(--x-radiomark-color);
         transform: scale(0.3);

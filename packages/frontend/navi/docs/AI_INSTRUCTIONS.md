@@ -88,6 +88,14 @@ consistency across the app, not from any single call site.
   before displaying an error by hand, before writing an error boundary of your
   own, and before concluding that a dev overlay over a page that already shows
   its error is a crash.
+- `docs/offline.md` — an app that keeps working without the network: what the
+  store and the actions already hold when a page is left and come back to,
+  the one declaration (`setNetworkPolicy`) that keeps requests from going out
+  — a GET answered from the store, a completed read kept as it is, a write
+  refused before the press with a message — and what stays the app's (deciding
+  the reason, persisting the store, replaying writes). Read it before caching
+  responses in the app, before wrapping a resource's callbacks to answer
+  offline, and before marking write buttons read-only one by one.
 - `docs/field_validation.md` — what a control refuses and who decides it: the
   split between what only a browser can answer (a blocked keystroke, where the
   callout lands, when the message appears) and « is this value acceptable »,

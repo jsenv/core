@@ -25,6 +25,14 @@ export { findEvent } from "@jsenv/dom";
 export { defineInteractionDetector } from "./src/control/interaction/interactions.js";
 export { useActionStatus } from "./src/action/use_action_status.js";
 export { useRunOnMount } from "./src/action/use_run_on_mount.js";
+// Whether a request may go out at all — one declaration the resource actions
+// and the controls bound to them read (see docs/offline.md).
+export {
+  isOfflineError,
+  OfflineError,
+  setNetworkPolicy,
+  useNetworkPolicyReason,
+} from "./src/action/network_policy.js";
 
 // for debug/testing purposes
 export { enableDebugActions } from "./src/action/actions.js";

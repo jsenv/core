@@ -62,6 +62,13 @@ const createEventEmitter = () => {
  * Only exact declared versions ("1.2.3") are compared: a range ("^1.2.3"), a
  * file/workspace protocol or a tag cannot be checked without resolving what npm
  * would pick, which is way beyond what is needed here.
+ *
+ * A status carries a severity so that every consumer (server log, browser
+ * overlay, reload on install) reads the same decision: a missing package or an
+ * outdated runtime dependency is a "warning", the page is not running what the
+ * project asks for. An outdated devDependency is only "info": the installed
+ * version runs, what may differ is tooling, and that is worth a line in the
+ * console, not a dialog nor a reload once installed.
  */
 
 
@@ -93,13 +100,14 @@ const readDependencyStatus = (
   if (!packageJSON) {
     return null;
   }
-  const declaredVersion = readDeclaredVersion(packageJSON, packageName);
-  if (!declaredVersion) {
+  const declaration = readDeclaration(packageJSON, packageName);
+  if (!declaration) {
     return null;
   }
   return createStatus(packageDirectory, {
     packageName,
-    declaredVersion,
+    declaredVersion: declaration.version,
+    declaredIn: declaration.field,
     declaringDirectoryUrl,
     declaredBy: packageJSON.name,
   });
@@ -126,6 +134,7 @@ const readDependencyStatuses = (packageDirectory) => {
         createStatus(packageDirectory, {
           packageName,
           declaredVersion: dependencies[packageName],
+          declaredIn: field,
           declaringDirectoryUrl: packageDirectory.url,
           declaredBy: packageJSON.name,
         }),
@@ -137,17 +146,25 @@ const readDependencyStatuses = (packageDirectory) => {
 
 const createStatus = (
   packageDirectory,
-  { packageName, declaredVersion, declaringDirectoryUrl, declaredBy },
+  {
+    packageName,
+    declaredVersion,
+    declaredIn,
+    declaringDirectoryUrl,
+    declaredBy,
+  },
 ) => {
   const status = {
     packageName,
     declaredVersion,
+    declaredIn,
     declaredBy,
     installedVersion: null,
     // the file telling this dependency apart; it is what an install rewrites and
     // what the dev server looks at to know the dependency became the declared one
     watchedPath: null,
     state: "missing",
+    severity: "warning",
   };
   const installedDirectoryUrl = findInstalledDirectoryUrl(
     declaringDirectoryUrl,
@@ -169,11 +186,16 @@ const createStatus = (
   status.installedVersion = installedPackageJSON
     ? installedPackageJSON.version
     : null;
-  status.state =
-    isExactVersion(declaredVersion) &&
-    status.installedVersion !== declaredVersion
-      ? "outdated"
-      : "installed";
+  if (
+    !isExactVersion(declaredVersion) ||
+    status.installedVersion === declaredVersion
+  ) {
+    status.state = "installed";
+    status.severity = null;
+    return status;
+  }
+  status.state = "outdated";
+  status.severity = declaredIn === "devDependencies" ? "info" : "warning";
   return status;
 };
 
@@ -201,11 +223,11 @@ const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
   return null;
 };
 
-const readDeclaredVersion = (packageJSON, packageName) => {
+const readDeclaration = (packageJSON, packageName) => {
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = packageJSON[field];
     if (dependencies && dependencies[packageName]) {
-      return dependencies[packageName];
+      return { field, version: dependencies[packageName] };
     }
   }
   return null;
@@ -12152,15 +12174,29 @@ const startDevServer = async ({
     onChange: (problems) => {
       dependencyProblemEventEmitter.emit(problems);
     },
-    onProblem: ({ packageName, declaredVersion, installedVersion, state }) => {
-      logger.warn(
+    onProblem: ({
+      packageName,
+      declaredVersion,
+      installedVersion,
+      declaredIn,
+      state,
+      severity,
+    }) => {
+      const message =
         state === "missing"
           ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
-          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
-      );
+          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion} in ${declaredIn}, run npm install`;
+      if (severity === "warning") {
+        logger.warn(message);
+      } else {
+        logger.info(message);
+      }
     },
-    onInstalled: ({ packageName, declaredVersion }) => {
+    onInstalled: ({ packageName, declaredVersion, severity }) => {
       logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      if (severity !== "warning") {
+        return;
+      }
       reloadRequestEventEmitter.emit({
         cause: `${packageName}@${declaredVersion} installed`,
         reason: `a dependency became available in node_modules`,

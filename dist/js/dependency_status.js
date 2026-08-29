@@ -4,6 +4,11 @@
  * A missing dependency is not handled here: it makes the import fail, so the
  * error overlay already says it, with more precision (which import, where).
  *
+ * The overlay is for the problems the server marks as "warning" (see severity
+ * in package_dependencies.js). An outdated devDependency is "info": it goes to
+ * the console as a line, said once, followed by an other line when it gets
+ * installed; no overlay, and the server does not reload the page for it.
+ *
  * The overlay does not only describe the problem, it shows the dev server
  * watching for the fix: the paths being looked at are named and kept alive on
  * screen, so waiting for "npm install" feels like waiting for something that is
@@ -16,6 +21,9 @@ let watchInfoFromServer = {};
 // what leaves this map has been installed while the overlay was open, which is
 // worth showing as such
 const outdatedPathMap = new Map();
+// the console is append-only: a problem is said when it appears or changes,
+// and its resolution when it leaves the list
+const consoleLineMap = new Map();
 
 const initDependencyStatus = ({ problems, watchInfo }) => {
   watchInfoFromServer = watchInfo || {};
@@ -32,7 +40,10 @@ const initDependencyStatus = ({ problems, watchInfo }) => {
 };
 
 const render = (problems) => {
-  const outdatedList = problems.filter(({ state }) => state === "outdated");
+  logInfoProblems(problems.filter(({ severity }) => severity === "info"));
+  const outdatedList = problems.filter(
+    ({ state, severity }) => state === "outdated" && severity === "warning",
+  );
   removeOverlay();
   removeOverlay = () => {};
   const installedList = [];
@@ -65,6 +76,28 @@ const render = (problems) => {
     ],
     node: createWatchNode(outdatedList, installedList),
   });
+};
+
+const logInfoProblems = (infoList) => {
+  for (const problem of infoList) {
+    const { packageName, declaredIn, declaredVersion, installedVersion } =
+      problem;
+    const line = `[jsenv] "${packageName}" is installed in ${
+      installedVersion || "an unknown version"
+    } but package.json declares ${declaredVersion} in ${declaredIn}, run npm install`;
+    if (consoleLineMap.get(packageName) === line) {
+      continue;
+    }
+    consoleLineMap.set(packageName, line);
+    console.info(line);
+  }
+  for (const packageName of consoleLineMap.keys()) {
+    if (infoList.some((problem) => problem.packageName === packageName)) {
+      continue;
+    }
+    consoleLineMap.delete(packageName);
+    console.info(`[jsenv] "${packageName}" is now installed`);
+  }
 };
 
 const describe = ({ packageName, declaredVersion, installedVersion }) => {
