@@ -4536,7 +4536,11 @@ const css$11 = /* css */`
     height: auto; /* User agent reset */
     margin: 0;
     padding: 0; /* User agent reset */
-    color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    /* The UA's ink for a [popover] element (CanvasText), not the element's:
+       a callout sits inside the element but writes on its own paper. The
+       color keywords are re-declared against that same ink in
+       navi_css_vars.js (.navi_callout). */
+    color: revert;
     font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     line-height: var(
