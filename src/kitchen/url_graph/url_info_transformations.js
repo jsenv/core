@@ -275,8 +275,14 @@ export const createUrlInfoTransformer = ({
       writeFileSync(fileUrl, content, { force: true });
       return undefined;
     }
+    // keyed by the file on disk: two urls differing by their search params
+    // ("file.css.map" and "file.css.map?side_effect") land in the same file,
+    // and two writes racing on it would interleave their bytes
+    const filePath = isFileSystemPath(fileUrl)
+      ? fileUrl
+      : urlToFileSystemPath(fileUrl);
     const previousWritePromise =
-      pendingWritePromiseMap.get(fileUrl) || Promise.resolve();
+      pendingWritePromiseMap.get(filePath) || Promise.resolve();
     const writePromise = previousWritePromise.then(async () => {
       try {
         await writeFile(fileUrl, content);
@@ -289,10 +295,10 @@ export const createUrlInfoTransformer = ({
         }
       }
     });
-    pendingWritePromiseMap.set(fileUrl, writePromise);
+    pendingWritePromiseMap.set(filePath, writePromise);
     writePromise.then(() => {
-      if (pendingWritePromiseMap.get(fileUrl) === writePromise) {
-        pendingWritePromiseMap.delete(fileUrl);
+      if (pendingWritePromiseMap.get(filePath) === writePromise) {
+        pendingWritePromiseMap.delete(filePath);
       }
     });
     return writePromise;

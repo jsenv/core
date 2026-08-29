@@ -241,22 +241,26 @@ export const spyFilesystemCalls = (
     _internalFs,
     "close",
     (fileDescriptor) => {
+      // Resolved when close is called, while the descriptor still belongs to
+      // this file: an asynchronous close frees it in the threadpool before
+      // its callback runs, and a synchronous open happening in between reuses
+      // the same number, so a lookup at callback time finds that other file
+      // (or nothing) and this file's write goes unnoticed.
+      const filePath = fileDescriptorPathMap.get(fileDescriptor);
+      if (!filePath) {
+        return {};
+      }
+      fileDescriptorPathMap.delete(fileDescriptor);
+      const stateBefore = filesystemStateInfoMap.get(filePath);
+      if (!stateBefore) {
+        return {};
+      }
+      filesystemStateInfoMap.delete(filePath);
       return {
         return: (buffer) => {
-          const filePath = fileDescriptorPathMap.get(fileDescriptor);
-          if (!filePath) {
-            return;
-          }
-          const stateBefore = filesystemStateInfoMap.get(filePath);
-          if (!stateBefore) {
-            fileDescriptorPathMap.delete(fileDescriptor);
-            return;
-          }
           if (buffer) {
             onReadFile(filePath);
           }
-          fileDescriptorPathMap.delete(fileDescriptor);
-          filesystemStateInfoMap.delete(filePath);
           const stateAfter = getFileStateWithinHook(filePath);
           onWriteFileDone(stateBefore, stateAfter);
         },
