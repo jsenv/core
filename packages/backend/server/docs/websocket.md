@@ -1,26 +1,36 @@
 # WebSocket
 
-Code below shows how server can accept web socket clients(s) and send data to these clients.
+A route accepts a websocket by returning a `WebSocketResponse`:
 
-_server.js:_
+_server.js_
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import {
+  createFileSystemFetch,
+  startServer,
+  WebSocketResponse,
+} from "@jsenv/server";
 
 await startServer({
   port: 3000,
   routes: [
     {
-      endpoint: "GET /websocket",
-      websocket: () => {
-        return {
-          opened: (websocket) => {
-            websocket.send("Hello world");
-          },
-        };
+      endpoint: "GET /chat.websocket",
+      fetch: () => {
+        return new WebSocketResponse((websocket) => {
+          websocket.send("Hello world");
+          websocket.on("message", (data) => {
+            websocket.send(data);
+          });
+          return () => {
+            // the client is gone
+          };
+        });
       },
+    },
+    {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./")),
+      fetch: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });
@@ -38,7 +48,7 @@ _client.html_
 
   <body>
     <script>
-      const websocket = new WebSocket("ws://localhost:3000/websocket");
+      const websocket = new WebSocket("ws://localhost:3000/chat.websocket");
       websocket.onmessage = (message) => {
         document.body.appendChild(document.createTextNode(message.data));
       };
@@ -47,4 +57,8 @@ _client.html_
 </html>
 ```
 
-Starting the server and opening `http://localhost:3000/client.html` displays a blank page with "Hello world".
+A route is a websocket route when its endpoint ends with `.websocket` or its `headers` pattern has `upgrade: "websocket"`; a plain request to it is answered 426. The handler receives the [ws](https://github.com/websockets/ws/blob/master/doc/ws.md) socket once the upgrade is done; if it returns a function, that function runs when the socket closes.
+
+A websocket route can still refuse the upgrade by returning a regular response (a 401 for instance). Returning anything but a `WebSocketResponse` with status 101 from a websocket route is an error, and so is returning a `WebSocketResponse` to a request that did not ask for an upgrade.
+
+`server.webSocketOrigin` is the `ws://` (or `wss://`) origin of the server. To broadcast to many clients, see [server sent events](./server_sent_events.md): `ServerEvents` accepts websocket clients too.

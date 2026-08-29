@@ -31,6 +31,19 @@ const listen = async ({
   }
 };
 
+/**
+ * Find a port nobody listens to on the given hostname, trying `initialPort`
+ * first then the following ones.
+ *
+ * @param {number} [initialPort=1] - First port to try.
+ * @param {Object} [options]
+ * @param {AbortSignal} [options.signal]
+ * @param {string} [options.hostname="127.0.0.1"] - Interface the port must be free on.
+ * @param {number} [options.min=1]
+ * @param {number} [options.max=65534] - Give up (throw) past this port.
+ * @param {(port: number) => number} [options.next] - How to pick the next port to try.
+ * @returns {Promise<number>}
+ */
 export const findFreePort = async (
   initialPort = 1,
   {
@@ -93,20 +106,34 @@ const portIsFree = async (port, hostname) => {
 
 const startListening = ({ server, port, hostname }) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("listening", () => {
+    const onError = (error) => {
+      server.removeListener("listening", onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.removeListener("error", onError);
       // in case port is 0 (randomly assign an available port)
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port);
-    });
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
     server.listen(port, hostname);
   });
 };
 
 export const stopListening = (server) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
+    const onError = (error) => {
+      server.removeListener("close", onClose);
+      reject(error);
+    };
+    const onClose = () => {
+      server.removeListener("error", onError);
+      resolve();
+    };
+    server.once("error", onError);
+    server.once("close", onClose);
     server.close();
   });
 };

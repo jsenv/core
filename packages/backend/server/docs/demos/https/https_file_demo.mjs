@@ -3,24 +3,19 @@ import { readFileSync } from "node:fs";
 
 await startServer({
   https: {
-    certificate: readFileSyncAsString("./server.crt"),
-    privateKey: readFileSyncAsString("./server.key"),
+    certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
+    privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
   },
   allowHttpRequestOnHttps: true,
-  requestToResponse: (request) => {
-    const clientUsesHttp = request.origin.startsWith("http:");
-
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
+  routes: [
+    {
+      endpoint: "GET *",
+      fetch: (request) => {
+        const clientUsesHttp = request.origin.startsWith("http:");
+        return new Response(
+          clientUsesHttp ? `Welcome http user` : `Welcome https user`,
+        );
       },
-      body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-    };
-  },
+    },
+  ],
 });
-
-function readFileSyncAsString(relativeUrl) {
-  const fileUrl = new URL(relativeUrl, import.meta.url);
-  return String(readFileSync(fileUrl));
-}

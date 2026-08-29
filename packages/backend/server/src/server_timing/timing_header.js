@@ -1,7 +1,7 @@
 import {
   parseMultipleHeader,
   stringifyMultipleHeader,
-} from "../internal/multiple-header.js";
+} from "../internal/multiple_header.js";
 
 // to predict order in chrome devtools we should put a,b,c,d,e or something
 // because in chrome dev tools they are shown in alphabetic order

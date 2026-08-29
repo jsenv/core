@@ -7,7 +7,6 @@ import {
 } from "@jsenv/filesystem";
 import { fetchFileSystem } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/server/src/plugins/filesystem/etag.js";
-import { urlToFileSystemPath } from "@jsenv/urls";
 import { unlinkSync } from "node:fs";
 
 if (process.platform === "win32") {
@@ -15,6 +14,16 @@ if (process.platform === "win32") {
 }
 
 const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
+
+// a response body is a file stream: it is read to the end before the directory
+// is reset, a stream whose file disappears before it opens emits an error
+const consumeBody = (body) => {
+  return new Promise((resolve, reject) => {
+    body.on("error", reject);
+    body.on("close", resolve);
+    body.resume();
+  });
+};
 
 // 200 on file
 {
@@ -50,10 +59,10 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
       "content-type": "text/javascript",
     },
     body: actual.body,
-    bodyEncoding: undefined,
     timing: undefined,
   };
   assert({ actual, expect });
+  await consumeBody(actual.body);
 }
 
 // 404 if file is missing
@@ -80,13 +89,12 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
   );
   const expect = {
     status: 404,
-    statusText: `ENOENT: File not found at ${urlToFileSystemPath(fileUrl)}`,
+    statusText: `ENOENT: File not found`,
     statusMessage: undefined,
     headers: {
       "cache-control": "private,max-age=0,must-revalidate",
     },
     body: undefined,
-    bodyEncoding: undefined,
     timing: undefined,
   };
   assert({ actual, expect });
@@ -196,6 +204,8 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     };
     assert({ actual, expect });
   }
+  await consumeBody(response.body);
+  await consumeBody(thirdResponse.body);
 }
 
 // 304 if file not mofified (using mtime)
@@ -305,6 +315,8 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     };
     assert({ actual, expect });
   }
+  await consumeBody(response.body);
+  await consumeBody(thirdResponse.body);
 }
 
 // 403 on directory

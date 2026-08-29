@@ -1,4 +1,4 @@
-import { parseMultipleHeader } from "../internal/multiple-header.js";
+import { parseMultipleHeader } from "../internal/multiple_header.js";
 import { pickAcceptedContent } from "./pick_accepted_content.js";
 
 export const pickContentVersion = (request, availableVersions) => {

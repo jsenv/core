@@ -1,6 +1,16 @@
-import { parseMultipleHeader } from "../internal/multiple-header.js";
+import { parseMultipleHeader } from "../internal/multiple_header.js";
 import { pickAcceptedContent } from "./pick_accepted_content.js";
 
+/**
+ * Pick, among the languages the server can produce, the one the request
+ * prefers according to its `accept-language` header. An exact match
+ * (`fr-FR`) scores higher than a primary language match (`fr` for `fr-CA`).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableLanguages - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The language to respond with, `null` when the request
+ *   accepts none of them or has no `accept-language` header.
+ */
 export const pickContentLanguage = (request, availableLanguages) => {
   const { headers = {} } = request;
   const requestAcceptLanguageHeader = headers["accept-language"];

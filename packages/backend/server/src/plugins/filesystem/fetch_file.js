@@ -1,12 +1,14 @@
 /*
- * This function returns response properties in a plain object like
- * { status: 200, body: "Hello world" }.
- * It is meant to be used inside "requestToResponse"
+ * Turns a request for a file into response properties: content type, client
+ * cache (etag or mtime), compression, directory listing or main file. The
+ * response is a plain object so that it composes with what the router and
+ * the plugins add.
  */
 
 import { urlIsOrIsInsideOf, urlToExtension, urlToPathname } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { createReadStream, readFile, statSync } from "node:fs";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 
 import { pickContentEncoding } from "../../content_negotiation/pick_content_encoding.js";
 import { composeTwoResponses } from "../../internal/response_composition.js";
@@ -18,12 +20,59 @@ import {
   isFileSystemPath,
 } from "./filesystem_path_and_url.js";
 
+/**
+ * A route `fetch` serving the files of a directory. The part of the url
+ * captured by the endpoint `*` (or the whole resource when there is none) is
+ * resolved inside `directoryUrl`; a url escaping it is answered with 403.
+ *
+ * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
+ * @param {Object} [options] - See {@link fetchFileSystem}.
+ * @returns {(request: Object, helpers: Object) => Promise<Object|null>}
+ *
+ * @example
+ * {
+ *   endpoint: "GET /assets/*",
+ *   fetch: createFileSystemFetch(import.meta.resolve("./assets/"), { etagEnabled: true }),
+ * }
+ */
 export const createFileSystemFetch = (directoryUrl, options) => {
   return (request, helpers) => {
     return fetchFileSystem(request, helpers, directoryUrl, options);
   };
 };
 
+/**
+ * Serve a file of `directoryUrl` for `request`. Declines (`null`) any method
+ * other than GET and HEAD. File paths appear in the status text only when the
+ * server runs with `canExposeSensitiveData`.
+ *
+ * @param {Object} request - The request given to a route `fetch`.
+ * @param {Object} [helpers] - The helpers given to a route `fetch` (used for `timing` and `canExposeSensitiveData`).
+ * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
+ * @param {Object} [options]
+ * @param {string} [options.mainFileRelativeUrl] - File served for the directory itself and,
+ *   as a fallback, for extension-less urls that do not exist (client side routing).
+ * @param {boolean} [options.etagEnabled=false] - Send an `etag` (hash of the content) and
+ *   answer 304 to a matching `if-none-match`.
+ * @param {boolean} [options.etagMemory=true] - Remember etags per file (invalidated when the
+ *   file stats change) so that a file is hashed once.
+ * @param {number} [options.etagMemoryMaxSize=1000] - Files remembered at most.
+ * @param {boolean} [options.mtimeEnabled=false] - Send `last-modified` and answer 304 to
+ *   `if-modified-since` (second precision). Ignored when `etagEnabled` is set.
+ * @param {boolean} [options.compressionEnabled=false] - Compress textual files with brotli,
+ *   gzip or deflate according to `accept-encoding`.
+ * @param {number} [options.compressionSizeThreshold=1024] - Files smaller than that (bytes) are not compressed.
+ * @param {string|((request: Object) => string)} [options.cacheControl] - The `cache-control`
+ *   response header. Defaults to 30 days immutable for versioned urls (see `isVersioned`) and
+ *   `private,max-age=0,must-revalidate` otherwise. `"no-store"` disables etag and mtime.
+ * @param {(request: Object) => boolean} [options.isVersioned] - Tells if a url is versioned
+ *   (its content never changes). Defaults to "has a `v` search param".
+ * @param {boolean} [options.canReadDirectory=false] - Answer a directory with its listing
+ *   (json or html, see {@link fetchDirectory}) instead of 403.
+ * @param {() => string|URL|null} [options.ENOENTFallback] - Called when the file does not exist;
+ *   the file url it returns is served instead.
+ * @returns {Promise<Object|null>} Response properties, `null` when the method is not GET/HEAD.
+ */
 export const fetchFileSystem = async (
   request,
   helpers,
@@ -56,6 +105,9 @@ export const fetchFileSystem = async (
   if (!directoryUrlString.endsWith("/")) {
     directoryUrlString = `${directoryUrlString}/`;
   }
+  const canExposeSensitiveData = Boolean(
+    helpers && helpers.canExposeSensitiveData,
+  );
   let resource;
   if (request.params && "0" in request.params) {
     resource = request.params["0"];
@@ -106,15 +158,14 @@ export const fetchFileSystem = async (
   const serveFile = async (fileUrl) => {
     try {
       const readStatTiming = helpers?.timing("file service>read file stat");
-      const fileStat = statSync(new URL(fileUrl));
+      const fileStat = await stat(new URL(fileUrl));
       readStatTiming?.end();
 
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
           return fetchDirectory(fileUrl, {
             headers: request.headers,
-            canReadDirectory,
-            rootDirectoryUrl: directoryUrl,
+            rootDirectoryUrl: directoryUrlString,
           });
         }
         if (mainFileRelativeUrl && fileUrl === directoryUrlString) {
@@ -210,7 +261,9 @@ export const fetchFileSystem = async (
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
           },
         },
-        convertFileSystemErrorToResponseProperties(e) || {},
+        convertFileSystemErrorToResponseProperties(e, {
+          canExposeSensitiveData,
+        }) || {},
       );
     }
   };
@@ -312,20 +365,13 @@ const computeEtag = async ({
       return etagMemoryEntry.eTag;
     }
   }
-  const fileContentAsBuffer = await new Promise((resolve, reject) => {
-    readFile(new URL(fileUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
+  const fileContentAsBuffer = await readFile(new URL(fileUrl));
   const eTag = bufferToEtag(fileContentAsBuffer);
   if (etagMemory) {
     if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
-      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
-      ETAG_MEMORY_MAP.delete(firstKey);
+      // a Map iterates in insertion order: the first key is the oldest entry
+      const oldestKey = ETAG_MEMORY_MAP.keys().next().value;
+      ETAG_MEMORY_MAP.delete(oldestKey);
     }
     ETAG_MEMORY_MAP.set(fileUrl, { fileStat, eTag });
   }
@@ -417,10 +463,23 @@ const fileUrlToReadableStream = (fileUrl) => {
   });
 };
 
+// Brotli's default quality (11) is meant for compressing assets once, ahead
+// of time: it is an order of magnitude slower than gzip. For compression at
+// request time, quality 4 costs about as much cpu as gzip while still
+// compressing better.
+const BROTLI_QUALITY_FOR_ON_THE_FLY_COMPRESSION = 4;
+
 const availableCompressionFormats = {
   br: async (fileReadableStream) => {
-    const { createBrotliCompress } = await import("node:zlib");
-    return fileReadableStream.pipe(createBrotliCompress());
+    const { constants, createBrotliCompress } = await import("node:zlib");
+    return fileReadableStream.pipe(
+      createBrotliCompress({
+        params: {
+          [constants.BROTLI_PARAM_QUALITY]:
+            BROTLI_QUALITY_FOR_ON_THE_FLY_COMPRESSION,
+        },
+      }),
+    );
   },
   deflate: async (fileReadableStream) => {
     const { createDeflate } = await import("node:zlib");

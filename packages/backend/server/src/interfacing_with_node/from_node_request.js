@@ -1,3 +1,15 @@
+/*
+ * Builds the `request` object handed to routes from a node request (http or
+ * http2 compat api). It is frozen: a plugin wanting another request returns
+ * new properties from "redirectRequest" and gets a copy (see
+ * applyRedirectionToRequest). The shape is described in
+ * docs/handling_requests.md.
+ *
+ * The values read from headers (`forwarded`, `cookie`...) come from the
+ * network: the parsers must never throw on garbage, a request that cannot
+ * be read would otherwise escape the request handler.
+ */
+
 import { Abort } from "@jsenv/abort";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -5,14 +17,14 @@ import { parse } from "node:querystring";
 import {
   colorizeResponseStatus,
   statusToType,
-} from "../internal/colorizeResponseStatus.js";
-import { headersFromObject } from "../internal/headersFromObject.js";
-import { parseSingleHeaderWithAttributes } from "../internal/multiple-header.js";
+} from "../internal/colorize_response_status.js";
+import { headersFromObject } from "../internal/headers_from_object.js";
+import { parseSingleHeaderWithAttributes } from "../internal/multiple_header.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, requestBodyLifetime, logger, nagle },
+  { serverOrigin, signal, logger },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
     const logFunction = logger[type];
@@ -52,12 +64,7 @@ export const fromNodeRequest = (
   // Without this the request body readable stream
   // might be closed when we'll try to attach "data" and "end" listeners to it
   nodeRequest.pause();
-  if (!nagle) {
-    nodeRequest.connection.setNoDelay(true);
-  }
-  const body = observableFromNodeStream(nodeRequest, {
-    readableLifetime: requestBodyLifetime,
-  });
+  const body = observableFromNodeStream(nodeRequest);
 
   let requestOrigin;
   if (nodeRequest.upgrade) {
@@ -78,12 +85,6 @@ export const fromNodeRequest = (
   // https://github.com/node-formidable/formidable/tree/master/src/parsers
   const buffer = async () => {
     // here we don't really need to warn, one might want to read anything as binary
-    // const contentType = headers["content-type"];
-    // if (!CONTENT_TYPE.isBinary(contentType)) {
-    //   console.warn(
-    //     `buffer() called on a request with content-type: "${contentType}". A binary content-type was expected.`,
-    //   );
-    // }
     const requestBodyBuffer = await readBody(body, { as: "buffer" });
     return requestBodyBuffer;
   };
@@ -98,7 +99,7 @@ export const fromNodeRequest = (
     }
     const { formidable } = await import("formidable");
     const form = formidable({});
-    nodeRequest.resume(); // was paused in line #53
+    nodeRequest.resume(); // paused above, formidable reads the node stream directly
     const [fields, files] = await form.parse(nodeRequest);
     const requestBodyFormData = { fields, files };
     return requestBodyFormData;
@@ -139,6 +140,7 @@ export const fromNodeRequest = (
   // request.ip          -> request ip as received by the server
   // request.ipForwarded -> ip of the client before proxying, undefined when there is no proxy
   // same applies on request.proto and request.host
+  // These forwarded values are what the headers say: any client can send them.
   let ip = nodeRequest.socket.remoteAddress;
   let proto = requestOrigin.startsWith("http:") ? "http" : "https";
   let host = headers["host"];
@@ -157,7 +159,7 @@ export const fromNodeRequest = (
     const forwardedHost = headers["x-forwarded-host"];
     if (forwardedFor) {
       // format is <client-ip>, <proxy1>, <proxy2>
-      ipForwarded = forwardedFor.split(",")[0];
+      ipForwarded = forwardedFor.split(",")[0].trim();
     }
     if (forwardedProto) {
       protoForwarded = forwardedProto;
@@ -195,52 +197,27 @@ export const fromNodeRequest = (
   });
 };
 
+// Handling a request is asynchronous: its logs are buffered until the
+// response headers are sent (or the request is dropped) so that the logs of
+// concurrent requests do not interleave.
 const createRequestLogger = (nodeRequest, write) => {
-  // Handling request is asynchronous, we buffer logs for that request
-  // until we know what happens with that request
-  // It delays logs until we know of the request will be handled
-  // but it's mandatory to make logs readable.
-
   const logArray = [];
-  const childArray = [];
-  const add = ({ type, value }) => {
+  const add = (type, value) => {
     logArray.push({ type, value });
   };
 
   const requestLogger = {
-    logArray,
-    childArray,
-    hasPushChild: false,
-    forPush: () => {
-      const childLogBuffer = createRequestLogger(nodeRequest, write);
-      childLogBuffer.isChild = true;
-      childArray.push(childLogBuffer);
-      requestLogger.hasPushChild = true;
-      return childLogBuffer;
-    },
     debug: (value) => {
-      add({
-        type: "debug",
-        value,
-      });
+      add("debug", value);
     },
     info: (value) => {
-      add({
-        type: "info",
-        value,
-      });
+      add("info", value);
     },
     warn: (value) => {
-      add({
-        type: "warn",
-        value,
-      });
+      add("warn", value);
     },
     error: (value) => {
-      add({
-        type: "error",
-        value,
-      });
+      add("error", value);
     },
     onHeadersSent: ({ status, statusText }) => {
       const isFaviconNotFound =
@@ -256,8 +233,8 @@ const createRequestLogger = (nodeRequest, write) => {
       if (statusText) {
         message += ` ${statusText}`;
       }
-      add({
-        type: isFaviconNotFound
+      add(
+        isFaviconNotFound
           ? "debug"
           : {
               information: "info",
@@ -266,8 +243,8 @@ const createRequestLogger = (nodeRequest, write) => {
               client_error: "warn",
               server_error: "error",
             }[statusType] || "error",
-        value: message,
-      });
+        message,
+      );
     },
     ended: false,
     end: () => {
@@ -275,19 +252,24 @@ const createRequestLogger = (nodeRequest, write) => {
         return;
       }
       requestLogger.ended = true;
-      if (requestLogger.isChild) {
-        // keep buffering until root request write logs for everyone
+      if (logArray.length === 0) {
         return;
       }
-      const prefixLines = (string, prefix) => {
-        return string.replace(/^(?!\s*$)/gm, prefix);
-      };
-      const writeLog = (
-        { type, value },
-        { someLogIsError, someLogIsWarn, depth },
-      ) => {
-        if (depth > 0) {
-          value = prefixLines(value, "  ".repeat(depth));
+      let someLogIsError = false;
+      let someLogIsWarn = false;
+      for (const log of logArray) {
+        if (log.type === "error") {
+          someLogIsError = true;
+        }
+        if (log.type === "warn") {
+          someLogIsWarn = true;
+        }
+      }
+      // every info log of a request that went wrong is written at the
+      // warn/error level, so that it shows up next to what went wrong
+      const writeLog = ({ type, value }, { indent }) => {
+        if (indent) {
+          value = prefixLines(value, "  ");
         }
         if (type === "info") {
           if (someLogIsError) {
@@ -298,52 +280,22 @@ const createRequestLogger = (nodeRequest, write) => {
         }
         write(type, value);
       };
-      const writeLogs = (loggerToWrite, depth) => {
-        const logArray = loggerToWrite.logArray;
-        if (logArray.length === 0) {
-          return;
-        }
-        let someLogIsError = false;
-        let someLogIsWarn = false;
-        for (const log of loggerToWrite.logArray) {
-          if (log.type === "error") {
-            someLogIsError = true;
-          }
-          if (log.type === "warn") {
-            someLogIsWarn = true;
-          }
-        }
-        const firstLog = logArray.shift();
-        const lastLog = logArray.pop();
-        const middleLogs = logArray;
-        writeLog(firstLog, {
-          someLogIsError,
-          someLogIsWarn,
-          depth,
-        });
-        for (const middleLog of middleLogs) {
-          writeLog(middleLog, {
-            someLogIsError,
-            someLogIsWarn,
-            depth,
-          });
-        }
-        for (const childLoggerToWrite of loggerToWrite.childArray) {
-          writeLogs(childLoggerToWrite, depth + 1);
-        }
-        if (lastLog) {
-          writeLog(lastLog, {
-            someLogIsError,
-            someLogIsWarn,
-            depth: depth + 1,
-          });
-        }
-      };
-      writeLogs(requestLogger, 0);
+      // the last log is the response status, shown under the request line
+      const lastLog = logArray.length > 1 ? logArray.pop() : null;
+      for (const log of logArray) {
+        writeLog(log, { indent: false });
+      }
+      if (lastLog) {
+        writeLog(lastLog, { indent: true });
+      }
     },
   };
 
   return requestLogger;
+};
+
+const prefixLines = (string, prefix) => {
+  return string.replace(/^(?!\s*$)/gm, prefix);
 };
 
 const readBody = (body, { as }) => {
@@ -400,10 +352,20 @@ const parseRequestCookieHeader = (cookieHeader) => {
       continue;
     }
     const name = pair.slice(0, eqIndex).trim();
-    const value = decodeURIComponent(pair.slice(eqIndex + 1).trim());
+    const value = decodeCookieValue(pair.slice(eqIndex + 1).trim());
     map.set(name, value);
   }
   return map;
+};
+
+// a cookie value is not necessarily percent-encoded: a malformed sequence
+// keeps the raw value
+const decodeCookieValue = (value) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 };
 
 export const applyRedirectionToRequest = (
@@ -442,41 +404,4 @@ const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
     resource: `${pathname}${new URL(baseUrl).search}`,
     baseUrl,
   });
-};
-
-export const createPushRequest = (
-  request,
-  { signal, pathname, method, logger },
-) => {
-  const pushRequest = Object.freeze({
-    ...request,
-    logger,
-    parent: request,
-    signal,
-    http2: true,
-    ...(pathname
-      ? getPropertiesFromPathname({
-          pathname,
-          baseUrl: request.url,
-        })
-      : {}),
-    method: method || request.method,
-    headers: getHeadersInheritedByPushRequest(request),
-    body: undefined,
-  });
-  return pushRequest;
-};
-
-const getHeadersInheritedByPushRequest = (request) => {
-  const headersInherited = { ...request.headers };
-  // mtime sent by the client in request headers concerns the main request
-  // Time remains valid for request to other resources so we keep it
-  // in child requests
-  // delete childHeaders["if-modified-since"]
-
-  // eTag sent by the client in request headers concerns the main request
-  // A request made to an other resource must not inherit the eTag
-  delete headersInherited["if-none-match"];
-
-  return headersInherited;
 };

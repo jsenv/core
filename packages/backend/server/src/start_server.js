@@ -2,27 +2,27 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import cluster from "node:cluster";
-import { isIP } from "node:net";
 
 import {
   applyRedirectionToRequest,
-  createPushRequest,
   fromNodeRequest,
 } from "./interfacing_with_node/from_node_request.js";
 import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js";
-import { websocketSuffixColorized } from "./internal/colorizeResponseStatus.js";
+import { websocketSuffixColorized } from "./internal/colorize_response_status.js";
 import {
   composeTwoHeaders,
   composeTwoHeaderValues,
 } from "./internal/headers_composition.js";
 import { listen, stopListening } from "./internal/listen.js";
-import { listenEvent } from "./internal/listenEvent.js";
-import { listenRequest } from "./internal/listenRequest.js";
-import { listenServerConnectionError } from "./internal/listenServerConnectionError.js";
+import { listenEvent } from "./internal/listen_event.js";
+import { listenRequest } from "./internal/listen_request.js";
+import { listenServerConnectionError } from "./internal/listen_server_connection_error.js";
 import { composeTwoResponses } from "./internal/response_composition.js";
-import { createPolyglotServer } from "./internal/server-polyglot.js";
-import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
-import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
+import { createSecureServer } from "./internal/secure_server.js";
+import { resolveServerOrigins } from "./internal/server_origins.js";
+import { createPolyglotServer } from "./internal/server_polyglot.js";
+import { trackServerPendingConnections } from "./internal/track_server_pending_connections.js";
+import { trackServerPendingRequests } from "./internal/track_server_pending_requests.js";
 import { serverPluginAutoreloadOnRestart } from "./plugins/autoreload_on_server_restart/server_plugin_autoreload_on_server_restart.js";
 import { serverPluginResponseCookies } from "./plugins/cookies/server_plugin_response_cookies.js";
 import { serverPluginDefaultBody4xx5xx } from "./plugins/default_body_4xx_5xx/server_plugin_default_body_4xx_5xx.js";
@@ -30,6 +30,7 @@ import { serverPluginInternalClientFiles } from "./plugins/internal_client_files
 import { serverPluginOpenFile } from "./plugins/open_file/server_plugin_open_file.js";
 import { serverPluginRouteInspector } from "./plugins/route_inspector/server_plugin_route_inspector.js";
 import { createServerPluginsController } from "./plugins/server_plugins_controller.js";
+import { createPermissionHelpers } from "./router/permissions.js";
 import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
 import {
@@ -43,75 +44,106 @@ import {
 } from "./stop_reasons.js";
 import { getWebSocketHandler } from "./web_socket_response.js";
 
-import { applyDnsResolution } from "./internal/dns_resolution.js";
-import { parseHostname } from "./internal/hostname_parser.js";
-import { createIpGetters } from "./internal/server_ips.js";
-
 const TIMING_NOOP = () => {
   return { end: () => {} };
 };
 
-const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
-  for (const p of permissionsRequired) {
-    if (!permissionsSet.has(p)) {
-      return false;
-    }
-  }
-  return true;
-};
-
 /**
- * Starts an HTTP (or HTTPS/HTTP2) server.
+ * Start an http server (https and http2 optional) answering each request with
+ * the first route producing a response.
  *
- * @param {Object} params
+ * @param {Object} [params={}]
+ * @param {Array<Object>} [params.routes=[]] - Route descriptors, tried in order. Each has:
+ *   - `endpoint` {string} — Required. `"GET /users/:id"`: an http method (or `*` for any)
+ *     and a resource pattern. `:name` captures a segment and `*` a run of segments, both
+ *     land in `request.params`; `?page=:page` captures a search param. `"*"` alone
+ *     matches everything. An endpoint ending in `.websocket` marks a websocket route.
+ *   - `fetch` {Function} — Required. `(request, helpers) => response`, async or not.
+ *     Returns a `Response`, a plain `{ status, statusText, statusMessage, headers, body,
+ *     timing }` object (`status` defaults to 404, `statusMessage` feeds the body of 4xx/5xx
+ *     responses), a `WebSocketResponse`, or `null`/`undefined` to let the next route try.
+ *     `request` is described in docs/handling_requests.md. `helpers` holds `timing(name)`,
+ *     `injectResponseHeader(name, value)`, `contentNegotiation` (`{ mediaType, language,
+ *     version, encoding }` picked from the `available*` lists below), `responseCookies`
+ *     (`set`/`delete`), `hasPermissions`, `getAllPermissions`, `router`,
+ *     `canExposeSensitiveData`, plus whatever plugins add with "augmentRouteFetchSecondArg".
+ *   - `headers` {Object} — Header pattern the request must match
+ *     (`{ upgrade: "websocket" }` marks a websocket route).
+ *   - `availableMediaTypes`, `availableLanguages`, `availableVersions`, `availableEncodings`
+ *     {Array} — What the route can produce, in order of preference. Drives content
+ *     negotiation, the `vary` header and 406 responses. Media types are inferred from the
+ *     endpoint extension when omitted.
+ *   - `acceptedMediaTypes` {Array<string>} — Request body media types accepted by
+ *     POST/PATCH/PUT (415 otherwise).
+ *   - `permissionsRequired` {Array<string>} — Permissions (granted by "grantPermissions"
+ *     plugins) needed to access the route; `[]` opens it to everyone. Once any route
+ *     declares permissions, a route without them is hidden (404) from everyone.
+ *   - `permissionsToSee` {Array<string>} — Permissions needed to learn the route exists
+ *     (403 instead of 404 when access is denied); `[]` makes it visible to everyone.
+ *   - `description` {string}, `clientCodeExample` {string|Function}, `declarationSource`
+ *     {string} — Shown by the route inspector at `/.internal/route_inspector`.
  *
- * @param {Array<Object>} [params.routes=[]] - Route definitions for the server.
- *   Each route is an object with the following properties:
- *   - `endpoint` {string} — Required. A string like `"GET /users/:id"` combining the HTTP method
- *     and the resource path. Use `"*"` as the method to match all methods, and URL patterns
- *     such as `:param` for named segments or `*` for wildcards.
- *   - `fetch` {Function} — Required. `(request, helpers) => response`. Must return a `Response`,
- *     a response-like object `{ status, headers, body }`, or `null`/`undefined` to skip the route.
- *   - `description` {string} — Optional human-readable description shown in the route inspector.
- *   - `permissionsRequired` {Array<string>} — Optional. Permissions the client must hold to
- *     access the route. An empty array means anyone can access. When omitted the route is hidden
- *     by default (404 for everyone).
- *   - `permissionsToSee` {Array<string>} — Optional. Permissions needed to know the route exists
- *     (403 instead of 404 when access is denied). An empty array means the route is visible to
- *     everyone even when access is denied.
- *   - `availableMediaTypes` {Array<string>} — Content-types this route can produce (drives
- *     `Accept` content negotiation).
- *   - `availableLanguages` {Array<string>} — Languages this route can respond with.
- *   - `availableEncodings` {Array<string>} — Encodings this route supports.
- *   - `acceptedMediaTypes` {Array<string>} — Content-types accepted for request bodies
- *     (POST/PATCH/PUT).
- *   - `clientCodeExample` {string|Function} — Optional code snippet displayed in the route
- *     inspector as a usage example.
- *   - `declarationSource` {string} — Optional file URL of where the route is declared, shown
- *     in the route inspector when `canExposeSensitiveData` is enabled.
- *   - `headers` {Object} — Optional header pattern that must match for the route to be selected.
+ * @param {Array<Object>} [params.plugins=[]] - Server plugins, see docs/plugins.md.
+ * @param {number} [params.port=0] - `0` lets the OS pick a free port.
+ * @param {number} [params.portHint] - With `port: 0`, try this port first, then the next ones.
+ * @param {string} [params.hostname="localhost"] - Hostname or ip to listen to; `server.origin` is built from it.
+ * @param {boolean} [params.acceptAnyIp=false] - Listen on every interface (`0.0.0.0` or `::`)
+ *   so that other machines on the network can reach the server; `server.origins.externalip`
+ *   then tells the address to use from there.
+ * @param {boolean} [params.preferIpv6] - Favor ipv6 addresses in `server.origins`.
+ * @param {Object|false} [params.https=false] - `{ certificate, privateKey }` (PEM strings) to serve https.
+ * @param {boolean} [params.redirectHttpToHttps] - With https, answer http requests with a 301
+ *   to the https origin. Defaults to true unless `allowHttpRequestOnHttps` is set.
+ * @param {boolean} [params.allowHttpRequestOnHttps=false] - With https, also serve plain http
+ *   requests on the same port (`request.origin` tells them apart).
+ * @param {boolean} [params.http2=false] - Serve http2 (needs `https`, http/1.1 clients are still
+ *   accepted). Brings nothing on localhost; a page loading many modules from another machine
+ *   loads several times faster. Http2 has no reason phrase: `statusText` then only reaches the
+ *   logs and the body of 4xx/5xx responses.
+ * @param {boolean} [params.http1Allowed=true] - With http2, still accept http/1.1 clients.
+ * @param {string} [params.logLevel] - `"debug"`, `"info"` (default), `"warn"`, `"error"` or `"off"`.
+ * @param {string} [params.routerLogLevel] - Same, for the router logs (which route matched).
+ * @param {boolean} [params.startLog=true] - Log "server started at …" once listening.
+ * @param {string} [params.serverName="server"] - Name used in the logs.
+ * @param {AbortSignal} [params.signal] - Cancels the start (an AbortError is thrown). Once
+ *   listening the server is stopped with `stop`.
+ * @param {boolean} [params.stopOnSIGINT] - Stop on SIGINT (ctrl+c). Defaults to true, except
+ *   inside a cluster worker where the primary process is in charge.
+ * @param {boolean} [params.stopOnExit=true] - Stop on SIGHUP, SIGTERM, beforeExit and exit.
+ * @param {boolean} [params.stopOnInternalError=false] - Stop when a route throws (after the
+ *   "handleError" plugins answered).
+ * @param {boolean} [params.keepProcessAlive=true] - When false the server alone does not keep
+ *   the process alive.
+ * @param {boolean} [params.canExposeSensitiveData=false] - Lets the server hand out what
+ *   belongs to the machine it runs on. Development only, never in production. It unlocks:
+ *   - file paths in status texts (a 404 from `createFileSystemFetch` says which path);
+ *   - the declaration source of every route in the route inspector, where every route is
+ *     listed whatever its permissions;
+ *   - `GET /.internal/open_file/*`, opening a file of the machine in the editor;
+ *   - `GET /@jsenv/server/*`, serving this package's own client files;
+ *   - `/.internal/alive.websocket` and `/.internal/alive.eventsource`, which a client
+ *     subscribes to in order to reload when the server restarts.
+ * @param {boolean|Object} [params.serverTiming=false] - `true` or `{ minDuration }` to send
+ *   `server-timing` response headers: the time to start responding, the routing of each
+ *   plugin, what routes measure with `helpers.timing` and the `timing` a response hands
+ *   back. `minDuration` (ms) drops the entries that took less: 0 keeps everything (what a
+ *   test wants), a human reading devtools usually wants the sub-millisecond noise gone.
+ * @param {number} [params.requestWaitingMs=0] - Call `requestWaitingCallback` when a request
+ *   still has no response after that many ms (0 disables).
+ * @param {Function} [params.requestWaitingCallback] - `({ request, requestWaitingMs })`, logs a warning by default.
+ * @param {number} [params.responseTimeout=600000] - Ms a route can take to start responding
+ *   before a 504 is sent instead (10 minutes).
  *
- * @param {Array<Object>} [params.plugins=[]] - Server plugins that extend behaviour (hooks such
- *   as `grantPermissions`, `redirectRequest`, `handleError`, etc.). See plugin documentation for
- *   the exact shape; plugins are not described here in detail.
- *
- * @param {number} [params.port=0] - Port to listen on. Defaults to `0` which lets the OS assign
- *   a random available port — useful in tests to avoid port conflicts. A fixed port such as
- *   `3000` can be passed for a predictable address.
- *
- * @param {boolean} [params.acceptAnyIp=false] - When `true` the server binds to all network
- *   interfaces (`0.0.0.0` / `::`), making it reachable from other machines on the network.
- *   When `false` (default) it only listens on the configured `hostname`.
- *
- * @param {boolean} [params.canExposeSensitiveData=false] - Unlocks developer-facing features that
- *   should never be enabled in production:
- *   - Declaration source links in the route inspector (shows where each route is defined).
- *   - The `/.internal/open_file` endpoint that can open files on the server machine.
- *   - Auto-reload client notification when the server restarts.
- *   - All routes are visible in the route inspector regardless of permission configuration.
- *   Set to `true` during local development for a better DX.
- *
- * @returns {Promise<Object>} Resolves to the running server object with `{ origin, port, stop, … }`.
+ * @returns {Promise<Object>} The server: `{ origin, origins, port, hostname, nodeServer,
+ *   webSocketOrigin, stop, stoppedPromise, getStatus, addEffect }`.
+ *   - `origins`: `{ local, localip, externalip }`, `origin` being `origins.local`.
+ *   - `stop(reason)`: resolves once every connection is closed; `reason` can be anything
+ *     and defaults to `STOP_REASON_NOT_SPECIFIED`.
+ *   - `stoppedPromise`: resolves with the reason the server stopped for (one of the
+ *     `STOP_REASON_*` exports or what was given to `stop`).
+ *   - `getStatus()`: `"starting"`, `"opened"`, `"stopping"` or `"stopped"`.
+ *   - `addEffect(callback)`: runs `callback` right away; the function it returns runs
+ *     when the server stops.
  */
 export const startServer = async ({
   signal = new AbortController().signal,
@@ -142,17 +174,7 @@ export const startServer = async ({
   keepProcessAlive = true,
   routes = [],
   plugins = [],
-  // When enabled, the server gives more power:
-  // - each route show the source where it was declared
-  // - server can be requested to open a file on the machine
-  // - client can subscribe to server to detect when it restarts
-  // This param should be enabled ONLY during development on your machine
   canExposeSensitiveData = false,
-  nagle = true,
-  // false | true | { minDuration }: server-timing response headers.
-  // minDuration (ms) drops entries that took less — 0 keeps everything, which
-  // is what a test wants; a human reading devtools usually wants the noise
-  // gone (the jsenv dev server passes 0.5 for that).
   serverTiming = false,
   requestWaitingMs = 0,
   requestWaitingCallback = ({ request, requestWaitingMs }) => {
@@ -166,13 +188,7 @@ export const startServer = async ({
       ),
     );
   },
-  // timeAllocated to start responding to a request
-  // after this delay the server will respond with 504
-  responseTimeout = 60_000 * 10, // 10s
-  // time allocated to server code to start reading the request body
-  // after this delay the underlying stream is destroyed, attempting to read it would throw
-  // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
-  requestBodyLifetime = 60_000 * 2, // 2s
+  responseTimeout = 60_000 * 10, // 10 minutes
   ...rest
 } = {}) => {
   // param validations
@@ -268,9 +284,7 @@ export const startServer = async ({
   let nodeServer;
   const startServerOperation = Abort.startOperation();
   const stopCallbackSet = new Set();
-  const serverOrigins = {
-    local: "", // favors hostname when possible
-  };
+  let serverOrigins;
 
   try {
     startServerOperation.addAbortSignal(signal);
@@ -295,63 +309,15 @@ export const startServer = async ({
       nodeServer.unref();
     }
 
-    const createOrigin = (hostname) => {
-      const protocol = https ? "https" : "http";
-      if (isIP(hostname) === 6) {
-        return `${protocol}://[${hostname}]`;
-      }
-      return `${protocol}://${hostname}`;
-    };
-
-    const ipGetters = createIpGetters();
-    let hostnameToListen;
-    if (acceptAnyIp) {
-      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-      serverOrigins.local = createOrigin(firstInternalIp);
-      serverOrigins.localip = createOrigin(firstInternalIp);
-      const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
-      serverOrigins.externalip = createOrigin(firstExternalIp);
-      hostnameToListen = preferIpv6 ? "::" : "0.0.0.0";
-    } else {
-      hostnameToListen = hostname;
-    }
-    const hostnameInfo = parseHostname(hostname);
-    if (hostnameInfo.type === "ip") {
-      if (acceptAnyIp) {
-        throw new Error(
-          `hostname cannot be an ip when acceptAnyIp is enabled, got ${hostname}`,
-        );
-      }
-
-      preferIpv6 = hostnameInfo.version === 6;
-      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-      serverOrigins.local = createOrigin(firstInternalIp);
-      serverOrigins.localip = createOrigin(firstInternalIp);
-      if (hostnameInfo.label === "unspecified") {
-        const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 });
-        serverOrigins.externalip = createOrigin(firstExternalIp);
-      } else if (hostnameInfo.label === "loopback") {
-        // nothing
-      } else {
-        serverOrigins.local = createOrigin(hostname);
-      }
-    } else {
-      const hostnameDnsResolution = await applyDnsResolution(hostname, {
-        verbatim: true,
-      });
-      if (hostnameDnsResolution) {
-        const hostnameIp = hostnameDnsResolution.address;
-        serverOrigins.localip = createOrigin(hostnameIp);
-        serverOrigins.local = createOrigin(hostname);
-      } else {
-        const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 });
-        // fallback to internal ip because there is no ip
-        // associated to this hostname on operating system (in hosts file)
-        hostname = firstInternalIp;
-        hostnameToListen = firstInternalIp;
-        serverOrigins.local = createOrigin(firstInternalIp);
-      }
-    }
+    const resolved = await resolveServerOrigins({
+      https,
+      hostname,
+      acceptAnyIp,
+      preferIpv6,
+    });
+    hostname = resolved.hostname;
+    serverOrigins = resolved.serverOrigins;
+    const hostnameToListen = resolved.hostnameToListen;
 
     port = await listen({
       signal: startServerOperation.signal,
@@ -449,15 +415,11 @@ export const startServer = async ({
   );
   stopCallbackSet.add(removeConnectionErrorListener);
 
-  const connectionsTracker = trackServerPendingConnections(nodeServer, {
-    http2,
-  });
+  const connectionsTracker = trackServerPendingConnections(nodeServer);
   // opened connection must be shutdown before the close event is emitted
   stopCallbackSet.add(connectionsTracker.stop);
 
-  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
-    http2,
-  });
+  const pendingRequestsTracker = trackServerPendingRequests(nodeServer);
   // ensure pending requests got a response from the server
   stopCallbackSet.add((reason) => {
     pendingRequestsTracker.stop({
@@ -510,7 +472,7 @@ export const startServer = async ({
     serverTiming && typeof serverTiming === "object"
       ? serverTiming.minDuration || 0
       : 0;
-  const getResponseProperties = async (request, { pushResponse }) => {
+  const getResponseProperties = async (request) => {
     const timings = {};
     const timing = serverTiming
       ? (name) => {
@@ -531,9 +493,7 @@ export const startServer = async ({
     request.logger.info(
       request.headers["upgrade"] === "websocket"
         ? `GET ${request.url} ${websocketSuffixColorized}`
-        : request.parent
-          ? `Push ${request.resource}`
-          : `${request.method} ${request.url}`,
+        : `${request.method} ${request.url}`,
     );
     let requestWaitingTimeout;
     if (requestWaitingMs) {
@@ -613,23 +573,22 @@ export const startServer = async ({
           );
         },
       );
-      // the node request readable stream is never closed because
-      // the response headers contains "connection: keep-alive"
-      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-      if (
-        responseProperties.headers.connection === "keep-alive" &&
-        request.body
-      ) {
-        clearTimeout(request.body.timeout);
-      }
+      serverPluginsController.callHooks("inspectResponse", request, {
+        response: responseProperties,
+        warn: (message) => {
+          request.logger.warn(message);
+        },
+      });
       return responseProperties;
     };
 
     let timeout;
+    let timedOut = false;
     try {
       request = applyRequestInternalRedirection(request);
       const timeoutResponsePropertiesPromise = new Promise((resolve) => {
         timeout = setTimeout(() => {
+          timedOut = true;
           resolve({
             // the correct status code should be 500 because it's
             // we don't really know what takes time
@@ -645,7 +604,7 @@ export const startServer = async ({
       const routerResponsePropertiesPromise = (async () => {
         const fetchSecondArg = {
           timing,
-          pushResponse,
+          canExposeSensitiveData,
           injectResponseHeader: (name, value) => {
             if (!headersToInject) {
               headersToInject = {};
@@ -667,54 +626,28 @@ export const startServer = async ({
             }
           },
         );
-        // Build permission helpers, lazily per request.
-        // A single shared iterator ensures each plugin is called at most once.
-        // hasPermissions stops early once the rule is satisfied;
-        // getAllPermissions drains all remaining plugins.
-        const permissionsSet = new Set();
-        const nextPermissionsHook =
-          serverPluginsController.createAsyncHookIterator(
-            "grantPermissions",
-            request,
-          );
-        const drainPermissionsUntil = async (permissionsRequired) => {
-          for (;;) {
-            if (
-              permissionsRequired !== undefined &&
-              permissionsSatisfy(permissionsSet, permissionsRequired)
-            ) {
-              return true;
-            }
-            const { done, value } = await nextPermissionsHook();
-            if (done) {
-              break;
-            }
-            if (Array.isArray(value)) {
-              for (const p of value) {
-                permissionsSet.add(p);
-              }
-            }
-          }
-          return false;
-        };
-        const getAllPermissions = async () => {
-          await drainPermissionsUntil(undefined);
-          return permissionsSet;
-        };
-        const hasPermissions = async (permissionsRequired) => {
-          if (permissionsRequired.length === 0) {
-            return true;
-          }
-          return drainPermissionsUntil(permissionsRequired);
-        };
-        fetchSecondArg.getAllPermissions = getAllPermissions;
-        fetchSecondArg.hasPermissions = hasPermissions;
+        Object.assign(
+          fetchSecondArg,
+          createPermissionHelpers(serverPluginsController, request),
+        );
         const routerResponseProperties = await router.match(
           request,
           fetchSecondArg,
         );
         return routerResponseProperties;
       })();
+      // once the 504 is sent the route keeps running: what it throws
+      // afterwards would have nobody to reject to
+      routerResponsePropertiesPromise.catch((e) => {
+        if (timedOut) {
+          logger.error(
+            createDetailedMessage(`error after the 504 timeout response`, {
+              "request url": request.url,
+              "error stack": e.stack,
+            }),
+          );
+        }
+      });
       const responseProperties = await Promise.race([
         timeoutResponsePropertiesPromise,
         routerResponsePropertiesPromise,
@@ -769,15 +702,7 @@ export const startServer = async ({
     responseProperties,
     { signal, request },
   ) => {
-    // When "pushResponse" is called and the parent response has no body
-    // the parent response is immediatly ended. It means child responses (pushed streams)
-    // won't get a chance to be pushed.
-    // To let a chance to pushed streams we wait a little before sending the response
     const ignoreBody = request.method === "HEAD";
-    const bodyIsEmpty = !responseProperties.body || ignoreBody;
-    if (bodyIsEmpty && request.logger.hasPushChild) {
-      await new Promise((resolve) => setTimeout(resolve));
-    }
     await writeNodeResponse(responseStream, responseProperties, {
       signal,
       ignoreBody,
@@ -826,164 +751,28 @@ export const startServer = async ({
 
       const [receiveRequestOperation, sendResponseOperation] =
         prepareHandleRequestOperations(nodeRequest, nodeResponse);
-      const request = fromNodeRequest(nodeRequest, {
-        signal: stopAbortSignal,
-        serverOrigin,
-        requestBodyLifetime,
-        logger,
-        nagle,
-      });
+      let request;
+      try {
+        request = fromNodeRequest(nodeRequest, {
+          signal: stopAbortSignal,
+          serverOrigin,
+          logger,
+        });
+      } catch (e) {
+        // the request cannot even be read: there is nothing to hand to the routes
+        logger.error(
+          createDetailedMessage(`error while reading request`, {
+            "request url": nodeRequest.url,
+            "error stack": e.stack,
+          }),
+        );
+        nodeResponse.writeHead(500);
+        nodeResponse.end();
+        return;
+      }
 
       try {
-        const responseProperties = await getResponseProperties(request, {
-          pushResponse: async ({ path, method }) => {
-            const pushRequestLogger = request.logger.forPush();
-            if (typeof path !== "string" || path[0] !== "/") {
-              pushRequestLogger.warn(
-                `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-              );
-              return;
-            }
-            if (!request.http2) {
-              pushRequestLogger.warn(
-                `response push ignored because request is not http2`,
-              );
-              return;
-            }
-            const canPushStream = testCanPushStream(nodeResponse.stream);
-            if (!canPushStream.can) {
-              pushRequestLogger.debug(
-                `response push ignored because ${canPushStream.reason}`,
-              );
-              return;
-            }
-
-            let preventedByPlugin = null;
-            const prevent = () => {
-              preventedByPlugin = serverPluginsController.getCurrentPlugin();
-            };
-            serverPluginsController.callHooksUntil(
-              "onResponsePush",
-              { path, method },
-              { request, prevent },
-              () => preventedByPlugin,
-            );
-            if (preventedByPlugin) {
-              pushRequestLogger.debug(
-                `response push prevented by "${preventedByPlugin.name}" plugin`,
-              );
-              return;
-            }
-
-            const http2Stream = nodeResponse.stream;
-
-            // being able to push a stream is nice to have
-            // so when it fails it's not critical
-            const onPushStreamError = (e) => {
-              pushRequestLogger.error(
-                createDetailedMessage(
-                  `An error occured while pushing a stream to the response for ${request.resource}`,
-                  {
-                    "error stack": e.stack,
-                  },
-                ),
-              );
-            };
-
-            // not aborted, let's try to push a stream into that response
-            // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
-            let pushStream;
-            try {
-              pushStream = await new Promise((resolve, reject) => {
-                http2Stream.pushStream(
-                  {
-                    ":path": path,
-                    ...(method ? { ":method": method } : {}),
-                  },
-                  async (
-                    error,
-                    pushStream,
-                    // headers
-                  ) => {
-                    if (error) {
-                      reject(error);
-                    }
-                    resolve(pushStream);
-                  },
-                );
-              });
-            } catch (e) {
-              onPushStreamError(e);
-              return;
-            }
-
-            const abortController = new AbortController();
-            // It's possible to get NGHTTP2_REFUSED_STREAM errors here
-            // https://github.com/nodejs/node/issues/20824
-            const pushErrorCallback = (error) => {
-              onPushStreamError(error);
-              abortController.abort();
-            };
-            pushStream.on("error", pushErrorCallback);
-            sendResponseOperation.addEndCallback(() => {
-              pushStream.removeListener("error", onPushStreamError);
-            });
-
-            await sendResponseOperation.withSignal(async (signal) => {
-              const pushResponseOperation = Abort.startOperation();
-              pushResponseOperation.addAbortSignal(signal);
-              pushResponseOperation.addAbortSignal(abortController.signal);
-
-              const pushRequest = createPushRequest(request, {
-                signal: pushResponseOperation.signal,
-                pathname: path,
-                method,
-                logger: pushRequestLogger,
-              });
-
-              try {
-                const responseProperties = await getResponseProperties(
-                  pushRequest,
-                  {
-                    pushResponse: () => {
-                      pushRequest.logger.warn(
-                        `response push ignored because nested push is not supported`,
-                      );
-                    },
-                  },
-                );
-                if (!abortController.signal.aborted) {
-                  if (pushStream.destroyed) {
-                    abortController.abort();
-                  } else if (!http2Stream.pushAllowed) {
-                    abortController.abort();
-                  } else if (responseProperties.requestAborted) {
-                  } else {
-                    const responseLength =
-                      responseProperties.headers["content-length"] || 0;
-                    const { effectiveRecvDataLength, remoteWindowSize } =
-                      http2Stream.session.state;
-                    if (
-                      effectiveRecvDataLength + responseLength >
-                      remoteWindowSize
-                    ) {
-                      pushRequest.logger.debug(
-                        `Aborting stream to prevent exceeding remoteWindowSize`,
-                      );
-                      abortController.abort();
-                    }
-                  }
-                }
-                await sendResponse(pushStream, responseProperties, {
-                  signal: pushResponseOperation.signal,
-                  request: pushRequest,
-                });
-              } finally {
-                await pushResponseOperation.end();
-              }
-            });
-          },
-        });
+        const responseProperties = await getResponseProperties(request);
         const webSocketHandler = getWebSocketHandler(responseProperties);
         if (webSocketHandler) {
           throw new Error(
@@ -1038,22 +827,27 @@ export const startServer = async ({
     };
     // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
-      let request = fromNodeRequest(nodeRequest, {
-        signal: stopAbortSignal,
-        serverOrigin,
-        requestBodyLifetime,
-        logger,
-        nagle,
-      });
+      let request;
+      try {
+        request = fromNodeRequest(nodeRequest, {
+          signal: stopAbortSignal,
+          serverOrigin,
+          logger,
+        });
+      } catch (e) {
+        logger.error(
+          createDetailedMessage(`error while reading upgrade request`, {
+            "request url": nodeRequest.url,
+            "error stack": e.stack,
+          }),
+        );
+        socket.write(`HTTP/1.1 500 Internal Server Error\r\n\r\n`);
+        socket.destroy();
+        return;
+      }
       const [receiveRequestOperation, sendResponseOperation] =
         prepareHandleRequestOperations(nodeRequest, socket);
-      const responseProperties = await getResponseProperties(request, {
-        pushResponse: () => {
-          request.logger.warn(
-            `pushResponse ignored because it's not supported in websocket`,
-          );
-        },
-      });
+      const responseProperties = await getResponseProperties(request);
       if (receiveRequestOperation.signal.aborted) {
         return;
       }
@@ -1105,7 +899,7 @@ export const startServer = async ({
       }
       return;
     };
-    // see server-polyglot.js, upgrade must be listened on https server when used
+    // see server_polyglot.js, upgrade must be listened on https server when used
     const facadeServer = nodeServer._tlsServer || nodeServer;
     const removeUpgradeCallback = listenEvent(
       facadeServer,
@@ -1122,9 +916,9 @@ export const startServer = async ({
   }
 
   if (startLog) {
-    if (serverOrigins.network) {
+    if (serverOrigins.externalip) {
       logger.info(
-        `${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`,
+        `${serverName} started at ${serverOrigins.local} (${serverOrigins.externalip})`,
       );
     } else {
       logger.info(`${serverName} started at ${serverOrigins.local}`);
@@ -1167,37 +961,15 @@ const createNodeServer = async ({
         http1Allowed,
       });
     }
-    const { createServer } = await import("node:https");
-    return createServer({
-      cert: certificate,
-      key: privateKey,
+    return createSecureServer({
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed,
     });
   }
   const { createServer } = await import("node:http");
   return createServer();
-};
-
-const testCanPushStream = (http2Stream) => {
-  if (!http2Stream.pushAllowed) {
-    return {
-      can: false,
-      reason: `stream.pushAllowed is false`,
-    };
-  }
-
-  // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
-  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
-  const { remoteWindowSize } = http2Stream.session.state;
-  if (remoteWindowSize === 0) {
-    return {
-      can: false,
-      reason: `no more remoteWindowSize`,
-    };
-  }
-
-  return {
-    can: true,
-  };
 };
 
 const PROCESS_TEARDOWN_EVENTS_MAP = {

@@ -1,98 +1,75 @@
-# Error handling
+# Handling errors
 
-Errors are handled by the first service returning something in a "handleError" function.
+A route that throws (or rejects) is answered by the first plugin whose `handleError` hook returns a response. **Without such a plugin the error is thrown and the process exits**: a server always runs with one. `serverPluginErrorHandler` is the generic one:
 
 ```js
-import { startServer } from "@jsenv/server";
+import { serverPluginErrorHandler, startServer } from "@jsenv/server";
 
 await startServer({
+  plugins: [serverPluginErrorHandler()],
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         throw new Error("toto");
-      },
-    },
-  ],
-  services: [
-    {
-      handleError: (error, { request }) => {
-        const body = `An error occured: ${error.message}`;
-        return {
-          status: 500,
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(body),
-          },
-          body,
-        };
       },
     },
   ],
 });
 ```
 
-## handleError
-
-_handleError_ is a function responsible to generate a response from an error.
-
-- It is optional
-- It receives the error in argument
-- It is expect to return a _response_, `null` or `undefined`
-- It can be an async function
-
-When there is no service handling the error it is thrown leading to process exiting with 1.
-
-### jsenvServiceErrorHandler
-
-_jsenvServiceErrorHandler_ is a generic error handler. It can be used to catch errors and display a generic message.
-
-```js
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
-
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      response: () => {
-        throw new Error("toto");
-      },
-    },
-  ],
-  services: [jsenvServiceErrorHandler()],
-});
-```
+It answers 500 with an html page, a text or a json, depending on what the request accepts.
 
 ![screenshot of internal error page](./screenshots/500.png)
 
 ![screenshot of internal error page expanded](./screenshots/500_expanded.png)
 
-When _sendErrorDetails_ is enabled the error details becomes available
+With `sendErrorDetails: true` the error stack (and its properties, in json) is sent. A stack reveals file paths and code: development only.
 
 ![screenshot of internal error page with details expanded](./screenshots/500_expanded_and_details_enabled.png)
 
-When used this error handler should be the last service implementing "handleError" because it catch all errors.
-Any service catching a subset of error should be placed before this one as in the example below:
+The error responses get `cache-control: no-store`.
+
+## Handling some errors yourself
+
+`serverPluginErrorHandler` catches every error, so it comes last; a plugin handling a subset of them comes before:
 
 ```js
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
-
 await startServer({
-  services: [
+  plugins: [
     {
       handleError: (error) => {
         if (error.code === "FOO") {
-          return {
+          return new Response('Custom response for error with code "FOO"', {
             status: 500,
-            headers: {
-              "content-type": "text/plain",
-            },
-            body: 'Custom response for error with code "FOO"',
-          };
+          });
         }
+        return null;
       },
     },
-    jsenvServiceErrorHandler(),
+    serverPluginErrorHandler(),
   ],
 });
 ```
+
+An error exposing an `asResponse()` method is answered with what it returns: a way for a domain error to carry its own status.
+
+A route can also decide not to throw:
+
+```js
+fetch: async () => {
+  try {
+    return Response.json(await fetchExternalData());
+  } catch (error) {
+    return Response.json({ error: "Could not retrieve data" }, { status: 502 });
+  },
+};
+```
+
+## Timeouts
+
+A route that has not started responding after `responseTimeout` (10 minutes by default) is answered 504; the route keeps running and what it throws afterwards is logged.
+
+## Stopping on internal error
+
+`stopOnInternalError: true` stops the server once a route throws (after the error handlers answered), for a supervisor to restart it in a clean state.

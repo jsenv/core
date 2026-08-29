@@ -12,7 +12,7 @@ await startServer({
       headers: {
         upgrade: "websocket",
       },
-      websocket: () => {
+      fetch: () => {
         return new WebSocketResponse((websocket) => {
           websocket.send("Hello world");
         });

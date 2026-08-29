@@ -2,6 +2,16 @@ import { readFileSync } from "node:fs";
 
 const routeInspectorHtmlFileUrl = import.meta
   .resolve("./client/route_inspector.html");
+let routeInspectorHtml;
+const readRouteInspectorHtml = () => {
+  if (routeInspectorHtml === undefined) {
+    routeInspectorHtml = readFileSync(
+      new URL(routeInspectorHtmlFileUrl),
+      "utf8",
+    );
+  }
+  return routeInspectorHtml;
+};
 
 export const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
   return {
@@ -14,11 +24,7 @@ export const serverPluginRouteInspector = ({ canExposeSensitiveData }) => {
         availableMediaTypes: ["text/html"],
         declarationSource: import.meta.url,
         fetch: () => {
-          const inspectorHtml = readFileSync(
-            new URL(routeInspectorHtmlFileUrl),
-            "utf8",
-          );
-          return new Response(inspectorHtml, {
+          return new Response(readRouteInspectorHtml(), {
             headers: { "content-type": "text/html" },
           });
         },

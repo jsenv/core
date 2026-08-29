@@ -1,49 +1,18 @@
 # Content negotiation
 
-Content negotiation is a mechanism that allows the server to select the best representation of a resource when there are multiple options available. `@jsenv/server` provides tools to handle content type, language, version and encoding negotiation.
+A route declares what it can produce; the router picks what the request prefers, sets the `vary` header and answers 406 when nothing fits.
 
-## Content type Negotiation
-
-You can declare `availableMediaTypes` and respond with client's preferred content type:
+## Media type
 
 ```js
-import { startServer, pickContentType } from "@jsenv/server";
+import { startServer } from "@jsenv/server";
 
 await startServer({
   routes: [
-    // Manual negotiation approach
     {
-      endpoint: "GET *",
-      response: (request) => {
-        const contentTypeNegotiated = pickContentType(request, [
-          "application/json",
-          "text/plain",
-        ]);
-        if (!contentTypeNegotiated) {
-          return new Response(
-            `Server cannot respond in the content type you have requested. Server can only respond in the following content types: "application/json", "text/plain"`,
-            { status: 406 }, // 406 Not Acceptable is correct for this scenario
-          );
-        }
-        if (contentTypeNegotiated === "application/json") {
-          return Response.json(
-            { data: "Hello world" },
-            { headers: { vary: "accept" } },
-          );
-        }
-        return new Response("Hello world", {
-          headers: { vary: "accept" },
-        });
-      },
-    },
-    // Router-assisted negotiation (recommended)
-    // - 406 Not Acceptable is handled automatically
-    // - Vary header is set properly
-    // - contentNegotiation gives you the negotiated values
-    {
-      endpoint: "GET *",
+      endpoint: "GET /hello",
       availableMediaTypes: ["application/json", "text/plain"],
-      response: (request, { contentNegotiation }) => {
+      fetch: (request, { contentNegotiation }) => {
         if (contentNegotiation.mediaType === "application/json") {
           return Response.json({ data: "Hello world" });
         }
@@ -54,117 +23,56 @@ await startServer({
 });
 ```
 
-## Language Negotiation
+`Accept: text/*` gets text, `Accept: application/json` gets json, `Accept: image/png` gets 406. Without an `accept` header the first media type wins. The media type of a route whose endpoint has an extension (`GET /data.json`) is inferred.
 
-You can use `availableLanguages` to respond with the client's preferred language:
+The same can be done by hand with `pickContentType(request, availableMediaTypes)`, which returns the media type to use or `null` — then the 406 and the `vary` header are up to the route.
 
-```js
-import { startServer } from "@jsenv/server";
+## Language, version, encoding
 
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      availableLanguages: ["fr", "en"],
-      response: (request, { contentNegotiation }) => {
-        if (contentNegotiation.language === "fr") {
-          return new Response("Bonjour tout le monde !", {
-            "content-language": "fr",
-          });
-        }
-        return new Response("Hello world!", {
-          "content-language": "en",
-        });
-      },
-    },
-  ],
-});
-```
-
-## Versioning
-
-You can use `availableVersions` to respond with the client's desired version:
+`availableLanguages` (`accept-language`), `availableVersions` (`accept-version`) and `availableEncodings` (`accept-encoding`) work the same way, and combine:
 
 ```js
-import { startServer } from "@jsenv/server";
-
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      availableVersions: ["1", "2"],
-      response: (request, { contentNegotiation }) => {
-        if (contentNegotiation.version === "1") {
-          return new Response("v1");
-        }
-        return new Response("v2");
-      },
-    },
-  ],
-});
+{
+  endpoint: "GET /hello",
+  availableMediaTypes: ["application/json", "text/plain"],
+  availableLanguages: ["fr", "en"],
+  fetch: (request, { contentNegotiation }) => {
+    const message =
+      contentNegotiation.language === "fr"
+        ? "Bonjour tout le monde"
+        : "Hello world";
+    const headers = { "content-language": contentNegotiation.language };
+    if (contentNegotiation.mediaType === "application/json") {
+      return Response.json({ data: message }, { headers });
+    }
+    return new Response(message, { headers });
+  },
+}
 ```
-
-## Encoding Negotiation
-
-You can use `availableEncodings` to compress responses based on client preferences:
 
 ```js
 import { gzipSync } from "node:zlib";
-import { startServer } from "@jsenv/server";
 
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      availableEncodings: ["gzip", "identity"],
-      response: (request, { contentNegotiation }) => {
-        if (contentNegotiation.encoding === "gzip") {
-          return new Response(gzipSync(Buffer.from(`Hello world!`)), {
-            headers: {
-              "content-encoding": "gzip",
-            },
-          });
-        }
-        return new Response("Hello world!");
-      },
-    },
-  ],
-});
+{
+  endpoint: "GET /hello",
+  availableEncodings: ["gzip", "identity"],
+  fetch: (request, { contentNegotiation }) => {
+    if (contentNegotiation.encoding === "gzip") {
+      return new Response(gzipSync(Buffer.from("Hello world!")), {
+        headers: { "content-encoding": "gzip" },
+      });
+    }
+    return new Response("Hello world!");
+  },
+}
 ```
 
-## Multiple negotiations
+A version can also be a function, `availableVersions: [(version) => version.startsWith("1.")]`.
 
-You can combine content type, language, and encoding negotiations in a single route:
+## When several negotiations fail
 
-```js
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      availableMediaTypes: ["application/json", "text/plain"],
-      availableLanguages: ["fr", "en"],
-      response: (request, { contentNegotiation }) => {
-        const message =
-          contentNegotiation.language === "fr"
-            ? "Bonjour tout le monde"
-            : "Hello world";
-        const headers = {
-          "content-language": contentNegotiation.language,
-        };
-        if (contentNegotiation.mediaType === "application/json") {
-          return Response.json({ data: message }, { headers });
-        }
-        return new Response(message, { headers });
-      },
-    },
-  ],
-});
-```
+The 406 explains each failure (media types, languages, versions, encodings) and lists what is available in `available-media-types`, `available-languages`, `available-versions`, `available-encodings` response headers.
 
-## Error Handling
+## Checking the response
 
-The router automatically handles these errors:
-
-- **406 Not Acceptable**: When the server cannot provide a response matching the client's Accept headers
-
-When using router-assisted negotiation, proper Vary headers are automatically set to ensure correct caching behavior.
+The router warns (at the request log level) when the response `content-type`, `content-language`, `content-version` or `content-encoding` is not among what the route declared. `serverPluginResponseAcceptanceCheck` goes further and warns when a response does not honor what the request accepted, whatever the route declared.

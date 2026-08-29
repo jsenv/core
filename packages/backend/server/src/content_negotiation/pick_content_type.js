@@ -1,6 +1,16 @@
-import { parseMultipleHeader } from "../internal/multiple-header.js";
+import { parseMultipleHeader } from "../internal/multiple_header.js";
 import { pickAcceptedContent } from "./pick_accepted_content.js";
 
+/**
+ * Pick, among the media types the server can produce, the one the request
+ * prefers according to its `accept` header (quality values honored, `text/*`
+ * style wildcards understood).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableContentTypes - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The media type to respond with, `null` when the request
+ *   accepts none of them or has no `accept` header.
+ */
 export const pickContentType = (request, availableContentTypes) => {
   const { headers = {} } = request;
   const requestAcceptHeader = headers.accept;

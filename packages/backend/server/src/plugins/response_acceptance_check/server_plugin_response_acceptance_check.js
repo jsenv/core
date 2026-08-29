@@ -1,7 +1,12 @@
-import { pickContentEncoding } from "@jsenv/server/src/content_negotiation/pick_content_encoding.js";
-import { pickContentLanguage } from "@jsenv/server/src/content_negotiation/pick_content_language.js";
-import { pickContentType } from "@jsenv/server/src/content_negotiation/pick_content_type.js";
+import { pickContentEncoding } from "../../content_negotiation/pick_content_encoding.js";
+import { pickContentLanguage } from "../../content_negotiation/pick_content_language.js";
+import { pickContentType } from "../../content_negotiation/pick_content_type.js";
 
+/**
+ * Server plugin logging a warning when a response does not honor what the
+ * request accepts (`accept`, `accept-language`, `accept-encoding`). A
+ * development aid: it changes nothing in the response.
+ */
 export const serverPluginResponseAcceptanceCheck = () => {
   return {
     name: "jsenv:response_acceptance_check",
@@ -43,9 +48,9 @@ ${requestAcceptLanguageHeader}`);
   const requestAcceptEncodingHeader = request.headers["accept-encoding"];
   const responseContentEncodingHeader = response.headers["content-encoding"];
   if (
-    requestAcceptLanguageHeader &&
-    responseContentLanguageHeader &&
-    !pickContentEncoding(request, [responseContentLanguageHeader])
+    requestAcceptEncodingHeader &&
+    responseContentEncodingHeader &&
+    !pickContentEncoding(request, [responseContentEncodingHeader])
   ) {
     warn(`response encoding is not in the request accepted encoding.
 --- response content-encoding header ---

@@ -1,24 +1,18 @@
-# SSE (Server Sent Events)
+# Server-Sent Events
 
-Server-Sent Events (SSE) is a technology that allows a server to push updates to clients over a single HTTP connection. This guide shows how to implement SSE with `@jsenv/server`.
+`ServerEvents` keeps track of the connected clients and broadcasts events to them. A client connects with an `EventSource` (`accept: text/event-stream`) or with a `WebSocket`: `serverEvents.fetch` handles both.
 
-## CReating an SSE Room
-
-The example below demonstrates how to create an SSE room where the server can send events to connected clients.
-
-**Server implementation**
+_server.js_
 
 ```js
-import { startServer, createSSERoom } from "@jsenv/server";
+import { ServerEvents, startServer } from "@jsenv/server";
 
-// Create a room where clients will connect
-const room = createSSERoom();
+const serverEvents = new ServerEvents();
 
-// Send a ping event to all connected clients every second
 setInterval(() => {
-  room.sendEventToAllClients({
+  serverEvents.sendEventToAllClients({
     type: "ping",
-    data: { ts: Date.now() }, //   Optional data payload
+    data: JSON.stringify({ ts: Date.now() }),
   });
 }, 1000);
 
@@ -27,31 +21,42 @@ await startServer({
   routes: [
     {
       endpoint: "GET /events",
-      availableMediaTypes: ["text/event-stream"],
-      response: (request) => {
-        return room.join(request);
-      },
+      fetch: serverEvents.fetch,
     },
   ],
 });
 ```
 
-**Client Implementation**
+_client.js_
 
 ```js
-import { EventSource } from "eventsource";
-
-// Connect to the SSE endpoint
-const eventSource = new EventSource("https://localhost:3456/events");
-
-// Listen for specific event types
+const eventSource = new EventSource("http://localhost:3456/events");
 eventSource.addEventListener("ping", (event) => {
-  const data = event.data ? JSON.parse(event.data) : {};
-  console.log("> ping from server", {
-    lastEventId: event.lastEventId,
-    timestamp: data.timestamp,
-  });
+  console.log("ping from server", event.lastEventId, JSON.parse(event.data));
 });
 ```
 
 ![Screencast of server sent events execution in a terminal](./screenshots/sse-screencast.gif)
+
+An event is `{ type, data, id, retry }`; `data` is sent as is (stringify objects yourself). Every event gets an incrementing `id` and is kept (`historyLength`, 1000 by default): a client reconnecting with `last-event-id` receives what it missed. A comment is sent every `keepaliveDuration` (30s) so that proxies keep the connection open.
+
+Past `maxClientAllowed` (100) a new client is refused with 503, or the oldest one is disconnected with `actionOnClientLimitReached: "kick-oldest"`. `close()` disconnects everyone and answers 204 until `open()`. `getClientCount()` and `getAllEventSince(id)` tell where things stand.
+
+## Producing events only when someone listens
+
+`LazyServerEvents` runs a producer when the first client connects and its cleanup when the last one leaves — a file watcher, a database subscription, a timer. Only `fetch` is exposed: events can only come from the producer.
+
+```js
+import { LazyServerEvents } from "@jsenv/server";
+
+const ticks = new LazyServerEvents(({ sendEvent }) => {
+  const interval = setInterval(() => {
+    sendEvent({ type: "tick", data: new Date().toISOString() });
+  }, 1000);
+  return () => {
+    clearInterval(interval);
+  };
+});
+
+// route: { endpoint: "GET /ticks", fetch: ticks.fetch }
+```

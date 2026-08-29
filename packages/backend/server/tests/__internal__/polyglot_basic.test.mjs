@@ -2,15 +2,21 @@ import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 import https from "node:https";
 
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { listen } from "@jsenv/server/src/internal/listen.js";
-import { listenClientError } from "@jsenv/server/src/internal/listenClientError.js";
-import { listenRequest } from "@jsenv/server/src/internal/listenRequest.js";
-import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
+import { listenRequest } from "@jsenv/server/src/internal/listen_request.js";
+import { createPolyglotServer } from "@jsenv/server/src/internal/server_polyglot.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
 } from "../test_certificate.js";
+
+// the polyglot server is a net server dispatching to an http and a tls server,
+// a client error can surface on any of the three
+const listenClientError = (polyglotServer, callback) => {
+  polyglotServer.on("clientError", callback);
+  polyglotServer._httpServer.on("clientError", callback);
+  polyglotServer._tlsServer.on("clientError", callback);
+};
 
 const server = await createPolyglotServer({
   certificate: testServerCertificate,
@@ -34,7 +40,7 @@ const port = await listen({
   const response = await fetchUrl(`http://127.0.0.1:${port}`);
   const actual = {
     status: response.status,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {
@@ -58,7 +64,7 @@ const port = await listen({
   });
   const actual = {
     status: response.status,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {

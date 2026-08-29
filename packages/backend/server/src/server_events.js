@@ -311,7 +311,9 @@ const createServerEvents = ({
     if (history) {
       addEventToHistory(event);
     }
-    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    logger.debug(
+      `send "${event.type}" event to ${clientArray.length} client(s)`,
+    );
     for (const client of clientArray) {
       client.sendEvent(event);
     }

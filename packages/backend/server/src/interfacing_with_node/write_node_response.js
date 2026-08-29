@@ -2,27 +2,15 @@ import { raceCallbacks } from "@jsenv/abort";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { Socket } from "node:net";
+import { asReasonPhrase } from "../internal/reason_phrase.js";
 import { getObservableValueType } from "./get_observable_value_type.js";
 import { observableFromValue } from "./observable_from.js";
 
 export const writeNodeResponse = async (
   responseStream,
-  { status, statusText, headers, body, bodyEncoding },
+  { status, statusText, headers, body },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  const isNetSocket = responseStream instanceof Socket;
-  if (
-    body &&
-    body.isObservableBody &&
-    headers["connection"] === undefined &&
-    headers["content-length"] === undefined
-  ) {
-    headers["transfer-encoding"] = "chunked";
-  }
-  // if (body && headers["content-length"] === undefined) {
-  //   headers["transfer-encoding"] = "chunked";
-  // }
-
   const bodyObservableType = getObservableValueType(body);
   const destroyBody = () => {
     if (bodyObservableType === "file_handle") {
@@ -66,46 +54,8 @@ export const writeNodeResponse = async (
     return;
   }
 
-  if (bodyEncoding && !isNetSocket) {
-    responseStream.setEncoding(bodyEncoding);
-  }
-
   await new Promise((resolve) => {
-    const observable = observableFromValue(body);
     const abortController = new AbortController();
-    signal.addEventListener("abort", () => {
-      abortController.abort();
-    });
-    observable.subscribe(
-      {
-        next: (data) => {
-          try {
-            responseStream.write(data);
-          } catch (e) {
-            // Something inside Node.js sometimes puts stream
-            // in a state where .write() throw despites nodeResponse.destroyed
-            // being undefined and "close" event not being emitted.
-            // I have tested if we are the one calling destroy
-            // (I have commented every .destroy() call)
-            // but issue still occurs
-            // For the record it's "hard" to reproduce but can be by running
-            // a lot of tests against a browser in the context of @jsenv/core testing
-            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-              return;
-            }
-            responseStream.emit("error", e);
-          }
-        },
-        error: (value) => {
-          responseStream.emit("error", value);
-        },
-        complete: () => {
-          responseStream.end();
-        },
-      },
-      { signal: abortController.signal },
-    );
-
     raceCallbacks(
       {
         abort: (cb) => {
@@ -166,6 +116,46 @@ export const writeNodeResponse = async (
         raceEffects[winner.name](winner.data);
       },
     );
+
+    // a string or a buffer is written and ended in one go
+    if (typeof body === "string" || body instanceof Uint8Array) {
+      responseStream.end(body);
+      return;
+    }
+
+    const observable = observableFromValue(body);
+    signal.addEventListener("abort", () => {
+      abortController.abort();
+    });
+    observable.subscribe(
+      {
+        next: (data) => {
+          try {
+            responseStream.write(data);
+          } catch (e) {
+            // Something inside Node.js sometimes puts stream
+            // in a state where .write() throw despites nodeResponse.destroyed
+            // being undefined and "close" event not being emitted.
+            // I have tested if we are the one calling destroy
+            // (I have commented every .destroy() call)
+            // but issue still occurs
+            // For the record it's "hard" to reproduce but can be by running
+            // a lot of tests against a browser in the context of @jsenv/core testing
+            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+              return;
+            }
+            responseStream.emit("error", e);
+          }
+        },
+        error: (value) => {
+          responseStream.emit("error", value);
+        },
+        complete: () => {
+          responseStream.end();
+        },
+      },
+      { signal: abortController.signal },
+    );
   });
 };
 
@@ -176,38 +166,23 @@ const writeHead = (
   const responseIsNetSocket = responseStream instanceof Socket;
   const responseIsHttp2ServerResponse =
     responseStream instanceof Http2ServerResponse;
-  const responseIsServerHttp2Stream =
-    responseStream.constructor.name === "ServerHttp2Stream";
-  let nodeHeaders = headersToNodeHeaders(headers, {
+  const nodeHeaders = headersToNodeHeaders(headers, {
     // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
-    ignoreConnectionHeader:
-      responseIsHttp2ServerResponse || responseIsServerHttp2Stream,
+    ignoreConnectionHeader: responseIsHttp2ServerResponse,
   });
-  if (statusText === undefined) {
-    statusText = statusTextFromStatus(status);
-  } else {
-    statusText = statusText.replace(/\n/g, "").replaceAll("✅", "");
-  }
-  if (responseIsServerHttp2Stream) {
-    nodeHeaders = {
-      ...nodeHeaders,
-      ":status": status,
-    };
-    responseStream.respond(nodeHeaders);
-    onHeadersSent({ nodeHeaders, status, statusText });
-    return;
-  }
-  // nodejs strange signature for writeHead force this
-  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
-  if (
-    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
-    responseIsHttp2ServerResponse
-  ) {
+  statusText =
+    statusText === undefined
+      ? statusTextFromStatus(status)
+      : asReasonPhrase(statusText);
+  if (responseIsHttp2ServerResponse) {
+    // http2 has no reason phrase: statusText only reaches the logs
     responseStream.writeHead(status, nodeHeaders);
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
   if (responseIsNetSocket) {
+    // a websocket upgrade request answered with something else than 101:
+    // the response is written by hand on the socket
     const headersString = Object.keys(nodeHeaders)
       .map((h) => `${h}: ${nodeHeaders[h]}`)
       .join("\r\n");
@@ -217,20 +192,7 @@ const writeHead = (
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
-
-  try {
-    responseStream.writeHead(status, statusText, nodeHeaders);
-  } catch (e) {
-    if (
-      e.code === "ERR_INVALID_CHAR" &&
-      e.message.includes("Invalid character in statusMessage")
-    ) {
-      throw new Error(`Invalid character in statusMessage
---- status message ---
-${statusText}`);
-    }
-    throw e;
-  }
+  responseStream.writeHead(status, statusText, nodeHeaders);
   onHeadersSent({ nodeHeaders, status, statusText });
 };
 
@@ -239,17 +201,11 @@ const statusTextFromStatus = (status) =>
 
 const headersToNodeHeaders = (headers, { ignoreConnectionHeader }) => {
   const nodeHeaders = {};
-
-  Object.keys(headers).forEach((name) => {
-    if (name === "connection" && ignoreConnectionHeader) return;
-    const nodeHeaderName = name in mapping ? mapping[name] : name;
-    nodeHeaders[nodeHeaderName] = headers[name];
-  });
-
+  for (const name of Object.keys(headers)) {
+    if (name === "connection" && ignoreConnectionHeader) {
+      continue;
+    }
+    nodeHeaders[name] = headers[name];
+  }
   return nodeHeaders;
-};
-
-const mapping = {
-  // "content-type": "Content-Type",
-  // "last-modified": "Last-Modified",
 };

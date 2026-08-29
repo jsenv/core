@@ -23,7 +23,7 @@ const actual = {
 const expect = {
   url: `${apiServer.origin}/`,
   status: 200,
-  statusText: "",
+  statusText: "OK",
   headers: {
     "connection": "keep-alive",
     "content-type": "text/plain;charset=UTF-8",

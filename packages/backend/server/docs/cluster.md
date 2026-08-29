@@ -1,3 +1,7 @@
+# Cluster
+
+One server per CPU core, with Node's cluster module: the workers share the port.
+
 _cluster_demo_server.mjs:_
 
 ```js
@@ -6,8 +10,8 @@ import { startServer, createFileSystemFetch } from "@jsenv/server";
 await startServer({
   routes: [
     {
-      endpoint: "GET /",
-      response: createFileSystemFetch(import.meta.resolve("./")),
+      endpoint: "GET *",
+      fetch: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });

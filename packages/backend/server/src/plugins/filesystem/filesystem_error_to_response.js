@@ -1,21 +1,27 @@
-export const convertFileSystemErrorToResponseProperties = (error) => {
+// The file path belongs to the server machine: it joins the status text only
+// when the server was started with canExposeSensitiveData.
+export const convertFileSystemErrorToResponseProperties = (
+  error,
+  { canExposeSensitiveData },
+) => {
+  const location = canExposeSensitiveData ? ` at ${error.path}` : "";
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
     return {
       status: 403,
-      statusText: `EACCES: No permission to read file at ${error.path}`,
+      statusText: `EACCES: No permission to read file${location}`,
     };
   }
   if (isErrorWithCode(error, "EPERM")) {
     return {
       status: 403,
-      statusText: `EPERM: No permission to read file at ${error.path}`,
+      statusText: `EPERM: No permission to read file${location}`,
     };
   }
   if (isErrorWithCode(error, "ENOENT")) {
     return {
       status: 404,
-      statusText: `ENOENT: File not found at ${error.path}`,
+      statusText: `ENOENT: File not found${location}`,
     };
   }
   // file access may be temporarily blocked
@@ -23,7 +29,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EBUSY")) {
     return {
       status: 503,
-      statusText: `EBUSY: File is busy ${error.path}`,
+      statusText: `EBUSY: File is busy${location}`,
       headers: {
         "retry-after": 0.01, // retry in 10ms
       },
@@ -42,7 +48,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EISDIR")) {
     return {
       status: 500,
-      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
+      statusText: `EISDIR: Unexpected directory operation${location}`,
     };
   }
   return null;

@@ -19,9 +19,9 @@ Error: here
     at redirectRequest (base/cors.test.mjs:28:19)
     at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:151:25)
     at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:203:27)
-    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:470:29)
-    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:630:17)
-    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:838:42)
+    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:432:29)
+    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:588:17)
+    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:775:42)
     at Server.emit (node:events:521:24)
     at parserOnIncoming (node:_http_server:1383:12)
     at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
@@ -49,7 +49,7 @@ Error: here
     "keep-alive": "timeout=5",
     "vary": "origin, access-control-request-method, access-control-request-headers"
   },
-  "body": "Code inside server has thrown an error:\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true })."
+  "body": "Code inside server has thrown an error:\nDetails not available: to enable them use serverPluginErrorHandler({ sendErrorDetails: true })."
 }
 ```
 

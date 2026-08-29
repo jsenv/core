@@ -5,7 +5,6 @@ const run = async ({ waitForEver }) => {
   const server = await startServer({
     keepProcessAlive: false,
     responseTimeout: 500,
-    requestBodyLifetime: 200,
     routes: [
       {
         endpoint: "GET *",

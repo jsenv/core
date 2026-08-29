@@ -1,14 +1,29 @@
-import { startServer } from "@jsenv/server";
+import {
+  serverPluginCORS,
+  serverPluginErrorHandler,
+  startServer,
+} from "@jsenv/server";
 
 const server = await startServer({
-  accessControlAllowRequestOrigin: true,
-  accessControlAllowRequestMethod: true,
-  accessControlAllowRequestHeaders: true,
-  accessControlAllowCredentials: true,
-  requestToResponse: () => {
-    throw new Error("test");
-  },
+  plugins: [
+    serverPluginErrorHandler(),
+    serverPluginCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowCredentials: true,
+    }),
+  ],
+  routes: [
+    {
+      endpoint: "GET *",
+      fetch: () => {
+        throw new Error("test");
+      },
+    },
+  ],
 });
 
 const response = await fetch(server.origin);
-response.headers.has("access-control-allow-origin"); // true
+console.log(response.status); // 500
+console.log(response.headers.has("access-control-allow-origin")); // true

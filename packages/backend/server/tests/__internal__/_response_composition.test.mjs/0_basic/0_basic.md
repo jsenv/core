@@ -20,7 +20,6 @@ return composeTwoResponses(
     "foo": false
   },
   "body": undefined,
-  "bodyEncoding": undefined,
   "timing": undefined
 }
 ```

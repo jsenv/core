@@ -13,6 +13,8 @@ import { pickContentEncoding } from "../content_negotiation/pick_content_encodin
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
+import { asReasonPhrase } from "../internal/reason_phrase.js";
+import { permissionsSatisfy } from "./permissions.js";
 
 const routeInspectorUrl = `/.internal/route_inspector`;
 
@@ -28,7 +30,7 @@ const HTTP_METHODS = [
 
 export const createRouter = (
   routeDescriptionArray,
-  { optionsFallback, logLevel, redirect = "manual" } = {},
+  { optionsFallback, logLevel } = {},
 ) => {
   const logger = createLogger({ logLevel });
   const routeSet = new Set();
@@ -285,7 +287,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
       if (fetchReturnValue instanceof Response) {
         status = fetchReturnValue.status;
-        statusText = fetchReturnValue.statusText;
+        // a Response built without statusText has an empty one: the standard
+        // phrase for that status is used instead
+        statusText = fetchReturnValue.statusText || undefined;
         headers = Object.fromEntries(fetchReturnValue.headers);
         body = fetchReturnValue.body;
       } else if (
@@ -293,7 +297,10 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         typeof fetchReturnValue === "object"
       ) {
         status = fetchReturnValue.status || 404;
-        statusText = fetchReturnValue.statusText;
+        statusText =
+          fetchReturnValue.statusText === undefined
+            ? undefined
+            : asReasonPhrase(fetchReturnValue.statusText);
         statusMessage = fetchReturnValue.statusMessage;
         headers = fetchReturnValue.headers || {};
         body = fetchReturnValue.body;
@@ -302,30 +309,6 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         throw new TypeError(
           `response must be a Response, or an Object, received ${fetchReturnValue}`,
         );
-      }
-
-      if (
-        redirect === "follow" &&
-        isRedirectStatus(status) &&
-        headers["location"]
-      ) {
-        const redirectUrl = new URL(headers["location"], request.url);
-        if (redirectUrl.origin === new URL(request.url).origin) {
-          const redirectRequest = {
-            ...request,
-            url: redirectUrl.href,
-            resource:
-              redirectUrl.pathname + redirectUrl.search + redirectUrl.hash,
-            // GET for 301/302/303, preserve method for 307/308
-            method: status === 307 || status === 308 ? request.method : "GET",
-            params: {},
-          };
-          const redirectedResponse = await matchRoutes(redirectRequest);
-          onRouteMatch(route);
-          onResponseHeaders(request, route, redirectedResponse.headers || {});
-          return redirectedResponse;
-        }
-        // redirect to other origins are left to the client to handle
       }
 
       onRouteMatch(route);
@@ -650,25 +633,13 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
   return router;
 };
 
-/**
- * Adds a route to the router.
- *
- * @param {Object} params - Route configuration object
- * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
- * @param {Object} [params.headers] - Optional headers pattern to match
- * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
- * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
- * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
- * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
- * @param {Function} params.fetch - Function to generate response for matching requests
- * @throws {TypeError} If endpoint is not a string
- * @returns {void}
- */
+// Turns a route descriptor (documented on startServer's `routes` param) into
+// a route: matchers for the method, the resource and the headers, plus what
+// the inspector shows. Throws on a malformed descriptor.
 const createRoute = ({
   endpoint,
   description,
   headers,
-  service,
   serverPlugin,
   permissionsRequired,
   permissionsToSee,
@@ -680,7 +651,6 @@ const createRoute = ({
   fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
   clientCodeExample,
   isFallback,
-  subroutes,
   declarationSource,
 }) => {
   if (!endpoint || typeof endpoint !== "string") {
@@ -720,7 +690,6 @@ const createRoute = ({
     method,
     resource,
     description,
-    service,
     serverPlugin,
     permissionsRequired,
     permissionsToSee,
@@ -803,13 +772,9 @@ const createRoute = ({
     resourcePattern,
     isForWebSocket,
     isFallback,
-    subroutes,
   };
   return route;
 };
-
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const isRedirectStatus = (status) => REDIRECT_STATUSES.has(status);
 
 // Returns a denied response if the request does not satisfy route access/visible config.
 // Returns null if access is granted.
@@ -845,15 +810,6 @@ const checkRouteAccess = async (
     return createForbiddenResponse(request);
   }
   return createRouteNotFoundResponse(request);
-};
-
-const permissionsSatisfy = (permissionsSet, permissionsRequired) => {
-  for (const p of permissionsRequired) {
-    if (!permissionsSet.has(p)) {
-      return false;
-    }
-  }
-  return true;
 };
 
 const createForbiddenResponse = () => {
@@ -931,18 +887,12 @@ const createNotAcceptableResponse = (
 ) => {
   const unsupported = [];
   const headers = {};
-  const data = {};
 
   if (availableMediaTypes.length) {
     const requestAcceptHeader = request.headers["accept"];
 
     // Use a non-standard but semantic header name
     headers["available-media-types"] = availableMediaTypes.join(", ");
-
-    Object.assign(data, {
-      requestAcceptHeader,
-      availableMediaTypes,
-    });
 
     unsupported.push({
       type: "content-type",
@@ -956,11 +906,6 @@ Available media types: ${availableMediaTypes.join(", ")}.`,
     // Use a non-standard but semantic header name
     headers["available-languages"] = availableLanguages.join(", ");
 
-    Object.assign(data, {
-      requestAcceptLanguageHeader,
-      availableLanguages,
-    });
-
     unsupported.push({
       type: "language",
       message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
@@ -973,11 +918,6 @@ Available languages: ${availableLanguages.join(", ")}.`,
     // Use a non-standard but semantic header name
     headers["available-versions"] = availableVersions.join(", ");
 
-    Object.assign(data, {
-      requestAcceptVersionHeader,
-      availableLanguages,
-    });
-
     unsupported.push({
       type: "version",
       message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
@@ -989,11 +929,6 @@ Available versions: ${availableVersions.join(", ")}.`,
 
     // Use a non-standard but semantic header name
     headers["available-encodings"] = availableEncodings.join(", ");
-
-    Object.assign(data, {
-      requestAcceptEncodingHeader,
-      availableEncodings,
-    });
 
     unsupported.push({
       type: "encoding",
@@ -1031,7 +966,7 @@ const createMethodNotAllowedResponse = (
   return {
     status: 405,
     statusText: "Method Not Allowed",
-    statusmessage: `The HTTP method "${request.method}" is not supported for this resource.
+    statusMessage: `The HTTP method "${request.method}" is not supported for this resource.
 Allowed methods: ${allowedMethods.join(", ")}`,
     headers: {
       allow: allowedMethods.join(", "),

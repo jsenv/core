@@ -22,7 +22,6 @@ return composeTwoResponses(
     "etag": "toto"
   },
   "body": undefined,
-  "bodyEncoding": undefined,
   "timing": undefined
 }
 ```

@@ -1,10 +1,9 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { listen } from "@jsenv/server/src/internal/listen.js";
-import { listenRequest } from "@jsenv/server/src/internal/listenRequest.js";
-import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
+import { listenRequest } from "@jsenv/server/src/internal/listen_request.js";
+import { createPolyglotServer } from "@jsenv/server/src/internal/server_polyglot.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
@@ -42,7 +41,7 @@ const port = await listen({
   });
   const actual = {
     status: response.status,
-    headers: headersToObject(response.headers),
+    headers: Object.fromEntries(response.headers.entries()),
     body: await response.text(),
   };
   const expect = {

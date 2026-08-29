@@ -13,6 +13,32 @@ export const jsenvAccessControlAllowedMethods = [
   "OPTIONS",
 ];
 
+/**
+ * Server plugin adding the CORS response headers to every response, including
+ * errors (a browser treats a 500 without them as a CORS failure). Disabled
+ * (returns no plugin) unless `accessControlAllowRequestOrigin` is true or
+ * `accessControlAllowedOrigins` is non empty.
+ *
+ * @param {Object} [params]
+ * @param {Array<string>} [params.accessControlAllowedOrigins=[]] - Origins allowed to
+ *   read responses. `*` stands for any run of characters except "/":
+ *   `"https://pr-*-my-app.fly.dev"` matches every preview deployment.
+ * @param {Array<string>} [params.accessControlAllowedMethods] - Defaults to
+ *   GET, POST, PUT, DELETE, OPTIONS.
+ * @param {Array<string>} [params.accessControlAllowedHeaders] - Defaults to `["x-requested-with"]`.
+ * @param {boolean} [params.accessControlAllowRequestOrigin=false] - Reflect any request
+ *   origin, whatever `accessControlAllowedOrigins` says.
+ * @param {boolean} [params.accessControlAllowRequestMethod=false] - Also allow the method a
+ *   preflight asks for (`access-control-request-method`).
+ * @param {boolean} [params.accessControlAllowRequestHeaders=false] - Also allow the headers a
+ *   preflight asks for (`access-control-request-headers`).
+ * @param {boolean} [params.accessControlAllowCredentials=false] - Send
+ *   `access-control-allow-credentials: true`.
+ * @param {number} [params.accessControlMaxAge=600] - Seconds a browser may cache the preflight.
+ * @param {boolean} [params.timingAllowOrigin=false] - Send `timing-allow-origin` so the
+ *   allowed origin can read resource timing.
+ * @returns {Object|Array} The plugin, or `[]` when CORS stays disabled.
+ */
 export const serverPluginCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
@@ -126,12 +152,7 @@ const generateAccessControlHeaders = ({
   // If no origin matches we fall back to "*" (only when not using credentials).
   let allowOrigin = null;
 
-  const requestOrigin =
-    "origin" in headers && headers.origin !== "null"
-      ? headers.origin
-      : "referer" in headers
-        ? new URL(headers.referer).origin
-        : null;
+  const requestOrigin = readRequestOrigin(headers);
 
   if (requestOrigin) {
     if (allowedOriginChecker.isAllowed(requestOrigin)) {
@@ -190,4 +211,16 @@ const generateAccessControlHeaders = ({
     ...(timingAllowOrigin ? { "timing-allow-origin": allowOrigin } : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
   };
+};
+
+// the referer is a fallback for clients not sending "origin"; it comes from
+// the network and may not be a url at all
+const readRequestOrigin = (headers) => {
+  if ("origin" in headers && headers.origin !== "null") {
+    return headers.origin;
+  }
+  if ("referer" in headers && URL.canParse(headers.referer)) {
+    return new URL(headers.referer).origin;
+  }
+  return null;
 };

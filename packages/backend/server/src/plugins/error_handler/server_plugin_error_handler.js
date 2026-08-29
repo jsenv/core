@@ -4,7 +4,31 @@ import { pickContentType } from "../../content_negotiation/pick_content_type.js"
 import { replacePlaceholdersInHtml } from "../../replace_placeholder_in_html.js";
 
 const internalErrorHtmlFileUrl = import.meta.resolve("./client/500.html");
+let internalErrorHtmlTemplate;
+const readInternalErrorHtmlTemplate = () => {
+  if (internalErrorHtmlTemplate === undefined) {
+    internalErrorHtmlTemplate = readFileSync(
+      new URL(internalErrorHtmlFileUrl),
+      "utf8",
+    );
+  }
+  return internalErrorHtmlTemplate;
+};
 
+/**
+ * Server plugin turning an error thrown while handling a request into a 500
+ * response (html, text or json depending on what the request accepts).
+ * Without a plugin handling errors, a route that throws makes the process
+ * exit. Put it last: it catches every error, so plugins handling a subset of
+ * them must come before.
+ *
+ * An error exposing an `asResponse()` method is answered with what it returns.
+ *
+ * @param {Object} [params]
+ * @param {boolean} [params.sendErrorDetails=false] - Put the error stack (and
+ *   its own properties for json) in the response. Development only: a stack
+ *   reveals file paths and code.
+ */
 export const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
     name: "jsenv:error_handler",
@@ -34,18 +58,14 @@ export const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
       const availableContentTypes = {
         "text/html": () => {
           const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+            return `<p>Details not available: to enable them use serverPluginErrorHandler({ sendErrorDetails: true }).</p>`;
           };
           const renderHtmlForErrorWithDetails = () => {
             return errorToHTML(serverInternalError);
           };
 
-          const internalErrorHtmlTemplate = readFileSync(
-            new URL(internalErrorHtmlFileUrl),
-            "utf8",
-          );
           const internalErrorHtml = replacePlaceholdersInHtml(
-            internalErrorHtmlTemplate,
+            readInternalErrorHtmlTemplate(),
             {
               errorMessage: serverInternalErrorIsAPrimitive
                 ? `Code inside server has thrown a literal.`
@@ -79,7 +99,7 @@ export const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
               internalErrorMessage += `\n${serverInternalError.stack}`;
             }
           } else {
-            internalErrorMessage += `\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).`;
+            internalErrorMessage += `\nDetails not available: to enable them use serverPluginErrorHandler({ sendErrorDetails: true }).`;
           }
 
           return {

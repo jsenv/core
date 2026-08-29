@@ -1,7 +1,19 @@
 import { lstatSync, readdirSync } from "node:fs";
 
 import { pickContentType } from "../../content_negotiation/pick_content_type.js";
+import { escapeHtml } from "../../internal/escape_html.js";
 
+/**
+ * Response listing a directory, as json (an array of names) or as an html
+ * page of links depending on what the request accepts (json by default).
+ *
+ * @param {string|URL} url - The directory.
+ * @param {Object} [params]
+ * @param {Object} [params.headers={}] - Request headers, read for `accept`.
+ * @param {string|URL} [params.rootDirectoryUrl] - Directory served at "/", so
+ *   that the html links are relative to the server.
+ * @returns {{ status: number, headers: Object, body: string }}
+ */
 export const fetchDirectory = (
   url,
   { headers = {}, rootDirectoryUrl } = {},
@@ -20,7 +32,7 @@ export const fetchDirectory = (
         status: 200,
         headers: {
           "content-type": "application/json",
-          "content-length": directoryContentJson.length,
+          "content-length": Buffer.byteLength(directoryContentJson),
         },
         body: directoryContentJson,
       };
@@ -35,7 +47,7 @@ export const fetchDirectory = (
   </head>
 
   <body>
-    <h1>Content of directory ${url}</h1>
+    <h1>Content of directory ${escapeHtml(url)}</h1>
     <ul>
       ${directoryContentArray.map((filename) => {
         const fileUrlObject = new URL(filename, url);
@@ -46,8 +58,9 @@ export const fetchDirectory = (
         if (lstatSync(fileUrlObject).isDirectory()) {
           fileUrlRelativeToServer += "/";
         }
+        const linkHtml = escapeHtml(fileUrlRelativeToServer);
         return `<li>
-        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+        <a href="/${linkHtml}">${linkHtml}</a>
       </li>`;
       }).join(`
       `)}

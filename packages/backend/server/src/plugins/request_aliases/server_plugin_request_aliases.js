@@ -1,5 +1,13 @@
 import { URL_META } from "@jsenv/url-meta";
 
+/**
+ * Server plugin rewriting request resources before routing, from url
+ * patterns to their replacement: `{ "/old/*": "/new/*", "/index": "/" }`
+ * (patterns as in @jsenv/url-meta). The search params of the request are
+ * kept unless the replacement has its own.
+ *
+ * @param {Object<string, string>} resourceAliases
+ */
 export const serverPluginRequestAliases = (resourceAliases) => {
   const aliases = {};
   Object.keys(resourceAliases).forEach((key) => {

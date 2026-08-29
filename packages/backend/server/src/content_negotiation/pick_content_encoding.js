@@ -1,6 +1,16 @@
-import { parseMultipleHeader } from "../internal/multiple-header.js";
+import { parseMultipleHeader } from "../internal/multiple_header.js";
 import { pickAcceptedContent } from "./pick_accepted_content.js";
 
+/**
+ * Pick, among the encodings the server can produce, the one the request
+ * prefers according to its `accept-encoding` header (`br` and `brotli` are
+ * synonyms).
+ *
+ * @param {{ headers: Object }} request - Anything carrying lowercased `headers`.
+ * @param {Array<string>} availableEncodings - In order of server preference: on a tie the first one wins.
+ * @returns {string|null} The encoding to respond with, `null` when the request
+ *   accepts none of them or has no `accept-encoding` header.
+ */
 export const pickContentEncoding = (request, availableEncodings) => {
   const { headers = {} } = request;
   const requestAcceptEncodingHeader = headers["accept-encoding"];

@@ -1,17 +1,10 @@
 import { startServer } from "@jsenv/server";
 
 const server = await startServer({
-  plugins: [
+  routes: [
     {
-      handleRequest: () => {
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: "Hello world",
-        };
-      },
+      endpoint: "GET *",
+      fetch: () => new Response("Hello world"),
     },
   ],
 });

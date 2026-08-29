@@ -1,121 +1,64 @@
 # Serving files
 
-A server often needs to serve file without routing logic. Either the file is there and server sends it, or it responds with a 404 status code. You can use _fetchFileSystem_ for that, an async function that will search for a file on the filesystem and produce a response for it.
-
 ```js
-import { startServer, createFileSystemFetch } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
-      endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./")),
+      endpoint: "GET /assets/*",
+      fetch: createFileSystemFetch(import.meta.resolve("./assets/")),
     },
-  ],
-});
-```
-
-When request.method is not `"HEAD"` or `"GET"` the returned response correspond to _501 not implemented_.
-
-_fetchFileSystem_ can be configured to handle cache, compression and content types.
-
-## Configuring file response cache
-
-When server receives a request it can decides to respond with _304 Not modified_ instead of _200 OK_.
-A 304 status tells the client it can use its cached version of the response.
-Consequently 304 responses have an empty body while 200 contains the file content.
-
-By default _fetchFileSystem_ will always respond with 200. You can unlock 304 responses using either _etag_ or _mtime_ based caching.
-
-### etagEnabled
-
-```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
-
-await startServer({
-  routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./"), {
-        eTagEnabled: true,
+      fetch: createFileSystemFetch(import.meta.resolve("./public/"), {
+        mainFileRelativeUrl: "./index.html",
       }),
     },
   ],
 });
 ```
 
-When _etagEnabled_ is true, _fetchFileSystem_ will try to return 304 when request headers contains _if-none-match_.
-When etag generated from the file content equals the one found in request headers, a 304 response without body is sent, otherwise it will be a 200 with the file content in the body.
+The part of the url captured by `*` (the whole resource when the endpoint has none) is resolved inside the directory. A url leaving the directory (`..`) is answered 403. Any method other than GET and HEAD is declined: the next route is tried. The `content-type` comes from the file extension.
 
-### mtimeEnabled
+The options are in the JSDoc of `createFileSystemFetch`; what follows is how they combine.
+
+## Client cache
+
+By default every request gets 200 with the content. Two ways to unlock 304:
+
+- `etagEnabled` — an `etag` computed from the content, remembered per file until its stats change (`etagMemory`, `etagMemoryMaxSize`); a matching `if-none-match` gets 304. Robust.
+- `mtimeEnabled` — a `last-modified` header from the filesystem date, second precision; a recent enough `if-modified-since` gets 304. Relies on filesystem dates being meaningful.
+
+When both are set, etag wins.
+
+`cacheControl` becomes the `cache-control` header. By default a versioned url (`isVersioned`: the url has a `v` search param) is `private,max-age=2592000,immutable` and anything else `private,max-age=0,must-revalidate`. It can be a function of the request:
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
-
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./"), {
-        mtimeEnabled: true,
-      }),
-    },
-  ],
+createFileSystemFetch(import.meta.resolve("./"), {
+  etagEnabled: true,
+  cacheControl: (request) =>
+    request.resource === "/"
+      ? `private,max-age=0,must-revalidate`
+      : `private,max-age=3600,immutable`,
 });
 ```
 
-When mtimeEnabled is true, _fetchFileSystem_ will to return 304 when request headers contains _if-modified-since_.
-When filesystem modification date equals the one found in request headers, a 304 response without body is sent, otherwise it will be a 200 with the file content in the body.
+`"no-store"` disables etag and mtime, they would be pointless.
 
-Things to know:
+## Compression
 
-- _mtime_ is less robust then _etag_ because it assumes filesystem dates are reliable.
-- Date comparison is precise to the millisecond.
+`compressionEnabled` compresses textual files bigger than `compressionSizeThreshold` (1024 bytes) with brotli, gzip or deflate, whichever `accept-encoding` prefers. The compression happens for every request (brotli at quality 4 to keep it cheap) and the response has no `content-length`: for production, compress the files once at build time instead.
 
-### cacheControl
+## Directories
 
-```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
+A url pointing to a directory gets 403, unless:
 
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./"), {
-        mtimeEnabled: true,
-        cacheControl: (request) =>
-          request.resource === "/"
-            ? `private,max-age=0,must-revalidate`
-            : `private,max-age=3600,immutable`,
-      }),
-    },
-  ],
-});
-```
+- `canReadDirectory: true` — the listing is sent, as json or as an html page of links (see `fetchDirectory`),
+- `mainFileRelativeUrl` — that file is sent for the directory itself, and for any extension-less url that does not exist (client side routing needs the same page for `/users/42`).
 
-_cacheControl_ parameter will become the response _cache-control_ header.
-Read more about this header at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control.
-During development, you likely don't want to enable _cache-control_ header.
+`ENOENTFallback: () => fileUrl` serves another file when the requested one does not exist.
 
-## Configuring file response compression
+## What a 404 says
 
-When compression is enabled _fetchFileSystem_ uses a compression format if possible.
-Internally it uses content encoding negotiation (see [Content negotiation](./content_negotiation.md#content-negotiation)).
-The available compression formats are _gzip_, _brotli_ and _deflate_. One (or none) is picked according to the _accept-encoding_ request header.
-To enable compression, use _compressionEnabled_ and _compressionSizeThreshold_ parameter.
-
-```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
-
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./"), {
-        compressionEnabled: true,
-        compressionSizeThreshold: 1024,
-      }),
-    },
-  ],
-});
-```
+The status text is `ENOENT: File not found`; the file path is added only when the server runs with `canExposeSensitiveData` (see [security](./security.md)). Same for the other filesystem errors (EACCES → 403, EBUSY → 503 with `retry-after`, …).

@@ -1,8 +1,6 @@
 # server [![npm package](https://img.shields.io/npm/v/@jsenv/server.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/server)
 
-> A modern, flexible Node.js HTTP server with declarative routing, content negotiation, and WebSocket support.
-
-`@jsenv/server` simplifies server development with a declarative API that handles common web server needs like routing, content negotiation, file serving, and real-time communication.
+> A Node.js HTTP server with declarative routing, content negotiation, file serving, WebSocket and Server-Sent Events.
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -12,7 +10,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: () => new Response("Hello world"),
+      fetch: () => new Response("Hello world"),
     },
   ],
 });
@@ -20,16 +18,14 @@ await startServer({
 
 # Features
 
-- [*] Declarative routing with path parameters and pattern matching
-- [*] Content negotiation for type, language, version and encoding
-- [*] Real-time communication via WebSockets and Server-Sent Events
-- [*] File serving with ETags, conditional requests, and compression
-- [*] Security with HTTPS and automatic HTTP-to-HTTPS redirection
-- [*] HTTP/2 support including server push
-- [*] CORS handling built-in
-- [*] Performance monitoring with server timing
-- [*] Sacalability through cluster mode for multi-core utilization
-- [ ] Request authentification with JWT, OAuth etc
+- Declarative routing: `"GET /users/:id"`, the first route returning a response wins
+- 404, 405, 406, 415 and OPTIONS responses derived from the routes
+- Content negotiation for media type, language, version and encoding
+- File serving with etag/mtime client cache and compression
+- WebSocket and Server-Sent Events, with a broadcast helper
+- HTTPS, with http → https redirection; http2 as an option
+- CORS, server timing and error pages as plugins
+- A route inspector at `/.internal/route_inspector`
 
 # Installation
 
@@ -37,14 +33,11 @@ await startServer({
 npm install @jsenv/server
 ```
 
-**Requirements:**
+Requires Node.js 22.13.1 or higher.
 
-- Node.js 22.13.1 or higher
-- ES modules support
+# Quick examples
 
-# Quick Examples
-
-**Basic API Server**
+**API server**
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -54,37 +47,44 @@ await startServer({
   routes: [
     {
       endpoint: "GET /api/users",
-      response: () => Response.json([{ id: 1, name: "John" }]),
+      fetch: () => Response.json([{ id: 1, name: "John" }]),
     },
     {
       endpoint: "GET /api/users/:id",
-      response: (request) =>
+      fetch: (request) =>
         Response.json({ id: request.params.id, name: "John" }),
     },
     {
-      endpoint: "GET *",
-      response: () => new Response("Not found", { status: 404 }),
+      endpoint: "POST /api/users",
+      acceptedMediaTypes: ["application/json"],
+      fetch: async (request) => {
+        const user = await request.json();
+        return Response.json(user, { status: 201 });
+      },
     },
   ],
 });
 ```
 
-**Static File Server**
+**Static file server**
 
 ```js
-import { startServer, createFileSystemFetch } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./")),
+      fetch: createFileSystemFetch(import.meta.resolve("./public/"), {
+        etagEnabled: true,
+        compressionEnabled: true,
+      }),
     },
   ],
 });
 ```
 
-**HTTPS Server**
+**HTTPS server**
 
 ```js
 import { readFileSync } from "node:fs";
@@ -95,16 +95,10 @@ await startServer({
     certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
     privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
   },
-  allowHttpRequestOnHttps: true, // will disable https redirection and let you handle http request
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        const clientUsesHttp = request.origin.startsWith("http:");
-        return new Response(
-          clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-        );
-      },
+      fetch: () => new Response("Welcome"),
     },
   ],
 });
@@ -112,16 +106,20 @@ await startServer({
 
 # Documentation
 
-| Topic                                                | Description                                      |
-| ---------------------------------------------------- | ------------------------------------------------ |
-| [Handling requests](./docs/handling_requests.md)     | Process HTTP requests and generate responses     |
-| [Handling errors](./docs/handling_errors.md)         | Error handling strategies and custom responses   |
-| [Server timing](./docs/server_timing.md)             | Measure and report server performance metrics    |
-| [CORS](./docs/cors.md)                               | Configure Cross-Origin Resource Sharing          |
-| [HTTPS](./docs/https.md)                             | Set up secure HTTPS connections                  |
-| [Serving files](./docs/serving_files.md)             | Static file serving with caching and compression |
-| [Content negotiation](./docs/content_negotiation.md) | Content type, language and encoding negotiation  |
-| [Websocket](./docs/websocket.md)                     | Bi-directional real-time communication           |
-| [Server Sent Events](./docs/server_sent_events.md)   | Push updates to clients over HTTP                |
-| [Cluster](./docs/cluster.md)                         | Scale your server across multiple CPU cores      |
-| [HTTP/2 Push](./docs/http2_push.md)                  | Optimize loading with server push                |
+Every option is described by the JSDoc of the export (`startServer`, `createFileSystemFetch`, `serverPluginCORS`, …): hover it in your editor. The pages below explain how the pieces fit together.
+
+| Topic                                                | Description                                            |
+| ---------------------------------------------------- | ------------------------------------------------------ |
+| [Handling requests](./docs/handling_requests.md)     | Routes, the request object, the response formats       |
+| [Handling errors](./docs/handling_errors.md)         | What happens when a route throws, error pages          |
+| [Plugins](./docs/plugins.md)                         | The hooks a server plugin can implement                |
+| [Serving files](./docs/serving_files.md)             | Static files with client cache and compression         |
+| [Content negotiation](./docs/content_negotiation.md) | Media type, language, version and encoding negotiation |
+| [WebSocket](./docs/websocket.md)                     | Accepting WebSocket connections                        |
+| [Server-Sent Events](./docs/server_sent_events.md)   | Pushing events to clients                              |
+| [CORS](./docs/cors.md)                               | Cross-Origin Resource Sharing                          |
+| [HTTPS](./docs/https.md)                             | HTTPS, http redirection and http2                      |
+| [Server timing](./docs/server_timing.md)             | Reporting where the server spent its time              |
+| [Lifecycle](./docs/lifecycle.md)                     | Starting, stopping, keeping the process alive          |
+| [Security](./docs/security.md)                       | What the server protects, what it leaves to you        |
+| [Cluster](./docs/cluster.md)                         | One server per CPU core                                |
