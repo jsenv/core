@@ -56,6 +56,10 @@
               <TwoColGridSection />
             </section>
             <section>
+              <h2 id="s-short-container">Container shorter than one line</h2>
+              <ShortContainerSection />
+            </section>
+            <section>
               <h2 id="s-basic">Basic</h2>
               <BasicSection />
             </section>
@@ -134,6 +138,9 @@
               </li>
               <li>
                 <a href="#s-two-col-grid">Two-column grid layout</a>
+              </li>
+              <li>
+                <a href="#s-short-container">Container shorter than one line</a>
               </li>
               <li>
                 <a href="#s-basic">Basic</a>
@@ -377,6 +384,54 @@
               </div>
             ))}
           </>
+        );
+      };
+
+      const ShortContainerSection = () => {
+        const [height, setHeight] = useState(51);
+        return (
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "12px",
+                fontSize: "14px",
+              }}
+            >
+              Card height: <strong>{height}px</strong>
+              <input
+                type="range"
+                min="24"
+                max="90"
+                value={height}
+                onInput={(e) => setHeight(Number(e.target.value))}
+                style={{ width: "200px" }}
+              />
+            </label>
+            <Box row spacing="16px" style={{ flexWrap: "wrap" }}>
+              {["Marie D.", "Marie-Christine D."].map((name) => (
+                <Box
+                  key={name}
+                  flex="y"
+                  width="150px"
+                  height={`${height}px`}
+                  paddingX="8px"
+                  paddingY="16px"
+                  alignX="center"
+                  alignY="center"
+                  border="2px solid #4caf50"
+                  borderRadius="12px"
+                  background="#e8f5e9"
+                >
+                  <Text bold alignX="center" maxLines={1} expandX minWidth="0">
+                    {name}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
+          </div>
         );
       };
 

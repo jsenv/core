@@ -268,6 +268,9 @@ changes do exactly that).
 
 ## See also
 
+- [state_binding.md](./state_binding.md) — `signal`, `action` or
+  `command` + `commandFor`: the three shapes, and the callback that only
+  remembers
 - [resource.md](./resource.md) — actions created from REST callbacks, and the
   store behind them
 - [resource_with_params.md](./resource_with_params.md) — `withParams()` and

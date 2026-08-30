@@ -427,9 +427,20 @@ const POSITION_PROPS = {
     return { transform: `skew(${value})` };
   },
 };
+// Only the inline axis has something to truncate here, so the clip must not
+// constrain the block one: `hidden` would make the element a scroll container,
+// whose flex automatic minimum size is 0, and a single line inside a column
+// flex container shorter than 1lh then shrinks under its own line box and gets
+// cut through the glyphs. `clip` keeps the content-based minimum, so the line
+// overflows visibly instead. The margin leaves room for ink drawn outside the
+// advance width; it starts from the padding box, having no hidden line to hold
+// back the way lineClampStyles below does.
 const singleLineEllipsisStyles = () => {
   return {
-    overflow: "hidden",
+    overflow: "clip",
+    // The `padding-box` keyword is redundant (it is the default box) but
+    // Chromium drops the declaration when a bare calc() follows the property.
+    overflowClipMargin: "padding-box calc((1lh - 1em) / 2)",
     textOverflow: "ellipsis",
     overflowWrap: "normal",
   };

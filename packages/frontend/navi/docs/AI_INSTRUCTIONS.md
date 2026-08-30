@@ -153,6 +153,16 @@ consistency across the app, not from any single call site.
   given a `ui` draws no placeholder of its own. Read it before putting a
   `BadgeList` in a picker's `ui`, before wrapping its fallback in a `Badge`,
   and before setting `maxLines` on the list rather than on the picker.
+- `docs/state_binding.md` — the rule the whole API rests on: state navi shows is
+  BOUND (`signal`), not copied back by a callback. The three shapes an
+  application ever has to say (`signal` / `action` / `command` + `commandFor`),
+  the four ways the same mistake is written (`onCurrentChange`, `uiAction`,
+  `onClick` and `onOpen`/`onClose` all writing a signal), why a binding is not
+  merely shorter (it is written by every gesture, it moves the component when
+  written, and it goes through the interaction gate), what is left for the
+  callback, and what to conclude when the state being wired has no prop for it —
+  a parallel copy, or a binding navi is missing. Read it before writing any
+  handler whose body only assigns state.
 - `docs/control_value.md` — who holds a control's value: nobody, a bound
   `signal` (two-way, in both directions), or you (`value`/`checked`). What
   `signal` + `defaultValue` says, what a signal holds for each kind of control,
@@ -282,9 +292,13 @@ consistency across the app, not from any single call site.
   is given back the offset it was read at, and only when the row owns the
   document scroll), a back arrow that stays inside the app (`useCanNavBack()` /
   `navBack({ fallback })`), and the few cases where tabs are legitimately not
-  URLs. Read it before writing any routing code — the
-  position of the user belongs in the URL by default, and that decision is
-  not retrofittable.
+  URLs. It also holds the middle answer — a position READ from the URL and
+  restored on reload without a route and without an entry per step: a search
+  param signal handed to a `SlideContainer`, walked to rather than jumped to,
+  and `history: "push"` for the states whose values ARE places (with the write
+  that says otherwise, `signal.set(v, { history })`). Read it before writing any
+  routing code — the position of the user belongs in the URL by default, and
+  that decision is not retrofittable.
 - Source code and demos on GitHub:
   https://github.com/jsenv/core/tree/main/packages/frontend/navi — where to go
   when the built export's JSDoc doesn't answer the question (see "Where the

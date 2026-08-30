@@ -289,6 +289,11 @@ Declared on the **root route**, a search param is a position that holds wherever
 one is in the application — a view mode that survives moving from page to page.
 Declared on one route, it exists only there.
 
+Writing it AMENDS the history entry one is on rather than stacking a new one: a
+param that qualifies a screen is not a place, and one entry per write turns a
+single back-press into as many as the user moved. A state whose values ARE
+places says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
+
 ## Rendering routes
 
 `<Route>` is the only primitive. With `children` it is a container that renders
@@ -575,9 +580,9 @@ match at once; the first matching branch wins).
 ## Tabs that are not routes
 
 `SlideContainer` holds slides that replace one another in one box, with the same
-gestures and the same travelling bar, and — unless it is given a `urlParam`, see
-below — nothing written to the URL. Use it when the position genuinely is not a
-place one should be able to link to:
+gestures and the same travelling bar, and — unless the signal it is bound to is
+one the URL holds, see below — nothing written to the URL. Use it when the
+position genuinely is not a place one should be able to link to:
 
 - the steps of a wizard, or the screens of a picker, inside a dialog or a popover
   — a popup is promoted to the browser's top layer, so no container can hold two
@@ -615,48 +620,84 @@ and it should NOT stack an entry per step, because the back arrow of a form mean
 back-press into four, and walk the reader backwards through a form they thought
 they had left.
 
-Neither pure answer fits: routes would want one route per step, a real navigation
-per move (so a push per move), and the walk's own rules — a step held until it is
-answered, a confirmation reachable only by publishing — re-expressed as route
-guards. A plain `SlideContainer` writes nothing at all.
+There is nothing to invent for it: a search param already IS a position in the
+URL that replaces rather than pushes ([Search params](#search-params)). Declare
+the step as one, and hand its signal to the container:
 
-`urlParam` is that middle answer: the container owns one search param, writes
-where it stands into it **by replacement**, and opens on what it names.
-
-```jsx
-<SlideContainer id="alert_editor" signal={stepSignal} urlParam="step">
+```js
+const stepSignal = stateSignal(undefined, {
+  id: "step",
+  oneOf: ["when", "where", "who", "recap", "done"],
+  // the step qualifies THIS visit, not the screen: a link built to the editor
+  // does not inherit the step one happens to be on, and it goes back to nothing
+  // when the route stops matching
+  weak: true,
+});
+export const ALERT_EDIT_ROUTE = route("/alerts/:alertId/edit", {
+  searchParams: { step: stepSignal },
+});
 ```
 
-Two things it does that a `useEffect` calling `history.replaceState` beside the
-container cannot, and they are the reason it lives inside:
+```jsx
+<SlideContainer signal={stepSignal} defaultCurrent={editing ? "recap" : "when"}>
+```
 
-- it writes the travels that HAPPENED. A travel a lock refused, or one the caller
-  refused late, never reaches the address — or is written back when it does;
-- it READS the param through the walk rather than jumping to it. The address
-  comes from outside the box (typed, shared, kept from a session that has moved
-  on), so every slide between here and there is asked to let go the way a key
-  going that way would ask it, and the first one that holds is where one stops.
-  `?step=done` cannot open a confirmation screen for something nobody sent — and
-  the address is then rewritten with the area actually shown, so it never says
-  one is somewhere one is not.
+That is the whole wiring, and every half of it is the piece that already
+existed. Worth naming, because each answers a question a wizard actually has:
+
+- **the param is absent while the step is the default one** (route.js prunes it),
+  so `/alerts/W-123/edit` stays clean and `defaultCurrent` is what says where the
+  container opens. An empty signal means "wherever this would have opened
+  anyway", not "the first slide";
+- **the container walks to the step rather than jumping to it.** The address comes
+  from outside the box (typed, shared, kept from a session that has moved on), so
+  every slide between here and there is asked to let go the way a key going that
+  way would ask it, and the first one that holds is where one stops. `?step=done`
+  cannot open a confirmation screen for something nobody sent. The signal is then
+  written with the area actually shown, so the address never says one is
+  somewhere one is not;
+- **only the travels that HAPPENED are written.** A travel a lock refused, or one
+  `onCurrentChange` refused late, never reaches the signal — or is written back
+  when it does.
 
 A container remembers nothing across a reload, so a step whose `required` the app
 knows is already satisfied says so itself (`required={!alreadyFilled}`); the same
 holds for a hold that a finished job lifts (`preventNavNext={!published}`).
 
-`history: "push"` is the other half, for slides that ARE places one came from — a
-gallery one browses:
+Two containers on one screen are two signals, and that is the whole answer to
+"which one owns the param": the one holding the route's signal. A gallery of
+seven wizards side by side hands each of them a `useSignal` of its own, and
+nothing goes into the address.
 
-```jsx
-<SlideContainer urlParam={{ name: "photo", history: "push" }}>
+### A state whose values ARE places: `history: "push"`
+
+Replacement is the default because most URL-held state qualifies the screen one
+is on. A state whose values are places one came from — the photo being looked at
+in a gallery — says so where the state is declared:
+
+```js
+const photoSignal = stateSignal(undefined, { id: "photo", history: "push" });
 ```
 
-Even there, a slide reached by DRAGGING replaces rather than pushes: swiping back
-and forth with a thumb is browsing, not a trail one wants to walk home along.
+Every write of it then stacks an entry, wherever the write comes from. Except
+where the writer knows this particular move is not one: a slide reached by
+DRAGGING replaces even in a container that pushes, because swiping back and forth
+with a thumb is browsing, not a trail one wants to walk home along. That is said
+at the write rather than declared:
 
-What `urlParam` is not: a route. Nothing is declared, nothing matches, no page
-transition plays — what travels is the box, and the address is a label on where
-the box stands. A position several parts of the app must react to is still a
-route.
+```js
+photoSignal.set(nextPhoto, { history: "replace" });
+```
+
+`SlideContainer` already does exactly that for its own drags, so a gallery gets
+it by declaring the state and nothing else.
+
+### What this is not
+
+It is not a route. Nothing is declared for the steps themselves, nothing matches
+on them, and no page transition plays — a transition needs the page to change
+([route_transitions.md](./route_transitions.md)), and a search param moving is
+not one. What travels is the box, and the address is a label on where the box
+stands. A position several parts of the app must react to is still a route.
 
 Demo: [../src/layout/demos/8_slide_container_demo.html](../src/layout/demos/8_slide_container_demo.html).

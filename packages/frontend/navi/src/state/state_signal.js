@@ -68,6 +68,14 @@ if (import.meta.hot) {
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
  *   "edit this one" id, where every other link to the screen must lead to the plain screen.
  *   Incompatible with `persists` (throws).
+ * @param {"replace"|"push"} [options.history="replace"] - what writing this state
+ *   is worth in the browser's history, when it is bound to a url (a route's
+ *   `searchParams`, a path param). Replacement by default: a state that
+ *   qualifies the screen one is on — a step in a form, a view mode, a sort — is
+ *   not a place, and one entry per write turns a single back-press into as many
+ *   as the user moved. `"push"` is for a state whose values ARE places one came
+ *   from (the photo one is looking at in a gallery). Whatever is said here, one
+ *   write can say otherwise: `signal.set(value, { history })`.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -141,8 +149,14 @@ export const stateSignal = (defaultValue, options = {}) => {
     ignoreArrayOrder,
     autoFix,
     weak = false,
+    history = "replace",
   } = options;
 
+  if (history !== "replace" && history !== "push") {
+    throw new TypeError(
+      `stateSignal "${id}": history must be "replace" or "push", got ${history}.`,
+    );
+  }
   if (weak && persists) {
     throw new TypeError(
       `stateSignal "${id}": weak and persists are contradictory — a weak param qualifies one visit, it cannot be restored from a previous session.`,
@@ -329,7 +343,35 @@ export const stateSignal = (defaultValue, options = {}) => {
     configurable: true,
   });
 
+  // What the write being made right now asks of the history, over what this
+  // state declares. It lives for the length of one assignment: the effect that
+  // writes the url runs synchronously inside it (see route.js), and reads it
+  // there. A write made inside batch() is therefore out of its reach — say the
+  // history on the state itself for those.
+  let historyForCurrentWrite;
   const facadeSignal = preactSignal;
+  /**
+   * Write the state, saying what this ONE write is worth in the history.
+   *
+   * The state says which of the two it usually is (`history` above); a writer
+   * that knows THIS move is not one of them says so here — a slide reached by
+   * dragging inside a container whose slides are places one came from.
+   *
+   * @param {any} value
+   * @param {{history?: "replace"|"push"}} [options]
+   */
+  facadeSignal.set = (value, { history: historyAsked } = {}) => {
+    if (historyAsked === undefined) {
+      facadeSignal.value = value;
+      return;
+    }
+    historyForCurrentWrite = historyAsked;
+    try {
+      facadeSignal.value = value;
+    } finally {
+      historyForCurrentWrite = undefined;
+    }
+  };
   facadeSignal.validity = validity;
   facadeSignal.validSignal = computed(() => {
     // Reading facadeSignal.value establishes the reactive dependency.
@@ -474,6 +516,8 @@ export const stateSignal = (defaultValue, options = {}) => {
     localStorageKey,
     debug,
     ...options,
+    history,
+    getHistory: () => historyForCurrentWrite || history,
   };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,

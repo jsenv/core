@@ -213,7 +213,7 @@ export const route = (
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
-    route.redirectTo = (params, { callReason } = {}) => {
+    route.redirectTo = (params, { callReason, history = "replace" } = {}) => {
       if (!integration) {
         if (import.meta.dev) {
           console.warn(
@@ -229,11 +229,14 @@ export const route = (
         );
       }
       return integration.navTo(routeUrl, {
-        replace: true,
+        replace: history !== "push",
         callReason,
       });
     };
-    route.replaceParams = (newParams, { callReason, isSignalChange } = {}) => {
+    route.replaceParams = (
+      newParams,
+      { callReason, isSignalChange, history = "replace" } = {},
+    ) => {
       const matching = route.matchingSignal.peek();
       if (!matching) {
         console.warn(
@@ -302,6 +305,7 @@ export const route = (
         }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
+          history,
         });
       }
 
@@ -327,7 +331,7 @@ export const route = (
         );
       }
       return integration.navTo(targetUrl, {
-        replace: true,
+        replace: history !== "push",
         callReason,
       });
     };
@@ -398,6 +402,13 @@ export const route = (
     const { connections } = routePattern;
     for (const connection of connections) {
       const { signal: paramSignal, debug, paramName } = connection;
+      // What a write of this state is worth in the history: what the state
+      // declares, and what the write happening right now says instead (see
+      // stateSignal's `history` and its `set`). Read at the moment of the
+      // navigation and never before. A plain signal says nothing and replaces,
+      // which is what a param qualifying a screen is.
+      const historyOfWrite = () =>
+        paramSignal.options?.getHistory?.() || "replace";
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -440,6 +451,7 @@ export const route = (
             {
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
+              history: historyOfWrite(),
             },
           );
           return;
@@ -457,6 +469,7 @@ export const route = (
             {
               callReason: `${paramName} signal reset to default on ${route}`,
               isSignalChange: true,
+              history: historyOfWrite(),
             },
           );
           return;
@@ -476,6 +489,7 @@ export const route = (
           {
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,
+            history: historyOfWrite(),
           },
         );
       });

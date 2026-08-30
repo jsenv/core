@@ -348,6 +348,9 @@ directions; it just has nothing extra to say.
 
 ## See also
 
+- [state_binding.md](./state_binding.md) — the same rule beyond controls:
+  a `SlideContainer`'s area, a popup being open, the position in the app — all
+  bound rather than copied back by a callback
 - [form_changed.md](./form_changed.md) — what a form makes of each of these:
   which fields it counts as already answered, and when it sends nothing
 - [control_object.md](./control_object.md) — several controls reading as one

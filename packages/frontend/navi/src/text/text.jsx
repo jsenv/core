@@ -83,8 +83,17 @@ const css = /* css */ `
       display: block;
       min-width: 0;
       text-overflow: ellipsis;
-      overflow: hidden;
+      /* Only the inline axis has something to truncate, so the clip must not
+         constrain the block one: overflow hidden would make the element a
+         scroll container, whose flex automatic minimum size is 0, and inside a
+         column flex container shorter than 1lh the text then shrinks under its
+         own line box and gets cut through the glyphs. The margin leaves room
+         for ink drawn outside the advance width. */
+      overflow: clip;
       overflow-wrap: normal;
+      /* The padding-box keyword is redundant (it is the default box) but
+         Chromium drops the declaration when a bare calc() follows. */
+      overflow-clip-margin: padding-box calc((1lh - 1em) / 2);
     }
 
     &[data-skeleton] {
