@@ -1527,16 +1527,22 @@ const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
 };
 
 // Whether the document's offset belongs to the tabs. The pages of a row scroll
-// the document when nothing between the box and the viewport scrolls or clips:
-// the tab on screen is then what makes the document tall, and the offset on it
-// is that tab's — it has to be given back with the tab, and the browser's
-// clamping of it while pages are swapped has to be ignored.
+// the document when nothing between the box and the viewport is a scroll
+// container: the tab on screen is then what makes the document tall, and the
+// offset on it is that tab's — it has to be given back with the tab, and the
+// browser's clamping of it while pages are swapped has to be ignored.
 //
 // A box that lives inside a scroller of its own — a frame in an article, a
 // panel beside other content — shares nothing with the document: the offset
 // there is the surrounding page's, the reader never left it, and a travel has
 // no business moving it. Each of its pages brings its own scrollport, which
 // goes away with the page and has nothing to restore.
+//
+// includeHidden, because an `overflow: hidden` ancestor is one of those
+// scrollers: it shows no scrollbar and still holds an offset of its own, and
+// what is under it never reaches the document. A wrapper that merely clips
+// (`overflow: clip`) holds nothing and is walked straight through — see
+// is_scrollable.js.
 const pagesScrollTheDocument = (element) => {
   const scrollContainer = getScrollContainer(element, { includeHidden: true });
   // html and body are one answer: whichever of them the walk stops on, what

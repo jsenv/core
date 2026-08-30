@@ -2229,6 +2229,17 @@ naviI18n.addAll({
     pt: "meia-noite",
     nl: "middernacht",
   },
+  // What <TimeRange> writes between the two bounds of a span — "8h–10h",
+  // "11 mai – 14 mai". An en dash, the mark for a span, not a hyphen.
+  "time.range_separator": {
+    en: "–",
+    fr: "–",
+    de: "–",
+    es: "–",
+    it: "–",
+    pt: "–",
+    nl: "–",
+  },
   // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
   "time.duration.year_symbol": {
     en: "y",
@@ -8082,27 +8093,35 @@ const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, forceUnit?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, pad?: boolean, precision?: "hour"|"minute", forceUnit?: boolean }} [options]
  * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
  *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
  *   Past 24 hours the default promotes to days, which reads better but hides
  *   the unit the caller works in.
  * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
  *   represents a time-of-day rather than a real duration (used by
- *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
- *   things at once, both consequences of a clock's "0" being a meaningful
- *   hour rather than "no hours":
- *   - a zero-hours component is normally dropped entirely (a real 5-minute
- *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
- *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
- *     doesn't collapse to something indistinguishable from an actual
- *     5-minute duration.
- *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
- *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
- *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
- *     formats spell out their units, so "10 heures"/"10h" reads fine there
- *     and only "compact" needs the clock shape.
+ *   `<Time type="time">`, see time.jsx's own TimeTime). A clock's "0" is a
+ *   meaningful hour rather than "no hours": a zero-hours component is
+ *   normally dropped entirely (a real 5-minute duration should print as
+ *   "5 minutes", not "0 hours 5 minutes"); this keeps it instead (e.g.
+ *   "0 h et 5 min"/"0h 5min"/"00h05") so midnight doesn't collapse to
+ *   something indistinguishable from an actual 5-minute duration.
  *   Must not be set for plain duration formatting.
+ * @param {boolean} [options.pad=true] - Zero-pad the hour to 2 digits
+ *   ("08h30" rather than "8h30"). `clockStyle` + `format: "compact"` only.
+ * @param {"hour"|"minute"} [options.precision="minute"] - Whether a zero
+ *   minute is written: `"minute"` keeps it ("10h00"), `"hour"` drops it
+ *   ("10h"). `clockStyle` + `format: "compact"` only.
+ *
+ *   These last two are the clock's two independent shape choices, and only
+ *   `format: "compact"` has to make them — the spelled-out formats put their
+ *   units in words, so "10 heures"/"10 h"/"10h" already reads as a time of
+ *   day whatever the padding, and they always write the hour bare and drop a
+ *   zero minute. Padded + minute ("08h00") is the column shape, where every
+ *   row occupies the same width; bare + hour ("8h", "8h30") is the shape a
+ *   person speaks. Bare + minute ("8h00") only ever makes sense next to a
+ *   partner that has minutes of its own — see `<TimeRange>`, which is the
+ *   only thing that asks for it.
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -8113,6 +8132,9 @@ const formatTime = (date, lang) => {
  * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
  * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
  * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false }) // "10h00"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "10h"
+ * formatMinuteDuration(510, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "8h30"
  * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
  * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
  */
@@ -8122,13 +8144,15 @@ const formatMinuteDuration = (
     lang = languagesSignal.value,
     format = "long",
     clockStyle = false,
+    pad = true,
+    precision = "minute",
     forceUnit = false,
   } = {},
 ) => {
   if (minutes < 0) {
     // the d/h/m split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
-    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
+    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, pad, precision, forceUnit })}`;
   }
   if (forceUnit || (minutes === 0 && !clockStyle)) {
     // a zero has nothing to promote to, and rendering it as an empty string
@@ -8162,16 +8186,19 @@ const formatMinuteDuration = (
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
-  const hStr = clockStyle
-    ? String(h).padStart(2, "0")
-    : formatCompactNumber(h, lang);
+  const hStr =
+    clockStyle && pad
+      ? String(h).padStart(2, "0")
+      : formatCompactNumber(h, lang);
   if (d === 0 && h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
     if (clockStyle) {
-      // "10h00" on a clock, "2h" for a real 2 hours duration
-      return `${hStr}${hSym}00`;
+      // "10h00" on a clock, "2h" for a real 2 hours duration — except at
+      // precision "hour", where a clock drops the zero minute too ("10h"),
+      // the way one says it out loud
+      return precision === "minute" ? `${hStr}${hSym}00` : `${hStr}${hSym}`;
     }
     return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
   }
@@ -29786,16 +29813,22 @@ const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
 };
 
 // Whether the document's offset belongs to the tabs. The pages of a row scroll
-// the document when nothing between the box and the viewport scrolls or clips:
-// the tab on screen is then what makes the document tall, and the offset on it
-// is that tab's — it has to be given back with the tab, and the browser's
-// clamping of it while pages are swapped has to be ignored.
+// the document when nothing between the box and the viewport is a scroll
+// container: the tab on screen is then what makes the document tall, and the
+// offset on it is that tab's — it has to be given back with the tab, and the
+// browser's clamping of it while pages are swapped has to be ignored.
 //
 // A box that lives inside a scroller of its own — a frame in an article, a
 // panel beside other content — shares nothing with the document: the offset
 // there is the surrounding page's, the reader never left it, and a travel has
 // no business moving it. Each of its pages brings its own scrollport, which
 // goes away with the page and has nothing to restore.
+//
+// includeHidden, because an `overflow: hidden` ancestor is one of those
+// scrollers: it shows no scrollbar and still holds an offset of its own, and
+// what is under it never reaches the document. A wrapper that merely clips
+// (`overflow: clip`) holds nothing and is walked straight through — see
+// is_scrollable.js.
 const pagesScrollTheDocument = element => {
   const scrollContainer = getScrollContainer(element, {
     includeHidden: true
@@ -53120,6 +53153,8 @@ const TimeTime = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  pad = true,
+  precision = pad ? "minute" : "hour",
   ...props
 }) => {
   if (children === undefined) {
@@ -53128,13 +53163,7 @@ const TimeTime = ({
       children: "--:--"
     });
   }
-  const date = toDate(children, value => {
-    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
-      const d = new Date(`1970-01-01T${value}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
+  const date = toTimeOfDay(children);
   // toDate turns a non-finite number into an Invalid Date, which is an object
   if (!date || isNaN(date.getTime())) {
     return jsx(TimeText, {
@@ -53171,7 +53200,9 @@ const TimeTime = ({
     text = formatMinuteDuration(totalMinutes, {
       lang,
       format,
-      clockStyle: true
+      clockStyle: true,
+      pad,
+      precision
     });
   } else if (format !== "long") {
     // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
@@ -53181,7 +53212,9 @@ const TimeTime = ({
     text = formatMinuteDuration(totalMinutes, {
       lang,
       format,
-      clockStyle: true
+      clockStyle: true,
+      pad,
+      precision
     });
   } else {
     const midnightWord = naviI18n("time.midnight", undefined, {
@@ -53470,6 +53503,111 @@ const TimeText = props => {
     as: "time",
     noWrap: true,
     ...props
+  });
+};
+
+/**
+ * Displays a span between two instants — an opening slot, an availability
+ * window — as the two `<time>` elements `<Time>` would render, around a
+ * separator.
+ *
+ * On top of writing the separator, it makes the two bounds agree on how
+ * precisely they are written, which is a property of the pair and of nothing
+ * else: with `type="time" format="compact" pad={false}`, "08:00"–"10:00" reads
+ * "8h–10h", but "11:30"–"14:00" reads "11h30–14h00" and not "11h30–14h", where
+ * the eye stops on the difference of shape before it reads the hours. Any bound
+ * with minutes gives minutes to both, zero included. The padded clock
+ * (`pad` left at its default) already writes every bound at the same width, and
+ * the spelled-out formats say their units in words, so neither needs the rule
+ * and neither is touched by it.
+ *
+ * @param {Date|number|string} from
+ *   The start of the span, in whatever `<Time>` accepts for this `type`.
+ * @param {Date|number|string} to
+ *   The end of the span. An undefined bound renders `<Time>`'s own placeholder.
+ * @param {"date"|"month"|"datetime"|"time"|"hour"|"minute"|"second"} [type="time"]
+ *   Passed to both bounds. Only `"time"` gets the shared-precision rule; the
+ *   other types are written one after the other, with nothing factored out (a
+ *   date span reads "11 mai – 14 mai", never "du 11 au 14 mai").
+ * @param {"hour"|"minute"} [precision]
+ *   Writes both bounds at this precision instead of the one the pair calls for
+ *   — `"minute"` to keep a zero minute on both ("8h00–10h00"), `"hour"` to drop
+ *   it on both ("8h–11h30", which is the shape the rule exists to avoid: set it
+ *   only when you mean it).
+ * @param {string} [separator]
+ *   What goes between the two bounds. Defaults to the `"time.range_separator"`
+ *   navi text (an en dash), tightened against both bounds in `format="compact"`
+ *   — where the span is one short token — and spaced out otherwise.
+ *
+ *   Every other prop is forwarded to both bounds; see `<Time>`.
+ */
+const TimeRange = ({
+  from,
+  to,
+  type = "time",
+  format = "long",
+  lang = languagesSignal.value,
+  pad = true,
+  precision,
+  separator = naviI18n("time.range_separator", undefined, {
+    lang
+  }),
+  ...props
+}) => {
+  const boundProps = {
+    type,
+    format,
+    lang
+  };
+  if (type === "time") {
+    boundProps.pad = pad;
+    boundProps.precision = precision ?? resolvePairPrecision(from, to, {
+      format,
+      pad
+    });
+  }
+  // compact writes the whole span as one short token ("8h–10h"): nothing
+  // around the separator, and no break inside it. The other formats are
+  // phrases — they get room around the separator, and may wrap there.
+  const tight = format === "compact";
+  return jsxs(Text, {
+    noWrap: tight,
+    ...props,
+    children: [jsx(Time, {
+      ...boundProps,
+      children: from
+    }), tight ? separator : ` ${separator} `, jsx(Time, {
+      ...boundProps,
+      children: to
+    })]
+  });
+};
+
+// The two bounds of a span are written to the same precision, decided by the
+// pair: "8h–10h" as long as neither has minutes, "11h30–14h00" as soon as one
+// of them does. Only ever a question for the unpadded compact clock — the
+// padded one always writes "08h00", and the spelled-out formats name their
+// units, leaving no shape for the eye to trip on.
+const resolvePairPrecision = (from, to, {
+  format,
+  pad
+}) => {
+  if (pad || format !== "compact") {
+    return "minute";
+  }
+  const hasMinutes = value => {
+    const date = toTimeOfDay(value);
+    return Boolean(date) && !isNaN(date.getTime()) && date.getMinutes() !== 0;
+  };
+  return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
+};
+const toTimeOfDay = value => {
+  return toDate(value, string => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(string)) {
+      const d = new Date(`1970-01-01T${string}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
   });
 };
 const toDate = (value, parseString) => {
@@ -80875,5 +81013,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

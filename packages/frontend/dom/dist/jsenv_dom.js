@@ -4896,9 +4896,18 @@ const findFocusable = (element, { exclude } = {}) => {
   return focusableDescendant;
 };
 
-// note: keep in mind that an element with overflow: 'hidden' is scrollable
-// it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
-// the only overflow that prevents scroll is "visible"
+// `hidden` and `clip` both cut the content off and are two different things
+// here, which is what `includeHidden` is about:
+// - `hidden` IS a scroll container. Nothing scrolls it by hand, but keyboard
+//   arrows and scrollTop/scrollLeft do, so whoever cares where an element can
+//   be brought into view has to count it.
+// - `clip` is not one. It clips and stops there: it has no scroll box at all,
+//   and scrollTop/scrollLeft on it read back 0 whatever they are set to. That
+//   is the whole reason a layout reaches for it (see navi's
+//   docs/MOBILE_LAYOUT_PITFALLS.md), so it is never included, whatever the
+//   caller asks for.
+// `visible` is the other non-scrolling value, and the only one on which the
+// content still reaches the ancestors.
 const isScrollable = (element, { includeHidden } = {}) => {
   if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
@@ -4940,7 +4949,10 @@ const canHaveVerticalScroll = (element, { includeHidden }) => {
     }
     return false;
   }
-  if (verticalOverflow === "hidden" || verticalOverflow === "clip") {
+  if (verticalOverflow === "clip") {
+    return false;
+  }
+  if (verticalOverflow === "hidden") {
     return includeHidden;
   }
   const overflow = getStyle(element, "overflow");
@@ -4951,7 +4963,10 @@ const canHaveVerticalScroll = (element, { includeHidden }) => {
     }
     return false;
   }
-  if (overflow === "hidden" || overflow === "clip") {
+  if (overflow === "clip") {
+    return false;
+  }
+  if (overflow === "hidden") {
     return includeHidden;
   }
   return true; // "auto", "scroll"
@@ -4965,7 +4980,10 @@ const canHaveHorizontalScroll = (element, { includeHidden }) => {
     }
     return false;
   }
-  if (horizontalOverflow === "hidden" || horizontalOverflow === "clip") {
+  if (horizontalOverflow === "clip") {
+    return false;
+  }
+  if (horizontalOverflow === "hidden") {
     return includeHidden;
   }
   const overflow = getStyle(element, "overflow");
@@ -4976,7 +4994,10 @@ const canHaveHorizontalScroll = (element, { includeHidden }) => {
     }
     return false;
   }
-  if (overflow === "hidden" || overflow === "clip") {
+  if (overflow === "clip") {
+    return false;
+  }
+  if (overflow === "hidden") {
     return includeHidden;
   }
   return true; // "auto", "scroll"

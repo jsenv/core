@@ -279,7 +279,7 @@ export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
 export { TextBox } from "./src/text/text_box.jsx";
-export { Time } from "./src/text/time.jsx";
+export { Time, TimeRange } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 export { Unit } from "./src/text/unit.jsx";
 
