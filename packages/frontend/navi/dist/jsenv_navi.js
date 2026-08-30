@@ -5,7 +5,7 @@
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
-export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
+export { chainEvent, clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
@@ -30465,7 +30465,16 @@ const anyMatchingRouteSignal = (routes) => {
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.
  * @param {string} command
- * @param {Event} event What the user did.
+ * @param {Event} event What caused this. Mandatory: it is what makes a command
+ *   traceable back to its origin — the debug panel groups everything a gesture
+ *   set off under it, and the gates below read it to know whether the default
+ *   was already prevented and which mouse button was pressed. When nothing was
+ *   handed over — a timer firing, an action settling, a signal changing — build
+ *   a `CustomEvent` that names what happened and chain it to whatever preceded
+ *   it, rather than leaving the origin unsaid:
+ *     const expiredEvent = new CustomEvent("session_expired");
+ *     chainEvent(expiredEvent, causeEvent); // when something did precede it
+ *     triggerNaviCommand(dialogEl, "--navi-open", expiredEvent);
  * @param {object} [options]
  * @param {boolean} [options.optional] No suitable target is not a warning.
  * @param {any} [options.value] What the command is about, carried to whoever
@@ -30482,6 +30491,11 @@ const triggerNaviCommand = (
   event,
   { optional, value, anchor } = {},
 ) => {
+  if (!event) {
+    throw new Error(
+      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Pass the gesture, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
+    );
+  }
   const naviCommand =
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
@@ -33597,6 +33611,12 @@ const GROUP_DEFAULTS = {
  *
  * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
  * (e.g. ignoring buttons inside a selectable list).
+ *
+ * **Aggregating**: `aggregateChildStates(children, fallbackState, stateNow)` — what the
+ * children add up to. `fallbackState` is the empty of the declared `stateType`;
+ * `stateNow` is what the group is worth as it is asked, which an aggregate reads to
+ * answer for children that are not there (a selectable list whose selected row is not
+ * drawn).
  */
 const useUIGroupStateController = (
   props,
@@ -33753,16 +33773,22 @@ const useUIGroupStateController = (
       // taking that for an answer is how a value handed to it evaporates on
       // the way in, and how that emptiness then travels back up to whoever
       // handed it (a picker showing its row as unanswered).
-      const aggregateGroupUIState = (whenNobodyCanAnswer) => {
+      //
+      // `stateNow` is what the group is worth as it is asked: what it keeps
+      // when there is nobody to ask, and what an aggregate reads to answer for
+      // what its children do not say — a selection whose row is not drawn (see
+      // ListSelectable) lives there and nowhere else.
+      const aggregateGroupUIState = (stateNow) => {
         const someChildCanAnswer = childUIStateControllerArray.some(
           shouldPropagateStateToChild,
         );
         if (!someChildCanAnswer) {
-          return whenNobodyCanAnswer;
+          return stateNow;
         }
         const aggChildState = resolvedAggregateChildStates(
           childUIStateControllerArray,
           fallbackState,
+          stateNow,
         );
         if (aggChildState !== undefined) {
           return aggChildState;
@@ -34286,8 +34312,6 @@ const useUIGroupStateController = (
     // ── update: runs every render after the first ─────────────────────────
     (s) => {
       const { controller } = s;
-      const prevValue = controller.value;
-      const prevHasValueProp = controller.hasValueProp;
       const prevDefaultValue = controller.defaultValue;
       controller.props = props;
       controller.ref = ref;
@@ -34305,10 +34329,14 @@ const useUIGroupStateController = (
         controller.placeChildrenUIState(groupUIState, propagateDownEvent);
         controller.syncInternalState(groupUIState);
       };
-      if (
-        hasValueProp &&
-        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
-      ) {
+      // A controlled group goes on showing the value it is given. A child
+      // answering for itself moves what the group is worth — that is what
+      // `uiAction` reports — but the value stays the owner's, so the test is
+      // against what the children are showing, not against the value handed
+      // down last time. A popup reopened on another subject hands down the very
+      // same empty value it did before, and the selection left inside it from
+      // the previous opening is what has to go.
+      if (hasValueProp && !compareTwoJsValues(value, controller.uiState)) {
         placeChildrenFrom(value);
       }
       if (
@@ -61346,23 +61374,22 @@ const ListSelectable = props => {
     focusGroupDirection,
     focusGroupWrap
   } = props;
-  // What the list holds, which is not the same as what its rows say. A list
-  // draws the rows it needs and no more: the selected one may be scrolled out
-  // of the window, or filtered out of the view. Aggregating over the rows that
-  // happen to be mounted would then lose the selection — a row that is not
-  // there cannot say it is not selected.
-  const selectionRef = useRef(undefined);
-  if (selectionRef.current === undefined) {
-    selectionRef.current = Object.hasOwn(props, "value") ? props.value : props.defaultValue;
-  }
+  // `kept` is what the list holds as it is asked, which is not the same as what
+  // its rows say: a list draws the rows it needs and no more, so the selected
+  // one may be scrolled out of the window or filtered out of the view, and a
+  // row that is not there cannot say it is not selected. Reading it off the
+  // group rather than remembering it here is what makes a value put ON the list
+  // (a `value` prop, a signal, a reopened popup) replace the whole selection —
+  // a private memory of its own would go on holding the rows it could not see
+  // being unselected.
+  //
   // `fallbackState` is the empty of the shape the list declared below
   // (`stateType`): `[]` for a multiple list, nothing for a single one. Taking
   // it is what lets an emptied list say "empty" — `undefined` is the word for
   // "unset", and a bound stateSignal reads that as "nothing decided here, go
   // back to the default" (see docs/control_value.md), which is how a list
   // emptied down to its last row puts that row back on reload.
-  const aggregateChildStates = (children, fallbackState) => {
-    const kept = selectionRef.current;
+  const aggregateChildStates = (children, fallbackState, kept) => {
     if (multiple) {
       const drawnValues = new Set(children.map(child => child.props.value));
       const stillSelected = Array.isArray(kept) ? kept.filter(value => !drawnValues.has(value)) : [];
@@ -61371,13 +61398,10 @@ const ListSelectable = props => {
           stillSelected.push(child.uiState);
         }
       }
-      const values = stillSelected.length === 0 ? fallbackState : stillSelected;
-      selectionRef.current = values;
-      return values;
+      return stillSelected.length === 0 ? fallbackState : stillSelected;
     }
     for (const child of children) {
       if (child.uiState !== undefined) {
-        selectionRef.current = child.uiState;
         return child.uiState;
       }
     }
@@ -61385,7 +61409,6 @@ const ListSelectable = props => {
     // deselected; if it is not, the list keeps what it holds.
     const keptIsDrawn = children.some(child => child.props.value === kept);
     if (keptIsDrawn) {
-      selectionRef.current = undefined;
       return undefined;
     }
     return kept;

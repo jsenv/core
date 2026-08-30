@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List value in dialog repro</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        applySearch,
+        Button,
+        Dialog,
+        Input,
+        List,
+        useSearchText,
+      } from "@jsenv/navi";
+
+      const PLAYERS = [
+        { id: "u-1", name: "Marie" },
+        { id: "u-2", name: "Paul" },
+        { id: "u-3", name: "Jacques" },
+        { id: "u-4", name: "Sophie" },
+      ];
+
+      const App = () => {
+        const [seat, setSeat] = useState(null);
+        const [seats, setSeats] = useState({});
+        const [picked, setPicked] = useState(null);
+        const [searchText, setSearchText] = useState("");
+        const [players] = useState(PLAYERS);
+        const [orderedPlayers, getMatchInfo] = useSearchText(
+          searchText,
+          players,
+          (text, player) => applySearch(text, player.name),
+        );
+
+        return (
+          <div>
+            {[1, 2, 3, 4].map((n) => (
+              <Button
+                key={n}
+                data-testid={`seat_${n}`}
+                command="--navi-open"
+                commandFor="seat_dialog"
+                value={n}
+                onClick={() => {
+                  setSeat(n);
+                  setPicked(seats[n] || null);
+                }}
+              >
+                seat {n}: {seats[n] || "—"}
+              </Button>
+            ))}
+            <pre id="state">{JSON.stringify(seats)}</pre>
+            <Dialog id="seat_dialog">
+              <div id="footer">
+                picked: {picked || "aucun"} (seat {seat})
+              </div>
+              <Input
+                type="search"
+                navi-list="seat_list"
+                placeholder="Rechercher"
+                value={searchText}
+                uiAction={(v) => setSearchText(v || "")}
+              />
+              <List
+                id="seat_list"
+                selectable
+                multiple
+                maxLengthGuard={1}
+                value={picked ? [picked] : []}
+                uiAction={(v) => {
+                  const first = v && v[0];
+                  setPicked(first || null);
+                  if (first) {
+                    setSeats((s) => ({ ...s, [seat]: first }));
+                  }
+                }}
+              >
+                {orderedPlayers.map((player) => (
+                  <List.Item
+                    key={player.id}
+                    value={player.id}
+                    matchInfo={getMatchInfo(player)}
+                  >
+                    {player.name}
+                  </List.Item>
+                ))}
+              </List>
+              <Button command="--navi-close">Fermer</Button>
+            </Dialog>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

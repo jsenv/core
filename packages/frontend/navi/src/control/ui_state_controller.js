@@ -1013,6 +1013,12 @@ const GROUP_DEFAULTS = {
  *
  * **Filtering**: `childControlFilter` can exclude certain child types from aggregation
  * (e.g. ignoring buttons inside a selectable list).
+ *
+ * **Aggregating**: `aggregateChildStates(children, fallbackState, stateNow)` — what the
+ * children add up to. `fallbackState` is the empty of the declared `stateType`;
+ * `stateNow` is what the group is worth as it is asked, which an aggregate reads to
+ * answer for children that are not there (a selectable list whose selected row is not
+ * drawn).
  */
 export const useUIGroupStateController = (
   props,
@@ -1176,16 +1182,22 @@ export const useUIGroupStateController = (
       // taking that for an answer is how a value handed to it evaporates on
       // the way in, and how that emptiness then travels back up to whoever
       // handed it (a picker showing its row as unanswered).
-      const aggregateGroupUIState = (whenNobodyCanAnswer) => {
+      //
+      // `stateNow` is what the group is worth as it is asked: what it keeps
+      // when there is nobody to ask, and what an aggregate reads to answer for
+      // what its children do not say — a selection whose row is not drawn (see
+      // ListSelectable) lives there and nowhere else.
+      const aggregateGroupUIState = (stateNow) => {
         const someChildCanAnswer = childUIStateControllerArray.some(
           shouldPropagateStateToChild,
         );
         if (!someChildCanAnswer) {
-          return whenNobodyCanAnswer;
+          return stateNow;
         }
         const aggChildState = resolvedAggregateChildStates(
           childUIStateControllerArray,
           fallbackState,
+          stateNow,
         );
         if (aggChildState !== undefined) {
           return aggChildState;
@@ -1709,8 +1721,6 @@ export const useUIGroupStateController = (
     // ── update: runs every render after the first ─────────────────────────
     (s) => {
       const { controller } = s;
-      const prevValue = controller.value;
-      const prevHasValueProp = controller.hasValueProp;
       const prevDefaultValue = controller.defaultValue;
       controller.props = props;
       controller.ref = ref;
@@ -1728,10 +1738,14 @@ export const useUIGroupStateController = (
         controller.placeChildrenUIState(groupUIState, propagateDownEvent);
         controller.syncInternalState(groupUIState);
       };
-      if (
-        hasValueProp &&
-        (!prevHasValueProp || !compareTwoJsValues(value, prevValue))
-      ) {
+      // A controlled group goes on showing the value it is given. A child
+      // answering for itself moves what the group is worth — that is what
+      // `uiAction` reports — but the value stays the owner's, so the test is
+      // against what the children are showing, not against the value handed
+      // down last time. A popup reopened on another subject hands down the very
+      // same empty value it did before, and the selection left inside it from
+      // the previous opening is what has to go.
+      if (hasValueProp && !compareTwoJsValues(value, controller.uiState)) {
         placeChildrenFrom(value);
       }
       if (
