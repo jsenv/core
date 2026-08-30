@@ -66926,8 +66926,15 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       /* The façade is transparent to the pointer — a press on what it draws
          means "open the picker". An own target is the exception, the same way
          the clear cross is one in the slot below: it says the press is aimed at
-         IT, so it has to be reachable at all. */
+         IT, so it has to be reachable at all.
+         Positioned as well as pointable: the input covering the box
+         (see [navi-ui-custom] below) is absolute, so it paints over every
+         static element of the façade whatever their pointer-events say — and
+         the press then reaches the input, which is the picker. No offset, so
+         nothing moves; this only puts the own target in the same paint layer
+         as the things it has to be reachable through. */
       [data-own-target] {
+        position: relative;
         pointer-events: auto;
       }
     }
@@ -67171,6 +67178,42 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
         z-index: -1;
       }
     }
+    /* bare: the caller's drawing IS the trigger. No frame, no control line, no
+       slot beside it, no clamp on it — the picker takes the size of what the ui
+       draws, to the pixel, and does nothing to it but catch the press. For a
+       picker that is a whole piece of a layout (a column of a card, a tile)
+       rather than a field: the same drawing can then sit alone somewhere else
+       and be the same box in both places. */
+    &[data-variant="bare"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      /* The box holds the drawing rather than placing it inside itself: a
+         height the caller gave the picker belongs to the drawing too. */
+      --picker-align-y-default: stretch;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+      --x-picker-icon-color: currentColor;
+
+      /* The drawing is the caller's, so it is written on the page's line at
+         the page's size — the control font and the control line belong to the
+         field-like drawings, which this one is not. */
+      font-size: inherit;
+      font-family: inherit;
+      line-height: inherit;
+
+      .navi_picker_box {
+        /* A field is at least one line tall whatever it holds; this is not a
+           field, so its height is the drawing's and nothing else. */
+        min-height: 0;
+      }
+    }
     /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
        and the --navi-button-* vars) — its surface, its padding, a centered
        label, its washed-out read-only and disabled — for a picker that IS a
@@ -67274,7 +67317,10 @@ const PickerButton = props => {
   // A word in a sentence is never truncated — and the clamp's overflow: hidden
   // would cut its dotted underline, which sits on the edge of the line box
   // (WebKit drops it or not depending on the subpixel position of the line).
-  const maxLines = variant === "text" ? undefined : maxLinesProp;
+  // A bare picker is not truncated either: the drawing it shows is the
+  // caller's own, and clamping it would be the picker deciding the shape of
+  // something it does not draw.
+  const maxLines = variant === "text" || variant === "bare" ? undefined : maxLinesProp;
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
@@ -67495,7 +67541,7 @@ const PickerButton = props => {
                 })
               })
             })
-          }), variant === "icon" || variant === "headless" || variant === "button" || variant === "text" || ui === "default" ? null : jsx("span", {
+          }), variant === "icon" || variant === "headless" || variant === "button" || variant === "text" || variant === "bare" || ui === "default" ? null : jsx("span", {
             className: "navi_picker_right_slot",
             children: jsx(PickerOwnContent, {
               children: clearable && interactive && value !== undefined && value !== "" && clearConfirm !== undefined ?

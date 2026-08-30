@@ -302,8 +302,15 @@ const css = /* css */ `
       /* The façade is transparent to the pointer — a press on what it draws
          means "open the picker". An own target is the exception, the same way
          the clear cross is one in the slot below: it says the press is aimed at
-         IT, so it has to be reachable at all. */
+         IT, so it has to be reachable at all.
+         Positioned as well as pointable: the input covering the box
+         (see [navi-ui-custom] below) is absolute, so it paints over every
+         static element of the façade whatever their pointer-events say — and
+         the press then reaches the input, which is the picker. No offset, so
+         nothing moves; this only puts the own target in the same paint layer
+         as the things it has to be reachable through. */
       [data-own-target] {
+        position: relative;
         pointer-events: auto;
       }
     }
@@ -547,6 +554,42 @@ const css = /* css */ `
         z-index: -1;
       }
     }
+    /* bare: the caller's drawing IS the trigger. No frame, no control line, no
+       slot beside it, no clamp on it — the picker takes the size of what the ui
+       draws, to the pixel, and does nothing to it but catch the press. For a
+       picker that is a whole piece of a layout (a column of a card, a tile)
+       rather than a field: the same drawing can then sit alone somewhere else
+       and be the same box in both places. */
+    &[data-variant="bare"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      /* The box holds the drawing rather than placing it inside itself: a
+         height the caller gave the picker belongs to the drawing too. */
+      --picker-align-y-default: stretch;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+      --x-picker-icon-color: currentColor;
+
+      /* The drawing is the caller's, so it is written on the page's line at
+         the page's size — the control font and the control line belong to the
+         field-like drawings, which this one is not. */
+      font-size: inherit;
+      font-family: inherit;
+      line-height: inherit;
+
+      .navi_picker_box {
+        /* A field is at least one line tall whatever it holds; this is not a
+           field, so its height is the drawing's and nothing else. */
+        min-height: 0;
+      }
+    }
     /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
        and the --navi-button-* vars) — its surface, its padding, a centered
        label, its washed-out read-only and disabled — for a picker that IS a
@@ -653,7 +696,11 @@ const PickerButton = (props) => {
   // A word in a sentence is never truncated — and the clamp's overflow: hidden
   // would cut its dotted underline, which sits on the edge of the line box
   // (WebKit drops it or not depending on the subpixel position of the line).
-  const maxLines = variant === "text" ? undefined : maxLinesProp;
+  // A bare picker is not truncated either: the drawing it shows is the
+  // caller's own, and clamping it would be the picker deciding the shape of
+  // something it does not draw.
+  const maxLines =
+    variant === "text" || variant === "bare" ? undefined : maxLinesProp;
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
@@ -897,6 +944,7 @@ const PickerButton = (props) => {
           variant === "headless" ||
           variant === "button" ||
           variant === "text" ||
+          variant === "bare" ||
           ui === "default" ? null : (
             <span className="navi_picker_right_slot">
               <PickerOwnContent>
@@ -1243,7 +1291,7 @@ const PickerFirstResolver = (props) => {
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
- *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "text" | "picker",
+ *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "text" | "bare" | "picker",
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
@@ -1301,6 +1349,13 @@ const PickerFirstResolver = (props) => {
  *   left out it is the icon the right slot would have shown (`rightSlotIcon`,
  *   or the chevron), and given it is drawn instead — one icon of the caller's
  *   own, and nothing else.
+ *
+ *   Under `variant="bare"` it is the trigger as well, and the picker adds
+ *   nothing around it: whatever this draws is what the picker measures. Its
+ *   own padding, its own lines, its own corners — a `<Box>` here gives a
+ *   picker the exact box that `<Box>` has on its own. Anything interactive
+ *   inside it takes its clicks back with `data-own-target`, the press
+ *   everywhere else opening the popup.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1380,16 +1435,20 @@ const PickerFirstResolver = (props) => {
  *   BEFORE the ui state is emptied, so answering no leaves the field exactly
  *   as it was; answering yes clears and sends, and the picker's own action
  *   receives the cleared value like any other choice.
- * @param {"icon"|"headless"|"discrete"|"button"|"text"|"picker"} [variant]
+ * @param {"icon"|"headless"|"discrete"|"button"|"text"|"bare"|"picker"} [variant]
  *   How the trigger is drawn. `"button"` is a Button's drawing — surface,
  *   padding, a centered label, no chevron — and what a `type="confirm"` picker
  *   draws unless told otherwise: nothing is picked, the popup is a question.
  *   `"text"` is a word in a sentence, underlined with dots, no box and no
  *   slot: what `mode="callout"` uses for a callout on a term rather than on an
  *   icon (`"icon"` being its default, with an info icon in place of the
- *   chevron). `"picker"` (or an explicit `variant={undefined}`) asks a
- *   confirm or callout picker for the field-like drawing every other picker
- *   has.
+ *   chevron). `"bare"` draws no trigger of its own at all: the `ui` is it, and
+ *   the picker is exactly that drawing's box — no padding, no frame, no
+ *   control line, no clamp, no slot — for a picker that is a whole piece of a
+ *   layout rather than a field, and which must measure the same as the same
+ *   drawing placed anywhere else. `"picker"` (or an explicit
+ *   `variant={undefined}`) asks a confirm or callout picker for the field-like
+ *   drawing every other picker has.
  * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
  *   question, in the popup's default body — text, or JSX when it needs an
  *   emphasis, a link. Left out, a generic "are you sure?" in the current
