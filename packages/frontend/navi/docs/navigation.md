@@ -3,6 +3,23 @@
 How to build navigation with `@jsenv/navi`: declaring routes, rendering them,
 linking to them, and turning them into tabs.
 
+- [The rule that decides everything else: the position belongs in the URL](#the-rule-that-decides-everything-else-the-position-belongs-in-the-url)
+- [Declaring routes](#declaring-routes)
+  - [A section is allowed to be a route of its own](#a-section-is-allowed-to-be-a-route-of-its-own)
+  - [Which values a param accepts](#which-values-a-param-accepts)
+  - [An address that only sends elsewhere](#an-address-that-only-sends-elsewhere)
+  - [Search params](#search-params)
+- [Rendering routes](#rendering-routes)
+  - [Loading data](#loading-data)
+- [Links and tab rows](#links-and-tab-rows)
+- [The back arrow: `navBack`](#the-back-arrow-navback)
+- [Tabs that travel: `RouteTravel`](#tabs-that-travel-routetravel)
+- [Where a navigation lands: the scroll](#where-a-navigation-lands-the-scroll)
+- [Creating something, then editing it](#creating-something-then-editing-it)
+- [Tabs that are not routes](#tabs-that-are-not-routes)
+  - [A `SlideContainer` in the URL: a position that is not a place one came from](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
+  - [A state whose values ARE places: `history: "push"`](#a-state-whose-values-are-places-history-push)
+
 ## The rule that decides everything else: the position belongs in the URL
 
 Where the user is — which section, which tab, which sub-page — is state. Put it
@@ -21,8 +38,10 @@ retrofitted later:
 So the default shape of a tab row is routes: `<Nav>` + `<Link route>` +
 `<RouteTravel>`. `SlideContainer` is the exception, not the starting point — see
 [Tabs that are not routes](#tabs-that-are-not-routes) for the cases that
-genuinely are one, and for the middle answer: a position READ from the URL and
-restored on reload, without a route and without a history entry per step.
+genuinely are one, and
+[A `SlideContainer` in the URL](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
+for the middle answer: a position READ from the URL and restored on reload,
+without a route and without a history entry per step.
 
 ## Declaring routes
 
@@ -609,7 +628,7 @@ page. It reads which slide is on screen from the container itself, and its bar
 follows the slides, a finger dragging them included. `<Link slide>` has no href
 and behaves like a button: this is not a link to anywhere.
 
-### The middle answer: a position in the URL that is not a place one came from
+### A `SlideContainer` in the URL: a position that is not a place one came from
 
 "Should a link be able to open the app on this?" has a third answer, and a wizard
 is exactly it: **yes for reading and for reloading, no for history.** The step one
@@ -625,12 +644,12 @@ URL that replaces rather than pushes ([Search params](#search-params)). Declare
 the step as one, and hand its signal to the container:
 
 ```js
-const stepSignal = stateSignal(undefined, {
+const stepSignal = stateSignal("when", {
   id: "step",
   oneOf: ["when", "where", "who", "recap", "done"],
   // the step qualifies THIS visit, not the screen: a link built to the editor
-  // does not inherit the step one happens to be on, and it goes back to nothing
-  // when the route stops matching
+  // does not inherit the step one happens to be on, and it goes back to the
+  // default when the route stops matching
   weak: true,
 });
 export const ALERT_EDIT_ROUTE = route("/alerts/:alertId/edit", {
@@ -639,16 +658,20 @@ export const ALERT_EDIT_ROUTE = route("/alerts/:alertId/edit", {
 ```
 
 ```jsx
-<SlideContainer signal={stepSignal} defaultCurrent={editing ? "recap" : "when"}>
+<SlideContainer signal={stepSignal}>
 ```
 
 That is the whole wiring, and every half of it is the piece that already
 existed. Worth naming, because each answers a question a wizard actually has:
 
-- **the param is absent while the step is the default one** (route.js prunes it),
-  so `/alerts/W-123/edit` stays clean and `defaultCurrent` is what says where the
-  container opens. An empty signal means "wherever this would have opened
-  anyway", not "the first slide";
+- **where it opens is the state's own default** — the first argument of
+  `stateSignal`. The container has a `defaultCurrent` for when it owns its
+  position, but a bound container does not own it: one place says where the step
+  starts, and it is the same place a reset goes back to;
+- **the param is absent while the step IS that default** (route.js prunes it), so
+  `/alerts/W-123/edit` is clean on the first step, gains `?step=where` on the
+  second, and loses it again coming back. The address carries what differs from
+  the usual answer and nothing else;
 - **the container walks to the step rather than jumping to it.** The address comes
   from outside the box (typed, shared, kept from a session that has moved on), so
   every slide between here and there is asked to let go the way a key going that
@@ -663,6 +686,24 @@ existed. Worth naming, because each answers a question a wizard actually has:
 A container remembers nothing across a reload, so a step whose `required` the app
 knows is already satisfied says so itself (`required={!alreadyFilled}`); the same
 holds for a hold that a finished job lifts (`preventNavNext={!published}`).
+
+**A start that depends on where one is** — a wizard creating something opens on
+its first question, the same wizard editing something opens on its summary — is
+not a prop on the container either: a `stateSignal` takes a SIGNAL as its default
+and follows it as long as nobody has answered otherwise.
+
+```js
+const stepDefaultSignal = computed(() =>
+  // `matchingSignal`, not `matching`: the plain property is a mirror, the
+  // signal is what a computed can follow
+  ALERT_EDIT_ROUTE.matchingSignal.value ? "recap" : "when",
+);
+const stepSignal = stateSignal(stepDefaultSignal, { id: "step", weak: true });
+```
+
+The pruning follows it too, so both addresses stay clean on the step they open
+on — `/alerts/create` on "when", `/alerts/W-123/edit` on "recap" — and a step
+someone actually chose survives the default moving under it.
 
 Two containers on one screen are two signals, and that is the whole answer to
 "which one owns the param": the one holding the route's signal. A gallery of

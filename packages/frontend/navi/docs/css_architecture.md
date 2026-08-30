@@ -41,7 +41,7 @@ This means an app can override a Navi default from its own unlayered CSS, withou
 }
 ```
 
-Targeting the same element is not a detail — see [`--navi-*` vs `--component-*`](#--navi-vs---component-where-the-override-has-to-go) below.
+Targeting the same element is not a detail — see [`--navi-*` vs `--component-*`](#--navi--vs---component--where-the-override-has-to-go) below.
 
 ### Why actual rules stay outside any layer
 

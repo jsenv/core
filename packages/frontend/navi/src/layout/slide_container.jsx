@@ -455,8 +455,6 @@ const durationToMs = (duration) => {
 // "somewhere over there" (a gesture one browses with), or it said a name (a tab
 // pressed, a key, a command — a place aimed at). Nothing at all when the travel
 // came from code, which has no interaction to speak of.
-const CAUSES_WRITTEN_BY_REPLACEMENT = ["drag", "refusal", "state"];
-
 const causeOfEvent = (event) => {
   if (!event) {
     return "code";
@@ -470,6 +468,10 @@ const causeOfEvent = (event) => {
   }
   return "command";
 };
+
+// The causes that are not places one went, whatever the state they are written
+// into says (see writeAreaAsked).
+const CAUSES_WRITTEN_BY_REPLACEMENT = ["drag", "refusal", "state"];
 
 const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
@@ -525,16 +527,34 @@ const readArea = (slideElement) =>
  *   still unanswered) is where one stops — after which the signal is written
  *   with the area actually shown, so it says where one IS and never where one
  *   asked to be.
- *   Hand it a `stateSignal` declared on a route (`searchParams: { step }`) and
- *   the address is that state: `?step=<area>` on every travel, and the walk
- *   above is what a link, a bookmark or a traversal goes through. Written by
+ *   PUTTING THE AREA IN THE URL is that binding and nothing more: hand it a
+ *   `stateSignal` a route declares as a search param, and `?step=<area>` is
+ *   written on every travel, read on a load, a bookmark, a link, a traversal —
+ *   through the walk above, so an address cannot open a slide the walk may not
+ *   reach.
+ *   ```js
+ *   const stepSignal = stateSignal("when", { id: "step", weak: true });
+ *   route("/alerts/:id/edit", { searchParams: { step: stepSignal } });
+ *   ```
+ *   ```jsx
+ *   <SlideContainer signal={stepSignal}>
+ *   ```
+ *   Where it opens is the state's own default (`stateSignal`'s first argument —
+ *   a signal there, for a start that depends on where one is), and the param
+ *   stays out of the address while the area IS that default. `weak` keeps the
+ *   step from being inherited by links built to that route. Written by
  *   replacement unless the state says `history: "push"`, and even then a slide
  *   reached by DRAGGING replaces — see docs/navigation.md.
- * @param {string} [props.defaultCurrent] - which slide to open on, when the
- *   travel is left to the container. Mount-only, like every other `default*`:
+ * @param {string} [props.defaultCurrent] - which slide to open on, for a
+ *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
+ *   A container bound to a `signal` does not own its position, and where it
+ *   opens is that state's own default (`stateSignal`'s first argument) rather
+ *   than this: one place says where the area starts, and it is the place a
+ *   reset goes back to. This still answers for a signal holding nothing at
+ *   all.
  * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"state", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
  *   - the slide being shown has changed. `cause` says what asked for it, which
  *   is what tells a place browsed past from a place aimed at — a slide dragged

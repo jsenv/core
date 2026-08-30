@@ -110,14 +110,14 @@ Binding the state does not remove the callback — it removes one job from it:
 
 ## What binds itself
 
-| the state                         | how it binds                               | where it is written up                                                                 |
-| --------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
-| a control's value                 | `signal` (every control, every group)      | [control_value.md](./control_value.md)                                                 |
-| the area a `SlideContainer` is on | `signal` (a route's, and it is in the URL) | its JSDoc, [navigation.md](./navigation.md)                                            |
-| a popup being open                | `signal`, `open`, `navState`               | [popup_open.md](./popup_open.md)                                                       |
-| where the user is                 | route + search-param signals               | [navigation.md](./navigation.md)                                                       |
-| a value proposed to a control     | `command="--navi-update"`                  | [control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update) |
-| the state of an async run         | an `action`, read by `useAsyncData`        | [actions.md](./actions.md)                                                             |
+| the state                         | how it binds                                                | where it is written up                                                                                               |
+| --------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| a control's value                 | `signal` (every control, every group)                       | [control_value.md](./control_value.md)                                                                               |
+| the area a `SlideContainer` is on | `signal` (a route's search param signal puts it in the URL) | its JSDoc, [navigation.md](./navigation.md#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from) |
+| a popup being open                | `signal`, `open`, `navState`                                | [popup_open.md](./popup_open.md)                                                                                     |
+| where the user is                 | route + search-param signals                                | [navigation.md](./navigation.md)                                                                                     |
+| a value proposed to a control     | `command="--navi-update"`                                   | [control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)                               |
+| the state of an async run         | an `action`, read by `useAsyncData`                         | [actions.md](./actions.md)                                                                                           |
 
 ## When there is no binding
 

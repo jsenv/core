@@ -29,7 +29,15 @@ let isUpdatingRoutesFromUrl = false;
  *   `:name=${signal}` binds that param to a signal.
  * @param {object} [options]
  * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
- *   Search params this route two-way syncs with, by name.
+ *   Search params this route two-way syncs with, by name. The signal and the url
+ *   are the same state: writing the signal rewrites the address, an address
+ *   arriving from outside writes the signal, and the param disappears from the
+ *   url while the signal holds its default.
+ *   Writing one AMENDS the history entry one is on — a param qualifies the
+ *   screen, it is not a place, and one entry per write turns a single
+ *   back-press into as many as the user moved. A state whose values ARE places
+ *   says so where it is declared (`stateSignal(v, { history: "push" })`), and
+ *   one write can still say otherwise (`signal.set(v, { history })`).
  * @param {Object<string, RegExp | Array | ((value: string) => boolean)>} [options.params]
  *   Which values a path param accepts, by param name: a regexp tested against the
  *   decoded segment, the list of accepted values (compared as strings, so it can

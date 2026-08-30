@@ -16349,6 +16349,14 @@ const generateSignalId = () => {
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
  *   "edit this one" id, where every other link to the screen must lead to the plain screen.
  *   Incompatible with `persists` (throws).
+ * @param {"replace"|"push"} [options.history="replace"] - what writing this state
+ *   is worth in the browser's history, when it is bound to a url (a route's
+ *   `searchParams`, a path param). Replacement by default: a state that
+ *   qualifies the screen one is on — a step in a form, a view mode, a sort — is
+ *   not a place, and one entry per write turns a single back-press into as many
+ *   as the user moved. `"push"` is for a state whose values ARE places one came
+ *   from (the photo one is looking at in a gallery). Whatever is said here, one
+ *   write can say otherwise: `signal.set(value, { history })`.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -16422,8 +16430,14 @@ const stateSignal = (defaultValue, options = {}) => {
     ignoreArrayOrder,
     autoFix,
     weak = false,
+    history = "replace",
   } = options;
 
+  if (history !== "replace" && history !== "push") {
+    throw new TypeError(
+      `stateSignal "${id}": history must be "replace" or "push", got ${history}.`,
+    );
+  }
   if (weak && persists) {
     throw new TypeError(
       `stateSignal "${id}": weak and persists are contradictory — a weak param qualifies one visit, it cannot be restored from a previous session.`,
@@ -16600,7 +16614,35 @@ const stateSignal = (defaultValue, options = {}) => {
     configurable: true,
   });
 
+  // What the write being made right now asks of the history, over what this
+  // state declares. It lives for the length of one assignment: the effect that
+  // writes the url runs synchronously inside it (see route.js), and reads it
+  // there. A write made inside batch() is therefore out of its reach — say the
+  // history on the state itself for those.
+  let historyForCurrentWrite;
   const facadeSignal = preactSignal;
+  /**
+   * Write the state, saying what this ONE write is worth in the history.
+   *
+   * The state says which of the two it usually is (`history` above); a writer
+   * that knows THIS move is not one of them says so here — a slide reached by
+   * dragging inside a container whose slides are places one came from.
+   *
+   * @param {any} value
+   * @param {{history?: "replace"|"push"}} [options]
+   */
+  facadeSignal.set = (value, { history: historyAsked } = {}) => {
+    if (historyAsked === undefined) {
+      facadeSignal.value = value;
+      return;
+    }
+    historyForCurrentWrite = historyAsked;
+    try {
+      facadeSignal.value = value;
+    } finally {
+      historyForCurrentWrite = undefined;
+    }
+  };
   facadeSignal.validity = validity;
   facadeSignal.validSignal = computed(() => {
     // Reading facadeSignal.value establishes the reactive dependency.
@@ -16745,6 +16787,8 @@ const stateSignal = (defaultValue, options = {}) => {
     localStorageKey,
     debug,
     ...options,
+    history,
+    getHistory: () => historyForCurrentWrite || history,
   };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,
@@ -18012,9 +18056,20 @@ const POSITION_PROPS = {
     return { transform: `skew(${value})` };
   },
 };
+// Only the inline axis has something to truncate here, so the clip must not
+// constrain the block one: `hidden` would make the element a scroll container,
+// whose flex automatic minimum size is 0, and a single line inside a column
+// flex container shorter than 1lh then shrinks under its own line box and gets
+// cut through the glyphs. `clip` keeps the content-based minimum, so the line
+// overflows visibly instead. The margin leaves room for ink drawn outside the
+// advance width; it starts from the padding box, having no hidden line to hold
+// back the way lineClampStyles below does.
 const singleLineEllipsisStyles = () => {
   return {
-    overflow: "hidden",
+    overflow: "clip",
+    // The `padding-box` keyword is redundant (it is the default box) but
+    // Chromium drops the declaration when a bare calc() follows the property.
+    overflowClipMargin: "padding-box calc((1lh - 1em) / 2)",
     textOverflow: "ellipsis",
     overflowWrap: "normal",
   };
@@ -24540,7 +24595,15 @@ let isUpdatingRoutesFromUrl = false;
  *   `:name=${signal}` binds that param to a signal.
  * @param {object} [options]
  * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
- *   Search params this route two-way syncs with, by name.
+ *   Search params this route two-way syncs with, by name. The signal and the url
+ *   are the same state: writing the signal rewrites the address, an address
+ *   arriving from outside writes the signal, and the param disappears from the
+ *   url while the signal holds its default.
+ *   Writing one AMENDS the history entry one is on — a param qualifies the
+ *   screen, it is not a place, and one entry per write turns a single
+ *   back-press into as many as the user moved. A state whose values ARE places
+ *   says so where it is declared (`stateSignal(v, { history: "push" })`), and
+ *   one write can still say otherwise (`signal.set(v, { history })`).
  * @param {Object<string, RegExp | Array | ((value: string) => boolean)>} [options.params]
  *   Which values a path param accepts, by param name: a regexp tested against the
  *   decoded segment, the list of accepted values (compared as strings, so it can
@@ -24711,17 +24774,20 @@ const route = (
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
-    route.redirectTo = (params, { callReason } = {}) => {
+    route.redirectTo = (params, { callReason, history = "replace" } = {}) => {
       if (!integration) {
         return Promise.resolve();
       }
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, {
-        replace: true,
+        replace: history !== "push",
         callReason,
       });
     };
-    route.replaceParams = (newParams, { callReason, isSignalChange } = {}) => {
+    route.replaceParams = (
+      newParams,
+      { callReason, isSignalChange, history = "replace" } = {},
+    ) => {
       const matching = route.matchingSignal.peek();
       if (!matching) {
         console.warn(
@@ -24774,6 +24840,7 @@ const route = (
         }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
+          history,
         });
       }
 
@@ -24789,7 +24856,7 @@ const route = (
         newParams,
       );
       return integration.navTo(targetUrl, {
-        replace: true,
+        replace: history !== "push",
         callReason,
       });
     };
@@ -24860,6 +24927,13 @@ const route = (
     const { connections } = routePattern;
     for (const connection of connections) {
       const { signal: paramSignal, debug, paramName } = connection;
+      // What a write of this state is worth in the history: what the state
+      // declares, and what the write happening right now says instead (see
+      // stateSignal's `history` and its `set`). Read at the moment of the
+      // navigation and never before. A plain signal says nothing and replaces,
+      // which is what a param qualifying a screen is.
+      const historyOfWrite = () =>
+        paramSignal.options?.getHistory?.() || "replace";
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -24902,6 +24976,7 @@ const route = (
             {
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
+              history: historyOfWrite(),
             },
           );
           return;
@@ -24919,6 +24994,7 @@ const route = (
             {
               callReason: `${paramName} signal reset to default on ${route}`,
               isSignalChange: true,
+              history: historyOfWrite(),
             },
           );
           return;
@@ -24938,6 +25014,7 @@ const route = (
           {
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,
+            history: historyOfWrite(),
           },
         );
       });
@@ -39015,8 +39092,17 @@ const css$X = /* css */`
       display: block;
       min-width: 0;
       text-overflow: ellipsis;
-      overflow: hidden;
+      /* Only the inline axis has something to truncate, so the clip must not
+         constrain the block one: overflow hidden would make the element a
+         scroll container, whose flex automatic minimum size is 0, and inside a
+         column flex container shorter than 1lh the text then shrinks under its
+         own line box and gets cut through the glyphs. The margin leaves room
+         for ink drawn outside the advance width. */
+      overflow: clip;
       overflow-wrap: normal;
+      /* The padding-box keyword is redundant (it is the default box) but
+         Chromium drops the declaration when a bare calc() follows. */
+      overflow-clip-margin: padding-box calc((1lh - 1em) / 2);
     }
 
     &[data-skeleton] {
@@ -51130,6 +51216,10 @@ const causeOfEvent = event => {
   }
   return "command";
 };
+
+// The causes that are not places one went, whatever the state they are written
+// into says (see writeAreaAsked).
+const CAUSES_WRITTEN_BY_REPLACEMENT = ["drag", "refusal", "state"];
 const readArea = slideElement => slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
 /**
@@ -51166,33 +51256,65 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   repeated spans), except that a row needs no trailing hole: what is not
  *   written is simply not there.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
- *   to keep it here and drive it by command.
- * @param {import("@preact/signals").Signal<string>} [props.signal] - the same
- *   thing said the way every navi control says it: the container shows the area
- *   the signal holds, and writes into it the area it travels to. One binding
- *   instead of `current` + `onCurrentChange`, and the state stays where the app
- *   put it — which is what lets something else read where the slides are (a
- *   field carrying the current tab into a form, see
+ *   to keep it here and drive it by command. An area named from outside is a
+ *   REQUEST rather than a placement — see `signal` for what that means.
+ * @param {import("@preact/signals").Signal<string>} [props.signal] - where the
+ *   area lives, said the way every navi control says it: the container shows
+ *   the area the signal holds, and writes into it the area it travels to. One
+ *   binding instead of `current` + `onCurrentChange`, and the state stays where
+ *   the app put it — which is what lets something else read where the slides
+ *   are (a field carrying the current tab into a form, see
  *   docs/control_object.md#a-settings-sheet) or move them by writing it.
  *   Excludes `current`; `onCurrentChange` still fires, for the `cause` and for
  *   the right to refuse.
- * @param {string} [props.defaultCurrent] - which slide to open on, when the
- *   travel is left to the container. Mount-only, like every other `default*`:
+ *   An area written from outside is WALKED to, not jumped to: every slide
+ *   between here and there is asked to let go the way a key going that way
+ *   would ask it, and the first one that holds (`preventNav`, a `required` step
+ *   still unanswered) is where one stops — after which the signal is written
+ *   with the area actually shown, so it says where one IS and never where one
+ *   asked to be.
+ *   PUTTING THE AREA IN THE URL is that binding and nothing more: hand it a
+ *   `stateSignal` a route declares as a search param, and `?step=<area>` is
+ *   written on every travel, read on a load, a bookmark, a link, a traversal —
+ *   through the walk above, so an address cannot open a slide the walk may not
+ *   reach.
+ *   ```js
+ *   const stepSignal = stateSignal("when", { id: "step", weak: true });
+ *   route("/alerts/:id/edit", { searchParams: { step: stepSignal } });
+ *   ```
+ *   ```jsx
+ *   <SlideContainer signal={stepSignal}>
+ *   ```
+ *   Where it opens is the state's own default (`stateSignal`'s first argument —
+ *   a signal there, for a start that depends on where one is), and the param
+ *   stays out of the address while the area IS that default. `weak` keeps the
+ *   step from being inherited by links built to that route. Written by
+ *   replacement unless the state says `history: "push"`, and even then a slide
+ *   reached by DRAGGING replaces — see docs/navigation.md.
+ * @param {string} [props.defaultCurrent] - which slide to open on, for a
+ *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
- * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"url", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
+ *   A container bound to a `signal` does not own its position, and where it
+ *   opens is that state's own default (`stateSignal`'s first argument) rather
+ *   than this: one place says where the area starts, and it is the place a
+ *   reset goes back to. This still answers for a signal holding nothing at
+ *   all.
+ * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"state", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
  *   - the slide being shown has changed. `cause` says what asked for it, which
- *   is what tells a place browsed past from a place aimed at: a caller writing
- *   this into the URL pushes a history entry for a tab that was pressed and
- *   replaces the current one for a slide that was dragged, so three swipes back
- *   and forth do not bury the way out of the page.
+ *   is what tells a place browsed past from a place aimed at — a slide dragged
+ *   to rather than pressed for. `cause: "state"` is the bound state asking (a
+ *   write from the application, a load on a link, a traversal) rather than
+ *   anything done inside the box, and its `event` is null.
  *   Answer `false` to REFUSE the change and the slide goes back where it came
  *   from — a guard that says no, a session that is gone. A promise refuses it
  *   late, once whatever it had to ask has answered; the travel plays meanwhile
  *   and is undone if the answer is no.
- *   `cause: "url"` is the address asking (see `urlParam`) — a load on a link, a
- *   traversal — rather than anything done inside the box.
+ *   It is not where the area is REMEMBERED: `signal` does that in both
+ *   directions and is written by every way of travelling, while a callback
+ *   assigning it catches only the ones it was written for — see
+ *   docs/state_binding.md. What is left here is the `cause` and the refusal.
  * @param {"now"|"rest"} [props.commit="now"] - when the change is told.
  *   "rest" waits for the travel to be over, and lets the container hold the
  *   slide it is going to meanwhile: the picture moves with the finger and the
@@ -51210,33 +51332,6 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   one that just travelled there. Called once the travel is over, and in the
  *   same render as the return to rest — anything later shows the old content
  *   for a frame.
- * @param {string|{name: string, history?: "replace"|"push"}} [props.urlParam]
- *   - the search param this container owns, and where it stands is written
- *   into: `urlParam="step"` puts `?step=<area>` in the address on every travel,
- *   and opens on the area it names on a load, a bookmark, a traversal, a link
- *   from anywhere else in the application.
- *   It is the answer to "the step should be readable and should survive a
- *   reload" WITHOUT one route per slide: no route to declare, no route guard to
- *   re-express the walk's own rules in, and no page transition — what travels
- *   is the box, and the address is a label on where the box stands. Say it on a
- *   container whose slides are places one may be sent to; a walk nobody links
- *   into keeps its position to itself.
- *   Written by REPLACEMENT: four steps that each stacked an entry would turn
- *   one back-press into four, and the back arrow of a page means "leave this
- *   page", not "one question back". `history: "push"` says the opposite for the
- *   containers that mean it — slides that ARE places one came from, a gallery
- *   one browses — and even there a slide reached by dragging replaces, so
- *   swiping back and forth does not bury the way out.
- *   The address is READ through the walk, not jumped to: it comes from outside
- *   the box, so every slide between here and there is asked to let go the way a
- *   key going that way would ask it, and the first one that holds
- *   (`preventNav`, or a `required` step still unanswered) is where one stops —
- *   `?step=done` cannot open a confirmation screen for something nobody sent.
- *   Whatever comes of it, the address is then rewritten with the area actually
- *   shown: it says where one IS, never where one asked to be. A step the app
- *   knows is already answered on a reload is told so by its own `required`
- *   (`required={!alreadyFilled}`) — the container remembers nothing across a
- *   load, and cannot.
  * Each way of travelling can be shut off, or narrowed to one axis: `true`
  * (every axis the map has), `false`, `"x"`, `"y"`, `"xy"`.
  *
@@ -51289,7 +51384,6 @@ const SlideContainer = ({
   commit = "now",
   loop,
   onLoop,
-  urlParam,
   travelByKeyboard = true,
   travelByDrag = true,
   travelByScroll = "x",
@@ -51306,7 +51400,11 @@ const SlideContainer = ({
   const containerRef = useRef();
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
-  const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
+  // This is where the container's own answer lives, and it is the only one the
+  // picture is drawn from — an area coming from outside is a REQUEST that has
+  // to be walked to first (see the effect reading currentFromCaller). At mount
+  // there is no road to walk yet, so what the caller holds is taken as it is.
+  const [currentAreaState, setCurrentAreaState] = useState(() => (currentSignal ? currentSignal.peek() : currentProp) ?? defaultCurrent);
   // The slide this container is travelling to while its controller has not been
   // told yet (commit="rest"): for the length of that travel the container is
   // ahead of whoever holds `current`, and this is where it keeps its own answer
@@ -51384,51 +51482,42 @@ const SlideContainer = ({
   // nothing measured per frame.
   const followerElementsRef = useRef([]);
   const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
-  const current = rollingArea ?? provisionalArea ?? currentFromCaller ?? currentAreaState;
-  // The search param this container owns, when it owns one: the name it is
-  // written under, and whether going somewhere is somewhere one CAME from.
-  const urlParamName = typeof urlParam === "string" ? urlParam : urlParam?.name;
-  const urlParamHistory = urlParam?.history || "replace";
-  // What the address says right now. Read from the signal rather than from
-  // window.location so that a traversal — the browser's own back and forward —
-  // is a render like any other: the address moved, and the slides follow it.
-  // Read only when there is a param to read, so a container that owns none is
-  // not re-rendered by every navigation in the application.
-  const areaInUrl = urlParamName ? new URL(documentUrlSignal.value).searchParams.get(urlParamName) : null;
-  // The last thing this container knows the address said, whether it wrote it
-  // or read it. What makes a two-way binding stop turning: the address is only
-  // an INSTRUCTION when it changed by itself (a load, a traversal, a link), and
+  const current = rollingArea ?? provisionalArea ?? currentAreaState;
+  // The last area this container knows the caller holds, whether it wrote it
+  // there or read it from there. What makes a two-way binding stop turning: an
+  // area held outside is an INSTRUCTION only when it changed by itself (a load,
+  // a traversal, a link, something in the application writing the signal), and
   // what this container put there is not news. Without it, a container ahead of
-  // its own URL (commit="rest", where the picture arrives before the address is
-  // written) would read its own lateness as an order to go back.
-  const areaInUrlSeenRef = useRef(undefined);
-  // Where the container stands, said in the address. `replace` amends the entry
-  // one is on: a walk of four steps must not turn one back-press into four, and
-  // the back arrow of a page keeps meaning "leave this page". `push` is for
-  // slides that ARE places one came from — and even there a slide reached by
-  // DRAGGING replaces, because browsing back and forth with a thumb is not a
-  // trail one wants to walk home along.
-  const writeUrlParam = (area, cause, {
-    replace = false
+  // its own state (commit="rest", where the picture arrives before the change
+  // is told) would read its own lateness as an order to go back.
+  const areaAskedSeenRef = useRef(currentSignal ? currentSignal.peek() : currentProp);
+  // Where the container stands, said where the caller holds it.
+  //
+  // Whether a slide is a place one came from is the STATE's own business (see
+  // stateSignal's `history`), and this container has no opinion on it. What it
+  // does know is which of its own writes are not places at all, and those are
+  // written by REPLACEMENT whatever the state declares:
+  // - a drag, because browsing back and forth with a thumb is not a trail one
+  //   wants to walk home along;
+  // - a correction — a refused travel put back, a walk that stopped before
+  //   where it was asked to go — because it is the entry that asked for the
+  //   wrong thing being amended, not a place one was;
+  // - the state itself asking (`cause: "state"`), because reading a value back
+  //   and answering it is not somewhere one went.
+  const writeAreaAsked = (area, {
+    cause
   } = {}) => {
-    if (!urlParamName) {
+    areaAskedSeenRef.current = area;
+    if (!currentSignal) {
       return;
     }
-    areaInUrlSeenRef.current = area;
-    const urlObject = new URL(window.location.href);
-    if (urlObject.searchParams.get(urlParamName) === area) {
+    if (CAUSES_WRITTEN_BY_REPLACEMENT.includes(cause) && currentSignal.set) {
+      currentSignal.set(area, {
+        history: "replace"
+      });
       return;
     }
-    urlObject.searchParams.set(urlParamName, area);
-    navTo(urlObject.href, {
-      replace: replace || urlParamHistory !== "push" || cause === "drag" ||
-      // The address already says it: reading it back is not a place one went.
-      cause === "url",
-      // What travels is the box, not the page: the address is a label on where
-      // the box stands, and a route transition would move the whole document
-      // for a slide that has already travelled by itself.
-      routeTransition: "none"
-    });
+    currentSignal.value = area;
   };
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
@@ -52059,7 +52148,7 @@ const SlideContainer = ({
     }
     const leftArea = readArea(currentElement);
     setCurrentAreaState(area);
-    if (!onCurrentChange && !currentSignal && !urlParamName) {
+    if (!onCurrentChange && !currentSignal) {
       return true;
     }
     // What asked for this, read off the interaction rather than carried down
@@ -52090,21 +52179,16 @@ const SlideContainer = ({
     return true;
   };
 
-  // The caller learns where the container went: the bound signal is written,
-  // then the address, then `onCurrentChange` is called — in that order, so a
-  // caller reading either from inside its own handler reads where it now is.
-  // The signal before the address because writing the address can render on
-  // the spot (a navigation lets go of what Preact had queued, see
-  // rendering_hold.js), and that render must already find `current` moved.
+  // The caller learns where the container went: the bound state is written
+  // first, then `onCurrentChange` is called, so a caller reading the state from
+  // inside its own handler reads where it now is. Written here rather than by
+  // the caller so that it is told about the travels that HAPPENED and about no
+  // others: the ones a lock refused never reach this point, and one refused
+  // late is written back below (see goBackToRefusedArea).
   const tellCurrentChange = (area, detail, leftArea) => {
-    if (currentSignal) {
-      currentSignal.value = area;
-    }
-    // The address is told here rather than by the caller so that it is told
-    // about the travels that HAPPENED and about no others: the ones a lock
-    // refused never reach this point, and one refused late is written back
-    // below (see goBackToRefusedArea).
-    writeUrlParam(area, detail.cause);
+    writeAreaAsked(area, {
+      cause: detail.cause
+    });
     if (!onCurrentChange) {
       return;
     }
@@ -52132,47 +52216,44 @@ const SlideContainer = ({
   const goBackToRefusedArea = leftArea => {
     setProvisionalArea(null);
     setCurrentAreaState(leftArea);
-    if (currentSignal) {
-      currentSignal.value = leftArea;
-    }
-    // Written over rather than stacked on, whatever this container does with
-    // the history otherwise: the entry the refused travel wrote is the one
-    // being corrected, and a refusal is not a place one was.
-    writeUrlParam(leftArea, "code", {
-      replace: true
+    // Written over rather than stacked on, whatever the state says otherwise:
+    // the entry a refused travel wrote is the one being corrected, and a
+    // refusal is not a place one was.
+    writeAreaAsked(leftArea, {
+      cause: "refusal"
     });
   };
 
-  // The address asks for a slide. Read on every render it changes on rather
-  // than at mount alone, because the browser's own arrows are exactly that —
-  // the address moving by itself — and a link from elsewhere in the application
-  // is too. What follows is a travel like any other: the slides move, the
-  // caller is told, and the address ends up saying where the box actually
-  // stands.
+  // Something outside the box asks for a slide: the application writing the
+  // bound signal, and — when that signal is a route's own (see
+  // docs/navigation.md) — a load on a link, a traversal, an address typed by
+  // hand. All the same event here, and the answer to all of them is the same:
+  // it is a REQUEST, walked to rather than jumped to.
+  //
+  // Walked, because the request comes from outside and the road may be closed:
+  // every slide between here and there is asked to let go the way a key going
+  // that way would ask it, and the first one that holds is where one stops.
+  // `?step=done` cannot open a confirmation screen for something nobody sent.
+  // Whatever comes of it, the state is then written with the area actually
+  // shown: it says where one IS, never where one asked to be.
   useLayoutEffect(() => {
-    if (!urlParamName) {
+    if (currentFromCaller === undefined) {
       return;
     }
-    if (areaInUrl === areaInUrlSeenRef.current) {
+    if (currentFromCaller === areaAskedSeenRef.current) {
       // Not news: either nothing moved, or this container is reading back what
       // it wrote itself.
       return;
     }
-    areaInUrlSeenRef.current = areaInUrl;
-    if (areaInUrl === null) {
-      // An address that says nothing is not an address saying "the first
-      // slide": a container opened without the param opens where it would have
-      // opened anyway, and the param appears the first time one travels.
-      return;
-    }
+    areaAskedSeenRef.current = currentFromCaller;
     // Where the box IS, read off the DOM: `current` is undefined until someone
     // names a slide, and the container standing on its first one is a fact only
     // the map knows (see the layout effect that paints it).
-    const areaOnScreen = containerRef.current?.getAttribute("data-slide-current");
-    if (!areaOnScreen || areaInUrl === areaOnScreen) {
+    const areaOnScreen = containerRef.current?.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+    if (!areaOnScreen || currentFromCaller === areaOnScreen) {
       return;
     }
-    const reached = reachableTowards(areaOnScreen, areaInUrl);
+    const reached = reachableTowards(areaOnScreen, currentFromCaller);
     if (reached && reached !== areaOnScreen) {
       // Told rather than asked: the walk above has already put every lock on
       // the way the question goToArea would have put the first one, and this
@@ -52181,15 +52262,25 @@ const SlideContainer = ({
       // any travel nobody pressed anything for.
       setCurrentAreaState(reached);
       tellCurrentChange(reached, {
-        cause: "url"
+        cause: "state"
       }, areaOnScreen);
       return;
     }
-    // The param names nowhere this map knows, or somewhere the walk is not
-    // allowed to reach: the address is put back on the slide one is actually
-    // looking at, rather than left saying one is somewhere one is not.
-    writeUrlParam(areaOnScreen, "url");
-  }, [urlParamName, areaInUrl]);
+    // Nowhere this map knows, or somewhere the walk is not allowed to reach:
+    // the state is put back on the slide one is actually looking at, rather
+    // than left saying one is somewhere one is not. A caller holding `current`
+    // themselves is told instead — it is their value to correct.
+    if (currentSignal) {
+      writeAreaAsked(areaOnScreen, {
+        cause: "refusal"
+      });
+      return;
+    }
+    onCurrentChange?.(areaOnScreen, {
+      cause: "state",
+      event: null
+    });
+  }, [currentFromCaller]);
 
   // The press kept during a roll, taken once the window rests and the travel is
   // given back (noTravel off): by direction when there was one, so it is read
@@ -53287,6 +53378,10 @@ const SlideContainer = ({
  *   ahead to a screen that has nothing to show yet. Answering a step
  *   un-answers the ones after it, since what they were answered about has just
  *   changed.
+ *   A container remembers nothing across a load, and cannot: a step the app
+ *   knows is already answered when the page opens says so itself
+ *   (`required={!alreadyFilled}`), which is what lets an address naming a later
+ *   step be walked to.
  * @param {boolean} [props.preventNav] - hold the user here, whichever way they
  *   try to leave.
  * @param {boolean} [props.preventNavNext] - hold them from going right or down.
