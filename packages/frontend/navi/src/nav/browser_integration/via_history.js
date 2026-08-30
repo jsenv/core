@@ -8,6 +8,7 @@ import { resolveRouteRedirection } from "../route.js";
 import {
   installScrollRestoration,
   restoreScrollPosition,
+  startAtTop,
 } from "./scroll_restoration.js";
 import { rearmUrlTarget } from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
@@ -256,12 +257,21 @@ export const setupBrowserIntegrationViaHistory = ({
       isVisited,
       state,
     });
+    // Where the document lands, said by what kind of arrival this is. Both are
+    // waited for, and for the same two reasons: the page has to be there to be
+    // scrolled, and a picture taken before it would be of a page at its top
+    // (see rendering_hold.js, which is where the waiting happens). After the
+    // history has been written too, so the entry being left keeps the offset
+    // it is at.
+    //
+    // A replace gets neither: it is the same place said differently — a param
+    // settling, a state written — and moving the reader for it would throw
+    // them out of a page they never left. The one replace that IS an arrival
+    // is a row of tabs travelling, and the row says so for itself (see
+    // route_travel.jsx).
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url));
     } else if (navigationType === "traverse") {
-      // Where this entry was left. Waited for like the reset above, and for
-      // the same two reasons: the page has to be there to be scrolled, and a
-      // picture taken before it would be of a page at its top.
       whenRenderingResumes(() => restoreScrollPosition(url));
     }
     executeWithCleanup(
@@ -454,37 +464,4 @@ export const setupBrowserIntegrationViaHistory = ({
     isVisited,
     visitedUrlsSignal,
   };
-};
-
-// A page one arrives at for the first time starts at its top. Only a document
-// navigation does that on its own: a pushState creates its entry with whatever
-// scroll happened to be there, so without this the new page opens at the offset
-// of the one before it — and worse, that borrowed offset is what the browser
-// then remembers FOR that entry, and hands back on the way forward.
-//
-// Push only. A traverse is the browser's business and it is already right: it
-// keeps a position per entry and restores it. A replace is not an arrival —
-// it is the same place, said differently (a tab row travelling, see
-// route_travel.jsx), and resetting there would throw the reader out of a page
-// they never left.
-//
-// After the routes have been told, and after the picture of the page being
-// left has been taken — that ordering is the whole subtlety. The routes
-// changing is what sets a movement off, and a movement measures the box it is
-// leaving as it stands; put the document back to its top any earlier and the
-// picture is of a page at its first line, which the reader was not at. The
-// browser paints what the new offset shows and nothing else, so what is kept
-// of the page being left is the band it had already painted, and the movement
-// carries a fragment (see rendering_hold.js, which is where the waiting
-// happens). After pushState too, so the entry being left keeps the offset it
-// is at.
-//
-// The document, because the document is the scrollport in the common case. An
-// app that scrolls an element of its own scrolls it itself.
-const startAtTop = (url) => {
-  // A fragment names where to land, and the browser is the one that finds it.
-  if (new URL(url, window.location.href).hash) {
-    return;
-  }
-  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };

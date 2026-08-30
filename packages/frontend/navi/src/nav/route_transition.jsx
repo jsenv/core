@@ -80,6 +80,7 @@ import {
 import {
   holdTransitionWindow,
   releaseTransitionWindow,
+  TRANSITION_WINDOW_CSS,
 } from "./transition_window.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
@@ -116,6 +117,8 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css = /* css */ `
+  ${TRANSITION_WINDOW_CSS}
+
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -200,39 +203,46 @@ const css = /* css */ `
       height: var(--navi-transition-window-height);
       animation-name: none;
 
-      /* Cut at the safe area, on top of being cut at the area's own box. The
-         pictures are drawn in the top layer, so they cover a fixed bar as
-         easily as anything else — and the area runs UNDER the bars by design:
-         that is what a fixed bar is for, and what the room it gives back is
-         for. An area taller than the screen therefore ends below the bottom
-         bar, and a scrolled one starts above the top bar, so the movement
-         would be watched painting over them for its whole length.
+      /* Cut at what covers the area, on top of being cut at the area's own
+         box. The pictures are drawn in the top layer, so they cover a fixed bar
+         as easily as anything else — and the area runs UNDER the bars by
+         design: that is what a fixed bar is for, and what the room it gives
+         back is for. An area taller than the screen therefore ends below the
+         bottom bar, and a scrolled one starts above the top bar, so the
+         movement would be watched painting over them for its whole length.
 
-         The band left free is the app's own safe area (see
-         layout/safe_area.js) — every kind of furniture at once, not the bars
-         alone, and read rather than asked for, so one that grows, shrinks or
-         unmounts mid-transition is followed without anything being told. What
-         the window cannot know is only where it itself stands, and that is the
-         measured half. */
+         Two bands are left free, and they answer for two different things: the
+         app's own safe area (layout/safe_area.js), everything pinned to the
+         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
+         what covers the area from inside the document — a sticky header above
+         the pages covers the top of the area exactly as a fixed bar covers the
+         top of the screen. Both are read rather than asked for, so one that
+         grows, shrinks or unmounts mid-transition is followed without anything
+         being told. What the window cannot know is only where it itself stands,
+         and that is the measured half. */
       --navi-route-transition-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+        var(--navi-safe-area-inset-top) +
+          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
       );
       --navi-route-transition-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+        var(--navi-safe-area-inset-left) +
+          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
       );
       --navi-route-transition-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) - 100dvh
+          var(--navi-safe-area-inset-bottom) +
+          var(--navi-transition-cover-bottom) - 100dvh
       );
       --navi-route-transition-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) - 100dvw
+          var(--navi-safe-area-inset-right) +
+          var(--navi-transition-cover-right) - 100dvw
       );
       clip-path: inset(
         var(--navi-route-transition-clip-top)

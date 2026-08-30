@@ -733,7 +733,7 @@ export const visibleRectEffect = (
           onNaviPositionChange,
         );
         // Dispatched by applyNewPosition's own notifyPositionTransition
-        // around this ancestor's own left/top animation (distinct from
+        // around this ancestor's own placement animation (distinct from
         // navi_position_change, fired once with the final target, not per
         // frame). The anchor this element is positioned against may live
         // inside that ancestor and be moving right now — rather than hiding
@@ -1055,7 +1055,10 @@ const toContainerAlignedPosition = (value) => {
  * axis never reads the attribute back itself (`positionAreaFixed` always wins).
  *
  * @param {HTMLElement} element - The element to position (position: absolute or
- *   fixed — detected from its own computed style, see the scroll offset comment below)
+ *   fixed — detected from its own computed style, see the scroll offset comment below),
+ *   laid out at its containing block's own origin: the returned `left`/`top` are meant
+ *   to be applied as a translate from there, see `applyNewPosition` for the whole
+ *   contract and for why the placement may not go through `left`/`top` themselves
  * @param {HTMLElement} [anchor] - The anchor element to position against. Omit (or pass
  *   `null`/`undefined`) when there's no real anchor to dock `element` against a *container*
  *   instead — see `container` below; in that mode, "top"/"bottom"/"left"/"right" are
@@ -1253,12 +1256,12 @@ export const pickPositionRelativeTo = (
   const clampLeftBound = availableLeft;
   const clampRightBound = availableRight;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
-  // painted/transformed box): the element being positioned may have an
-  // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
-  // using animation="scale"/"grow", still at its @starting-style value the
-  // instant it's first shown) — getBoundingClientRect() would then report
-  // its *shrunk* transformed size, throwing off any math that centers/fits
-  // against the element's own dimensions.
+  // painted/transformed box): the element being positioned is moved by
+  // transforms — its own placement translate (see applyNewPosition), plus
+  // whatever `scale` an entrance animation happens to be playing at that
+  // instant (a popover using animation="scaling"/"expand-*") — so
+  // getBoundingClientRect() answers where it is painted, at its *shrunk*
+  // mid-animation size, instead of the box being measured here.
   const elementWidth = element.offsetWidth;
   const elementHeight = element.offsetHeight;
   const anchorWidth = anchorRight - anchorLeft;
@@ -1767,11 +1770,32 @@ const notifyPositionTransition = (element, animation) => {
 };
 
 /**
- * Applies a `pickPositionRelativeTo` result to `element`. `left`/`top` are
- * set instantly (a scroll-triggered reposition should never lag its
- * target); when `shouldTransition` is set (a resize-triggered reposition),
- * the visual move is played out via `element.animate()` instead — kept
- * independent of Popover/Dialog/Callout's own opacity/scale/display CSS
+ * Applies a `pickPositionRelativeTo` result to `element`, as a `translate`.
+ *
+ * The two halves of that contract, which a caller must honor:
+ *
+ * 1. `element` stays laid out at its containing block's own origin — its CSS
+ *    must say `left: 0; top: 0` (and leave right/bottom `auto`). The computed
+ *    `left`/`top` are then applied as a translate from there, which lands the
+ *    box in exactly the same place `left: Npx` would have. The reason to go
+ *    through a transform at all is the *measuring*: an out-of-flow box with a
+ *    shrink-to-fit width can never be wider than "containing block width -
+ *    left", so a box placed with `left` reports a width that depends on where
+ *    it currently stands — and `pickPositionRelativeTo` decides which side to
+ *    place it on from that very width. Feeding a placement back into the
+ *    decision that produced it makes the element alternate sides forever, one
+ *    flip per reposition. Laid out at the origin, the measured width only ever
+ *    depends on the content and on the size caps below.
+ * 2. The `translate` property belongs to this function alone. An animation on
+ *    the same element uses `scale` (which composes: individual transform
+ *    properties apply translate, then rotate, then scale, then `transform`, so
+ *    a scale never rescales the placement) or `transform` — see popup_css.js,
+ *    whose slide entrances translate through `transform` for that reason.
+ *
+ * The translate is set instantly (a scroll-triggered reposition should never
+ * lag its target); when `shouldTransition` is set (a resize-triggered
+ * reposition), the visual move is played out via `element.animate()` instead —
+ * kept independent of Popover/Dialog/Callout's own opacity/scale/display CSS
  * transition on the same element, so neither can clobber the other (see
  * notifyPositionTransition's own doc for why a dedicated Animation over a
  * CSS one). Duration comes from `--popup-position-transition-duration`
@@ -1843,18 +1867,19 @@ export const applyNewPosition = (
   // A single implicit keyframe turned out not to work here: the WAAPI
   // "neutral" start keyframe isn't frozen at `animate()` call time, it's
   // resolved from the underlying value when the animation is first
-  // *sampled* (the next frame) — by then `element.style.left`/`top` below
+  // *sampled* (the next frame) — by then `element.style.translate` below
   // has already been overwritten with the new target, so start === end and
   // nothing visibly moves (observed as the dialog just jumping). Reading
   // the previous value ourselves, before overwriting it, and passing both
   // keyframes explicitly sidesteps that entirely.
-  const previousLeft = parseFloat(element.style.left) || left;
-  const previousTop = parseFloat(element.style.top) || top;
+  const previousTranslate = parseTranslate(element.style.translate);
+  const previousLeft = previousTranslate ? previousTranslate.x : left;
+  const previousTop = previousTranslate ? previousTranslate.y : top;
   if (shouldTransition) {
     const animation = element.animate(
       [
-        { left: `${previousLeft}px`, top: `${previousTop}px` },
-        { left: `${left}px`, top: `${top}px` },
+        { translate: `${previousLeft}px ${previousTop}px` },
+        { translate: `${left}px ${top}px` },
       ],
       {
         duration: parseTransitionDurationMs(
@@ -1867,12 +1892,27 @@ export const applyNewPosition = (
     );
     notifyPositionTransition(element, animation);
   }
-  // The specified `left`/`top` are set to their final target right away,
+  // The specified translate is set to its final target right away,
   // regardless of `shouldTransition` — the animation above only plays the
   // visual move from the old position, it never becomes the actual
   // specified style (see notifyPositionTransition's own commitStyles for
   // why that matters once it ends).
-  element.style.left = `${left}px`;
-  element.style.top = `${top}px`;
+  element.style.translate = `${left}px ${top}px`;
   dispatchCustomEvent(element, "navi_position_change");
+};
+
+// "42px 100px" as { x, y }. Anything else — unset, "none", a single-value
+// shorthand — reads as "never placed yet" (null), so a first placement has no
+// stale point to be animated from.
+const parseTranslate = (translate) => {
+  if (!translate) {
+    return null;
+  }
+  const [x, y] = translate.split(" ");
+  const xNumber = parseFloat(x);
+  const yNumber = parseFloat(y);
+  if (Number.isNaN(xNumber) || Number.isNaN(yNumber)) {
+    return null;
+  }
+  return { x: xNumber, y: yNumber };
 };

@@ -40,6 +40,7 @@ import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 import { computed } from "@preact/signals";
 
 import {
+  getScrollContainer,
   scrollRoomTowards,
   startDragToTravel,
   watchWheelTravel,
@@ -49,12 +50,17 @@ import {
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
 import {
+  arriveAtScrollPosition,
+  suspendScrollRecording,
+} from "./browser_integration/scroll_restoration.js";
+import {
   holdTransitionDestination,
   releaseTransitionDestination,
 } from "./transition_destination.js";
 import {
   holdTransitionWindow,
   releaseTransitionWindow,
+  TRANSITION_WINDOW_CSS,
 } from "./transition_window.js";
 import {
   holdRenderingForRouting,
@@ -105,6 +111,8 @@ const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 const TRAVEL_NAME = "navi-route-travel";
 
 const css = /* css */ `
+  ${TRANSITION_WINDOW_CSS}
+
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -223,38 +231,46 @@ const css = /* css */ `
          route to the next. */
       height: var(--navi-transition-window-height);
 
-      /* Cut at the safe area, on top of being cut at the box. The pictures are
-         drawn in the top layer, so they cover a fixed bar as easily as anything
-         else — and the box they travel in runs UNDER the bars by design: that
-         is what a fixed bar is for, and what the room it gives back is for. A
-         box scrolled by so much as a pixel therefore starts above the top bar
-         and ends below the bottom one, and the travel would be watched painting
-         over both for its whole length.
+      /* Cut at what covers the box, on top of being cut at the box. The
+         pictures are drawn in the top layer, so they cover a fixed bar as
+         easily as anything else — and the box they travel in runs UNDER the
+         bars by design: that is what a fixed bar is for, and what the room it
+         gives back is for. A box scrolled by so much as a pixel therefore
+         starts above the top bar and ends below the bottom one, and the travel
+         would be watched painting over both for its whole length.
 
-         The band left free is the app's own safe area (see layout/safe_area.js)
-         — every kind of furniture at once, not the bars alone, and read rather
-         than asked for, so one that grows, shrinks or unmounts mid-travel is
-         followed without anything being told. What the group cannot know is
-         only where it itself stands, and that is the measured half. */
+         Two bands are left free, and they answer for two different things: the
+         app's own safe area (layout/safe_area.js), everything pinned to the
+         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
+         what covers the box from inside the document — a sticky row of tabs
+         above the pages covers the top of the box exactly as a fixed bar covers
+         the top of the screen. Both are read rather than asked for, so one that
+         grows, shrinks or unmounts mid-travel is followed without anything
+         being told. What the group cannot know is only where it itself stands,
+         and that is the measured half. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+        var(--navi-safe-area-inset-top) +
+          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+        var(--navi-safe-area-inset-left) +
+          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) - 100dvh
+          var(--navi-safe-area-inset-bottom) +
+          var(--navi-transition-cover-bottom) - 100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) - 100dvw
+          var(--navi-safe-area-inset-right) +
+          var(--navi-transition-cover-right) - 100dvw
       );
       clip-path: inset(
         var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
@@ -558,6 +574,19 @@ export const RouteTravel = ({
       ended: false,
     };
     travelRef.current = travel;
+    // Whether the document's offset is this row's business at all (see
+    // pagesScrollTheDocument), asked once and before anything is swapped.
+    travel.scrollsDocument = pagesScrollTheDocument(elementRef.current);
+    if (travel.scrollsDocument) {
+      // One of the tabs is about to be swapped out from under that scrollport,
+      // and whatever the browser does with the offset meanwhile — clamping it
+      // to a page shorter than the trip — is not the reader scrolling. The url
+      // it would be written against is already the arriving tab's, so recorded
+      // it is that tab's own position that the tab being left destroys. Deaf
+      // for the whole travel, which is exactly as long as the offset belongs
+      // to nobody (see endTravel).
+      travel.resumeScrollRecording = suspendScrollRecording();
+    }
     // Taken before the picture is: the browser reads the name off the DOM as it
     // stands when the transition starts, and this box is only a picture of its
     // own for as long as it is the one travelling. Where it travels to is said
@@ -604,8 +633,21 @@ export const RouteTravel = ({
         },
         renderWait,
       );
+      // Where the arriving tab was left, or its top when it has never been
+      // read. A travel is an arrival — the tab pressed is another route, and
+      // the replace it navigates by is the only thing about it that says
+      // otherwise — and this is the one place that knows it. Read from the
+      // travel rather than from the page it set off for: a travel aimed
+      // somewhere else while it waited lands where it is aimed now.
+      if (travel.scrollsDocument) {
+        const { route, params } = travel.page;
+        arriveAtScrollPosition(route.buildUrl(params));
+      }
       // The page arriving is in the DOM and the transition has not started
-      // playing: the one moment both boxes can be known.
+      // playing: the one moment both boxes can be known. After the scroll,
+      // which is what the box is measured through: the two states are at the
+      // same place in the layout without being at the same place in the window
+      // (see transition_window.js).
       holdTransitionWindow(travel, elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
@@ -834,6 +876,22 @@ export const RouteTravel = ({
         }
         travel.viewTransition.skipTransition();
       } finally {
+        if (travel.scrollsDocument) {
+          // The page coming back was read somewhere else, and the offset
+          // currently on the document is the one the page that came in put
+          // there. Given back once the page is really back — the render is
+          // what makes the document tall enough to hold that offset again —
+          // and the recording stays deaf until then, over the clamp the swap
+          // back makes on the way. Its own deafness rather than the travel's:
+          // the travel ends here, and this outlives it by a render.
+          const resumeScrollRecording = suspendScrollRecording();
+          const stopWatchingRender = observeRouteRender(() => {
+            stopWatchingRender();
+            const { route, params } = travel.fromPage;
+            arriveAtScrollPosition(route.buildUrl(params));
+            resumeScrollRecording();
+          });
+        }
         releaseRendering();
         // A travel ENDS, whatever happened on the way back: put the state back,
         // fail to drop the picture, be interrupted by something else — the one
@@ -920,6 +978,11 @@ export const RouteTravel = ({
     travel.ended = true;
     travel.dropHold?.();
     travel.dropHold = null;
+    // The offset on the scrollport belongs to a page again — the one that
+    // arrived, or the one put back. A travel that never got as far as saying
+    // which still has to give the recording back; the gesture's own
+    // pseudo-travel never took it (see noPicture).
+    travel.resumeScrollRecording?.();
     // Its own hold, always — whether or not this travel is still the current
     // one. Nobody else will lift it.
     releaseHold(travel);
@@ -1461,6 +1524,27 @@ const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
   } finally {
     wait.stop();
   }
+};
+
+// Whether the document's offset belongs to the tabs. The pages of a row scroll
+// the document when nothing between the box and the viewport scrolls or clips:
+// the tab on screen is then what makes the document tall, and the offset on it
+// is that tab's — it has to be given back with the tab, and the browser's
+// clamping of it while pages are swapped has to be ignored.
+//
+// A box that lives inside a scroller of its own — a frame in an article, a
+// panel beside other content — shares nothing with the document: the offset
+// there is the surrounding page's, the reader never left it, and a travel has
+// no business moving it. Each of its pages brings its own scrollport, which
+// goes away with the page and has nothing to restore.
+const pagesScrollTheDocument = (element) => {
+  const scrollContainer = getScrollContainer(element, { includeHidden: true });
+  // html and body are one answer: whichever of them the walk stops on, what
+  // scrolls is the viewport, which is what window.scrollTo moves.
+  return (
+    scrollContainer === document.documentElement ||
+    scrollContainer === document.body
+  );
 };
 
 // A page of the row: a route, and the params that say which of its tabs when

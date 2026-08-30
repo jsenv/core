@@ -56,6 +56,7 @@ import { linkAsksForReplace } from "./link_replace.js";
 import {
   installScrollRestoration,
   restoreScrollPosition,
+  startAtTop,
 } from "./scroll_restoration.js";
 
 export const setupBrowserIntegrationViaNavigation = ({
@@ -190,6 +191,8 @@ export const setupBrowserIntegrationViaNavigation = ({
       isVisited,
       state,
     });
+    // Same rule, same timing as via_history.js's own, and the same reading of
+    // a replace: only the row that travels knows one of its own is an arrival.
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url));
     } else if (navigationType === "traverse") {
@@ -484,14 +487,4 @@ export const setupBrowserIntegrationViaNavigation = ({
     isVisited,
     visitedUrlsSignal,
   };
-};
-
-// Same rule, same timing as via_history.js's own: a page one arrives at for
-// the first time starts at its top, once the picture of the page being left
-// has been taken.
-const startAtTop = (url) => {
-  if (new URL(url, window.location.href).hash) {
-    return;
-  }
-  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };

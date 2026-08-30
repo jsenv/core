@@ -98,10 +98,11 @@ const css = /* css */ `
        right where it's set) — same reasoning as Popover's identical
        attribute (popover.jsx's own top comment has the full case). */
     position: fixed;
-    /* Popover resets */
-    inset: auto;
-    top: 0;
-    left: 0;
+    /* Popover resets. Laid out at its containing block's own origin and moved
+       from there by a translate (applyNewPosition), never by left/top — see
+       applyNewPosition's own doc for why the placement may not go through
+       left/top themselves. */
+    inset: 0 auto auto 0;
     /* For some reason callout could end up behing elements when it's redisplayed in a dialog
     (behind button relatively positioned in dialog footer while callout is appended into dialog body)
     To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
@@ -125,10 +126,9 @@ const css = /* css */ `
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
-    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
-       left/top are NOT transitioned here, applyNewPosition drives that
-       itself via the Web Animations API instead of CSS, same mechanism
-       Popover/Dialog use. */
+    /* opacity only: the placement lives in the translate property, which
+       applyNewPosition (visible_rect.js) owns and animates itself through the
+       Web Animations API, same mechanism Popover/Dialog use. */
     transition: opacity 0.2s ease-in-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */

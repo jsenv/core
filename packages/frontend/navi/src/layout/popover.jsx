@@ -174,7 +174,14 @@ const css = /* css */ `
        whether it has a real anchor — this file's top comment has the full
        reasoning. */
     position: absolute;
-    inset: unset;
+    /* Laid out at its containing block's own origin and moved from there by a
+       translate (applyNewPosition), never by left/top: a shrink-to-fit box
+       placed with left is only ever as wide as what is left of the container
+       to its right, and that width is what decides which side it gets placed
+       on — see applyNewPosition's own doc. right/bottom stay auto: an inset
+       there would over-constrain the box against the UA's margin: auto and
+       re-center it. */
+    inset: 0 auto auto 0;
     /* Custom renderer only: --popover-stack-order is set to
        openLocalPopoverCount on every open (see openEffect below) so the
        most-recently-opened local popover always outranks an earlier one,
@@ -206,35 +213,13 @@ const css = /* css */ `
        (see box.jsx), which is what makes it scroll — and what a
        header/footer/body inside it then rearranges. */
     overscroll-behavior: none;
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
+    /* The placement is a translate, so the translate property is spoken for
+       here (see applyNewPosition in visible_rect.js, which owns it and animates
+       it itself through the Web Animations API rather than through this file's
+       transitions — no shared transition-property to clobber, no propertyName
+       to filter). An entrance animation moves the popover through scale and
+       transform instead, which compose under it: see popup_css.js. */
 
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
-
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
@@ -1262,7 +1247,7 @@ const usePopoverProps = (props) => {
     });
     // A descendant anchored to something inside this popover (a Callout, a
     // further-nested Popover) needing to know about this popover's own
-    // left/top repositioning transition — not just that the target changed
+    // repositioning transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
     // applyNewPosition itself (see its own notifyPositionTransition in

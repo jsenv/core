@@ -24,6 +24,13 @@
  * something still loading. Its content is not there at the moment it is put
  * back, so a position beyond what has arrived is clamped as before. Only the
  * page knows when it is whole.
+ *
+ * WHEN a page is arrived at is not decided here either. A document navigation
+ * lands where its kind says (see via_history.js), and one scrollport can be
+ * shared by pages the browser is never told apart: a row of tabs replaces the
+ * url under the same document, so the arrival — and the deafness the swap
+ * needs, see suspendScrollRecording — is asked for by the row itself (see
+ * route_travel.jsx).
  */
 
 import { observeRouteRender } from "../route_render.js";
@@ -62,6 +69,29 @@ const storePositions = () => {
   }
 };
 
+// The document is one scrollport for every page put in it, so a page swapped
+// under it for a shorter one is an offset the browser CLAMPS — and a clamp is
+// a scroll event like any other. It is not the reader scrolling, and by the
+// time it fires the url is already the arriving page's: written down, it is
+// that page's own position that the page being left destroys.
+//
+// Only whoever swaps the page knows when that is happening, so the deafness is
+// asked for from there and lasts exactly as long as the swap. Counted rather
+// than flagged: two swaps overlap — a travel relaying into the next one under
+// the same finger, a travel being undone while it plays.
+let suspendCount = 0;
+export const suspendScrollRecording = () => {
+  suspendCount++;
+  let resumed = false;
+  return () => {
+    if (resumed) {
+      return;
+    }
+    resumed = true;
+    suspendCount--;
+  };
+};
+
 let installed = false;
 export const installScrollRestoration = () => {
   if (installed) {
@@ -79,6 +109,9 @@ export const installScrollRestoration = () => {
   window.addEventListener(
     "scroll",
     () => {
+      if (suspendCount) {
+        return;
+      }
       positionByUrl.set(window.location.href, {
         x: window.scrollX,
         y: window.scrollY,
@@ -101,12 +134,43 @@ export const installScrollRestoration = () => {
 
 // Nothing to put back is not the same as putting back the top: a page arrived
 // at for the first time is startAtTop's business, and this must not step on it.
+// Whether there was anything, for a caller who has an answer of its own for the
+// page that has never been read.
 export const restoreScrollPosition = (url) => {
   const position = positionByUrl.get(new URL(url, window.location.href).href);
   if (!position) {
-    return;
+    return false;
   }
   scrollTo(position);
+  return true;
+};
+
+// A page one arrives at for the first time starts at its top. Only a document
+// navigation does that on its own: a pushState creates its entry with whatever
+// scroll happened to be there, so without this the page opens at the offset of
+// the one before it — and that borrowed offset is what is then remembered FOR
+// it, and handed back on the way forward.
+//
+// The document, because the document is the scrollport in the common case. An
+// app that scrolls an element of its own scrolls it itself.
+export const startAtTop = (url) => {
+  // A fragment names where to land, and the browser is the one that finds it.
+  if (new URL(url, window.location.href).hash) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+
+// An arrival at a page whose scrollport is already showing another one: the
+// tabs of a row share the document, and the offset on it is whichever tab was
+// last read. Where this one was read, and its top when it never was — leaving
+// the offset alone would seat the reader wherever the neighbour happened to
+// be, so here "nothing recorded" and "stay" are not the same thing.
+export const arriveAtScrollPosition = (url) => {
+  if (restoreScrollPosition(url)) {
+    return;
+  }
+  startAtTop(url);
 };
 
 const scrollTo = ({ x, y }) => {

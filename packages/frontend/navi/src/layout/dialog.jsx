@@ -222,11 +222,17 @@ const css = /* css */ `
        containing block is genuinely its nearest positioned ancestor,
        regardless of positionArea. See the [data-layer="top"] rule below for
        why the via-attribute renderer overrides this. Position is always
-       JS-driven (pickPositionRelativeTo sets top/left directly, see
-       useDialogProps below) — no CSS alignment/inset math here at all,
-       unlike an earlier version of this file. */
+       JS-driven (pickPositionRelativeTo, see useDialogProps below) — no CSS
+       alignment/inset math here at all. */
     position: absolute;
-    inset: unset;
+    /* Laid out at its containing block's own origin and moved from there by a
+       translate (applyNewPosition), never by left/top: a shrink-to-fit box
+       placed with left is only ever as wide as what is left of the container
+       to its right, and that width is what decides where it gets placed — see
+       applyNewPosition's own doc. right/bottom stay auto: an inset there would
+       over-constrain the box against the UA's margin: auto and re-center
+       it. */
+    inset: 0 auto auto 0;
     /* Custom renderer only — see openLocalDialogCount above */
     z-index: calc(var(--navi-z-index-popup) + var(--dialog-stack-order, 0));
     min-width: min(
@@ -322,11 +328,12 @@ const css = /* css */ `
     &[data-flush-bottom][data-flush-left] {
       border-bottom-left-radius: 0;
     }
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
+    /* The placement is a translate, so the translate property is spoken for
+       here (see applyNewPosition in visible_rect.js, which owns it and animates
+       it itself through the Web Animations API rather than through this file's
+       transitions — no shared transition-property to clobber, no propertyName
+       to filter). An entrance animation moves the dialog through scale and
+       transform instead, which compose under it: see popup_css.js. */
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -406,7 +413,7 @@ const css = /* css */ `
        containing block is the viewport rather than any positioned
        ancestor. Not left to the native :modal UA stylesheet's own default
        (also position: fixed, but with its own margin/inset assumptions) so
-       that JS-set top/left (see useDialogProps below) always wins
+       that the JS-driven placement (see useDialogProps below) always wins
        cleanly. */
     &[data-layer="top"] {
       position: fixed;
@@ -1372,8 +1379,8 @@ const useDialogProps = (props) => {
       rectEffect.disconnect();
     });
     // A descendant anchored to something inside this dialog (a Callout, a
-    // nested Popover) needing to know about this dialog's own left/top
-    // repositioning transition — not just that the target changed
+    // nested Popover) needing to know about this dialog's own repositioning
+    // transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
     // applyNewPosition itself (see its own notifyPositionTransition), since

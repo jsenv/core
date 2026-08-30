@@ -71,14 +71,17 @@ export const createSwipeToClose = (side, { grip } = {}) => {
       }
     }
 
-    // Where the panel stands, written on it directly: the gesture reports a
-    // distance in screen coordinates, which is exactly what a translate takes.
+    // How far the panel has been pulled, written on it directly: the gesture
+    // reports a distance in screen coordinates, which is exactly what a
+    // translate takes. It goes through `transform` because the `translate`
+    // property carries where the panel *stands* (applyNewPosition in
+    // visible_rect.js, which owns it) — the pull composes under the placement
+    // instead of replacing it.
     const paint = (distance) => {
-      panelEl.style.translate =
-        axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+      panelEl.style.transform = translateOf(axis, distance);
     };
     const restore = () => {
-      panelEl.style.translate = "";
+      panelEl.style.transform = "";
       panelEl.style.transitionProperty = "";
       panelEl.style.userSelect = "";
     };
@@ -90,8 +93,8 @@ export const createSwipeToClose = (side, { grip } = {}) => {
       paint(to);
       const animation = panelEl.animate(
         [
-          { translate: translateOf(axis, from) },
-          { translate: translateOf(axis, to) },
+          { transform: translateOf(axis, from) },
+          { transform: translateOf(axis, to) },
         ],
         {
           duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
@@ -161,4 +164,6 @@ const sizeOf = (element, axis) => {
   return axis === "x" ? rect.width : rect.height;
 };
 const translateOf = (axis, distance) =>
-  axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+  axis === "x"
+    ? `translate(${distance}px, 0px)`
+    : `translate(0px, ${distance}px)`;

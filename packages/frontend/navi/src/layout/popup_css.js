@@ -48,7 +48,14 @@
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
- * 100%-of-own-size. Popover always resolves `animation="auto"`/`"sliding"`
+ * 100%-of-own-size. It travels through `transform`, not through the
+ * `translate` property, which belongs to the popup's own placement
+ * (applyNewPosition in visible_rect.js — see its doc for why the placement is
+ * a transform at all, and why it has to be the outermost one: the individual
+ * transform properties apply translate, then rotate, then scale, then
+ * `transform`, so both the travel here and the `scale` below compose *under* a
+ * placement that stays where it was put).
+ * Popover always resolves `animation="auto"`/`"sliding"`
  * to one of these concretely in JS (see popover.jsx's
  * `resolveDirectionValue`), so there's no bare `animation="sliding"`
  * selector here at all — a point/corner has no anchor edge to grow out of,
@@ -89,14 +96,15 @@ export const popupCss = /* css */ `
 
   .navi_popover,
   .navi_dialog {
-    /* left/top are deliberately absent from this list — applyNewPosition
-       (visible_rect.js) drives that transition itself via the Web
-       Animations API instead of CSS, so it stays independent of whatever
-       this list contains (no shared transition-property to clobber, no
-       propertyName to filter). */
+    /* The translate property is deliberately absent from this list — it
+       carries where the popup stands, and applyNewPosition (visible_rect.js)
+       owns it and drives its own transition through the Web Animations API
+       instead of CSS, so it stays independent of whatever this list contains
+       (no shared transition-property to clobber, no propertyName to filter).
+       What moves here is transform, which composes under it. */
     &[navi-animation] {
       transition-property:
-        display, overlay, opacity, translate, scale, box-shadow;
+        display, overlay, opacity, transform, scale, box-shadow;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
@@ -125,7 +133,7 @@ export const popupCss = /* css */ `
          centered, no direction involved. */
     &[navi-animation="scaling"] {
       opacity: 1;
-      translate: 0 0;
+      transform: translate(0px, 0px);
       scale: 1;
       &[aria-expanded="false"] {
         opacity: 0;
@@ -177,14 +185,16 @@ export const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
-      translate: 0 0;
+      transform: translate(0px, 0px);
 
       /* No fade: the travel is the whole effect. Fading it out on top would
          make the popup disappear before it has finished leaving, which reads as
          two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        translate: calc(var(--x-popup-slide-x, 0) * 100%)
-          calc(var(--x-popup-slide-y, -1) * 100%);
+        transform: translate(
+          calc(var(--x-popup-slide-x, 0) * 100%),
+          calc(var(--x-popup-slide-y, -1) * 100%)
+        );
       }
     }
   }

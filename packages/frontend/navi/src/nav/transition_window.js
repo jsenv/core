@@ -29,8 +29,38 @@
  * the page arriving is in the DOM and the transition has not started playing.
  * Everything DERIVED from these numbers — the band a fixed bar covers, how far
  * a page travels — is derived in CSS, so the application's own numbers (the
- * room its bars give back, see layout/safe_area.js) take part in it.
+ * room its bars give back, see layout/safe_area.js; what covers the box from
+ * inside the document, --navi-transition-cover-* below) take part in it.
  */
+
+/**
+ * What covers the box from INSIDE the document: a sticky row of tabs above the
+ * pages, a header pinned to the top of a scroller. Declared at zero and
+ * written by whoever covers it, exactly as a fixed bar publishes the room it
+ * gives back (layout/safe_area.js).
+ *
+ * A slot rather than a measurement, and a slot navi cannot fill itself: the
+ * safe area answers for what is pinned to the WINDOW's edges, and a sticky row
+ * is none of those — it lives in the document, below the bars, and covers the
+ * top of the box exactly as a fixed bar covers the top of the screen. The
+ * pictures of a transition are drawn in the top layer, where no z-index of the
+ * document reaches them, so what the document paints over the box has to be
+ * counted here or it is the pictures that paint over it.
+ *
+ * Each one is a distance inward from the band the safe area already leaves
+ * free, so a row states its own height and nothing else: what the bars above
+ * it take is already counted.
+ */
+export const TRANSITION_WINDOW_CSS = /* css */ `
+  @layer navi {
+    :root {
+      --navi-transition-cover-top: 0px;
+      --navi-transition-cover-right: 0px;
+      --navi-transition-cover-bottom: 0px;
+      --navi-transition-cover-left: 0px;
+    }
+  }
+`;
 
 const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
 const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";
