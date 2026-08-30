@@ -373,6 +373,9 @@ installImportMetaCssBuild(import.meta);/**
 const URL_TARGET_ATTRIBUTE = "data-url-target";
 const css$14 = /* css */`
   @layer navi {
+    /* Layered whole: the mark is navi's suggestion for "here is what the URL
+       pointed at", not something it needs. An app replaces it, or removes it
+       with animation: none, from an unlayered rule of any weight. */
     [${URL_TARGET_ATTRIBUTE}] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
         ease-out;
@@ -5979,25 +5982,32 @@ const css$12 = /* css */`
       border-radius: 50%;
     }
 
+    /* The svg takes the whole square and the glyph keeps its share of it
+       inside the viewBox (see CALLOUT_STATUS_GLYPH_VIEWBOX). Sized as a
+       fraction of the square instead, the svg box lands on a fractional
+       device pixel and the rasteriser snaps the glyph a pixel off centre —
+       visible on a small badge, where the glyph is only a few pixels wide. */
     svg {
-      width: auto;
-      height: 55%;
+      width: 100%;
+      height: 100%;
     }
   }
-  /* Inside an <Icon>, the icon box is the size: fill it. The glyph keeps its
-     own share of it — the Icon's rule sizing any svg it holds to the whole
-     box is for an svg that IS the icon, and this one sits in a square. */
+  /* Inside an <Icon>, the icon box is the size: fill it. */
   .navi_icon > .navi_callout_status_icon {
     width: 100%;
     height: 100%;
   }
-  .navi_icon[data-icon-char] .navi_callout_status_icon svg {
-    width: auto;
-    height: 55%;
-  }
 `;
-const CALLOUT_STATUS_GLYPH_VIEWBOX = "0 0 125 300";
-const CALLOUT_STATUS_GLYPH_PATH = "m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z";
+
+/**
+ * The "!" on a square, viewBox and path both. The box is square and holds the
+ * glyph's margin: the ink is 298 of 540 units tall (55%), centered. Drawn this
+ * way rather than tight around the ink so whoever shows it can give the svg the
+ * whole square — the glyph is then placed by the vector rasteriser, which has
+ * no device pixel grid to miss, at any square size down to a fractional one.
+ */
+const CALLOUT_STATUS_GLYPH_VIEWBOX = "0 0 540 540";
+const CALLOUT_STATUS_GLYPH_PATH = "m232.5,121 8,196h59l8-196zm36.5,224a37,37 0 1,0 2,0z";
 
 /**
  * @type {import("ignore:preact").FunctionComponent<{
@@ -6048,7 +6058,8 @@ const css$11 = /* css */`
       /* A callout is parented to what it explains, so it inherits from it — and
        an element that suppressed text selection (a list row, a drag source)
        would make its own explanation unselectable. The message is text one
-       copies. */
+       copies. Layered: an app that has a reason to lock its own callouts down
+       says so and wins. */
       user-select: text;
 
       --callout-success-color: var(--navi-callout-success-color);
@@ -6208,9 +6219,11 @@ const css$11 = /* css */`
             display: none;
           }
 
+          /* The glyph keeps its share of the square inside the viewBox
+             (see CALLOUT_STATUS_GLYPH_VIEWBOX), so the svg takes all of it. */
           svg {
-            width: 16px;
-            height: 12px;
+            width: 100%;
+            height: 100%;
             color: white;
           }
         }
@@ -6957,6 +6970,7 @@ const calloutTemplate = /* html */`
   <div
     class="navi_callout"
     popover="manual"
+    navi-out-of-flow=""
     aria-expanded="true"
   >
     <div class="navi_callout_box">
@@ -27056,11 +27070,114 @@ const releaseTransitionDestination = (owner) => {
 };
 
 /**
+ * The furniture around the pages — the fixed bars — photographed with them for
+ * the length of a route transition, so that a piece of it belonging to ONE of
+ * the two states takes part in the movement instead of appearing or vanishing
+ * in a frame.
+ *
+ * Whether a bar is the frame or part of what changes is a fact about the PAIR
+ * of states, never about the bar: the top bar of a list is the frame while one
+ * goes into a row of that list, and part of what changes when the next page
+ * takes the whole screen. So nothing is declared — a name is written on every
+ * bar for the length of the movement, and the browser derives the rest:
+ *
+ * - a bar the two states SHARE is one element wearing one name on both sides.
+ *   The browser pairs the two pictures into one group and holds it where it
+ *   stands: the frame, and the pages move behind it exactly as before.
+ * - a bar only one state has never meets a counterpart. It stands where it was
+ *   photographed while the pages move OVER it (see the z-order in
+ *   route_transition.jsx) — covered progressively as a page comes over it,
+ *   uncovered as one leaves — rather than going out with the render.
+ *
+ * The name is per ELEMENT and kept for the element's whole life, which is what
+ * makes "shared" mean shared: several bars can live on one edge
+ * (layout/fixed_bar/fixed_bar_space.js), so a bar leaving and another one
+ * arriving on that same edge are two names and two movements, not one bar
+ * changing its mind.
+ *
+ * Worn only while a transition of navi's plays: named the rest of the time, a
+ * bar would be captured during every view transition the APPLICATION starts —
+ * dead to the pointer and drawn in the top layer for the length of a movement
+ * that has nothing to do with it. Being unable to answer a press is the price
+ * of being photographed, and a route transition is where it costs nothing:
+ * both pages are pictures for those few hundred milliseconds anyway.
+ */
+
+// What counts as furniture: what is pinned to an edge of the window and gives
+// its room back to the content (layout/fixed_bar/fixed_bar.jsx). A sticky row
+// inside the pages needs none of this — it lives in the area, so it is already
+// part of the pages' own picture.
+const FURNITURE_SELECTOR = ".navi_fixed_bar";
+const NAME_PROPERTY = "view-transition-name";
+const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
+
+const nameByElement = new WeakMap();
+let nameCount = 0;
+
+// Whose movement the names belong to, for the same reason the window has an
+// owner (transition_window.js): a movement ending after another has replaced
+// it must not strip what the new one is wearing.
+let furnitureOwner = null;
+let namedElements = new Set();
+
+/**
+ * Name what stands around the area. Called twice for one movement: before the
+ * picture of the state being left is taken, and again once the state arriving
+ * has rendered — a bar that just mounted has to wear its name before the
+ * second picture, and one that survived the render is left with the name it
+ * already has.
+ */
+const nameTransitionFurniture = (owner, areaElement) => {
+  if (owner !== furnitureOwner) {
+    furnitureOwner = owner;
+    namedElements = new Set();
+  }
+  for (const element of document.querySelectorAll(FURNITURE_SELECTOR)) {
+    if (namedElements.has(element)) {
+      continue;
+    }
+    // Inside the area it is not furniture, it is the page: naming it would
+    // punch a hole in the picture the movement is played on.
+    if (areaElement.contains(element)) {
+      continue;
+    }
+    let name = nameByElement.get(element);
+    if (!name) {
+      // A name the application wrote itself answers for that element, and it
+      // is saying something navi is not: it wants that bar moved on the pages'
+      // clock, by its own CSS. Asked only of a bar navi has never named — a
+      // bar wearing one of ITS names is one this movement inherited from the
+      // one it interrupted, and taking it for the application's would leave it
+      // named for the rest of the document's life.
+      if (getComputedStyle(element).viewTransitionName !== "none") {
+        continue;
+      }
+      nameCount++;
+      name = `${FURNITURE_NAME_PREFIX}${nameCount}`;
+      nameByElement.set(element, name);
+    }
+    element.style.setProperty(NAME_PROPERTY, name);
+    namedElements.add(element);
+  }
+};
+
+const releaseTransitionFurniture = (owner) => {
+  if (owner !== furnitureOwner) {
+    return;
+  }
+  furnitureOwner = null;
+  for (const element of namedElements) {
+    element.style.removeProperty(NAME_PROPERTY);
+  }
+  namedElements = new Set();
+};
+
+/**
  * The window two pages are seen through while one replaces the other, measured
  * once and published for the length of the movement.
  *
- * Both ways of moving from one route to another need the same six numbers, so
- * they are written under the same names and read by the same CSS formulas —
+ * Both ways of moving from one route to another need the same numbers, so they
+ * are written under the same names and read by the same CSS formulas —
  * `route_travel.jsx` for a row a finger pushes, `route_transition.jsx` for a
  * relation between two pages. Only one of them ever plays at a time (there is
  * one view transition per document), which is what lets them share the names.
@@ -27071,16 +27188,25 @@ const releaseTransitionDestination = (owner) => {
  *   pictures of a transition are drawn in the top layer, above everything, so
  *   no overflow of the document reaches them: where to cut them can only be
  *   said from outside the document, and this is where that outside is known.
- * - **the height it is held at**, the taller of the two states. Left to the
- *   browser the window's height animates from one to the other, and a window
- *   that changes size under the pictures cuts the page being left from the
- *   bottom, progressively. It does end up at the arriving height, and that is
- *   right; what must not happen is the user watching it get there.
- * - **where the page being left WAS**, which is not where the window stands:
- *   the two states are at the same place in the layout without being at the
- *   same place in the window — one page is scrolled and the other is not.
- *   Drawn at the window's own corner, the page being left would be seen
- *   jumping to its top before it begins to leave.
+ * - **the box is the two states TOGETHER**, not either one of them. The
+ *   browser puts the group where the arriving state stands and animates it
+ *   from where the state being left stood; both are wrong for the same reason
+ *   — a window that is one of the two states cuts the other. Held at the
+ *   rectangle that contains both, nothing either picture holds is ever cut by
+ *   a box it never had, and the user never watches the window get anywhere.
+ * - **where each state WAS**, which is not where the window stands: the two
+ *   states are at the same place in the layout without being at the same place
+ *   in the window — one page is scrolled and the other is not, one has a top
+ *   bar over it and the other has the screen. Each picture is placed at its
+ *   own corner inside the window.
+ * - **the band the state being left kept free**, next to the one the arriving
+ *   state keeps free. A band is furniture — a fixed bar, a sticky row — and
+ *   the pictures are cut at it so they are not watched painting over it. Read
+ *   live it describes the arriving state alone, and a piece of furniture that
+ *   belongs to only ONE of the two states is then treated as the frame of
+ *   both: the page being left is cut at a bar it never had. Photographed here
+ *   at the one moment the state being left still exists, the cut can be taken
+ *   at what is furniture on BOTH sides (see the clip formulas).
  *
  * Only the measuring needs JS, and only for the one moment both states exist:
  * the page arriving is in the DOM and the transition has not started playing.
@@ -27107,8 +27233,32 @@ const releaseTransitionDestination = (owner) => {
  * Each one is a distance inward from the band the safe area already leaves
  * free, so a row states its own height and nothing else: what the bars above
  * it take is already counted.
+ *
+ * Registered as lengths for the same reason the safe area is (safe_area.js):
+ * the band has to be readable in pixels at the moment a page leaves.
  */
 const TRANSITION_WINDOW_CSS = /* css */ `
+  @property --navi-transition-cover-top {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-transition-cover-right {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-transition-cover-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-transition-cover-left {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+
   @layer navi {
     :root {
       --navi-transition-cover-top: 0px;
@@ -27125,6 +27275,12 @@ const WINDOW_WIDTH_PROPERTY = "--navi-transition-window-width";
 const WINDOW_HEIGHT_PROPERTY = "--navi-transition-window-height";
 const WINDOW_OLD_TOP_PROPERTY = "--navi-transition-window-old-top";
 const WINDOW_OLD_LEFT_PROPERTY = "--navi-transition-window-old-left";
+const WINDOW_NEW_TOP_PROPERTY = "--navi-transition-window-new-top";
+const WINDOW_NEW_LEFT_PROPERTY = "--navi-transition-window-new-left";
+const OLD_BAND_TOP_PROPERTY = "--navi-transition-old-band-top";
+const OLD_BAND_RIGHT_PROPERTY = "--navi-transition-old-band-right";
+const OLD_BAND_BOTTOM_PROPERTY = "--navi-transition-old-band-bottom";
+const OLD_BAND_LEFT_PROPERTY = "--navi-transition-old-band-left";
 const WINDOW_PROPERTIES = [
   WINDOW_TOP_PROPERTY,
   WINDOW_LEFT_PROPERTY,
@@ -27132,6 +27288,12 @@ const WINDOW_PROPERTIES = [
   WINDOW_HEIGHT_PROPERTY,
   WINDOW_OLD_TOP_PROPERTY,
   WINDOW_OLD_LEFT_PROPERTY,
+  WINDOW_NEW_TOP_PROPERTY,
+  WINDOW_NEW_LEFT_PROPERTY,
+  OLD_BAND_TOP_PROPERTY,
+  OLD_BAND_RIGHT_PROPERTY,
+  OLD_BAND_BOTTOM_PROPERTY,
+  OLD_BAND_LEFT_PROPERTY,
 ];
 
 // Whose numbers are currently published. The window belongs to the movement
@@ -27140,21 +27302,50 @@ const WINDOW_PROPERTIES = [
 // on.
 let windowOwner = null;
 
-const holdTransitionWindow = (owner, element, rectBefore) => {
+/**
+ * The state being left, taken while rendering is held — the page arriving is
+ * not in the DOM yet, so this is still the one going away. Where its box
+ * stands and what its furniture left free, which the arriving state answers
+ * for differently and which nothing can be read back from once it is gone.
+ */
+const measureTransitionWindowState = (element) => {
+  return {
+    rect: element.getBoundingClientRect(),
+    band: readBand(),
+  };
+};
+
+const holdTransitionWindow = (owner, element, stateBefore) => {
+  const rectBefore = stateBefore.rect;
+  const bandBefore = stateBefore.band;
   const rectAfter = element.getBoundingClientRect();
-  // It cannot be measured from one side alone: a page arriving shorter than
-  // the one it replaces would cut the one leaving, a page arriving taller
-  // would be cut itself.
-  const height =
-    rectBefore.height > rectAfter.height ? rectBefore.height : rectAfter.height;
+  const bandAfter = readBand();
+  // The rectangle that contains both states. It cannot be measured from one
+  // side alone: a page arriving shorter than the one it replaces would cut the
+  // one leaving, a page arriving taller would be cut itself, and either one
+  // standing higher up than the other would be cut across.
+  const top = rectBefore.top < rectAfter.top ? rectBefore.top : rectAfter.top;
+  const left =
+    rectBefore.left < rectAfter.left ? rectBefore.left : rectAfter.left;
+  const bottom =
+    rectBefore.bottom > rectAfter.bottom ? rectBefore.bottom : rectAfter.bottom;
+  const right =
+    rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
   windowOwner = owner;
   const { style } = document.documentElement;
-  style.setProperty(WINDOW_TOP_PROPERTY, `${rectAfter.top}px`);
-  style.setProperty(WINDOW_LEFT_PROPERTY, `${rectAfter.left}px`);
-  style.setProperty(WINDOW_WIDTH_PROPERTY, `${rectAfter.width}px`);
-  style.setProperty(WINDOW_HEIGHT_PROPERTY, `${height}px`);
+  style.setProperty(WINDOW_TOP_PROPERTY, `${top}px`);
+  style.setProperty(WINDOW_LEFT_PROPERTY, `${left}px`);
+  style.setProperty(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
+  style.setProperty(WINDOW_HEIGHT_PROPERTY, `${bottom - top}px`);
   style.setProperty(WINDOW_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
   style.setProperty(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
+  style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
+  style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
+  const oldBand = bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter);
+  style.setProperty(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
+  style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
+  style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
+  style.setProperty(OLD_BAND_LEFT_PROPERTY, `${oldBand.left}px`);
 };
 
 // The live layout takes the box back. A discontinuity by construction — the
@@ -27170,6 +27361,65 @@ const releaseTransitionWindow = (owner) => {
   for (const property of WINDOW_PROPERTIES) {
     style.removeProperty(property);
   }
+};
+
+// A band nothing can be wider than, published for an edge nothing is known
+// about: taken as the smaller of the two, it leaves the live band standing on
+// its own, which is the movement navi played before it knew any of this.
+const BAND_UNKNOWN = 1e6;
+
+// What the furniture leaves free on each edge, as a distance inward from that
+// edge of the window: the app's safe area (everything pinned to the window's
+// edges) plus what covers the box from inside the document.
+const readBand = () => {
+  const computedStyle = getComputedStyle(document.documentElement);
+  const readEdge = (edge) => {
+    const safeArea = parseFloat(
+      computedStyle.getPropertyValue(`--navi-safe-area-inset-${edge}`),
+    );
+    const cover = parseFloat(
+      computedStyle.getPropertyValue(`--navi-transition-cover-${edge}`),
+    );
+    // A browser that cannot register a custom property hands back the calc()
+    // it was written as rather than what it computes to (see safe_area.js).
+    if (!Number.isFinite(safeArea) || !Number.isFinite(cover)) {
+      return BAND_UNKNOWN;
+    }
+    return safeArea + cover;
+  };
+  return {
+    top: readEdge("top"),
+    right: readEdge("right"),
+    bottom: readEdge("bottom"),
+    left: readEdge("left"),
+  };
+};
+
+// How far the cut may be opened for the picture being left — the band its own
+// state kept free, which is the whole point of photographing it: furniture
+// present in only one of the two states is not the frame, it is part of what
+// changes, and cutting the page being left at a bar it never had shows its
+// header being sliced instead of leaving.
+//
+// Never past what the picture ARRIVING needs, though: the cut is one line for
+// both pictures, so opening it for one opens it for the other. A box that runs
+// under the furniture it arrives beside — a page scrolled below a top bar —
+// would then be watched painting over that bar for the length of the movement,
+// which is what the cut exists to prevent. On such an edge the arriving band
+// stands, and the page being left is cut as it always was.
+const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
+  return {
+    top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,
+    right:
+      rectAfter.right > window.innerWidth - bandAfter.right
+        ? bandAfter.right
+        : bandBefore.right,
+    bottom:
+      rectAfter.bottom > window.innerHeight - bandAfter.bottom
+        ? bandAfter.bottom
+        : bandBefore.bottom,
+    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left,
+  };
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -27302,18 +27552,37 @@ const css$10 = /* css */`
      the document animates, and the document belongs to the application the
      rest of the time. */
   :root[data-navi-route-transition] {
-    /* With an area marked, the page AROUND it is not taken as a picture — so
-       exactly one of the two names below exists at a time, and the movements
-       can be written once for both. It is also what a fixed bar wants: a
-       captured element is not painted where it stands and cannot be pointed
-       at either, so a bar photographed with the document is dead for the
-       length of every transition. Left live, it answers as it always did, and
-       nothing shows through where the pages are — the two pictures cover the
-       area's rectangle between them at every moment. Anything around that must
-       ANIMATE rather than stand still gets a view-transition-name of its own,
-       and the browser moves it on the same clock. */
+    /* With an area marked, the page AROUND it is not taken as one picture —
+       so exactly one of the two names below exists at a time, and the
+       movements can be written once for both. It is also the only way the
+       furniture can take part in the movement: photographed with the whole
+       document it is one picture the size of the screen, and a bar can be
+       neither held where it stands nor moved with the page it belongs to
+       inside it. Each bar is photographed on its own instead (see
+       transition_furniture.js), and nothing shows through where the pages are
+       — their two pictures cover the area's rectangle between them at every
+       moment. */
     &[data-navi-route-transition-target="area"] {
       view-transition-name: none;
+
+      /* The pages travel OVER the furniture. Everything else captured while an
+         area is marked is a fixed bar wearing a name of navi's own for the
+         length of the movement (transition_furniture.js): a bar the two states
+         share is one group the browser holds where it stands, and a bar only
+         one of them has stands there too, with no counterpart to move to. Both
+         belong under the pages — that is what lets a page come over a bar that
+         is going away, and a page leaving uncover the bar arriving behind it.
+
+         Ordered here rather than left to the DOM, which decides it otherwise:
+         where an application puts its bars relative to the area is its own
+         business. A name and \`*\` weigh the same, so the two rules are read in
+         the order they are written. */
+      &::view-transition-group(*) {
+        z-index: 0;
+      }
+      &::view-transition-group(navi-route-transition) {
+        z-index: 1;
+      }
     }
 
     &::view-transition-old(root),
@@ -27342,11 +27611,22 @@ const css$10 = /* css */`
       overflow: clip;
     }
     &::view-transition-group(navi-route-transition) {
-      /* Held still for the whole transition, at the taller of the two states,
-         and standing where the area stands (see transition_window.js). Held by
-         dropping the group's animation rather than by winning against it with
-         !important — which also drops its position animation, fine for an area
-         that stays in the same place from one page to the next. */
+      /* Held still for the whole transition, at the rectangle that contains
+         both states (see transition_window.js). Held by dropping the group's
+         animation rather than by winning against it with !important. The
+         browser puts the group where the ARRIVING area stands, so it is moved
+         from there back to the window's own corner. */
+      top: calc(
+        var(--navi-transition-window-top) - var(
+            --navi-transition-window-new-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-left) - var(
+            --navi-transition-window-new-left
+          )
+      );
+      width: var(--navi-transition-window-width);
       height: var(--navi-transition-window-height);
       animation-name: none;
 
@@ -27365,31 +27645,51 @@ const css$10 = /* css */`
          the pages covers the top of the area exactly as a fixed bar covers the
          top of the screen. Both are read rather than asked for, so one that
          grows, shrinks or unmounts mid-transition is followed without anything
-         being told. What the window cannot know is only where it itself stands,
-         and that is the measured half. */
+         being told.
+
+         Read live, though, they describe the state ARRIVING and nothing else,
+         so the cut is taken at the smaller of that and the band the state
+         being left kept free (--navi-transition-old-band-*, photographed while
+         both still existed). Furniture standing in BOTH states is the frame:
+         the pages move behind it and are cut at it. Furniture standing in one
+         of them is part of what changes, and cutting the page being left at a
+         bar it never had shows its own header being sliced instead of
+         leaving. */
       --navi-route-transition-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) +
-          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
+        min(
+            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)
+          ) - var(--navi-transition-window-top)
       );
       --navi-route-transition-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) +
-          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
+        min(
+            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)
+          ) - var(--navi-transition-window-left)
       );
       --navi-route-transition-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) +
-          var(--navi-transition-cover-bottom) - 100dvh
+          min(
+            var(--navi-safe-area-inset-bottom) +
+              var(--navi-transition-cover-bottom),
+            var(--navi-transition-old-band-bottom)
+          ) -
+          100dvh
       );
       --navi-route-transition-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) +
-          var(--navi-transition-cover-right) - 100dvw
+          min(
+            var(--navi-safe-area-inset-right) +
+              var(--navi-transition-cover-right),
+            var(--navi-transition-old-band-right)
+          ) -
+          100dvw
       );
       clip-path: inset(
         var(--navi-route-transition-clip-top)
@@ -27416,10 +27716,12 @@ const css$10 = /* css */`
           ) - var(--navi-route-transition-clip-bottom)
       );
     }
+    /* Each picture at the corner its own state stood at, which is not the
+       window's: the window contains both states, and a state that is scrolled
+       — or that stands under a bar the other one does not have — is somewhere
+       inside it (see transition_window.js). Offset here rather than by
+       \`translate\`, which the movement itself uses. */
     &::view-transition-old(navi-route-transition) {
-      /* Where the area WAS on screen, which is not where the window stands
-         (see transition_window.js). Offset here rather than by \`translate\`,
-         which the movement itself uses. */
       top: calc(
         var(--navi-transition-window-old-top) - var(
             --navi-transition-window-top
@@ -27427,6 +27729,18 @@ const css$10 = /* css */`
       );
       left: calc(
         var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+    }
+    &::view-transition-new(navi-route-transition) {
+      top: calc(
+        var(--navi-transition-window-new-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-new-left) - var(
             --navi-transition-window-left
           )
       );
@@ -28113,12 +28427,17 @@ const beginTransition = ({
     warnOnce("several-areas", `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`);
   }
   const areaElement = areaElements.length > 0 ? areaElements[0] : null;
-  // The area as it stands before anything moves: rendering is held, so this is
-  // still the page being left (see holdAreaGeometry).
-  let areaRectBefore = null;
+  // The area as it stands before anything moves, and the band the furniture
+  // around it leaves free: rendering is held, so both are still the page being
+  // left (see transition_window.js).
+  let areaStateBefore = null;
   if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
-    areaRectBefore = areaElement.getBoundingClientRect();
+    // Said before the picture is taken, like every name (see
+    // transition_furniture.js): what the bars are wearing when the transition
+    // starts is what the browser photographs.
+    nameTransitionFurniture(transition, areaElement);
+    areaStateBefore = measureTransitionWindowState(areaElement);
   }
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
@@ -28188,7 +28507,11 @@ const beginTransition = ({
     // The page arriving is in the DOM and the transition has not started
     // playing: the one moment both states of the area can be known.
     if (areaElement) {
-      holdTransitionWindow(transition, areaElement, areaRectBefore);
+      // A bar the arriving state mounted has to wear its name before the
+      // second picture is taken; one that survived the render keeps the name
+      // it already has, which is what pairs its two pictures.
+      nameTransitionFurniture(transition, areaElement);
+      holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
   });
   const end = () => {
@@ -28206,6 +28529,7 @@ const beginTransition = ({
       documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
       releaseTransitionWindow(transition);
       releaseTransitionDestination(transition);
+      releaseTransitionFurniture(transition);
       if (restoreDuration) {
         restoreDuration();
       }
@@ -28248,7 +28572,7 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
   }
   let escapedName = null;
   for (const name of capturedNames) {
-    if (name === "root" || name === AREA_NAME) {
+    if (name === "root" || name === AREA_NAME || name.startsWith(FURNITURE_NAME_PREFIX)) {
       continue;
     }
     escapedName = name;
@@ -28333,16 +28657,37 @@ const pageIsCurrent$1 = ({
 };
 // The FIRST page that answers, and every page read all the same: a page that
 // is not the current one today is the one that must wake the reader tomorrow.
+//
+// Two of them answering at once is the one thing this reading cannot get right.
+// Relations are declared one pair at a time, so the row read here is the order
+// they happened to be written in — an order nothing in the application shows —
+// and the movement then played is the one written for whichever page was
+// mentioned first. A movement is a movement: it looks deliberate, which is why
+// the overlap is said out loud here, where both pages are known.
 const currentPageIndex$1 = pages => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
     const isCurrent = pageIsCurrent$1(pages[i]);
-    if (isCurrent && currentIndex === -1) {
-      currentIndex = i;
+    if (!isCurrent) {
+      continue;
     }
+    if (currentIndex === -1) {
+      currentIndex = i;
+      continue;
+    }
+    warnPagesBothCurrent(pages[currentIndex], pages[i]);
   }
   return currentIndex;
 };
+const warnPagesBothCurrent = (pageKept, pageIgnored) => {
+  const kept = describePage(pageKept);
+  const ignored = describePage(pageIgnored);
+  warnOnce(`both-current:${kept}|${ignored}`, `${kept} and ${ignored} are both current on "${window.location.pathname}": two relations claim this url. A relation is resolved through which page is current, so the one mentioned first in a defineRouteTransition call wins — ${kept} — and its movement plays whichever of the two the application is really showing. Make one of them decline this url with a param constraint (see navigation.md, "Which values a param accepts").`);
+};
+const describePage = ({
+  route,
+  params
+}) => params ? `${route} with ${JSON.stringify(params)}` : `${route}`;
 
 installImportMetaCssBuild(import.meta);/**
  * Dragging from one route to the next, when the tabs of a page are URLs.
@@ -28480,17 +28825,16 @@ const css$$ = /* css */`
          same page changing its mind. */
       mix-blend-mode: normal;
     }
+    /* Each picture at the corner its own box stood at, which is not the
+       window's: the window contains both boxes, and the two are at the same
+       place in the layout without being at the same place in the window — one
+       page is scrolled and the other is not, so the box being left starts
+       higher up. Left at the window's own corner the page being left would be
+       seen jumping back to its top before it even begins to leave. Offset here
+       rather than by \`translate\`, which the movement itself uses, and at its
+       own size rather than the group's so that nothing is cut off the far side
+       of the shift (see transition_window.js). */
     &::view-transition-old(navi-route-travel) {
-      /* Where the page being left WAS on screen, which is not where the group
-         stands: the group is at the arriving box (its position animation is
-         dropped along with its height one, below), and the two boxes are at the
-         same place in the layout without being at the same place in the window
-         — one page is scrolled and the other is not, so the box being left
-         starts higher up. Left at the group's own corner the page being left
-         would be seen jumping back to its top before it even begins to leave.
-         Offset here rather than by \`translate\`, which the movement itself uses,
-         and at its own size rather than the group's so that nothing is cut off
-         the far side of the shift (see transition_window.js). */
       top: calc(
         var(--navi-transition-window-old-top) - var(
             --navi-transition-window-top
@@ -28498,6 +28842,19 @@ const css$$ = /* css */`
       );
       left: calc(
         var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+      width: auto;
+    }
+    &::view-transition-new(navi-route-travel) {
+      top: calc(
+        var(--navi-transition-window-new-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-new-left) - var(
             --navi-transition-window-left
           )
       );
@@ -28514,17 +28871,28 @@ const css$$ = /* css */`
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see transition_window.js): the group
-         is what CLIPS, and the browser animates its height from the box being
-         left to the box arriving — so the window shrinks under the pictures and
-         cuts the page leaving from the bottom, progressively. The box does end
-         up at the arriving page's height, and that is right; what must not
-         happen is the user watching it get there.
+         travel at the rectangle that contains both boxes (see
+         transition_window.js): the group is what CLIPS, and the browser
+         animates it from the box being left to the box arriving — so the
+         window moves and shrinks under the pictures, cutting the page leaving
+         from the bottom, progressively. The box does end up at the arriving
+         page's height, and that is right; what must not happen is the user
+         watching it get there.
 
-         The height is held by dropping the group's animation rather than by
-         winning against it with !important — which also drops its position
-         animation, fine while a travel box stands in the same place from one
-         route to the next. */
+         Held by dropping the group's animation rather than by winning against
+         it with !important. The browser puts the group where the ARRIVING box
+         stands, so it is moved from there back to the window's own corner. */
+      top: calc(
+        var(--navi-transition-window-top) - var(
+            --navi-transition-window-new-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-left) - var(
+            --navi-transition-window-new-left
+          )
+      );
+      width: var(--navi-transition-window-width);
       height: var(--navi-transition-window-height);
 
       /* Cut at what covers the box, on top of being cut at the box. The
@@ -28542,31 +28910,51 @@ const css$$ = /* css */`
          above the pages covers the top of the box exactly as a fixed bar covers
          the top of the screen. Both are read rather than asked for, so one that
          grows, shrinks or unmounts mid-travel is followed without anything
-         being told. What the group cannot know is only where it itself stands,
-         and that is the measured half. */
+         being told.
+
+         Read live, though, they describe the state ARRIVING and nothing else,
+         so the cut is taken at the smaller of that and the band the state
+         being left kept free (--navi-transition-old-band-*, photographed while
+         both still existed). Furniture standing in BOTH states is the frame:
+         the pages move behind it and are cut at it. Furniture standing in one
+         of them is part of what changes, and cutting the page being left at a
+         bar it never had shows its own header being sliced instead of
+         leaving. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) +
-          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
+        min(
+            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)
+          ) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) +
-          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
+        min(
+            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)
+          ) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) +
-          var(--navi-transition-cover-bottom) - 100dvh
+          min(
+            var(--navi-safe-area-inset-bottom) +
+              var(--navi-transition-cover-bottom),
+            var(--navi-transition-old-band-bottom)
+          ) -
+          100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) +
-          var(--navi-transition-cover-right) - 100dvw
+          min(
+            var(--navi-safe-area-inset-right) +
+              var(--navi-transition-cover-right),
+            var(--navi-transition-old-band-right)
+          ) -
+          100dvw
       );
       clip-path: inset(
         var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
@@ -28903,9 +29291,10 @@ const RouteTravel = ({
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     pageAskedForRef.current = page;
-    // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see transition_window.js).
-    const rectBefore = elementRef.current.getBoundingClientRect();
+    // The box as it stands before anything moves, and the band the furniture
+    // around it leaves free: rendering is held, so both are still the page
+    // being left (see transition_window.js).
+    const stateBefore = measureTransitionWindowState(elementRef.current);
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = takeoverRoutingRenderingHold();
@@ -28948,7 +29337,7 @@ const RouteTravel = ({
       // which is what the box is measured through: the two states are at the
       // same place in the layout without being at the same place in the window
       // (see transition_window.js).
-      holdTransitionWindow(travel, elementRef.current, rectBefore);
+      holdTransitionWindow(travel, elementRef.current, stateBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {
@@ -38375,6 +38764,9 @@ const selectByTextStrings = (element, range, startText, endText) => {
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
 const css$X = /* css */`
   @layer navi {
+    /* Same reason as .navi_icon below: the display here is a starting point,
+       and box.jsx's unlayered [navi-box-flow] attributes have to win over it.
+       The rest is appearance a caller may want back. */
     .navi_text {
       &[data-skeleton] {
         border-radius: 0.2em;
@@ -44646,6 +45038,11 @@ const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
 installImportMetaCssBuild(import.meta);const css$M = /* css */`
   @layer navi {
+    /* Layered on purpose, rules included: a Field and its Label are chrome an
+       app restyles wholesale (its own label color, its own spacing), and
+       nothing declared here is structural — a cursor, a dimmed color, and
+       spacing that already has --spacing-with-control as its knob. So an app
+       rule of any weight takes them back, no specificity games. */
     .navi_label {
       --label-required-indicator-color: var(--navi-color-danger, #b42318);
 
@@ -46296,7 +46693,11 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
       --button-color-disabled: var(--button-color-readonly);
 
       /* Here to be easy to override */
-      display: inline-block; /* So box css can override when wanting to put button inline flex */
+      /* Layered, this one and the three below: display so box.jsx's unlayered
+         [navi-box-flow] can put the button inline-flex, the font and the line
+         so an app's own button typography wins without having to go through
+         the --button-* variables. */
+      display: inline-block;
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
       /* A form control comes with a line of its own from the browser, and that
@@ -49850,70 +50251,95 @@ const css$G = /* css */`
          controls answer it, an app never writes it. Whoever answers it also
          stops it (see .navi_button_content in button_ui.jsx), so a button
          deeper in — the clear cross in a picker's slot, the Save of a form in
-         a popup the member opens — never mistakes itself for the seam. */
+         a popup the member opens — never mistakes itself for the seam.
+       Both are asked of members only (see just below for what one is): the
+       second one alone being reset by a popup would leave the first one
+       reaching it. */
 
-    /* Members overlap by the width of one border, so along each seam one of the
-       two borders covers the other. Whichever member the user is on has to be
-       the one on top: it is the one whose border changes color, and the one
-       whose focus ring goes all the way around — half a ring, cut by the
-       neighbour painted after it, is what this avoids. z-index needs a
-       positioned element to mean anything, hence position: relative.
-       Deliberately not paired with isolation: isolate — a stacking context
-       here would also trap the popup of a picker held in the group, which
-       counts on its own band reaching the whole page. What keeps these
-       values from escaping is instead that everything they could reach is a
-       band above them (see navi_z_indexes.js). */
-    > *:hover,
-    > *[data-hover] {
-      position: relative;
-      z-index: var(--navi-z-index-control-hovered);
-    }
-    /* Three spellings for one thing — the member showing a focus ring. Some
-       controls take the focus on their own root (a button); others wrap a real
-       input and draw the ring on their frame while the keyboard is held
-       somewhere inside (a picker, a spin). The ring is what must not be sliced,
-       so the member holding it is raised whether it wears the state itself or
-       merely contains it. */
-    > *:focus-visible,
-    > *[data-focus-visible],
-    > *:has([data-focus-visible]) {
-      position: relative;
-      z-index: var(--navi-z-index-control-focused);
-    }
-    /* The member holding something open. Neither of the two above covers it:
-       the click that opened the popup gives no focus ring, the focus itself
-       left for the popup's content, and the pointer is free to travel to a
-       neighbour — yet the member keeps the border color its open state gives
-       it, and that border is exactly what the neighbour painted after it
-       slices. Read as a state, not as a pseudo-class: :active only lasts as
-       long as the button is held down, and while it is held :hover is true
-       anyway, so it would add nothing here.
+    /* What the group counts as a member — a child on its line, spelled
+       *:not([navi-out-of-flow]) here and at every seam below. Not every child
+       is one. A popup renders inside its opener's own subtree — a Dialog
+       written next to the Button that opens it lands as a child of the group
+       itself, and brings its backdrop (and, for layer="local", its clip
+       wrapper) along; a callout anchored on a <button> is mounted in that
+       button's parent, which is the group too. All of them are out of flow:
+       none is ever at a seam, and none is between two members either. Counted
+       as members they take a corner meant for a real one — a dialog in the
+       middle of a row comes out square — and, worse, they move the real ones:
+       a row of one button plus the dialog it opens has no :only-child left, so
+       the lone button squares the side it joins nothing on. Read off a marker
+       the elements set themselves (see popover.jsx, dialog.jsx, callout.js)
+       rather than named class by class here: a layout component knowing the
+       private classes of every component that can open something is exactly
+       what the corner claims above exist to avoid. */
+    > *:not([navi-out-of-flow]) {
+      /* Members overlap by the width of one border, so along each seam one of
+         the two borders covers the other. Whichever member the user is on has
+         to be the one on top: it is the one whose border changes color, and
+         the one whose focus ring goes all the way around — half a ring, cut by
+         the neighbour painted after it, is what this avoids. z-index needs a
+         positioned element to mean anything, hence position: relative.
+         Deliberately not paired with isolation: isolate — a stacking context
+         here would also trap the popup of a picker held in the group, which
+         counts on its own band reaching the whole page. What keeps these
+         values from escaping is instead that everything they could reach is a
+         band above them (see navi_z_indexes.js). */
+      &:hover,
+      &[data-hover] {
+        position: relative;
+        z-index: var(--navi-z-index-control-hovered);
+      }
 
-       :has, for the same reason as focus-visible above — the group member can
-       be an enrobage around the control that expands — and reaching a popup
-       held inline (a Popover with layer="local" renders inside its member)
-       costs nothing: that popup only reads expanded while its own member is,
-       which is the member this raises. */
-    > *[aria-expanded="true"],
-    > *:has([aria-expanded="true"]) {
-      position: relative;
-      z-index: var(--navi-z-index-control-expanded);
+      /* Three spellings for one thing — the member showing a focus ring. Some
+         controls take the focus on their own root (a button); others wrap a
+         real input and draw the ring on their frame while the keyboard is held
+         somewhere inside (a picker, a spin). The ring is what must not be
+         sliced, so the member holding it is raised whether it wears the state
+         itself or merely contains it. */
+      &:focus-visible,
+      &[data-focus-visible],
+      &:has([data-focus-visible]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-focused);
+      }
+
+      /* The member holding something open. Neither of the two above covers it:
+         the click that opened the popup gives no focus ring, the focus itself
+         left for the popup's content, and the pointer is free to travel to a
+         neighbour — yet the member keeps the border color its open state gives
+         it, and that border is exactly what the neighbour painted after it
+         slices. Read as a state, not as a pseudo-class: :active only lasts as
+         long as the button is held down, and while it is held :hover is true
+         anyway, so it would add nothing here.
+
+         :has, for the same reason as focus-visible above — the group member
+         can be an enrobage around the control that expands — and reaching a
+         popup held inline (a Popover with layer="local" renders inside its
+         member) costs nothing: that popup only reads expanded while its own
+         member is, which is the member this raises. A popup that is a child of
+         the group itself wears aria-expanded too, and is not a member:
+         position/z-index here would fight the placement it does its own way. */
+      &[aria-expanded="true"],
+      &:has([aria-expanded="true"]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-expanded);
+      }
     }
 
-    /* Horizontal (default): Cumulative margin for border overlap */
+    /* Where two members meet, stated as the relationship itself rather than as
+       positions in the child list: the corner a member loses is the one facing
+       a member, and the child list holds more than members (see above).
+       A group of one — or of one member and the popup it opens — matches
+       neither rule and keeps the radius it has on its own. */
+
+    /* Horizontal (default) */
     &:not([data-vertical]) {
-      > *:not(:first-child) {
+      /* A member with a member before it: its left corners are on that seam,
+         and it is the one pulled back so the two borders there become one
+         line — same relationship, so the same rule. */
+      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
         margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        --x-corner-top-right-radius: 0;
-        --x-corner-bottom-right-radius: 0;
 
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-      }
-
-      > *:last-child:not(:only-child) {
         --x-corner-top-left-radius: 0;
         --x-corner-bottom-left-radius: 0;
 
@@ -49921,30 +50347,23 @@ const css$G = /* css */`
         border-bottom-left-radius: 0 !important;
       }
 
-      > *:not(:first-child):not(:last-child) {
-        --x-corner-top-left-radius: 0;
+      /* A member with a member after it: its right corners are on that seam. */
+      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
         --x-corner-top-right-radius: 0;
         --x-corner-bottom-right-radius: 0;
-        --x-corner-bottom-left-radius: 0;
 
-        border-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
       }
     }
 
-    /* Vertical: Cumulative margin for border overlap */
+    /* Vertical */
     &[data-vertical] {
-      > *:not(:first-child) {
+      /* A member with a member above it — see the horizontal block's own
+         comments, this is the same thing turned a quarter. */
+      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
         margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        --x-corner-bottom-right-radius: 0;
-        --x-corner-bottom-left-radius: 0;
 
-        border-bottom-right-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-      }
-
-      > *:last-child:not(:only-child) {
         --x-corner-top-left-radius: 0;
         --x-corner-top-right-radius: 0;
 
@@ -49952,13 +50371,13 @@ const css$G = /* css */`
         border-top-right-radius: 0 !important;
       }
 
-      > *:not(:first-child):not(:last-child) {
-        --x-corner-top-left-radius: 0;
-        --x-corner-top-right-radius: 0;
+      /* A member with a member below it. */
+      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
         --x-corner-bottom-right-radius: 0;
         --x-corner-bottom-left-radius: 0;
 
-        border-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
       }
     }
   }
@@ -55974,7 +56393,13 @@ const DialogLocal = props => {
     children: [backdropProps && jsx(Box, {
       ...backdropProps
     }), jsx("div", {
-      className: "navi_dialog_clip_wrapper",
+      className: "navi_dialog_clip_wrapper"
+      // Out of flow like the dialog it holds — see the dialog's own
+      // contentProps for what reads the marker.
+      // eslint-disable-next-line react/no-unknown-property
+      ,
+
+      "navi-out-of-flow": "",
       children: jsx(Box, {
         ...contentProps
       })
@@ -56653,6 +57078,9 @@ const useDialogProps = props => {
   // real element we render ourselves.
   Object.assign(backdropProps, {
     "ref": backdropRef,
+    // Out of flow like the popup it belongs to — see the content element's own
+    // note for what the marker is read by.
+    "navi-out-of-flow": "",
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
     // Recomputed fresh on every render from openController.opened (not
@@ -56726,6 +57154,13 @@ const useDialogProps = props => {
       onNaviCommand(e);
       rest.onnavi_command?.(e);
     },
+    // Not a child on the line of whatever holds it: a popup renders inside its
+    // opener's own subtree, so a Dialog written next to the control that opens it
+    // is a child of that control's own parent. A Group frames the children on
+    // its line and this is not one of them — it is in the top layer, or
+    // absolutely placed by its own code — so it says so once, here (group.jsx
+    // reads this attribute to tell a member from anything else on its line).
+    "navi-out-of-flow": "",
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed
@@ -57436,7 +57871,13 @@ const PopoverCustom = props => {
     children: [backdropProps && jsx(Box, {
       ...backdropProps
     }), jsx("div", {
-      className: "navi_popover_clip_wrapper",
+      className: "navi_popover_clip_wrapper"
+      // Out of flow like the popover it holds — see the popover's own
+      // contentProps for what reads the marker.
+      // eslint-disable-next-line react/no-unknown-property
+      ,
+
+      "navi-out-of-flow": "",
       children: jsx(Box, {
         ...contentProps
       })
@@ -58172,6 +58613,9 @@ const usePopoverProps = props => {
   Object.assign(backdropProps, {
     "ref": backdropRef,
     "id": backdropId,
+    // Out of flow like the popup it belongs to — see the content element's own
+    // note for what the marker is read by.
+    "navi-out-of-flow": "",
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
     // Recomputed fresh on every render from openController.opened (not a
@@ -58267,6 +58711,13 @@ const usePopoverProps = props => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    // Not a child on the line of whatever holds it: a popup renders inside its
+    // opener's own subtree, so a Popover written next to the control that opens it
+    // is a child of that control's own parent. A Group frames the children on
+    // its line and this is not one of them — it is in the top layer, or
+    // absolutely placed by its own code — so it says so once, here (group.jsx
+    // reads this attribute to tell a member from anything else on its line).
+    "navi-out-of-flow": "",
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": e => {
@@ -58377,7 +58828,10 @@ const css$C = /* css */`
          opens it (a Picker holds its popup children inside its root), and
          line-height inherits as computed: the control's line is a length
          (--navi-control-line-height), and inherited it would arrive as that
-         control's pixels — a 12px caption on an 18px picker's 23px rows. */
+         control's pixels — a 12px caption on an 18px picker's 23px rows.
+         Layered, like the dialog padding below: both are what navi puts there
+         in the absence of anything else, and an app writing its own line or
+         its own popup padding is meant to win. */
       line-height: var(--navi-line-height);
 
       &.navi_popover {
