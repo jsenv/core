@@ -14,6 +14,11 @@ import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
 
 const css = /* css */ `
   @layer navi {
+    /* Layered on purpose, rules included: a Field and its Label are chrome an
+       app restyles wholesale (its own label color, its own spacing), and
+       nothing declared here is structural — a cursor, a dimmed color, and
+       spacing that already has --spacing-with-control as its knob. So an app
+       rule of any weight takes them back, no specificity games. */
     .navi_label {
       --label-required-indicator-color: var(--navi-color-danger, #b42318);
 

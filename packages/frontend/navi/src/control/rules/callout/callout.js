@@ -54,7 +54,8 @@ const css = /* css */ `
       /* A callout is parented to what it explains, so it inherits from it — and
        an element that suppressed text selection (a list row, a drag source)
        would make its own explanation unselectable. The message is text one
-       copies. */
+       copies. Layered: an app that has a reason to lock its own callouts down
+       says so and wins. */
       user-select: text;
 
       --callout-success-color: var(--navi-callout-success-color);
@@ -214,9 +215,11 @@ const css = /* css */ `
             display: none;
           }
 
+          /* The glyph keeps its share of the square inside the viewBox
+             (see CALLOUT_STATUS_GLYPH_VIEWBOX), so the svg takes all of it. */
           svg {
-            width: 16px;
-            height: 12px;
+            width: 100%;
+            height: 100%;
             color: white;
           }
         }
@@ -1031,6 +1034,7 @@ const calloutTemplate = /* html */ `
   <div
     class="navi_callout"
     popover="manual"
+    navi-out-of-flow=""
     aria-expanded="true"
   >
     <div class="navi_callout_box">

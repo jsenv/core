@@ -39,14 +39,24 @@ Live examples: `src/control/demos/15_group_demo.html`.
 
 ## What Group does to its members
 
-- **Seams**: each member after the first is pulled back by one border width, so
-  the two borders along a seam become one line. The width comes from the
-  member's own `--border-width` when it declares one, else from the group's
+- **Seams**: a member with a member before it is pulled back by one border
+  width, so the two borders along a seam become one line. The width comes from
+  the member's own `--border-width` when it declares one, else from the group's
   `--group-border-width` (default: `--navi-control-border-width`).
-- **Corners**: the first member loses the radius on the side that joins, the
-  last one loses it on the other side, and any member in between loses all
-  four. A single member keeps its own radius — a group of one looks like the
-  control alone. The ask is made twice, in two forms — see below.
+- **Corners**: a member loses the radius on each side where it faces another
+  member — the first one on the side that joins, the last one on the other
+  side, one in between on all four. A single member keeps its own radius — a
+  group of one looks like the control alone. The ask is made twice, in two
+  forms — see below.
+- **Members only**: a child out of the group's flow is none of the group's
+  business, and there are more of those than it looks. A popup renders inside
+  its opener's own subtree, so a `Dialog` or `Popover` written next to the
+  button that opens it is a child of the group itself, and brings its backdrop
+  along; a callout anchored on a `<button>` is mounted in that button's parent.
+  They mark themselves `navi-out-of-flow`, and the group reads that: none of
+  them takes a corner of its own, none moves anyone else's (a row of one button
+  and the dialog it opens is still a group of one), none is pulled back by a
+  border width it does not share.
 - **Overlap order**: the member under the pointer, the member showing a focus
   ring, and the member holding something open (`aria-expanded="true"`) paint
   above their neighbours (`position: relative` plus

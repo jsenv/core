@@ -665,7 +665,13 @@ const PopoverCustom = (props) => {
           contribute overflow the way the popover's own slide/scale
           animation can (see this file's top comment for why that clip
           wrapper exists at all). */}
-      <div className="navi_popover_clip_wrapper">
+      <div
+        className="navi_popover_clip_wrapper"
+        // Out of flow like the popover it holds — see the popover's own
+        // contentProps for what reads the marker.
+        // eslint-disable-next-line react/no-unknown-property
+        navi-out-of-flow=""
+      >
         <Box {...contentProps} />
       </div>
     </>
@@ -1452,6 +1458,9 @@ const usePopoverProps = (props) => {
   Object.assign(backdropProps, {
     "ref": backdropRef,
     "id": backdropId,
+    // Out of flow like the popup it belongs to — see the content element's own
+    // note for what the marker is read by.
+    "navi-out-of-flow": "",
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
     // Recomputed fresh on every render from openController.opened (not a
@@ -1554,6 +1563,13 @@ const usePopoverProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    // Not a child on the line of whatever holds it: a popup renders inside its
+    // opener's own subtree, so a Popover written next to the control that opens it
+    // is a child of that control's own parent. A Group frames the children on
+    // its line and this is not one of them — it is in the top layer, or
+    // absolutely placed by its own code — so it says so once, here (group.jsx
+    // reads this attribute to tell a member from anything else on its line).
+    "navi-out-of-flow": "",
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": (e) => {

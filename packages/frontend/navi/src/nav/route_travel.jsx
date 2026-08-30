@@ -59,6 +59,7 @@ import {
 } from "./transition_destination.js";
 import {
   holdTransitionWindow,
+  measureTransitionWindowState,
   releaseTransitionWindow,
   TRANSITION_WINDOW_CSS,
 } from "./transition_window.js";
@@ -184,17 +185,16 @@ const css = /* css */ `
          same page changing its mind. */
       mix-blend-mode: normal;
     }
+    /* Each picture at the corner its own box stood at, which is not the
+       window's: the window contains both boxes, and the two are at the same
+       place in the layout without being at the same place in the window — one
+       page is scrolled and the other is not, so the box being left starts
+       higher up. Left at the window's own corner the page being left would be
+       seen jumping back to its top before it even begins to leave. Offset here
+       rather than by \`translate\`, which the movement itself uses, and at its
+       own size rather than the group's so that nothing is cut off the far side
+       of the shift (see transition_window.js). */
     &::view-transition-old(navi-route-travel) {
-      /* Where the page being left WAS on screen, which is not where the group
-         stands: the group is at the arriving box (its position animation is
-         dropped along with its height one, below), and the two boxes are at the
-         same place in the layout without being at the same place in the window
-         — one page is scrolled and the other is not, so the box being left
-         starts higher up. Left at the group's own corner the page being left
-         would be seen jumping back to its top before it even begins to leave.
-         Offset here rather than by \`translate\`, which the movement itself uses,
-         and at its own size rather than the group's so that nothing is cut off
-         the far side of the shift (see transition_window.js). */
       top: calc(
         var(--navi-transition-window-old-top) - var(
             --navi-transition-window-top
@@ -202,6 +202,19 @@ const css = /* css */ `
       );
       left: calc(
         var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+      width: auto;
+    }
+    &::view-transition-new(navi-route-travel) {
+      top: calc(
+        var(--navi-transition-window-new-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-new-left) - var(
             --navi-transition-window-left
           )
       );
@@ -218,17 +231,28 @@ const css = /* css */ `
     }
     &::view-transition-group(navi-route-travel) {
       /* The window the two pictures are seen through, held still for the whole
-         travel at the taller of the two boxes (see transition_window.js): the group
-         is what CLIPS, and the browser animates its height from the box being
-         left to the box arriving — so the window shrinks under the pictures and
-         cuts the page leaving from the bottom, progressively. The box does end
-         up at the arriving page's height, and that is right; what must not
-         happen is the user watching it get there.
+         travel at the rectangle that contains both boxes (see
+         transition_window.js): the group is what CLIPS, and the browser
+         animates it from the box being left to the box arriving — so the
+         window moves and shrinks under the pictures, cutting the page leaving
+         from the bottom, progressively. The box does end up at the arriving
+         page's height, and that is right; what must not happen is the user
+         watching it get there.
 
-         The height is held by dropping the group's animation rather than by
-         winning against it with !important — which also drops its position
-         animation, fine while a travel box stands in the same place from one
-         route to the next. */
+         Held by dropping the group's animation rather than by winning against
+         it with !important. The browser puts the group where the ARRIVING box
+         stands, so it is moved from there back to the window's own corner. */
+      top: calc(
+        var(--navi-transition-window-top) - var(
+            --navi-transition-window-new-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-left) - var(
+            --navi-transition-window-new-left
+          )
+      );
+      width: var(--navi-transition-window-width);
       height: var(--navi-transition-window-height);
 
       /* Cut at what covers the box, on top of being cut at the box. The
@@ -246,31 +270,51 @@ const css = /* css */ `
          above the pages covers the top of the box exactly as a fixed bar covers
          the top of the screen. Both are read rather than asked for, so one that
          grows, shrinks or unmounts mid-travel is followed without anything
-         being told. What the group cannot know is only where it itself stands,
-         and that is the measured half. */
+         being told.
+
+         Read live, though, they describe the state ARRIVING and nothing else,
+         so the cut is taken at the smaller of that and the band the state
+         being left kept free (--navi-transition-old-band-*, photographed while
+         both still existed). Furniture standing in BOTH states is the frame:
+         the pages move behind it and are cut at it. Furniture standing in one
+         of them is part of what changes, and cutting the page being left at a
+         bar it never had shows its own header being sliced instead of
+         leaving. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) +
-          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
+        min(
+            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)
+          ) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) +
-          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
+        min(
+            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)
+          ) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) +
-          var(--navi-transition-cover-bottom) - 100dvh
+          min(
+            var(--navi-safe-area-inset-bottom) +
+              var(--navi-transition-cover-bottom),
+            var(--navi-transition-old-band-bottom)
+          ) -
+          100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) +
-          var(--navi-transition-cover-right) - 100dvw
+          min(
+            var(--navi-safe-area-inset-right) +
+              var(--navi-transition-cover-right),
+            var(--navi-transition-old-band-right)
+          ) -
+          100dvw
       );
       clip-path: inset(
         var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
@@ -602,9 +646,10 @@ export const RouteTravel = ({
       document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
     }
     pageAskedForRef.current = page;
-    // The box as it stands before anything moves: rendering is held, so this is
-    // still the page being left (see transition_window.js).
-    const rectBefore = elementRef.current.getBoundingClientRect();
+    // The box as it stands before anything moves, and the band the furniture
+    // around it leaves free: rendering is held, so both are still the page
+    // being left (see transition_window.js).
+    const stateBefore = measureTransitionWindowState(elementRef.current);
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = takeoverRoutingRenderingHold();
@@ -648,7 +693,7 @@ export const RouteTravel = ({
       // which is what the box is measured through: the two states are at the
       // same place in the layout without being at the same place in the window
       // (see transition_window.js).
-      holdTransitionWindow(travel, elementRef.current, rectBefore);
+      holdTransitionWindow(travel, elementRef.current, stateBefore);
     });
     travel.viewTransition = viewTransition;
     if (scrub) {

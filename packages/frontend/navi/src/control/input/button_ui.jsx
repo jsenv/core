@@ -89,7 +89,11 @@ const css = /* css */ `
       --button-color-disabled: var(--button-color-readonly);
 
       /* Here to be easy to override */
-      display: inline-block; /* So box css can override when wanting to put button inline flex */
+      /* Layered, this one and the three below: display so box.jsx's unlayered
+         [navi-box-flow] can put the button inline-flex, the font and the line
+         so an app's own button typography wins without having to go through
+         the --button-* variables. */
+      display: inline-block;
       font-size: var(--button-font-size);
       font-family: var(--button-font-family);
       /* A form control comes with a line of its own from the browser, and that

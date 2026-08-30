@@ -39,27 +39,33 @@ const css = /* css */ `
       border-radius: 50%;
     }
 
+    /* The svg takes the whole square and the glyph keeps its share of it
+       inside the viewBox (see CALLOUT_STATUS_GLYPH_VIEWBOX). Sized as a
+       fraction of the square instead, the svg box lands on a fractional
+       device pixel and the rasteriser snaps the glyph a pixel off centre —
+       visible on a small badge, where the glyph is only a few pixels wide. */
     svg {
-      width: auto;
-      height: 55%;
+      width: 100%;
+      height: 100%;
     }
   }
-  /* Inside an <Icon>, the icon box is the size: fill it. The glyph keeps its
-     own share of it — the Icon's rule sizing any svg it holds to the whole
-     box is for an svg that IS the icon, and this one sits in a square. */
+  /* Inside an <Icon>, the icon box is the size: fill it. */
   .navi_icon > .navi_callout_status_icon {
     width: 100%;
     height: 100%;
   }
-  .navi_icon[data-icon-char] .navi_callout_status_icon svg {
-    width: auto;
-    height: 55%;
-  }
 `;
 
-export const CALLOUT_STATUS_GLYPH_VIEWBOX = "0 0 125 300";
+/**
+ * The "!" on a square, viewBox and path both. The box is square and holds the
+ * glyph's margin: the ink is 298 of 540 units tall (55%), centered. Drawn this
+ * way rather than tight around the ink so whoever shows it can give the svg the
+ * whole square — the glyph is then placed by the vector rasteriser, which has
+ * no device pixel grid to miss, at any square size down to a fractional one.
+ */
+export const CALLOUT_STATUS_GLYPH_VIEWBOX = "0 0 540 540";
 export const CALLOUT_STATUS_GLYPH_PATH =
-  "m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z";
+  "m232.5,121 8,196h59l8-196zm36.5,224a37,37 0 1,0 2,0z";
 
 /**
  * @type {import("preact").FunctionComponent<{

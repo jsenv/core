@@ -829,7 +829,13 @@ const DialogLocal = (props) => {
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
-      <div className="navi_dialog_clip_wrapper">
+      <div
+        className="navi_dialog_clip_wrapper"
+        // Out of flow like the dialog it holds — see the dialog's own
+        // contentProps for what reads the marker.
+        // eslint-disable-next-line react/no-unknown-property
+        navi-out-of-flow=""
+      >
         <Box {...contentProps} />
       </div>
     </>
@@ -1559,6 +1565,9 @@ const useDialogProps = (props) => {
   // real element we render ourselves.
   Object.assign(backdropProps, {
     "ref": backdropRef,
+    // Out of flow like the popup it belongs to — see the content element's own
+    // note for what the marker is read by.
+    "navi-out-of-flow": "",
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
     // Recomputed fresh on every render from openController.opened (not
@@ -1632,6 +1641,13 @@ const useDialogProps = (props) => {
       onNaviCommand(e);
       rest.onnavi_command?.(e);
     },
+    // Not a child on the line of whatever holds it: a popup renders inside its
+    // opener's own subtree, so a Dialog written next to the control that opens it
+    // is a child of that control's own parent. A Group frames the children on
+    // its line and this is not one of them — it is in the top layer, or
+    // absolutely placed by its own code — so it says so once, here (group.jsx
+    // reads this attribute to tell a member from anything else on its line).
+    "navi-out-of-flow": "",
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed

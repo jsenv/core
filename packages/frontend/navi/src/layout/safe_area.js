@@ -32,7 +32,37 @@
  */
 
 export const SAFE_AREA_CSS = /* css */ `
+  /* Declared as lengths so that they COMPUTE to one: an unregistered custom
+     property keeps the calc() it was written as, and the sum below is then a
+     string no one can read back. Reading it off the computed style — which a
+     route transition does, to keep the band the page being left had (see
+     nav/transition_window.js) — only works for a registered property. */
+  @property --navi-safe-area-inset-top {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-safe-area-inset-right {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-safe-area-inset-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-safe-area-inset-left {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+
   @layer navi {
+    /* Layered whole, rules included: the two rules below are offers, not
+       structure. [data-navi-safe-area] is an attribute the app puts on its own
+       scroller, so the app's own padding on that element has to win over what
+       navi suggests for it. */
     :root {
       /* The room each kind of furniture takes, declared here at zero and
          written by whoever takes it. A slot rather than a value: the sum below

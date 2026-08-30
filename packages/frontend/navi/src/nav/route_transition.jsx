@@ -78,7 +78,13 @@ import {
   releaseTransitionDestination,
 } from "./transition_destination.js";
 import {
+  FURNITURE_NAME_PREFIX,
+  nameTransitionFurniture,
+  releaseTransitionFurniture,
+} from "./transition_furniture.js";
+import {
   holdTransitionWindow,
+  measureTransitionWindowState,
   releaseTransitionWindow,
   TRANSITION_WINDOW_CSS,
 } from "./transition_window.js";
@@ -155,18 +161,37 @@ const css = /* css */ `
      the document animates, and the document belongs to the application the
      rest of the time. */
   :root[data-navi-route-transition] {
-    /* With an area marked, the page AROUND it is not taken as a picture — so
-       exactly one of the two names below exists at a time, and the movements
-       can be written once for both. It is also what a fixed bar wants: a
-       captured element is not painted where it stands and cannot be pointed
-       at either, so a bar photographed with the document is dead for the
-       length of every transition. Left live, it answers as it always did, and
-       nothing shows through where the pages are — the two pictures cover the
-       area's rectangle between them at every moment. Anything around that must
-       ANIMATE rather than stand still gets a view-transition-name of its own,
-       and the browser moves it on the same clock. */
+    /* With an area marked, the page AROUND it is not taken as one picture —
+       so exactly one of the two names below exists at a time, and the
+       movements can be written once for both. It is also the only way the
+       furniture can take part in the movement: photographed with the whole
+       document it is one picture the size of the screen, and a bar can be
+       neither held where it stands nor moved with the page it belongs to
+       inside it. Each bar is photographed on its own instead (see
+       transition_furniture.js), and nothing shows through where the pages are
+       — their two pictures cover the area's rectangle between them at every
+       moment. */
     &[data-navi-route-transition-target="area"] {
       view-transition-name: none;
+
+      /* The pages travel OVER the furniture. Everything else captured while an
+         area is marked is a fixed bar wearing a name of navi's own for the
+         length of the movement (transition_furniture.js): a bar the two states
+         share is one group the browser holds where it stands, and a bar only
+         one of them has stands there too, with no counterpart to move to. Both
+         belong under the pages — that is what lets a page come over a bar that
+         is going away, and a page leaving uncover the bar arriving behind it.
+
+         Ordered here rather than left to the DOM, which decides it otherwise:
+         where an application puts its bars relative to the area is its own
+         business. A name and \`*\` weigh the same, so the two rules are read in
+         the order they are written. */
+      &::view-transition-group(*) {
+        z-index: 0;
+      }
+      &::view-transition-group(navi-route-transition) {
+        z-index: 1;
+      }
     }
 
     &::view-transition-old(root),
@@ -195,11 +220,22 @@ const css = /* css */ `
       overflow: clip;
     }
     &::view-transition-group(navi-route-transition) {
-      /* Held still for the whole transition, at the taller of the two states,
-         and standing where the area stands (see transition_window.js). Held by
-         dropping the group's animation rather than by winning against it with
-         !important — which also drops its position animation, fine for an area
-         that stays in the same place from one page to the next. */
+      /* Held still for the whole transition, at the rectangle that contains
+         both states (see transition_window.js). Held by dropping the group's
+         animation rather than by winning against it with !important. The
+         browser puts the group where the ARRIVING area stands, so it is moved
+         from there back to the window's own corner. */
+      top: calc(
+        var(--navi-transition-window-top) - var(
+            --navi-transition-window-new-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-left) - var(
+            --navi-transition-window-new-left
+          )
+      );
+      width: var(--navi-transition-window-width);
       height: var(--navi-transition-window-height);
       animation-name: none;
 
@@ -218,31 +254,51 @@ const css = /* css */ `
          the pages covers the top of the area exactly as a fixed bar covers the
          top of the screen. Both are read rather than asked for, so one that
          grows, shrinks or unmounts mid-transition is followed without anything
-         being told. What the window cannot know is only where it itself stands,
-         and that is the measured half. */
+         being told.
+
+         Read live, though, they describe the state ARRIVING and nothing else,
+         so the cut is taken at the smaller of that and the band the state
+         being left kept free (--navi-transition-old-band-*, photographed while
+         both still existed). Furniture standing in BOTH states is the frame:
+         the pages move behind it and are cut at it. Furniture standing in one
+         of them is part of what changes, and cutting the page being left at a
+         bar it never had shows its own header being sliced instead of
+         leaving. */
       --navi-route-transition-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) +
-          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
+        min(
+            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)
+          ) - var(--navi-transition-window-top)
       );
       --navi-route-transition-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) +
-          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
+        min(
+            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)
+          ) - var(--navi-transition-window-left)
       );
       --navi-route-transition-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) +
-          var(--navi-transition-cover-bottom) - 100dvh
+          min(
+            var(--navi-safe-area-inset-bottom) +
+              var(--navi-transition-cover-bottom),
+            var(--navi-transition-old-band-bottom)
+          ) -
+          100dvh
       );
       --navi-route-transition-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) +
-          var(--navi-transition-cover-right) - 100dvw
+          min(
+            var(--navi-safe-area-inset-right) +
+              var(--navi-transition-cover-right),
+            var(--navi-transition-old-band-right)
+          ) -
+          100dvw
       );
       clip-path: inset(
         var(--navi-route-transition-clip-top)
@@ -269,10 +325,12 @@ const css = /* css */ `
           ) - var(--navi-route-transition-clip-bottom)
       );
     }
+    /* Each picture at the corner its own state stood at, which is not the
+       window's: the window contains both states, and a state that is scrolled
+       — or that stands under a bar the other one does not have — is somewhere
+       inside it (see transition_window.js). Offset here rather than by
+       \`translate\`, which the movement itself uses. */
     &::view-transition-old(navi-route-transition) {
-      /* Where the area WAS on screen, which is not where the window stands
-         (see transition_window.js). Offset here rather than by \`translate\`,
-         which the movement itself uses. */
       top: calc(
         var(--navi-transition-window-old-top) - var(
             --navi-transition-window-top
@@ -280,6 +338,18 @@ const css = /* css */ `
       );
       left: calc(
         var(--navi-transition-window-old-left) - var(
+            --navi-transition-window-left
+          )
+      );
+    }
+    &::view-transition-new(navi-route-transition) {
+      top: calc(
+        var(--navi-transition-window-new-top) - var(
+            --navi-transition-window-top
+          )
+      );
+      left: calc(
+        var(--navi-transition-window-new-left) - var(
             --navi-transition-window-left
           )
       );
@@ -932,12 +1002,17 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     );
   }
   const areaElement = areaElements.length > 0 ? areaElements[0] : null;
-  // The area as it stands before anything moves: rendering is held, so this is
-  // still the page being left (see holdAreaGeometry).
-  let areaRectBefore = null;
+  // The area as it stands before anything moves, and the band the furniture
+  // around it leaves free: rendering is held, so both are still the page being
+  // left (see transition_window.js).
+  let areaStateBefore = null;
   if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
-    areaRectBefore = areaElement.getBoundingClientRect();
+    // Said before the picture is taken, like every name (see
+    // transition_furniture.js): what the bars are wearing when the transition
+    // starts is what the browser photographs.
+    nameTransitionFurniture(transition, areaElement);
+    areaStateBefore = measureTransitionWindowState(areaElement);
   }
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
@@ -1021,7 +1096,11 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     // The page arriving is in the DOM and the transition has not started
     // playing: the one moment both states of the area can be known.
     if (areaElement) {
-      holdTransitionWindow(transition, areaElement, areaRectBefore);
+      // A bar the arriving state mounted has to wear its name before the
+      // second picture is taken; one that survived the render keeps the name
+      // it already has, which is what pairs its two pictures.
+      nameTransitionFurniture(transition, areaElement);
+      holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
   });
   const end = () => {
@@ -1039,6 +1118,7 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
       documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
       releaseTransitionWindow(transition);
       releaseTransitionDestination(transition);
+      releaseTransitionFurniture(transition);
       if (restoreDuration) {
         restoreDuration();
       }
@@ -1084,7 +1164,11 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
   }
   let escapedName = null;
   for (const name of capturedNames) {
-    if (name === "root" || name === AREA_NAME) {
+    if (
+      name === "root" ||
+      name === AREA_NAME ||
+      name.startsWith(FURNITURE_NAME_PREFIX)
+    ) {
       continue;
     }
     escapedName = name;
@@ -1165,13 +1249,37 @@ const pageIsCurrent = ({ route, params }) => {
 };
 // The FIRST page that answers, and every page read all the same: a page that
 // is not the current one today is the one that must wake the reader tomorrow.
+//
+// Two of them answering at once is the one thing this reading cannot get right.
+// Relations are declared one pair at a time, so the row read here is the order
+// they happened to be written in — an order nothing in the application shows —
+// and the movement then played is the one written for whichever page was
+// mentioned first. A movement is a movement: it looks deliberate, which is why
+// the overlap is said out loud here, where both pages are known.
 const currentPageIndex = (pages) => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
     const isCurrent = pageIsCurrent(pages[i]);
-    if (isCurrent && currentIndex === -1) {
-      currentIndex = i;
+    if (!isCurrent) {
+      continue;
     }
+    if (currentIndex === -1) {
+      currentIndex = i;
+      continue;
+    }
+    warnPagesBothCurrent(pages[currentIndex], pages[i]);
   }
   return currentIndex;
 };
+
+const warnPagesBothCurrent = (pageKept, pageIgnored) => {
+  const kept = describePage(pageKept);
+  const ignored = describePage(pageIgnored);
+  warnOnce(
+    `both-current:${kept}|${ignored}`,
+    `${kept} and ${ignored} are both current on "${window.location.pathname}": two relations claim this url. A relation is resolved through which page is current, so the one mentioned first in a defineRouteTransition call wins — ${kept} — and its movement plays whichever of the two the application is really showing. Make one of them decline this url with a param constraint (see navigation.md, "Which values a param accepts").`,
+  );
+};
+
+const describePage = ({ route, params }) =>
+  params ? `${route} with ${JSON.stringify(params)}` : `${route}`;

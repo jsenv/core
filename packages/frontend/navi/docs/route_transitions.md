@@ -188,12 +188,28 @@ taken. Without that wait the picture keeps only the band the browser had
 already painted at the new offset, and the movement carries a fragment of the
 page instead of the page.
 
-With an area marked, the page around it is left LIVE rather than photographed:
-the bars keep answering the pointer for the whole movement, which a captured
-element cannot do. The flip side is that anything around the area which must
-_animate_ rather than stand still — a title that changes with the route — needs
-a `view-transition-name` of its own; named, the browser moves it on the same
-clock as the pages.
+With an area marked, each **fixed bar around it is photographed on its own** for
+the length of the movement, and whether it is the frame or part of what changes
+is derived rather than declared — it is a fact about the pair of states, not
+about the bar:
+
+- a bar **both states have** is one element, so its two pictures pair into one
+  group and it holds where it stands. The pages move behind it, and a bar whose
+  content changes with the route cross-fades without being named by hand.
+- a bar **one state has** meets no counterpart. It holds where it was
+  photographed while the pages move over it — covered as a page comes over it,
+  uncovered as one leaves — instead of appearing or vanishing in a frame. A page
+  that takes the whole screen (a full-screen wizard whose banner is its own
+  header) is this case, on the way in and on the way back.
+
+The pages are ordered above the bars for that reason. The price of being
+photographed is that a bar cannot answer the pointer for those few hundred
+milliseconds, which is what a route transition wants anyway: both pages are
+pictures too, and a press landing on either would be an accident. `RouteTravel`
+is the opposite case — a finger is on the box — and leaves the bars live.
+
+A bar the application names itself keeps its name and its own movement: navi
+names only what is unnamed.
 
 It is a `Box`, so the layout the pages need is written on it directly (`flex`,
 `className`, `style`, …). An app that already has an element holding its pages
@@ -236,6 +252,41 @@ its two sides leaves the other on the browser's fade, and a fade needs its two
 half-transparent pictures to add up rather than cover each other
 (`mix-blend-mode: plus-lighter`, as the shipped `zoom` and the demo's `spin`
 both do). A movement where both pages move wants what navi poses.
+
+## Two routes matching one url
+
+A relation is written between two pages, and it is resolved through **which page
+is current** — not through the url, and not through the branch the router
+renders. So a url claimed by two of the routes named in relations makes the
+movement depend on the order the relations were declared in:
+
+```js
+const ALERTS_ROUTE = route("/me/alerts");
+const ALERT_CREATE_ROUTE = route("/me/alerts/create");
+const ALERT_DETAIL_ROUTE = route("/me/alerts/:alertId"); // "create" is an alertId
+
+defineRouteTransition(ALERTS_ROUTE, ALERT_DETAIL_ROUTE, "slide-x");
+defineRouteTransition(ALERTS_ROUTE, ALERT_CREATE_ROUTE, "cover-y");
+```
+
+On `/me/alerts/create` both detail and create are current; the page mentioned
+first wins, and the composer slides in from the right instead of covering. It is
+the one place where declaration order is load-bearing, and nothing on screen says
+so — a wrong movement is still a movement, and reads as a deliberate choice.
+
+The fix is on the route, not on the relation: make one of them decline the url
+(see [navigation.md](./navigation.md#which-values-a-param-accepts)).
+
+```js
+const ALERT_DETAIL_ROUTE = route("/me/alerts/:alertId", {
+  params: { alertId: (alertId) => alertId !== "create" },
+});
+```
+
+Which is worth doing whether or not a transition is involved: two routes matching
+one url is also two route actions running, and two branches competing for the
+`<Route>` the router renders. Left in place, navi says it once in the console,
+naming both routes.
 
 ## Route transitions and `RouteTravel` — one pair, one system
 

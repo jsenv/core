@@ -22,70 +22,95 @@ const css = /* css */ `
          controls answer it, an app never writes it. Whoever answers it also
          stops it (see .navi_button_content in button_ui.jsx), so a button
          deeper in — the clear cross in a picker's slot, the Save of a form in
-         a popup the member opens — never mistakes itself for the seam. */
+         a popup the member opens — never mistakes itself for the seam.
+       Both are asked of members only (see just below for what one is): the
+       second one alone being reset by a popup would leave the first one
+       reaching it. */
 
-    /* Members overlap by the width of one border, so along each seam one of the
-       two borders covers the other. Whichever member the user is on has to be
-       the one on top: it is the one whose border changes color, and the one
-       whose focus ring goes all the way around — half a ring, cut by the
-       neighbour painted after it, is what this avoids. z-index needs a
-       positioned element to mean anything, hence position: relative.
-       Deliberately not paired with isolation: isolate — a stacking context
-       here would also trap the popup of a picker held in the group, which
-       counts on its own band reaching the whole page. What keeps these
-       values from escaping is instead that everything they could reach is a
-       band above them (see navi_z_indexes.js). */
-    > *:hover,
-    > *[data-hover] {
-      position: relative;
-      z-index: var(--navi-z-index-control-hovered);
-    }
-    /* Three spellings for one thing — the member showing a focus ring. Some
-       controls take the focus on their own root (a button); others wrap a real
-       input and draw the ring on their frame while the keyboard is held
-       somewhere inside (a picker, a spin). The ring is what must not be sliced,
-       so the member holding it is raised whether it wears the state itself or
-       merely contains it. */
-    > *:focus-visible,
-    > *[data-focus-visible],
-    > *:has([data-focus-visible]) {
-      position: relative;
-      z-index: var(--navi-z-index-control-focused);
-    }
-    /* The member holding something open. Neither of the two above covers it:
-       the click that opened the popup gives no focus ring, the focus itself
-       left for the popup's content, and the pointer is free to travel to a
-       neighbour — yet the member keeps the border color its open state gives
-       it, and that border is exactly what the neighbour painted after it
-       slices. Read as a state, not as a pseudo-class: :active only lasts as
-       long as the button is held down, and while it is held :hover is true
-       anyway, so it would add nothing here.
+    /* What the group counts as a member — a child on its line, spelled
+       *:not([navi-out-of-flow]) here and at every seam below. Not every child
+       is one. A popup renders inside its opener's own subtree — a Dialog
+       written next to the Button that opens it lands as a child of the group
+       itself, and brings its backdrop (and, for layer="local", its clip
+       wrapper) along; a callout anchored on a <button> is mounted in that
+       button's parent, which is the group too. All of them are out of flow:
+       none is ever at a seam, and none is between two members either. Counted
+       as members they take a corner meant for a real one — a dialog in the
+       middle of a row comes out square — and, worse, they move the real ones:
+       a row of one button plus the dialog it opens has no :only-child left, so
+       the lone button squares the side it joins nothing on. Read off a marker
+       the elements set themselves (see popover.jsx, dialog.jsx, callout.js)
+       rather than named class by class here: a layout component knowing the
+       private classes of every component that can open something is exactly
+       what the corner claims above exist to avoid. */
+    > *:not([navi-out-of-flow]) {
+      /* Members overlap by the width of one border, so along each seam one of
+         the two borders covers the other. Whichever member the user is on has
+         to be the one on top: it is the one whose border changes color, and
+         the one whose focus ring goes all the way around — half a ring, cut by
+         the neighbour painted after it, is what this avoids. z-index needs a
+         positioned element to mean anything, hence position: relative.
+         Deliberately not paired with isolation: isolate — a stacking context
+         here would also trap the popup of a picker held in the group, which
+         counts on its own band reaching the whole page. What keeps these
+         values from escaping is instead that everything they could reach is a
+         band above them (see navi_z_indexes.js). */
+      &:hover,
+      &[data-hover] {
+        position: relative;
+        z-index: var(--navi-z-index-control-hovered);
+      }
 
-       :has, for the same reason as focus-visible above — the group member can
-       be an enrobage around the control that expands — and reaching a popup
-       held inline (a Popover with layer="local" renders inside its member)
-       costs nothing: that popup only reads expanded while its own member is,
-       which is the member this raises. */
-    > *[aria-expanded="true"],
-    > *:has([aria-expanded="true"]) {
-      position: relative;
-      z-index: var(--navi-z-index-control-expanded);
+      /* Three spellings for one thing — the member showing a focus ring. Some
+         controls take the focus on their own root (a button); others wrap a
+         real input and draw the ring on their frame while the keyboard is held
+         somewhere inside (a picker, a spin). The ring is what must not be
+         sliced, so the member holding it is raised whether it wears the state
+         itself or merely contains it. */
+      &:focus-visible,
+      &[data-focus-visible],
+      &:has([data-focus-visible]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-focused);
+      }
+
+      /* The member holding something open. Neither of the two above covers it:
+         the click that opened the popup gives no focus ring, the focus itself
+         left for the popup's content, and the pointer is free to travel to a
+         neighbour — yet the member keeps the border color its open state gives
+         it, and that border is exactly what the neighbour painted after it
+         slices. Read as a state, not as a pseudo-class: :active only lasts as
+         long as the button is held down, and while it is held :hover is true
+         anyway, so it would add nothing here.
+
+         :has, for the same reason as focus-visible above — the group member
+         can be an enrobage around the control that expands — and reaching a
+         popup held inline (a Popover with layer="local" renders inside its
+         member) costs nothing: that popup only reads expanded while its own
+         member is, which is the member this raises. A popup that is a child of
+         the group itself wears aria-expanded too, and is not a member:
+         position/z-index here would fight the placement it does its own way. */
+      &[aria-expanded="true"],
+      &:has([aria-expanded="true"]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-expanded);
+      }
     }
 
-    /* Horizontal (default): Cumulative margin for border overlap */
+    /* Where two members meet, stated as the relationship itself rather than as
+       positions in the child list: the corner a member loses is the one facing
+       a member, and the child list holds more than members (see above).
+       A group of one — or of one member and the popup it opens — matches
+       neither rule and keeps the radius it has on its own. */
+
+    /* Horizontal (default) */
     &:not([data-vertical]) {
-      > *:not(:first-child) {
+      /* A member with a member before it: its left corners are on that seam,
+         and it is the one pulled back so the two borders there become one
+         line — same relationship, so the same rule. */
+      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
         margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        --x-corner-top-right-radius: 0;
-        --x-corner-bottom-right-radius: 0;
 
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-      }
-
-      > *:last-child:not(:only-child) {
         --x-corner-top-left-radius: 0;
         --x-corner-bottom-left-radius: 0;
 
@@ -93,30 +118,23 @@ const css = /* css */ `
         border-bottom-left-radius: 0 !important;
       }
 
-      > *:not(:first-child):not(:last-child) {
-        --x-corner-top-left-radius: 0;
+      /* A member with a member after it: its right corners are on that seam. */
+      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
         --x-corner-top-right-radius: 0;
         --x-corner-bottom-right-radius: 0;
-        --x-corner-bottom-left-radius: 0;
 
-        border-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
       }
     }
 
-    /* Vertical: Cumulative margin for border overlap */
+    /* Vertical */
     &[data-vertical] {
-      > *:not(:first-child) {
+      /* A member with a member above it — see the horizontal block's own
+         comments, this is the same thing turned a quarter. */
+      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
         margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
-      }
-      > *:first-child:not(:only-child) {
-        --x-corner-bottom-right-radius: 0;
-        --x-corner-bottom-left-radius: 0;
 
-        border-bottom-right-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-      }
-
-      > *:last-child:not(:only-child) {
         --x-corner-top-left-radius: 0;
         --x-corner-top-right-radius: 0;
 
@@ -124,13 +142,13 @@ const css = /* css */ `
         border-top-right-radius: 0 !important;
       }
 
-      > *:not(:first-child):not(:last-child) {
-        --x-corner-top-left-radius: 0;
-        --x-corner-top-right-radius: 0;
+      /* A member with a member below it. */
+      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
         --x-corner-bottom-right-radius: 0;
         --x-corner-bottom-left-radius: 0;
 
-        border-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
       }
     }
   }

@@ -4,7 +4,7 @@
 
 Navi components are styled through a combination of CSS custom properties (variables) and scoped CSS rules. The architecture is designed so that:
 
-1. **Navi wins by default** — component rules are not placed inside `@layer`, so they beat any layered global styles.
+1. **Navi wins by default** — the rules that paint and lay a component out are not placed inside `@layer`, so they beat any layered global style. The exception is deliberate and always says so in a comment: a rule navi is happy to hand back sits in `@layer navi` next to the defaults — see [The exception](#the-exception-a-rule-navi-offers-back).
 2. **Defaults are easy to override** — default values for CSS variables are declared inside `@layer navi`, which has the lowest possible specificity, making them trivially overridable from outside.
 3. **The preferred override surface is component props** — props translate to inline styles or data attributes, not class names.
 
@@ -14,14 +14,14 @@ Navi components are styled through a combination of CSS custom properties (varia
 
 ```
 @layer navi {
-  /* CSS variable defaults only */
+  /* CSS variable defaults — and, when navi says so, a rule it offers back */
   .navi_button {
     --button-height: 32px;
     --button-padding-x: 12px;
   }
 }
 
-/* Actual rules — outside any layer */
+/* The rules that paint and lay out — outside any layer */
 .navi_button {
   height: var(--button-height);
   padding-inline: var(--button-padding-x);
@@ -48,6 +48,37 @@ Targeting the same element is not a detail — see [`--navi-*` vs `--component-*
 Navi components often need to enforce specific values that global resets or utility libraries may clobber — for example `box-sizing: content-box`, `white-space: nowrap`, or `display: inline-flex`. If these rules were inside `@layer navi`, any unlayered global style (e.g. `* { box-sizing: border-box }`) would silently override them, breaking component layout.
 
 By keeping rules outside any layer, Navi wins by default without resorting to `!important`. An app that genuinely needs to change a structural rule should do so through the CSS variable surface, not by overriding the rule directly.
+
+### The exception: a rule navi offers back
+
+Some rules are not structure — they are what navi puts there in the absence of
+anything else, and an app (or another navi component) is meant to win over them
+plainly. Those go **inside** `@layer navi`, rules and all, and each one carries a
+comment naming who is supposed to win:
+
+- `[navi-aspect-ratio]`'s `min-width/min-height` and `.navi_icon`'s `display`
+  (`box.jsx`, `text.jsx`), so box.jsx's own unlayered `[navi-box-flow]`
+  attributes can still change the display;
+- the text properties a surface takes back from its opener
+  (`surface_text_css.js`), so an app that wants one of them back says so;
+- the `[data-url-target]` mark, the document's `line-height`, a Field's spacing
+  and a Label's dimmed color — appearance with no structural role;
+- `[data-navi-safe-area]`'s padding (`safe_area.js`), which is a suggestion for
+  an element the **app** owns.
+
+So the layer is readable from the outside as a statement rather than an
+accident:
+
+| In `@layer navi`                                 | Unlayered                        |
+| ------------------------------------------------ | -------------------------------- |
+| every CSS variable default                       | the rules that paint and lay out |
+| a rule navi offers back (commented, on the rule) | navi's own structure             |
+
+Either way an app never has to inflate a selector: a layered rule loses to any
+unlayered rule of the app's, and an unlayered one is reached through the
+variable that feeds it — `--picker-border-radius` for the picker's corners,
+`--navi-control-border-radius` for every control's, both declared in the layer
+and both overridable from a single-class rule.
 
 ---
 

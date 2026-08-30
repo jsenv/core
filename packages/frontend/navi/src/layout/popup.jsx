@@ -40,7 +40,10 @@ const css = /* css */ `
          opens it (a Picker holds its popup children inside its root), and
          line-height inherits as computed: the control's line is a length
          (--navi-control-line-height), and inherited it would arrive as that
-         control's pixels — a 12px caption on an 18px picker's 23px rows. */
+         control's pixels — a 12px caption on an 18px picker's 23px rows.
+         Layered, like the dialog padding below: both are what navi puts there
+         in the absence of anything else, and an app writing its own line or
+         its own popup padding is meant to win. */
       line-height: var(--navi-line-height);
 
       &.navi_popover {

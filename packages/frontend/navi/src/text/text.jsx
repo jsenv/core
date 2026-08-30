@@ -15,6 +15,9 @@ import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 const css = /* css */ `
   @layer navi {
+    /* Same reason as .navi_icon below: the display here is a starting point,
+       and box.jsx's unlayered [navi-box-flow] attributes have to win over it.
+       The rest is appearance a caller may want back. */
     .navi_text {
       &[data-skeleton] {
         border-radius: 0.2em;
