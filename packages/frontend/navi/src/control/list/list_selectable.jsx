@@ -261,7 +261,13 @@ const ListSelectable = (props) => {
       ? props.value
       : props.defaultValue;
   }
-  const aggregateChildStates = (children) => {
+  // `fallbackState` is the empty of the shape the list declared below
+  // (`stateType`): `[]` for a multiple list, nothing for a single one. Taking
+  // it is what lets an emptied list say "empty" — `undefined` is the word for
+  // "unset", and a bound stateSignal reads that as "nothing decided here, go
+  // back to the default" (see docs/control_value.md), which is how a list
+  // emptied down to its last row puts that row back on reload.
+  const aggregateChildStates = (children, fallbackState) => {
     const kept = selectionRef.current;
     if (multiple) {
       const drawnValues = new Set(children.map((child) => child.props.value));
@@ -273,7 +279,7 @@ const ListSelectable = (props) => {
           stillSelected.push(child.uiState);
         }
       }
-      const values = stillSelected.length === 0 ? undefined : stillSelected;
+      const values = stillSelected.length === 0 ? fallbackState : stillSelected;
       selectionRef.current = values;
       return values;
     }

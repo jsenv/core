@@ -91,6 +91,13 @@ const ListVirtualContext = createContext(null);
 // that returning a component of one's own — instead of a bare <List.Item> —
 // works the same way.
 const ListRowContext = createContext(null);
+// The slot a child of the list stands in — which one it is, and where it sits
+// among its siblings (see ListDeclaredChildren). A row takes its place in the
+// collection by slot, and hears through this context that its slot moved: a
+// context subscriber is re-rendered even when preact skipped the component
+// that holds it, which is what lets a row nobody rebuilt follow the list all
+// the same.
+const ListSlotContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
@@ -1146,24 +1153,11 @@ const ListFirstResolver = (props) => {
   props.ref = props.ref || refDefault;
   const idDefault = useId();
   props.id = props.id || idDefault;
-  // A new pass every time the caller walks the children: they are about to
-  // say again, in order, which rows of the collection they stand for. Decided
-  // here, on the children as the caller gave them. Further down the chain a
-  // resolver re-rendering on its own hands the rows down inside a vnode of its
-  // own (ListSelectable wraps them in the group's contexts) — but the rows are
-  // the very vnodes preact already holds, and it skips them: nothing is said
-  // again, so nothing may be asked again either (see createListVirtual).
   const virtualRef = useRef(null);
   if (!virtualRef.current) {
     virtualRef.current = createListVirtual();
   }
-  const virtual = virtualRef.current;
-  const childrenPreviousRef = useRef(undefined);
-  if (childrenPreviousRef.current !== props.children) {
-    childrenPreviousRef.current = props.children;
-    virtual.openPass();
-  }
-  props.virtual = virtual;
+  props.virtual = virtualRef.current;
 
   return <Next {...props} />;
 };
@@ -3008,7 +3002,7 @@ const UnorderedList = ({
                 <ListVirtualContext.Provider value={virtual}>
                   <ListRowContext.Provider value={null}>
                     <ListColumnsContext.Provider value={columns || null}>
-                      {children}
+                      <ListDeclaredChildren>{children}</ListDeclaredChildren>
                     </ListColumnsContext.Provider>
                   </ListRowContext.Provider>
                 </ListVirtualContext.Provider>
@@ -3197,6 +3191,9 @@ const ListItemUI = (props) => {
   // registered the row, decided it is inside the render window, and placed its
   // separator. All that is left here is to draw it.
   const row = useContext(ListRowContext);
+  // Where this row was declared, when it was declared one by one (see
+  // ListDeclaredChildren).
+  const slot = useContext(ListSlotContext);
   // There is no standalone match/matchScore/highlight prop — participation
   // in a matching system (search, filter…) only goes through `matchInfo`
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
@@ -3220,12 +3217,22 @@ const ListItemUI = (props) => {
     }
   }
   // Where a row sits is where it was declared, full stop: a list is written in
-  // the order it reads. Nothing to pass, nothing to keep in sync — a search
-  // that reorders rows reorders the rows it declares. A row drawn by a run
-  // already knows its place; the run gave it.
-  if (!row && !props.filtered) {
-    props.index = virtual.take(props.id, 1);
+  // the order it reads. Its slot is what says that — a search that reorders
+  // rows reorders the rows it declares, and the slots follow. A row drawn by a
+  // run already knows its place; the run gave it.
+  if (!row) {
+    if (props.filtered) {
+      virtual.drop(props.id);
+    } else {
+      props.index = virtual.take(props.id, 1, slot ? slot.id : props.id);
+    }
   }
+  const rowId = props.id;
+  useLayoutEffect(() => {
+    return () => {
+      virtual.drop(rowId);
+    };
+  }, []);
   // Every row that is drawn registers itself, whether it was declared one by
   // one or drawn by a run: what it says about itself (its value, whether it is
   // selected) is written where it is drawn, in one place.
@@ -3613,12 +3620,19 @@ List.Item = ListItem;
 // where each child's rows start.
 //
 // A child knows how many rows it stands for but not what was declared before
-// it, so the list hands out the places as its children render — in order, which
-// is the only thing needed to place them. A child re-rendering ON ITS OWN (its
-// own state changed, the list was not given its children again) keeps the
-// place it was given: nothing before it moved. Hence the pass — only the
-// caller walking the children again opens a new one (see ListFirstResolver),
-// and within a pass a child takes its place exactly once.
+// it, and it cannot deduce that from when it renders: a render is free to skip
+// it. A child that draws from signals and whose props are all referentially
+// === the previous ones does not render again (@preact/signals installs a
+// shouldComponentUpdate that says so), which is what any child nobody rebuilt
+// this frame is — and children numbered as they render would then slide up
+// into the place of the one that was skipped.
+//
+// So the places are read off the walk instead of off the renders: the list
+// names a slot for each of its children and declares them here, in order,
+// before any of them renders (see ListDeclaredChildren). A child then takes
+// its place BY SLOT and keeps it for as long as its slot stands — whether it
+// renders again or not — while a child whose slot the walk no longer names
+// loses its place in that same render, so nothing removed is ever counted.
 const createListVirtual = () => {
   const totalSignal = signal(0);
   // Bumped whenever a run takes in rows. The list itself has to hear about it:
@@ -3630,10 +3644,109 @@ const createListVirtual = () => {
   // an attribute: what is drawn is from before, and the app may want to say so
   // without taking anything away.
   const refreshingSignal = signal(0);
+  // Where the walk put each slot: the slot it lives in (a group walks its own
+  // rows, inside the slot the list gave the group) and its rank among the
+  // slots declared with it.
+  const slotById = new Map();
+  // What stands in a slot once it has rendered: the row, or the run of rows,
+  // that took the place, and how many rows of the collection it stands for.
+  const ownerById = new Map();
   const placeByOwner = new Map();
+  // The owners in the order their slots put them, and how many rows they stand
+  // for together: kept so that a child declared after all the others — a whole
+  // first render, and anything the list gains at its end — is placed without
+  // going over the others again.
+  const orderedOwnerIds = [];
+  let rowTotal = 0;
   const locatorByOwner = new Map();
-  let passId = 0;
-  let nextIndex = 0;
+  const pathCache = new Map();
+  // Tells two owners sharing a slot apart (several rows inside one child of
+  // the list), in the order they first took a place.
+  let sequence = 0;
+  let placesStale = false;
+
+  // Whatever the slot held is gone with it, and so is whatever its own walk
+  // declared inside it.
+  const dropSlot = (slotId) => {
+    slotById.delete(slotId);
+    for (const [ownerId, owner] of ownerById) {
+      if (owner.slotId === slotId) {
+        ownerById.delete(ownerId);
+        placeByOwner.delete(ownerId);
+      }
+    }
+    for (const [otherSlotId, slot] of slotById) {
+      if (slot.parentId === slotId) {
+        dropSlot(otherSlotId);
+      }
+    }
+  };
+  // Where a slot sits, said as the ranks of the slots it lives in, outermost
+  // first: comparing two of them keeps a group's rows inside their group and
+  // the groups where the list declared them.
+  const pathOf = (slotId) => {
+    const pathCached = pathCache.get(slotId);
+    if (pathCached) {
+      return pathCached;
+    }
+    const slot = slotById.get(slotId);
+    if (!slot) {
+      return null;
+    }
+    let path;
+    if (slot.parentId === null) {
+      path = [slot.order];
+    } else {
+      const parentPath = pathOf(slot.parentId);
+      path = parentPath === null ? [slot.order] : [...parentPath, slot.order];
+    }
+    pathCache.set(slotId, path);
+    return path;
+  };
+  // The places, all of them, from the order the slots are in. Done in one go
+  // rather than owner by owner: a place is a sum of what stands before it, so
+  // there is nothing to hand out one at a time — and nothing changes it but a
+  // slot moving or a child taking a different number of rows.
+  const refreshPlaces = () => {
+    placesStale = false;
+    const owners = [...ownerById.entries()];
+    owners.sort(([, leftOwner], [, rightOwner]) => {
+      const comparison = comparePath(
+        pathOf(leftOwner.slotId),
+        pathOf(rightOwner.slotId),
+      );
+      if (comparison !== 0) {
+        return comparison;
+      }
+      return leftOwner.sequence - rightOwner.sequence;
+    });
+    orderedOwnerIds.length = 0;
+    let index = 0;
+    for (const [ownerId, owner] of owners) {
+      orderedOwnerIds.push(ownerId);
+      placeByOwner.set(ownerId, index);
+      index += owner.rowCount;
+    }
+    rowTotal = index;
+    totalSignal.value = rowTotal;
+  };
+  // Whether nothing that has taken a place stands after this one.
+  const standsLast = (owner) => {
+    if (orderedOwnerIds.length === 0) {
+      return true;
+    }
+    const lastOwner = ownerById.get(
+      orderedOwnerIds[orderedOwnerIds.length - 1],
+    );
+    const comparison = comparePath(
+      pathOf(lastOwner.slotId),
+      pathOf(owner.slotId),
+    );
+    if (comparison !== 0) {
+      return comparison < 0;
+    }
+    return lastOwner.sequence < owner.sequence;
+  };
 
   const virtual = {
     totalSignal,
@@ -3655,14 +3768,38 @@ const createListVirtual = () => {
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
-    // Reopening the pass when the rows are not about to render again would
-    // empty the places without anyone refilling them: the next row to render
-    // on its own (an item being selected, a run following the window) would be
-    // handed the first place — drawing itself as the top of the list, its
-    // separator gone, and the one after it wearing a separator it should not.
-    openPass: () => {
-      passId++;
-      nextIndex = 0;
+    // The children a walk stands over, in order — said in one call, before any
+    // of them renders, so that what a child asks next is answered against the
+    // whole picture and not against the children that happened to render first.
+    declareSlots: (parentSlotId, slotIds) => {
+      const slotIdSet = new Set(slotIds);
+      for (const [slotId, slot] of slotById) {
+        if (slot.parentId === parentSlotId && !slotIdSet.has(slotId)) {
+          dropSlot(slotId);
+          pathCache.clear();
+          placesStale = true;
+        }
+      }
+      let order = 0;
+      for (const slotId of slotIds) {
+        const slot = slotById.get(slotId);
+        if (!slot) {
+          // A slot nothing stands in yet moves nobody: the child that takes it
+          // says so itself, when it renders.
+          slotById.set(slotId, { parentId: parentSlotId, order });
+        } else if (slot.order !== order) {
+          slot.order = order;
+          pathCache.clear();
+          placesStale = true;
+        }
+        order++;
+      }
+      // Now, rather than when the first child asks: the walk has just said
+      // where everything stands, so every place can be settled once instead of
+      // once per child.
+      if (placesStale) {
+        refreshPlaces();
+      }
     },
     // Whether any run of rows lives in this list: what makes a render window
     // mean anything (see List's renderBudget).
@@ -3683,19 +3820,140 @@ const createListVirtual = () => {
       }
       return null;
     },
-    take: (ownerId, rowCount, indexStart) => {
-      const placeTaken = placeByOwner.get(ownerId);
-      if (placeTaken && placeTaken.passId === passId) {
-        return placeTaken.index;
+    // The place the slot's rows start at. Asked again on every render of the
+    // child and answered with the same number for as long as nothing moved —
+    // and answered at all for a child that does not ask again, which is the
+    // point of taking by slot.
+    take: (ownerId, rowCount, slotId) => {
+      const previous = ownerById.get(ownerId);
+      if (
+        previous &&
+        previous.slotId === slotId &&
+        previous.rowCount === rowCount
+      ) {
+        if (placesStale) {
+          refreshPlaces();
+        }
+        return placeByOwner.get(ownerId);
       }
-      const index = indexStart === undefined ? nextIndex : indexStart;
-      placeByOwner.set(ownerId, { passId, index });
-      nextIndex = index + rowCount;
-      totalSignal.value = nextIndex;
-      return index;
+      const owner = {
+        slotId,
+        rowCount,
+        sequence: previous ? previous.sequence : sequence++,
+      };
+      ownerById.set(ownerId, owner);
+      if (!previous && !placesStale && standsLast(owner)) {
+        orderedOwnerIds.push(ownerId);
+        placeByOwner.set(ownerId, rowTotal);
+        rowTotal += rowCount;
+        totalSignal.value = rowTotal;
+        return placeByOwner.get(ownerId);
+      }
+      placesStale = true;
+      refreshPlaces();
+      return placeByOwner.get(ownerId);
+    },
+    // The child stands for no row of the collection any more: it was filtered
+    // out by a search, or it is gone.
+    drop: (ownerId) => {
+      if (!ownerById.delete(ownerId)) {
+        return;
+      }
+      placeByOwner.delete(ownerId);
+      refreshPlaces();
     },
   };
   return virtual;
+};
+// The walk that gives the list's children their places. It names a slot for
+// each of them — after the child's key when it has one, after its position
+// otherwise, which is how preact itself tells unkeyed children apart — and says
+// the whole set to the list's virtual before any of them renders.
+//
+// Wrapping each child in its own provider is what makes a slot reach the row
+// inside it, however deep the caller buried it, and what wakes a row whose slot
+// moved: the value it holds is the same object for as long as the child stays
+// where it was.
+const ListDeclaredChildren = ({ children }) => {
+  const virtual = useContext(ListVirtualContext);
+  const parentSlot = useContext(ListSlotContext);
+  const parentSlotId = parentSlot ? parentSlot.id : null;
+  const slotsRef = useRef(new Map());
+  const slotsPrevious = slotsRef.current;
+
+  const childArray = flattenChildren(children);
+  const slots = new Map();
+  const slotIds = [];
+  let index = 0;
+  for (const child of childArray) {
+    const childKey =
+      child && child.key !== undefined && child.key !== null
+        ? `k${child.key}`
+        : `i${index}`;
+    let slotId =
+      parentSlotId === null ? childKey : `${parentSlotId}/${childKey}`;
+    if (slots.has(slotId)) {
+      // Two children answering to the same key: preact cannot tell them apart
+      // either, but a slot each is what keeps them both on screen.
+      slotId = `${slotId}#${index}`;
+    }
+    const slotPrevious = slotsPrevious.get(slotId);
+    slots.set(
+      slotId,
+      slotPrevious && slotPrevious.order === index
+        ? slotPrevious
+        : { id: slotId, order: index },
+    );
+    slotIds.push(slotId);
+    index++;
+  }
+  slotsRef.current = slots;
+  virtual.declareSlots(parentSlotId, slotIds);
+
+  return (
+    <>
+      {childArray.map((child, childIndex) => {
+        const slotId = slotIds[childIndex];
+        return (
+          <ListSlotContext.Provider key={slotId} value={slots.get(slotId)}>
+            {child}
+          </ListSlotContext.Provider>
+        );
+      })}
+    </>
+  );
+};
+// The children as preact will diff them: nested arrays flattened, and a child
+// that renders nothing still holding its position — a conditional child must
+// not move the ones after it as it comes and goes.
+const flattenChildren = (children, flat = []) => {
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      flattenChildren(child, flat);
+    }
+    return flat;
+  }
+  flat.push(children);
+  return flat;
+};
+
+// Two slots compared by where they sit (see pathOf). A slot no walk declared
+// sorts after them all: it stands nowhere the list knows of.
+const comparePath = (leftPath, rightPath) => {
+  if (leftPath === null) {
+    return rightPath === null ? 0 : 1;
+  }
+  if (rightPath === null) {
+    return -1;
+  }
+  let depth = 0;
+  while (depth < leftPath.length && depth < rightPath.length) {
+    if (leftPath[depth] !== rightPath[depth]) {
+      return leftPath[depth] - rightPath[depth];
+    }
+    depth++;
+  }
+  return leftPath.length - rightPath.length;
 };
 
 const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
@@ -3830,6 +4088,7 @@ export const ListItems = ({
 }) => {
   const ownerId = useId();
   const virtual = useContext(ListVirtualContext);
+  const slot = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
@@ -3853,7 +4112,11 @@ export const ListItems = ({
     }
   }
 
-  const runStart = virtual.take(ownerId, store.rowCount);
+  const runStart = virtual.take(
+    ownerId,
+    store.rowCount,
+    slot ? slot.id : ownerId,
+  );
   const runEnd = runStart + store.rowCount;
   const getItemAt = (index) => store.getItem(index);
   const windowFrom =
@@ -3882,6 +4145,7 @@ export const ListItems = ({
   useLayoutEffect(() => {
     return () => {
       virtual.dropRowLocator(ownerId);
+      virtual.drop(ownerId);
     };
   }, []);
 
@@ -4779,7 +5043,7 @@ export const ListItemGroup = ({
         aria-labelledby={groupId}
       >
         <GroupItemTrackerContext.Provider value={groupTracker}>
-          {children}
+          <ListDeclaredChildren>{children}</ListDeclaredChildren>
         </GroupItemTrackerContext.Provider>
       </ul>
     </ListItem>

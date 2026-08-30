@@ -491,7 +491,7 @@
                   multiple
                   value={selectedMultiple}
                   action={(v) => {
-                    setSelectedMultiple(v ?? []);
+                    setSelectedMultiple(v);
                     pushMultipleLog(
                       "action",
                       v && v.length ? v.join(", ") : "(none)",
@@ -588,7 +588,7 @@
             selectable
             multiple={multiple}
             action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
+              setSelected(multiple ? v : (v ?? null));
             }}
             expandX
           >
@@ -1248,7 +1248,7 @@
             selectable
             multiple={multiple}
             action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
+              setSelected(multiple ? v : (v ?? null));
             }}
           >
             {FRUITS.map((fruit, i) => (
@@ -1417,7 +1417,7 @@
             multiple={multiple}
             style={customStyle}
             action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
+              setSelected(multiple ? v : (v ?? null));
             }}
           >
             {FRUITS.map((fruit, i) => (
@@ -1669,7 +1669,7 @@
             selectable
             multiple={multiple}
             action={(v) => {
-              setSelected(multiple ? (v ?? []) : (v ?? null));
+              setSelected(multiple ? v : (v ?? null));
             }}
           >
             {FRUITS.map((fruit, i) => (
@@ -1928,7 +1928,7 @@
               spacing="xs"
               borderWidth="0"
               action={(v) => {
-                setSelected(v ?? []);
+                setSelected(v);
               }}
             >
               {SIZES.map((size, i) => (

@@ -1195,6 +1195,15 @@ export const useUIGroupStateController = (
         // wheels nobody turned have settled nothing. Only the default shapes
         // fall back to the empty of their type, where "no child says anything"
         // and "the value is empty" are the same sentence.
+        //
+        // Not `fallbackState !== undefined`, tempting as it looks: `stateType`
+        // is what the group's OWN shape would be, and a caller-supplied
+        // aggregate is free to hold another one — TimeSpin and WheelTime are
+        // "HH:MM" strings inside groups declared `stateType: "object"`, and
+        // handing them `{}` for "unanswered" would empty a signal holding a
+        // time. An aggregate that does want the empty of the declared type
+        // takes it: it is handed `fallbackState` as its second argument (see
+        // ListSelectable, which returns it for an emptied multiple list).
         return stateShapeIsTheDefaultOne ? fallbackState : undefined;
       };
 
