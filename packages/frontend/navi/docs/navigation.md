@@ -473,7 +473,9 @@ coming up from below.
 A swipe **replaces** the current history entry, and a tab pressed says the same
 thing when its link asks for it (`<Link replace>`, see above) — the two gestures
 towards the same neighbour must not write two different histories. `onTravel`
-decides otherwise.
+decides otherwise. A replace normally leaves the scroll where it is; a row of
+tabs is the exception, and gives each tab back the offset it was read at — see
+[A row of tabs, where a replace IS an arrival](#a-row-of-tabs-where-a-replace-is-an-arrival).
 
 Several `RouteTravel` boxes may live on one page — a section of the path and a
 search param of the root route are two rows of tabs, both live — and only the one
@@ -491,7 +493,7 @@ the two, never both: see [route_transitions.md](./route_transitions.md).
 
 ## Where a navigation lands: the scroll
 
-Three cases, and they are not a policy to configure but three different facts:
+Four cases, and they are not a policy to configure but four different facts:
 
 - **Going somewhere new** (a `<Link>`, anything that pushes) lands at the top.
   It is an arrival: the offset one had elsewhere means nothing here, and left
@@ -503,6 +505,10 @@ Three cases, and they are not a policy to configure but three different facts:
   cannot do: it restores at the instant the entry changes, when the document
   still holds the page being left, so anything further down than that page is
   tall is clamped away.
+- **Replacing the entry** (`<Link replace>`, `route.redirectTo()`, a param
+  settling, a state written) moves nothing. It is the same place said
+  differently, and the reader is still in the page they were reading — a row of
+  tabs is the one shape where that reading is wrong, see below.
 - **A reload** lands where one was, as it would have without navi.
 
 One consequence is softened where the browser exposes its stack (the
@@ -520,6 +526,39 @@ that must ALWAYS behave as a back — even far from the entry it targets, even
 in a browser with no Navigation API — is `navBack()`. Where there may be
 nothing to go back to (a shared link opened cold), decide what the arrow does
 from the history, not from the link.
+
+### A row of tabs, where a replace IS an arrival
+
+The tabs of a `<RouteTravel>` navigate by replacing, and yet each one is another
+route. They also share a single scrollport — the document — and the tab on
+screen is what makes it tall. So leaving the offset alone does not keep it: the
+moment the arriving tab is shorter, the browser clamps, and the reader's place
+is gone before anything of navi's is asked.
+
+The row is the only thing that knows this, so the row is what says it. On every
+travel — a tab pressed, a thumb dragging the pages, a wheel, a travel let go of
+too early and put back:
+
+- the arriving tab is given back the offset it was read at, once it is really
+  rendered;
+- a tab never read opens at its **top**, rather than wherever its neighbour
+  happened to be;
+- the clamp itself is never recorded. It is not the reader scrolling, and the
+  url it would be written against is already the arriving tab's — recorded, it
+  destroys that tab's own position, which is then what a later back or forward
+  hands out.
+
+**Only where the row owns the document**: nothing between the travelling box and
+the viewport may scroll or clip. A row inside a scroller of its own — a frame in
+an article, a panel beside other content — shares nothing with the document, and
+the offset there belongs to the page around it, which the reader never left; the
+travel leaves it alone. An `overflow: hidden` or `clip` on any ancestor is
+enough to put the row outside the document's scrollport, so a row that should
+give positions back and does not is worth looking at from that angle first.
+
+Pages that scroll inside themselves rather than scrolling the document are not
+concerned either way: each one brings its own scrollport, which goes away with
+the page and has nothing to give back.
 
 What is not covered: a page whose height depends on something still loading is
 not tall enough at the moment its position is put back, so a deep position is

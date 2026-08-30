@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
@@ -6081,10 +6081,11 @@ const css$11 = /* css */`
        right where it's set) — same reasoning as Popover's identical
        attribute (popover.jsx's own top comment has the full case). */
     position: fixed;
-    /* Popover resets */
-    inset: auto;
-    top: 0;
-    left: 0;
+    /* Popover resets. Laid out at its containing block's own origin and moved
+       from there by a translate (applyNewPosition), never by left/top — see
+       applyNewPosition's own doc for why the placement may not go through
+       left/top themselves. */
+    inset: 0 auto auto 0;
     /* For some reason callout could end up behing elements when it's redisplayed in a dialog
     (behind button relatively positioned in dialog footer while callout is appended into dialog body)
     To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
@@ -6108,10 +6109,9 @@ const css$11 = /* css */`
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
-    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
-       left/top are NOT transitioned here, applyNewPosition drives that
-       itself via the Web Animations API instead of CSS, same mechanism
-       Popover/Dialog use. */
+    /* opacity only: the placement lives in the translate property, which
+       applyNewPosition (visible_rect.js) owns and animates itself through the
+       Web Animations API, same mechanism Popover/Dialog use. */
     transition: opacity 0.2s ease-in-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
@@ -25351,6 +25351,43 @@ const updateDocumentState = (value) => {
 };
 
 /**
+ * What the history entry being written ends up holding.
+ *
+ * `state`:
+ * - `undefined` — a neutral navigation: a link click, a `replaceUrl` writing a
+ *   search param. A **replace** stays on the entry the document is already on,
+ *   so what that entry holds stays with it. A **push** opens a NEW entry, and
+ *   what was written for the one being left — an open dialog, an expanded
+ *   picker (see `useNavState`) — describes that entry alone: carried forward it
+ *   would reopen on the next screen, and on the one after that, until something
+ *   mounting the same id opens out of nowhere.
+ * - `null` — an explicit reset.
+ * - an object — built by the caller (`enter()`/`leave()` copy the current state
+ *   themselves), taken as given.
+ *
+ * `sharedState` always wins: it describes the document, not the entry.
+ *
+ * The push/replace split is the Navigation API's own rule for a `navigate()`
+ * carrying no state — which is why via_navigation.js gets it from the browser
+ * and via_history.js has to spell it out to say the same thing.
+ */
+const resolveEffectiveDocumentState = (
+  state,
+  { navigationType, currentState, sharedState },
+) => {
+  if (state === undefined) {
+    if (navigationType === "push") {
+      return sharedState;
+    }
+    return { ...(currentState || {}), ...sharedState };
+  }
+  if (state === null) {
+    return sharedState;
+  }
+  return { ...state, ...sharedState };
+};
+
+/**
  * The document's rendering, held for the one frame a view transition needs.
  *
  * The browser does not take the picture of the page being left when a
@@ -25482,6 +25519,13 @@ const takeoverRoutingRenderingHold = () => {
  * something still loading. Its content is not there at the moment it is put
  * back, so a position beyond what has arrived is clamped as before. Only the
  * page knows when it is whole.
+ *
+ * WHEN a page is arrived at is not decided here either. A document navigation
+ * lands where its kind says (see via_history.js), and one scrollport can be
+ * shared by pages the browser is never told apart: a row of tabs replaces the
+ * url under the same document, so the arrival — and the deafness the swap
+ * needs, see suspendScrollRecording — is asked for by the row itself (see
+ * route_travel.jsx).
  */
 
 
@@ -25519,6 +25563,29 @@ const storePositions = () => {
   }
 };
 
+// The document is one scrollport for every page put in it, so a page swapped
+// under it for a shorter one is an offset the browser CLAMPS — and a clamp is
+// a scroll event like any other. It is not the reader scrolling, and by the
+// time it fires the url is already the arriving page's: written down, it is
+// that page's own position that the page being left destroys.
+//
+// Only whoever swaps the page knows when that is happening, so the deafness is
+// asked for from there and lasts exactly as long as the swap. Counted rather
+// than flagged: two swaps overlap — a travel relaying into the next one under
+// the same finger, a travel being undone while it plays.
+let suspendCount = 0;
+const suspendScrollRecording = () => {
+  suspendCount++;
+  let resumed = false;
+  return () => {
+    if (resumed) {
+      return;
+    }
+    resumed = true;
+    suspendCount--;
+  };
+};
+
 let installed = false;
 const installScrollRestoration = () => {
   if (installed) {
@@ -25536,6 +25603,9 @@ const installScrollRestoration = () => {
   window.addEventListener(
     "scroll",
     () => {
+      if (suspendCount) {
+        return;
+      }
       positionByUrl.set(window.location.href, {
         x: window.scrollX,
         y: window.scrollY,
@@ -25558,12 +25628,43 @@ const installScrollRestoration = () => {
 
 // Nothing to put back is not the same as putting back the top: a page arrived
 // at for the first time is startAtTop's business, and this must not step on it.
+// Whether there was anything, for a caller who has an answer of its own for the
+// page that has never been read.
 const restoreScrollPosition = (url) => {
   const position = positionByUrl.get(new URL(url, window.location.href).href);
   if (!position) {
-    return;
+    return false;
   }
   scrollTo(position);
+  return true;
+};
+
+// A page one arrives at for the first time starts at its top. Only a document
+// navigation does that on its own: a pushState creates its entry with whatever
+// scroll happened to be there, so without this the page opens at the offset of
+// the one before it — and that borrowed offset is what is then remembered FOR
+// it, and handed back on the way forward.
+//
+// The document, because the document is the scrollport in the common case. An
+// app that scrolls an element of its own scrolls it itself.
+const startAtTop = (url) => {
+  // A fragment names where to land, and the browser is the one that finds it.
+  if (new URL(url, window.location.href).hash) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+
+// An arrival at a page whose scrollport is already showing another one: the
+// tabs of a row share the document, and the offset on it is whichever tab was
+// last read. Where this one was read, and its top when it never was — leaving
+// the offset alone would seat the reader wherever the neighbour happened to
+// be, so here "nothing recorded" and "stay" are not the same thing.
+const arriveAtScrollPosition = (url) => {
+  if (restoreScrollPosition(url)) {
+    return;
+  }
+  startAtTop(url);
 };
 
 const scrollTo = ({ x, y }) => {
@@ -25907,28 +26008,14 @@ const setupBrowserIntegrationViaHistory = ({
 
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
-      // undefined → inherit current state (link click, neutral navigation)
-      // null     → explicit reset (no nav-state keys carried over)
-      // {...}    → explicit state from enter()/leave(), already built from currentState
-      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
-      let effectiveState;
-      const sharedState = {
-        jsenv_visited_urls: Array.from(visitedUrlSet),
-        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-      };
-      if (state === undefined) {
-        effectiveState = {
-          ...(getDocumentState() || {}),
-          ...sharedState,
-        };
-      } else if (state === null) {
-        effectiveState = sharedState;
-      } else if (state) {
-        effectiveState = {
-          ...state,
-          ...sharedState,
-        };
-      }
+      const effectiveState = resolveEffectiveDocumentState(state, {
+        navigationType,
+        currentState: getDocumentState(),
+        sharedState: {
+          jsenv_visited_urls: Array.from(visitedUrlSet),
+          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+        },
+      });
       if (navigationType === "push") {
         window.history.pushState(effectiveState, null, url);
       } else {
@@ -25977,12 +26064,21 @@ const setupBrowserIntegrationViaHistory = ({
       isVisited,
       state,
     });
+    // Where the document lands, said by what kind of arrival this is. Both are
+    // waited for, and for the same two reasons: the page has to be there to be
+    // scrolled, and a picture taken before it would be of a page at its top
+    // (see rendering_hold.js, which is where the waiting happens). After the
+    // history has been written too, so the entry being left keeps the offset
+    // it is at.
+    //
+    // A replace gets neither: it is the same place said differently — a param
+    // settling, a state written — and moving the reader for it would throw
+    // them out of a page they never left. The one replace that IS an arrival
+    // is a row of tabs travelling, and the row says so for itself (see
+    // route_travel.jsx).
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url));
     } else if (navigationType === "traverse") {
-      // Where this entry was left. Waited for like the reset above, and for
-      // the same two reasons: the page has to be there to be scrolled, and a
-      // picture taken before it would be of a page at its top.
       whenRenderingResumes(() => restoreScrollPosition(url));
     }
     executeWithCleanup(
@@ -26175,39 +26271,6 @@ const setupBrowserIntegrationViaHistory = ({
     isVisited,
     visitedUrlsSignal,
   };
-};
-
-// A page one arrives at for the first time starts at its top. Only a document
-// navigation does that on its own: a pushState creates its entry with whatever
-// scroll happened to be there, so without this the new page opens at the offset
-// of the one before it — and worse, that borrowed offset is what the browser
-// then remembers FOR that entry, and hands back on the way forward.
-//
-// Push only. A traverse is the browser's business and it is already right: it
-// keeps a position per entry and restores it. A replace is not an arrival —
-// it is the same place, said differently (a tab row travelling, see
-// route_travel.jsx), and resetting there would throw the reader out of a page
-// they never left.
-//
-// After the routes have been told, and after the picture of the page being
-// left has been taken — that ordering is the whole subtlety. The routes
-// changing is what sets a movement off, and a movement measures the box it is
-// leaving as it stands; put the document back to its top any earlier and the
-// picture is of a page at its first line, which the reader was not at. The
-// browser paints what the new offset shows and nothing else, so what is kept
-// of the page being left is the band it had already painted, and the movement
-// carries a fragment (see rendering_hold.js, which is where the waiting
-// happens). After pushState too, so the entry being left keeps the offset it
-// is at.
-//
-// The document, because the document is the scrollport in the common case. An
-// app that scrolls an element of its own scrolls it itself.
-const startAtTop = (url) => {
-  // A fragment names where to land, and the browser is the one that finds it.
-  if (new URL(url, window.location.href).hash) {
-    return;
-  }
-  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 
 let updateRoutes;
@@ -26996,8 +27059,38 @@ const releaseTransitionDestination = (owner) => {
  * the page arriving is in the DOM and the transition has not started playing.
  * Everything DERIVED from these numbers — the band a fixed bar covers, how far
  * a page travels — is derived in CSS, so the application's own numbers (the
- * room its bars give back, see layout/safe_area.js) take part in it.
+ * room its bars give back, see layout/safe_area.js; what covers the box from
+ * inside the document, --navi-transition-cover-* below) take part in it.
  */
+
+/**
+ * What covers the box from INSIDE the document: a sticky row of tabs above the
+ * pages, a header pinned to the top of a scroller. Declared at zero and
+ * written by whoever covers it, exactly as a fixed bar publishes the room it
+ * gives back (layout/safe_area.js).
+ *
+ * A slot rather than a measurement, and a slot navi cannot fill itself: the
+ * safe area answers for what is pinned to the WINDOW's edges, and a sticky row
+ * is none of those — it lives in the document, below the bars, and covers the
+ * top of the box exactly as a fixed bar covers the top of the screen. The
+ * pictures of a transition are drawn in the top layer, where no z-index of the
+ * document reaches them, so what the document paints over the box has to be
+ * counted here or it is the pictures that paint over it.
+ *
+ * Each one is a distance inward from the band the safe area already leaves
+ * free, so a row states its own height and nothing else: what the bars above
+ * it take is already counted.
+ */
+const TRANSITION_WINDOW_CSS = /* css */ `
+  @layer navi {
+    :root {
+      --navi-transition-cover-top: 0px;
+      --navi-transition-cover-right: 0px;
+      --navi-transition-cover-bottom: 0px;
+      --navi-transition-cover-left: 0px;
+    }
+  }
+`;
 
 const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
 const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";
@@ -27144,6 +27237,8 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css$10 = /* css */`
+  ${TRANSITION_WINDOW_CSS}
+
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -27228,39 +27323,46 @@ const css$10 = /* css */`
       height: var(--navi-transition-window-height);
       animation-name: none;
 
-      /* Cut at the safe area, on top of being cut at the area's own box. The
-         pictures are drawn in the top layer, so they cover a fixed bar as
-         easily as anything else — and the area runs UNDER the bars by design:
-         that is what a fixed bar is for, and what the room it gives back is
-         for. An area taller than the screen therefore ends below the bottom
-         bar, and a scrolled one starts above the top bar, so the movement
-         would be watched painting over them for its whole length.
+      /* Cut at what covers the area, on top of being cut at the area's own
+         box. The pictures are drawn in the top layer, so they cover a fixed bar
+         as easily as anything else — and the area runs UNDER the bars by
+         design: that is what a fixed bar is for, and what the room it gives
+         back is for. An area taller than the screen therefore ends below the
+         bottom bar, and a scrolled one starts above the top bar, so the
+         movement would be watched painting over them for its whole length.
 
-         The band left free is the app's own safe area (see
-         layout/safe_area.js) — every kind of furniture at once, not the bars
-         alone, and read rather than asked for, so one that grows, shrinks or
-         unmounts mid-transition is followed without anything being told. What
-         the window cannot know is only where it itself stands, and that is the
-         measured half. */
+         Two bands are left free, and they answer for two different things: the
+         app's own safe area (layout/safe_area.js), everything pinned to the
+         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
+         what covers the area from inside the document — a sticky header above
+         the pages covers the top of the area exactly as a fixed bar covers the
+         top of the screen. Both are read rather than asked for, so one that
+         grows, shrinks or unmounts mid-transition is followed without anything
+         being told. What the window cannot know is only where it itself stands,
+         and that is the measured half. */
       --navi-route-transition-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+        var(--navi-safe-area-inset-top) +
+          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
       );
       --navi-route-transition-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+        var(--navi-safe-area-inset-left) +
+          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
       );
       --navi-route-transition-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) - 100dvh
+          var(--navi-safe-area-inset-bottom) +
+          var(--navi-transition-cover-bottom) - 100dvh
       );
       --navi-route-transition-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) - 100dvw
+          var(--navi-safe-area-inset-right) +
+          var(--navi-transition-cover-right) - 100dvw
       );
       clip-path: inset(
         var(--navi-route-transition-clip-top)
@@ -28278,6 +28380,8 @@ const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
 const css$$ = /* css */`
+  ${TRANSITION_WINDOW_CSS}
+
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -28396,38 +28500,46 @@ const css$$ = /* css */`
          route to the next. */
       height: var(--navi-transition-window-height);
 
-      /* Cut at the safe area, on top of being cut at the box. The pictures are
-         drawn in the top layer, so they cover a fixed bar as easily as anything
-         else — and the box they travel in runs UNDER the bars by design: that
-         is what a fixed bar is for, and what the room it gives back is for. A
-         box scrolled by so much as a pixel therefore starts above the top bar
-         and ends below the bottom one, and the travel would be watched painting
-         over both for its whole length.
+      /* Cut at what covers the box, on top of being cut at the box. The
+         pictures are drawn in the top layer, so they cover a fixed bar as
+         easily as anything else — and the box they travel in runs UNDER the
+         bars by design: that is what a fixed bar is for, and what the room it
+         gives back is for. A box scrolled by so much as a pixel therefore
+         starts above the top bar and ends below the bottom one, and the travel
+         would be watched painting over both for its whole length.
 
-         The band left free is the app's own safe area (see layout/safe_area.js)
-         — every kind of furniture at once, not the bars alone, and read rather
-         than asked for, so one that grows, shrinks or unmounts mid-travel is
-         followed without anything being told. What the group cannot know is
-         only where it itself stands, and that is the measured half. */
+         Two bands are left free, and they answer for two different things: the
+         app's own safe area (layout/safe_area.js), everything pinned to the
+         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
+         what covers the box from inside the document — a sticky row of tabs
+         above the pages covers the top of the box exactly as a fixed bar covers
+         the top of the screen. Both are read rather than asked for, so one that
+         grows, shrinks or unmounts mid-travel is followed without anything
+         being told. What the group cannot know is only where it itself stands,
+         and that is the measured half. */
       --navi-route-travel-clip-top: max(
         0px,
-        var(--navi-safe-area-inset-top) - var(--navi-transition-window-top)
+        var(--navi-safe-area-inset-top) +
+          var(--navi-transition-cover-top) - var(--navi-transition-window-top)
       );
       --navi-route-travel-clip-left: max(
         0px,
-        var(--navi-safe-area-inset-left) - var(--navi-transition-window-left)
+        var(--navi-safe-area-inset-left) +
+          var(--navi-transition-cover-left) - var(--navi-transition-window-left)
       );
       --navi-route-travel-clip-bottom: max(
         0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          var(--navi-safe-area-inset-bottom) - 100dvh
+          var(--navi-safe-area-inset-bottom) +
+          var(--navi-transition-cover-bottom) - 100dvh
       );
       --navi-route-travel-clip-right: max(
         0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          var(--navi-safe-area-inset-right) - 100dvw
+          var(--navi-safe-area-inset-right) +
+          var(--navi-transition-cover-right) - 100dvw
       );
       clip-path: inset(
         var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
@@ -28736,6 +28848,19 @@ const RouteTravel = ({
       ended: false
     };
     travelRef.current = travel;
+    // Whether the document's offset is this row's business at all (see
+    // pagesScrollTheDocument), asked once and before anything is swapped.
+    travel.scrollsDocument = pagesScrollTheDocument(elementRef.current);
+    if (travel.scrollsDocument) {
+      // One of the tabs is about to be swapped out from under that scrollport,
+      // and whatever the browser does with the offset meanwhile — clamping it
+      // to a page shorter than the trip — is not the reader scrolling. The url
+      // it would be written against is already the arriving tab's, so recorded
+      // it is that tab's own position that the tab being left destroys. Deaf
+      // for the whole travel, which is exactly as long as the offset belongs
+      // to nobody (see endTravel).
+      travel.resumeScrollRecording = suspendScrollRecording();
+    }
     // Taken before the picture is: the browser reads the name off the DOM as it
     // stands when the transition starts, and this box is only a picture of its
     // own for as long as it is the one travelling. Where it travels to is said
@@ -28778,8 +28903,24 @@ const RouteTravel = ({
           await change();
         }
       }, renderWait);
+      // Where the arriving tab was left, or its top when it has never been
+      // read. A travel is an arrival — the tab pressed is another route, and
+      // the replace it navigates by is the only thing about it that says
+      // otherwise — and this is the one place that knows it. Read from the
+      // travel rather than from the page it set off for: a travel aimed
+      // somewhere else while it waited lands where it is aimed now.
+      if (travel.scrollsDocument) {
+        const {
+          route,
+          params
+        } = travel.page;
+        arriveAtScrollPosition(route.buildUrl(params));
+      }
       // The page arriving is in the DOM and the transition has not started
-      // playing: the one moment both boxes can be known.
+      // playing: the one moment both boxes can be known. After the scroll,
+      // which is what the box is measured through: the two states are at the
+      // same place in the layout without being at the same place in the window
+      // (see transition_window.js).
       holdTransitionWindow(travel, elementRef.current, rectBefore);
     });
     travel.viewTransition = viewTransition;
@@ -29000,6 +29141,25 @@ const RouteTravel = ({
         }
         travel.viewTransition.skipTransition();
       } finally {
+        if (travel.scrollsDocument) {
+          // The page coming back was read somewhere else, and the offset
+          // currently on the document is the one the page that came in put
+          // there. Given back once the page is really back — the render is
+          // what makes the document tall enough to hold that offset again —
+          // and the recording stays deaf until then, over the clamp the swap
+          // back makes on the way. Its own deafness rather than the travel's:
+          // the travel ends here, and this outlives it by a render.
+          const resumeScrollRecording = suspendScrollRecording();
+          const stopWatchingRender = observeRouteRender(() => {
+            stopWatchingRender();
+            const {
+              route,
+              params
+            } = travel.fromPage;
+            arriveAtScrollPosition(route.buildUrl(params));
+            resumeScrollRecording();
+          });
+        }
         releaseRendering();
         // A travel ENDS, whatever happened on the way back: put the state back,
         // fail to drop the picture, be interrupted by something else — the one
@@ -29085,6 +29245,11 @@ const RouteTravel = ({
     travel.ended = true;
     travel.dropHold?.();
     travel.dropHold = null;
+    // The offset on the scrollport belongs to a page again — the one that
+    // arrived, or the one put back. A travel that never got as far as saying
+    // which still has to give the recording back; the gesture's own
+    // pseudo-travel never took it (see noPicture).
+    travel.resumeScrollRecording?.();
     // Its own hold, always — whether or not this travel is still the current
     // one. Nobody else will lift it.
     releaseHold(travel);
@@ -29618,6 +29783,26 @@ const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
   } finally {
     wait.stop();
   }
+};
+
+// Whether the document's offset belongs to the tabs. The pages of a row scroll
+// the document when nothing between the box and the viewport scrolls or clips:
+// the tab on screen is then what makes the document tall, and the offset on it
+// is that tab's — it has to be given back with the tab, and the browser's
+// clamping of it while pages are swapped has to be ignored.
+//
+// A box that lives inside a scroller of its own — a frame in an article, a
+// panel beside other content — shares nothing with the document: the offset
+// there is the surrounding page's, the reader never left it, and a travel has
+// no business moving it. Each of its pages brings its own scrollport, which
+// goes away with the page and has nothing to restore.
+const pagesScrollTheDocument = element => {
+  const scrollContainer = getScrollContainer(element, {
+    includeHidden: true
+  });
+  // html and body are one answer: whichever of them the walk stops on, what
+  // scrolls is the viewport, which is what window.scrollTo moves.
+  return scrollContainer === document.documentElement || scrollContainer === document.body;
 };
 
 // A page of the row: a route, and the params that say which of its tabs when
@@ -53768,7 +53953,7 @@ const createOpenController = (
     // Last: the close effects above are what starts the exit transition the
     // content must outlive (see popup_content_mount.js).
     controller.unmountContent?.();
-    controller.onOpenedChange?.(false);
+    controller.onOpenedChange?.(false, closeEvent);
   };
   const controller = {
     opened: false,
@@ -53788,9 +53973,10 @@ const createOpenController = (
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
-    // interaction, a command, a prop. What lets a `signal` prop reflect the
-    // popup's real state (see useOpenPropsEffectOnOpenController), called once
-    // the open/close has fully happened rather than mid-sequence.
+    // interaction, a command, a prop — with the event that asked. What lets a
+    // `signal` prop reflect the popup's real state, and a `navState` prop write
+    // it into the history entry (see useOpenPropsEffectOnOpenController);
+    // called once the open/close has fully happened rather than mid-sequence.
     onOpenedChange: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
@@ -53894,7 +54080,7 @@ const createOpenController = (
         openEffectReturnValue?.(closeEvent);
       };
       closeHandlers = openHandler(requestOpenEvent) || null;
-      controller.onOpenedChange?.(true);
+      controller.onOpenedChange?.(true, requestOpenEvent);
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
@@ -54014,33 +54200,83 @@ const scheduleMountOpen = (run) => {
   });
 };
 
+// Where the popup's open state is kept, when it is kept anywhere: `navState`
+// resolved to the `{ id, type }` useNavState wants.
+//
+// `true` takes the popup's own id — a popup a `--navi-open` command can name is
+// a popup that already has a stable one, and that id is what identifies its
+// open state too.
+const NO_NAV_STATE = { id: undefined, type: "replace" };
+const resolveNavStateProp = (navState, popupId) => {
+  if (!navState) {
+    return NO_NAV_STATE;
+  }
+  if (navState === true) {
+    return { id: popupId, type: "replace" };
+  }
+  if (typeof navState === "string") {
+    return { id: navState, type: "replace" };
+  }
+  return { id: navState.id || popupId, type: navState.type || "replace" };
+};
+
 /**
- * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
- * shared between `useOpenControllerByProps` below (Dialog/Popover driving
- * their own controller) and `picker_custom.jsx` (which derives its own
- * boolean from history state instead of a literal `open` prop, but needs
- * the exact same skip-if-already-matching / open-or-requestClose control
- * flow, via a small `{ open, requestClose, opened }` adapter around its own
- * `requestOpen`/`requestClose` wrappers).
+ * Keeps an open controller in sync with where the caller says the popup should
+ * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
+ * state written into the history entry, so a screen left and come back to finds
+ * its popup as it was.
+ *
+ * Shared between `useOpenControllerByProps` below (Dialog/Popover driving their
+ * own controller) and `picker_custom.jsx` (which owns its controller but wants
+ * the same skip-if-already-matching / open-or-requestClose control flow).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean> }} props
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean>, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
  */
 const useOpenPropsEffectOnOpenController = (openController, props) => {
-  const { signal, defaultOpen } = props;
-  // What the caller holds, however they hold it: an `open` they re-render
-  // themselves, or a `signal` this hook also writes (see onOpenedChange below).
-  // Reading .value during render is what subscribes the popup to it.
-  const open = signal ? signal.value : props.open;
+  const { signal, defaultOpen, navState } = props;
+  const { id: navStateId, type: navStateType } = resolveNavStateProp(
+    navState,
+    props.id,
+  );
+  // Called unconditionally (it answers with no-ops for an absent id), like
+  // every other hook here.
+  const [navStateValue, enterNavState, leaveNavState] = useNavState(
+    navStateId,
+    { type: navStateType },
+  );
+  // What the caller holds, however they hold it: the history entry when there
+  // is a `navState`, an `open` they re-render themselves, or a `signal` this
+  // hook also writes (see onOpenedChange below). Reading .value during render
+  // is what subscribes the popup to a signal; reading the document state is
+  // what subscribes it to the history entry, back button included.
+  const open = navStateId
+    ? Boolean(navStateValue)
+    : signal
+      ? signal.value
+      : props.open;
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
-  // --navi-close command) writes what happened into the signal, so whoever
-  // holds it always reads where the popup is.
-  openController.onOpenedChange = signal
-    ? (opened) => {
-        signal.value = opened;
-      }
-    : null;
+  // --navi-close command) writes what happened where the caller keeps it, so
+  // whoever holds it always reads where the popup is.
+  openController.onOpenedChange =
+    navStateId || signal
+      ? (opened, event) => {
+          if (navStateId) {
+            if (opened) {
+              enterNavState();
+            } else {
+              // Under type "push" a cancel goes back rather than rewriting the
+              // entry, so everything else written to the url while the popup
+              // was open goes back with it (see useNavState's own leave()).
+              leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
+            }
+          }
+          if (signal) {
+            signal.value = opened;
+          }
+        }
+      : null;
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -54093,11 +54329,14 @@ const useOpenPropsEffectOnOpenController = (openController, props) => {
         { isCancel: true },
       );
     }
+    // The request can be refused (a busy form denying the close): the popup
+    // then stays where it was, and whoever holds the open state is told so —
+    // otherwise it would keep saying "closed" about a popup still open.
     if (signal) {
-      // The request can be refused (a busy form denying the close): the popup
-      // then stays where it was, and the signal is told so — otherwise it
-      // would keep saying "closed" about a popup still open.
       signal.value = openController.opened;
+    }
+    if (navStateId && openController.opened) {
+      enterNavState();
     }
   }, [open]);
 };
@@ -54358,7 +54597,14 @@ const usePopupContentMount = (
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
- * 100%-of-own-size. Popover always resolves `animation="auto"`/`"sliding"`
+ * 100%-of-own-size. It travels through `transform`, not through the
+ * `translate` property, which belongs to the popup's own placement
+ * (applyNewPosition in visible_rect.js — see its doc for why the placement is
+ * a transform at all, and why it has to be the outermost one: the individual
+ * transform properties apply translate, then rotate, then scale, then
+ * `transform`, so both the travel here and the `scale` below compose *under* a
+ * placement that stays where it was put).
+ * Popover always resolves `animation="auto"`/`"sliding"`
  * to one of these concretely in JS (see popover.jsx's
  * `resolveDirectionValue`), so there's no bare `animation="sliding"`
  * selector here at all — a point/corner has no anchor edge to grow out of,
@@ -54399,14 +54645,15 @@ const popupCss = /* css */ `
 
   .navi_popover,
   .navi_dialog {
-    /* left/top are deliberately absent from this list — applyNewPosition
-       (visible_rect.js) drives that transition itself via the Web
-       Animations API instead of CSS, so it stays independent of whatever
-       this list contains (no shared transition-property to clobber, no
-       propertyName to filter). */
+    /* The translate property is deliberately absent from this list — it
+       carries where the popup stands, and applyNewPosition (visible_rect.js)
+       owns it and drives its own transition through the Web Animations API
+       instead of CSS, so it stays independent of whatever this list contains
+       (no shared transition-property to clobber, no propertyName to filter).
+       What moves here is transform, which composes under it. */
     &[navi-animation] {
       transition-property:
-        display, overlay, opacity, translate, scale, box-shadow;
+        display, overlay, opacity, transform, scale, box-shadow;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
@@ -54435,7 +54682,7 @@ const popupCss = /* css */ `
          centered, no direction involved. */
     &[navi-animation="scaling"] {
       opacity: 1;
-      translate: 0 0;
+      transform: translate(0px, 0px);
       scale: 1;
       &[aria-expanded="false"] {
         opacity: 0;
@@ -54487,14 +54734,16 @@ const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
-      translate: 0 0;
+      transform: translate(0px, 0px);
 
       /* No fade: the travel is the whole effect. Fading it out on top would
          make the popup disappear before it has finished leaving, which reads as
          two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        translate: calc(var(--x-popup-slide-x, 0) * 100%)
-          calc(var(--x-popup-slide-y, -1) * 100%);
+        transform: translate(
+          calc(var(--x-popup-slide-x, 0) * 100%),
+          calc(var(--x-popup-slide-y, -1) * 100%)
+        );
       }
     }
   }
@@ -54686,14 +54935,17 @@ const createSwipeToClose = (side, { grip } = {}) => {
       }
     }
 
-    // Where the panel stands, written on it directly: the gesture reports a
-    // distance in screen coordinates, which is exactly what a translate takes.
+    // How far the panel has been pulled, written on it directly: the gesture
+    // reports a distance in screen coordinates, which is exactly what a
+    // translate takes. It goes through `transform` because the `translate`
+    // property carries where the panel *stands* (applyNewPosition in
+    // visible_rect.js, which owns it) — the pull composes under the placement
+    // instead of replacing it.
     const paint = (distance) => {
-      panelEl.style.translate =
-        axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+      panelEl.style.transform = translateOf(axis, distance);
     };
     const restore = () => {
-      panelEl.style.translate = "";
+      panelEl.style.transform = "";
       panelEl.style.transitionProperty = "";
       panelEl.style.userSelect = "";
     };
@@ -54705,8 +54957,8 @@ const createSwipeToClose = (side, { grip } = {}) => {
       paint(to);
       const animation = panelEl.animate(
         [
-          { translate: translateOf(axis, from) },
-          { translate: translateOf(axis, to) },
+          { transform: translateOf(axis, from) },
+          { transform: translateOf(axis, to) },
         ],
         {
           duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
@@ -54776,7 +55028,9 @@ const sizeOf = (element, axis) => {
   return axis === "x" ? rect.width : rect.height;
 };
 const translateOf = (axis, distance) =>
-  axis === "x" ? `${distance}px 0px` : `0px ${distance}px`;
+  axis === "x"
+    ? `translate(${distance}px, 0px)`
+    : `translate(0px, ${distance}px)`;
 
 const PopupClose = ({
   label,
@@ -54973,11 +55227,17 @@ const css$E = /* css */`
        containing block is genuinely its nearest positioned ancestor,
        regardless of positionArea. See the [data-layer="top"] rule below for
        why the via-attribute renderer overrides this. Position is always
-       JS-driven (pickPositionRelativeTo sets top/left directly, see
-       useDialogProps below) — no CSS alignment/inset math here at all,
-       unlike an earlier version of this file. */
+       JS-driven (pickPositionRelativeTo, see useDialogProps below) — no CSS
+       alignment/inset math here at all. */
     position: absolute;
-    inset: unset;
+    /* Laid out at its containing block's own origin and moved from there by a
+       translate (applyNewPosition), never by left/top: a shrink-to-fit box
+       placed with left is only ever as wide as what is left of the container
+       to its right, and that width is what decides where it gets placed — see
+       applyNewPosition's own doc. right/bottom stay auto: an inset there would
+       over-constrain the box against the UA's margin: auto and re-center
+       it. */
+    inset: 0 auto auto 0;
     /* Custom renderer only — see openLocalDialogCount above */
     z-index: calc(var(--navi-z-index-popup) + var(--dialog-stack-order, 0));
     min-width: min(
@@ -55073,11 +55333,12 @@ const css$E = /* css */`
     &[data-flush-bottom][data-flush-left] {
       border-bottom-left-radius: 0;
     }
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
+    /* The placement is a translate, so the translate property is spoken for
+       here (see applyNewPosition in visible_rect.js, which owns it and animates
+       it itself through the Web Animations API rather than through this file's
+       transitions — no shared transition-property to clobber, no propertyName
+       to filter). An entrance animation moves the dialog through scale and
+       transform instead, which compose under it: see popup_css.js. */
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -55157,7 +55418,7 @@ const css$E = /* css */`
        containing block is the viewport rather than any positioned
        ancestor. Not left to the native :modal UA stylesheet's own default
        (also position: fixed, but with its own margin/inset assumptions) so
-       that JS-set top/left (see useDialogProps below) always wins
+       that the JS-driven placement (see useDialogProps below) always wins
        cleanly. */
     &[data-layer="top"] {
       position: fixed;
@@ -55442,6 +55703,16 @@ const css$E = /* css */`
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
  *   veto a close instead).
+ * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
+ *   Keeps the open state in the history entry, so a screen left and come back
+ *   to finds this popup as it was — open, and without an entrance playing: it
+ *   was already open when the page reappeared. `true` stores it under the
+ *   popup's own `id`; a string names the key instead.
+ *   `{ type: "push" }` also makes the opening a history entry of its own, so
+ *   the back button closes the popup rather than leaving the screen — and a
+ *   cancel (Escape) goes back, taking whatever was written to the url while it
+ *   was open with it. The state belongs to the entry that wrote it: a
+ *   navigation that stacks a new entry does not carry it along.
  * @param {object} [props.openController] - Advanced: an externally-owned
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
@@ -55509,6 +55780,7 @@ const UncontrolledDialog = props => {
     open: undefined,
     signal: undefined,
     defaultOpen: undefined,
+    navState: undefined,
     onClose: undefined,
     openController: openController,
     onnavi_request_open: e => {
@@ -56088,8 +56360,8 @@ const useDialogProps = props => {
       rectEffect.disconnect();
     });
     // A descendant anchored to something inside this dialog (a Callout, a
-    // nested Popover) needing to know about this dialog's own left/top
-    // repositioning transition — not just that the target changed
+    // nested Popover) needing to know about this dialog's own repositioning
+    // transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
     // applyNewPosition itself (see its own notifyPositionTransition), since
@@ -56536,7 +56808,14 @@ const css$D = /* css */`
        whether it has a real anchor — this file's top comment has the full
        reasoning. */
     position: absolute;
-    inset: unset;
+    /* Laid out at its containing block's own origin and moved from there by a
+       translate (applyNewPosition), never by left/top: a shrink-to-fit box
+       placed with left is only ever as wide as what is left of the container
+       to its right, and that width is what decides which side it gets placed
+       on — see applyNewPosition's own doc. right/bottom stay auto: an inset
+       there would over-constrain the box against the UA's margin: auto and
+       re-center it. */
+    inset: 0 auto auto 0;
     /* Custom renderer only: --popover-stack-order is set to
        openLocalPopoverCount on every open (see openEffect below) so the
        most-recently-opened local popover always outranks an earlier one,
@@ -56568,35 +56847,13 @@ const css$D = /* css */`
        (see box.jsx), which is what makes it scroll — and what a
        header/footer/body inside it then rearranges. */
     overscroll-behavior: none;
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
+    /* The placement is a translate, so the translate property is spoken for
+       here (see applyNewPosition in visible_rect.js, which owns it and animates
+       it itself through the Web Animations API rather than through this file's
+       transitions — no shared transition-property to clobber, no propertyName
+       to filter). An entrance animation moves the popover through scale and
+       transform instead, which compose under it: see popup_css.js. */
 
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
-
-    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
-       drives that itself via the Web Animations API instead of CSS, so it
-       stays independent from navi-animation's own opacity/scale/display
-       transition list below (no shared transition-property to clobber, no
-       propertyName to filter). */
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
@@ -56900,6 +57157,16 @@ const css$D = /* css */`
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
  *   veto a close instead).
+ * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
+ *   Keeps the open state in the history entry, so a screen left and come back
+ *   to finds this popup as it was — open, and without an entrance playing: it
+ *   was already open when the page reappeared. `true` stores it under the
+ *   popup's own `id`; a string names the key instead.
+ *   `{ type: "push" }` also makes the opening a history entry of its own, so
+ *   the back button closes the popup rather than leaving the screen — and a
+ *   cancel (Escape) goes back, taking whatever was written to the url while it
+ *   was open with it. The state belongs to the entry that wrote it: a
+ *   navigation that stacks a new entry does not carry it along.
  * @param {object} [props.openController] - Advanced: an externally-owned
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
@@ -56965,6 +57232,7 @@ const UncontrolledPopover = props => {
     open: undefined,
     signal: undefined,
     defaultOpen: undefined,
+    navState: undefined,
     onClose: undefined,
     openController: openController,
     onnavi_request_open: e => {
@@ -57580,7 +57848,7 @@ const usePopoverProps = props => {
     });
     // A descendant anchored to something inside this popover (a Callout, a
     // further-nested Popover) needing to know about this popover's own
-    // left/top repositioning transition — not just that the target changed
+    // repositioning transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
     // applyNewPosition itself (see its own notifyPositionTransition in

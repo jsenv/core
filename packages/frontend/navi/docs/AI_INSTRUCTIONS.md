@@ -278,7 +278,9 @@ consistency across the app, not from any single call site.
   than a param, search params bound to signals, rendering with `<Route>`,
   tab rows (`Nav` / `Link` / `RouteTravel`), where a navigation lands
   (scroll: a push arrives at the top, a back or forward lands where the page
-  was left), a back arrow that stays inside the app (`useCanNavBack()` /
+  was left, a replace moves nothing — except in a `RouteTravel`, where each tab
+  is given back the offset it was read at, and only when the row owns the
+  document scroll), a back arrow that stays inside the app (`useCanNavBack()` /
   `navBack({ fallback })`), and the few cases where tabs are legitimately not
   URLs. Read it before writing any routing code — the
   position of the user belongs in the URL by default, and that decision is
