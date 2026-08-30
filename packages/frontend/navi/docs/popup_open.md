@@ -97,11 +97,24 @@ This is the same entry point the attributes go through: same target resolution,
 same command proxies, same events. The popup stays uncontrolled, and keeps its
 say over closing.
 
-`event` is the DOM event the decision came from. Pass it whenever there is one:
-it is chained into the request event, and that chain is what lets the popup
-handle focus correctly (which element to give focus back to, whether a
-mousedown's click must be swallowed). Omit it only when nothing user-initiated
-triggered the command.
+`event` is what caused the decision, and it is mandatory — triggering a command
+without one throws. It is chained into the request event, and that chain is what
+lets the popup handle focus correctly (which element to give focus back to,
+whether a mousedown's click must be swallowed) and what the debug panel groups
+the whole sequence under.
+
+Almost always there is a DOM event to hand over, because almost always something
+was done to the page. When there genuinely was not — a timer firing, an action
+settling, a signal changing — say so with a `CustomEvent` named after what
+happened rather than leaving the origin unsaid:
+
+```js
+import { chainEvent, triggerNaviCommand } from "@jsenv/navi";
+
+const expiredEvent = new CustomEvent("session_expired");
+chainEvent(expiredEvent, causeEvent); // when something did precede it
+triggerNaviCommand(dialogRef.current, "--navi-open", expiredEvent);
+```
 
 ## Which element receives the command
 

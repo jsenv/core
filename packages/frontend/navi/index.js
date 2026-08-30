@@ -144,6 +144,12 @@ export { detectHorizontalOverflow } from "./src/layout/detect_horizontal_overflo
 // target and dispatches exactly like the attribute path, so a popup driven this
 // way stays uncontrolled and keeps its own say over closing.
 export { triggerNaviCommand } from "./src/control/commands.js";
+// A command must say what caused it, and what caused it is not always a DOM
+// event — a timer, an action settling, a signal changing. `chainEvent` hangs the
+// CustomEvent standing in for it off whatever preceded it, so the origin stays
+// readable from the chain. Re-exported so that does not cost an app a direct
+// dependency on @jsenv/dom.
+export { chainEvent } from "@jsenv/dom";
 
 // Details (in between navigation/interaction and fields)
 export { Details } from "./src/control/details/details.jsx";

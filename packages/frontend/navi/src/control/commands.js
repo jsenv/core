@@ -29,7 +29,16 @@ import {
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.
  * @param {string} command
- * @param {Event} event What the user did.
+ * @param {Event} event What caused this. Mandatory: it is what makes a command
+ *   traceable back to its origin — the debug panel groups everything a gesture
+ *   set off under it, and the gates below read it to know whether the default
+ *   was already prevented and which mouse button was pressed. When nothing was
+ *   handed over — a timer firing, an action settling, a signal changing — build
+ *   a `CustomEvent` that names what happened and chain it to whatever preceded
+ *   it, rather than leaving the origin unsaid:
+ *     const expiredEvent = new CustomEvent("session_expired");
+ *     chainEvent(expiredEvent, causeEvent); // when something did precede it
+ *     triggerNaviCommand(dialogEl, "--navi-open", expiredEvent);
  * @param {object} [options]
  * @param {boolean} [options.optional] No suitable target is not a warning.
  * @param {any} [options.value] What the command is about, carried to whoever
@@ -46,6 +55,11 @@ export const triggerNaviCommand = (
   event,
   { optional, value, anchor } = {},
 ) => {
+  if (!event) {
+    throw new Error(
+      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Pass the gesture, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
+    );
+  }
   const naviCommand =
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
