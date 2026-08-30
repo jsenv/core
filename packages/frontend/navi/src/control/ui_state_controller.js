@@ -783,6 +783,34 @@ const isNamelessGrouping = (child, uiState) =>
   typeof uiState === "object" &&
   !Array.isArray(uiState);
 
+// Is this value the empty the child writes when it holds nothing? Reading it
+// back out of the object means the child holds nothing — which is `undefined`,
+// not the empty itself (see the object group's distributeChildUIState below).
+const uiStateIsChildEmpty = (uiState, child) => {
+  const { emptyUIState } = child;
+  if (emptyUIState === undefined) {
+    return false;
+  }
+  if (uiState === emptyUIState) {
+    return true;
+  }
+  // The empties are shapes, not identities: what comes back down went through
+  // a restore, a signal or an action and is a different array/object than the
+  // EMPTY_ARRAY/EMPTY_OBJECT that went up.
+  if (Array.isArray(emptyUIState)) {
+    return Array.isArray(uiState) && uiState.length === 0;
+  }
+  if (typeof emptyUIState === "object" && emptyUIState !== null) {
+    return (
+      uiState !== null &&
+      typeof uiState === "object" &&
+      !Array.isArray(uiState) &&
+      Object.keys(uiState).length === 0
+    );
+  }
+  return false;
+};
+
 const firstDefinedChildUIState = (children) => {
   for (const child of children) {
     const childUIState = child.uiState;
@@ -920,7 +948,19 @@ const GROUP_DEFAULTS = {
         typeof newUIState === "object" &&
         Object.prototype.hasOwnProperty.call(newUIState, childName)
       ) {
-        return newUIState[childName];
+        const childUIState = newUIState[childName];
+        // The exact inverse of the empty aggregateChildStates wrote just
+        // above: what a child holding nothing put into the object
+        // must come back out as nothing. Handed back as-is it reads as a value
+        // — a checkbox takes any state that is not `undefined` as checked,
+        // `false` included (see the `checked` line in control_hooks'
+        // toDomProps) — so restoring the object (a picker cancelling on Escape)
+        // would check every box it contains, and the group would then re-derive
+        // the `true` nobody said.
+        if (uiStateIsChildEmpty(childUIState, child)) {
+          return undefined;
+        }
+        return childUIState;
       }
       // Merged in on the way up (see above), so on the way down it takes the
       // whole object and picks out its own keys — the same value it produced.
