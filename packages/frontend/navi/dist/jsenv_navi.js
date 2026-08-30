@@ -27084,10 +27084,17 @@ const releaseTransitionDestination = (owner) => {
  * - a bar the two states SHARE is one element wearing one name on both sides.
  *   The browser pairs the two pictures into one group and holds it where it
  *   stands: the frame, and the pages move behind it exactly as before.
- * - a bar only one state has never meets a counterpart. It stands where it was
- *   photographed while the pages move OVER it (see the z-order in
- *   route_transition.jsx) — covered progressively as a page comes over it,
- *   uncovered as one leaves — rather than going out with the render.
+ * - a bar only one state has never meets a counterpart. It belongs to the page
+ *   that has it, so it travels with that page — leaving by the keyframes the
+ *   page being left leaves by, arriving by the ones the page arriving arrives
+ *   by — instead of going out with the render. Under the pages, so a page
+ *   coming over it covers it (see the z-order in route_transition.jsx).
+ *
+ * Which keyframes those are is published by the movement itself
+ * (--navi-route-transition-leave / -enter, see route_transition.jsx): a
+ * selector cannot say "the bars that have no counterpart" — the names are per
+ * element, so there is nothing static to write — so the rule is written for
+ * the length of the movement, over the names this one turned out to have.
  *
  * The name is per ELEMENT and kept for the element's whole life, which is what
  * makes "shared" mean shared: several bars can live on one edge
@@ -27108,6 +27115,10 @@ const releaseTransitionDestination = (owner) => {
 // inside the pages needs none of this — it lives in the area, so it is already
 // part of the pages' own picture.
 const FURNITURE_SELECTOR = ".navi_fixed_bar";
+// Worn by the root for the length of a route transition (route_transition.jsx
+// owns it). Written out rather than imported: importing the module that owns
+// it back into this one would close a cycle.
+const TRANSITION_ATTRIBUTE$1 = "data-navi-route-transition";
 const NAME_PROPERTY = "view-transition-name";
 const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 
@@ -27119,19 +27130,54 @@ let nameCount = 0;
 // it must not strip what the new one is wearing.
 let furnitureOwner = null;
 let namedElements = new Set();
+// The rule giving the one-sided bars their movement, written for one movement
+// and taken down with it.
+let travelStyleElement = null;
 
 /**
- * Name what stands around the area. Called twice for one movement: before the
- * picture of the state being left is taken, and again once the state arriving
- * has rendered — a bar that just mounted has to wear its name before the
- * second picture, and one that survived the render is left with the name it
- * already has.
+ * Name what stands around the area, before the picture of the state being left
+ * is taken: the browser reads the names off the DOM as it stands when the
+ * transition starts.
  */
 const nameTransitionFurniture = (owner, areaElement) => {
   if (owner !== furnitureOwner) {
     furnitureOwner = owner;
     namedElements = new Set();
   }
+  nameFurnitureAround(areaElement);
+};
+
+/**
+ * The state arriving has rendered and the second picture has not been taken:
+ * the one moment both states of the furniture are known. A bar that just
+ * mounted is named — one that survived the render keeps the name it has, which
+ * is what pairs its two pictures — and the bars only one of the two states has
+ * are given the movement of the page they belong to.
+ */
+const holdTransitionFurniture = (owner, areaElement) => {
+  if (owner !== furnitureOwner) {
+    return;
+  }
+  const namesLeaving = [];
+  for (const element of namedElements) {
+    if (!element.isConnected) {
+      namesLeaving.push(nameByElement.get(element));
+    }
+  }
+  const namesArriving = nameFurnitureAround(areaElement);
+  const cssText = `${travelRule("old", namesLeaving, "--navi-route-transition-leave")}${travelRule("new", namesArriving, "--navi-route-transition-enter")}`;
+  if (!cssText) {
+    return;
+  }
+  travelStyleElement = document.createElement("style");
+  travelStyleElement.textContent = cssText;
+  document.head.appendChild(travelStyleElement);
+};
+
+// Returns the elements it had to name, which are the ones the state arriving
+// brought: everything else was already wearing its name from the first pass.
+const nameFurnitureAround = (areaElement) => {
+  const namesAdded = [];
   for (const element of document.querySelectorAll(FURNITURE_SELECTOR)) {
     if (namedElements.has(element)) {
       continue;
@@ -27158,7 +27204,32 @@ const nameTransitionFurniture = (owner, areaElement) => {
     }
     element.style.setProperty(NAME_PROPERTY, name);
     namedElements.add(element);
+    namesAdded.push(name);
   }
+  return namesAdded;
+};
+
+// The movement, played on pictures no static rule can name. The keyframes are
+// read rather than guessed: a type navi ships publishes them, and so may one
+// an application writes — a type that publishes nothing leaves its furniture
+// to the browser's own fade, which is what the rule not being written means.
+const travelRule = (side, names, movementProperty) => {
+  if (names.length === 0) {
+    return "";
+  }
+  const animationName = getComputedStyle(document.documentElement)
+    .getPropertyValue(movementProperty)
+    .trim();
+  if (!animationName) {
+    return "";
+  }
+  const selector = names
+    .map(
+      (name) =>
+        `:root[${TRANSITION_ATTRIBUTE$1}]::view-transition-${side}(${name})`,
+    )
+    .join(",");
+  return `${selector}{animation-name:${animationName};animation-timing-function:ease;animation-fill-mode:both}`;
 };
 
 const releaseTransitionFurniture = (owner) => {
@@ -27170,6 +27241,10 @@ const releaseTransitionFurniture = (owner) => {
     element.style.removeProperty(NAME_PROPERTY);
   }
   namedElements = new Set();
+  if (travelStyleElement) {
+    travelStyleElement.remove();
+    travelStyleElement = null;
+  }
 };
 
 /**
@@ -27583,6 +27658,16 @@ const css$10 = /* css */`
       &::view-transition-group(navi-route-transition) {
         z-index: 1;
       }
+
+      /* And on the transition's own clock, whatever was captured. How long the
+         movement lasts is a fact about the movement, not about the pages: a bar
+         left on the browser's own 250ms would be gone a third of the way into a
+         longer one, instead of being covered by the page coming over it. */
+      &::view-transition-group(*),
+      &::view-transition-old(*),
+      &::view-transition-new(*) {
+        animation-duration: var(--navi-route-transition-duration, 300ms);
+      }
     }
 
     &::view-transition-old(root),
@@ -27773,47 +27858,29 @@ const css$10 = /* css */`
         object-position: top left;
         /* Two pages crossing are two solid things, and seeing through one to
            the other says they are the same page changing its mind. A movement
-           that keeps the browser's fade on one of its two sides wants the
-           opposite, and says so — see zoom below. */
+           that fades on one of its two sides wants the opposite, and says so —
+           see zoom below. */
         mix-blend-mode: normal;
         animation-fill-mode: both;
       }
     }
 
-    /* Eased, which is a taste about THESE four: a custom type says its own
-       curve. */
-    &[data-navi-route-transition-type="slide-x"],
-    &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"] {
-      &::view-transition-old(root),
-      &::view-transition-new(root),
-      &::view-transition-old(navi-route-transition),
-      &::view-transition-new(navi-route-transition) {
-        animation-timing-function: ease;
-      }
-    }
-
+    /* Which keyframes a page leaves and arrives by, said as a VALUE on the
+       root rather than only as a rule on the pictures. That pair IS the
+       movement, and the pages are not the only thing playing it: a fixed bar
+       the two states do not share travels with the page it belongs to, and its
+       picture wears a name nobody can write a selector for (it is per element
+       — see transition_furniture.js). Read from here, it is given the same
+       two. A type an application defines its own way is free to publish them
+       and have its furniture travel too. */
     &[data-navi-route-transition-type="slide-x"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-start;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-end;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-start;
+        --navi-route-transition-enter: navi-route-transition-enter-from-end;
       }
       &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-end;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-start;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+        --navi-route-transition-enter: navi-route-transition-enter-from-start;
       }
     }
 
@@ -27822,24 +27889,12 @@ const css$10 = /* css */`
        coming up from below. */
     &[data-navi-route-transition-type="slide-y"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-top;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-bottom;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-top;
+        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
       }
       &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-bottom;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-top;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+        --navi-route-transition-enter: navi-route-transition-enter-from-top;
       }
     }
 
@@ -27850,79 +27905,90 @@ const css$10 = /* css */`
        fade. */
     &[data-navi-route-transition-type="cover-x"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-still;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-end;
-        }
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-end;
       }
       &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+        --navi-route-transition-enter: navi-route-transition-still;
         &::view-transition-old(root),
         &::view-transition-old(navi-route-transition) {
           /* The page leaving is the cover: it must slide off ABOVE the one it
              uncovers, against the browser's default of drawing the new page on
              top. */
           z-index: 1;
-          animation-name: navi-route-transition-leave-towards-end;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-still;
         }
       }
     }
     &[data-navi-route-transition-type="cover-y"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-still;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-bottom;
-        }
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
       }
       &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+        --navi-route-transition-enter: navi-route-transition-still;
         &::view-transition-old(root),
         &::view-transition-old(navi-route-transition) {
           z-index: 1;
-          animation-name: navi-route-transition-leave-towards-bottom;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-still;
         }
       }
     }
 
     /* Going deeper is coming closer: the page arriving lands from slightly too
        big, and going back it is the page leaving that grows away. The other
-       side keeps the browser's own fade under it. */
+       side fades, which is what the browser would have done there anyway —
+       written out so that this type says both of its halves like every
+       other. */
     &[data-navi-route-transition-type="zoom"] {
+      &[data-navi-route-transition="forward"] {
+        --navi-route-transition-leave: navi-route-transition-fade-out;
+        --navi-route-transition-enter: navi-route-transition-zoom-in;
+      }
+      &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-zoom-out;
+        --navi-route-transition-enter: navi-route-transition-fade-in;
+      }
       &::view-transition-old(root),
       &::view-transition-new(root),
       &::view-transition-old(navi-route-transition),
       &::view-transition-new(navi-route-transition) {
-        /* One side of this one is the browser's fade, and a fade is two
-           half-transparent pictures: they must ADD up rather than cover each
-           other, or the page behind shows through the middle of the
-           movement. */
+        /* One side of this one is a fade, and a fade is two half-transparent
+           pictures: they must ADD up rather than cover each other, or the page
+           behind shows through the middle of the movement. */
         mix-blend-mode: plus-lighter;
       }
-      &[data-navi-route-transition="forward"] {
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-zoom-in;
-        }
+    }
+
+    /* The pages play what the type published. Written once for the types navi
+       ships and for those only: a type an application defines writes its own
+       rule, and one of navi's here would race it on cascade order. */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"],
+    &[data-navi-route-transition-type="zoom"] {
+      &::view-transition-old(root),
+      &::view-transition-old(navi-route-transition) {
+        animation-name: var(--navi-route-transition-leave);
       }
-      &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-zoom-out;
-        }
+      &::view-transition-new(root),
+      &::view-transition-new(navi-route-transition) {
+        animation-name: var(--navi-route-transition-enter);
+      }
+    }
+
+    /* Eased, which is a taste about THESE four: a custom type says its own
+       curve, and zoom keeps the browser's. */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
+        animation-timing-function: ease;
       }
     }
   }
@@ -27987,6 +28053,19 @@ const css$10 = /* css */`
   @keyframes navi-route-transition-still {
     to {
       translate: 0 0;
+    }
+  }
+  /* The browser's own fade, written out: a movement says both of its halves,
+     so that whoever else plays it (transition_furniture.js) can be given the
+     same one. */
+  @keyframes navi-route-transition-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes navi-route-transition-fade-in {
+    from {
+      opacity: 0;
     }
   }
 `;
@@ -28507,10 +28586,7 @@ const beginTransition = ({
     // The page arriving is in the DOM and the transition has not started
     // playing: the one moment both states of the area can be known.
     if (areaElement) {
-      // A bar the arriving state mounted has to wear its name before the
-      // second picture is taken; one that survived the render keeps the name
-      // it already has, which is what pairs its two pictures.
-      nameTransitionFurniture(transition, areaElement);
+      holdTransitionFurniture(transition, areaElement);
       holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
   });
@@ -53987,10 +54063,15 @@ const TimeRange = ({
   }
   // compact writes the whole span as one short token ("8h–10h"): nothing
   // around the separator, and no break inside it. The other formats are
-  // phrases — they get room around the separator, and may wrap there.
+  // phrases — they get room around the separator, and may wrap there (their
+  // separator carries its own spaces, which is enough to keep Text from adding
+  // more). Text spaces its children out by default, so the tight span has to
+  // say it wants none — before {...props}, so a caller can still ask for its
+  // own spacing.
   const tight = format === "compact";
   return jsxs(Text, {
     noWrap: tight,
+    spacing: tight ? 0 : undefined,
     ...props,
     children: [jsx(Time, {
       ...boundProps,

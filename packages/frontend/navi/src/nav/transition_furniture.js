@@ -13,10 +13,17 @@
  * - a bar the two states SHARE is one element wearing one name on both sides.
  *   The browser pairs the two pictures into one group and holds it where it
  *   stands: the frame, and the pages move behind it exactly as before.
- * - a bar only one state has never meets a counterpart. It stands where it was
- *   photographed while the pages move OVER it (see the z-order in
- *   route_transition.jsx) — covered progressively as a page comes over it,
- *   uncovered as one leaves — rather than going out with the render.
+ * - a bar only one state has never meets a counterpart. It belongs to the page
+ *   that has it, so it travels with that page — leaving by the keyframes the
+ *   page being left leaves by, arriving by the ones the page arriving arrives
+ *   by — instead of going out with the render. Under the pages, so a page
+ *   coming over it covers it (see the z-order in route_transition.jsx).
+ *
+ * Which keyframes those are is published by the movement itself
+ * (--navi-route-transition-leave / -enter, see route_transition.jsx): a
+ * selector cannot say "the bars that have no counterpart" — the names are per
+ * element, so there is nothing static to write — so the rule is written for
+ * the length of the movement, over the names this one turned out to have.
  *
  * The name is per ELEMENT and kept for the element's whole life, which is what
  * makes "shared" mean shared: several bars can live on one edge
@@ -37,6 +44,10 @@
 // inside the pages needs none of this — it lives in the area, so it is already
 // part of the pages' own picture.
 const FURNITURE_SELECTOR = ".navi_fixed_bar";
+// Worn by the root for the length of a route transition (route_transition.jsx
+// owns it). Written out rather than imported: importing the module that owns
+// it back into this one would close a cycle.
+const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const NAME_PROPERTY = "view-transition-name";
 export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 
@@ -48,19 +59,54 @@ let nameCount = 0;
 // it must not strip what the new one is wearing.
 let furnitureOwner = null;
 let namedElements = new Set();
+// The rule giving the one-sided bars their movement, written for one movement
+// and taken down with it.
+let travelStyleElement = null;
 
 /**
- * Name what stands around the area. Called twice for one movement: before the
- * picture of the state being left is taken, and again once the state arriving
- * has rendered — a bar that just mounted has to wear its name before the
- * second picture, and one that survived the render is left with the name it
- * already has.
+ * Name what stands around the area, before the picture of the state being left
+ * is taken: the browser reads the names off the DOM as it stands when the
+ * transition starts.
  */
 export const nameTransitionFurniture = (owner, areaElement) => {
   if (owner !== furnitureOwner) {
     furnitureOwner = owner;
     namedElements = new Set();
   }
+  nameFurnitureAround(areaElement);
+};
+
+/**
+ * The state arriving has rendered and the second picture has not been taken:
+ * the one moment both states of the furniture are known. A bar that just
+ * mounted is named — one that survived the render keeps the name it has, which
+ * is what pairs its two pictures — and the bars only one of the two states has
+ * are given the movement of the page they belong to.
+ */
+export const holdTransitionFurniture = (owner, areaElement) => {
+  if (owner !== furnitureOwner) {
+    return;
+  }
+  const namesLeaving = [];
+  for (const element of namedElements) {
+    if (!element.isConnected) {
+      namesLeaving.push(nameByElement.get(element));
+    }
+  }
+  const namesArriving = nameFurnitureAround(areaElement);
+  const cssText = `${travelRule("old", namesLeaving, "--navi-route-transition-leave")}${travelRule("new", namesArriving, "--navi-route-transition-enter")}`;
+  if (!cssText) {
+    return;
+  }
+  travelStyleElement = document.createElement("style");
+  travelStyleElement.textContent = cssText;
+  document.head.appendChild(travelStyleElement);
+};
+
+// Returns the elements it had to name, which are the ones the state arriving
+// brought: everything else was already wearing its name from the first pass.
+const nameFurnitureAround = (areaElement) => {
+  const namesAdded = [];
   for (const element of document.querySelectorAll(FURNITURE_SELECTOR)) {
     if (namedElements.has(element)) {
       continue;
@@ -87,7 +133,32 @@ export const nameTransitionFurniture = (owner, areaElement) => {
     }
     element.style.setProperty(NAME_PROPERTY, name);
     namedElements.add(element);
+    namesAdded.push(name);
   }
+  return namesAdded;
+};
+
+// The movement, played on pictures no static rule can name. The keyframes are
+// read rather than guessed: a type navi ships publishes them, and so may one
+// an application writes — a type that publishes nothing leaves its furniture
+// to the browser's own fade, which is what the rule not being written means.
+const travelRule = (side, names, movementProperty) => {
+  if (names.length === 0) {
+    return "";
+  }
+  const animationName = getComputedStyle(document.documentElement)
+    .getPropertyValue(movementProperty)
+    .trim();
+  if (!animationName) {
+    return "";
+  }
+  const selector = names
+    .map(
+      (name) =>
+        `:root[${TRANSITION_ATTRIBUTE}]::view-transition-${side}(${name})`,
+    )
+    .join(",");
+  return `${selector}{animation-name:${animationName};animation-timing-function:ease;animation-fill-mode:both}`;
 };
 
 export const releaseTransitionFurniture = (owner) => {
@@ -99,4 +170,8 @@ export const releaseTransitionFurniture = (owner) => {
     element.style.removeProperty(NAME_PROPERTY);
   }
   namedElements = new Set();
+  if (travelStyleElement) {
+    travelStyleElement.remove();
+    travelStyleElement = null;
+  }
 };

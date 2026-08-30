@@ -253,6 +253,20 @@ half-transparent pictures to add up rather than cover each other
 (`mix-blend-mode: plus-lighter`, as the shipped `zoom` and the demo's `spin`
 both do). A movement where both pages move wants what navi poses.
 
+A custom type can also say its two keyframes **as values**, next to the rules
+that play them:
+
+```css
+:root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
+  --navi-route-transition-leave: spin-out;
+  --navi-route-transition-enter: spin-in;
+}
+```
+
+That is what a fixed bar belonging to one of the two states is given to travel
+with the page it belongs to (see the transition area above). Nothing else reads
+them, and a type that publishes nothing leaves such a bar to the browser's fade.
+
 ## Two routes matching one url
 
 A relation is written between two pages, and it is resolved through **which page

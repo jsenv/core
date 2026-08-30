@@ -627,10 +627,14 @@ export const TimeRange = ({
   }
   // compact writes the whole span as one short token ("8h–10h"): nothing
   // around the separator, and no break inside it. The other formats are
-  // phrases — they get room around the separator, and may wrap there.
+  // phrases — they get room around the separator, and may wrap there (their
+  // separator carries its own spaces, which is enough to keep Text from adding
+  // more). Text spaces its children out by default, so the tight span has to
+  // say it wants none — before {...props}, so a caller can still ask for its
+  // own spacing.
   const tight = format === "compact";
   return (
-    <Text noWrap={tight} {...props}>
+    <Text noWrap={tight} spacing={tight ? 0 : undefined} {...props}>
       <Time {...boundProps}>{from}</Time>
       {tight ? separator : ` ${separator} `}
       <Time {...boundProps}>{to}</Time>

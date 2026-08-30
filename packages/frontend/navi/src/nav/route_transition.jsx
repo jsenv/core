@@ -79,6 +79,7 @@ import {
 } from "./transition_destination.js";
 import {
   FURNITURE_NAME_PREFIX,
+  holdTransitionFurniture,
   nameTransitionFurniture,
   releaseTransitionFurniture,
 } from "./transition_furniture.js";
@@ -191,6 +192,16 @@ const css = /* css */ `
       }
       &::view-transition-group(navi-route-transition) {
         z-index: 1;
+      }
+
+      /* And on the transition's own clock, whatever was captured. How long the
+         movement lasts is a fact about the movement, not about the pages: a bar
+         left on the browser's own 250ms would be gone a third of the way into a
+         longer one, instead of being covered by the page coming over it. */
+      &::view-transition-group(*),
+      &::view-transition-old(*),
+      &::view-transition-new(*) {
+        animation-duration: var(--navi-route-transition-duration, 300ms);
       }
     }
 
@@ -382,47 +393,29 @@ const css = /* css */ `
         object-position: top left;
         /* Two pages crossing are two solid things, and seeing through one to
            the other says they are the same page changing its mind. A movement
-           that keeps the browser's fade on one of its two sides wants the
-           opposite, and says so — see zoom below. */
+           that fades on one of its two sides wants the opposite, and says so —
+           see zoom below. */
         mix-blend-mode: normal;
         animation-fill-mode: both;
       }
     }
 
-    /* Eased, which is a taste about THESE four: a custom type says its own
-       curve. */
-    &[data-navi-route-transition-type="slide-x"],
-    &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"] {
-      &::view-transition-old(root),
-      &::view-transition-new(root),
-      &::view-transition-old(navi-route-transition),
-      &::view-transition-new(navi-route-transition) {
-        animation-timing-function: ease;
-      }
-    }
-
+    /* Which keyframes a page leaves and arrives by, said as a VALUE on the
+       root rather than only as a rule on the pictures. That pair IS the
+       movement, and the pages are not the only thing playing it: a fixed bar
+       the two states do not share travels with the page it belongs to, and its
+       picture wears a name nobody can write a selector for (it is per element
+       — see transition_furniture.js). Read from here, it is given the same
+       two. A type an application defines its own way is free to publish them
+       and have its furniture travel too. */
     &[data-navi-route-transition-type="slide-x"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-start;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-end;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-start;
+        --navi-route-transition-enter: navi-route-transition-enter-from-end;
       }
       &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-end;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-start;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+        --navi-route-transition-enter: navi-route-transition-enter-from-start;
       }
     }
 
@@ -431,24 +424,12 @@ const css = /* css */ `
        coming up from below. */
     &[data-navi-route-transition-type="slide-y"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-top;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-bottom;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-top;
+        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
       }
       &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-leave-towards-bottom;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-top;
-        }
+        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+        --navi-route-transition-enter: navi-route-transition-enter-from-top;
       }
     }
 
@@ -459,79 +440,90 @@ const css = /* css */ `
        fade. */
     &[data-navi-route-transition-type="cover-x"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-still;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-end;
-        }
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-end;
       }
       &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+        --navi-route-transition-enter: navi-route-transition-still;
         &::view-transition-old(root),
         &::view-transition-old(navi-route-transition) {
           /* The page leaving is the cover: it must slide off ABOVE the one it
              uncovers, against the browser's default of drawing the new page on
              top. */
           z-index: 1;
-          animation-name: navi-route-transition-leave-towards-end;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-still;
         }
       }
     }
     &[data-navi-route-transition-type="cover-y"] {
       &[data-navi-route-transition="forward"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-still;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-enter-from-bottom;
-        }
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
       }
       &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+        --navi-route-transition-enter: navi-route-transition-still;
         &::view-transition-old(root),
         &::view-transition-old(navi-route-transition) {
           z-index: 1;
-          animation-name: navi-route-transition-leave-towards-bottom;
-        }
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-still;
         }
       }
     }
 
     /* Going deeper is coming closer: the page arriving lands from slightly too
        big, and going back it is the page leaving that grows away. The other
-       side keeps the browser's own fade under it. */
+       side fades, which is what the browser would have done there anyway —
+       written out so that this type says both of its halves like every
+       other. */
     &[data-navi-route-transition-type="zoom"] {
+      &[data-navi-route-transition="forward"] {
+        --navi-route-transition-leave: navi-route-transition-fade-out;
+        --navi-route-transition-enter: navi-route-transition-zoom-in;
+      }
+      &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-zoom-out;
+        --navi-route-transition-enter: navi-route-transition-fade-in;
+      }
       &::view-transition-old(root),
       &::view-transition-new(root),
       &::view-transition-old(navi-route-transition),
       &::view-transition-new(navi-route-transition) {
-        /* One side of this one is the browser's fade, and a fade is two
-           half-transparent pictures: they must ADD up rather than cover each
-           other, or the page behind shows through the middle of the
-           movement. */
+        /* One side of this one is a fade, and a fade is two half-transparent
+           pictures: they must ADD up rather than cover each other, or the page
+           behind shows through the middle of the movement. */
         mix-blend-mode: plus-lighter;
       }
-      &[data-navi-route-transition="forward"] {
-        &::view-transition-new(root),
-        &::view-transition-new(navi-route-transition) {
-          animation-name: navi-route-transition-zoom-in;
-        }
+    }
+
+    /* The pages play what the type published. Written once for the types navi
+       ships and for those only: a type an application defines writes its own
+       rule, and one of navi's here would race it on cascade order. */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"],
+    &[data-navi-route-transition-type="zoom"] {
+      &::view-transition-old(root),
+      &::view-transition-old(navi-route-transition) {
+        animation-name: var(--navi-route-transition-leave);
       }
-      &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          animation-name: navi-route-transition-zoom-out;
-        }
+      &::view-transition-new(root),
+      &::view-transition-new(navi-route-transition) {
+        animation-name: var(--navi-route-transition-enter);
+      }
+    }
+
+    /* Eased, which is a taste about THESE four: a custom type says its own
+       curve, and zoom keeps the browser's. */
+    &[data-navi-route-transition-type="slide-x"],
+    &[data-navi-route-transition-type="slide-y"],
+    &[data-navi-route-transition-type="cover-x"],
+    &[data-navi-route-transition-type="cover-y"] {
+      &::view-transition-old(root),
+      &::view-transition-new(root),
+      &::view-transition-old(navi-route-transition),
+      &::view-transition-new(navi-route-transition) {
+        animation-timing-function: ease;
       }
     }
   }
@@ -596,6 +588,19 @@ const css = /* css */ `
   @keyframes navi-route-transition-still {
     to {
       translate: 0 0;
+    }
+  }
+  /* The browser's own fade, written out: a movement says both of its halves,
+     so that whoever else plays it (transition_furniture.js) can be given the
+     same one. */
+  @keyframes navi-route-transition-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes navi-route-transition-fade-in {
+    from {
+      opacity: 0;
     }
   }
 `;
@@ -1096,10 +1101,7 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     // The page arriving is in the DOM and the transition has not started
     // playing: the one moment both states of the area can be known.
     if (areaElement) {
-      // A bar the arriving state mounted has to wear its name before the
-      // second picture is taken; one that survived the render keeps the name
-      // it already has, which is what pairs its two pictures.
-      nameTransitionFurniture(transition, areaElement);
+      holdTransitionFurniture(transition, areaElement);
       holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
   });
