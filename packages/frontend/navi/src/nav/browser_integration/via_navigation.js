@@ -46,7 +46,10 @@ import {
   getNavDepth,
   NAV_DEPTH_STATE_KEY,
 } from "./document_back_and_forward.js";
-import { updateDocumentState } from "./document_state_signal.js";
+import {
+  resolveEffectiveDocumentState,
+  updateDocumentState,
+} from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForReplace } from "./link_replace.js";
@@ -150,22 +153,16 @@ export const setupBrowserIntegrationViaNavigation = ({
 
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
-      // Same reading as via_history.js: undefined inherits the current state,
-      // null resets it, an object replaces it — and the visited set rides
-      // along in every case. The entry already exists (interception commits
-      // before the handler runs), so the state is written onto it.
-      let effectiveState;
-      const sharedState = {
-        jsenv_visited_urls: Array.from(visitedUrlSet),
-        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-      };
-      if (state === undefined) {
-        effectiveState = { ...(getDocumentState() || {}), ...sharedState };
-      } else if (state === null) {
-        effectiveState = sharedState;
-      } else {
-        effectiveState = { ...state, ...sharedState };
-      }
+      // The entry already exists (interception commits before the handler
+      // runs), so the state is written onto it.
+      const effectiveState = resolveEffectiveDocumentState(state, {
+        navigationType,
+        currentState: getDocumentState(),
+        sharedState: {
+          jsenv_visited_urls: Array.from(visitedUrlSet),
+          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+        },
+      });
       navigation.updateCurrentEntry({ state: effectiveState });
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -373,18 +370,14 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   const runStateOnly = (navigationType, state) => {
     applyNavigationToNavDepth(navigationType, state);
-    let effectiveState;
-    const sharedState = {
-      jsenv_visited_urls: Array.from(visitedUrlSet),
-      [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-    };
-    if (state === undefined) {
-      effectiveState = { ...(getDocumentState() || {}), ...sharedState };
-    } else if (state === null) {
-      effectiveState = sharedState;
-    } else {
-      effectiveState = { ...state, ...sharedState };
-    }
+    const effectiveState = resolveEffectiveDocumentState(state, {
+      navigationType,
+      currentState: getDocumentState(),
+      sharedState: {
+        jsenv_visited_urls: Array.from(visitedUrlSet),
+        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+      },
+    });
     navigation.updateCurrentEntry({ state: effectiveState });
     updateDocumentState(effectiveState);
   };

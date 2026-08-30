@@ -691,6 +691,16 @@ const css = /* css */ `
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
  *   veto a close instead).
+ * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
+ *   Keeps the open state in the history entry, so a screen left and come back
+ *   to finds this popup as it was — open, and without an entrance playing: it
+ *   was already open when the page reappeared. `true` stores it under the
+ *   popup's own `id`; a string names the key instead.
+ *   `{ type: "push" }` also makes the opening a history entry of its own, so
+ *   the back button closes the popup rather than leaving the screen — and a
+ *   cancel (Escape) goes back, taking whatever was written to the url while it
+ *   was open with it. The state belongs to the entry that wrote it: a
+ *   navigation that stacks a new entry does not carry it along.
  * @param {object} [props.openController] - Advanced: an externally-owned
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
@@ -758,6 +768,7 @@ const UncontrolledDialog = (props) => {
       open={undefined}
       signal={undefined}
       defaultOpen={undefined}
+      navState={undefined}
       onClose={undefined}
       openController={openController}
       onnavi_request_open={(e) => {

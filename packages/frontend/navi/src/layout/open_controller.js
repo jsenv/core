@@ -7,6 +7,7 @@ import {
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
+import { useNavState } from "../nav/browser_integration/browser_integration.js";
 import { warnSignalCollision } from "../control/control_value.js";
 import {
   prepareFocusTransfer,
@@ -221,7 +222,7 @@ export const createOpenController = (
     // Last: the close effects above are what starts the exit transition the
     // content must outlive (see popup_content_mount.js).
     controller.unmountContent?.();
-    controller.onOpenedChange?.(false);
+    controller.onOpenedChange?.(false, closeEvent);
   };
   const controller = {
     opened: false,
@@ -241,9 +242,10 @@ export const createOpenController = (
     // away on close (`unmountWhenClosed`). Called from performClose above.
     unmountContent: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
-    // interaction, a command, a prop. What lets a `signal` prop reflect the
-    // popup's real state (see useOpenPropsEffectOnOpenController), called once
-    // the open/close has fully happened rather than mid-sequence.
+    // interaction, a command, a prop — with the event that asked. What lets a
+    // `signal` prop reflect the popup's real state, and a `navState` prop write
+    // it into the history entry (see useOpenPropsEffectOnOpenController);
+    // called once the open/close has fully happened rather than mid-sequence.
     onOpenedChange: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
@@ -347,7 +349,7 @@ export const createOpenController = (
         openEffectReturnValue?.(closeEvent);
       };
       closeHandlers = openHandler(requestOpenEvent) || null;
-      controller.onOpenedChange?.(true);
+      controller.onOpenedChange?.(true, requestOpenEvent);
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
@@ -467,36 +469,98 @@ const scheduleMountOpen = (run) => {
   });
 };
 
+// Where the popup's open state is kept, when it is kept anywhere: `navState`
+// resolved to the `{ id, type }` useNavState wants.
+//
+// `true` takes the popup's own id — a popup a `--navi-open` command can name is
+// a popup that already has a stable one, and that id is what identifies its
+// open state too.
+const NO_NAV_STATE = { id: undefined, type: "replace" };
+const resolveNavStateProp = (navState, popupId) => {
+  if (!navState) {
+    return NO_NAV_STATE;
+  }
+  if (navState === true) {
+    if (import.meta.dev && !popupId) {
+      console.warn(
+        `[navi] "popup" got navState={true} but has no "id" to store its open state under. Give the popup an id, or pass the key as navState="some_id".`,
+      );
+    }
+    return { id: popupId, type: "replace" };
+  }
+  if (typeof navState === "string") {
+    return { id: navState, type: "replace" };
+  }
+  return { id: navState.id || popupId, type: navState.type || "replace" };
+};
+
 /**
- * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
- * shared between `useOpenControllerByProps` below (Dialog/Popover driving
- * their own controller) and `picker_custom.jsx` (which derives its own
- * boolean from history state instead of a literal `open` prop, but needs
- * the exact same skip-if-already-matching / open-or-requestClose control
- * flow, via a small `{ open, requestClose, opened }` adapter around its own
- * `requestOpen`/`requestClose` wrappers).
+ * Keeps an open controller in sync with where the caller says the popup should
+ * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
+ * state written into the history entry, so a screen left and come back to finds
+ * its popup as it was.
+ *
+ * Shared between `useOpenControllerByProps` below (Dialog/Popover driving their
+ * own controller) and `picker_custom.jsx` (which owns its controller but wants
+ * the same skip-if-already-matching / open-or-requestClose control flow).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean> }} props
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean>, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
  */
 export const useOpenPropsEffectOnOpenController = (openController, props) => {
-  const { signal, defaultOpen } = props;
-  if (signal) {
+  const { signal, defaultOpen, navState } = props;
+  const { id: navStateId, type: navStateType } = resolveNavStateProp(
+    navState,
+    props.id,
+  );
+  // Called unconditionally (it answers with no-ops for an absent id), like
+  // every other hook here.
+  const [navStateValue, enterNavState, leaveNavState] = useNavState(
+    navStateId,
+    { type: navStateType },
+  );
+  if (navStateId) {
+    if (import.meta.dev && (signal || Object.hasOwn(props, "open"))) {
+      const ignored = signal ? "signal" : "open";
+      console.warn(
+        `[navi] "popup" got both "navState" and "${ignored}". "navState" is the source of truth; "${ignored}" is ignored. Pass only one.`,
+      );
+    }
+  } else if (signal) {
     warnSignalCollision(props, "popup", "open");
   }
-  // What the caller holds, however they hold it: an `open` they re-render
-  // themselves, or a `signal` this hook also writes (see onOpenedChange below).
-  // Reading .value during render is what subscribes the popup to it.
-  const open = signal ? signal.value : props.open;
+  // What the caller holds, however they hold it: the history entry when there
+  // is a `navState`, an `open` they re-render themselves, or a `signal` this
+  // hook also writes (see onOpenedChange below). Reading .value during render
+  // is what subscribes the popup to a signal; reading the document state is
+  // what subscribes it to the history entry, back button included.
+  const open = navStateId
+    ? Boolean(navStateValue)
+    : signal
+      ? signal.value
+      : props.open;
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
-  // --navi-close command) writes what happened into the signal, so whoever
-  // holds it always reads where the popup is.
-  openController.onOpenedChange = signal
-    ? (opened) => {
-        signal.value = opened;
-      }
-    : null;
+  // --navi-close command) writes what happened where the caller keeps it, so
+  // whoever holds it always reads where the popup is.
+  openController.onOpenedChange =
+    navStateId || signal
+      ? (opened, event) => {
+          if (navStateId) {
+            if (opened) {
+              enterNavState();
+            } else {
+              // Under type "push" a cancel goes back rather than rewriting the
+              // entry, so everything else written to the url while the popup
+              // was open goes back with it (see useNavState's own leave()).
+              leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
+            }
+          }
+          if (signal) {
+            signal.value = opened;
+          }
+        }
+      : null;
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -549,11 +613,14 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
         { isCancel: true },
       );
     }
+    // The request can be refused (a busy form denying the close): the popup
+    // then stays where it was, and whoever holds the open state is told so —
+    // otherwise it would keep saying "closed" about a popup still open.
     if (signal) {
-      // The request can be refused (a busy form denying the close): the popup
-      // then stays where it was, and the signal is told so — otherwise it
-      // would keep saying "closed" about a popup still open.
       signal.value = openController.opened;
+    }
+    if (navStateId && openController.opened) {
+      enterNavState();
     }
   }, [open]);
 };

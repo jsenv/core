@@ -17,7 +17,10 @@ import {
   getNavDepth,
   NAV_DEPTH_STATE_KEY,
 } from "./document_back_and_forward.js";
-import { updateDocumentState } from "./document_state_signal.js";
+import {
+  resolveEffectiveDocumentState,
+  updateDocumentState,
+} from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForReplace } from "./link_replace.js";
@@ -197,28 +200,14 @@ export const setupBrowserIntegrationViaHistory = ({
 
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
-      // undefined → inherit current state (link click, neutral navigation)
-      // null     → explicit reset (no nav-state keys carried over)
-      // {...}    → explicit state from enter()/leave(), already built from currentState
-      // When state is given it's responsability of the caller to ensure it inherits document state (or not, you want it 99% of the time)
-      let effectiveState;
-      const sharedState = {
-        jsenv_visited_urls: Array.from(visitedUrlSet),
-        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-      };
-      if (state === undefined) {
-        effectiveState = {
-          ...(getDocumentState() || {}),
-          ...sharedState,
-        };
-      } else if (state === null) {
-        effectiveState = sharedState;
-      } else if (state) {
-        effectiveState = {
-          ...state,
-          ...sharedState,
-        };
-      }
+      const effectiveState = resolveEffectiveDocumentState(state, {
+        navigationType,
+        currentState: getDocumentState(),
+        sharedState: {
+          jsenv_visited_urls: Array.from(visitedUrlSet),
+          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+        },
+      });
       if (navigationType === "push") {
         window.history.pushState(effectiveState, null, url);
       } else {
