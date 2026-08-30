@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.9.2",
+  "version": "6.9.3",
   "type": "module",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {

@@ -7,6 +7,10 @@ import {
   analyzeImportExpression,
 } from "./js_static_analysis/import_export.js";
 import {
+  analyzeImportMetaCssAssignment,
+  isImportMetaCssAssignment,
+} from "./js_static_analysis/import_meta_css.js";
+import {
   analyzeImportMetaResolveCall,
   isImportMetaResolveCall,
 } from "./js_static_analysis/import_meta_resolve.js";
@@ -129,6 +133,13 @@ export const parseJsUrls = ({
     },
     ExportAllDeclaration: (node) => {
       analyzeExportAllDeclaration(node, { onUrl });
+    },
+    AssignmentExpression: (node) => {
+      if (inlineContent && isJsModule && isImportMetaCssAssignment(node)) {
+        analyzeImportMetaCssAssignment(node, {
+          onInlineContent,
+        });
+      }
     },
     CallExpression: (node) => {
       if (isJsModule && isImportMetaResolveCall(node)) {

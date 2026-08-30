@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-minification",
-  "version": "1.7.10",
+  "version": "1.7.11",
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "@jsenv/core": "*"
   },
   "dependencies": {
-    "@jsenv/ast": "6.9.2",
+    "@jsenv/ast": "6.9.3",
     "@jsenv/sourcemap": "1.4.2",
     "@jsenv/urls": "2.9.10",
     "html-minifier": "4.0.0",
