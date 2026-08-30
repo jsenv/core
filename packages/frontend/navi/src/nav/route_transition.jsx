@@ -175,23 +175,117 @@ const css = /* css */ `
     &[data-navi-route-transition-target="area"] {
       view-transition-name: none;
 
+      /* Where the pages are cut, and how far they travel — said on the root so
+         that EVERY picture of the movement inherits them, not just the pages':
+         a fixed bar or a popup travelling with the page it belongs to
+         (transition_furniture.js) crosses the same window's worth of distance
+         the pages do, whatever its own size. The pages are then cut with what
+         is written here, on their group below.
+
+         The cut: the area's own box, and on top of it whatever covers the area.
+         The pictures are drawn in the top layer, so they cover a fixed bar as
+         easily as anything else — and the area runs UNDER the bars by design:
+         that is what a fixed bar is for, and what the room it gives back is
+         for. An area taller than the screen therefore ends below the bottom
+         bar, and a scrolled one starts above the top bar, so the movement would
+         be watched painting over them for its whole length.
+
+         Two bands are left free, and they answer for two different things: the
+         app's own safe area (layout/safe_area.js), everything pinned to the
+         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
+         what covers the area from inside the document — a sticky header above
+         the pages covers the top of the area exactly as a fixed bar covers the
+         top of the screen. Both are read rather than asked for, so one that
+         grows, shrinks or unmounts mid-transition is followed without anything
+         being told.
+
+         Read live, though, they describe the state ARRIVING and nothing else,
+         so the cut is taken at the smaller of that and the band the state
+         being left kept free (--navi-transition-old-band-*, photographed while
+         both still existed). Furniture standing in BOTH states is the frame:
+         the pages move behind it and are cut at it. Furniture standing in one
+         of them is part of what changes, and cutting the page being left at a
+         bar it never had shows its own header being sliced instead of
+         leaving. */
+      --navi-route-transition-clip-top: max(
+        0px,
+        min(
+            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)
+          ) - var(--navi-transition-window-top)
+      );
+      --navi-route-transition-clip-left: max(
+        0px,
+        min(
+            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)
+          ) - var(--navi-transition-window-left)
+      );
+      --navi-route-transition-clip-bottom: max(
+        0px,
+        var(--navi-transition-window-top) +
+          var(--navi-transition-window-height) +
+          min(
+            var(--navi-safe-area-inset-bottom) +
+              var(--navi-transition-cover-bottom),
+            var(--navi-transition-old-band-bottom)
+          ) -
+          100dvh
+      );
+      --navi-route-transition-clip-right: max(
+        0px,
+        var(--navi-transition-window-left) +
+          var(--navi-transition-window-width) +
+          min(
+            var(--navi-safe-area-inset-right) +
+              var(--navi-transition-cover-right),
+            var(--navi-transition-old-band-right)
+          ) -
+          100dvw
+      );
+
+      /* How far a page travels: the WINDOW it is seen through, not its own
+         size. A page is as tall as its content — several screens of it — and a
+         movement measured on the picture would send it thousands of pixels
+         away, off screen for most of the transition and flying past at the
+         end. What one page crossing another means is one window's worth of
+         movement, whatever the pages are made of (see the keyframes). */
+      --navi-route-transition-travel-x: calc(
+        var(--navi-transition-window-width) - var(
+            --navi-route-transition-clip-left
+          ) - var(--navi-route-transition-clip-right)
+      );
+      --navi-route-transition-travel-y: calc(
+        var(--navi-transition-window-height) - var(
+            --navi-route-transition-clip-top
+          ) - var(--navi-route-transition-clip-bottom)
+      );
+
       /* The pages travel OVER the furniture. Everything else captured while an
-         area is marked is a fixed bar wearing a name of navi's own for the
-         length of the movement (transition_furniture.js): a bar the two states
-         share is one group the browser holds where it stands, and a bar only
-         one of them has stands there too, with no counterpart to move to. Both
-         belong under the pages — that is what lets a page come over a bar that
-         is going away, and a page leaving uncover the bar arriving behind it.
+         area is marked wears a name of navi's own for the length of the
+         movement (transition_furniture.js): a bar the two states share is one
+         group the browser holds where it stands, and a bar only one of them
+         has stands there too, with no counterpart to move to. Both belong
+         under the pages — that is what lets a page come over a bar that is
+         going away, and a page leaving uncover the bar arriving behind it.
+
+         An open popup is the one piece that goes the other way: it stands in
+         the top layer, over everything the document paints, so its picture
+         stands over the pages rather than under them — a page sliding under a
+         dialog, not over it (the class comes from layout/popup_css.js).
 
          Ordered here rather than left to the DOM, which decides it otherwise:
          where an application puts its bars relative to the area is its own
-         business. A name and \`*\` weigh the same, so the two rules are read in
-         the order they are written. */
+         business. A name, a class and \`*\` weigh the same, so the rules are
+         read in the order they are written. */
       &::view-transition-group(*) {
         z-index: 0;
       }
       &::view-transition-group(navi-route-transition) {
         z-index: 1;
+      }
+      &::view-transition-group(.navi_popup) {
+        z-index: 2;
       }
 
       /* And on the transition's own clock, whatever was captured. How long the
@@ -248,93 +342,15 @@ const css = /* css */ `
       );
       width: var(--navi-transition-window-width);
       height: var(--navi-transition-window-height);
-      animation-name: none;
-
-      /* Cut at what covers the area, on top of being cut at the area's own
-         box. The pictures are drawn in the top layer, so they cover a fixed bar
-         as easily as anything else — and the area runs UNDER the bars by
-         design: that is what a fixed bar is for, and what the room it gives
-         back is for. An area taller than the screen therefore ends below the
-         bottom bar, and a scrolled one starts above the top bar, so the
-         movement would be watched painting over them for its whole length.
-
-         Two bands are left free, and they answer for two different things: the
-         app's own safe area (layout/safe_area.js), everything pinned to the
-         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
-         what covers the area from inside the document — a sticky header above
-         the pages covers the top of the area exactly as a fixed bar covers the
-         top of the screen. Both are read rather than asked for, so one that
-         grows, shrinks or unmounts mid-transition is followed without anything
-         being told.
-
-         Read live, though, they describe the state ARRIVING and nothing else,
-         so the cut is taken at the smaller of that and the band the state
-         being left kept free (--navi-transition-old-band-*, photographed while
-         both still existed). Furniture standing in BOTH states is the frame:
-         the pages move behind it and are cut at it. Furniture standing in one
-         of them is part of what changes, and cutting the page being left at a
-         bar it never had shows its own header being sliced instead of
-         leaving. */
-      --navi-route-transition-clip-top: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)
-          ) - var(--navi-transition-window-top)
-      );
-      --navi-route-transition-clip-left: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)
-          ) - var(--navi-transition-window-left)
-      );
-      --navi-route-transition-clip-bottom: max(
-        0px,
-        var(--navi-transition-window-top) +
-          var(--navi-transition-window-height) +
-          min(
-            var(--navi-safe-area-inset-bottom) +
-              var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)
-          ) -
-          100dvh
-      );
-      --navi-route-transition-clip-right: max(
-        0px,
-        var(--navi-transition-window-left) +
-          var(--navi-transition-window-width) +
-          min(
-            var(--navi-safe-area-inset-right) +
-              var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)
-          ) -
-          100dvw
-      );
+      /* And cut at what covers the area, on top of that (the band is worked
+         out on the root above). */
       clip-path: inset(
         var(--navi-route-transition-clip-top)
           var(--navi-route-transition-clip-right)
           var(--navi-route-transition-clip-bottom)
           var(--navi-route-transition-clip-left)
       );
-
-      /* How far a page travels: the WINDOW it is seen through, not its own
-         size. A page is as tall as its content — several screens of it — and a
-         movement measured on the picture would send it thousands of pixels
-         away, off screen for most of the transition and flying past at the
-         end. What one page crossing another means is one window's worth of
-         movement, whatever the pages are made of. Inherited by the pictures,
-         which is where it is used (see the keyframes). */
-      --navi-route-transition-travel-x: calc(
-        var(--navi-transition-window-width) - var(
-            --navi-route-transition-clip-left
-          ) - var(--navi-route-transition-clip-right)
-      );
-      --navi-route-transition-travel-y: calc(
-        var(--navi-transition-window-height) - var(
-            --navi-route-transition-clip-top
-          ) - var(--navi-route-transition-clip-bottom)
-      );
+      animation-name: none;
     }
     /* Each picture at the corner its own state stood at, which is not the
        window's: the window contains both states, and a state that is scrolled

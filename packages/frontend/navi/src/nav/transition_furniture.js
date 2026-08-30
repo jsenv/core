@@ -1,8 +1,8 @@
 /**
- * The furniture around the pages — the fixed bars — photographed with them for
- * the length of a route transition, so that a piece of it belonging to ONE of
- * the two states takes part in the movement instead of appearing or vanishing
- * in a frame.
+ * The furniture around the pages — the fixed bars, and the popups standing
+ * over them in the top layer — photographed with them for the length of a
+ * route transition, so that a piece of it belonging to ONE of the two states
+ * takes part in the movement instead of appearing or vanishing in a frame.
  *
  * Whether a bar is the frame or part of what changes is a fact about the PAIR
  * of states, never about the bar: the top bar of a list is the frame while one
@@ -17,7 +17,15 @@
  *   that has it, so it travels with that page — leaving by the keyframes the
  *   page being left leaves by, arriving by the ones the page arriving arrives
  *   by — instead of going out with the render. Under the pages, so a page
- *   coming over it covers it (see the z-order in route_transition.jsx).
+ *   coming over it covers it — a popup over them instead, standing where it
+ *   stands in the document (see the z-order in route_transition.jsx).
+ *
+ * A popup shown in the top layer is furniture of the same kind, and its case
+ * is the sharper one: it is a DOM descendant of the area, yet painted outside
+ * the area's picture, so being captured on its own is the only way it is on
+ * screen at all for those few hundred milliseconds (layout/popup_css.js). One
+ * the two states share holds where it stands, one only a single state has
+ * travels with that state's page — the same two outcomes, derived the same way.
  *
  * Which keyframes those are is published by the movement itself
  * (--navi-route-transition-leave / -enter, see route_transition.jsx): a
@@ -39,11 +47,15 @@
  * both pages are pictures for those few hundred milliseconds anyway.
  */
 
+// The browser's top layer: painted above everything the document paints, so
+// outside the area's picture whatever the DOM says.
+const TOP_LAYER_SELECTOR = ":modal, :popover-open";
 // What counts as furniture: what is pinned to an edge of the window and gives
-// its room back to the content (layout/fixed_bar/fixed_bar.jsx). A sticky row
-// inside the pages needs none of this — it lives in the area, so it is already
-// part of the pages' own picture.
-const FURNITURE_SELECTOR = ".navi_fixed_bar";
+// its room back to the content (layout/fixed_bar/fixed_bar.jsx), and what
+// stands over the pages in the top layer. A sticky row inside the pages needs
+// none of this — it lives in the area, so it is already part of the pages' own
+// picture, and so is a popup rendered with layer="local".
+const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECTOR}), .navi_dialog:is(${TOP_LAYER_SELECTOR})`;
 // Worn by the root for the length of a route transition (route_transition.jsx
 // owns it). Written out rather than imported: importing the module that owns
 // it back into this one would close a cycle.
@@ -112,8 +124,10 @@ const nameFurnitureAround = (areaElement) => {
       continue;
     }
     // Inside the area it is not furniture, it is the page: naming it would
-    // punch a hole in the picture the movement is played on.
-    if (areaElement.contains(element)) {
+    // punch a hole in the picture the movement is played on. Standing in the
+    // top layer takes it out of that picture though, so there is no hole to
+    // punch — which is exactly the case of a modal dialog rendered by a page.
+    if (areaElement.contains(element) && !element.matches(TOP_LAYER_SELECTOR)) {
       continue;
     }
     let name = nameByElement.get(element);

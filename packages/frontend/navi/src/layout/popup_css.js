@@ -284,21 +284,41 @@ export const popupCss = /* css */ `
      popup lives in the top layer too: uncaptured, it is simply covered for the
      length of the movement, so it disappears the instant its page starts to
      leave and lands abruptly when the arriving one settles. Captured, it is a
-     group beside the pages, painted over them where it stands, and the browser
-     fades it out with the page it belonged to or in with the page it comes
-     with.
+     group beside the pages, painted over them where it stands.
+
+     The class is how navi reaches that picture afterwards: its clock below,
+     and its place above the pages (the z-order in nav/route_transition.jsx). */
+  :root[data-navi-route-transition] .navi_popover[aria-expanded="true"],
+  :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"],
+  :root[data-navi-route-travel] .navi_popover[aria-expanded="true"],
+  :root[data-navi-route-travel] .navi_dialog[aria-expanded="true"] {
+    view-transition-class: navi_popup;
+  }
+
+  /* The name, wherever nobody writes a better one. A movement played on an
+     area names the popups standing over it itself, per element and in JS
+     (nav/transition_furniture.js): only a real name tells the popup the two
+     states SHARE — one element, one name, one group held where it stands —
+     from the one a single state has, which belongs to that state's page and
+     travels with it. A movement played on the whole document runs no such
+     pass, so the popup takes an identity of its own and the browser fades it.
 
      An identity of its own (match-element), never a shared name: two popups on
      either side of a navigation are two different popups, and what is wanted is
      precisely that one goes and the other comes. A browser with no
      match-element takes no name and the pictures cover the popup. */
   @supports (view-transition-name: match-element) {
-    :root[data-navi-route-transition] .navi_popover[aria-expanded="true"],
-    :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"],
+    :root[data-navi-route-transition]:not(
+        [data-navi-route-transition-target="area"]
+      )
+      .navi_popover[aria-expanded="true"],
+    :root[data-navi-route-transition]:not(
+        [data-navi-route-transition-target="area"]
+      )
+      .navi_dialog[aria-expanded="true"],
     :root[data-navi-route-travel] .navi_popover[aria-expanded="true"],
     :root[data-navi-route-travel] .navi_dialog[aria-expanded="true"] {
       view-transition-name: match-element;
-      view-transition-class: navi_popup;
     }
   }
 
