@@ -51,9 +51,11 @@ it once, at startup; there is nothing else to wire.
 Under a truthy reason, no resource callback is called. What happens instead
 depends on what was asked:
 
-- **A `GET` answers from the store.** If the row its params designate is
-  there — by the resource's `idKey`, or by any of its `uniqueKeys` — the action
-  completes with it and nothing is asked. Going from game A to game B, both read
+- **A `GET` answers from the store.** If the row it designates is there, the
+  action completes with it and nothing is asked. The row is the one its params
+  name — by the resource's `idKey`, or by any of its `uniqueKeys` — or, when
+  the params name none (a `GET` without params, like `/me`), the row the
+  action last completed with. Going from game A to game B, both read
   before, is a change of params that would normally rerun `GAME.GET`; under the
   policy it completes from the store, and a screen that does not take
   `error: true` keeps drawing what it holds instead of falling into its error
@@ -64,8 +66,8 @@ depends on what was asked:
   action's own value knows which ids answered `/users?scope=shareable`. So a
   rerun asked of a completed read under the policy is held — the action keeps
   its state, its value and its data, exactly as a `run()` on a completed action
-  would. This is the piece an app cannot do on its own: the callback never sees
-  its action.
+  would. This is the piece an app cannot do on its own: by the time a callback
+  runs, its action has already been reset.
 - **A `GET_RANGE` revalidation fails quietly.** A list that comes back to the
   screen draws the composition it left and asks again for the window it draws;
   under the policy that ask fails, and a failed revalidation keeps the rows it

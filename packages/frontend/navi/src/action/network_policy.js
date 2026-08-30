@@ -8,8 +8,9 @@ import { isSignal } from "../utils/is_signal.js";
  * read by the action layer rather than by every callback.
  *
  * Under a policy (a truthy reason):
- * - a resource GET answers with the row its store holds for its params and
- *   asks nothing (resource_graph.js, applyNetworkPolicy); a completed read
+ * - a resource GET answers with the row its store holds for it — named by its
+ *   params, or the one it last completed with — and asks nothing
+ *   (resource_graph.js, applyNetworkPolicy); a completed read
  *   asked to rerun stays completed (actions.js, handleActionRequest);
  *   anything else settles with an OfflineError carrying the reason;
  * - a control bound to a write — or inside a form bound to one — is read-only

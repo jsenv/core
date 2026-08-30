@@ -1026,6 +1026,7 @@ export const createAction = (callback, rootOptions = {}) => {
           event,
           signal: internalAbortSignal,
           isPrerun,
+          action,
         });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {

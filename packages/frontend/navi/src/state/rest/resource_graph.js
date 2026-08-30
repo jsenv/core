@@ -85,7 +85,7 @@ const debug = (...args) => {
  *
  * @param {string} name - resource name, used in action names and error messages
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
- * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"` (or the first `uniqueKeys` entry)
+ * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
@@ -101,7 +101,7 @@ export const resource = (
   name,
   {
     // configuration options
-    idKey,
+    idKey = "id",
     uniqueKeys = [],
     rerunOn,
     dependencies,
@@ -120,9 +120,6 @@ export const resource = (
   } = {},
 ) => {
   const declarationSite = getDeclarationSite();
-  if (idKey === undefined) {
-    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
-  }
   const setupCallbackSet = new Set();
   const addItemSetup = (callback) => {
     setupCallbackSet.add(callback);
@@ -170,10 +167,12 @@ export const resource = (
     store,
     declarationSite,
   });
-  // The row a GET's params designate, when the store already holds it: the
-  // value under idKey may be the id or any unique key (a route opening a user
-  // by id or by slug names both `id`), and a unique key may be given under its
-  // own name. Answers a GET under a network policy (see applyNetworkPolicy).
+  // The row a GET designates, when the store already holds it — by its params:
+  // the value under idKey may be the id or any unique key (a route opening a
+  // user by id or by slug names both `id`), and a unique key may be given under
+  // its own name; or, when the params name no row (a GET without params, or
+  // whose params carry no key), the row the action last completed with.
+  // Answers a GET under a network policy (see applyNetworkPolicy).
   const selectByAnyKey = (value) => {
     const item = store.select(value);
     if (item) {
@@ -187,31 +186,42 @@ export const resource = (
     }
     return null;
   };
-  const findItemInStore = (params) => {
-    return untracked(() => {
-      if (primitiveCanBeId(params)) {
-        return selectByAnyKey(params);
+  const findItemByParams = (params) => {
+    if (primitiveCanBeId(params)) {
+      return selectByAnyKey(params);
+    }
+    if (!isProps(params)) {
+      return null;
+    }
+    const idParam = params[idKey];
+    if (idParam !== undefined) {
+      const item = selectByAnyKey(idParam);
+      if (item) {
+        return item;
       }
-      if (!isProps(params)) {
-        return null;
-      }
-      const idParam = params[idKey];
-      if (idParam !== undefined) {
-        const item = selectByAnyKey(idParam);
+    }
+    for (const uniqueKey of uniqueKeys) {
+      const uniqueKeyParam = params[uniqueKey];
+      if (uniqueKeyParam !== undefined) {
+        const item = store.select(uniqueKey, uniqueKeyParam);
         if (item) {
           return item;
         }
       }
-      for (const uniqueKey of uniqueKeys) {
-        const uniqueKeyParam = params[uniqueKey];
-        if (uniqueKeyParam !== undefined) {
-          const item = store.select(uniqueKey, uniqueKeyParam);
-          if (item) {
-            return item;
-          }
-        }
+    }
+    return null;
+  };
+  const findItemInStore = (params, action) => {
+    return untracked(() => {
+      const itemByParams = findItemByParams(params);
+      if (itemByParams) {
+        return itemByParams;
       }
-      return null;
+      const lastItemId = getLastGetItemId(action);
+      if (lastItemId === undefined) {
+        return null;
+      }
+      return store.select(lastItemId) || null;
     });
   };
   return createResource(name, {
@@ -1269,6 +1279,9 @@ const createRestActionFactoryForRoot = (
         // lifecycle rules can detect whether sub-resources were embedded.
         if (verb === "GET") {
           recordGetResultProperties(action, Object.keys(result));
+          const itemId = applyResultToValue(result);
+          lastGetItemIdWeakMap.set(action, itemId);
+          return itemId;
         }
         return applyResultToValue(result);
       },
@@ -1316,12 +1329,12 @@ const createRestActionFactoryForRoot = (
 };
 
 // Under a network policy no callback is called (see network_policy.js). A GET
-// of a root resource answers with the row the store holds for its params —
-// handing the item back is an upsert without effect, so the action completes
-// with what it had and nothing is asked. A relationship GET has no row of its
-// own to answer with, and a write has nothing to answer: both settle with an
-// OfflineError carrying the policy's reason. A completed GET asked to rerun
-// never gets here (actions.js holds it).
+// of a root resource answers with the row the store holds for it (see
+// findItemInStore) — handing the item back is an upsert without effect, so the
+// action completes with what it had and nothing is asked. A relationship GET
+// has no row of its own to answer with, and a write has nothing to answer:
+// both settle with an OfflineError carrying the policy's reason. A completed
+// GET asked to rerun never gets here (actions.js holds it).
 const applyNetworkPolicy = (
   restCallback,
   { verb, isMany, findItemInStore },
@@ -1332,13 +1345,21 @@ const applyNetworkPolicy = (
       return restCallback(params, context);
     }
     if (verb === "GET" && !isMany && findItemInStore) {
-      const item = findItemInStore(params);
+      const item = findItemInStore(params, context.action);
       if (item) {
         return item;
       }
     }
     throw new OfflineError(reason);
   };
+};
+
+// WeakMap<action, itemId> — the row each GET action last completed with. A
+// reset clears the action's value; this survives it, so a GET run again after
+// a reset can still be answered from the store under a network policy.
+const lastGetItemIdWeakMap = new WeakMap();
+const getLastGetItemId = (action) => {
+  return lastGetItemIdWeakMap.get(action);
 };
 
 // Captures the "file:line:column" of the user code that invoked the public

@@ -2,7 +2,7 @@
 
 ```js
 const USER = resource("user", {
-  uniqueKeys: ["username"],
+  idKey: "username",
   GET_MANY: async () => [
     { id: 1, username: "alice", name: "Alice" },
     { id: 2, username: "bob", name: "Bob" },

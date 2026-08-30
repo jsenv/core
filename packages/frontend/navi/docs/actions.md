@@ -13,8 +13,9 @@ const getUser = createAction(async ({ id }, { signal }) => {
 });
 ```
 
-The callback receives `(params, { reason, event, signal, isPrerun })`. `signal`
-is aborted when the run is called off — pass it to `fetch`.
+The callback receives `(params, { reason, event, signal, isPrerun, action })`.
+`signal` is aborted when the run is called off — pass it to `fetch`. `action` is
+the instance being run.
 
 `resource()` creates one action per REST callback rather than having you write
 them by hand — see [resource.md](./resource.md).
