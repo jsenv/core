@@ -48,7 +48,9 @@ import { Text } from "./text.jsx";
  *                    says "minuit et 5 minutes" (`format="short"/"narrow"/"compact"`
  *                    keep the zero hour instead — "0 h et 5 min"/"0h 5min"/"00h05").
  *                    `format="compact"` also zero-pads any single-digit hour, not
- *                    just midnight (e.g. "5h30" → "05h30"), closer to "05:30".
+ *                    just midnight (e.g. "5h30" → "05h30"), closer to "05:30";
+ *                    `pad={false}` writes it the way one says it instead ("8h30",
+ *                    "8h"). See `<TimeRange>` for a span between two of them.
  *   - `"hour"`     → hours as duration (e.g. 1.5 → "1 heure 30 minutes")
  *   - `"minute"`   → minutes as duration (e.g. 90 → "1 heure 30 minutes")
  *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
@@ -79,6 +81,19 @@ import { Text } from "./text.jsx";
  *   instead of the default "1 jour et 12 heures". The default promotes to the
  *   largest fitting unit because it reads better; force the unit when the unit
  *   itself is the information (a quota, a counter).
+ * @param {boolean} [pad=true]
+ *   `type="time"` + `format="compact"` only — whether the clock is written at a
+ *   fixed width. `true` (default) zero-pads the hour and always writes the
+ *   minutes ("08h00", "08h30"), so a column of times lines up. `false` writes
+ *   the shape one says out loud instead: bare hour, minutes only when there are
+ *   any ("8h", "8h30"). The spelled-out formats put their units in words and
+ *   need neither, so they ignore it.
+ * @param {"hour"|"minute"} [precision]
+ *   `type="time"` + `format="compact"` only, and rarely set by hand — whether a
+ *   zero minute is written ("8h00") or dropped ("8h"). Defaults to whatever
+ *   `pad` implies; the one reason to force `"minute"` on an unpadded clock is
+ *   to agree with a partner that has minutes of its own, which is what
+ *   `<TimeRange>` does for you.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -247,19 +262,15 @@ const TimeTime = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  pad = true,
+  precision = pad ? "minute" : "hour",
   ...props
 }) => {
   if (children === undefined) {
     return <TimeText {...props}>--:--</TimeText>;
   }
 
-  const date = toDate(children, (value) => {
-    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
-      const d = new Date(`1970-01-01T${value}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
+  const date = toTimeOfDay(children);
   // toDate turns a non-finite number into an Invalid Date, which is an object
   if (!date || isNaN(date.getTime())) {
     return <TimeText {...props}>{String(children)}</TimeText>;
@@ -295,6 +306,8 @@ const TimeTime = ({
       lang,
       format,
       clockStyle: true,
+      pad,
+      precision,
     });
   } else if (format !== "long") {
     // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
@@ -305,6 +318,8 @@ const TimeTime = ({
       lang,
       format,
       clockStyle: true,
+      pad,
+      precision,
     });
   } else {
     const midnightWord = naviI18n("time.midnight", undefined, { lang });
@@ -556,6 +571,97 @@ const TimeRelative = ({
 
 const TimeText = (props) => {
   return <Text as="time" noWrap {...props} />;
+};
+
+/**
+ * Displays a span between two instants — an opening slot, an availability
+ * window — as the two `<time>` elements `<Time>` would render, around a
+ * separator.
+ *
+ * On top of writing the separator, it makes the two bounds agree on how
+ * precisely they are written, which is a property of the pair and of nothing
+ * else: with `type="time" format="compact" pad={false}`, "08:00"–"10:00" reads
+ * "8h–10h", but "11:30"–"14:00" reads "11h30–14h00" and not "11h30–14h", where
+ * the eye stops on the difference of shape before it reads the hours. Any bound
+ * with minutes gives minutes to both, zero included. The padded clock
+ * (`pad` left at its default) already writes every bound at the same width, and
+ * the spelled-out formats say their units in words, so neither needs the rule
+ * and neither is touched by it.
+ *
+ * @param {Date|number|string} from
+ *   The start of the span, in whatever `<Time>` accepts for this `type`.
+ * @param {Date|number|string} to
+ *   The end of the span. An undefined bound renders `<Time>`'s own placeholder.
+ * @param {"date"|"month"|"datetime"|"time"|"hour"|"minute"|"second"} [type="time"]
+ *   Passed to both bounds. Only `"time"` gets the shared-precision rule; the
+ *   other types are written one after the other, with nothing factored out (a
+ *   date span reads "11 mai – 14 mai", never "du 11 au 14 mai").
+ * @param {"hour"|"minute"} [precision]
+ *   Writes both bounds at this precision instead of the one the pair calls for
+ *   — `"minute"` to keep a zero minute on both ("8h00–10h00"), `"hour"` to drop
+ *   it on both ("8h–11h30", which is the shape the rule exists to avoid: set it
+ *   only when you mean it).
+ * @param {string} [separator]
+ *   What goes between the two bounds. Defaults to the `"time.range_separator"`
+ *   navi text (an en dash), tightened against both bounds in `format="compact"`
+ *   — where the span is one short token — and spaced out otherwise.
+ *
+ *   Every other prop is forwarded to both bounds; see `<Time>`.
+ */
+export const TimeRange = ({
+  from,
+  to,
+  type = "time",
+  format = "long",
+  lang = languagesSignal.value,
+  pad = true,
+  precision,
+  separator = naviI18n("time.range_separator", undefined, { lang }),
+  ...props
+}) => {
+  const boundProps = { type, format, lang };
+  if (type === "time") {
+    boundProps.pad = pad;
+    boundProps.precision =
+      precision ?? resolvePairPrecision(from, to, { format, pad });
+  }
+  // compact writes the whole span as one short token ("8h–10h"): nothing
+  // around the separator, and no break inside it. The other formats are
+  // phrases — they get room around the separator, and may wrap there.
+  const tight = format === "compact";
+  return (
+    <Text noWrap={tight} {...props}>
+      <Time {...boundProps}>{from}</Time>
+      {tight ? separator : ` ${separator} `}
+      <Time {...boundProps}>{to}</Time>
+    </Text>
+  );
+};
+
+// The two bounds of a span are written to the same precision, decided by the
+// pair: "8h–10h" as long as neither has minutes, "11h30–14h00" as soon as one
+// of them does. Only ever a question for the unpadded compact clock — the
+// padded one always writes "08h00", and the spelled-out formats name their
+// units, leaving no shape for the eye to trip on.
+const resolvePairPrecision = (from, to, { format, pad }) => {
+  if (pad || format !== "compact") {
+    return "minute";
+  }
+  const hasMinutes = (value) => {
+    const date = toTimeOfDay(value);
+    return Boolean(date) && !isNaN(date.getTime()) && date.getMinutes() !== 0;
+  };
+  return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
+};
+
+const toTimeOfDay = (value) => {
+  return toDate(value, (string) => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(string)) {
+      const d = new Date(`1970-01-01T${string}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
 };
 
 const toDate = (value, parseString) => {

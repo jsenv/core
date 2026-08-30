@@ -272,27 +272,35 @@ export const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, forceUnit?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, pad?: boolean, precision?: "hour"|"minute", forceUnit?: boolean }} [options]
  * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
  *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
  *   Past 24 hours the default promotes to days, which reads better but hides
  *   the unit the caller works in.
  * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
  *   represents a time-of-day rather than a real duration (used by
- *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
- *   things at once, both consequences of a clock's "0" being a meaningful
- *   hour rather than "no hours":
- *   - a zero-hours component is normally dropped entirely (a real 5-minute
- *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
- *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
- *     doesn't collapse to something indistinguishable from an actual
- *     5-minute duration.
- *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
- *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
- *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
- *     formats spell out their units, so "10 heures"/"10h" reads fine there
- *     and only "compact" needs the clock shape.
+ *   `<Time type="time">`, see time.jsx's own TimeTime). A clock's "0" is a
+ *   meaningful hour rather than "no hours": a zero-hours component is
+ *   normally dropped entirely (a real 5-minute duration should print as
+ *   "5 minutes", not "0 hours 5 minutes"); this keeps it instead (e.g.
+ *   "0 h et 5 min"/"0h 5min"/"00h05") so midnight doesn't collapse to
+ *   something indistinguishable from an actual 5-minute duration.
  *   Must not be set for plain duration formatting.
+ * @param {boolean} [options.pad=true] - Zero-pad the hour to 2 digits
+ *   ("08h30" rather than "8h30"). `clockStyle` + `format: "compact"` only.
+ * @param {"hour"|"minute"} [options.precision="minute"] - Whether a zero
+ *   minute is written: `"minute"` keeps it ("10h00"), `"hour"` drops it
+ *   ("10h"). `clockStyle` + `format: "compact"` only.
+ *
+ *   These last two are the clock's two independent shape choices, and only
+ *   `format: "compact"` has to make them — the spelled-out formats put their
+ *   units in words, so "10 heures"/"10 h"/"10h" already reads as a time of
+ *   day whatever the padding, and they always write the hour bare and drop a
+ *   zero minute. Padded + minute ("08h00") is the column shape, where every
+ *   row occupies the same width; bare + hour ("8h", "8h30") is the shape a
+ *   person speaks. Bare + minute ("8h00") only ever makes sense next to a
+ *   partner that has minutes of its own — see `<TimeRange>`, which is the
+ *   only thing that asks for it.
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -303,6 +311,9 @@ export const formatTime = (date, lang) => {
  * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
  * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
  * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false }) // "10h00"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "10h"
+ * formatMinuteDuration(510, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "8h30"
  * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
  * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
  */
@@ -312,13 +323,15 @@ export const formatMinuteDuration = (
     lang = languagesSignal.value,
     format = "long",
     clockStyle = false,
+    pad = true,
+    precision = "minute",
     forceUnit = false,
   } = {},
 ) => {
   if (minutes < 0) {
     // the d/h/m split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
-    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
+    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, pad, precision, forceUnit })}`;
   }
   if (forceUnit || (minutes === 0 && !clockStyle)) {
     // a zero has nothing to promote to, and rendering it as an empty string
@@ -352,16 +365,19 @@ export const formatMinuteDuration = (
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
-  const hStr = clockStyle
-    ? String(h).padStart(2, "0")
-    : formatCompactNumber(h, lang);
+  const hStr =
+    clockStyle && pad
+      ? String(h).padStart(2, "0")
+      : formatCompactNumber(h, lang);
   if (d === 0 && h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
     if (clockStyle) {
-      // "10h00" on a clock, "2h" for a real 2 hours duration
-      return `${hStr}${hSym}00`;
+      // "10h00" on a clock, "2h" for a real 2 hours duration — except at
+      // precision "hour", where a clock drops the zero minute too ("10h"),
+      // the way one says it out loud
+      return precision === "minute" ? `${hStr}${hSym}00` : `${hStr}${hSym}`;
     }
     return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
   }

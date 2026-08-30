@@ -153,6 +153,17 @@ naviI18n.addAll({
     pt: "meia-noite",
     nl: "middernacht",
   },
+  // What <TimeRange> writes between the two bounds of a span — "8h–10h",
+  // "11 mai – 14 mai". An en dash, the mark for a span, not a hyphen.
+  "time.range_separator": {
+    en: "–",
+    fr: "–",
+    de: "–",
+    es: "–",
+    it: "–",
+    pt: "–",
+    nl: "–",
+  },
   // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
   "time.duration.year_symbol": {
     en: "y",
