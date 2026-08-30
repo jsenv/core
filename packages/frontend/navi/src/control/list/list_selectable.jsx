@@ -84,7 +84,6 @@ const css = /* css */ `
          inputs (a horizontal list of choices), so it takes the control line
          with the control font — the same number of pixels tall as them. */
       line-height: var(--navi-control-line-height);
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
   }
 

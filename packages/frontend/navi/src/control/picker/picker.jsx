@@ -36,7 +36,7 @@ import {
   getUIStateFromElement,
 } from "../ui_state_dom.js";
 import { PickerConfirmResolver } from "./picker_confirm.jsx";
-import { PickerContext } from "./picker_context.jsx";
+import { PickerContext, pickerUIIsNaviOwn } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
@@ -246,7 +246,6 @@ const css = /* css */ `
       cursor: var(--x-picker-cursor, pointer);
       pointer-events: auto;
       /* user-select: none; */
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     .navi_picker_value {
@@ -898,9 +897,15 @@ const PickerButton = (props) => {
               // the picker draws itself, so each is written on its own line
               // (see .navi_picker_value in the CSS above).
               data-picker-facade={ui === undefined ? undefined : ""}
-              // A button's label is not a placeholder, however empty the
-              // picker behind it is.
+              // A placeholder is the picker saying "nothing here yet" about
+              // the value navi draws — the default rendering, or the one a
+              // typed picker installs for itself. A button's label is not
+              // that, however empty the picker behind it is, and neither is a
+              // caller's own "ui": an empty value may be exactly what the
+              // caller is drawing there ("no filter", "anywhere"), so how it
+              // looks empty stays theirs (documented on the ui prop below).
               navi-placeholder={
+                (ui === undefined || pickerUIIsNaviOwn(ui)) &&
                 variant !== "button" &&
                 variant !== "text" &&
                 uiStateHoldsNothing(value)
@@ -1340,10 +1345,13 @@ const PickerFirstResolver = (props) => {
  * @param {import("preact").ComponentChildren | "default"} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
- *   next to it. A `ui` must therefore say on its own that the picker is empty,
- *   and take the same room empty as it does filled. A <BadgeList> gets both
- *   from its `fallback` — the placeholder text, as plain text, see
- *   docs/badge_list.md. `"default"` draws nothing in the slot at all.
+ *   next to it, and an empty value is not greyed as a placeholder either: what
+ *   this draws when the picker holds nothing may well be an answer ("no
+ *   filter", "anywhere"), so its empty look is the caller's. A `ui` must
+ *   therefore say on its own that the picker is empty, and take the same room
+ *   empty as it does filled. A <BadgeList> gets both from its `fallback` — the
+ *   placeholder text, as plain text, see docs/badge_list.md. `"default"` draws
+ *   nothing in the slot at all.
  *
  *   Under `variant="icon"` there is no value to draw, so this IS the trigger:
  *   left out it is the icon the right slot would have shown (`rightSlotIcon`,

@@ -101,7 +101,15 @@ const css = /* css */ `
       --navi-focus-outline-width: 2px;
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
-      --navi-control-tap-highlight-color: transparent;
+      /* The grey rectangle a mobile browser flashes under a finger: we draw
+         what a press does ourselves (background, ring, chevron), and the
+         browser's rectangle is a square painted over rounded corners.
+         Declared here alone because the property is inherited: :root covers
+         every element, in and out of navi, so nothing has to remember it.
+         Set the token to a color to get the flash back, on the whole app or
+         on one subtree. */
+      -webkit-tap-highlight-color: var(--navi-tap-highlight-color);
+      --navi-tap-highlight-color: transparent;
 
       --navi-control-font-family: ${controlDefaultFontFamily};
       --navi-control-font-size: ${controlDefaultFontSize};

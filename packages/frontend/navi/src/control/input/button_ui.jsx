@@ -152,7 +152,6 @@ const css = /* css */ `
     cursor: var(--x-button-cursor);
     touch-action: manipulation;
     user-select: none;
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_button_content {
       /* The ask stops here: this element is the button's frame, so what is

@@ -10,7 +10,7 @@ import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import { uiStateHoldsNothing } from "../ui_state_controller.js";
-import { PickerContext } from "./picker_context.jsx";
+import { asPickerOwnUI, PickerContext } from "./picker_context.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
 import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
 import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
@@ -79,7 +79,7 @@ const PickerObject = (props) => {
     />
   );
 };
-export const PickerObjectUI = () => {
+export const PickerObjectUI = asPickerOwnUI(() => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (uiStateHoldsNothing(value)) {
@@ -101,7 +101,7 @@ export const PickerObjectUI = () => {
       })}
     </BadgeList>
   );
-};
+});
 
 const PickerArray = (props) => {
   const Next = useNextResolver();
@@ -115,7 +115,7 @@ const PickerArray = (props) => {
     />
   );
 };
-export const PickerArrayUI = () => {
+export const PickerArrayUI = asPickerOwnUI(() => {
   const { value, placeholder, maxLines } = useContext(PickerContext);
 
   if (uiStateHoldsNothing(value)) {
@@ -131,7 +131,7 @@ export const PickerArrayUI = () => {
       })}
     </Text>
   );
-};
+});
 
 /**
  * One value the picker holds, drawn as a chip with a cross that takes it back
@@ -191,7 +191,7 @@ const PickerColor = (props) => {
     />
   );
 };
-export const PickerColorUI = () => {
+export const PickerColorUI = asPickerOwnUI(() => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -201,7 +201,7 @@ export const PickerColorUI = () => {
     return renderSafe(placeholder);
   }
   return <Color>{value}</Color>;
-};
+});
 
 const PickerDate = (props) => {
   const Next = useNextResolver();
@@ -215,7 +215,7 @@ const PickerDate = (props) => {
     />
   );
 };
-export const PickerDateUI = (props) => {
+export const PickerDateUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -236,7 +236,7 @@ export const PickerDateUI = (props) => {
       {value}
     </Time>
   );
-};
+});
 
 const PickerMonth = (props) => {
   const Next = useNextResolver();
@@ -250,7 +250,7 @@ const PickerMonth = (props) => {
     />
   );
 };
-export const PickerMonthUI = (props) => {
+export const PickerMonthUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -266,7 +266,7 @@ export const PickerMonthUI = (props) => {
       {value}
     </Time>
   );
-};
+});
 
 const PickerWeek = (props) => {
   const Next = useNextResolver();
@@ -280,7 +280,7 @@ const PickerWeek = (props) => {
     />
   );
 };
-export const PickerWeekUI = (props) => {
+export const PickerWeekUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -296,7 +296,7 @@ export const PickerWeekUI = (props) => {
       {value}
     </Time>
   );
-};
+});
 
 const PickerTime = (props) => {
   const Next = useNextResolver();
@@ -310,7 +310,7 @@ const PickerTime = (props) => {
     />
   );
 };
-export const PickerTimeUI = (props) => {
+export const PickerTimeUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -326,7 +326,7 @@ export const PickerTimeUI = (props) => {
       {value}
     </Time>
   );
-};
+});
 
 const PickerDuration = (props) => {
   const Next = useNextResolver();
@@ -341,7 +341,7 @@ const PickerDuration = (props) => {
     />
   );
 };
-export const PickerDurationUI = (props) => {
+export const PickerDurationUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -357,7 +357,7 @@ export const PickerDurationUI = (props) => {
       {value}
     </Time>
   );
-};
+});
 
 const PickerDatetime = (props) => {
   const Next = useNextResolver();
@@ -371,7 +371,7 @@ const PickerDatetime = (props) => {
     />
   );
 };
-export const PickerDatetimeUI = (props) => {
+export const PickerDatetimeUI = asPickerOwnUI((props) => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -387,7 +387,7 @@ export const PickerDatetimeUI = (props) => {
     return renderSafe(placeholder);
   }
   return <Time type="datetime">{value}</Time>;
-};
+});
 
 const PickerFile = (props) => {
   const Next = useNextResolver();
@@ -401,7 +401,7 @@ const PickerFile = (props) => {
     />
   );
 };
-export const PickerFileUI = () => {
+export const PickerFileUI = asPickerOwnUI(() => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value) {
@@ -412,4 +412,4 @@ export const PickerFileUI = () => {
   }
   // value is a FileList-like string from the input; display file names
   return String(value);
-};
+});

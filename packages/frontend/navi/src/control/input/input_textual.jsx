@@ -232,7 +232,6 @@ export const inputCss = /* css */ `
       border: none;
       border-radius: inherit;
       outline: none;
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &::placeholder {
         color: var(--x-placeholder-color);

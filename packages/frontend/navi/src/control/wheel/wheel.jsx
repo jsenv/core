@@ -115,7 +115,6 @@ const css = /* css */ `
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     &:focus {
       /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
@@ -245,7 +244,6 @@ const css = /* css */ `
        inherited here, so it stays fixed to the center window rather than flipping
        as rows scroll under the pointer. */
     user-select: none;
-    -webkit-tap-highlight-color: transparent;
     /* NO content-visibility here, ever. content-visibility: auto was tried
        (to skip painting clipped rows) and it breaks the first opening of any
        popup holding a wheel: rows born inside a closed dialog are "skipped"

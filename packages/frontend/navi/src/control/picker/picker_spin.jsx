@@ -158,10 +158,6 @@ const css = /* css */ `
        keyboard here (see navi-focus-delegate below). */
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
-    /* No grey flash under a finger: what a press does is said by the chevron's
-       own background, and the browser's rectangle is drawn square over corners
-       that are round. Inherited, so the three pieces inside get it too. */
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* The middle holds the keyboard, and this box wears its ring: whatever is in
      there fills it, so a ring of its own would be drawn a pixel inside this
@@ -415,7 +411,6 @@ const css = /* css */ `
     outline-width: var(--navi-focus-outline-width);
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* A value one PICKS has nowhere of its own to wear a ring — its middle is a
      container that hands the ring over (data-focus-outline-delegate) — so the

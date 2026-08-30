@@ -39245,7 +39245,6 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_current_indicator {
       position: absolute;
@@ -44090,7 +44089,6 @@ installImportMetaCssBuild(import.meta);const css$N = /* css */`
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     .navi_checkbox_accent_probe {
@@ -44871,7 +44869,6 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
       cursor: var(--x-cursor);
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     /* Focus */
@@ -45434,7 +45431,6 @@ installImportMetaCssBuild(import.meta);const css$K = /* css */`
       min-width: inherit;
       font-size: inherit;
       appearance: none;
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &::-webkit-slider-thumb {
         width: var(--thumb-width);
@@ -46145,7 +46141,6 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
     cursor: var(--x-button-cursor);
     touch-action: manipulation;
     user-select: none;
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     .navi_button_content {
       /* The ask stops here: this element is the button's frame, so what is
@@ -47497,7 +47492,6 @@ const inputCss = /* css */`
       border: none;
       border-radius: inherit;
       outline: none;
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
       &::placeholder {
         color: var(--x-placeholder-color);
@@ -59302,6 +59296,22 @@ const PickerConfirmBody = ({
 
 const PickerContext = createContext();
 
+/*
+ * A typed picker (`type="date"`, `type="array"`, …) draws its value with a ui
+ * of navi's own, installed as the very "ui" prop a caller overrides to draw
+ * that value themselves. Marking navi's own tells the two apart afterwards:
+ * an empty value is greyed as a placeholder only when the drawing is navi's —
+ * a caller's ui may well be their way of writing "no filter", which is an
+ * answer, not a blank (see navi-placeholder in picker.jsx).
+ */
+const asPickerOwnUI = PickerUI => {
+  PickerUI.isPickerOwnUI = true;
+  return PickerUI;
+};
+const pickerUIIsNaviOwn = ui => {
+  return Boolean(ui) && typeof ui === "object" && Boolean(ui.type?.isPickerOwnUI);
+};
+
 const PickerNaviMinute = props => {
   const Next = useNextResolver();
   const {
@@ -60124,7 +60134,6 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`
          inputs (a horizontal list of choices), so it takes the control line
          with the control font — the same number of pixels tall as them. */
       line-height: var(--navi-control-line-height);
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
   }
 
@@ -66342,7 +66351,7 @@ const PickerObject = props => {
     "navi-state-shape": "object"
   });
 };
-const PickerObjectUI = () => {
+const PickerObjectUI = asPickerOwnUI(() => {
   const {
     value,
     placeholder
@@ -66367,7 +66376,7 @@ const PickerObjectUI = () => {
       }, key);
     })
   });
-};
+});
 const PickerArray = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66377,7 +66386,7 @@ const PickerArray = props => {
     "navi-state-shape": "array"
   });
 };
-const PickerArrayUI = () => {
+const PickerArrayUI = asPickerOwnUI(() => {
   const {
     value,
     placeholder,
@@ -66399,7 +66408,7 @@ const PickerArrayUI = () => {
       }, item);
     })
   });
-};
+});
 
 /**
  * One value the picker holds, drawn as a chip with a cross that takes it back
@@ -66460,7 +66469,7 @@ const PickerColor = props => {
     ...props
   });
 };
-const PickerColorUI = () => {
+const PickerColorUI = asPickerOwnUI(() => {
   const {
     value,
     placeholder
@@ -66474,7 +66483,7 @@ const PickerColorUI = () => {
   return jsx(Color, {
     children: value
   });
-};
+});
 const PickerDate = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66484,7 +66493,7 @@ const PickerDate = props => {
     type: "date"
   });
 };
-const PickerDateUI = props => {
+const PickerDateUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66506,7 +66515,7 @@ const PickerDateUI = props => {
     ...props,
     children: value
   });
-};
+});
 const PickerMonth = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66516,7 +66525,7 @@ const PickerMonth = props => {
     type: "month"
   });
 };
-const PickerMonthUI = props => {
+const PickerMonthUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66537,7 +66546,7 @@ const PickerMonthUI = props => {
     ...props,
     children: value
   });
-};
+});
 const PickerWeek = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66547,7 +66556,7 @@ const PickerWeek = props => {
     type: "week"
   });
 };
-const PickerWeekUI = props => {
+const PickerWeekUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66568,7 +66577,7 @@ const PickerWeekUI = props => {
     ...props,
     children: value
   });
-};
+});
 const PickerTime = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66578,7 +66587,7 @@ const PickerTime = props => {
     type: "time"
   });
 };
-const PickerTimeUI = props => {
+const PickerTimeUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66598,7 +66607,7 @@ const PickerTimeUI = props => {
     ...props,
     children: value
   });
-};
+});
 const PickerDuration = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66609,7 +66618,7 @@ const PickerDuration = props => {
     "navi-input-type": "duration"
   });
 };
-const PickerDurationUI = props => {
+const PickerDurationUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66629,7 +66638,7 @@ const PickerDurationUI = props => {
     ...props,
     children: value
   });
-};
+});
 const PickerDatetime = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66639,7 +66648,7 @@ const PickerDatetime = props => {
     type: "datetime-local"
   });
 };
-const PickerDatetimeUI = props => {
+const PickerDatetimeUI = asPickerOwnUI(props => {
   const {
     value,
     placeholder
@@ -66658,7 +66667,7 @@ const PickerDatetimeUI = props => {
     type: "datetime",
     children: value
   });
-};
+});
 const PickerFile = props => {
   const Next = useNextResolver();
   return jsx(Next, {
@@ -66668,7 +66677,7 @@ const PickerFile = props => {
     ...props
   });
 };
-const PickerFileUI = () => {
+const PickerFileUI = asPickerOwnUI(() => {
   const {
     value,
     placeholder
@@ -66681,7 +66690,7 @@ const PickerFileUI = () => {
   }
   // value is a FileList-like string from the input; display file names
   return String(value);
-};
+});
 
 installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
@@ -66870,7 +66879,6 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
       cursor: var(--x-picker-cursor, pointer);
       pointer-events: auto;
       /* user-select: none; */
-      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
     }
 
     .navi_picker_value {
@@ -67513,11 +67521,16 @@ const PickerButton = props => {
             ,
 
             "data-picker-facade": ui === undefined ? undefined : ""
-            // A button's label is not a placeholder, however empty the
-            // picker behind it is.
+            // A placeholder is the picker saying "nothing here yet" about
+            // the value navi draws — the default rendering, or the one a
+            // typed picker installs for itself. A button's label is not
+            // that, however empty the picker behind it is, and neither is a
+            // caller's own "ui": an empty value may be exactly what the
+            // caller is drawing there ("no filter", "anywhere"), so how it
+            // looks empty stays theirs (documented on the ui prop below).
             ,
 
-            "navi-placeholder": variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
+            "navi-placeholder": (ui === undefined || pickerUIIsNaviOwn(ui)) && variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
             maxLines: maxLines,
             children: jsx(PickerOwnContent, {
               children: jsx(PickerContext.Provider, {
@@ -67946,10 +67959,6 @@ const css$s = /* css */`
        keyboard here (see navi-focus-delegate below). */
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
-    /* No grey flash under a finger: what a press does is said by the chevron's
-       own background, and the browser's rectangle is drawn square over corners
-       that are round. Inherited, so the three pieces inside get it too. */
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* The middle holds the keyboard, and this box wears its ring: whatever is in
      there fills it, so a ring of its own would be drawn a pixel inside this
@@ -68203,7 +68212,6 @@ const css$s = /* css */`
     outline-width: var(--navi-focus-outline-width);
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* A value one PICKS has nowhere of its own to wear a ring — its middle is a
      container that hands the ring over (data-focus-outline-delegate) — so the
@@ -71145,7 +71153,6 @@ const css$m = /* css */`
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     &:focus {
       /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
@@ -71275,7 +71282,6 @@ const css$m = /* css */`
        inherited here, so it stays fixed to the center window rather than flipping
        as rows scroll under the pointer. */
     user-select: none;
-    -webkit-tap-highlight-color: transparent;
     /* NO content-visibility here, ever. content-visibility: auto was tried
        (to skip painting clipped rows) and it breaks the first opening of any
        popup holding a wheel: rows born inside a closed dialog are "skipped"
