@@ -19,6 +19,7 @@ import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
+import { Box } from "../../box/box.jsx";
 import { ControlGroup } from "../control_group.jsx";
 import {
   formatTimeParts,
@@ -185,6 +186,7 @@ export const TimeWheel = ({
  *   size?: string,
  *   startLabel?: import("preact").ComponentChildren,
  *   endLabel?: import("preact").ComponentChildren,
+ *   labelPosition?: "before" | "above",
  *   timeProps?: object,
  *   [key: string]: any,
  * }>}
@@ -193,6 +195,13 @@ export const TimeWheel = ({
  * @param {import("preact").ComponentChildren} [startLabel] What is written
  *   before the first time ("De"), and `endLabel` between the two ("à"). Say
  *   `null` for neither.
+ * @param {"before"|"above"} [labelPosition="before"] Where each label stands.
+ *   Before its wheels, the span reads as one sentence ("De 9h00 à 18h00").
+ *   Above them, each bound is a column — "Début" over its wheels, "Fin" over
+ *   the other — two answers side by side, whose wheels land at the same place
+ *   whatever the width of the words. Labels that are nouns rather than
+ *   prepositions belong there; the group is still a row, and takes `flexWrap`
+ *   for screens too narrow to hold both columns.
  * @param {number} [minuteStep=1] How many minutes apart the values on both
  *   minute wheels are.
  * @param {{min?: number, max?: number}|number[]} [hours] Which hours both
@@ -221,6 +230,7 @@ export const TimeRangeWheel = ({
   size,
   startLabel = naviI18n("time_range.from"),
   endLabel = naviI18n("time_range.to"),
+  labelPosition = "before",
   timeProps,
   startTimeProps,
   endTimeProps,
@@ -293,53 +303,69 @@ export const TimeRangeWheel = ({
       {...rest}
     >
       <AnsweredContext.Provider value={answeredRef}>
-        {startLabel === null ? null : (
-          <Text size={size} className="navi_time_range_label">
-            {startLabel}
-          </Text>
-        )}
-        <TimeWheel
-          id={startId}
-          ref={startRef}
-          name="start"
-          minuteStep={minuteStep}
-          hours={hours}
-          loop={loop}
-          size={size}
-          placeholder={placeholder ? placeholder.start : undefined}
-          // e.detail.value is the settled WHEEL's own value (an hour, a
-          // minute) — half a time. What the pair compares is this bound's
-          // whole time, read off the element the listener sits on.
-          onnavi_wheel_settle={(e) => {
-            keepBoundsApart("start", getUIStateFromElement(e.currentTarget), e);
-          }}
-          {...timeProps}
-          {...startTimeProps}
-        />
-        {endLabel === null ? null : (
-          <Text size={size} className="navi_time_range_label">
-            {endLabel}
-          </Text>
-        )}
-        <TimeWheel
-          ref={endRef}
-          name="end"
-          minuteStep={minuteStep}
-          hours={hours}
-          loop={loop}
-          size={size}
-          placeholder={placeholder ? placeholder.end : undefined}
-          onnavi_wheel_settle={(e) => {
-            keepBoundsApart("end", getUIStateFromElement(e.currentTarget), e);
-          }}
-          // Which time it comes after, and how much room there must be between
-          // the two: said on the LATER of the two, so the answer is given where
-          // the time one would have to move is (see time_range_constraint.js).
-          data-time-after={startId}
-          data-time-min-duration={minDuration}
-          {...timeProps}
-          {...endTimeProps}
-        />
+        <TimeBound
+          labelPosition={labelPosition}
+          label={
+            startLabel === null ? null : (
+              <Text size={size} className="navi_time_range_label">
+                {startLabel}
+              </Text>
+            )
+          }
+        >
+          <TimeWheel
+            id={startId}
+            ref={startRef}
+            name="start"
+            minuteStep={minuteStep}
+            hours={hours}
+            loop={loop}
+            size={size}
+            placeholder={placeholder ? placeholder.start : undefined}
+            // e.detail.value is the settled WHEEL's own value (an hour, a
+            // minute) — half a time. What the pair compares is this bound's
+            // whole time, read off the element the listener sits on.
+            onnavi_wheel_settle={(e) => {
+              keepBoundsApart(
+                "start",
+                getUIStateFromElement(e.currentTarget),
+                e,
+              );
+            }}
+            {...timeProps}
+            {...startTimeProps}
+          />
+        </TimeBound>
+        <TimeBound
+          labelPosition={labelPosition}
+          label={
+            endLabel === null ? null : (
+              <Text size={size} className="navi_time_range_label">
+                {endLabel}
+              </Text>
+            )
+          }
+        >
+          <TimeWheel
+            ref={endRef}
+            name="end"
+            minuteStep={minuteStep}
+            hours={hours}
+            loop={loop}
+            size={size}
+            placeholder={placeholder ? placeholder.end : undefined}
+            onnavi_wheel_settle={(e) => {
+              keepBoundsApart("end", getUIStateFromElement(e.currentTarget), e);
+            }}
+            // Which time it comes after, and how much room there must be between
+            // the two: said on the LATER of the two, so the answer is given where
+            // the time one would have to move is (see time_range_constraint.js).
+            data-time-after={startId}
+            data-time-min-duration={minDuration}
+            {...timeProps}
+            {...endTimeProps}
+          />
+        </TimeBound>
       </AnsweredContext.Provider>
     </ControlGroup>
   );
@@ -467,6 +493,26 @@ const resolveHourList = (hours) => {
 };
 
 const padTwo = (value) => String(value).padStart(2, "0");
+
+// A label and its wheels. Side by side, they are two items of the group's own
+// row. One above the other, they are one item: the two bounds then stand at
+// the same height and their wheels line up whatever the width of the words.
+const TimeBound = ({ labelPosition, label, children }) => {
+  if (labelPosition === "above") {
+    return (
+      <Box flex="y" alignX="center" spacing="xs">
+        {label}
+        {children}
+      </Box>
+    );
+  }
+  return (
+    <>
+      {label}
+      {children}
+    </>
+  );
+};
 
 // The two times as one span, { start, end } — the shape a pair carries.
 const aggregateSpan = (childUIStateControllers) => {
