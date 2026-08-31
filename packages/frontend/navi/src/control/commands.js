@@ -26,16 +26,40 @@ import {
 } from "./ui_state_dom.js";
 
 /**
+ * Runs a navi command from JS. It is the LAST RESORT: the attributes say the
+ * same thing declaratively and go through this very function, so a press that
+ * opens, closes, sends, updates or travels needs none of this.
+ *
+ * ```html
+ * <button command="--navi-open" commandfor="note-dialog" value="42">
+ * ```
+ *
+ * `command` names it (`--navi-x:argument` when it needs an argument),
+ * `commandfor` / `navi-command-target` says to whom, the source's own `value`
+ * says what it is about (`command-value` when the source has a value meaning
+ * something else). Reach for `triggerNaviCommand` only when what decides is not
+ * a press on the element carrying those attributes: a long press, the end of a
+ * drag, a double-click, a keyboard shortcut, a server answer, an observer.
+ *
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.
  * @param {string} command
  * @param {Event} event What caused this. Mandatory: it is what makes a command
  *   traceable back to its origin — the debug panel groups everything a gesture
  *   set off under it, and the gates below read it to know whether the default
- *   was already prevented and which mouse button was pressed. When nothing was
- *   handed over — a timer firing, an action settling, a signal changing — build
- *   a `CustomEvent` that names what happened and chain it to whatever preceded
- *   it, rather than leaving the origin unsaid:
+ *   was already prevented and which mouse button was pressed.
+ *
+ *   **Forward the event you were handed**, down through every function between
+ *   the handler and this call, so what arrives here is the real gesture. Almost
+ *   every command has one: a person did something to the page, or the browser
+ *   did. Building a `CustomEvent` at the call site instead of taking `event` as
+ *   a parameter looks like it satisfies the requirement, and throws away
+ *   exactly what makes it useful — the chain a popup reads to give the focus
+ *   back, the button that was pressed, a default already prevented.
+ *
+ *   The `CustomEvent` is for the genuinely originless case — a timer firing, an
+ *   action settling, a signal changing — and even there it names what happened
+ *   and chains to whatever preceded it:
  *     const expiredEvent = new CustomEvent("session_expired");
  *     chainEvent(expiredEvent, causeEvent); // when something did precede it
  *     triggerNaviCommand(dialogEl, "--navi-open", expiredEvent);
@@ -57,7 +81,7 @@ export const triggerNaviCommand = (
 ) => {
   if (!event) {
     throw new Error(
-      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Pass the gesture, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
+      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Forward the gesture that led here, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
     );
   }
   const naviCommand =

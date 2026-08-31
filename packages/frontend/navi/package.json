@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.29.151",
+  "version": "0.29.152",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -49,6 +49,7 @@
     "access": "public"
   },
   "sideEffects": [
+    "./src/navi_instance.js",
     "./src/navi_css_vars.js",
     "./src/navi_z_indexes.js",
     "./src/control/interaction/*.js",

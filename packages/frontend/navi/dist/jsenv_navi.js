@@ -15,6 +15,45 @@ import { parseDuration, durationContainsNaN, compareTwoDurations, durationToSeco
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
+/**
+ * One page, one navi.
+ *
+ * navi keeps contexts, registries and singletons at module scope, so a second
+ * copy of the library in the same page is a second of each, and nothing
+ * crosses between them. Every symptom of that lands far from the cause and
+ * reads as an app bug: a <Loading> mounted by one copy is invisible to the
+ * hook reading the other's context and reports itself missing, an action
+ * registered in one is unknown to the other, focus and z-index each get a
+ * second owner. So the copies are detected here, when the second one is
+ * imported, and that import fails — the first thing that goes wrong says what
+ * is wrong.
+ *
+ * A copy is a module evaluation, which is what the object added to the set
+ * stands for; the urls are only there to tell the reader which two files to
+ * compare. Two urls for one file on disk is the usual shape (a dev server
+ * stamping a package version into specifiers, a bundle embedding navi next to
+ * a copy resolved separately); two versions installed in node_modules is the
+ * other.
+ *
+ * This module must stay in the entry chunk: the whole point is that it is
+ * evaluated once per copy of navi, and a shared chunk would be evaluated once
+ * for both.
+ */
+
+// Symbol.for so the set is the same one across copies — a copy cannot see the
+// other's module scope, which is the very thing being detected.
+const NAVI_INSTANCE_SET = Symbol.for("navi_instance_set");
+
+const instanceSet = globalThis[NAVI_INSTANCE_SET] || new Set();
+globalThis[NAVI_INSTANCE_SET] = instanceSet;
+instanceSet.add({ url: import.meta.url });
+if (instanceSet.size > 1) {
+  const urlList = Array.from(instanceSet, ({ url }) => `- ${url}`).join("\n");
+  throw new Error(`@jsenv/navi is loaded ${instanceSet.size} times in this page:
+${urlList}
+Each one builds its own contexts, stores and registries, so what one holds is invisible to the components using another.`);
+}
+
 installImportMetaCssBuild(import.meta);/**
  * Every z-index navi can be seen competing on, in one place, ordered.
  *
@@ -30169,16 +30208,40 @@ const anyMatchingRouteSignal = (routes) => {
 };
 
 /**
+ * Runs a navi command from JS. It is the LAST RESORT: the attributes say the
+ * same thing declaratively and go through this very function, so a press that
+ * opens, closes, sends, updates or travels needs none of this.
+ *
+ * ```html
+ * <button command="--navi-open" commandfor="note-dialog" value="42">
+ * ```
+ *
+ * `command` names it (`--navi-x:argument` when it needs an argument),
+ * `commandfor` / `navi-command-target` says to whom, the source's own `value`
+ * says what it is about (`command-value` when the source has a value meaning
+ * something else). Reach for `triggerNaviCommand` only when what decides is not
+ * a press on the element carrying those attributes: a long press, the end of a
+ * drag, a double-click, a keyboard shortcut, a server answer, an observer.
+ *
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.
  * @param {string} command
  * @param {Event} event What caused this. Mandatory: it is what makes a command
  *   traceable back to its origin — the debug panel groups everything a gesture
  *   set off under it, and the gates below read it to know whether the default
- *   was already prevented and which mouse button was pressed. When nothing was
- *   handed over — a timer firing, an action settling, a signal changing — build
- *   a `CustomEvent` that names what happened and chain it to whatever preceded
- *   it, rather than leaving the origin unsaid:
+ *   was already prevented and which mouse button was pressed.
+ *
+ *   **Forward the event you were handed**, down through every function between
+ *   the handler and this call, so what arrives here is the real gesture. Almost
+ *   every command has one: a person did something to the page, or the browser
+ *   did. Building a `CustomEvent` at the call site instead of taking `event` as
+ *   a parameter looks like it satisfies the requirement, and throws away
+ *   exactly what makes it useful — the chain a popup reads to give the focus
+ *   back, the button that was pressed, a default already prevented.
+ *
+ *   The `CustomEvent` is for the genuinely originless case — a timer firing, an
+ *   action settling, a signal changing — and even there it names what happened
+ *   and chains to whatever preceded it:
  *     const expiredEvent = new CustomEvent("session_expired");
  *     chainEvent(expiredEvent, causeEvent); // when something did precede it
  *     triggerNaviCommand(dialogEl, "--navi-open", expiredEvent);
@@ -30200,7 +30263,7 @@ const triggerNaviCommand = (
 ) => {
   if (!event) {
     throw new Error(
-      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Pass the gesture, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
+      `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Forward the gesture that led here, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
     );
   }
   const naviCommand =

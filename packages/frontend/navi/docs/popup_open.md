@@ -5,6 +5,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [The popup owns its open state](#the-popup-owns-its-open-state)
 - [A button opens it: the attributes](#a-button-opens-it-the-attributes)
 - [Something else opens it: `triggerNaviCommand`](#something-else-opens-it-triggernavicommand)
+  - [The event is forwarded, not invented](#the-event-is-forwarded-not-invented)
 - [Which element receives the command](#which-element-receives-the-command)
 - [The anchor](#the-anchor)
 - [Opening it ON something](#opening-it-on-something)
@@ -75,10 +76,15 @@ press:
 
 ## Something else opens it: `triggerNaviCommand`
 
-The attributes fire on every click of the element that carries them. As soon as
-the opening is a decision rather than a click — a long press, the end of a drag,
-a double-click, a keyboard shortcut, a server answer, an `IntersectionObserver` —
-the decision has to be made in JS, and the command triggered from there:
+The attributes fire on every click of the element that carries them, and they
+cover more than "this button opens that dialog": `commandfor` says to whom,
+`value` says what it is about, `--navi-x:argument` says how. Before writing any
+JS here, check none of those is the answer — `triggerNaviCommand` is the last
+resort, not the general way to run a command.
+
+What it is for is a decision rather than a click — a long press, the end of a
+drag, a double-click, a keyboard shortcut, a server answer, an
+`IntersectionObserver`:
 
 ```jsx
 import { triggerNaviCommand } from "@jsenv/navi";
@@ -100,16 +106,41 @@ This is the same entry point the attributes go through: same target resolution,
 same command proxies, same events. The popup stays uncontrolled, and keeps its
 say over closing.
 
+### The event is forwarded, not invented
+
 `event` is what caused the decision, and it is mandatory — triggering a command
 without one throws. It is chained into the request event, and that chain is what
 lets the popup handle focus correctly (which element to give focus back to,
 whether a mousedown's click must be swallowed) and what the debug panel groups
 the whole sequence under.
 
-Almost always there is a DOM event to hand over, because almost always something
-was done to the page. When there genuinely was not — a timer firing, an action
-settling, a signal changing — say so with a `CustomEvent` named after what
-happened rather than leaving the origin unsaid:
+So the event to pass is **the one that is already there**, threaded down through
+every function between the handler and the call. A `CustomEvent` built on the
+spot satisfies the signature and defeats its purpose: the origin is a name
+instead of a gesture, and everything read off the real event is gone.
+
+```js
+// ✗ the handler drops the event, the command is told a story instead
+const openMenu = () => {
+  const openEvent = new CustomEvent("open");
+  triggerNaviCommand(popoverRef.current, "--navi-open", openEvent);
+};
+
+// ✓ the handler passes on what it was given
+const openMenu = (event) => {
+  triggerNaviCommand(popoverRef.current, "--navi-open", event);
+};
+```
+
+A helper several presses share takes the event as a parameter like any other;
+the same holds one layer deeper, when the decision is taken by something navi
+handed an event to — an `interactions` detector, an `onOpen`, an action's
+callback. Follow it back: there is a gesture at the start of nearly every
+sequence.
+
+The exception is the sequence that genuinely started on its own — a timer
+firing, an action settling, a signal changing. Then say what happened with a
+`CustomEvent` named after it, rather than leaving the origin unsaid:
 
 ```js
 import { chainEvent, triggerNaviCommand } from "@jsenv/navi";

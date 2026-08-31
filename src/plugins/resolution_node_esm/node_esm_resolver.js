@@ -453,10 +453,17 @@ const addRelationshipWithPackageJson = ({
   hasVersioningEffect = false,
 }) => {
   const { ownerUrlInfo } = reference;
+  // One file imports many packages, so it depends on many package.json: the
+  // relationship is identified by the package.json it points at, not by the
+  // field alone. Keying on the field alone lets the first package imported
+  // stand for every other one, and a version bump on any of the others then
+  // leaves this file cooked against the version it saw first — the ?v= baked
+  // in its specifiers names a package copy nobody else resolves to anymore.
   for (const referenceToOther of ownerUrlInfo.referenceToOthersSet) {
     if (
       referenceToOther.type === "package_json" &&
-      referenceToOther.subtype === field
+      referenceToOther.subtype === field &&
+      referenceToOther.specifier === packageJsonUrl
     ) {
       return;
     }

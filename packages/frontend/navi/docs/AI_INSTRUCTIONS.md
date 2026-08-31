@@ -138,6 +138,17 @@ consistency across the app, not from any single call site.
   `smallTouchScreenSignal` in an app to change a dialog's size, before passing
   `expandX={false}` to stop a dialog sprawling, and before writing CSS to make a
   dialog fit the screen.
+- `docs/popup_open.md` — what opens a `Dialog`/`Popover` and who owns the fact
+  that it is open: why a popup with no `open` prop is the default (it refuses to
+  close while a control inside it is mid-action), the attributes that open one
+  (`command` + `commandfor`, `value` saying what it is opened ON, reaching
+  `onOpen` before the content is built), and `triggerNaviCommand` as the LAST
+  RESORT for a decision that is not a press — with the rule that decides most
+  reviews: the `event` it takes is the gesture you were handed, threaded down to
+  the call, never a `new CustomEvent()` built on the spot (that is for a timer,
+  an action settling, a signal changing, and nothing else). Read it before
+  calling `triggerNaviCommand`, before passing `open` to a popup, and before an
+  `onOpen`/`onClose` writing a signal.
 - `docs/autofocus.md` — who gets the keyboard when a popup opens or a slide
   arrives, and whether a ring shows on it: the ladder navi walks, what
   `autoFocus` means on a surface (`true` = the surface takes it, for a popup

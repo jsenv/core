@@ -1,3 +1,6 @@
+// First, so a page holding two copies of navi says so before anything else
+// has a chance to go wrong in a way that points somewhere else.
+import "./src/navi_instance.js";
 import "./src/navi_css_vars.js";
 import "./src/navi_z_indexes.js";
 // The element the URL designates — the one whose id is the hash — shows itself
