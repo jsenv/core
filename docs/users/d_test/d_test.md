@@ -429,11 +429,102 @@ Prevents new executions from starting if memory usage is too high.
 
 The default value is 50%. New executions will start as long as memory usage is below 50% of the total available memory.
 
+### 3.4.4 parallel.maxHeavy
+
+An execution allocated more time than the others is a heavy one; `maxHeavy` limits how many of them run at the same time.
+
+| maxHeavy | Max heavy executions in parallel |
+| -------- | -------------------------------- |
+| 1        | Only one                         |
+| 3        | 3                                |
+| 75%      | 75% of `parallel.max`            |
+
+The default value is 75%: on a machine running 8 executions in parallel, up to 6 of them can be heavy ones, and the 2 remaining slots stay available for short executions. Heavy executions are the ones that launch browsers, build projects or start servers; letting them take every slot makes them compete for cpu and memory, and `maxCpu`/`maxMemory` then pause the whole plan.
+
+When only heavy executions remain, they run as `parallel.max` allows.
+
+### 3.4.5 Starting the longest executions first
+
+With a fixed number of slots, a long execution started last holds one of them while every other slot is idle. `executionTimings` lets jsenv remember how long each execution took so the next run starts the long ones first.
+
+```js
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+await executeTestPlan({
+  rootDirectoryUrl: import.meta.resolve("../"),
+  executionTimings: true,
+  testPlan: {
+    "./src/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+  },
+});
+```
+
+Durations are written to `.jsenv/jsenv_tests_timings.json`, which can be added to `.gitignore`.
+
+Only the order in which executions **start** changes: they keep the index they got from the filesystem and are still reported in that order. An execution never seen before is assumed to last as long as the median one, so a new test file is not pushed to the end of the run just for being new.
+
+This is off by default: it makes the start order depend on a file written by a previous run, which a test plan snapshotting its own execution order cannot afford.
+
+### 3.4.6 Locking a shared resource
+
+Two test files sometimes cannot run at the same time: they bind the same port, drive the same daemon, write the same directory. The file declares what it takes:
+
+```js
+"jsenv:lock server-port";
+```
+
+Executions locking the same resource run one after another; the rest of the plan keeps running in parallel around them. One directive per resource.
+
+This is a **directive**, not a function call: jsenv reads it without executing the file. It has to be, because a lock must be known before the execution starts — a file that had to run to say what it takes would already be holding it.
+
+The same can be declared from the test plan, for files that cannot be edited. Both are merged.
+
+```js
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+await executeTestPlan({
+  rootDirectoryUrl: import.meta.resolve("../"),
+  testPlan: {
+    "./src/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+        locks: ["server-port"],
+      },
+    },
+  },
+});
+```
+
 ## 3.5 Allocated time per test
 
 Each test file is given 30s to execute.
 If this duration is exceeded, the browser tab is closed, and the execution is marked as failed.
-This duration can be configured as shown below:
+
+A file needing more than that says so itself:
+
+```js
+"jsenv:allocate 90s";
+```
+
+Durations are written as `500ms`, `90s` or `2m`. The declaration is a **directive**: it belongs to the directive prologue, at the top of the file, before the imports — comments may precede it. A `jsenv:` directive jsenv cannot read makes the run fail immediately, naming the file: nothing else would report a typo, and the file would silently fall back to the default duration.
+
+A file allocated more time than the default is also treated as a heavy execution: it is started earlier and counted against [parallel.maxHeavy](#344-parallelmaxheavy).
+
+When the duration is computed rather than fixed, ask for it from the file instead:
+
+```js
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(process.platform === "win32" ? 120_000 : 60_000);
+```
+
+This works in Node.js and in a browser; the sooner it is called, the sooner the runner knows.
+
+The duration can also be set from the test plan, which is the right place when it depends on the plan rather than on the file:
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test";
@@ -455,6 +546,8 @@ await executeTestPlan({
   },
 });
 ```
+
+When several of them apply to one execution, the largest duration wins.
 
 ## 3.6 Code coverage
 
