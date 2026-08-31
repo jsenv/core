@@ -8360,6 +8360,12 @@ const jsenvPluginImportMetaCss = () => {
           return null;
         }
         if (urlInfo.context.build) {
+          if (hasModuleScopeAssignment(urlInfo.contentAst)) {
+            urlInfo.contentSideEffects.push({
+              has: true,
+              reason: "import.meta.css assigned at module scope",
+            });
+          }
           const packageName = urlInfo.packageName;
           const packageDirectoryUrl =
             urlInfo.packageDirectoryUrl || urlInfo.context.rootDirectoryUrl;
@@ -8401,6 +8407,28 @@ const jsenvPluginImportMetaCss = () => {
       },
     },
   };
+};
+
+// A stylesheet assigned at module scope is adopted when the module runs: that
+// assignment IS the module's side effect. It has to be told, because a
+// package.json "sideEffects" list is authoritative once it exists — a module
+// it does not name is dropped whole when it is imported for nothing else, and
+// its css silently leaves the build.
+const hasModuleScopeAssignment = (ast) => {
+  for (const node of ast.body) {
+    if (node.type !== "ExpressionStatement") {
+      continue;
+    }
+    const { expression } = node;
+    if (
+      expression.type === "AssignmentExpression" &&
+      expression.operator === "=" &&
+      getImportMetaPropertyName(expression.left) === "css"
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const babelPluginRewriteImportMetaCssAssignment = (

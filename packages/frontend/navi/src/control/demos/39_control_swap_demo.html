@@ -225,7 +225,7 @@
         <div class="demo-section">
           <Heading id="autofocus">autoFocus</Heading>
           <Box flex="y" spacing="m">
-            <Variant caption="sans">
+            <Variant caption="par défaut">
               <div class="phone">
                 <ControlSwap spacing="xs">
                   {whereSide()}
@@ -233,19 +233,19 @@
                 </ControlSwap>
               </div>
             </Variant>
-            <Variant caption="autoFocus sur la side de recherche">
+            <Variant caption="autoFocus={false} sur la side de recherche">
               <div class="phone">
                 <ControlSwap spacing="xs">
                   {whereSide()}
-                  {whatSide({ autoFocus: true })}
+                  {whatSide({ autoFocus: false })}
                 </ControlSwap>
               </div>
             </Variant>
-            <Variant caption='autoFocus + defaultValue="what"'>
+            <Variant caption='defaultValue="what" : rien au montage'>
               <div class="phone">
                 <ControlSwap spacing="xs" defaultValue="what">
                   {whereSide()}
-                  {whatSide({ autoFocus: true })}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>

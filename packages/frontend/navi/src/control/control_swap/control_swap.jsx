@@ -341,8 +341,11 @@ export const ControlSwap = (props) => {
  * @param badge - A mark on the cap saying this collapsed control is still
  *   doing something (a filter set, a search typed). `true` draws a dot;
  *   anything else is drawn as given (a `<BadgeCount>`, say).
- * @param autoFocus - Moves the focus into this control when it takes the
- *   floor. Never on mount, whatever the setting.
+ * @param autoFocus - On by default: the focus goes into this control when it
+ *   takes the floor (its `[autofocus]` element, or the first focusable one).
+ *   `false` leaves it on the cap that was pressed — for a control one reads
+ *   before writing in, or a phone where the keyboard must not rise yet. Never
+ *   on mount, whatever the setting.
  */
 const ControlSwapSide = () => null;
 
@@ -388,12 +391,14 @@ const readSides = (children) => {
   return sides;
 };
 
-// The floor moved: whatever the newly collapsed slot held is inert now, and a
-// focus inside it was dropped to the document body by the browser. It goes into
-// the control taking over when that control asked for it, and to the cap
-// speaking for it otherwise — never nowhere.
+// The floor moved: the press that gave it landed on a cap, and what one wants
+// next is the control that just arrived — typing into the search field one just
+// opened, not pressing its icon again. So the focus follows the floor into the
+// control, unless the side refused it, and lands on the cap otherwise: whatever
+// the newly collapsed slot held is inert now and was dropped to the document
+// body by the browser, so it must go somewhere.
 const focusWithTheFloor = (activeSlot, activeSide, activeCap) => {
-  if (activeSide.autoFocus) {
+  if (activeSide.autoFocus !== false) {
     const elementToFocus = findElementToFocus(activeSlot);
     if (elementToFocus) {
       elementToFocus.focus();

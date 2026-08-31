@@ -38,7 +38,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$15 = /* css */`@layer navi {
+const css$16 = /* css */`@layer navi {
   :root {
     --navi-z-index-control-hovered: 1;
     --navi-z-index-control-focused: 2;
@@ -50,7 +50,7 @@ const css$15 = /* css */`@layer navi {
   }
 }
 `;
-import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$16, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -319,7 +319,7 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$14 = /* css */`@layer navi {
+const css$15 = /* css */`@layer navi {
   [data-url-target] {
     animation: navi_url_target var(--navi-url-target-duration, 2s)
         ease-out;
@@ -337,7 +337,7 @@ const css$14 = /* css */`@layer navi {
   }
 }
 `;
-import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$15, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
@@ -698,7 +698,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$13 = /* css */`.action_error {
+installImportMetaCssBuild(import.meta);const css$14 = /* css */`.action_error {
   background: #fdd;
   border: 1px solid red;
   margin-top: 0;
@@ -722,7 +722,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$13, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$14, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -5893,7 +5893,7 @@ installImportMetaCssBuild(import.meta);/**
  * (see calloutTemplate in callout.js).
  */
 
-const css$12 = /* css */`.navi_callout_status_icon {
+const css$13 = /* css */`.navi_callout_status_icon {
   --x-callout-status-icon-color: var(--navi-callout-neutral-color);
   box-sizing: border-box;
   aspect-ratio: 1;
@@ -5964,7 +5964,7 @@ const CalloutStatusIcon = ({
   status = "info",
   shape = "square"
 }) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
+  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
   return jsx("span", {
     className: "navi_callout_status_icon",
     "data-status": status === "none" ? undefined : status,
@@ -5993,7 +5993,7 @@ installImportMetaCssBuild(import.meta);/**
 
 // Unique for the page's lifetime: a caller may write the id in a commandfor.
 let calloutCount = 0;
-const css$11 = /* css */`
+const css$12 = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6310,7 +6310,7 @@ const openCallout = (message, {
   closeButton = true,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$11, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -27559,7 +27559,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$10 = /* css */`:root[data-navi-route-transition] [data-navi-route-transition-area] {
+const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-transition-area] {
   view-transition-name: navi-route-transition;
 }
 
@@ -27851,7 +27851,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   const props = {
     ...rest,
@@ -27909,7 +27909,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   const {
     type,
@@ -27946,7 +27946,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
@@ -28587,7 +28587,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$$ = /* css */`.navi_route_travel {
+const css$10 = /* css */`.navi_route_travel {
   position: relative;
 
   &[data-travel-by-drag="x"] {
@@ -28876,7 +28876,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$$, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/nav/route_travel.jsx"];
   installTransitionWindowCss();
   const elementRef = useRef();
   const gestureRef = useRef(null);
@@ -37857,7 +37857,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`.navi_loading_indicator_fluid_container {
+installImportMetaCssBuild(import.meta);const css$$ = /* css */`.navi_loading_indicator_fluid_container {
   border-radius: inherit;
   opacity: 1;
   width: 100%;
@@ -37888,7 +37888,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -38093,7 +38093,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Z = /* css */`.navi_loading_outline_wrapper {
+installImportMetaCssBuild(import.meta);const css$_ = /* css */`.navi_loading_outline_wrapper {
   top: max(var(--loading-outline-min-inset, -100vh),
       var(--loading-rectangle-top, 0px));
   right: max(var(--loading-outline-min-inset, -100vh),
@@ -38114,7 +38114,7 @@ installImportMetaCssBuild(import.meta);const css$Z = /* css */`.navi_loading_out
 }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -38249,7 +38249,7 @@ const LoadingOutlineWithPortal = props => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$Y = /* css */`.navi_text_anchor {
+const css$Z = /* css */`.navi_text_anchor {
   vertical-align: baseline;
   user-select: none;
   overflow: hidden;
@@ -38287,7 +38287,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -38504,7 +38504,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$X = /* css */`@layer navi {
+const css$Y = /* css */`@layer navi {
   .navi_text {
     &[data-skeleton] {
       border-radius: .2em;
@@ -39061,7 +39061,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -39286,7 +39286,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$X, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -39447,7 +39447,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$W = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$X = /* css */`@layer navi {
   .navi_link {
     --link-border-radius: unset;
     --link-outline-color: var(--navi-focus-outline-color);
@@ -39863,7 +39863,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$W, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -40370,7 +40370,7 @@ let navCount = 0;
 // Worn by a nav of routes while a route movement between two of its tabs is
 // pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
 const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
-const css$V = /* css */`@layer navi {
+const css$W = /* css */`@layer navi {
   .navi_nav {
     --nav-border: none;
     --nav-padding: 0px;
@@ -40609,7 +40609,7 @@ const Nav = ({
   slideContainer,
   ...props
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/link/nav.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const navRef = props.ref;
@@ -41174,7 +41174,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$U = /* css */`@layer navi {
+const css$V = /* css */`@layer navi {
   .navi_binder {
     --binder-border-width: var(--navi-control-border-width);
     --binder-border-radius: var(--navi-control-border-radius);
@@ -41459,7 +41459,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -41946,7 +41946,7 @@ installImportMetaCssBuild(import.meta);/**
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
  */
-const css$T = /* css */`@layer navi {
+const css$U = /* css */`@layer navi {
   :root {
     --navi-fixed-bar-width: 56px;
     --navi-fixed-bar-height: 56px;
@@ -42064,7 +42064,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Said with the width the border rule reads rather than with an attribute of
@@ -42158,7 +42158,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$S = /* css */ `
+const css$T = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -42182,7 +42182,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$S;
+    styleEl.textContent = css$T;
     document.head.appendChild(styleEl);
   }
 
@@ -42337,7 +42337,7 @@ const useFocusGroup = (
 };
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const css$R = /* css */`.navi_summary_marker {
+const css$S = /* css */`.navi_summary_marker {
   flex-shrink: 0;
   width: 1em;
   height: 1em;
@@ -42429,7 +42429,7 @@ const SummaryMarker = ({
   loading,
   openDirection = "down"
 }) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   return jsx("span", {
     className: "navi_summary_marker",
@@ -42474,7 +42474,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`.navi_details {
+installImportMetaCssBuild(import.meta);const css$R = /* css */`.navi_details {
   z-index: 1;
   flex-direction: column;
   flex-shrink: 0;
@@ -42519,7 +42519,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -42952,7 +42952,7 @@ installImportMetaCssBuild(import.meta);/**
  * UI when it comes first). Once settled open the clipping is released, so a
  * popover or focus ring inside is not cut at the edges.
  */
-const css$P = /* css */`.navi_expandable {
+const css$Q = /* css */`.navi_expandable {
   flex-direction: column;
   flex-shrink: 0;
   display: flex;
@@ -43149,7 +43149,7 @@ const useExpandableContext = partName => {
  *   and rebuilds it from scratch on every expansion.
  */
 const Expandable = props => {
-  import.meta.css = [css$P, "@jsenv/navi/src/control/expandable/expandable.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/control/expandable/expandable.jsx"];
   const {
     ref,
     ui,
@@ -43718,6 +43718,1211 @@ const createToggleEvent = open => {
   return toggleEvent;
 };
 
+const NextResolverContext = createContext(null);
+const useNextResolver = () => useContext(NextResolverContext);
+
+/**
+ * Creates a renderComponent function that passes props through a chain of resolvers.
+ * Each resolver is a Preact component rendered in sequence (hooks are allowed).
+ * To pass through to the next resolver, call useNextResolver() and render the
+ * returned Next component with the desired props.
+ * To terminate the chain early (e.g. render a specialized component), render
+ * directly without calling Next.
+ *
+ * The last entry in the array is the final/target component — it receives null
+ * from useNextResolver() indicating it is terminal.
+ *
+ * Usage:
+ *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
+ *   // Then inside a component render:
+ *   renderButton(props)
+ *
+ * NextResolverContext exposes a stable Next component so resolvers can continue
+ * the chain via useNextResolver().
+ * ResolverIndexContext tracks which resolver is next so that when a resolver
+ * re-renders and calls Next, the chain resumes from the correct position.
+ */
+const createComponentResolver = resolvers => {
+  const ResolverIndexContext = createContext(0);
+  const ChainRunner = props => {
+    const index = useContext(ResolverIndexContext);
+    if (index >= resolvers.length) {
+      return null;
+    }
+    const Resolver = resolvers[index];
+    const isLast = index === resolvers.length - 1;
+    return jsx(ResolverIndexContext.Provider, {
+      value: index + 1,
+      children: isLast ? jsx(NextResolverContext.Provider, {
+        value: null,
+        children: jsx(Resolver, {
+          ...props
+        })
+      }) : jsx(Resolver, {
+        ...props
+      })
+    });
+  };
+
+  // Stable component defined once per createComponentResolver call.
+  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
+  // is inherited from the parent tree. When a resolver calls <Next>, the chain
+  // resumes from index+1 (already set by the Provider wrapping that resolver).
+  const NextComponent = props => jsx(ChainRunner, {
+    ...props
+  });
+  const renderComponent = props => {
+    return jsx(NextResolverContext.Provider, {
+      value: NextComponent,
+      children: jsx(ResolverIndexContext.Provider, {
+        value: 0,
+        children: jsx(ChainRunner, {
+          ...props
+        })
+      })
+    });
+  };
+  return renderComponent;
+};
+
+const ButtonRouteResolver = props => {
+  const Next = useNextResolver();
+  if (props.route) {
+    return jsx(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonWithRoute = props => {
+  const Next = useNextResolver();
+  const {
+    route,
+    routeParams,
+    children,
+    pseudoState,
+    ...rest
+  } = props;
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  // Merged into whatever the caller already holds: a button can be forced into
+  // a state for a demo and still learn its own current-ness from its route.
+  return jsx(Next, {
+    href: url,
+    pseudoState: {
+      ...pseudoState,
+      ":-navi-href-current": linkMatching
+    },
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
+};
+
+const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
+const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
+const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
+const LIGHT_LUMINANCE_THRESHOLD = 0.5;
+const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
+const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
+
+/**
+ * Sets data attributes on an element based on the OKLCH lightness and contrast
+ * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
+ * (0–1, perceptually uniform scale).
+ *
+ * Three boolean attributes are managed independently:
+ *
+ * ## `data-accent-light` (set when OKLCH L > 0.5)
+ *   The accent color is perceptually light (orange, green, pink, yellow…).
+ *   Use to adjust color-mix direction so hover/active effects darken toward
+ *   black instead of lightening toward white.
+ *
+ * ## `data-accent-very-light` (set when OKLCH L > 0.92)
+ *   The accent color is near-white or white. Use to show a grey background on
+ *   unchecked state so the component boundary remains visible against white
+ *   page backgrounds.
+ *
+ * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
+ *   The best contrasting foreground color against the accent is dark (black).
+ *   Use to render checkmarks, icons, or text in a dark color instead of white.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
+ * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
+ * @param {object} [options]
+ * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
+ *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
+ */
+const useAccentColorAttributes = (
+  ref,
+  accentColor,
+  { elementSelector, colorProperty = "backgroundColor" } = {},
+) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    elementSelector =
+      elementSelector || el.getAttribute("data-visual-selector");
+    if (elementSelector) {
+      elementToCheck = el.querySelector(elementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttributes = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const color = computedStyle[colorProperty];
+      if (!color) {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+        return;
+      }
+      const luminance = resolveOklchLightness(color, el);
+      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      }
+      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      }
+      const bestContrast = contrastColor(
+        color,
+        el,
+        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
+      );
+      if (bestContrast === "black") {
+        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+      }
+    };
+    updateAttributes();
+    const unsubscribeFromPseudoState = subscribeToPseudoState(
+      el,
+      updateAttributes,
+    );
+    return () => {
+      unsubscribeFromPseudoState();
+      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+    };
+  }, [ref, accentColor, elementSelector, colorProperty]);
+};
+
+installImportMetaCssBuild(import.meta);const css$P = /* css */`@layer navi {
+  .navi_button {
+    --button-border-radius: var(--navi-control-border-radius);
+    --button-border-width: var(--navi-control-border-width);
+    --button-cta-background-color: var(--navi-accent-color);
+    --button-outline-width: var(--navi-focus-outline-width);
+    --button-outline-offset: calc(-.5 * var(--button-outline-width));
+    --button-outline-color: var(--navi-focus-outline-color);
+    --button-padding-x-default: var(--navi-button-padding-x-default);
+    --button-padding-y-default: var(--navi-button-padding-y-default);
+    --button-loader-color: var(--navi-loader-color);
+    --button-border-color: var(--navi-control-border-color);
+    --button-background-color: var(--button-background, var(--navi-button-background-color));
+    --button-color: currentColor;
+    --button-cursor: pointer;
+    --button-font-size: var(--navi-control-font-size);
+    --button-font-family: var(--navi-control-font-family);
+    --button-border-color-hover: color-mix(in srgb,
+        var(--button-border-color) 70%,
+        black);
+    --button-background-color-hover: color-mix(in srgb,
+        var(--button-background-color) 95%,
+        black);
+    --button-color-hover: var(--button-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-background-color-current: var(--button-background-color);
+    --button-color-current: var(--button-color);
+    --button-border-color-pressed: color-mix(in srgb,
+        var(--button-border-color) 90%,
+        black);
+    --button-border-color-readonly: color-mix(in srgb,
+        var(--button-border-color) 30%,
+        var(--navi-surface-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-color-readonly: color-mix(in srgb,
+        var(--button-color) 30%,
+        transparent);
+    --button-border-color-disabled: var(--button-border-color-readonly);
+    --button-background-color-disabled: var(--button-background-color-readonly);
+    --button-color-disabled: var(--button-color-readonly);
+    font-size: var(--button-font-size);
+    font-family: var(--button-font-family);
+    line-height: var(--navi-control-line-height);
+    display: inline-block;
+  }
+}
+
+a.navi_button {
+  text-align: center;
+  text-decoration: none;
+}
+
+.navi_button {
+  --x-button-outline-offset: var(--button-outline-offset);
+  --x-button-border-color: var(--button-border-color);
+  --x-button-border: var(--button-border, var(--button-border-width) solid var(--x-button-border-color));
+  --x-button-background: var(--button-background);
+  --x-button-background-color: var(--button-background-color);
+  --x-button-color: var(--button-color);
+  --x-button-cursor: var(--button-cursor);
+  box-sizing: border-box;
+  aspect-ratio: inherit;
+  color: var(--x-button-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--button-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--button-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--button-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--button-border-radius));
+  cursor: var(--x-button-cursor);
+  touch-action: manipulation;
+  user-select: none;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  position: relative;
+
+  & .navi_button_content {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+    display: inherit;
+    box-sizing: border-box;
+    aspect-ratio: inherit;
+    width: 100%;
+    height: 100%;
+    padding-top: var(--button-padding-top, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    align-items: inherit;
+    justify-content: inherit;
+    color: inherit;
+    vertical-align: inherit;
+    background: var(--x-button-background);
+    background-color: var(--x-button-background-color, var(--x-button-background));
+    border: var(--x-button-border);
+    border-radius: inherit;
+    outline-width: var(--button-outline-width);
+    outline-color: var(--button-outline-color);
+    outline-offset: var(--button-outline-offset);
+    transition-property: transform;
+    transition-duration: .15s;
+    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+    position: relative;
+
+    & .navi_button_shadow {
+      inset: calc(-1 * var(--x-button-outer-width));
+      border-radius: inherit;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    & > img {
+      border-radius: inherit;
+    }
+  }
+
+  &[data-href-current] {
+    --x-button-border-color: var(--button-border-color-current);
+    --x-button-background-color: var(--button-background-color-current);
+    --x-button-color: var(--button-color-current);
+  }
+
+  &[data-hover] {
+    --x-button-border-color: var(--button-border-color-hover);
+    --x-button-background-color: var(--button-background-color-hover);
+    --x-button-color: var(--button-color-hover);
+  }
+
+  &[data-pressed] {
+    --x-button-outline-color: var(--button-border-color-pressed);
+  }
+
+  &[data-pressed] {
+    & .navi_button_content {
+      transform: scale(.9);
+    }
+  }
+
+  &[data-pressed] {
+    & .navi_button_shadow {
+      box-shadow: inset 0 3px 6px #0003, inset 0 1px 2px #0000004d, inset 0 0 0 1px #0000001a, inset 2px 0 4px #0000001a, inset -2px 0 4px #0000001a;
+    }
+  }
+
+  &[data-readonly] {
+    --x-button-border-color: var(--button-border-color-readonly);
+    --x-button-background-color: var(--button-background-color-readonly);
+    --x-button-color: var(--button-color-readonly);
+    --x-button-cursor: default;
+  }
+
+  &[data-focus-visible] {
+    --x-button-border-color: transparent;
+
+    & .navi_button_content {
+      outline-style: solid;
+    }
+  }
+
+  &[data-disabled] {
+    --x-button-border-color: var(--button-border-color-disabled);
+    --x-button-background-color: var(--button-background-color-disabled);
+    --x-button-color: var(--button-color-disabled);
+    --x-button-cursor: default;
+
+    & .navi_button_content {
+      transform: none;
+
+      & .navi_button_shadow {
+        box-shadow: none;
+      }
+    }
+  }
+
+  &[data-callout] {
+    --x-button-border-color: var(--callout-color);
+  }
+
+  &[data-variant="discrete"] {
+    --button-border-width: 0;
+    --button-border-color: transparent;
+    --button-border-color-hover: var(--button-border-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-border-color-readonly: var(--button-border-color);
+    --button-border-color-disabled: var(--button-border-color);
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: color-mix(in srgb,
+        currentColor 8%,
+        var(--button-background-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+
+    &[data-pressed] {
+      & .navi_button_content {
+        transform: none;
+      }
+    }
+  }
+
+  &[data-variant="bare"] {
+    --button-border-width: 0;
+    --button-border-color: transparent;
+    --button-border-color-hover: var(--button-border-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-border-color-readonly: var(--button-border-color);
+    --button-border-color-disabled: var(--button-border-color);
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: var(--button-background-color);
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+
+    &[data-pressed] {
+      & .navi_button_content {
+        transform: none;
+      }
+    }
+  }
+
+  &[data-variant="discrete-border"] {
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: var(--button-background-color);
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+    --x-button-border-color: transparent;
+
+    &[data-hover] {
+      --x-button-border-color: var(--button-border-color-hover);
+    }
+
+    &[data-readonly], &[data-disabled] {
+      --x-button-border-color: transparent;
+    }
+  }
+
+  &[data-variant="border"] {
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: color-mix(in srgb,
+        currentColor 8%,
+        var(--button-background-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+  }
+
+  &[data-press-effect="scale"][data-pressed] {
+    & .navi_button_content {
+      transform: scale(.9);
+    }
+  }
+
+  &[data-press-effect="none"][data-pressed] {
+    & .navi_button_content {
+      transform: none;
+    }
+  }
+
+  &[data-icon] {
+    --button-padding: 0;
+    display: inline-flex;
+  }
+
+  &[data-cta] {
+    --x-button-background-color: var(--button-cta-background-color);
+    --x-button-border-color: var(--button-cta-background-color);
+    --x-button-color: white;
+
+    &[data-hover] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 85%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 85%,
+          white);
+    }
+
+    &[data-readonly] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 50%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 50%,
+          white);
+    }
+
+    &[data-disabled] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 40%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 40%,
+          white);
+      --x-button-color: #fff9;
+    }
+  }
+}
+`;
+const ButtonUI = props => {
+  import.meta.css = [css$P, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  const {
+    ref,
+    // href/link
+    href,
+    target,
+    rel,
+    replace,
+    // visual
+    variant,
+    pressEffect,
+    icon,
+    cta,
+    spacing,
+    // Whether the button draws the loading outline itself. A button that is
+    // one half of a bigger control says no: what is busy is the control, and
+    // the outline belongs around the whole of it (see split_button.jsx).
+    loadingOutline = true
+  } = props;
+  const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
+    controlType: "button",
+    allowNameless: true
+  });
+  const {
+    basePseudoState,
+    children
+  } = buttonControlHostProps;
+  const loading = basePseudoState[":-navi-loading"];
+
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
+  useDocumentUrl();
+  const isLink = href !== undefined;
+  let as = "button";
+  let innerTarget;
+  let innerRel;
+  let innerCurrent;
+  if (isLink) {
+    as = "a";
+    const {
+      isSameSite,
+      isCurrent
+    } = getHrefTargetInfo(href);
+    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
+    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+    innerCurrent = isCurrent;
+  }
+  // For a button that has only an href: nothing else knows it points at the
+  // page one is on. A route says so through `pseudoState`, which Box lays over
+  // this one.
+  buttonControlHostProps.basePseudoState = {
+    ...basePseudoState,
+    ":-navi-href-current": innerCurrent
+  };
+
+  // Worn as an attribute, like a link's (see link_replace.js): read off the
+  // anchor by the click handler, off the source by --navi-nav-to.
+  const replaceRequest = replace ? {
+    [LINK_REPLACE_ATTRIBUTE]: ""
+  } : null;
+  const visualSelector = ".navi_button_content";
+  useAccentColorAttributes(ref, null, {
+    elementSelector: visualSelector
+  });
+  return jsxs(Box, {
+    inline: true,
+    block: true,
+    ...buttonControlRootProps,
+    ...buttonControlHostProps,
+    // eslint-disable-next-line react/no-children-prop
+    children: undefined
+    // All button are forced to type="button" as a way to avoid form submission which
+    // should always go through --navi-send command instead
+    // without having to call preventDefault() on button clicks
+    ,
+
+    type: "button",
+    spacing: undefined,
+    cta: undefined,
+    pressEffect: undefined,
+    loadingOutline: undefined,
+    ref: ref,
+    as: as,
+    href: href,
+    target: innerTarget,
+    rel: innerRel,
+    replace: undefined,
+    ...replaceRequest,
+    // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
+    // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
+    onnavi_get_value: e => {
+      e.detail.respondWith(props.value);
+    },
+    onContextMenu: e => {
+      if (as === "a") {
+        // For link we keep context menu to allow "open in new tab" and other browser features
+        return;
+      }
+      if (e.pointerType !== "touch") {
+        // right click is allowed
+        return;
+      }
+      // Suppress the native context menu triggered by long-press on touch devices.
+      // Buttons have no meaningful context menu (no text to copy/paste/search),
+      // and the long-press visual state would get stuck if we let the menu open.
+      // Note: e.button === -1 is equivalent — it means no physical button triggered
+      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+      e.preventDefault();
+    },
+    "data-variant": variant,
+    "data-press-effect": pressEffect,
+    "data-icon": icon ? "" : undefined,
+    "data-cta": cta ? "" : undefined,
+    "data-callout-arrow-x": "center"
+    // style management
+    ,
+
+    baseClassName: "navi_button",
+    styleCSSVars: ButtonStyleCSSVars,
+    pseudoClasses: ButtonPseudoClasses,
+    pseudoElements: ButtonPseudoElements,
+    visualSelector: visualSelector,
+    hasChildUsingForwardedProps: true,
+    children: [jsx(LoadingOutline, {
+      loading: loadingOutline && loading,
+      inset: -1,
+      color: "var(--button-loader-color)"
+    }), jsx(ControlChildrenWrapper, {
+      ...controlChildrenWrapperProps,
+      children: jsx(ButtonContent, {
+        spacing: spacing,
+        children: children
+      })
+    })]
+  });
+};
+const ButtonContent = ({
+  spacing,
+  children
+}) => {
+  const boxForwardedProps = useContext(BoxForwardedPropsContext);
+  return jsxs(Text, {
+    ...boxForwardedProps,
+    display: "inherit",
+    spacing: spacing,
+    className: "navi_button_content",
+    children: [children, jsx(ButtonShadow, {})]
+  });
+};
+const ButtonStyleCSSVars = {
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
+  "color": "--button-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover"
+  },
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed"
+  },
+  ":-navi-href-current": {
+    backgroundColor: "--button-background-color-current",
+    borderColor: "--button-border-color-current",
+    color: "--button-color-current"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled"
+  }
+};
+const ButtonPseudoClasses = [":-navi-href-current", ":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoElements = ["::-navi-loader"];
+const ButtonShadow = () => {
+  return jsx("span", {
+    className: "navi_button_shadow"
+  });
+};
+markAsOutsideTextFlow(ButtonShadow);
+
+const ButtonFirstResolver = props => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const ownTargetHidden = useOwnTargetHidden(props);
+  if (ownTargetHidden) {
+    return null;
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonCommandPropResolver = props => {
+  const Next = useNextResolver();
+  const form = useContext(FormContext);
+  if (props.type === "submit") {
+    props.type = "button";
+    props.command = props.command || "--navi-send";
+  }
+  const command = props.command;
+  // What follows a send THIS button asked for, overriding the form's own
+  // `command` (see resolveAfterSend in commands.js). Named after the browser's
+  // formaction/formmethod/formtarget, which are the same idea: a submit button
+  // saying how its own submission differs. For a form with two ways out —
+  // "save" stays, "delete" goes back to the list.
+  const {
+    formCommand
+  } = props;
+  props.formCommand = undefined;
+  props["data-after-send"] = formCommand;
+
+  // `readOnlyWhileFormUnchanged`: hold the send button back until the form
+  // around it holds something new, so it says it is waiting instead of
+  // accepting a press that would send nothing.
+  //
+  // Opt-in, because a press that sends nothing is usually still worth
+  // accepting: in a dialog or a slide it closes the dialog / moves to the next
+  // step all the same — the user IS done, there was simply nothing to send. It
+  // is only in a form that goes nowhere on its own (one in the document) that
+  // the press would visibly do nothing at all.
+  //
+  // Passed to Next rather than written onto props like everything else here:
+  // these answer to something outside the button and flip back, and the props
+  // object outlives the render (a button inside a form is the same vnode when
+  // the form re-renders around it), so a write would never be undone.
+  const heldByForm = Boolean(props.readOnlyWhileFormUnchanged && command === "--navi-send" && form?.changed === false);
+  const readOnly = heldByForm ? true : props.readOnly;
+
+  // Called fresh on every render (not a module-level object computed once
+  // at import time) — naviI18n(...) must be re-evaluated per call so a
+  // Button using a command's built-in default label actually follows
+  // setPreferredLanguage()/a "languagechange" event instead of staying
+  // stuck with whatever language was active the first time this module was
+  // imported.
+  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
+  if (getCommandDefaultProps) {
+    const commandDefaultProps = getCommandDefaultProps();
+    for (const key of Object.keys(commandDefaultProps)) {
+      if (props[key] === undefined) {
+        props[key] = commandDefaultProps[key];
+      }
+    }
+  }
+  return jsx(Next, {
+    ...props,
+    readOnlyWhileFormUnchanged: undefined,
+    readOnly: readOnly
+    // Why it is read-only, for READONLY_CONSTRAINT to say the right thing:
+    // read-only for some other reason (a caller's own prop, a read-only form
+    // around it) must not be explained as "waiting for a change".
+    ,
+    "data-readonly-reason": heldByForm ? "form-unchanged" : undefined
+  });
+};
+const COMMAND_DEFAULT_PROPS_FACTORIES = {
+  "--navi-clear": () => ({
+    children: naviI18n("button.clear")
+  }),
+  "--navi-reset": () => ({
+    children: naviI18n("button.reset")
+  }),
+  "--navi-define": () => ({
+    children: naviI18n("button.define")
+  }),
+  "--navi-send": () => ({
+    children: naviI18n("button.send"),
+    cta: true
+  }),
+  "--navi-cancel": () => ({
+    children: naviI18n("button.cancel")
+  }),
+  "--navi-confirm": () => ({
+    children: naviI18n("button.confirm"),
+    cta: true
+  }),
+  "--navi-close": () => ({
+    children: naviI18n("button.close")
+  }),
+  "--navi-open": () => ({
+    children: naviI18n("button.open")
+  })
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   ownTarget?: boolean | "refuse" | "always",
+ *   replace?: boolean,
+ *   [key: string]: any,
+ * }>}
+ * @param {boolean} [replace] Go where the press leads — an `href`, a
+ *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
+ *   rather than stacking on it: what `<Link replace>` says, for a press drawn
+ *   as a button.
+ * @param {Function} [action] On a button with an `href` or a `route`, the
+ *   same order as a Link's: it runs on the press, before the navigation, and
+ *   the navigation does not wait for it (see Link's `action`).
+ * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
+ *   that belongs to another control — a chip's cross on a picker's façade, an
+ *   eye on a pressable row, a diskette inside a slide that travels. The press is
+ *   this button's alone (no travel starts, no popup opens, no navi control above
+ *   answers) and its `onClick` waits for its own interaction gate instead of
+ *   firing from the DOM. What it does where the zone is read-only, disabled or
+ *   busy depends on whether it WRITES to the control it sits in: it goes by
+ *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
+ *   the zone's state entirely — for a gesture that never touched that control.
+ */
+const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
+
+installImportMetaCssBuild(import.meta);/**
+ * ControlSwap: two controls taking turns on one line.
+ *
+ *     [👥] [ Le dimanche matin     ▾ ]                     [🔍]
+ *     [👥]                           [ Rechercher…       ] [🔍]
+ *
+ * Four boxes on a row that is never wide enough for both controls — a phone
+ * answering "what do I search IN" then "what am I looking for". The two end
+ * caps are fixed: same place, same size, in both states, and either of them
+ * hands the floor to the other side. That is the whole reason the caps sit
+ * OUTSIDE the controls rather than being drawn inside them (a picker's façade
+ * yields a zone with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon
+ * that lives inside its control while open and becomes a pill once closed is
+ * a switch that moves when you flip it: the finger that opened the search has
+ * to travel to close it again. Out here, the same pixel does both.
+ *
+ * Nothing is unmounted. Two elements that never coexist have nothing to
+ * interpolate between, so both sides stay mounted at all times and only their
+ * share of the middle moves: the collapsed slot falls to zero width and turns
+ * inert — unreachable by finger and by keyboard — while what was typed in it
+ * survives the round trip.
+ *
+ * Neither control ever reflows during the movement. Each one is laid out at
+ * the full width of the middle (`100cqw` of the stage, which is a query
+ * container) whatever its slot currently measures, so the slot uncovers a
+ * finished control instead of squeezing a live one — text never rewraps
+ * mid-swap, and a collapsed control is not a zero-width column of stacked
+ * words silently setting the row's height.
+ *
+ * The row has ONE height, and everything in it is that tall: the caps because
+ * they are squares of it, the two controls because they are stretched to it.
+ * Nothing is measured — a height read off the controls could only come back
+ * through a resize observer, and a cap made square with `aspect-ratio` never
+ * reads it anyway (on a flex item stretched to its line, the main size is
+ * resolved from content first). It is a length, `--navi-control-swap-size`,
+ * defaulting to the height of a navi control at its default padding; a row of
+ * roomier controls says so once, there.
+ */
+const css$O = /* css */`.navi_control_swap {
+  --x-control-swap-size: var(--navi-control-swap-size, calc(var(--navi-control-line-height) + 2 *
+          var(--navi-control-padding-y-default) + 2 *
+          var(--navi-control-border-width)));
+  height: var(--x-control-swap-size);
+  align-items: stretch;
+
+  & > .navi_control_swap_cap {
+    flex: 0 0 var(--x-control-swap-size);
+    justify-content: center;
+    align-self: stretch;
+    align-items: center;
+    position: relative;
+
+    & .navi_control_swap_badge {
+      z-index: 1;
+      background-color: var(--navi-control-swap-badge-color, var(--navi-accent-color));
+      border-radius: 100em;
+      width: .45em;
+      height: .45em;
+      position: absolute;
+      top: 0;
+      right: 0;
+      transform: translate(30%, -30%);
+    }
+  }
+
+  & > .navi_control_swap_stage {
+    flex-direction: row;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    container-type: inline-size;
+
+    & > .navi_control_swap_slot {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      overflow: hidden;
+
+      & > .navi_control_swap_control {
+        flex-direction: column;
+        flex: none;
+        justify-content: center;
+        width: 100cqw;
+        display: flex;
+
+        & > * {
+          width: 100%;
+        }
+      }
+
+      &[data-collapsed] {
+        flex-grow: 0;
+      }
+
+      &[data-pinned="end"] {
+        justify-content: flex-end;
+      }
+    }
+  }
+
+  &[data-settled] > .navi_control_swap_stage > .navi_control_swap_slot:not([data-collapsed]) {
+    overflow: visible;
+  }
+
+  &[data-animation] > .navi_control_swap_stage > .navi_control_swap_slot {
+    transition: flex-grow var(--navi-control-swap-animation-duration, .22s)
+        ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-animation] > .navi_control_swap_stage > .navi_control_swap_slot {
+      transition: none;
+    }
+  }
+}
+`;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   onChange?: (name: string, event: Event) => void,
+ *   animation?: boolean,
+ *   children?: import("ignore:preact").ComponentChildren,
+ * }>}
+ * @param value - The name of the side holding the floor, driven from outside:
+ *   the row swaps to match every change of it, and a press on a cap can still
+ *   swap it in between (same semantics as Dialog/Popover's own `open`).
+ * @param defaultValue - Uncontrolled, mount-only: which side starts with the
+ *   floor. The first `<ControlSwap.Side>` by default.
+ * @param signal - Two-way binding: the row follows the signal and writes the
+ *   side's name back into it whenever a press swaps it. Excludes `value`.
+ * @param onChange - Called with the name of the side taking the floor, and the
+ *   press that gave it.
+ * @param animation - On by default: the two slots trade their share of the
+ *   middle over `--navi-control-swap-animation-duration` (0.22s). `false`
+ *   swaps them in one frame; `prefers-reduced-motion` does too.
+ *
+ * The row is one length tall — `--navi-control-swap-size`, the height of a navi
+ * control at its default padding — and the caps are squares of it. Controls
+ * with a padding of their own need that length said once, here.
+ */
+const ControlSwap = props => {
+  import.meta.css = [css$O, "@jsenv/navi/src/control/control_swap/control_swap.jsx"];
+  const {
+    value,
+    defaultValue,
+    signal,
+    onChange,
+    animation = true,
+    children,
+    ...rest
+  } = props;
+  const sides = readSides(children);
+  if (sides.length !== 2) {
+    throw new Error(`<ControlSwap> takes exactly two <ControlSwap.Side> as direct children, got ${sides.length}`);
+  }
+  // Reading .value during render is what subscribes the row to it.
+  const valueRequested = signal ? signal.value : value;
+  const [activeName, setActiveName] = useState(() => {
+    const nameRequested = valueRequested === undefined ? defaultValue : valueRequested;
+    return nameRequested === undefined ? sides[0].name : nameRequested;
+  });
+  const activeIndexFound = sides.findIndex(side => side.name === activeName);
+  const activeIndex = activeIndexFound === -1 ? 0 : activeIndexFound;
+  const activeSide = sides[activeIndex];
+  const capRefs = [useRef(), useRef()];
+  const slotRefs = [useRef(), useRef()];
+  const slotIdPrefix = useId();
+  const activeNameRef = useRef(activeName);
+  activeNameRef.current = activeSide.name;
+
+  // The movement is over and the slots are where they belong (see the CSS).
+  const [settled, setSettled] = useState(true);
+  const swapTo = (name, event) => {
+    if (name === activeNameRef.current) {
+      return;
+    }
+    activeNameRef.current = name;
+    setActiveName(name);
+    setSettled(!animation);
+    if (signal) {
+      signal.value = name;
+    }
+    if (onChange) {
+      onChange(name, event);
+    }
+  };
+
+  // Follow `value`/`signal` changes after mount (the initial one is already in
+  // the state above). A press that wrote the signal lands here too and no-ops,
+  // since the state already matches.
+  const isFirstValueRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstValueRunRef.current) {
+      isFirstValueRunRef.current = false;
+      return;
+    }
+    if (valueRequested === undefined) {
+      return;
+    }
+    swapTo(valueRequested);
+  }, [valueRequested]);
+
+  // Move the focus with the floor — but never on mount: a row that simply
+  // renders with its search side open must not steal the page's focus, and on
+  // a phone that is the keyboard rising in front of the list one came to read.
+  const isFirstActiveRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstActiveRunRef.current) {
+      isFirstActiveRunRef.current = false;
+      return undefined;
+    }
+    const activeSlot = slotRefs[activeIndex].current;
+    focusWithTheFloor(activeSlot, activeSide, capRefs[activeIndex].current);
+    if (!animation) {
+      return undefined;
+    }
+    return whenTransitionSettles(activeSlot, () => {
+      setSettled(true);
+    });
+  }, [activeSide.name]);
+
+  // Both caps do the same thing, and it is the reason they sit outside the
+  // controls: whichever one the finger lands on, the floor goes to the other
+  // side. The same pixel opens the search and closes it.
+  const swapOnPress = event => {
+    swapTo(sides[activeIndex === 0 ? 1 : 0].name, event);
+  };
+  return jsxs(Box, {
+    flex: "x",
+    baseClassName: "navi_control_swap",
+    role: "group",
+    "data-animation": animation ? "" : undefined,
+    "data-settled": settled ? "" : undefined,
+    ...rest,
+    children: [jsx(ControlSwapCap, {
+      ref: capRefs[0],
+      side: sides[0],
+      slotId: `${slotIdPrefix}_0`,
+      active: activeIndex === 0,
+      onPress: swapOnPress
+    }), jsx("div", {
+      className: "navi_control_swap_stage",
+      children: sides.map((side, index) => jsx("div", {
+        ref: slotRefs[index],
+        id: `${slotIdPrefix}_${index}`,
+        className: "navi_control_swap_slot",
+        "data-pinned": index === 0 ? "start" : "end",
+        "data-collapsed": side === activeSide ? undefined : "",
+        inert: side === activeSide ? undefined : true,
+        children: jsx("div", {
+          className: "navi_control_swap_control",
+          children: side.children
+        })
+      }, side.name))
+    }), jsx(ControlSwapCap, {
+      ref: capRefs[1],
+      side: sides[1],
+      slotId: `${slotIdPrefix}_1`,
+      active: activeIndex === 1,
+      onPress: swapOnPress
+    })]
+  });
+};
+
+/**
+ * One of the two controls, and the cap that speaks for it. Declarative: the row
+ * reads these and draws the caps at its ends, the controls between them.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   name?: string,
+ *   icon: import("ignore:preact").ComponentChildren,
+ *   label: string,
+ *   badge?: boolean | import("ignore:preact").ComponentChildren,
+ *   autoFocus?: boolean,
+ *   children?: import("ignore:preact").ComponentChildren,
+ * }>}
+ * @param name - How `value`/`signal`/`onChange` name this side. Its position
+ *   ("0" or "1") by default.
+ * @param icon - What the cap draws.
+ * @param label - What the cap is called — it holds no text, so this is its
+ *   accessible name. Say what pressing it reveals ("Rechercher"), not what it
+ *   currently shows: the cap wears `aria-expanded` for the state.
+ * @param badge - A mark on the cap saying this collapsed control is still
+ *   doing something (a filter set, a search typed). `true` draws a dot;
+ *   anything else is drawn as given (a `<BadgeCount>`, say).
+ * @param autoFocus - On by default: the focus goes into this control when it
+ *   takes the floor (its `[autofocus]` element, or the first focusable one).
+ *   `false` leaves it on the cap that was pressed — for a control one reads
+ *   before writing in, or a phone where the keyboard must not rise yet. Never
+ *   on mount, whatever the setting.
+ */
+const ControlSwapSide = () => null;
+const ControlSwapCap = ({
+  ref,
+  side,
+  slotId,
+  active,
+  onPress
+}) => {
+  const {
+    icon,
+    label,
+    badge
+  } = side;
+  return jsxs(Button, {
+    ref: ref,
+    className: "navi_control_swap_cap",
+    variant: "discrete",
+    icon: true,
+    "aria-label": label,
+    "aria-expanded": active,
+    "aria-controls": slotId,
+    onClick: onPress,
+    children: [jsx(Icon, {
+      width: "60%",
+      square: true,
+      children: icon
+    }), badge ? jsx("span", {
+      className: "navi_control_swap_badge",
+      "aria-hidden": "true",
+      children: badge === true ? null : badge
+    }) : null]
+  });
+};
+ControlSwap.Side = ControlSwapSide;
+const readSides = children => {
+  const sides = [];
+  for (const child of toChildArray(children)) {
+    if (!child || child.type !== ControlSwapSide) {
+      continue;
+    }
+    const {
+      name,
+      ...rest
+    } = child.props;
+    sides.push({
+      name: name === undefined ? String(sides.length) : name,
+      ...rest
+    });
+  }
+  return sides;
+};
+
+// The floor moved: the press that gave it landed on a cap, and what one wants
+// next is the control that just arrived — typing into the search field one just
+// opened, not pressing its icon again. So the focus follows the floor into the
+// control, unless the side refused it, and lands on the cap otherwise: whatever
+// the newly collapsed slot held is inert now and was dropped to the document
+// body by the browser, so it must go somewhere.
+const focusWithTheFloor = (activeSlot, activeSide, activeCap) => {
+  if (activeSide.autoFocus !== false) {
+    const elementToFocus = findElementToFocus(activeSlot);
+    if (elementToFocus) {
+      elementToFocus.focus();
+      return;
+    }
+  }
+  const {
+    activeElement
+  } = document;
+  if (!activeElement || activeElement === document.body) {
+    activeCap.focus();
+  }
+};
+const findElementToFocus = slot => {
+  const autofocusElement = slot.querySelector("[autofocus]");
+  if (autofocusElement) {
+    return autofocusElement;
+  }
+  return findAfter(slot, elementIsFocusable, {
+    root: slot
+  });
+};
+
 const DEFAULT_VALIDITY_STATE = { valid: true, reported: null };
 
 /**
@@ -43823,106 +45028,7 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
-const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
-const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
-const LIGHT_LUMINANCE_THRESHOLD = 0.5;
-const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
-const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
-
-/**
- * Sets data attributes on an element based on the OKLCH lightness and contrast
- * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
- * (0–1, perceptually uniform scale).
- *
- * Three boolean attributes are managed independently:
- *
- * ## `data-accent-light` (set when OKLCH L > 0.5)
- *   The accent color is perceptually light (orange, green, pink, yellow…).
- *   Use to adjust color-mix direction so hover/active effects darken toward
- *   black instead of lightening toward white.
- *
- * ## `data-accent-very-light` (set when OKLCH L > 0.92)
- *   The accent color is near-white or white. Use to show a grey background on
- *   unchecked state so the component boundary remains visible against white
- *   page backgrounds.
- *
- * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
- *   The best contrasting foreground color against the accent is dark (black).
- *   Use to render checkmarks, icons, or text in a dark color instead of white.
- *
- * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
- * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
- * @param {object} [options]
- * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
- *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
- * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
- */
-const useAccentColorAttributes = (
-  ref,
-  accentColor,
-  { elementSelector, colorProperty = "backgroundColor" } = {},
-) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    elementSelector =
-      elementSelector || el.getAttribute("data-visual-selector");
-    if (elementSelector) {
-      elementToCheck = el.querySelector(elementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
-    };
-    updateAttributes();
-    const unsubscribeFromPseudoState = subscribeToPseudoState(
-      el,
-      updateAttributes,
-    );
-    return () => {
-      unsubscribeFromPseudoState();
-      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-    };
-  }, [ref, accentColor, elementSelector, colorProperty]);
-};
-
-installImportMetaCssBuild(import.meta);const css$O = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$N = /* css */`@layer navi {
   .navi_checkbox {
     --switch-margin: 0;
     --switch-padding: 2px;
@@ -43979,7 +45085,7 @@ installImportMetaCssBuild(import.meta);const css$O = /* css */`@layer navi {
 }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$O, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -44021,7 +45127,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
   .navi_checkbox {
     --border-radius: var(--navi-checkbox-border-radius);
     --border-width: var(--navi-control-border-width);
@@ -44289,7 +45395,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$N, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -44411,7 +45517,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$L = /* css */`@layer navi {
   .navi_label {
     --label-required-indicator-color: var(--navi-color-danger, #b42318);
 
@@ -44487,7 +45593,7 @@ installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$M, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -44522,7 +45628,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$M, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -44554,7 +45660,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$M, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/field.jsx"];
   const {
     children,
     // Marks the label when its control is required. Takes what to show, or
@@ -44716,7 +45822,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$K = /* css */`@layer navi {
   .navi_radio {
     --margin: 3px 3px 3px 5px;
     --outline-offset: 1px;
@@ -45022,7 +46128,7 @@ const InputRadioHeadless = props => {
 };
 const VARIANT_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$L, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -45168,7 +46274,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$K = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);const css$J = /* css */`@layer navi {
   .navi_input_range {
     --border-radius: 6px;
     --border-width: var(--navi-control-border-width);
@@ -45407,7 +46513,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$K, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -45520,73 +46626,6 @@ const RangeStyleCSSVars = {
 };
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
-
-const NextResolverContext = createContext(null);
-const useNextResolver = () => useContext(NextResolverContext);
-
-/**
- * Creates a renderComponent function that passes props through a chain of resolvers.
- * Each resolver is a Preact component rendered in sequence (hooks are allowed).
- * To pass through to the next resolver, call useNextResolver() and render the
- * returned Next component with the desired props.
- * To terminate the chain early (e.g. render a specialized component), render
- * directly without calling Next.
- *
- * The last entry in the array is the final/target component — it receives null
- * from useNextResolver() indicating it is terminal.
- *
- * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
- *   // Then inside a component render:
- *   renderButton(props)
- *
- * NextResolverContext exposes a stable Next component so resolvers can continue
- * the chain via useNextResolver().
- * ResolverIndexContext tracks which resolver is next so that when a resolver
- * re-renders and calls Next, the chain resumes from the correct position.
- */
-const createComponentResolver = resolvers => {
-  const ResolverIndexContext = createContext(0);
-  const ChainRunner = props => {
-    const index = useContext(ResolverIndexContext);
-    if (index >= resolvers.length) {
-      return null;
-    }
-    const Resolver = resolvers[index];
-    const isLast = index === resolvers.length - 1;
-    return jsx(ResolverIndexContext.Provider, {
-      value: index + 1,
-      children: isLast ? jsx(NextResolverContext.Provider, {
-        value: null,
-        children: jsx(Resolver, {
-          ...props
-        })
-      }) : jsx(Resolver, {
-        ...props
-      })
-    });
-  };
-
-  // Stable component defined once per createComponentResolver call.
-  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
-  // is inherited from the parent tree. When a resolver calls <Next>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = props => jsx(ChainRunner, {
-    ...props
-  });
-  const renderComponent = props => {
-    return jsx(NextResolverContext.Provider, {
-      value: NextComponent,
-      children: jsx(ResolverIndexContext.Provider, {
-        value: 0,
-        children: jsx(ChainRunner, {
-          ...props
-        })
-      })
-    });
-  };
-  return renderComponent;
-};
 
 installImportMetaCssBuild(import.meta);// The .navi_input box, in a module of its own: a page may render a Textarea or
 // a Select without any Input, so none of them can rely on another having run.
@@ -46081,676 +47120,19 @@ const CloseSvg = () => {
   });
 };
 
+// Drawn 0.7 off the corner rather than centered on its bounding box: the ring
+// carries nearly all the ink and sits up in the top-left, the tail is thin and
+// runs down-right, so the mass lands around 11.3 of the 24 box while the box
+// says 12. Centered on the box the glyph reads high and left in a square — the
+// 0.7 between the two is baked into the coordinates below.
 const SearchSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
   children: jsx("path", {
-    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+    d: "M16.2 14.7h-.79l-.28-.27C16.11 13.29 16.7 11.81 16.7 10.2 16.7 6.61 13.79 3.7 10.2 3.7S3.7 6.61 3.7 10.2 6.61 16.7 10.2 16.7c1.61 0 3.09-.59 4.23-1.57l.27 .28v.79l5 4.99L21.19 19.7l-4.99-5zm-6 0C7.71 14.7 5.7 12.69 5.7 10.2S7.71 5.7 10.2 5.7 14.7 7.71 14.7 10.2 12.69 14.7 10.2 14.7z",
     fill: "currentColor"
   })
 });
-
-const ButtonRouteResolver = props => {
-  const Next = useNextResolver();
-  if (props.route) {
-    return jsx(ButtonWithRoute, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonWithRoute = props => {
-  const Next = useNextResolver();
-  const {
-    route,
-    routeParams,
-    children,
-    pseudoState,
-    ...rest
-  } = props;
-  const url = route.buildUrl(routeParams);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  // Merged into whatever the caller already holds: a button can be forced into
-  // a state for a demo and still learn its own current-ness from its route.
-  return jsx(Next, {
-    href: url,
-    pseudoState: {
-      ...pseudoState,
-      ":-navi-href-current": linkMatching
-    },
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$J = /* css */`@layer navi {
-  .navi_button {
-    --button-border-radius: var(--navi-control-border-radius);
-    --button-border-width: var(--navi-control-border-width);
-    --button-cta-background-color: var(--navi-accent-color);
-    --button-outline-width: var(--navi-focus-outline-width);
-    --button-outline-offset: calc(-.5 * var(--button-outline-width));
-    --button-outline-color: var(--navi-focus-outline-color);
-    --button-padding-x-default: var(--navi-button-padding-x-default);
-    --button-padding-y-default: var(--navi-button-padding-y-default);
-    --button-loader-color: var(--navi-loader-color);
-    --button-border-color: var(--navi-control-border-color);
-    --button-background-color: var(--button-background, var(--navi-button-background-color));
-    --button-color: currentColor;
-    --button-cursor: pointer;
-    --button-font-size: var(--navi-control-font-size);
-    --button-font-family: var(--navi-control-font-family);
-    --button-border-color-hover: color-mix(in srgb,
-        var(--button-border-color) 70%,
-        black);
-    --button-background-color-hover: color-mix(in srgb,
-        var(--button-background-color) 95%,
-        black);
-    --button-color-hover: var(--button-color);
-    --button-border-color-current: var(--button-border-color);
-    --button-background-color-current: var(--button-background-color);
-    --button-color-current: var(--button-color);
-    --button-border-color-pressed: color-mix(in srgb,
-        var(--button-border-color) 90%,
-        black);
-    --button-border-color-readonly: color-mix(in srgb,
-        var(--button-border-color) 30%,
-        var(--navi-surface-color));
-    --button-background-color-readonly: var(--button-background-color);
-    --button-color-readonly: color-mix(in srgb,
-        var(--button-color) 30%,
-        transparent);
-    --button-border-color-disabled: var(--button-border-color-readonly);
-    --button-background-color-disabled: var(--button-background-color-readonly);
-    --button-color-disabled: var(--button-color-readonly);
-    font-size: var(--button-font-size);
-    font-family: var(--button-font-family);
-    line-height: var(--navi-control-line-height);
-    display: inline-block;
-  }
-}
-
-a.navi_button {
-  text-align: center;
-  text-decoration: none;
-}
-
-.navi_button {
-  --x-button-outline-offset: var(--button-outline-offset);
-  --x-button-border-color: var(--button-border-color);
-  --x-button-border: var(--button-border, var(--button-border-width) solid var(--x-button-border-color));
-  --x-button-background: var(--button-background);
-  --x-button-background-color: var(--button-background-color);
-  --x-button-color: var(--button-color);
-  --x-button-cursor: var(--button-cursor);
-  box-sizing: border-box;
-  aspect-ratio: inherit;
-  color: var(--x-button-color);
-  border-top-left-radius: var(--x-corner-top-left-radius, var(--button-border-radius));
-  border-top-right-radius: var(--x-corner-top-right-radius, var(--button-border-radius));
-  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--button-border-radius));
-  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--button-border-radius));
-  cursor: var(--x-button-cursor);
-  touch-action: manipulation;
-  user-select: none;
-  background: none;
-  border: none;
-  outline: none;
-  padding: 0;
-  position: relative;
-
-  & .navi_button_content {
-    --x-corner-top-left-radius: initial;
-    --x-corner-top-right-radius: initial;
-    --x-corner-bottom-right-radius: initial;
-    --x-corner-bottom-left-radius: initial;
-    display: inherit;
-    box-sizing: border-box;
-    aspect-ratio: inherit;
-    width: 100%;
-    height: 100%;
-    padding-top: var(--button-padding-top, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
-    padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
-    padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
-    padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
-    align-items: inherit;
-    justify-content: inherit;
-    color: inherit;
-    vertical-align: inherit;
-    background: var(--x-button-background);
-    background-color: var(--x-button-background-color, var(--x-button-background));
-    border: var(--x-button-border);
-    border-radius: inherit;
-    outline-width: var(--button-outline-width);
-    outline-color: var(--button-outline-color);
-    outline-offset: var(--button-outline-offset);
-    transition-property: transform;
-    transition-duration: .15s;
-    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
-    position: relative;
-
-    & .navi_button_shadow {
-      inset: calc(-1 * var(--x-button-outer-width));
-      border-radius: inherit;
-      pointer-events: none;
-      position: absolute;
-    }
-
-    & > img {
-      border-radius: inherit;
-    }
-  }
-
-  &[data-href-current] {
-    --x-button-border-color: var(--button-border-color-current);
-    --x-button-background-color: var(--button-background-color-current);
-    --x-button-color: var(--button-color-current);
-  }
-
-  &[data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-    --x-button-background-color: var(--button-background-color-hover);
-    --x-button-color: var(--button-color-hover);
-  }
-
-  &[data-pressed] {
-    --x-button-outline-color: var(--button-border-color-pressed);
-  }
-
-  &[data-pressed] {
-    & .navi_button_content {
-      transform: scale(.9);
-    }
-  }
-
-  &[data-pressed] {
-    & .navi_button_shadow {
-      box-shadow: inset 0 3px 6px #0003, inset 0 1px 2px #0000004d, inset 0 0 0 1px #0000001a, inset 2px 0 4px #0000001a, inset -2px 0 4px #0000001a;
-    }
-  }
-
-  &[data-readonly] {
-    --x-button-border-color: var(--button-border-color-readonly);
-    --x-button-background-color: var(--button-background-color-readonly);
-    --x-button-color: var(--button-color-readonly);
-    --x-button-cursor: default;
-  }
-
-  &[data-focus-visible] {
-    --x-button-border-color: transparent;
-
-    & .navi_button_content {
-      outline-style: solid;
-    }
-  }
-
-  &[data-disabled] {
-    --x-button-border-color: var(--button-border-color-disabled);
-    --x-button-background-color: var(--button-background-color-disabled);
-    --x-button-color: var(--button-color-disabled);
-    --x-button-cursor: default;
-
-    & .navi_button_content {
-      transform: none;
-
-      & .navi_button_shadow {
-        box-shadow: none;
-      }
-    }
-  }
-
-  &[data-callout] {
-    --x-button-border-color: var(--callout-color);
-  }
-
-  &[data-variant="discrete"] {
-    --button-border-width: 0;
-    --button-border-color: transparent;
-    --button-border-color-hover: var(--button-border-color);
-    --button-border-color-current: var(--button-border-color);
-    --button-border-color-readonly: var(--button-border-color);
-    --button-border-color-disabled: var(--button-border-color);
-    --button-background-color: var(--button-background, transparent);
-    --button-background-color-hover: color-mix(in srgb,
-        currentColor 8%,
-        var(--button-background-color));
-    --button-background-color-readonly: var(--button-background-color);
-    --button-background-color-disabled: var(--button-background-color);
-
-    &[data-pressed] {
-      & .navi_button_content {
-        transform: none;
-      }
-    }
-  }
-
-  &[data-variant="bare"] {
-    --button-border-width: 0;
-    --button-border-color: transparent;
-    --button-border-color-hover: var(--button-border-color);
-    --button-border-color-current: var(--button-border-color);
-    --button-border-color-readonly: var(--button-border-color);
-    --button-border-color-disabled: var(--button-border-color);
-    --button-background-color: var(--button-background, transparent);
-    --button-background-color-hover: var(--button-background-color);
-    --button-background-color-readonly: var(--button-background-color);
-    --button-background-color-disabled: var(--button-background-color);
-
-    &[data-pressed] {
-      & .navi_button_content {
-        transform: none;
-      }
-    }
-  }
-
-  &[data-variant="discrete-border"] {
-    --button-background-color: var(--button-background, transparent);
-    --button-background-color-hover: var(--button-background-color);
-    --button-background-color-readonly: var(--button-background-color);
-    --button-background-color-disabled: var(--button-background-color);
-    --x-button-border-color: transparent;
-
-    &[data-hover] {
-      --x-button-border-color: var(--button-border-color-hover);
-    }
-
-    &[data-readonly], &[data-disabled] {
-      --x-button-border-color: transparent;
-    }
-  }
-
-  &[data-variant="border"] {
-    --button-background-color: var(--button-background, transparent);
-    --button-background-color-hover: color-mix(in srgb,
-        currentColor 8%,
-        var(--button-background-color));
-    --button-background-color-readonly: var(--button-background-color);
-    --button-background-color-disabled: var(--button-background-color);
-  }
-
-  &[data-press-effect="scale"][data-pressed] {
-    & .navi_button_content {
-      transform: scale(.9);
-    }
-  }
-
-  &[data-press-effect="none"][data-pressed] {
-    & .navi_button_content {
-      transform: none;
-    }
-  }
-
-  &[data-icon] {
-    --button-padding: 0;
-    display: inline-flex;
-  }
-
-  &[data-cta] {
-    --x-button-background-color: var(--button-cta-background-color);
-    --x-button-border-color: var(--button-cta-background-color);
-    --x-button-color: white;
-
-    &[data-hover] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 85%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 85%,
-          white);
-    }
-
-    &[data-readonly] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 50%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 50%,
-          white);
-    }
-
-    &[data-disabled] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 40%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 40%,
-          white);
-      --x-button-color: #fff9;
-    }
-  }
-}
-`;
-const ButtonUI = props => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/input/button_ui.jsx"];
-  const {
-    ref,
-    // href/link
-    href,
-    target,
-    rel,
-    replace,
-    // visual
-    variant,
-    pressEffect,
-    icon,
-    cta,
-    spacing,
-    // Whether the button draws the loading outline itself. A button that is
-    // one half of a bigger control says no: what is busy is the control, and
-    // the outline belongs around the whole of it (see split_button.jsx).
-    loadingOutline = true
-  } = props;
-  const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
-    controlType: "button",
-    allowNameless: true
-  });
-  const {
-    basePseudoState,
-    children
-  } = buttonControlHostProps;
-  const loading = basePseudoState[":-navi-loading"];
-
-  // subscribe to document url to re-render and re-compute getHrefTargetInfo
-  useDocumentUrl();
-  const isLink = href !== undefined;
-  let as = "button";
-  let innerTarget;
-  let innerRel;
-  let innerCurrent;
-  if (isLink) {
-    as = "a";
-    const {
-      isSameSite,
-      isCurrent
-    } = getHrefTargetInfo(href);
-    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
-    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
-    innerCurrent = isCurrent;
-  }
-  // For a button that has only an href: nothing else knows it points at the
-  // page one is on. A route says so through `pseudoState`, which Box lays over
-  // this one.
-  buttonControlHostProps.basePseudoState = {
-    ...basePseudoState,
-    ":-navi-href-current": innerCurrent
-  };
-
-  // Worn as an attribute, like a link's (see link_replace.js): read off the
-  // anchor by the click handler, off the source by --navi-nav-to.
-  const replaceRequest = replace ? {
-    [LINK_REPLACE_ATTRIBUTE]: ""
-  } : null;
-  const visualSelector = ".navi_button_content";
-  useAccentColorAttributes(ref, null, {
-    elementSelector: visualSelector
-  });
-  return jsxs(Box, {
-    inline: true,
-    block: true,
-    ...buttonControlRootProps,
-    ...buttonControlHostProps,
-    // eslint-disable-next-line react/no-children-prop
-    children: undefined
-    // All button are forced to type="button" as a way to avoid form submission which
-    // should always go through --navi-send command instead
-    // without having to call preventDefault() on button clicks
-    ,
-
-    type: "button",
-    spacing: undefined,
-    cta: undefined,
-    pressEffect: undefined,
-    loadingOutline: undefined,
-    ref: ref,
-    as: as,
-    href: href,
-    target: innerTarget,
-    rel: innerRel,
-    replace: undefined,
-    ...replaceRequest,
-    // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
-    // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
-    onnavi_get_value: e => {
-      e.detail.respondWith(props.value);
-    },
-    onContextMenu: e => {
-      if (as === "a") {
-        // For link we keep context menu to allow "open in new tab" and other browser features
-        return;
-      }
-      if (e.pointerType !== "touch") {
-        // right click is allowed
-        return;
-      }
-      // Suppress the native context menu triggered by long-press on touch devices.
-      // Buttons have no meaningful context menu (no text to copy/paste/search),
-      // and the long-press visual state would get stuck if we let the menu open.
-      // Note: e.button === -1 is equivalent — it means no physical button triggered
-      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
-      e.preventDefault();
-    },
-    "data-variant": variant,
-    "data-press-effect": pressEffect,
-    "data-icon": icon ? "" : undefined,
-    "data-cta": cta ? "" : undefined,
-    "data-callout-arrow-x": "center"
-    // style management
-    ,
-
-    baseClassName: "navi_button",
-    styleCSSVars: ButtonStyleCSSVars,
-    pseudoClasses: ButtonPseudoClasses,
-    pseudoElements: ButtonPseudoElements,
-    visualSelector: visualSelector,
-    hasChildUsingForwardedProps: true,
-    children: [jsx(LoadingOutline, {
-      loading: loadingOutline && loading,
-      inset: -1,
-      color: "var(--button-loader-color)"
-    }), jsx(ControlChildrenWrapper, {
-      ...controlChildrenWrapperProps,
-      children: jsx(ButtonContent, {
-        spacing: spacing,
-        children: children
-      })
-    })]
-  });
-};
-const ButtonContent = ({
-  spacing,
-  children
-}) => {
-  const boxForwardedProps = useContext(BoxForwardedPropsContext);
-  return jsxs(Text, {
-    ...boxForwardedProps,
-    display: "inherit",
-    spacing: spacing,
-    className: "navi_button_content",
-    children: [children, jsx(ButtonShadow, {})]
-  });
-};
-const ButtonStyleCSSVars = {
-  "outlineWidth": "--button-outline-width",
-  "borderWidth": "--button-border-width",
-  "borderRadius": "--button-border-radius",
-  "border": "--button-border",
-  "paddingX": "--button-padding-x",
-  "paddingY": "--button-padding-y",
-  "paddingTop": "--button-padding-top",
-  "paddingRight": "--button-padding-right",
-  "paddingBottom": "--button-padding-bottom",
-  "paddingLeft": "--button-padding-left",
-  "borderColor": "--button-border-color",
-  "background": "--button-background",
-  "backgroundColor": "--button-background-color",
-  "color": "--button-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-    color: "--button-color-hover"
-  },
-  ":-navi-pressed": {
-    borderColor: "--button-border-color-pressed"
-  },
-  ":-navi-href-current": {
-    backgroundColor: "--button-background-color-current",
-    borderColor: "--button-border-color-current",
-    color: "--button-color-current"
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-    color: "--button-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-    color: "--button-color-disabled"
-  }
-};
-const ButtonPseudoClasses = [":-navi-href-current", ":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const ButtonPseudoElements = ["::-navi-loader"];
-const ButtonShadow = () => {
-  return jsx("span", {
-    className: "navi_button_shadow"
-  });
-};
-markAsOutsideTextFlow(ButtonShadow);
-
-const ButtonFirstResolver = props => {
-  const Next = useNextResolver();
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  const ownTargetHidden = useOwnTargetHidden(props);
-  if (ownTargetHidden) {
-    return null;
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonCommandPropResolver = props => {
-  const Next = useNextResolver();
-  const form = useContext(FormContext);
-  if (props.type === "submit") {
-    props.type = "button";
-    props.command = props.command || "--navi-send";
-  }
-  const command = props.command;
-  // What follows a send THIS button asked for, overriding the form's own
-  // `command` (see resolveAfterSend in commands.js). Named after the browser's
-  // formaction/formmethod/formtarget, which are the same idea: a submit button
-  // saying how its own submission differs. For a form with two ways out —
-  // "save" stays, "delete" goes back to the list.
-  const {
-    formCommand
-  } = props;
-  props.formCommand = undefined;
-  props["data-after-send"] = formCommand;
-
-  // `readOnlyWhileFormUnchanged`: hold the send button back until the form
-  // around it holds something new, so it says it is waiting instead of
-  // accepting a press that would send nothing.
-  //
-  // Opt-in, because a press that sends nothing is usually still worth
-  // accepting: in a dialog or a slide it closes the dialog / moves to the next
-  // step all the same — the user IS done, there was simply nothing to send. It
-  // is only in a form that goes nowhere on its own (one in the document) that
-  // the press would visibly do nothing at all.
-  //
-  // Passed to Next rather than written onto props like everything else here:
-  // these answer to something outside the button and flip back, and the props
-  // object outlives the render (a button inside a form is the same vnode when
-  // the form re-renders around it), so a write would never be undone.
-  const heldByForm = Boolean(props.readOnlyWhileFormUnchanged && command === "--navi-send" && form?.changed === false);
-  const readOnly = heldByForm ? true : props.readOnly;
-
-  // Called fresh on every render (not a module-level object computed once
-  // at import time) — naviI18n(...) must be re-evaluated per call so a
-  // Button using a command's built-in default label actually follows
-  // setPreferredLanguage()/a "languagechange" event instead of staying
-  // stuck with whatever language was active the first time this module was
-  // imported.
-  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
-  if (getCommandDefaultProps) {
-    const commandDefaultProps = getCommandDefaultProps();
-    for (const key of Object.keys(commandDefaultProps)) {
-      if (props[key] === undefined) {
-        props[key] = commandDefaultProps[key];
-      }
-    }
-  }
-  return jsx(Next, {
-    ...props,
-    readOnlyWhileFormUnchanged: undefined,
-    readOnly: readOnly
-    // Why it is read-only, for READONLY_CONSTRAINT to say the right thing:
-    // read-only for some other reason (a caller's own prop, a read-only form
-    // around it) must not be explained as "waiting for a change".
-    ,
-    "data-readonly-reason": heldByForm ? "form-unchanged" : undefined
-  });
-};
-const COMMAND_DEFAULT_PROPS_FACTORIES = {
-  "--navi-clear": () => ({
-    children: naviI18n("button.clear")
-  }),
-  "--navi-reset": () => ({
-    children: naviI18n("button.reset")
-  }),
-  "--navi-define": () => ({
-    children: naviI18n("button.define")
-  }),
-  "--navi-send": () => ({
-    children: naviI18n("button.send"),
-    cta: true
-  }),
-  "--navi-cancel": () => ({
-    children: naviI18n("button.cancel")
-  }),
-  "--navi-confirm": () => ({
-    children: naviI18n("button.confirm"),
-    cta: true
-  }),
-  "--navi-close": () => ({
-    children: naviI18n("button.close")
-  }),
-  "--navi-open": () => ({
-    children: naviI18n("button.open")
-  })
-};
-
-/**
- * @type {import("ignore:preact").FunctionComponent<{
- *   ownTarget?: boolean | "refuse" | "always",
- *   replace?: boolean,
- *   [key: string]: any,
- * }>}
- * @param {boolean} [replace] Go where the press leads — an `href`, a
- *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
- *   rather than stacking on it: what `<Link replace>` says, for a press drawn
- *   as a button.
- * @param {Function} [action] On a button with an `href` or a `route`, the
- *   same order as a Link's: it runs on the press, before the navigation, and
- *   the navigation does not wait for it (see Link's `action`).
- * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
- *   that belongs to another control — a chip's cross on a picker's façade, an
- *   eye on a pressable row, a diskette inside a slide that travels. The press is
- *   this button's alone (no travel starts, no popup opens, no navi control above
- *   answers) and its `onClick` waits for its own interaction gate instead of
- *   firing from the DOM. What it does where the zone is read-only, disabled or
- *   busy depends on whether it WRITES to the control it sits in: it goes by
- *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
- *   the zone's state entirely — for a gesture that never touched that control.
- */
-const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
 const InputTypeResolver = props => {
   const Next = useNextResolver();
@@ -46851,39 +47233,35 @@ const InputSearchUI = ({
 const InputEmail = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    ui: jsx(InputEmailUI, {
-      icon: props.icon
+    ui: jsx(InputTypeIconUI, {
+      icon: props.icon,
+      typeIcon: jsx(EmailSvg, {})
     }),
     ...props
-  });
-};
-const InputEmailUI = ({
-  icon
-}) => {
-  if (icon !== undefined) {
-    return null;
-  }
-  return jsx(InputIconSlot, {
-    children: jsx(EmailSvg, {})
   });
 };
 const InputTel = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    ui: jsx(InputTelUI, {
-      icon: props.icon
+    ui: jsx(InputTypeIconUI, {
+      icon: props.icon,
+      typeIcon: jsx(PhoneSvg, {})
     }),
     ...props
   });
 };
-const InputTelUI = ({
-  icon
+// The type draws its own icon; `icon` replaces it, and `icon={null}` leaves the
+// slot empty — for a caller drawing something of its own beside the field.
+const InputTypeIconUI = ({
+  icon,
+  typeIcon
 }) => {
-  if (icon !== undefined) {
+  const iconToDraw = icon === undefined ? typeIcon : icon;
+  if (!iconToDraw) {
     return null;
   }
   return jsx(InputIconSlot, {
-    children: jsx(PhoneSvg, {})
+    children: iconToDraw
   });
 };
 const InputNumber = props => {
@@ -48160,6 +48538,18 @@ const Input = props => {
     ...props
   });
 };
+
+/**
+ * What an application puts inside the field's own box, beside the text: a
+ * button, a unit, an icon of its own. Passed as `ui` — the slots place
+ * themselves, the field keeps the room they take.
+ *
+ * They label the input, so a press lands on the field rather than blurring it —
+ * except when the field is not focused yet, where the slot may take the focus
+ * itself (a clear cross, a reveal-password eye). `IconSlot` sizes what it holds
+ * on the line rather than on a character; `UnitSlot` keeps its text on one
+ * line.
+ */
 Input.UI = {
   LeftSlot: InputLeftSlot,
   RightSlot: InputRightSlot,
@@ -79142,5 +79532,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
