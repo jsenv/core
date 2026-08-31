@@ -110,7 +110,24 @@ decided: a `routeAction`, a `<Button action>`, the `action` of the `<Link>` one
 came in by — or the component owns its request and does not suspend on it: a
 folding panel, a slice a button asks for. That one reads `action.dataSignal` and
 `action.errorSignal` (or `useActionStatus`) directly, `run()`s the action from an
-effect, and draws its own skeleton until the data is there.
+effect, and draws its own skeleton until the data is there. When what it owns is
+a signal rather than a prop, that run is declared once instead of written by
+hand: `actionRunEffect(action, () => …)` runs on the first truthy params, reruns
+when they change and aborts when they go false — the very machinery
+`routeAction` is built on.
+
+**Which of the two it is, is decided by the parameter, not by what draws it.**
+If the parameter is in the address — a path param, a search param bound to a
+`stateSignal` — the data belongs to the screen, and it is a `routeAction`, even
+when a popup is the only thing that draws it. The component owns its request
+only when the parameter is chosen inside it and dies with it. A popup is never
+by itself a reason to own one: being open can be bound too — to a signal, to the
+history entry, to the address — and the data of a popup that binds it is a route
+action like any other (see
+[popup_open.md](./popup_open.md#a-popup-that-loads-data)). Getting this wrong is
+invisible at the call site and expensive on screen: the request then leaves with
+the gesture instead of with the screen, one waterfall behind everything else the
+address needed.
 
 `{ onLoad }` is what the screen does with the data **once, when it becomes
 known** — seed the fields someone is about to edit, focus something, remember

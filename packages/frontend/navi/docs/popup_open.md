@@ -11,7 +11,8 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [A press that opens a popup and acts on it](#a-press-that-opens-a-popup-and-acts-on-it)
 - [Reacting to open and close](#reacting-to-open-and-close)
 - [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
-- [When `open` is the right answer, and what it costs](#when-open-is-the-right-answer-and-what-it-costs)
+- [When the app holds the open state](#when-the-app-holds-the-open-state)
+- [A popup that loads data](#a-popup-that-loads-data)
 - [What the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)
 
 Where the focus goes once it is open is its own subject — see
@@ -38,13 +39,15 @@ Escape, the backdrop, a close button — all of them ask, and the busy control
 answers, the same way it would answer anyone else.
 
 So the question is never "should this popup be controlled?" but "what triggers
-the opening?":
+the opening?" — and, when the answer is the application rather than a gesture,
+where that state lives:
 
-| what opens it                      | how                                            |
-| ---------------------------------- | ---------------------------------------------- |
-| a button                           | `command` / `commandfor` attributes, no `open` |
-| a gesture, an event, a JS decision | `triggerNaviCommand(...)`, still no `open`     |
-| it is a piece of application state | `open` — see the cost below                    |
+| what opens it                      | how                                                    |
+| ---------------------------------- | ------------------------------------------------------ |
+| a button                           | `command` / `commandfor` attributes, no `open`         |
+| a gesture, an event, a JS decision | `triggerNaviCommand(...)`, still no `open`             |
+| a state the app holds              | `signal` — [below](#when-the-app-holds-the-open-state) |
+| where the user is                  | `navState`, or a route `stateSignal` given to `signal` |
 
 ## A button opens it: the attributes
 
@@ -459,23 +462,118 @@ A dialog picker's cancel also goes back in history, so anything written to the
 url while it was open (a route `stateSignal`, a search param) goes back with it
 — one more reason Escape and the click outside are not interchangeable.
 
-## When `open` is the right answer, and what it costs
+## When the app holds the open state
 
-`open` is for a popup whose being-open is a fact about the application, not
-about the user's last gesture: a route that _is_ a dialog, an error the app
-decides to show. Use it there, and know what it changes.
+A popup whose being-open is a fact about the application rather than about the
+user's last gesture — a sheet an address can be reloaded into, an error the app
+decides to show — needs somewhere to keep that fact. Three props say it, and
+what separates them is where the state lives, not how hard the popup is driven:
+all three go through the same `requestClose`, so a busy control inside still
+refuses to be left mid-action. What changes is whether anyone hears the refusal.
 
-The busy arbitration still runs — `open={false}` goes through the same
-`requestClose` — but nobody hears the refusal. The parent's state says closed,
-the popup stayed open, and the two disagree from then on: the effect only reacts
-to `open` _changing_, so setting it back to `true` matches the popup's real
-state and does nothing, and the popup can no longer be closed by the prop at
-all until it closes on its own.
+### `signal` — the app holds it, both ways
+
+```jsx
+<Dialog signal={groupSheetOpenSignal} />
+```
+
+The popup opens and closes to match the signal, and writes into it whenever it
+opens or closes on its own: Escape, the backdrop, a `--navi-close` command — and
+the close a busy control denied, after which the signal says "open", because
+that is what is true. One binding both drives the popup and knows where it is,
+which is what every navi control does with its value (see
+[state_binding.md](./state_binding.md)); `Dialog`, `Popover` and what is built
+on them (`SidePanel`) all take it. A signal already `true` at mount means the
+popup was already open when the page appeared: no entrance plays.
+
+### `navState` — the history entry holds it
+
+```jsx
+<Dialog id="group-sheet" navState={{ type: "push" }} />
+```
+
+The open state goes into the history entry, so a screen left and come back to
+finds the popup as it was, and so does a reload. `true` stores it under the
+popup's own `id`; a string names the key instead. `{ type: "push" }` makes the
+opening an entry of its own — the back button then closes the popup rather than
+leaving the screen, and the cancel takes back with it whatever was written to
+the url while it was open. A `Picker` needs none of this: its popup's open state
+is nav state by construction.
+
+The two meet when the signal IS a route's: a search-param `stateSignal` given to
+`signal` puts the open state in the address itself, where a link can point at
+it.
+
+### `open`, and what it costs
+
+`open` is the one-way half of `signal` — the parent re-renders with a boolean
+and the popup follows — and the refusal is what it costs. `open={false}` goes
+through the same `requestClose`, and when a busy control denies it, the parent's
+state says closed while the popup stayed open. The two disagree from then on:
+the effect only reacts to `open` _changing_, so setting it back to `true`
+matches the popup's real state and does nothing, and the popup can no longer be
+closed by the prop at all until it closes on its own. A `signal` has no such
+gap, since the popup writes back what really happened.
 
 `defaultOpen` is the middle ground: mount-only, and the popup owns everything
 afterwards. `defaultOpen="interaction"` means the mount _is_ the opening (the
 entrance animation plays); any other truthy value means it was already open when
 the page appeared (no entrance).
+
+## A popup that loads data
+
+Being open is where the user is, and what a popup draws belongs to the screen
+exactly the way a page's own data does. So a popup that loads something binds
+its open state (above) and asks for its data with a `routeAction` whose params
+are `false` while it is closed:
+
+```js
+const groupSheetOpenSignal = stateSignal(false, {
+  id: "group_sheet",
+  type: "boolean",
+});
+
+export const GROUP_MEMBERS = routeAction(GAME_ROUTE, USER.GET_MANY, () => {
+  if (!groupSheetOpenSignal.value) {
+    return false;
+  }
+  return { group: groupSignal.value };
+});
+```
+
+```jsx
+<Dialog signal={groupSheetOpenSignal}>
+  <GroupMembers />
+</Dialog>;
+
+const GroupMembers = () => {
+  const [members] = useAsyncData(GROUP_MEMBERS); // reads, never runs
+  …
+};
+```
+
+What the popup gains is everything a page has:
+
+- the request leaves **with the screen**, in parallel with the rest of what the
+  address needs, instead of behind the gesture that opens the popup;
+- `useAsyncData` reads it — the wait delegated to `<Loading>`, the failure to
+  `<ErrorBoundary>`, `onLoad` for what is seeded once (see
+  [actions.md](./actions.md#reading-an-action));
+- the action layer's rerun rules, its dependencies
+  ([resource_dependencies.md](./resource_dependencies.md)) and the
+  aborted-not-reset treatment a route action gets when the screen is left
+  ([offline.md](./offline.md));
+- a reload keeps the open state, so it keeps the request too;
+- and the routes keep saying what an address needs, which is why they declare
+  it.
+
+The shape this replaces looks harmless, which is the problem: `bindParams`
+inside the component, `run()` from a `useEffect`, `data === undefined` as the
+loading flag. That is the owned request, and it is right only when the parameter
+is chosen inside the popup and dies with it — a filter the sheet itself holds
+and nothing else remembers. When the parameter is one the address holds, those
+same lines have quietly turned screen data into a popup's private request, asked
+for late and asked for alone.
 
 ## What the popup holds while it is closed
 
