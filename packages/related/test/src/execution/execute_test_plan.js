@@ -32,6 +32,7 @@ import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { generateCoverage } from "../coverage/generate_coverage.js";
+import { createExecutionTimings } from "./execution_timings.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { createIsInsideFragment } from "./is_inside_fragment.js";
 import { renderOutroContent, reporterList } from "./reporters/reporter_list.js";
@@ -45,6 +46,7 @@ import { assertAndNormalizeWebServer } from "./web_server_param.js";
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
+ * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took to start the longest ones first on the next run
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -103,6 +105,12 @@ const parallelDefault = {
   max: "80%", // percentage resolved against the available cpus
   maxCpu: "80%",
   maxMemory: "50%",
+  // percentage resolved against parallel.max; an execution is heavy when it is
+  // allocated more time than the others (see defaultMsAllocatedPerExecution)
+  maxHeavy: "75%",
+};
+const executionTimingsDefault = {
+  fileUrl: undefined,
 };
 
 export const executeTestPlan = async ({
@@ -118,6 +126,9 @@ export const executeTestPlan = async ({
   handleSIGTERM = true,
   updateProcessExitCode = true,
   parallel = parallelDefault,
+  // opt-in: it makes the start order depend on a file written by a previous run,
+  // which a test plan snapshotting its own execution order cannot afford
+  executionTimings = false,
   // https://github.com/avajs/ava/blob/main/docs/recipes/splitting-tests-ci.md
   // https://playwright.dev/docs/test-sharding
   fragment,
@@ -291,6 +302,7 @@ export const executeTestPlan = async ({
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
   let finalizeCoverage;
+  let timingsMemory;
 
   try {
     let logger;
@@ -417,6 +429,51 @@ export const executeTestPlan = async ({
           throw new TypeError(
             `parallel.maxCpu must be a number or a percentage, got ${maxCpu}`,
           );
+        }
+
+        const maxHeavy = parallel.maxHeavy;
+        if (typeof maxHeavy === "string") {
+          const maxHeavyAsRatio = assertPercentageAndConvertToRatio(maxHeavy);
+          parallel.maxHeavy = Math.round(maxHeavyAsRatio * parallel.max) || 1;
+        } else if (typeof maxHeavy === "number") {
+          if (maxHeavy < 1) {
+            parallel.maxHeavy = 1;
+          }
+        } else {
+          throw new TypeError(
+            `parallel.maxHeavy must be a number or a percentage, got ${maxHeavy}`,
+          );
+        }
+      }
+      // executionTimings
+      {
+        if (executionTimings === true) {
+          executionTimings = {};
+        }
+        if (executionTimings) {
+          if (typeof executionTimings !== "object") {
+            throw new TypeError(
+              `executionTimings must be an object, got ${executionTimings}`,
+            );
+          }
+          const unexpectedExecutionTimingsKeys = Object.keys(
+            executionTimings,
+          ).filter((key) => !Object.hasOwn(executionTimingsDefault, key));
+          if (unexpectedExecutionTimingsKeys.length > 0) {
+            throw new TypeError(
+              `${unexpectedExecutionTimingsKeys.join(",")}: no such key on executionTimings`,
+            );
+          }
+          executionTimings = {
+            ...executionTimingsDefault,
+            ...executionTimings,
+          };
+          timingsMemory = createExecutionTimings({
+            fileUrl:
+              executionTimings.fileUrl === undefined
+                ? new URL("./.jsenv/jsenv_tests_timings.json", rootDirectoryUrl)
+                : executionTimings.fileUrl,
+          });
         }
       }
       // fragment/fragmentByRuntime
@@ -763,6 +820,8 @@ To fix this warning:
             params,
             skipped: false,
             skipReason: "",
+            // set when the file calls requestAllocatedMs
+            allocatedMsRequested: undefined,
 
             // will be set by run()
             status: "planified",
@@ -947,7 +1006,31 @@ To fix this warning:
 
       const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-      const executionRemainingSet = new Set(executionPlanifiedArray);
+      // an execution allowed more time than the others is a heavy one: it is
+      // both worth starting early and worth not having too many of at once
+      const heavyExecutionSet = new Set();
+      for (const execution of executionPlanifiedArray) {
+        if (execution.skipped) {
+          continue;
+        }
+        if (execution.params.allocatedMs > defaultMsAllocatedPerExecution) {
+          heavyExecutionSet.add(execution);
+          continue;
+        }
+        if (timingsMemory) {
+          const allocatedMsRequested = timingsMemory.getAllocatedMsRequested(
+            execution.name,
+          );
+          if (allocatedMsRequested > defaultMsAllocatedPerExecution) {
+            heavyExecutionSet.add(execution);
+          }
+        }
+      }
+      const executionStartOrderArray = timingsMemory
+        ? timingsMemory.sortByLongestFirst(executionPlanifiedArray)
+        : executionPlanifiedArray;
+
+      const executionRemainingSet = new Set(executionStartOrderArray);
       const executionExecutingSet = new Set();
       const usedTagSet = new Set();
       const start = async (execution) => {
@@ -971,6 +1054,9 @@ To fix this warning:
           execution.status = "executing";
           const executionResult = await run({
             ...execution.params,
+            onAllocatedMsRequested: (ms) => {
+              execution.allocatedMsRequested = ms;
+            },
             signal: operation.signal,
             logger,
             keepRunning,
@@ -984,6 +1070,9 @@ To fix this warning:
             for (const tagNoLongerInUse of execution.params.uses) {
               usedTagSet.delete(tagNoLongerInUse);
             }
+          }
+          if (timingsMemory) {
+            timingsMemory.record(execution);
           }
           if (execution.result.status !== "completed") {
             testPlanResult.failed = true;
@@ -1015,6 +1104,12 @@ To fix this warning:
       };
       const startAsMuchAsPossible = async () => {
         operation.throwIfAborted();
+        let heavyExecutingCount = 0;
+        for (const executionExecuting of executionExecutingSet) {
+          if (heavyExecutionSet.has(executionExecuting)) {
+            heavyExecutingCount++;
+          }
+        }
         const promises = [];
         for (const executionCandidate of executionRemainingSet) {
           if (executionExecutingSet.size >= parallel.max) {
@@ -1042,6 +1137,13 @@ To fix this warning:
               promises.push(promise);
               break;
             }
+            if (heavyExecutionSet.has(executionCandidate)) {
+              if (heavyExecutingCount >= parallel.maxHeavy) {
+                // leave this slot to a lighter execution: filling every slot
+                // with the heavy ones makes them fight for cpu and memory
+                continue;
+              }
+            }
             if (executionCandidate.params.uses) {
               const nonAvailableTag = executionCandidate.params.uses.find(
                 (tagToUse) => usedTagSet.has(tagToUse),
@@ -1053,6 +1155,9 @@ To fix this warning:
                 continue;
               }
             }
+          }
+          if (heavyExecutionSet.has(executionCandidate)) {
+            heavyExecutingCount++;
           }
           const promise = (async () => {
             await start(executionCandidate);
@@ -1136,6 +1241,10 @@ To fix this warning:
       teardownCallbackSet.clear();
     }
     timings.teardownEnd = takeTiming();
+
+    if (timingsMemory) {
+      timingsMemory.write();
+    }
 
     if (finalizeCoverage) {
       await finalizeCoverage();

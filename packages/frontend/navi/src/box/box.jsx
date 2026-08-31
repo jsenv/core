@@ -59,7 +59,10 @@ import {
   resolveInteractions,
   useInteractionsEffect,
 } from "../control/interaction/interactions.js";
-import { OWN_TARGET_ATTRIBUTE } from "../control/own_target.js";
+import {
+  SELF_INTERACTIONS_ATTRIBUTE,
+  selfInteractionsAttributeValue,
+} from "../control/self_interactions.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
@@ -392,7 +395,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   childPropSet?: Set<string>,
  *   preventInitialTransition?: boolean,
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
- *   ownTarget?: boolean | "refuse" | "always",
+ *   selfInteractions?: string,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -525,13 +528,14 @@ const computeBox = (props, parentBoxFlow) => {
     // cross an application draws in a card's corner, a badge on a row that
     // travels. Writing the attribute is the whole of it here: it is read off
     // the DOM by the controls above and by the gesture readers, and what an
-    // affordance makes of the read-only around it is a question only a control
-    // can answer (see own_target.js).
-    ownTarget,
+    // affordance makes of the block around it is a question only a control can
+    // answer (see self_interactions.js).
+    selfInteractions,
     ...rest
   } = props;
-  if (ownTarget) {
-    rest[OWN_TARGET_ATTRIBUTE] = typeof ownTarget === "string" ? ownTarget : "";
+  if (selfInteractions) {
+    rest[SELF_INTERACTIONS_ATTRIBUTE] =
+      selfInteractionsAttributeValue(selfInteractions);
   }
   let as = asProp;
 

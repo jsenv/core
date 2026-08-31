@@ -263,12 +263,14 @@ consistency across the app, not from any single call site.
   of navi's own.
 - `docs/interactions.md` — the `interactions` prop: making a component answer a
   swipe, a held press, a shortcut, and registering a gesture navi does not have.
-  It also holds `ownTarget`, for an affordance an application draws inside a
-  zone that belongs to another control — a chip's cross, an eye, a diskette:
-  the three modes and the question that picks one (does it write to the control
-  it sits in?), the `Box` form that claims the press and nothing more (so an
-  affordance keeps its own drawing instead of becoming a control), and what
-  `ownTarget` does NOT stop (a plain `onClick` on an ancestor).
+  It also holds `selfInteractions`, for an affordance an application draws
+  inside a zone that belongs to another control — a chip's cross, an eye, a
+  diskette: why the claim is a required LIST (a press is not a drag, and what
+  is not named stays the zone's), `whenSelfInteractionsBlocked` and the question
+  that picks one of its three modes (does it write to the control it sits in?),
+  the `Box` form that claims interactions and nothing more (so an affordance
+  keeps its own drawing instead of becoming a control), and what the claim does
+  NOT stop (a plain `onClick` on an ancestor).
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi — and before stopping the propagation of

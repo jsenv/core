@@ -9,7 +9,7 @@
  * caps are fixed: same place, same size, in both states, and either of them
  * hands the floor to the other side. That is the whole reason the caps sit
  * OUTSIDE the controls rather than being drawn inside them (a picker's façade
- * yields a zone with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon
+ * yields a zone with `selfInteractions`, a field has `Input.UI.LeftSlot`): an icon
  * that lives inside its control while open and becomes a pill once closed is
  * a switch that moves when you flip it: the finger that opened the search has
  * to travel to close it again. Out here, the same pixel does both.
@@ -44,6 +44,7 @@ import {
   findFocusTarget,
   moveFocusTo,
 } from "../../utils/focus/focus_transfer.js";
+import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { warnSignalCollision } from "../control_value.js";
 import { Button } from "../input/button.jsx";
 
@@ -362,9 +363,12 @@ export const ControlSwap = (props) => {
  * @param label - What the cap is called — it holds no text, so this is its
  *   accessible name. Say what pressing it reveals ("Rechercher"), not what it
  *   currently shows: the cap wears `aria-expanded` for the state.
- * @param badge - A mark on the cap saying this collapsed control is still
- *   doing something (a filter set, a search typed). `true` draws a dot;
- *   anything else is drawn as given (a `<BadgeCount>`, say).
+ * @param badge - A mark on the cap saying the control behind it is still doing
+ *   something (a filter set, a search typed). `true` draws a dot; anything else
+ *   is drawn as given (a `<BadgeCount>`, say). Drawn only while this side is
+ *   the collapsed one — the side holding the floor spells out in full what a
+ *   dot could only hint at — so it is read straight off the state
+ *   (`badge={Boolean(groupId)}`), with no "and this side is hidden" to add.
  * @param autoFocus - On by default: the focus goes into this control when it
  *   takes the floor, where navi's ladder puts it — an `autoFocus` inside the
  *   control first, its first focusable otherwise. `false` leaves it on the cap
@@ -382,6 +386,9 @@ const ControlSwapSide = () => null;
 
 const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
   const { icon, label, badge, ...capProps } = side.capProps;
+  // A badge on a cap can only say one thing: the control you are NOT looking at
+  // holds something. The one holding the floor is on the row saying it itself.
+  const badgeToDraw = active ? null : badge;
   return (
     <Button
       icon
@@ -391,11 +398,10 @@ const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
       ref={ref}
       // After the caller's props, all of them: the class is what the row's own
       // CSS reaches for, and the rest is the wiring that makes the cap a cap.
-      className={
-        capProps.className
-          ? `navi_control_swap_cap ${capProps.className}`
-          : "navi_control_swap_cap"
-      }
+      className={withPropsClassName(
+        "navi_control_swap_cap",
+        capProps.className,
+      )}
       aria-expanded={active}
       aria-controls={slotId}
       onClick={onPress}
@@ -403,9 +409,9 @@ const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
       <Icon width="50%" square>
         {icon}
       </Icon>
-      {badge ? (
+      {badgeToDraw ? (
         <span className="navi_control_swap_badge" aria-hidden="true">
-          {badge === true ? null : badge}
+          {badgeToDraw === true ? null : badgeToDraw}
         </span>
       ) : null}
     </Button>

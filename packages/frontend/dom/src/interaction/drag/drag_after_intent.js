@@ -95,8 +95,13 @@ const css = /* css */ `
        not to the gesture, and two fingers are never a drag. */
     touch-action: pinch-zoom;
   }
+  /* Only what took the grab: an affordance that claimed the click alone keeps
+     the source's touch-action, so the long press that picks the object up still
+     reaches the browser as a press rather than as a scroll. Handing it auto
+     there would be a hole in the source at the very place one grabs. */
   [data-drag-ignore],
-  [data-own-target],
+  [data-self-interactions~="drag"],
+  [data-self-interactions~="*"],
   [data-drag-source] [popover],
   [data-drag-source] dialog {
     -webkit-touch-callout: default;

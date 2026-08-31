@@ -36,6 +36,7 @@
     "@jsenv/pwa": "../pwa",
     "@jsenv/service-worker": "./",
     "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/test": "../../related/test",
     "playwright": "1.62.1"
   },
   "publishConfig": {

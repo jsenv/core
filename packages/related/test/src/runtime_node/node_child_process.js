@@ -55,6 +55,7 @@ export const nodeChildProcess = ({
       onConsole,
       onRuntimeStarted,
       onRuntimeStopped,
+      onAllocatedMsRequested = () => {},
 
       measureMemoryUsage,
       onMeasureMemoryAvailable,
@@ -161,6 +162,15 @@ export const nodeChildProcess = ({
         onceChildProcessEvent(childProcess, "exit", () => {
           onRuntimeStopped();
         }),
+      );
+      cleanupCallbackSet.add(
+        onChildProcessMessage(
+          childProcess,
+          "allocated-ms-request",
+          ({ ms }) => {
+            onAllocatedMsRequested(ms);
+          },
+        ),
       );
 
       const removeOutputListener = installChildProcessOutputListener(

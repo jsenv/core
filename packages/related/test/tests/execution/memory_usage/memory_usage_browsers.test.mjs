@@ -1,7 +1,15 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
-import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import {
+  chromium,
+  execute,
+  firefox,
+  requestAllocatedMs,
+  webkit,
+} from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 const test = async (params) => {
   const devServer = await startDevServer({

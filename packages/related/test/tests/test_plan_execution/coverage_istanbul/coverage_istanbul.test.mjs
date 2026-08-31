@@ -4,10 +4,13 @@ import {
   executeTestPlan,
   firefox,
   reportCoverageAsHtml,
+  requestAllocatedMs,
   webkit,
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
+
+requestAllocatedMs(120_000);
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce

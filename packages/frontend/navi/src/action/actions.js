@@ -56,6 +56,14 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  *
  * An action run never throws: failures land in errorSignal and are reported
  * once, by one rule, in action_error_report.js (see the comment in onRunError).
+ *
+ * Blast radius: this file is the substrate of routing (route_action.js,
+ * action_run_effect.js), resources (state/rest) and every control's `action`
+ * prop. Its own unit tests cover almost none of that, so a change here is
+ * verified against the consumers' nets: tests/route_tabs and
+ * tests/route_transition_list_revisit (browser), src/state/rest/tests and
+ * src/nav/tests (node) — src/action/*.test.js alone proves nothing about
+ * routing or lists.
  */
 
 let DEBUG = false;
@@ -584,6 +592,14 @@ ${lines.join("\n")}`);
 
 const NO_PARAMS = { __no_params__: true };
 const mergeActionParams = (currentParams, newParams) => {
+  // The order of these two checks is load-bearing. Checking `undefined` first
+  // looks symmetric — "no new params, keep whatever is there, NO_PARAMS
+  // included" — and breaks routing: merge(NO_PARAMS, undefined) must yield
+  // `undefined` so the proxy targets a runnable child, because NO_PARAMS means
+  // "no params yet, nothing to run" to _updateTarget and the run-effect
+  // machinery. With NO_PARAMS kept, a route action bound to a not-yet-matching
+  // route resolves to no target and the page renders nothing
+  // (tests/route_tabs is the net that catches it).
   if (currentParams === NO_PARAMS) {
     return newParams;
   }
@@ -749,6 +765,16 @@ export const createAction = (callback, rootOptions = {}) => {
             });
           }
           const combinedParams = mergeActionParams(params, newParamsOrSignal);
+          if (combinedParams === params) {
+            // Binding added nothing (mergeTwoJsValues returns the current
+            // params by reference when the new ones change no key): equal
+            // params must give the same instance, and the instance holding
+            // these exact params is this action. A separate child here would
+            // run with its own signals, invisible to whoever holds this one —
+            // a <Button action={A}> runs through this path (its UI state
+            // contributes no params), and useActionStatus(A) must see that run.
+            return action;
+          }
           return createChildAction({
             ...options,
             params: combinedParams,
@@ -788,7 +814,13 @@ export const createAction = (callback, rootOptions = {}) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
-      childActionWeakSet.add(childAction);
+      if (childAction !== action) {
+        // binding that added nothing resolves to the action itself; it must
+        // not enter its own child set or matchAllSelfOrDescendant would
+        // traverse it forever (the cache above may still hold it: a plain
+        // lookup, never traversed)
+        childActionWeakSet.add(childAction);
+      }
 
       return childAction;
     };

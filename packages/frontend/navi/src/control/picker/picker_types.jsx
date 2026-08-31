@@ -144,7 +144,7 @@ export const PickerArrayUI = asPickerOwnUI(() => {
  * around the chip. `commandFor` is for a chip that stands outside the picker it
  * speaks for.
  *
- * The cross is an own target (see own_target.js), so the press belongs to it
+ * The cross claims the press (see self_interactions.js), so it belongs to it
  * and not to the picker underneath, and it goes when the picker turns read-only
  * — a row being read still says what was picked, it just no longer offers to
  * unpick it.
@@ -165,7 +165,7 @@ export const PickerChip = ({ value, commandFor, children, ...rest }) => {
     <Badge inline flex {...rest}>
       {children}
       <Badge.Button
-        ownTarget
+        selfInteractions="click"
         command="--navi-unselect"
         commandFor={commandFor}
         value={value}

@@ -57,6 +57,7 @@ export const nodeWorkerThread = ({
       onConsole,
       onRuntimeStarted,
       onRuntimeStopped,
+      onAllocatedMsRequested = () => {},
 
       measureMemoryUsage,
       onMeasureMemoryAvailable,
@@ -142,6 +143,15 @@ export const nodeWorkerThread = ({
         onceWorkerThreadEvent(workerThread, "exit", () => {
           onRuntimeStopped();
         }),
+      );
+      cleanupCallbackSet.add(
+        onWorkerThreadMessage(
+          workerThread,
+          "allocated-ms-request",
+          ({ ms }) => {
+            onAllocatedMsRequested(ms);
+          },
+        ),
       );
 
       const stop = memoize(async () => {

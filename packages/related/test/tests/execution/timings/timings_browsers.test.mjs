@@ -4,8 +4,11 @@ import {
   chromiumIsolatedTab,
   execute,
   firefoxIsolatedTab,
+  requestAllocatedMs,
   webkitIsolatedTab,
 } from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 const test = async (params) => {
   const devServer = await startDevServer({

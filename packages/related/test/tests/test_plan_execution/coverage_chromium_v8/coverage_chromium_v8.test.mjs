@@ -1,7 +1,14 @@
 import { startDevServer } from "@jsenv/core";
-import { chromium, executeTestPlan, reportCoverageAsHtml } from "@jsenv/test";
+import {
+  chromium,
+  executeTestPlan,
+  reportCoverageAsHtml,
+  requestAllocatedMs,
+} from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
+
+requestAllocatedMs(120_000);
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
   const run = async ({ testPlan }) => {

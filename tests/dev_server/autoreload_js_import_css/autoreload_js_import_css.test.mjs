@@ -3,6 +3,9 @@ import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium, firefox } from "playwright";
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 if (process.platform === "win32") {
   // TODO: fix on windows

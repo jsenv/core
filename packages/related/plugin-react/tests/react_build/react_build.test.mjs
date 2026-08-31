@@ -3,6 +3,9 @@ import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 const run = async ({ runtimeCompat, minification }) => {
   await ensureEmptyDirectory(

@@ -8,6 +8,9 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { chromium } from "playwright";
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 process.exit(0); // TODO: fix this test
 

@@ -8,8 +8,11 @@ import {
   reportAsJson,
   reportAsJunitXml,
   reporterList,
+  requestAllocatedMs,
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
+
+requestAllocatedMs(60_000);
 
 if (process.env.CI) {
   process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999

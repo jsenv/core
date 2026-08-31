@@ -1,6 +1,14 @@
 import { startDevServer } from "@jsenv/core";
-import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import {
+  chromium,
+  execute,
+  firefox,
+  requestAllocatedMs,
+  webkit,
+} from "@jsenv/test";
 import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
+
+requestAllocatedMs(90_000);
 
 if (process.platform === "win32") {
   process.exit(0);

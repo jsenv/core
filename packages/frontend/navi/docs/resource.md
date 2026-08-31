@@ -138,6 +138,13 @@ One verb dispatching on a string gives up everything the store does for you:
 per-operation action state (loading/error per button), per-relation autorerun,
 and a child collection that other components can read.
 
+The same smell wears a second coat: a verb on one relation carrying, in its
+params, an id from a **different** relation — a `group_id` sent to the game ×
+user shares, which the server expands into people. That is two relations
+spelled as one, and the one the gesture is actually about (game × group) is the
+one that ends up with no rows, no action state, and nothing for its row on
+screen to read.
+
 | Situation                                                                                                     | Use                                                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | The child is a first-class entity with its own store, shared across parents (a user referenced by many games) | `.one()` / `.many()`                                                                                                                |
@@ -148,6 +155,18 @@ and a child collection that other components can read.
 
 Singular vs plural is about the relation, not the verb: `.one`/`.scopedOne` for a
 single sub-object, `.many`/`.scopedMany` for a collection.
+
+And the table has a negative worth naming, because the workaround looks fine in
+a demo: **a write whose effect the response does not carry is a modelling bug,
+not a case for the client to remember.** After the write, some row on screen
+will claim "this happened" — and it must read that from the store, which only
+holds what responses carried. When the relation actually written has no row
+anywhere (the response answered with a different entity than the one the
+gesture was about), whatever the screen memorizes instead lives on the client
+and **dies with the session**: reload, and the row confidently claims the write
+never happened. The fix is on the shape — give that relation its own
+relationship method and a callback returning what was written, even when the
+backend must grow a field for it — never a flag next to the button.
 
 ## Callback return contracts
 

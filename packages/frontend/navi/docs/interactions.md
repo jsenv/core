@@ -531,64 +531,94 @@ sideways), while a `move` goes wherever it is put, a `land` wherever the board h
 places and a `toss` wherever it was thrown (`xy`). `data-drag-delay`,
 `data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
 
-### An affordance inside somebody else's box: `ownTarget`
+### An affordance inside somebody else's box: `selfInteractions`
 
 A chip's cross inside a carried piece, an eye on a row that travels, a diskette
-on a picker's façade. It is aimed AT, not merely inside, and the press belongs
-to it alone:
+on a picker's façade. It is aimed AT, not merely inside — but aimed at for
+WHAT, which is the whole of the prop:
 
 ```jsx
-<Badge.Button ownTarget onClick={() => remove(id)}>
+<Badge.Button selfInteractions="click" onClick={() => remove(id)}>
   ×
 </Badge.Button>
 ```
 
-No gesture starts under it, no navi control above it answers the mousedown or
-the click, and its `onClick` waits for its own interaction gate instead of
-firing from the DOM.
+The press is now this cross's alone: no navi control above it answers the
+mousedown or the click, and its `onClick` waits for its own interaction gate
+instead of firing from the DOM.
 
-#### Does it write to the control it sits in?
+#### Why it is a list, and why it is required
 
-That question, and nothing else, picks the mode:
+A press is not a drag. A drag announces itself — a few pixels of travel with a
+mouse, a long hold with a finger — and a click is the absence of both, so the
+two can be told apart without anyone guessing at pointerdown. An affordance
+that claimed every gesture at once would be a HOLE in whatever it sits in: a
+badge drawn against the edge of a card is a seventh of that card, and precisely
+the edge one grabs to carry it.
 
-| what it does                                                 | mode                 | on a read-only / disabled / busy zone     |
-| ------------------------------------------------------------ | -------------------- | ----------------------------------------- |
-| writes to it (a cross that removes, a stepper)               | `ownTarget`          | it goes                                   |
-| writes to it, and its presence says there is something there | `ownTarget="refuse"` | it stays and refuses with a callout       |
-| never touches it (a diskette saving into MY address book)    | `ownTarget="always"` | nothing changes: still lit, still pressed |
+So the claim names its interactions, and what it does not name stays the zone's:
+
+| written                        | takes                     | leaves                              |
+| ------------------------------ | ------------------------- | ----------------------------------- |
+| `selfInteractions="click"`     | the press                 | the grab — the card is still carried by it |
+| `selfInteractions="click drag"`| both                      | —                                   |
+| `selfInteractions="*"`         | every gesture, now and later | —                                |
+
+`"*"` is there for the case where it is true, not as a shorthand: it is the one
+value that will silently swallow a gesture navi has not shipped yet.
+
+`data-drag-ignore` says a different thing, to the gesture alone and for all of
+them at once: the press there is none of the gesture's business, and the element
+keeps both its cursor and its text selection.
+
+#### Where the zone blocks: does it write to the control it sits in?
+
+That question, and nothing else, picks `whenSelfInteractionsBlocked` — what
+becomes of the affordance where the zone around it is disabled or read-only.
+The claimed interactions are its subject, and only them: the ones left to the
+zone were never this element's to block.
+
+| what it does                                                 | written                                      | on a blocked zone                         |
+| ------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------- |
+| writes to it (a cross that removes, a stepper)               | nothing — `"hide"` is the default            | it goes                                   |
+| writes to it, and its presence says there is something there | `whenSelfInteractionsBlocked="refuse"`       | it stays and refuses with a callout       |
+| never touches it (a diskette saving into MY address book)    | `whenSelfInteractionsBlocked="ignore"`       | nothing changes: still lit, still pressed |
 
 A greyed cross that still removes is worse than no cross — hence the default.
-`"always"` is the other extreme and the caller owns it: the zone's read-only is
+`"ignore"` is the other extreme and the caller owns it: the zone's read-only is
 about a value the affordance does not write, so answering "read-only" to a
 gesture that was never going to write anything says nothing true. Use it only
 when that is really the case.
 
+Busy is not on the list because busy does not block: it is the read-only a
+running action sets on its way that does.
+
 #### On something you draw yourself
 
-`ownTarget` is a `Box` prop too, so an affordance does not have to become a
-control to claim its press — a pastille positioned in a card's corner by its own
-class stays exactly what it was drawn as:
+`selfInteractions` is a `Box` prop too, so an affordance does not have to become
+a control to claim its interactions — a pastille positioned in a card's corner
+by its own class stays exactly what it was drawn as:
 
 ```jsx
-<Box as="button" ownTarget className="court_side" onClick={explain}>
+<Box as="button" selfInteractions="click" className="court_side" onClick={explain}>
 ```
 
-On a box the prop does exactly one thing: it writes `data-own-target`. That
-attribute is the claim — it is what the controls above read, and what the
+On a box the prop does exactly one thing: it writes `data-self-interactions`.
+That attribute is the claim — it is what the controls above read, and what the
 gesture readers read (`data-drag-handle`, `data-drag-ignore` and friends are the
-same vocabulary). Writing it by hand on an element navi does not render works
-and is the last resort: a typo there is silent, whereas the prop is spelled
-once.
+same vocabulary), each picking its own word out of it. Writing it by hand on an
+element navi does not render works and is the last resort: a typo there is
+silent, whereas the prop is spelled once and checked.
 
-The modes above are the other half, and they belong to controls: they are about
-a gate, a callout and a control's own read-only, none of which a box has. A box
-claims the press and nothing more; put the affordance on a control when what it
-does about a held zone matters.
+`whenSelfInteractionsBlocked` is the other half, and it belongs to controls: it
+is about a gate, a callout and a control's own read-only, none of which a box
+has. A box claims interactions and nothing more; put the affordance on a control
+when what it does about a held zone matters.
 
 #### When the affordance should sit OUTSIDE instead
 
-`ownTarget` says a façade CAN yield a zone; it does not say it should. What
-decides is whether the affordance stays where the finger left it.
+`selfInteractions` says a façade CAN yield a zone; it does not say it should.
+What decides is whether the affordance stays where the finger left it.
 
 An icon that lives inside its control while that control is showing, and
 becomes a pill of its own once it is not, is a switch that moves when you flip
@@ -598,8 +628,8 @@ which is the whole gesture on a phone. `<ControlSwap>` is that row: two
 controls taking turns in the middle, a fixed cap at each end.
 
 So: an affordance that acts on what it sits in (a chip's cross, a stepper, an
-eye on a row) belongs inside, and takes its press back with `ownTarget`. One
-that swaps what is being shown belongs outside it, where it can stay put.
+eye on a row) belongs inside, and takes its press back with `selfInteractions`.
+One that swaps what is being shown belongs outside it, where it can stay put.
 
 Whichever side of the frame it ends up on, the control must be told, because a
 control draws affordances of its own and will otherwise draw a second one:
@@ -622,15 +652,11 @@ control draws affordances of its own and will otherwise draw a second one:
 
 #### navi steps back; a plain `onClick` does not
 
-What `ownTarget` stops is navi answering: the controls above it, and the
-gestures. It does **not** stop the event — the propagation is left whole, so
+What the claim stops is navi answering: the controls above it, and the gestures
+it named. It does **not** stop the event — the propagation is left whole, so
 that everything which is not a navi interaction still sees the press it always
 saw. A raw `onClick` on an ancestor is one of those, and still fires; stop it
 there yourself if it must not.
-
-`data-drag-ignore` says a narrower thing, to the gesture alone: the press there
-is none of the gesture's business, and the element keeps both its cursor and its
-text selection.
 
 ### What says a thing can be picked up
 

@@ -22,6 +22,8 @@ if (process.argv[2] === "@jsenv/core") {
   process.argv[2] = "./tests/";
 }
 await executeTestPlan({
+  // remembers how long each execution took to start the longest ones first
+  executionTimings: true,
   logs: {
     level: "info",
     platformInfo: true,
@@ -33,25 +35,6 @@ await executeTestPlan({
     "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
-        allocatedMs: ({ fileRelativeUrl }) => {
-          if (fileRelativeUrl.endsWith("_snapshots.test.mjs")) {
-            return 180_000;
-          }
-          if (
-            fileRelativeUrl.endsWith("import_assert_type_css_build.test.mjs") ||
-            fileRelativeUrl.endsWith("autoreload_js_import_css.test.mjs")
-          ) {
-            return 90_000;
-          }
-          if (
-            fileRelativeUrl.endsWith("preload_js_module_build.test.mjs") ||
-            fileRelativeUrl.endsWith("import_assert_type_css_dev.test.mjs") ||
-            fileRelativeUrl.endsWith("preload_local_font_build.test.mjs")
-          ) {
-            return 60_000;
-          }
-          return 30_000;
-        },
       },
     },
     "./packages/**/*.test.html": {
@@ -70,49 +53,6 @@ await executeTestPlan({
     "./packages/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
-        allocatedMs: ({ fileRelativeUrl }) => {
-          if (fileRelativeUrl.endsWith("test_plan_logs_browsers.test.mjs")) {
-            return 160_000;
-          }
-          if (
-            fileRelativeUrl.endsWith("coverage_browsers_and_node.test.mjs") ||
-            fileRelativeUrl.endsWith("coverage_chromium_v8.test.mjs") ||
-            fileRelativeUrl.endsWith("coverage_istanbul.test.mjs")
-          ) {
-            return 120_000;
-          }
-          if (
-            fileRelativeUrl.endsWith("_browsers.test.mjs") ||
-            fileRelativeUrl.endsWith("test_plan_logs_node.test.mjs") ||
-            fileRelativeUrl.endsWith("test_plan_logs_mixed.test.mjs")
-          ) {
-            return 90_000;
-          }
-          if (
-            fileRelativeUrl.endsWith("browser_tabs.test.mjs") ||
-            fileRelativeUrl.endsWith("fragment.test.mjs")
-          ) {
-            return 60_000;
-          }
-          if (
-            fileRelativeUrl.endsWith(
-              "service-worker/tests/errors/errors_snapshots.test.mjs",
-            ) ||
-            fileRelativeUrl.endsWith(
-              "service-worker/tests/update/update_snapshots.test.mjs",
-            ) ||
-            fileRelativeUrl.endsWith("react_build.test.mjs") ||
-            fileRelativeUrl.endsWith("react_refresh.test.mjs") ||
-            fileRelativeUrl.endsWith("toolbar_basic.test.mjs") ||
-            fileRelativeUrl.endsWith("react_dev.test.mjs") ||
-            // ten revisits per page, each waiting for a transition to have
-            // played and a revalidation to have had time to ask
-            fileRelativeUrl.endsWith("route_transition_list_revisit.test.mjs")
-          ) {
-            return 90_000;
-          }
-          return undefined;
-        },
         uses: ({ fileRelativeUrl }) => {
           if (
             fileRelativeUrl.endsWith(

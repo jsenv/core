@@ -19,6 +19,7 @@ export const run = async ({
   signal = new AbortController().signal,
   logger,
   allocatedMs,
+  onAllocatedMsRequested = () => {},
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
@@ -69,6 +70,22 @@ export const run = async ({
   if (allocatedMs) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
+  // the file being executed can ask for more time, see requestAllocatedMs
+  const handleAllocatedMsRequest = (ms) => {
+    onAllocatedMsRequested(ms);
+    if (!timeoutAbortSource) {
+      // nothing to extend: execution has no time limit
+      return;
+    }
+    if (ms <= allocatedMs) {
+      return;
+    }
+    allocatedMs = ms;
+    // the request arrives once execution has started, what is left of the
+    // requested duration is what the file can still use
+    timeoutAbortSource.remove();
+    timeoutAbortSource = runOperation.timeout(ms - takeTiming());
+  };
   const consoleCalls = [];
   onConsoleRef.current = ({ type, text }) => {
     if (mirrorConsole) {
@@ -121,6 +138,7 @@ export const run = async ({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
+                onAllocatedMsRequested: handleAllocatedMsRequest,
                 collectConsole,
                 measureMemoryUsage,
                 onMeasureMemoryAvailable,

@@ -8,6 +8,8 @@ export { firefox, firefoxIsolatedTab } from "./runtime_browsers/firefox.js";
 export { webkit, webkitIsolatedTab } from "./runtime_browsers/webkit.js";
 export { nodeChildProcess } from "./runtime_node/node_child_process.js";
 export { nodeWorkerThread } from "./runtime_node/node_worker_thread.js";
+// called from within a test file
+export { requestAllocatedMs } from "./runtime_node/request_allocated_ms.js";
 // coverage
 export { reportCoverageAsHtml } from "./coverage/report_coverage_as_html.js";
 export { reportCoverageAsJson } from "./coverage/report_coverage_as_json.js";

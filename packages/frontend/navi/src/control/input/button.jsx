@@ -6,7 +6,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
-import { useOwnTargetHidden } from "../own_target.js";
+import { useSelfInteractionsHidden } from "../self_interactions.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -15,9 +15,9 @@ const ButtonFirstResolver = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
 
-  const ownTargetHidden = useOwnTargetHidden(props);
+  const selfInteractionsHidden = useSelfInteractionsHidden(props);
 
-  if (ownTargetHidden) {
+  if (selfInteractionsHidden) {
     return null;
   }
   return <Next {...props} />;
@@ -121,7 +121,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 
 /**
  * @type {import("preact").FunctionComponent<{
- *   ownTarget?: boolean | "refuse" | "always",
+ *   selfInteractions?: string,
+ *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
  *   [key: string]: any,
  * }>}
@@ -132,15 +133,20 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).
- * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
- *   that belongs to another control — a chip's cross on a picker's façade, an
- *   eye on a pressable row, a diskette inside a slide that travels. The press is
- *   this button's alone (no travel starts, no popup opens, no navi control above
- *   answers) and its `onClick` waits for its own interaction gate instead of
- *   firing from the DOM. What it does where the zone is read-only, disabled or
- *   busy depends on whether it WRITES to the control it sits in: it goes by
- *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
- *   the zone's state entirely — for a gesture that never touched that control.
+ * @param {string} [selfInteractions] The interactions this button takes for
+ *   itself inside a zone that belongs to another control — a chip's cross on a
+ *   picker's façade, an eye on a pressable row, a badge against the edge of a
+ *   card one carries. A required list, because a press is not a drag:
+ *   `"click"` makes the press this button's alone (no popup opens, no navi
+ *   control above answers) and leaves the grab to whatever it sits in,
+ *   `"click drag"` takes both, `"*"` takes every gesture there is. Whatever is
+ *   claimed, the button's `onClick` waits for its own interaction gate instead
+ *   of firing from the DOM.
+ * @param {"hide"|"refuse"|"ignore"} [whenSelfInteractionsBlocked] What becomes
+ *   of it where the zone around it is disabled or read-only, which is settled
+ *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
+ *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
+ *   it through untouched — for an affordance that never wrote to that control.
  */
 export const Button = createComponentResolver([
   ButtonFirstResolver,

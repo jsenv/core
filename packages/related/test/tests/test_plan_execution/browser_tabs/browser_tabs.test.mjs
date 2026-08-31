@@ -3,8 +3,15 @@
  */
 
 import { startDevServer } from "@jsenv/core";
-import { chromium, executeTestPlan, reportAsJson } from "@jsenv/test";
+import {
+  chromium,
+  executeTestPlan,
+  reportAsJson,
+  requestAllocatedMs,
+} from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
+
+requestAllocatedMs(60_000);
 
 await snapshotTestPlanSideEffects(import.meta.url, async ({ test }) => {
   const run = async ({ testPlan }) => {

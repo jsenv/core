@@ -41,6 +41,11 @@ validation message on the **requester** (the submit button, not the form):
   else — `"none"` — means the control displays nothing because something else
   does. `<Details>` uses that: its `<ActionRenderer>` shows the error inside the
   open panel.
+- `onActionError(error, event)` fires alongside whichever display was chosen —
+  it is for reacting to the failure, not for showing it (showing stays claimed
+  by the message or the boundary). Its siblings on every control with an
+  `action` — `onActionStart`, `onActionEnd`, `onActionAborted` — are in
+  [actions.md](./actions.md#the-instance-a-control-runs).
 
 ### A screen's data failed — a route action
 

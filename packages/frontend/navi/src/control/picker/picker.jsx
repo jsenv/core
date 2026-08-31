@@ -11,6 +11,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
@@ -299,16 +300,17 @@ const css = /* css */ `
       }
 
       /* The façade is transparent to the pointer — a press on what it draws
-         means "open the picker". An own target is the exception, the same way
-         the clear cross is one in the slot below: it says the press is aimed at
-         IT, so it has to be reachable at all.
+         means "open the picker". An element claiming the press is the exception,
+         the same way the clear cross is one in the slot below: it says the press
+         is aimed at IT, so it has to be reachable at all.
          Positioned as well as pointable: the input covering the box
          (see [navi-ui-custom] below) is absolute, so it paints over every
          static element of the façade whatever their pointer-events say — and
          the press then reaches the input, which is the picker. No offset, so
-         nothing moves; this only puts the own target in the same paint layer
+         nothing moves; this only puts that element in the same paint layer
          as the things it has to be reachable through. */
-      [data-own-target] {
+      [data-self-interactions~="click"],
+      [data-self-interactions~="*"] {
         position: relative;
         pointer-events: auto;
       }
@@ -555,10 +557,11 @@ const css = /* css */ `
     }
     /* bare: the caller's drawing IS the trigger. No frame, no control line, no
        slot beside it, no clamp on it — the picker takes the size of what the ui
-       draws, to the pixel, and does nothing to it but catch the press. For a
-       picker that is a whole piece of a layout (a column of a card, a tile)
-       rather than a field: the same drawing can then sit alone somewhere else
-       and be the same box in both places. */
+       draws, to the pixel, and does nothing to it but catch the press. What the
+       drawing needs in it — the cross of a clearable — the drawing places
+       itself (<Picker.Clear />). For a picker that is a whole piece of a layout
+       (a column of a card, a tile) rather than a field: the same drawing can
+       then sit alone somewhere else and be the same box in both places. */
     &[data-variant="bare"] {
       --picker-padding-x-default: 0;
       --picker-padding-y-default: 0;
@@ -654,6 +657,7 @@ const PickerButton = (props) => {
   import.meta.css = css;
   warnOnUnknownPickerType(props);
   warnOnUIDrawnByNobody(props);
+  warnOnClearableWithoutSlot(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -682,6 +686,9 @@ const PickerButton = (props) => {
     // Adds a clear button to the right slot, the same one type="search" puts at
     // the end of an input: a picker holds a value the user chose, and unsetting
     // it should not require reopening the popup to hunt for a "none" entry.
+    // Where navi puts it, which needs a slot to put it in: a variant without
+    // one (bare above all) holds a <Picker.Clear /> in its own drawing instead
+    // — the same cross, placed by whoever draws around it.
     clearable,
     // "Are you sure?" before the cross clears anything. A cross of three
     // millimetres at the edge of a touch screen, right where the chevron is
@@ -703,6 +710,23 @@ const PickerButton = (props) => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
+  // Which variants get the right slot — the chevron saying "this opens", and
+  // the cross replacing it once there is something to clear.
+  // Not the ones that draw no value beside it: an icon picker IS its icon, a
+  // headless one draws nothing, a button says what it opens with its label, a
+  // word in a sentence has no room for furniture. Nor a picker rendering the
+  // browser's own control ("default").
+  // Nor a bare one: the picker is that drawing's box to the pixel, so anything
+  // navi adds beside it either grows the box or covers what the caller drew.
+  // The pieces are the caller's to place there instead — a <Picker.Clear /> in
+  // their own layout (see warnOnClearableWithoutSlot).
+  const hasRightSlot =
+    variant !== "icon" &&
+    variant !== "headless" &&
+    variant !== "button" &&
+    variant !== "text" &&
+    variant !== "bare" &&
+    ui !== "default";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -734,6 +758,17 @@ const PickerButton = (props) => {
   const interactive =
     !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
+  // What the picker knows about itself, for the pieces it does not place: the
+  // drawings of its value (Picker.UI.*), and the affordances a caller may put
+  // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
+  const pickerContext = {
+    value,
+    placeholder,
+    maxLines,
+    id: inputProps.id,
+    interactive,
+    clearConfirm,
+  };
 
   return (
     /* Read-only crosses into everything the picker is made of: what it really
@@ -800,126 +835,124 @@ const PickerButton = (props) => {
         }}
       >
         <span className="navi_picker_box">
-          {variant === "headless" ? null : (
-            <LoadingOutline
-              loading={loading}
-              color="var(--picker-loader-color)"
-              inset={-2}
-            />
-          )}
-          <PickerInput
-            tabIndex={variant === "headless" ? -1 : undefined}
-            aria-hidden={variant === "headless" ? "true" : undefined}
-            {...inputProps}
-            // eslint-disable-next-line react/no-children-prop
-            children={undefined} // we will render children into the div
-            ui={ui}
-            onCopy={(e) => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                return;
-              }
-              const uiState = uiStateController.uiState;
-              if (uiState === undefined) {
-                return;
-              }
-              e.preventDefault();
-              const displayText =
-                pickerEl.querySelector(".navi_picker_value")?.textContent ??
-                String(uiState);
-              e.clipboardData.setData("text/plain", displayText);
-              e.clipboardData.setData(
-                "application/x-navi",
-                JSON.stringify(uiState),
-              );
-            }}
-            onCut={(e) => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                return;
-              }
-              const uiState = uiStateController.uiState;
-              if (uiState === undefined) {
-                return;
-              }
-              // the copy part don't need control to be interactable
-              const displayText =
-                pickerEl.querySelector(".navi_picker_value")?.textContent ??
-                String(uiState);
-              e.clipboardData.setData("text/plain", displayText);
-              e.clipboardData.setData(
-                "application/x-navi",
-                JSON.stringify(uiState),
-              );
-              // the clear ui state part need control to be interactable
-              dispatchRequestInteraction(pickerEl, {
-                event: e,
-                name: "cut",
-                allowed: () => {
-                  dispatchRequestClearUIState(inputRef.current, e);
-                },
-              });
-              e.preventDefault();
-            }}
-            onPaste={(e) => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                // Don't intercept inside the picker popup content.
-                return;
-              }
-              const naviData = e.clipboardData.getData("application/x-navi");
-              let pasteValue;
-              if (naviData) {
-                try {
-                  pasteValue = JSON.parse(naviData);
-                } catch {
-                  pasteValue = naviData;
+          <PickerContext.Provider value={pickerContext}>
+            {variant === "headless" ? null : (
+              <LoadingOutline
+                loading={loading}
+                color="var(--picker-loader-color)"
+                inset={-2}
+              />
+            )}
+            <PickerInput
+              tabIndex={variant === "headless" ? -1 : undefined}
+              aria-hidden={variant === "headless" ? "true" : undefined}
+              {...inputProps}
+              // eslint-disable-next-line react/no-children-prop
+              children={undefined} // we will render children into the div
+              ui={ui}
+              onCopy={(e) => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  return;
                 }
-              } else {
-                pasteValue = e.clipboardData.getData("text/plain");
-              }
-              dispatchRequestInteraction(pickerEl, {
-                event: e,
-                name: "paste",
-                allowed: () => {
-                  dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                    event: e,
-                  });
-                },
-              });
-              e.preventDefault();
-            }}
-          />
-          {variant === "headless" || ui === "default" ? null : (
-            <Text
-              className="navi_picker_value"
-              // Tells the caller's own drawing of the control from the value
-              // the picker draws itself, so each is written on its own line
-              // (see .navi_picker_value in the CSS above).
-              data-picker-facade={ui === undefined ? undefined : ""}
-              // A placeholder is the picker saying "nothing here yet" about
-              // the value navi draws — the default rendering, or the one a
-              // typed picker installs for itself. A button's label is not
-              // that, however empty the picker behind it is, and neither is a
-              // caller's own "ui": an empty value may be exactly what the
-              // caller is drawing there ("no filter", "anywhere"), so how it
-              // looks empty stays theirs (documented on the ui prop below).
-              navi-placeholder={
-                (ui === undefined || pickerUIIsNaviOwn(ui)) &&
-                variant !== "button" &&
-                variant !== "text" &&
-                uiStateHoldsNothing(value)
-                  ? ""
-                  : undefined
-              }
-              maxLines={maxLines}
-            >
-              <PickerOwnContent>
-                <PickerContext.Provider
-                  value={{ value, placeholder, maxLines }}
-                >
+                const uiState = uiStateController.uiState;
+                if (uiState === undefined) {
+                  return;
+                }
+                e.preventDefault();
+                const displayText =
+                  pickerEl.querySelector(".navi_picker_value")?.textContent ??
+                  String(uiState);
+                e.clipboardData.setData("text/plain", displayText);
+                e.clipboardData.setData(
+                  "application/x-navi",
+                  JSON.stringify(uiState),
+                );
+              }}
+              onCut={(e) => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  return;
+                }
+                const uiState = uiStateController.uiState;
+                if (uiState === undefined) {
+                  return;
+                }
+                // the copy part don't need control to be interactable
+                const displayText =
+                  pickerEl.querySelector(".navi_picker_value")?.textContent ??
+                  String(uiState);
+                e.clipboardData.setData("text/plain", displayText);
+                e.clipboardData.setData(
+                  "application/x-navi",
+                  JSON.stringify(uiState),
+                );
+                // the clear ui state part need control to be interactable
+                dispatchRequestInteraction(pickerEl, {
+                  event: e,
+                  name: "cut",
+                  allowed: () => {
+                    dispatchRequestClearUIState(inputRef.current, e);
+                  },
+                });
+                e.preventDefault();
+              }}
+              onPaste={(e) => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  // Don't intercept inside the picker popup content.
+                  return;
+                }
+                const naviData = e.clipboardData.getData("application/x-navi");
+                let pasteValue;
+                if (naviData) {
+                  try {
+                    pasteValue = JSON.parse(naviData);
+                  } catch {
+                    pasteValue = naviData;
+                  }
+                } else {
+                  pasteValue = e.clipboardData.getData("text/plain");
+                }
+                dispatchRequestInteraction(pickerEl, {
+                  event: e,
+                  name: "paste",
+                  allowed: () => {
+                    dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                      event: e,
+                    });
+                  },
+                });
+                e.preventDefault();
+              }}
+            />
+            {variant === "headless" || ui === "default" ? null : (
+              <Text
+                className="navi_picker_value"
+                // Tells the caller's own drawing of the control from the value
+                // the picker draws itself, so each is written on its own line
+                // (see .navi_picker_value in the CSS above).
+                data-picker-facade={ui === undefined ? undefined : ""}
+                // A placeholder is the picker saying "nothing here yet" about
+                // the value navi draws — the default rendering, or the one a
+                // typed picker installs for itself. A button's label is not
+                // that, however empty the picker behind it is, and neither is a
+                // caller's own "ui": an empty value may be exactly what the
+                // caller is drawing there ("no filter", "anywhere"), so how it
+                // looks empty stays theirs (documented on the ui prop below).
+                navi-placeholder={
+                  (ui === undefined || pickerUIIsNaviOwn(ui)) &&
+                  variant !== "button" &&
+                  variant !== "text" &&
+                  uiStateHoldsNothing(value)
+                    ? ""
+                    : undefined
+                }
+                maxLines={maxLines}
+              >
+                <PickerOwnContent>
                   {/* For what the picker cannot clamp itself: a <BadgeList>
-                      wraps flex rows, which line-clamp never sees. */}
+                    wraps flex rows, which line-clamp never sees. */}
                   <MaxLinesContext.Provider value={maxLines}>
                     {ui === undefined ? (
                       variant === "icon" ? (
@@ -941,93 +974,32 @@ const PickerButton = (props) => {
                       ui
                     )}
                   </MaxLinesContext.Provider>
-                </PickerContext.Provider>
-              </PickerOwnContent>
-            </Text>
-          )}
-          {variant === "icon" ||
-          variant === "headless" ||
-          variant === "button" ||
-          variant === "text" ||
-          variant === "bare" ||
-          ui === "default" ? null : (
-            <span className="navi_picker_right_slot">
-              <PickerOwnContent>
-                {/* Clearing is a modification: nothing to offer on a picker
-                    whose value cannot be changed. The cross is a control of its
-                    own, so the interaction gate finds IT rather than the picker
-                    and would let the press through — the tap aimed where the
-                    chevron sits would empty a field nothing else can touch. */}
-                {clearable &&
-                interactive &&
-                value !== undefined &&
-                value !== "" &&
-                clearConfirm !== undefined ? (
-                  // A picker on the façade of a picker: the cross opens the
-                  // question, and yes sends the clear to this picker's input.
-                  // A door only (allowNameless): the form around does not see
-                  // a field in it.
-                  <Picker
-                    type="confirm"
-                    variant="icon"
-                    ui={
-                      <Icon size={rightSlotIconSize} lineOverflow="allow">
-                        <CloseSvg />
-                      </Icon>
-                    }
-                    message={clearConfirm}
-                    command="--navi-clear"
-                    commandFor={inputProps.id}
-                    tabIndex="-1"
-                  />
-                ) : clearable &&
-                  interactive &&
-                  value !== undefined &&
-                  value !== "" ? (
-                  <Button
-                    command="--navi-clear"
-                    commandFor={inputProps.id}
-                    tabIndex="-1"
-                    // No navi-focus-delegate, unlike the identical button inside an
-                    // input: handing focus back to the picker's own input is what
-                    // opens the popup, and clearing is the opposite intention.
-                    icon
-                    variant="discrete"
-                    // What is busy once the clear is sent is the picker — the value
-                    // being removed is the whole field's, and the picker already
-                    // draws the wait around all of it. Two outlines for one wait is
-                    // one too many.
-                    loadingOutline={false}
-                    // preventDefault, not just tabIndex="-1": a mousedown focuses
-                    // its target before any click happens, and this button should
-                    // never hold focus at all — the field keeps it.
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                    }}
-                    flex
-                    align="center"
-                  >
+                </PickerOwnContent>
+              </Text>
+            )}
+            {hasRightSlot ? (
+              <span className="navi_picker_right_slot">
+                <PickerOwnContent>
+                  {clearable && pickerHasSomethingToClear(pickerContext) ? (
+                    <PickerClear size={rightSlotIconSize} />
+                  ) : rightSlot === undefined ? (
+                    // lineOverflow: what sits in the slot is an affordance, not a
+                    // character — a caller asking for a bigger one wants it bigger,
+                    // not capped at the height of the line it sits on
                     <Icon size={rightSlotIconSize} lineOverflow="allow">
-                      <CloseSvg />
+                      {rightSlotIcon === undefined ? (
+                        <ChevronDownSvg />
+                      ) : (
+                        rightSlotIcon
+                      )}
                     </Icon>
-                  </Button>
-                ) : rightSlot === undefined ? (
-                  // lineOverflow: what sits in the slot is an affordance, not a
-                  // character — a caller asking for a bigger one wants it bigger,
-                  // not capped at the height of the line it sits on
-                  <Icon size={rightSlotIconSize} lineOverflow="allow">
-                    {rightSlotIcon === undefined ? (
-                      <ChevronDownSvg />
-                    ) : (
-                      rightSlotIcon
-                    )}
-                  </Icon>
-                ) : (
-                  rightSlot
-                )}
-              </PickerOwnContent>
-            </span>
-          )}
+                  ) : (
+                    rightSlot
+                  )}
+                </PickerOwnContent>
+              </span>
+            ) : null}
+          </PickerContext.Provider>
         </span>
         <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
           {/* The attribute is what tells "inside this picker's popup" from
@@ -1041,6 +1013,120 @@ const PickerButton = (props) => {
     </ReadOnlyContext.Provider>
   );
 };
+/**
+ * The cross that empties the picker it sits in — reached as `<Picker.Clear />`.
+ *
+ * It is the very cross `clearable` puts in the right slot — the same button,
+ * wired the same way — for the drawings navi has no slot to put it in:
+ * `variant="bare"` above all, where the drawing is the caller's and so is the
+ * place the cross belongs in it, after a name or over a corner, at a size and
+ * with an icon of its own.
+ *
+ * It goes when there is nothing to take out and when nothing can be changed, so
+ * a caller places it once and never asks whether to draw it.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   size?: number | string,
+ *   children?: import("preact").ComponentChildren,
+ * } & Record<string, any>>}
+ * @param {number|string} [size="inherit"] How big the cross is drawn, as
+ *   `<Icon size>` reads it — "inherit" takes the size of the text around it.
+ * @param {import("preact").ComponentChildren} [children] The icon, in place of
+ *   the cross. Anything else goes to the `<Button>` underneath (`variant`,
+ *   `paddingX`, `aria-label`, …).
+ */
+const PickerClear = ({ size = "inherit", children, ...rest }) => {
+  const pickerContext = useContext(PickerContext);
+  if (!pickerContext) {
+    warnOnClearOutsidePicker();
+    return null;
+  }
+  if (!pickerHasSomethingToClear(pickerContext)) {
+    return null;
+  }
+  const { id, clearConfirm } = pickerContext;
+  const icon = (
+    // lineOverflow: the cross is an affordance, not a character — a caller
+    // asking for a bigger one wants it bigger, not capped at the height of the
+    // line it sits on.
+    <Icon size={size} lineOverflow="allow">
+      {children === undefined ? <CloseSvg /> : children}
+    </Icon>
+  );
+  // The press is aimed AT the cross: clearing is the opposite intention to
+  // opening, and the picker's box answers a press landing anywhere in it (see
+  // self_interactions.js). Only the press: a picker drawn inside something one
+  // carries is still carried by its cross.
+  if (clearConfirm !== undefined) {
+    return (
+      // A picker on the façade of a picker: the cross opens the question, and
+      // yes sends the clear to this picker's input.
+      <Picker
+        type="confirm"
+        variant="icon"
+        selfInteractions="click"
+        ui={icon}
+        message={clearConfirm}
+        command="--navi-clear"
+        commandFor={id}
+        tabIndex="-1"
+        aria-label={naviI18n("button.clear")}
+        {...rest}
+      />
+    );
+  }
+  return (
+    <Button
+      command="--navi-clear"
+      commandFor={id}
+      selfInteractions="click"
+      tabIndex="-1"
+      // No navi-focus-delegate, unlike the identical button inside an input:
+      // handing focus back to the picker's own input is what opens the popup,
+      // and clearing is the opposite intention.
+      icon
+      variant="discrete"
+      // What is busy once the clear is sent is the picker — the value being
+      // removed is the whole field's, and the picker already draws the wait
+      // around all of it. Two outlines for one wait is one too many.
+      loadingOutline={false}
+      // preventDefault, not just tabIndex="-1": a mousedown focuses its target
+      // before any click happens, and this button should never hold focus at
+      // all — the field keeps it.
+      onMouseDown={(e) => {
+        e.preventDefault();
+      }}
+      flex
+      align="center"
+      aria-label={naviI18n("button.clear")}
+      {...rest}
+    >
+      {icon}
+    </Button>
+  );
+};
+// Clearing is a modification: nothing to offer on a picker whose value cannot
+// be changed. Said here rather than left to the cross's own gate — the cross is
+// a control of its own, so the picker's interaction gate finds IT and would let
+// the press through: the tap aimed where the chevron sits would empty a field
+// nothing else can touch.
+const pickerHasSomethingToClear = ({ interactive, value }) => {
+  if (!interactive) {
+    return false;
+  }
+  return value !== undefined && value !== "";
+};
+let clearOutsidePickerWarned = false;
+const warnOnClearOutsidePicker = () => {
+  if (!import.meta.dev || clearOutsidePickerWarned) {
+    return;
+  }
+  clearOutsidePickerWarned = true;
+  console.warn(
+    `[navi] <Picker.Clear> outside a picker — it clears the picker it sits in, so it belongs in that picker's "ui" (or in its right slot, where "clearable" puts one for you). Nothing is drawn.`,
+  );
+};
+
 // What the picker draws itself — the value it shows, the furniture in its slot,
 // and whatever a caller puts in either — is not another control of the field
 // around it: none of it may take the id (nor the name) a <Field> hands down,
@@ -1362,8 +1448,11 @@ const PickerFirstResolver = (props) => {
  *   nothing around it: whatever this draws is what the picker measures. Its
  *   own padding, its own lines, its own corners — a `<Box>` here gives a
  *   picker the exact box that `<Box>` has on its own. Anything interactive
- *   inside it takes its clicks back with `data-own-target`, the press
- *   everywhere else opening the popup.
+ *   inside it takes its clicks back with `data-self-interactions`, the press
+ *   everywhere else opening the popup. There is no right slot beside it either,
+ *   so what a field would have got from navi this drawing places itself: a
+ *   `<Picker.Clear />` where the cross belongs, laid out like anything else it
+ *   holds.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1434,6 +1523,10 @@ const PickerFirstResolver = (props) => {
  *   `ui` — which is also what a caller overrides to draw their own. Nothing
  *   else is drawn there, the clear cross included: one icon has room for one
  *   thing.
+
+ *   `variant="bare"` has no slot either, for the same reason turned around: the
+ *   picker is the drawing's box to the pixel, so nothing may be added beside it
+ *   — the drawing holds what it needs (`<Picker.Clear />`) and places it.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
  *   interactive right slot goes.
@@ -1452,9 +1545,12 @@ const PickerFirstResolver = (props) => {
  *   icon (`"icon"` being its default, with an info icon in place of the
  *   chevron). `"bare"` draws no trigger of its own at all: the `ui` is it, and
  *   the picker is exactly that drawing's box — no padding, no frame, no
- *   control line, no clamp, no slot — for a picker that is a whole piece of a
- *   layout rather than a field, and which must measure the same as the same
- *   drawing placed anywhere else. `"picker"` (or an explicit
+ *   control line, no clamp — for a picker that is a whole piece of a layout
+ *   rather than a field, and which must measure the same as the same drawing
+ *   placed anywhere else. No right slot comes with it: a cross belongs inside
+ *   that drawing, at the place and the size the drawing decides, so it is
+ *   `<Picker.Clear />` the `ui` holds rather than `clearable` the picker
+ *   takes. `"picker"` (or an explicit
  *   `variant={undefined}`) asks a confirm or callout picker for the field-like
  *   drawing every other picker has.
  * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
@@ -1594,6 +1690,37 @@ const warnOnUIDrawnByNobody = (props) => {
   );
 };
 
+// `clearable` is "put the cross in the right slot", and these variants have no
+// slot to put it in — so the prop lands nowhere. Said out loud, because a
+// caller asking for a cross and getting none has no way to tell "ignored here"
+// from "broken".
+const clearableWithoutSlotWarnedSet = new Set();
+const warnOnClearableWithoutSlot = (props) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { clearable, variant } = props;
+  if (!clearable || SLOTLESS_PICKER_VARIANT_SET.has(variant) === false) {
+    return;
+  }
+  if (clearableWithoutSlotWarnedSet.has(variant)) {
+    return;
+  }
+  clearableWithoutSlotWarnedSet.add(variant);
+  console.warn(
+    `[navi] <Picker variant="${variant}" clearable> — that variant has no right slot, so no cross is drawn. ` +
+      `Draw it where it belongs instead: <Picker variant="${variant}" ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
+      `It is the same cross, and it takes itself away when there is nothing left to clear.`,
+  );
+};
+const SLOTLESS_PICKER_VARIANT_SET = new Set([
+  "icon",
+  "headless",
+  "button",
+  "text",
+  "bare",
+]);
+
 const warnOnUnknownPickerType = (props) => {
   if (!import.meta.dev) {
     return;
@@ -1624,6 +1751,7 @@ export const Picker = createComponentResolver([
 ]);
 
 Picker.Chip = PickerChip;
+Picker.Clear = PickerClear;
 
 Picker.UI = PickerDefaultUI;
 

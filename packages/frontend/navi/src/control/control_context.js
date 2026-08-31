@@ -80,9 +80,11 @@ export const CONTROL_PROP_SET = new Set([
   // same thing for every control at once.
   "constraints",
 
-  // A real target inside a zone that belongs to another control — see
-  // own_target.js.
-  "ownTarget",
+  // The interactions this element takes for itself inside a zone that belongs
+  // to another control, and what becomes of it where they are blocked — see
+  // self_interactions.js.
+  "selfInteractions",
+  "whenSelfInteractionsBlocked",
 
   "autoFocus",
   "autoFocusVisible",

@@ -96,7 +96,9 @@ available while a rerun is in flight). Where a failure goes when no screen takes
 it — and why a run settles with its error rather than rejecting — is
 [error_handling.md](./error_handling.md). `useActionStatus(action)` gives the whole
 state at once — `{ idle, loading, completed, aborted, error, data, params }` —
-for a component that needs to look at it rather than render it.
+for a component that needs to look at it rather than render it. It reads that
+very instance: to know what moves when a control is handed the action, see
+[the instance a control runs](#the-instance-a-control-runs).
 
 **Reading does not run.** `useAsyncData` waits for data someone else asked for
 — for a page, the route, through `routeAction`. A component reading an action
@@ -187,6 +189,38 @@ callback:
 </Button>
 ```
 
+## The instance a control runs
+
+A control binds the action it is given to its own UI state and runs the result.
+Which instance that is depends on whether the control carries a value:
+
+- a control with **no value of its own** — a button — contributes no params, so
+  what it runs **is** the instance it was handed. `useActionStatus` on that
+  instance sees the click, the run, the data.
+- a control that **carries a value** — an input, a form — runs the child
+  instance bound to that value. Those params are not the caller's, so neither
+  is the status: the instance the caller holds stays idle while the control's
+  run moves. Read the effect where it lands (the store, for a resource verb),
+  or listen to the run itself, below.
+
+Every control with an `action` reports the run it performs, whichever instance
+that is:
+
+```jsx
+<Button
+  action={shareAction}
+  onActionStart={(e) => {}}
+  onActionEnd={(data, e) => {}}
+  onActionError={(error, e) => {}}
+  onActionAborted={(e) => {}}
+/>
+```
+
+`onActionEnd` receives the data of a run that **completed** — a failure never
+reaches it. A failure goes to `onActionError`, alongside wherever the error is
+displayed (see [error_handling.md](./error_handling.md)); an abort to
+`onActionAborted`.
+
 ## `action` or `uiAction`
 
 Both fire when a control's value changes, and they are not two ways of writing
@@ -257,10 +291,10 @@ once per row. See
 [popup_open.md](./popup_open.md#a-press-that-opens-a-popup-and-acts-on-it).
 
 What is left for an `onClick` is what no value can express — imperative work
-with nothing to open and nothing to send. And one nuance worth knowing: on an
-`ownTarget`, a caller's `onClick` runs inside that control's own interaction
-gate rather than firing from the DOM (see
-[interactions.md](./interactions.md#an-affordance-inside-somebody-elses-box-owntarget)),
+with nothing to open and nothing to send. And one nuance worth knowing: on a
+control with `selfInteractions`, a caller's `onClick` runs inside that control's
+own interaction gate rather than firing from the DOM (see
+[interactions.md](./interactions.md#an-affordance-inside-somebody-elses-box-selfinteractions)),
 so the usual objection — an `onClick` fires on a read-only control — does not
 apply there. Everywhere else it does.
 

@@ -182,7 +182,8 @@ const css = /* css */ `
     cursor: default;
   }
   [data-drag-ignore],
-  [data-own-target],
+  [data-self-interactions~="drag"],
+  [data-self-interactions~="*"],
   [data-drag-source] [popover],
   [data-drag-source] dialog {
     cursor: auto;
@@ -281,16 +282,20 @@ import.meta.css = css;
 
 // What a press must not be read from at all. `data-drag-ignore` is said by
 // something whose press is its own business — a text one wants to select, a
-// control that reads the pointer itself. `data-own-target` is the same fact said
-// once for every gesture there is: an element declaring that a press landing on
-// it is aimed AT it, whatever it happens to sit inside (see also
-// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js). A popover or a dialog says it
-// without being asked: it is a layer OVER the surface, so a press in it is aimed
-// at the layer — yet it stays a descendant of whatever it is anchored in (a
-// callout next to a button, in the card that carries both), and the press
-// bubbles through the surface as if it had landed on it.
+// control that reads the pointer itself — and it means every gesture at once.
+// `data-self-interactions` says a narrower thing, and says which: an element
+// declaring the interactions that are ITS own, whatever it happens to sit
+// inside, the rest being left to what it sits in. Only the ones naming `drag`
+// take the grab away from the surface (see also DRAG_EXCLUDED_SELECTOR in
+// drag_to_travel.js) — an affordance that took the click alone is one a finger
+// may still pick the object up by, which is what it is for when it covers a real
+// part of that object. A popover or a dialog says it without being asked: it is
+// a layer OVER the surface, so a press in it is aimed at the layer — yet it
+// stays a descendant of whatever it is anchored in (a callout next to a button,
+// in the card that carries both), and the press bubbles through the surface as
+// if it had landed on it.
 const DRAG_IGNORED_SELECTOR =
-  "[data-drag-ignore],[data-own-target],[popover],dialog";
+  '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
 
 /**
  * Starts a drag-to-reorder interaction on a list item.

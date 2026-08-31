@@ -1,6 +1,9 @@
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(60_000);
 
 const run = async ({ runtimeCompat }) => {
   await build({

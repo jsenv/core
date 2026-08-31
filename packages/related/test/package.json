@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.7.35",
+  "version": "3.7.36",
   "type": "module",
   "repository": {
     "type": "git",
@@ -13,6 +13,7 @@
   },
   "exports": {
     ".": {
+      "browser": "./src/main_browser.js",
       "import": {
         "dev:jsenv": "./src/main.js",
         "default": "./dist/jsenv_test.js"

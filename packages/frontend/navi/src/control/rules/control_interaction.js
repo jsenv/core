@@ -26,7 +26,7 @@
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
 import { findControlHost } from "../control_dom.js";
-import { isAimedAtOwnTargetBelow } from "../own_target.js";
+import { isAimedAtSelfInteractionsBelow } from "../self_interactions.js";
 import { preventClickToExpand } from "./click_to_expand.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
@@ -250,14 +250,18 @@ export const onRequestInteraction = (
   const controlHost = findControlHost(currentTarget) || currentTarget;
 
   // Aimed at something else that lives in this control's box: a chip's cross, an
-  // eye, a diskette. The press is that affordance's alone (see own_target.js),
-  // and stepping back here — rather than stopping the propagation over there —
-  // is what leaves the event whole for everything that is not a navi
-  // interaction. Stepping back, not refusing: the reaction never happened, so
-  // its `prevented`/`always` (an `e.preventDefault()`, for most of them) have
-  // nothing to undo and would take the press from the affordance itself.
-  if (isAimedAtOwnTargetBelow(event, controlHost)) {
-    debugInteraction(event, `"${name}" is for an own target below`);
+  // eye, a diskette, claiming the press for itself (see self_interactions.js).
+  // The press is that element's alone, and stepping back here — rather than
+  // stopping the propagation over there — is what leaves the event whole for
+  // everything that is not a navi interaction. Stepping back, not refusing: the
+  // reaction never happened, so its `prevented`/`always` (an
+  // `e.preventDefault()`, for most of them) have nothing to undo and would take
+  // the press from the affordance itself.
+  if (isAimedAtSelfInteractionsBelow(event, controlHost)) {
+    debugInteraction(
+      event,
+      `"${name}" is for a self-interactions element below`,
+    );
     requestInteractionCustomEvent.preventDefault();
     return false;
   }

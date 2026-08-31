@@ -56,9 +56,10 @@ import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
 import {
-  OWN_TARGET_ATTRIBUTE,
-  ownTargetIgnoresZoneState,
-} from "./own_target.js";
+  SELF_INTERACTIONS_ATTRIBUTE,
+  selfInteractionsAttributeValue,
+  selfInteractionsIgnoreBlock,
+} from "./self_interactions.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -862,10 +863,11 @@ export const useControlProps = (
       return dispatched;
     };
 
-    // What the caller wrote runs from inside the gate when this control is an
-    // own target: a plain `onClick` is DOM, and it would fire from a cross drawn
-    // greyed by the read-only control the affordance sits in (see own_target.js).
-    const callerHandlerIsGated = Boolean(props.ownTarget);
+    // What the caller wrote runs from inside the gate when this control claims
+    // the press: a plain `onClick` is DOM, and it would fire from a cross drawn
+    // greyed by the read-only control the affordance sits in (see
+    // self_interactions.js).
+    const callerHandlerIsGated = Boolean(props.selfInteractions);
     const gateCallerHandler = (handler, e) => {
       if (!handler) {
         return undefined;
@@ -1534,13 +1536,14 @@ const useInteractiveProps = (
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
-  if (props.ownTarget) {
+  if (props.selfInteractions) {
     // One attribute, in the DOM, because that is where the claim is read from —
     // by the controls above and by the gesture readers below (see
-    // own_target.js). The prop is the ergonomic form of it and nothing more: an
-    // element an application draws itself writes the same attribute by hand.
-    controlRootProps[OWN_TARGET_ATTRIBUTE] =
-      typeof props.ownTarget === "string" ? props.ownTarget : "";
+    // self_interactions.js). The prop is the ergonomic form of it and nothing
+    // more: an element an application draws itself writes the same attribute by
+    // hand.
+    controlRootProps[SELF_INTERACTIONS_ATTRIBUTE] =
+      selfInteractionsAttributeValue(props.selfInteractions);
   }
   const { "navi-control-proxy-for": naviProxyFor } = props;
   controlHostProps["navi-control-proxy-for"] = naviProxyFor;
@@ -1578,12 +1581,12 @@ const useInteractiveProps = (
     const networkPolicyReason = useNetworkPolicyReason();
     const { disabled, required, readOnly, loading, optimistic } = props;
 
-    // `ownTarget="always"`: an affordance that writes nothing to the control it
-    // sits in has no business inheriting that control's state — a diskette
-    // saving a row into the reader's own address book stays pressable on a game
-    // nobody may edit. Its own props still hold; only what came from above is
-    // dropped (see own_target.js for the three modes).
-    const zoneStateApplies = !ownTargetIgnoresZoneState(props.ownTarget);
+    // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
+    // to the control it sits in has no business inheriting that control's state
+    // — a diskette saving a row into the reader's own address book stays
+    // pressable on a game nobody may edit. Its own props still hold; only what
+    // came from above is dropped (see self_interactions.js for the three modes).
+    const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
     const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
     const controlReadOnly = zoneStateApplies && controlReadOnlyFromAbove;
     const controlLoading = zoneStateApplies && controlLoadingFromAbove;

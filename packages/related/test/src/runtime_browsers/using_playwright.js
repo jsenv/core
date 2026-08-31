@@ -45,6 +45,7 @@ export const createRuntimeUsingPlaywright = ({
     onConsole,
     onRuntimeStarted,
     onRuntimeStopped,
+    onAllocatedMsRequested = () => {},
     teardownCallbackSet,
     isTestPlan,
 
@@ -166,6 +167,11 @@ ${webServer.rootDirectoryUrl}`);
     }
 
     const page = await browserContext.newPage();
+    // the only thing the page can tell node before it is done executing;
+    // see runtime_browsers/client/request_allocated_ms.js
+    await page.exposeFunction("__jsenv_request_allocated_ms__", (ms) => {
+      onAllocatedMsRequested(ms);
+    });
     if (!isBrowserDedicatedToExecution) {
       page.on("close", () => {
         onRuntimeStopped();

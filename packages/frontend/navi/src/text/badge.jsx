@@ -1,7 +1,7 @@
 import { useContext, useRef } from "preact/hooks";
 
 import { useControlProps } from "../control/control_hooks.jsx";
-import { useOwnTargetHidden } from "../control/own_target.js";
+import { useSelfInteractionsHidden } from "../control/self_interactions.js";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BadgeListContext } from "./badge_list_context.js";
@@ -177,9 +177,9 @@ const BadgeStyleCSSVars = {
 };
 
 const BadgeButton = (props) => {
-  const ownTargetHidden = useOwnTargetHidden(props);
+  const selfInteractionsHidden = useSelfInteractionsHidden(props);
 
-  if (ownTargetHidden) {
+  if (selfInteractionsHidden) {
     return null;
   }
   return <BadgeButtonUI {...props} />;

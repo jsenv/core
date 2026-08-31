@@ -3,6 +3,9 @@ import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/humanize";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { chromium } from "playwright";
+import { requestAllocatedMs } from "@jsenv/test";
+
+requestAllocatedMs(90_000);
 
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
