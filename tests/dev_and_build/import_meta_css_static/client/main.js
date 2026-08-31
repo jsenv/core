@@ -2,8 +2,8 @@
 import.meta.css = /* css */ `
   /* a comment */
   body {
-    background-color: blue; /* trailing comment */
     background-image: url("./jsenv.png");
+    background-color: blue; /* trailing comment */
   }
 `;
 

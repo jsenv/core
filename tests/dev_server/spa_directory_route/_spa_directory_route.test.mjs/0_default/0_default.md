@@ -4,7 +4,7 @@
 run()
 ```
 
-# 1/3 write 3 files into "./.jsenv/unknown@unknown/"
+# 1/3 write 2 files into "./.jsenv/unknown@unknown/"
 
 see [./.jsenv/unknown@unknown/](./.jsenv/unknown@unknown/)
 
