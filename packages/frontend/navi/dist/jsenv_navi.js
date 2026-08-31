@@ -44562,40 +44562,41 @@ installImportMetaCssBuild(import.meta);/**
  * a switch that moves when you flip it: the finger that opened the search has
  * to travel to close it again. Out here, the same pixel does both.
  *
- * Nothing is unmounted. Two elements that never coexist have nothing to
- * interpolate between, so both sides stay mounted at all times and only their
- * share of the middle moves: the collapsed slot falls to zero width and turns
- * inert — unreachable by finger and by keyboard — while what was typed in it
- * survives the round trip.
+ * Nothing is unmounted, and nothing is resized. Two elements that never
+ * coexist have nothing to interpolate between, so both controls stay mounted
+ * and laid out at all times, side by side on a track twice the width of the
+ * middle; the track slides, and one control pushes the other out under the cap
+ * it belongs to. A share of the middle traded between two shrinking boxes
+ * gives a wipe instead — each control squeezed live, text rewrapping under the
+ * movement, and nothing that reads as one thing arriving over another.
  *
- * Neither control ever reflows during the movement. Each one is laid out at
- * the full width of the middle (`100cqw` of the stage, which is a query
- * container) whatever its slot currently measures, so the slot uncovers a
- * finished control instead of squeezing a live one — text never rewraps
- * mid-swap, and a collapsed control is not a zero-width column of stacked
- * words silently setting the row's height.
+ * The control without the floor is off the middle rather than gone: `inert`,
+ * so no finger and no Tab reaches it, and holding what was typed in it for the
+ * round trip back.
  *
- * The row has ONE height, and everything in it is that tall: the caps because
- * they are squares of it, the two controls because they are stretched to it.
- * Nothing is measured — a height read off the controls could only come back
- * through a resize observer, and a cap made square with `aspect-ratio` never
- * reads it anyway (on a flex item stretched to its line, the main size is
- * resolved from content first). It is a length, `--navi-control-swap-size`,
- * defaulting to the height of a navi control at its default padding; a row of
- * roomier controls says so once, there.
+ * The row has ONE height, and everything in it is that tall: the caps are
+ * squares of it, the controls are given it. Nothing is measured — a height
+ * read off the controls could only come back through a resize observer, and a
+ * cap made square with `aspect-ratio` never reads it anyway (on a flex item
+ * stretched to its line, the main size is resolved from content first). It is
+ * a length, `--navi-control-swap-size`, and it is the only thing to say to
+ * make the row thinner or thicker.
  */
 const css$O = /* css */`.navi_control_swap {
-  --x-control-swap-size: var(--navi-control-swap-size, calc(var(--navi-control-line-height) + 2 *
-          var(--navi-control-padding-y-default) + 2 *
+  --x-control-swap-size: var(--navi-control-swap-size, calc(var(--navi-control-line-height) + 2 * var(--navi-s) + 2 *
           var(--navi-control-border-width)));
+  --x-control-swap-gap: var(--navi-control-swap-gap, var(--navi-xs));
   height: var(--x-control-swap-size);
   align-items: stretch;
+  gap: var(--x-control-swap-gap);
 
   & > .navi_control_swap_cap {
-    flex: 0 0 var(--x-control-swap-size);
+    aspect-ratio: 1;
+    flex: none;
     justify-content: center;
-    align-self: stretch;
     align-items: center;
+    min-width: 0;
+    height: 100%;
     position: relative;
 
     & .navi_control_swap_badge {
@@ -44612,51 +44613,43 @@ const css$O = /* css */`.navi_control_swap {
   }
 
   & > .navi_control_swap_stage {
-    flex-direction: row;
+    overflow-clip-margin: var(--navi-focus-outline-width);
     flex: 1 1 0;
     min-width: 0;
     display: flex;
+    overflow: clip;
     container-type: inline-size;
+  }
+
+  & > .navi_control_swap_stage > .navi_control_swap_track {
+    gap: var(--x-control-swap-gap);
+    flex-direction: row;
+    flex: none;
+    height: 100%;
+    display: flex;
 
     & > .navi_control_swap_slot {
-      flex: 1 1 0;
-      min-width: 0;
+      flex: 0 0 100cqw;
       display: flex;
-      overflow: hidden;
 
-      & > .navi_control_swap_control {
-        flex-direction: column;
-        flex: none;
-        justify-content: center;
-        width: 100cqw;
-        display: flex;
-
-        & > * {
-          width: 100%;
-        }
-      }
-
-      &[data-collapsed] {
-        flex-grow: 0;
-      }
-
-      &[data-pinned="end"] {
-        justify-content: flex-end;
+      & > * {
+        width: 100%;
+        height: 100%;
       }
     }
   }
 
-  &[data-settled] > .navi_control_swap_stage > .navi_control_swap_slot:not([data-collapsed]) {
-    overflow: visible;
+  &[data-active-index="1"] > .navi_control_swap_stage > .navi_control_swap_track {
+    transform: translateX(calc(-100cqw - var(--x-control-swap-gap)));
   }
 
-  &[data-animation] > .navi_control_swap_stage > .navi_control_swap_slot {
-    transition: flex-grow var(--navi-control-swap-animation-duration, .22s)
+  &[data-animation] > .navi_control_swap_stage > .navi_control_swap_track {
+    transition: transform var(--navi-control-swap-animation-duration, .22s)
         ease;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &[data-animation] > .navi_control_swap_stage > .navi_control_swap_slot {
+    &[data-animation] > .navi_control_swap_stage > .navi_control_swap_track {
       transition: none;
     }
   }
@@ -44681,13 +44674,14 @@ const css$O = /* css */`.navi_control_swap {
  *   side's name back into it whenever a press swaps it. Excludes `value`.
  * @param onChange - Called with the name of the side taking the floor, and the
  *   press that gave it.
- * @param animation - On by default: the two slots trade their share of the
- *   middle over `--navi-control-swap-animation-duration` (0.22s). `false`
- *   swaps them in one frame; `prefers-reduced-motion` does too.
+ * @param animation - On by default: the track slides from one control to the
+ *   other over `--navi-control-swap-animation-duration` (0.22s). `false` puts
+ *   it there in one frame; `prefers-reduced-motion` does too.
  *
- * The row is one length tall — `--navi-control-swap-size`, the height of a navi
- * control at its default padding — and the caps are squares of it. Controls
- * with a padding of their own need that length said once, here.
+ * The row is one length tall — `--navi-control-swap-size`, a line of text
+ * between two `s` paddings — and everything in it is that tall: the caps are
+ * squares of it, the control holding the floor fills it. `--navi-control-swap-gap`
+ * is the space between the boxes.
  */
 const ControlSwap = props => {
   import.meta.css = [css$O, "@jsenv/navi/src/control/control_swap/control_swap.jsx"];
@@ -44718,16 +44712,12 @@ const ControlSwap = props => {
   const slotIdPrefix = useId();
   const activeNameRef = useRef(activeName);
   activeNameRef.current = activeSide.name;
-
-  // The movement is over and the slots are where they belong (see the CSS).
-  const [settled, setSettled] = useState(true);
   const swapTo = (name, event) => {
     if (name === activeNameRef.current) {
       return;
     }
     activeNameRef.current = name;
     setActiveName(name);
-    setSettled(!animation);
     if (signal) {
       signal.value = name;
     }
@@ -44758,16 +44748,9 @@ const ControlSwap = props => {
   useLayoutEffect(() => {
     if (isFirstActiveRunRef.current) {
       isFirstActiveRunRef.current = false;
-      return undefined;
+      return;
     }
-    const activeSlot = slotRefs[activeIndex].current;
-    focusWithTheFloor(activeSlot, activeSide, capRefs[activeIndex].current);
-    if (!animation) {
-      return undefined;
-    }
-    return whenTransitionSettles(activeSlot, () => {
-      setSettled(true);
-    });
+    focusWithTheFloor(slotRefs[activeIndex].current, activeSide, capRefs[activeIndex].current);
   }, [activeSide.name]);
 
   // Both caps do the same thing, and it is the reason they sit outside the
@@ -44781,7 +44764,7 @@ const ControlSwap = props => {
     baseClassName: "navi_control_swap",
     role: "group",
     "data-animation": animation ? "" : undefined,
-    "data-settled": settled ? "" : undefined,
+    "data-active-index": activeIndex,
     ...rest,
     children: [jsx(ControlSwapCap, {
       ref: capRefs[0],
@@ -44791,18 +44774,16 @@ const ControlSwap = props => {
       onPress: swapOnPress
     }), jsx("div", {
       className: "navi_control_swap_stage",
-      children: sides.map((side, index) => jsx("div", {
-        ref: slotRefs[index],
-        id: `${slotIdPrefix}_${index}`,
-        className: "navi_control_swap_slot",
-        "data-pinned": index === 0 ? "start" : "end",
-        "data-collapsed": side === activeSide ? undefined : "",
-        inert: side === activeSide ? undefined : true,
-        children: jsx("div", {
-          className: "navi_control_swap_control",
+      children: jsx("div", {
+        className: "navi_control_swap_track",
+        children: sides.map((side, index) => jsx("div", {
+          ref: slotRefs[index],
+          id: `${slotIdPrefix}_${index}`,
+          className: "navi_control_swap_slot",
+          inert: index === activeIndex ? undefined : true,
           children: side.children
-        })
-      }, side.name))
+        }, side.name))
+      })
     }), jsx(ControlSwapCap, {
       ref: capRefs[1],
       side: sides[1],
@@ -44835,10 +44816,11 @@ const ControlSwap = props => {
  *   doing something (a filter set, a search typed). `true` draws a dot;
  *   anything else is drawn as given (a `<BadgeCount>`, say).
  * @param autoFocus - On by default: the focus goes into this control when it
- *   takes the floor (its `[autofocus]` element, or the first focusable one).
- *   `false` leaves it on the cap that was pressed — for a control one reads
- *   before writing in, or a phone where the keyboard must not rise yet. Never
- *   on mount, whatever the setting.
+ *   takes the floor, where navi's ladder puts it — an `autoFocus` inside the
+ *   control first, its first focusable otherwise. `false` leaves it on the cap
+ *   that was pressed, for a control one reads before writing in (and, on a
+ *   phone, for a keyboard that must not rise). Never on mount, whatever the
+ *   setting.
  */
 const ControlSwapSide = () => null;
 const ControlSwapCap = ({
@@ -44856,14 +44838,14 @@ const ControlSwapCap = ({
   return jsxs(Button, {
     ref: ref,
     className: "navi_control_swap_cap",
-    variant: "discrete",
     icon: true,
+    pressEffect: "none",
     "aria-label": label,
     "aria-expanded": active,
     "aria-controls": slotId,
     onClick: onPress,
     children: [jsx(Icon, {
-      width: "60%",
+      width: "50%",
       square: true,
       children: icon
     }), badge ? jsx("span", {
@@ -44894,32 +44876,44 @@ const readSides = children => {
 
 // The floor moved: the press that gave it landed on a cap, and what one wants
 // next is the control that just arrived — typing into the search field one just
-// opened, not pressing its icon again. So the focus follows the floor into the
-// control, unless the side refused it, and lands on the cap otherwise: whatever
-// the newly collapsed slot held is inert now and was dropped to the document
-// body by the browser, so it must go somewhere.
-const focusWithTheFloor = (activeSlot, activeSide, activeCap) => {
-  if (activeSide.autoFocus !== false) {
-    const elementToFocus = findElementToFocus(activeSlot);
-    if (elementToFocus) {
-      elementToFocus.focus();
+// opened, not pressing its icon again.
+//
+// WHERE inside is navi's own ladder (findFocusTarget): an `autoFocus` in the
+// control's own content first, the first focusable otherwise, a last resort
+// after that. Unlike an arriving popup it keeps the first focusable even where
+// the pointer is coarse (see docs/autofocus.md): a cap is pressed to reach the
+// control it names, so a keyboard rising is the answer to that gesture rather
+// than a cost imposed on a screen that merely appeared. A side one reads before
+// writing in says `autoFocus={false}`.
+const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
+  if (arrivingSide.autoFocus !== false) {
+    const found = findFocusTarget(arrivingSlot);
+    if (found) {
+      focusOnTheFloor(found.target);
       return;
     }
   }
+  // Whatever the leaving slot held is inert and off the window now, so the
+  // browser dropped its focus to the document body: it has to land somewhere,
+  // and the cap of the side taking over is where the gesture was.
   const {
     activeElement
   } = document;
   if (!activeElement || activeElement === document.body) {
-    activeCap.focus();
+    focusOnTheFloor(arrivingCap);
   }
 };
-const findElementToFocus = slot => {
-  const autofocusElement = slot.querySelector("[autofocus]");
-  if (autofocusElement) {
-    return autofocusElement;
-  }
-  return findAfter(slot, elementIsFocusable, {
-    root: slot
+
+// Whether a ring shows is the modality of what asked for the swap, not the fact
+// that this focus comes from code — a cap pressed with the mouse must not leave
+// a ring on the field. An editable target draws its ring on any focus, so the
+// native :focus-visible is told the same. preventScroll because the control is
+// off the window until the track arrives, and a browser revealing it would take
+// the page with it. (The rules are focus_transfer.js's; so is the reasoning.)
+const focusOnTheFloor = target => {
+  target.focus({
+    preventScroll: true,
+    focusVisible: isKeyboardModality() || isEditableTarget(target)
   });
 };
 
