@@ -2,6 +2,7 @@
   "name": "whatever",
   "private": true,
   "dependencies": {
+    "bar": "1.0.0",
     "foo": "1.0.1"
   }
 }

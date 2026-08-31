@@ -6,6 +6,10 @@
  *
  * node_modules is not watched, so what tells the dev server the install is over
  * is the installed version becoming the declared one.
+ *
+ * main.js imports two packages, and only one of them moves: a file depends on
+ * one package.json per package it imports, and a version bump must be seen
+ * whichever of them was resolved first.
  */
 
 import { assert } from "@jsenv/assert";
@@ -29,6 +33,13 @@ const run = async () => {
   replaceFileStructureSync({
     from: new URL("./fixtures/foo_1.0.0/", import.meta.url),
     to: new URL("./node_modules/foo/", sourceDirectoryUrl),
+  });
+  // bar is installed at the version package.json asks for: it is there to be
+  // the OTHER package main.js imports, so that foo's version is tracked next
+  // to a package whose version never moves
+  replaceFileStructureSync({
+    from: new URL("./fixtures/bar/", import.meta.url),
+    to: new URL("./node_modules/bar/", sourceDirectoryUrl),
   });
   const devServer = await startDevServer({
     logLevel: "off",
@@ -139,6 +150,32 @@ const run = async () => {
         rendered: "43",
         warningOverlay: false,
       };
+      assert({ actual, expect });
+    }
+
+    every_package_is_loaded_from_its_installed_version: {
+      // The value alone cannot tell whether the reload was enough: the files
+      // behind an outdated "?v=" are re-read from disk and answer 43 too. What
+      // must have moved is the "?v=" main.js was cooked with — a specifier
+      // still naming 1.0.0 is a second copy of foo, living under a url nothing
+      // else resolves to.
+      const resourceUrls = await page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .map((resourceEntry) => resourceEntry.name),
+      );
+      const actual = Array.from(
+        new Set(
+          resourceUrls
+            .filter((url) => url.includes("/node_modules/"))
+            .map((url) => url.slice(url.indexOf("/node_modules/"))),
+        ),
+      ).sort();
+      const expect = [
+        "/node_modules/bar/index.js?v=1.0.0",
+        "/node_modules/foo/answer.js?v=1.0.1",
+        "/node_modules/foo/index.js?v=1.0.1",
+      ];
       assert({ actual, expect });
     }
   } finally {
