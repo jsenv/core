@@ -12154,6 +12154,25 @@ const splitFileExtension = (filename) => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
+const resolveImportIdPath = (ownerUrlInfo, dynamicImportId) => {
+  const ancestorImportIds = [];
+  let ancestorUrlInfo = ownerUrlInfo;
+  let currentImportId = dynamicImportId;
+  while (ancestorUrlInfo) {
+    const ancestorDynamicImportId =
+      ancestorUrlInfo.searchParams.get("dynamic_import_id");
+    if (!ancestorDynamicImportId) {
+      break;
+    }
+    if (ancestorDynamicImportId !== currentImportId) {
+      ancestorImportIds.push(ancestorDynamicImportId);
+      currentImportId = ancestorDynamicImportId;
+    }
+    ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
+  }
+  return [...ancestorImportIds, dynamicImportId].join("/");
+};
+
 const determineDirectoryPath = ({
   sourceDirectoryUrl,
   assetsDirectory,
@@ -12176,23 +12195,24 @@ const determineDirectoryPath = ({
   }
   const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
   if (dynamicImportId) {
-    const ancestorImportIds = [];
-    let ancestorUrlInfo = ownerUrlInfo;
-    let currentImportId = dynamicImportId;
-    while (ancestorUrlInfo) {
-      const ancestorDynamicImportId =
-        ancestorUrlInfo.searchParams.get("dynamic_import_id");
-      if (!ancestorDynamicImportId) {
-        break;
-      }
-      if (ancestorDynamicImportId !== currentImportId) {
-        ancestorImportIds.push(ancestorDynamicImportId);
-        currentImportId = ancestorDynamicImportId;
-      }
-      ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
+    // Inside the isolated group that asked for it — but only while ONE did.
+    // A chunk several groups reach belongs to none of them: put inside the
+    // first asker it would move the day another one asks first, and the others
+    // would import it out of a sibling's directory.
+    const importIdPathSet = new Set();
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      importIdPathSet.add(
+        resolveImportIdPath(referenceFromOther.ownerUrlInfo, dynamicImportId),
+      );
     }
-    const importIdPath = [...ancestorImportIds, dynamicImportId].join("/");
-    return `${assetsDirectory}${importIdPath}/`;
+    if (importIdPathSet.size === 0) {
+      importIdPathSet.add(resolveImportIdPath(ownerUrlInfo, dynamicImportId));
+    }
+    if (importIdPathSet.size === 1) {
+      const [importIdPath] = importIdPathSet;
+      return `${assetsDirectory}${importIdPath}/`;
+    }
+    return `${assetsDirectory}${dynamicImportId}/`;
   }
   if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";
@@ -12943,12 +12963,10 @@ entryPoints: {
     for (const entryPoint of entryPointArray) {
       let { runtimeCompat } = entryPoint.params;
       if (runtimeCompat === undefined) {
-        const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
-          entryPoint.sourceUrl,
-          {
+        const runtimeCompatFromPackage =
+          await inferRuntimeCompatFromClosestPackage(entryPoint.sourceUrl, {
             runtimeType: entryPoint.runtimeType,
-          },
-        );
+          });
         if (runtimeCompatFromPackage) {
           entryPoint.params.runtimeCompat = runtimeCompat =
             runtimeCompatFromPackage;

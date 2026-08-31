@@ -679,12 +679,10 @@ entryPoints: {
     for (const entryPoint of entryPointArray) {
       let { runtimeCompat } = entryPoint.params;
       if (runtimeCompat === undefined) {
-        const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
-          entryPoint.sourceUrl,
-          {
+        const runtimeCompatFromPackage =
+          await inferRuntimeCompatFromClosestPackage(entryPoint.sourceUrl, {
             runtimeType: entryPoint.runtimeType,
-          },
-        );
+          });
         if (runtimeCompatFromPackage) {
           entryPoint.params.runtimeCompat = runtimeCompat =
             runtimeCompatFromPackage;

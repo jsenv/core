@@ -14,6 +14,8 @@
       #container {
         max-width: 900px;
         margin: 0 auto;
+        /* The page's own theme, so the rows read as they would in an app. */
+        --navi-control-border-radius: 8px;
       }
       h2 {
         margin: 0 0 4px;
@@ -155,7 +157,7 @@
         <div class="demo-section">
           <Heading id="nominal">Cas nominal</Heading>
           <div class="phone">
-            <ControlSwap spacing="xs">
+            <ControlSwap>
               {whereSide()}
               {whatSide()}
             </ControlSwap>
@@ -171,7 +173,7 @@
           <Box flex="y" spacing="m">
             <Variant caption="defaultValue absent : la première side">
               <div class="phone">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -179,7 +181,7 @@
             </Variant>
             <Variant caption='defaultValue="what"'>
               <div class="phone">
-                <ControlSwap spacing="xs" defaultValue="what">
+                <ControlSwap defaultValue="what">
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -197,7 +199,7 @@
           <div class="demo-section">
             <Heading id="badge">badge</Heading>
             <div class="phone">
-              <ControlSwap spacing="xs">
+              <ControlSwap>
                 {whereSide()}
                 <ControlSwap.Side
                   name="what"
@@ -227,7 +229,7 @@
           <Box flex="y" spacing="m">
             <Variant caption="par défaut">
               <div class="phone">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -235,7 +237,7 @@
             </Variant>
             <Variant caption="autoFocus={false} sur la side de recherche">
               <div class="phone">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide({ autoFocus: false })}
                 </ControlSwap>
@@ -243,7 +245,7 @@
             </Variant>
             <Variant caption='defaultValue="what" : rien au montage'>
               <div class="phone">
-                <ControlSwap spacing="xs" defaultValue="what">
+                <ControlSwap defaultValue="what">
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -261,7 +263,7 @@
           <Box flex="y" spacing="m">
             <Variant caption="par défaut">
               <div class="phone">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -269,7 +271,7 @@
             </Variant>
             <Variant caption="animation={false}">
               <div class="phone">
-                <ControlSwap spacing="xs" animation={false}>
+                <ControlSwap animation={false}>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -278,7 +280,6 @@
             <Variant caption="--navi-control-swap-animation-duration: 1s">
               <div class="phone">
                 <ControlSwap
-                  spacing="xs"
                   style={{ "--navi-control-swap-animation-duration": "1s" }}
                 >
                   {whereSide()}
@@ -298,7 +299,7 @@
           <Box flex="y" spacing="m">
             <Variant caption="320px">
               <div class="phone">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -306,7 +307,7 @@
             </Variant>
             <Variant caption="640px">
               <div class="wide">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -314,7 +315,7 @@
             </Variant>
             <Variant caption="fontSize 24px">
               <div class="phone" style="font-size: 24px">
-                <ControlSwap spacing="xs">
+                <ControlSwap>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -322,10 +323,7 @@
             </Variant>
             <Variant caption="--navi-control-swap-size: 40px">
               <div class="phone">
-                <ControlSwap
-                  spacing="xs"
-                  style={{ "--navi-control-swap-size": "40px" }}
-                >
+                <ControlSwap style={{ "--navi-control-swap-size": "40px" }}>
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>
@@ -350,7 +348,6 @@
               </Box>
               <div class="phone">
                 <ControlSwap
-                  spacing="xs"
                   value={value}
                   onChange={(name, event) => {
                     setValue(name);
@@ -376,7 +373,7 @@
           <Heading id="signal">signal</Heading>
           <Box flex="y" spacing="m">
             <div class="phone">
-              <ControlSwap spacing="xs" signal={sideSignal}>
+              <ControlSwap signal={sideSignal}>
                 {whereSide()}
                 {whatSide()}
               </ControlSwap>

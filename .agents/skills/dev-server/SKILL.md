@@ -17,6 +17,15 @@ Defined in [src/dev/start_dev_server.js](../../../src/dev/start_dev_server.js). 
 
 It always registers `jsenvPluginServerEvents` and `jsenvPluginClientMonitoring` first, then user `plugins`, then core plugins. Plugin collection happens in [src/plugins/jsenv_plugins_controller.js](../../../src/plugins/jsenv_plugins_controller.js).
 
+## The browser target is shared with the build
+
+`runtimeCompat` is not a dev-server setting: `startDevServer` and `build`
+resolve the same value the same way (explicit param → `browserslist` in the
+closest `package.json` → the shared default), so that a page cannot work here
+and break once built. Anything touching how it is resolved, or how a feature is
+judged supported, belongs to the pair — see
+[.agents/skills/build/SKILL.md](../build/SKILL.md).
+
 ## Plugin shape
 
 A jsenv plugin is a plain object. Fields fall into **non-hooks** (passed through) and **hooks** (invoked by the controller) — see `JSENV_PLUGIN_DESCRIPTION` in the controller.

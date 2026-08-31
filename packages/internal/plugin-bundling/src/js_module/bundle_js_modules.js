@@ -370,8 +370,24 @@ const rollupPluginJsenv = ({
     return new URL(specifier, importer);
   };
 
+  // The id forks a module into an isolated copy, so a module asked for twice
+  // gets ONE id and stays one copy — two isolated groups reaching the same
+  // dependency share it instead of each carrying an identical file. The
+  // counter below is then only what it is for: telling apart two DIFFERENT
+  // modules whose basename happens to be the same.
+  //
+  // Sharing costs the isolation nothing here: what is shared is reached
+  // through a dynamic import, so it is still loaded on demand, by whoever
+  // actually asks for it, and neither group loads the other's code.
   const dynamicImportIdSet = new Set();
+  const dynamicImportIdMap = new Map();
   const assignDynamicImportId = (urlImportedDynamically) => {
+    const dynamicImportIdFromMap = dynamicImportIdMap.get(
+      urlImportedDynamically,
+    );
+    if (dynamicImportIdFromMap) {
+      return dynamicImportIdFromMap;
+    }
     const urlInfo = kitchen.graph.getUrlInfo(urlImportedDynamically);
     let dynamicImportIdBase =
       urlInfo && urlInfo.filenameHint
@@ -385,6 +401,7 @@ const rollupPluginJsenv = ({
     }
     const dynamicImportId = dynamicImportIdCandidate;
     dynamicImportIdSet.add(dynamicImportId);
+    dynamicImportIdMap.set(urlImportedDynamically, dynamicImportId);
     return dynamicImportId;
   };
 
@@ -618,6 +635,23 @@ const rollupPluginJsenv = ({
             const originalFileUrl = getOriginalUrl(chunkInfo, true);
             const urlInfo = kitchen.graph.getUrlInfo(originalFileUrl);
             if (urlInfo && urlInfo.filenameHint) {
+              // The hint is read with the dynamic import id stripped, so every
+              // isolated copy of a module hands back the same name and rollup
+              // separates them with a counter of its own — a second numbering
+              // of one collision, in another format, beside the directory the
+              // id already names. The id IS what makes a copy distinct, so it
+              // is what the file is called; where nothing collides it spells
+              // the hint back.
+              const dynamicImportId = new URL(
+                getOriginalUrl(chunkInfo, false),
+              ).searchParams.get("dynamic_import_id");
+              if (dynamicImportId) {
+                const { filenameHint } = urlInfo;
+                const dotIndex = filenameHint.lastIndexOf(".");
+                const extension =
+                  dotIndex === -1 ? "" : filenameHint.slice(dotIndex);
+                return `${dynamicImportId}${extension}`;
+              }
               return urlInfo.filenameHint;
             }
           }

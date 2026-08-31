@@ -78,6 +78,8 @@ node --conditions=dev:jsenv <file>
 
 These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
 
+There is exactly one family of question this flag is wrong for: what a consumer of the **published** package receives — tree-shaking, `sideEffects`, chunking, packaging. None of that exists when running from source, so such a bug can be neither reproduced nor dismissed that way; it is answered against `dist/`. See [.agents/skills/build/SKILL.md](skills/build/SKILL.md).
+
 ## Key Architectural Principles
 
 - **Standards-First**: Built on web standards, native ES modules, modern JavaScript, CSS variables

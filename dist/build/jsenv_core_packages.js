@@ -6786,6 +6786,7 @@ const featuresCompatMap = {
     samsung: "15",
     firefox: "108",
     safari: "16.4",
+    ios_safari: "16.4",
   },
   import_type_json: {
     chrome: "123",
@@ -6812,6 +6813,7 @@ const featuresCompatMap = {
     safari: "4",
     ios_safari: "5",
     android: "4.4",
+    samsung: "4",
   },
   // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
   worker_type_module: {
@@ -6829,6 +6831,7 @@ const featuresCompatMap = {
     opera: "27",
     ios_safari: "11.3",
     android: "12.12",
+    samsung: "4",
   },
   service_worker_type_module: {
     chrome: "80",
@@ -6881,6 +6884,7 @@ const featuresCompatMap = {
     ios_safari: "9",
     android: "4",
     node: "4",
+    samsung: "4",
   },
   arrow_function: {
     chrome: "47",
@@ -7016,7 +7020,7 @@ const inferRuntimeCompatFromClosestPackage = async (
     if (!browserslistQuery) {
       return null;
     }
-    const namespace = await import("./browserslist_index_1/browserslist_index2.js");
+    const namespace = await import("../browserslist_index/browserslist_index.js");
     const browserslist = namespace.default;
     const browserslistResult = browserslist(browserslistQuery);
     const runtimeCompat = {};
