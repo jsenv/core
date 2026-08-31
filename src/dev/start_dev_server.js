@@ -13,10 +13,13 @@ import {
   urlToFileSystemPath,
   urlToRelativeUrl,
 } from "@jsenv/urls";
+import {
+  browserDefaultRuntimeCompat,
+  inferRuntimeCompatFromClosestPackage,
+} from "@jsenv/runtime-compat";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
 import { watchDependencies } from "../helpers/watch_dependencies.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
@@ -104,10 +107,11 @@ export const startDevServer = async ({
   // a test wants them all, hence 0 there.
   serverTiming = { minDuration: EXECUTED_BY_TEST_PLAN ? 0 : 0.5 },
 
-  // runtimeCompat is the runtimeCompat for the build
-  // when specified, dev server use it to warn in case
-  // code would be supported during dev but not after build
-  runtimeCompat = defaultRuntimeCompat,
+  // The runtimeCompat the build will use: the dev server warns when code works
+  // in dev but would not survive that build, and transpiles what those runtimes
+  // lack. Left out, it is inferred exactly as build() infers it, so the two
+  // never disagree on what they target.
+  runtimeCompat,
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -179,6 +183,12 @@ export const startDevServer = async ({
   }
   // params normalization
   {
+    if (runtimeCompat === undefined) {
+      runtimeCompat =
+        (await inferRuntimeCompatFromClosestPackage(sourceDirectoryUrl, {
+          runtimeType: "browser",
+        })) || browserDefaultRuntimeCompat;
+    }
     if (clientAutoreload === true) {
       clientAutoreload = {};
     }

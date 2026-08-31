@@ -70,7 +70,7 @@ import { isBareSpecifier } from "../helpers/bare_specifier.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { renderBuildDoneLog } from "./build_content_report.js";
-import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
+import { logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
@@ -981,7 +981,7 @@ entryPoints: {
 const entryPointDefaultParams = {
   buildRelativeUrl: undefined,
   mode: undefined,
-  runtimeCompat: defaultRuntimeCompat,
+  runtimeCompat: undefined,
   plugins: [],
   mappings: undefined,
   assetsDirectory: undefined,
