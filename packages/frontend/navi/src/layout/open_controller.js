@@ -239,7 +239,7 @@ export const createOpenController = (
     // previous subject first.
     onOpen: null,
     // The counterpart, set only when the popup was told to throw its content
-    // away on close (`unmountWhenClosed`). Called from performClose above.
+    // away on close (`mount="while-opened"`). Called from performClose above.
     unmountContent: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
     // interaction, a command, a prop — with the event that asked. What lets a

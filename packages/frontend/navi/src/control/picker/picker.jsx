@@ -1409,8 +1409,7 @@ const PickerFirstResolver = (props) => {
  *   popupTestId?: string,
  *   confirmTestId?: string,
  *   cancelTestId?: string,
- *   mountWhenClosed?: boolean,
- *   unmountWhenClosed?: boolean,
+ *   mount?: "always" | "from-first-open" | "while-opened",
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -1636,13 +1635,12 @@ const PickerFirstResolver = (props) => {
  *   Both are elements navi builds, which a test may not name by class (see
  *   docs/testid.md).
  * @param {string} [cancelTestId]
- * @param {boolean} [mountWhenClosed] The popup's own (see Popup): build the
- *   children before any opening. Left out, a picker told no value builds them
- *   right away — it reads its value off the control they hold — and one told
- *   a value waits for the first open. A `type="confirm"` picker never builds
- *   them early: its popup is a question, there is nothing to read.
- * @param {boolean} [unmountWhenClosed] The popup's own: throw the children
- *   away once the popup has closed.
+ * @param {"always"|"from-first-open"|"while-opened"} [mount] The popup's own
+ *   (see Popup): when the children are built and thrown away. Left out, a
+ *   picker told no value builds them right away (`"always"`) — it reads its
+ *   value off the control they hold — and one told a value waits for the first
+ *   open. A `type="confirm"` picker never builds them early: its popup is a
+ *   question, there is nothing to read.
  */
 // Every picker type is resolved into one of these before it gets here (see
 // PickerTypeResolver and resolveInputProps): a native input type, or navi_js

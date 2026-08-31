@@ -169,7 +169,7 @@ which one — so the press says it, with its own value:
 
 <Dialog
   id="radar-dialog"
-  unmountWhenClosed
+  mount="while-opened"
   onOpen={(e) => {
     editedRadarIdSignal.value = e.detail.value; // undefined = création
   }}
@@ -200,7 +200,7 @@ The order is the whole point, and it is a guarantee, not a coincidence:
 
 ```
 onOpen(openEvent)   ← the subject is decided here
-children mounted    ← unmountWhenClosed rebuilds them from scratch, on that subject
+children mounted    ← mount="while-opened" rebuilds them from scratch, on that subject
 positioned, shown
 ```
 
@@ -221,7 +221,7 @@ knowing why:
 `onnavi_command` receives the whole command string and its value, but it runs
 **after** the opening: whatever it writes lands on a popup that is already open.
 That works only as long as nothing has read the state yet — which
-`unmountWhenClosed` makes a real race rather than a theoretical one.
+`mount="while-opened"` makes a real race rather than a theoretical one.
 
 A `navi_request_open` listener added on the element is the request itself, ahead
 of the popup acting on it — but it is ordered against the popup's own handler by
@@ -609,23 +609,28 @@ A closed popup builds nothing: `children` are mounted on the first open, and
 stay mounted afterwards — a reopened popup finds its scroll position and its
 half-typed form where it left them.
 
-Two props move that line:
+"Closed" is two states, not one — never opened yet, and closed again after an
+opening — so the `mount` prop answers both at once:
 
-| prop                | effect                                                                                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `mountWhenClosed`   | build `children` right away — for content something depends on before any opening (a value read off it, fields a surrounding form submits, a size measured from outside) |
-| `unmountWhenClosed` | throw `children` away once the popup has finished closing — for content whose fresh state is its initial state                                                           |
+| `mount`                       | before the first open | after a close |
+| ----------------------------- | --------------------- | ------------- |
+| `"always"`                    | mounted               | mounted       |
+| `"from-first-open"` (default) | not mounted           | mounted       |
+| `"while-opened"`              | not mounted           | not mounted   |
 
-`unmountWhenClosed` is what an uncontrolled field seeded from a `defaultValue`
+`"always"` is for content something depends on before any opening: a value read
+off it, fields a surrounding form submits, a size measured from outside.
+
+`"while-opened"` is what an uncontrolled field seeded from a `defaultValue`
 needs: without it, a popup reopened after the underlying value changed still
 shows what it showed at closing time.
 
 ```jsx
-<Dialog ref={dialogRef} unmountWhenClosed>
+<Dialog ref={dialogRef} mount="while-opened">
   <Textarea defaultValue={note.text} />
 </Dialog>
 ```
 
 The content is dropped only once the exit transition is over, so the popup never
 plays it on a blank surface; a popup reopened while it was leaving keeps the
-content that opening just asked for. `mountWhenClosed` wins if both are set.
+content that opening just asked for.

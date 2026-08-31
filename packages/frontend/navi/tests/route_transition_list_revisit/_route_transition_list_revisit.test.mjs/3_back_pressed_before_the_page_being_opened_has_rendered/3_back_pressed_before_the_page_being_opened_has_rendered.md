@@ -5,7 +5,10 @@ const [without_transition, with_transition] = await Promise.all([
   openAndComeBack("plain_wm", { rushBack: true }),
   openAndComeBack("animated_wm", { rushBack: true }),
 ]);
-return { without_transition, with_transition };
+return {
+  without_transition: summarizeRushedRevisits(without_transition),
+  with_transition: summarizeRushedRevisits(with_transition),
+};
 ```
 
 ```js
@@ -15,26 +18,24 @@ return { without_transition, with_transition };
       "range_asks": 1,
       "many_asks": 0
     },
-    "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
-    "same_node_on_each_revisit": "----------",
     "transitions_played": 0,
     "transition_left_on_root": false,
-    "errors": []
+    "errors": [],
+    "revisits": "10/10 lawful: never left (same node, no ask) or truly came back (remounted, one ask)"
   },
   "with_transition": {
     "on_first_load": {
       "range_asks": 1,
       "many_asks": 0
     },
-    "range_asked_on_each_revisit": "0000100000",
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
-    "same_node_on_each_revisit": "SSSS-SSSSS",
     "transitions_played": 30,
     "transition_left_on_root": false,
-    "errors": []
+    "errors": [],
+    "revisits": "10/10 lawful: never left (same node, no ask) or truly came back (remounted, one ask)"
   }
 }
 ```

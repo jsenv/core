@@ -42835,6 +42835,34 @@ const DetailsFieldContent = ({
 };
 
 /**
+ * Runs `fn` and commits whatever it re-renders before returning, instead of
+ * letting Preact batch it into the next microtask. Layout effects of what gets
+ * mounted run inside the call too, exactly as they would on any other commit.
+ *
+ * For the caller that has to read the DOM it just asked for — measuring an
+ * element whose content it mounts in the same breath — and cannot wait a tick
+ * to do it, because what comes after is a browser event still in flight
+ * (preventDefault, focus placement) that no longer accepts being answered late.
+ *
+ * `options.debounceRendering` is Preact's own hook for deciding *when* the
+ * render queue drains; swapping it for "right now" for the duration of the call
+ * is exactly how preact/compat implements React's flushSync. Reserve it for the
+ * case above: rendering synchronously in the middle of an event gives up the
+ * batching that makes several state changes one commit.
+ */
+const flushSyncRendering = (fn) => {
+  const debounceRenderingPrevious = options.debounceRendering;
+  options.debounceRendering = (drainRenderQueue) => {
+    drainRenderQueue();
+  };
+  try {
+    fn();
+  } finally {
+    options.debounceRendering = debounceRenderingPrevious;
+  }
+};
+
+/**
  * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
  * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
  * of which of the two owns it.
@@ -43047,6 +43075,96 @@ const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
   return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
 };
 
+/**
+ * When a popup builds what it holds, and when it throws it away.
+ *
+ * A closed popup shows nothing, focuses nothing, and answers nothing: what it
+ * holds is out of reach until it opens. Building that content at mount time
+ * means a page carrying a handful of closed popups pays, on the very render
+ * that decides how fast it appears, for content nobody has asked for — and
+ * pays again on every subsequent measurement, since each of those nodes makes
+ * the document the rest of the page queries bigger.
+ *
+ * So the content is built when the popup first opens, and stays built from
+ * then on: closing is not throwing away, and a reopened popup finds its scroll
+ * position, its half-typed form and its list state where it left them.
+ *
+ * It is built synchronously, from inside `openController.open()` and before
+ * `openEffect` runs (see open_controller.js), so the popup still measures real
+ * content when it positions and animates itself, and so anything inside it
+ * still observes the opening the way it always did — mounted while the popup
+ * reads as closed, told it opened right after (see
+ * use_displayed_layout_effect.js).
+ *
+ * The `mount` prop moves that line. "closed" is two states, not one — never
+ * opened yet, and closed again after an opening — and the three values answer
+ * both at once:
+ *
+ * | mount             | before the first open | after a close |
+ * | ----------------- | --------------------- | ------------- |
+ * | "always"          | mounted               | mounted       |
+ * | "from-first-open" | not mounted           | mounted       |
+ * | "while-opened"    | not mounted           | not mounted   |
+ *
+ * "always" is for content something else depends on before any opening: a
+ * value the popup's owner reads off its own children, fields a form around it
+ * collects on submit, a size measured from outside.
+ *
+ * "while-opened" is the opposite end: content that must be rebuilt from
+ * scratch every time, because what it shows is read once at build time and can
+ * change while the popup is closed — an uncontrolled field seeded from a
+ * `defaultValue`, a form whose fresh state is its initial state.
+ */
+
+
+const MOUNT_DEFAULT = "from-first-open";
+
+const usePopupContentMount = (
+  openController,
+  ref,
+  { children, mount = MOUNT_DEFAULT },
+) => {
+  const mountedAlways = mount === "always";
+  const [contentMounted, setContentMounted] = useState(
+    () => mountedAlways || openController.opened,
+  );
+  openController.mountContent = contentMounted
+    ? null
+    : () => {
+        flushSyncRendering(() => {
+          setContentMounted(true);
+        });
+      };
+  openController.unmountContent =
+    mount === "while-opened"
+      ? () => {
+          const element = ref?.current;
+          if (!element) {
+            setContentMounted(false);
+            return;
+          }
+          // The popup is still on screen while it plays its exit transition;
+          // emptying it right away would show that transition running on a
+          // blank surface.
+          whenTransitionSettles(element, () => {
+            if (openController.opened) {
+              // reopened while it was leaving — the content it holds is the
+              // one that open just asked for
+              return;
+            }
+            setContentMounted(false);
+          });
+        }
+      : null;
+  useLayoutEffect(() => {
+    if (mountedAlways) {
+      setContentMounted(true);
+    }
+  }, [mountedAlways]);
+
+  return contentMounted ? children : null;
+};
+
 installImportMetaCssBuild(import.meta);/**
  * Expandable: an in-flow disclosure — a UI part that reveals a content part.
  * It covers the same ground as <Details> with structural differences:
@@ -43087,10 +43205,9 @@ installImportMetaCssBuild(import.meta);/**
  *   events.
  *
  * Content is not built until the first expansion and stays built afterwards —
- * same policy, same prop names as popups (see popup_content_mount.js):
- * `mountWhenClosed` builds it right away, `unmountWhenClosed` throws it away
- * once the collapse settles (so a closing animation still plays on real
- * content).
+ * same policy, same `mount` prop as popups (see popup_content_mount.js):
+ * `"always"` builds it right away, `"while-opened"` throws it away once the
+ * collapse settles (so a closing animation still plays on real content).
  *
  * The animation is a REVEAL, not a resize: the expandable's own footprint
  * grows/shrinks progressively (the content's grid track interpolates
@@ -43252,8 +43369,7 @@ const useExpandableContext = partName => {
  *   layout?: "row" | "column",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
- *   mountWhenClosed?: boolean,
- *   unmountWhenClosed?: boolean,
+ *   mount?: "always" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
  *   openKeyShortcut?: string,
  *   closeKeyShortcut?: string,
@@ -43290,13 +43406,15 @@ const useExpandableContext = partName => {
  *   the UI part (it would otherwise be lost to the closed, inert content).
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
- * @param mountWhenClosed - Builds the content right away instead of on first
- *   expansion. In layout="column" it also gives the closed expandable its
- *   content's height (the content is kept laid out at its open width), so
- *   opening only reveals the width instead of changing the height too.
- * @param unmountWhenClosed - Throws the content away once the collapse
- *   settles — after the closing animation, so it still plays on real content —
- *   and rebuilds it from scratch on every expansion.
+ * @param mount - When the content is built and thrown away, same three values
+ *   as a popup's (see popup_content_mount.js). `"from-first-open"` (the
+ *   default) builds it on the first expansion and keeps it afterwards.
+ *   `"always"` builds it right away; in layout="column" it also gives the
+ *   closed expandable its content's height (the content is kept laid out at
+ *   its open width), so opening only reveals the width instead of changing the
+ *   height too. `"while-opened"` throws the content away once the collapse
+ *   settles — after the closing animation, so it still plays on real
+ *   content — and rebuilds it from scratch on every expansion.
  */
 const Expandable = props => {
   import.meta.css = [css$Q, "@jsenv/navi/src/control/expandable/expandable.jsx"];
@@ -43312,8 +43430,7 @@ const Expandable = props => {
     layout,
     autoFocus,
     maxContentHeight,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount = MOUNT_DEFAULT,
     arrowKeyShortcuts = true,
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
@@ -43326,7 +43443,9 @@ const Expandable = props => {
   const contentContainerRef = useRef();
   const contentId = useId();
   const isColumn = layout === "column";
-  const closedContentSized = Boolean(isColumn && mountWhenClosed);
+  const mountedAlways = mount === "always";
+  const mountedWhileOpened = mount === "while-opened";
+  const closedContentSized = isColumn && mountedAlways;
   // Reading .value during render is what subscribes the expandable to it.
   const openRequested = signal ? signal.value : open;
   const [opened, setOpened] = useState(() => Boolean(openRequested === undefined ? defaultOpen : openRequested));
@@ -43337,13 +43456,10 @@ const Expandable = props => {
   const {
     loading: actionLoading
   } = useActionStatus(effectiveAction);
-  const [contentMounted, setContentMounted] = useState(() => Boolean(mountWhenClosed) || opened);
-  // Same exclusion as popup_content_mount.js: content that must exist while
-  // closed cannot also be thrown away on close.
-  const effectiveUnmountWhenClosed = unmountWhenClosed && !mountWhenClosed;
+  const [contentMounted, setContentMounted] = useState(() => mountedAlways || opened);
 
   // Fully open and no longer moving — what allows overflow to become visible
-  // (see the CSS) and what unmountWhenClosed waits for before emptying.
+  // (see the CSS) and what mount="while-opened" waits for before emptying.
   const [settled, setSettled] = useState(true);
 
   // Read before the close touches the DOM: flipping the content to inert can
@@ -43410,7 +43526,7 @@ const Expandable = props => {
     focusedAtPointerDownRef.current = null;
     setOpened(nextOpen);
     // Flipped here, before the closing/opening commit, so effects of that very
-    // commit already see the movement as started — unmountWhenClosed must not
+    // commit already see the movement as started — mount="while-opened" must not
     // read a stale "settled" and empty the content under a closing animation.
     setSettled(!animation);
     if (signal) {
@@ -43532,17 +43648,17 @@ const Expandable = props => {
     return cancel;
   }, [opened]);
   useLayoutEffect(() => {
-    if (settled && !opened && effectiveUnmountWhenClosed) {
+    if (settled && !opened && mountedWhileOpened) {
       setContentMounted(false);
     }
-  }, [settled, opened, effectiveUnmountWhenClosed]);
+  }, [settled, opened, mountedWhileOpened]);
   useLayoutEffect(() => {
-    if (mountWhenClosed) {
+    if (mountedAlways) {
       setContentMounted(true);
     }
-  }, [mountWhenClosed]);
+  }, [mountedAlways]);
 
-  // closedContentSized (column + mountWhenClosed): the closed content sizes
+  // closedContentSized (column + mount="always"): the closed content sizes
   // the height (see the CSS), which is only right if it lies at its OPEN
   // width — at its natural closed width (a 0-wide track) it would wrap
   // against nothing and stack word by word. So while closed, its width is
@@ -53902,7 +54018,7 @@ const createOpenController = (
     // previous subject first.
     onOpen: null,
     // The counterpart, set only when the popup was told to throw its content
-    // away on close (`unmountWhenClosed`). Called from performClose above.
+    // away on close (`mount="while-opened"`). Called from performClose above.
     unmountContent: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
     // interaction, a command, a prop — with the event that asked. What lets a
@@ -54372,111 +54488,6 @@ const getAvailableWidth = (layer, element) => {
     return getPositionedParent(element).clientWidth;
   }
   return visualViewportWidthSignal.peek();
-};
-
-/**
- * Runs `fn` and commits whatever it re-renders before returning, instead of
- * letting Preact batch it into the next microtask. Layout effects of what gets
- * mounted run inside the call too, exactly as they would on any other commit.
- *
- * For the caller that has to read the DOM it just asked for — measuring an
- * element whose content it mounts in the same breath — and cannot wait a tick
- * to do it, because what comes after is a browser event still in flight
- * (preventDefault, focus placement) that no longer accepts being answered late.
- *
- * `options.debounceRendering` is Preact's own hook for deciding *when* the
- * render queue drains; swapping it for "right now" for the duration of the call
- * is exactly how preact/compat implements React's flushSync. Reserve it for the
- * case above: rendering synchronously in the middle of an event gives up the
- * batching that makes several state changes one commit.
- */
-const flushSyncRendering = (fn) => {
-  const debounceRenderingPrevious = options.debounceRendering;
-  options.debounceRendering = (drainRenderQueue) => {
-    drainRenderQueue();
-  };
-  try {
-    fn();
-  } finally {
-    options.debounceRendering = debounceRenderingPrevious;
-  }
-};
-
-/**
- * When a popup builds what it holds, and when it throws it away.
- *
- * A closed popup shows nothing, focuses nothing, and answers nothing: what it
- * holds is out of reach until it opens. Building that content at mount time
- * means a page carrying a handful of closed popups pays, on the very render
- * that decides how fast it appears, for content nobody has asked for — and
- * pays again on every subsequent measurement, since each of those nodes makes
- * the document the rest of the page queries bigger.
- *
- * So the content is built when the popup first opens, and stays built from
- * then on: closing is not throwing away, and a reopened popup finds its scroll
- * position, its half-typed form and its list state where it left them.
- *
- * It is built synchronously, from inside `openController.open()` and before
- * `openEffect` runs (see open_controller.js), so the popup still measures real
- * content when it positions and animates itself, and so anything inside it
- * still observes the opening the way it always did — mounted while the popup
- * reads as closed, told it opened right after (see
- * use_displayed_layout_effect.js).
- *
- * `mountWhenClosed` is for content something else depends on before any of
- * this: a value the popup's owner reads off its own children, fields a form
- * around it collects on submit, a size measured from outside.
- *
- * `unmountWhenClosed` is the opposite end: content that must be rebuilt from
- * scratch every time, because what it shows is read once at build time and can
- * change while the popup is closed — an uncontrolled field seeded from a
- * `defaultValue`, a form whose fresh state is its initial state.
- */
-
-
-const usePopupContentMount = (
-  openController,
-  ref,
-  { children, mountWhenClosed, unmountWhenClosed },
-) => {
-  const [contentMounted, setContentMounted] = useState(
-    () => Boolean(mountWhenClosed) || openController.opened,
-  );
-  openController.mountContent = contentMounted
-    ? null
-    : () => {
-        flushSyncRendering(() => {
-          setContentMounted(true);
-        });
-      };
-  openController.unmountContent =
-    unmountWhenClosed && !mountWhenClosed
-      ? () => {
-          const element = ref?.current;
-          if (!element) {
-            setContentMounted(false);
-            return;
-          }
-          // The popup is still on screen while it plays its exit transition;
-          // emptying it right away would show that transition running on a
-          // blank surface.
-          whenTransitionSettles(element, () => {
-            if (openController.opened) {
-              // reopened while it was leaving — the content it holds is the
-              // one that open just asked for
-              return;
-            }
-            setContentMounted(false);
-          });
-        }
-      : null;
-  useLayoutEffect(() => {
-    if (mountWhenClosed) {
-      setContentMounted(true);
-    }
-  }, [mountWhenClosed]);
-
-  return contentMounted ? children : null;
 };
 
 /**
@@ -55669,16 +55680,15 @@ const css$E = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`).
- * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
- *   instead of waiting for the first open (see popup_content_mount.js). For
- *   content something depends on while the popup is still closed: a value read
- *   off it, fields a surrounding form collects on submit, a size measured from
- *   outside.
- * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
- *   popup has finished closing (see popup_content_mount.js). For content whose
- *   fresh state is its initial state: an uncontrolled field seeded from a
- *   `defaultValue` that changed while the popup was closed. Ignored when
- *   `mountWhenClosed` is set.
+ * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ *   `children` are built and thrown away (see popup_content_mount.js).
+ *   `"from-first-open"` (the default) builds them on the first open and keeps
+ *   them afterwards. `"always"` builds them right away, for content something
+ *   depends on while the popup is still closed: a value read off it, fields a
+ *   surrounding form collects on submit, a size measured from outside.
+ *   `"while-opened"` throws them away once the popup has finished closing, for
+ *   content whose fresh state is its initial state: an uncontrolled field
+ *   seeded from a `defaultValue` that changed while the popup was closed.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
@@ -55915,8 +55925,7 @@ const useDialogProps = props => {
     // openController.onOpen below).
     onOpen,
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount,
     ...rest
   } = props;
   // Assigned on every render, like openEffect below, so it always closes over
@@ -55925,8 +55934,7 @@ const useDialogProps = props => {
   openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed
+    mount
   });
   const isModal = layer === "top";
   const ref = props.ref;
@@ -57139,16 +57147,15 @@ const css$D = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`/`side_panel.jsx`).
- * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
- *   instead of waiting for the first open (see popup_content_mount.js). For
- *   content something depends on while the popup is still closed: a value read
- *   off it, fields a surrounding form collects on submit, a size measured from
- *   outside.
- * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
- *   popup has finished closing (see popup_content_mount.js). For content whose
- *   fresh state is its initial state: an uncontrolled field seeded from a
- *   `defaultValue` that changed while the popup was closed. Ignored when
- *   `mountWhenClosed` is set.
+ * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ *   `children` are built and thrown away (see popup_content_mount.js).
+ *   `"from-first-open"` (the default) builds them on the first open and keeps
+ *   them afterwards. `"always"` builds them right away, for content something
+ *   depends on while the popup is still closed: a value read off it, fields a
+ *   surrounding form collects on submit, a size measured from outside.
+ *   `"while-opened"` throws them away once the popup has finished closing, for
+ *   content whose fresh state is its initial state: an uncontrolled field
+ *   seeded from a `defaultValue` that changed while the popup was closed.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
@@ -57363,8 +57370,7 @@ const usePopoverProps = props => {
     // openController.onOpen below).
     onOpen,
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount,
     ...rest
   } = props;
   // Assigned on every render, like openEffect below, so it always closes over
@@ -57373,8 +57379,7 @@ const usePopoverProps = props => {
   openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed
+    mount
   });
   const isTopLayer = layer === "top";
   const ref = props.ref;
@@ -58313,16 +58318,15 @@ const css$C = /* css */`@layer navi {
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
- * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
- *   instead of waiting for the first open (see popup_content_mount.js). For
- *   content something depends on while the popup is still closed: a value read
- *   off it, fields a surrounding form collects on submit, a size measured from
- *   outside.
- * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
- *   popup has finished closing (see popup_content_mount.js). For content whose
- *   fresh state is its initial state: an uncontrolled field seeded from a
- *   `defaultValue` that changed while the popup was closed. Ignored when
- *   `mountWhenClosed` is set.
+ * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ *   `children` are built and thrown away (see popup_content_mount.js).
+ *   `"from-first-open"` (the default) builds them on the first open and keeps
+ *   them afterwards. `"always"` builds them right away, for content something
+ *   depends on while the popup is still closed: a value read off it, fields a
+ *   surrounding form collects on submit, a size measured from outside.
+ *   `"while-opened"` throws them away once the popup has finished closing, for
+ *   content whose fresh state is its initial state: an uncontrolled field
+ *   seeded from a `defaultValue` that changed while the popup was closed.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
@@ -58852,8 +58856,7 @@ const PickerCustom = props => {
       // and pushes it down instead, leaving the popup free to build its
       // content only when it is first opened (see popup_content_mount.js).
       // A caller who knows better says so with the popup's own props.
-      mountWhenClosed: props.mountWhenClosed ?? !isControlValueGivenByProps(props),
-      unmountWhenClosed: props.unmountWhenClosed,
+      mount: props.mount ?? (isControlValueGivenByProps(props) ? MOUNT_DEFAULT : "always"),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -59139,8 +59142,7 @@ const PickerContentInsidePopup = props => {
     ...rest,
     // On popupProps already (see the picker's popup assembly); they mean
     // nothing to the picker element.
-    mountWhenClosed: undefined,
-    unmountWhenClosed: undefined,
+    mount: undefined,
     onFocusOut: e => {
       if (!isPopover || !closeOnFocusOut) {
         return;
@@ -59222,7 +59224,7 @@ const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
  * The content is rendered through a portal into an element this component
  * owns, handed to the callout as its message (a Node, appended as-is). It is
  * rendered whether the callout is open or not, so what the content holds
- * survives a close, the way a popup's `mountWhenClosed` keeps it. The element
+ * survives a close, the way a popup's `mount="always"` keeps it. The element
  * carries data-picker-content: the callout is appended inside the picker root,
  * and a press in there must read as inside the popup, not on the trigger.
  */
@@ -59401,10 +59403,10 @@ const PickerConfirmResolver = props => {
     onConfirm: onConfirm
     // A question holds no value to read before it is asked: the popup is
     // built on the first open, like that of a picker told its value (see
-    // mountWhenClosed in picker_custom.jsx).
+    // the `mount` resolution in picker_custom.jsx).
     ,
 
-    mountWhenClosed: false,
+    mount: MOUNT_DEFAULT,
     message: undefined,
     confirmLabel: undefined,
     cancelLabel: undefined,

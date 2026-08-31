@@ -157,7 +157,7 @@
                 <OwnWaitDemo />
                 <OutsideDemo />
                 <PopoverDemo />
-                <MountedWhenClosedDemo />
+                <MountAlwaysDemo />
                 <ReopenDemo />
               </Box>
             )}
@@ -256,11 +256,11 @@
         </div>
       );
 
-      const MountedWhenClosedDemo = () => (
+      const MountAlwaysDemo = () => (
         <div className="demo-section">
-          <h2 id="mount_when_closed">Construit avant la première ouverture</h2>
+          <h2 id="mount_always">Construit avant la première ouverture</h2>
           <p className="caption">
-            <code>mountWhenClosed</code> : la requête part au chargement de la
+            <code>mount="always"</code> : la requête part au chargement de la
             page, l'attente se passe dans un dialog fermé.
           </p>
           <Button
@@ -273,7 +273,7 @@
           <Dialog
             id="mounted-dialog"
             data-testid="mounted-dialog"
-            mountWhenClosed
+            mount="always"
           >
             <Loading fallback={<MembersSkeleton />}>
               <Members group="orange" />
@@ -286,7 +286,7 @@
         const [group, setGroup] = useState(undefined);
         return (
           <div className="demo-section">
-            <h2 id="reopen">Rouvert sur autre chose (unmountWhenClosed)</h2>
+            <h2 id="reopen">Rouvert sur autre chose (mount="while-opened")</h2>
             <p className="caption">
               Le contenu est reconstruit à chaque ouverture, sur le groupe que
               le bouton porte.
@@ -307,7 +307,7 @@
             <Dialog
               id="reopen-dialog"
               data-testid="reopen-dialog"
-              unmountWhenClosed
+              mount="while-opened"
               onOpen={(e) => {
                 setGroup(e.detail.value);
               }}

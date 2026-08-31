@@ -479,7 +479,7 @@ holds; only its mechanisms change.
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | two routes, `/new` and `/:id/edit`                    | one dialog, two modes — hence the value it is opened ON ([popup_open.md](./popup_open.md#opening-it-on-something)) |
 | the draft lives in the `searchParams`                 | it lives in the dialog, and dies with it                                                                           |
-| cancelling = leaving the screen, which is thrown away | `unmountWhenClosed` (+ a `key` on the form), same effect                                                           |
+| cancelling = leaving the screen, which is thrown away | `mount="while-opened"` (+ a `key` on the form), same effect                                                        |
 | `RouteTravel` between the two screens                 | nothing: a dialog has no neighbour                                                                                 |
 | `onLoad` + `pristineKey`: the resource arrives after  | it is already in hand — the dialog is opened FROM the list                                                         |
 

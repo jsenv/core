@@ -15,6 +15,7 @@ import {
   PopupModeContext,
   useResolvedPopupMode,
 } from "@jsenv/navi/src/layout/popup_mode.jsx";
+import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
@@ -609,9 +610,9 @@ const PickerCustom = (props) => {
       // and pushes it down instead, leaving the popup free to build its
       // content only when it is first opened (see popup_content_mount.js).
       // A caller who knows better says so with the popup's own props.
-      mountWhenClosed:
-        props.mountWhenClosed ?? !isControlValueGivenByProps(props),
-      unmountWhenClosed: props.unmountWhenClosed,
+      mount:
+        props.mount ??
+        (isControlValueGivenByProps(props) ? MOUNT_DEFAULT : "always"),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -902,8 +903,7 @@ const PickerContentInsidePopup = (props) => {
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
       // nothing to the picker element.
-      mountWhenClosed={undefined}
-      unmountWhenClosed={undefined}
+      mount={undefined}
       onFocusOut={(e) => {
         if (!isPopover || !closeOnFocusOut) {
           return;
@@ -1005,7 +1005,7 @@ const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
  * The content is rendered through a portal into an element this component
  * owns, handed to the callout as its message (a Node, appended as-is). It is
  * rendered whether the callout is open or not, so what the content holds
- * survives a close, the way a popup's `mountWhenClosed` keeps it. The element
+ * survives a close, the way a popup's `mount="always"` keeps it. The element
  * carries data-picker-content: the callout is appended inside the picker root,
  * and a press in there must read as inside the popup, not on the trigger.
  */

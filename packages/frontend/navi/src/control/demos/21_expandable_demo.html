@@ -298,16 +298,16 @@
               </Expandable>
             </div>
             <div className="demo-box">
-              <p className="demo-caption">mountWhenClosed</p>
-              <Expandable ui="Summary" mountWhenClosed animation>
+              <p className="demo-caption">mount="always"</p>
+              <Expandable ui="Summary" mount="always" animation>
                 <div className="demo-content">
                   <MountClock />
                 </div>
               </Expandable>
             </div>
             <div className="demo-box">
-              <p className="demo-caption">unmountWhenClosed</p>
-              <Expandable ui="Summary" unmountWhenClosed animation>
+              <p className="demo-caption">mount="while-opened"</p>
+              <Expandable ui="Summary" mount="while-opened" animation>
                 <div className="demo-content">
                   <MountClock />
                 </div>
@@ -681,10 +681,10 @@
             </div>
             <div className="demo-box">
               <p className="demo-caption">
-                mountWhenClosed: the closed content sizes the height — last
+                mount="always": the closed content sizes the height — last
                 resort, the content may be expensive to render
               </p>
-              <Expandable layout="column" animation mountWhenClosed>
+              <Expandable layout="column" animation mount="always">
                 <Expandable.UI style="background: #eceff1; padding: 4px">
                   More
                 </Expandable.UI>

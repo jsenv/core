@@ -19,11 +19,21 @@
  * reads as closed, told it opened right after (see
  * use_displayed_layout_effect.js).
  *
- * `mountWhenClosed` is for content something else depends on before any of
- * this: a value the popup's owner reads off its own children, fields a form
- * around it collects on submit, a size measured from outside.
+ * The `mount` prop moves that line. "closed" is two states, not one — never
+ * opened yet, and closed again after an opening — and the three values answer
+ * both at once:
  *
- * `unmountWhenClosed` is the opposite end: content that must be rebuilt from
+ * | mount             | before the first open | after a close |
+ * | ----------------- | --------------------- | ------------- |
+ * | "always"          | mounted               | mounted       |
+ * | "from-first-open" | not mounted           | mounted       |
+ * | "while-opened"    | not mounted           | not mounted   |
+ *
+ * "always" is for content something else depends on before any opening: a
+ * value the popup's owner reads off its own children, fields a form around it
+ * collects on submit, a size measured from outside.
+ *
+ * "while-opened" is the opposite end: content that must be rebuilt from
  * scratch every time, because what it shows is read once at build time and can
  * change while the popup is closed — an uncontrolled field seeded from a
  * `defaultValue`, a form whose fresh state is its initial state.
@@ -34,13 +44,16 @@ import { useLayoutEffect, useState } from "preact/hooks";
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { whenTransitionSettles } from "./popup_shared.js";
 
+export const MOUNT_DEFAULT = "from-first-open";
+
 export const usePopupContentMount = (
   openController,
   ref,
-  { children, mountWhenClosed, unmountWhenClosed },
+  { children, mount = MOUNT_DEFAULT },
 ) => {
+  const mountedAlways = mount === "always";
   const [contentMounted, setContentMounted] = useState(
-    () => Boolean(mountWhenClosed) || openController.opened,
+    () => mountedAlways || openController.opened,
   );
   openController.mountContent = contentMounted
     ? null
@@ -50,7 +63,7 @@ export const usePopupContentMount = (
         });
       };
   openController.unmountContent =
-    unmountWhenClosed && !mountWhenClosed
+    mount === "while-opened"
       ? () => {
           const element = ref?.current;
           if (!element) {
@@ -71,10 +84,10 @@ export const usePopupContentMount = (
         }
       : null;
   useLayoutEffect(() => {
-    if (mountWhenClosed) {
+    if (mountedAlways) {
       setContentMounted(true);
     }
-  }, [mountWhenClosed]);
+  }, [mountedAlways]);
 
   return contentMounted ? children : null;
 };

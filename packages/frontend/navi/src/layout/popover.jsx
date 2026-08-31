@@ -538,16 +538,15 @@ const css = /* css */ `
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`/`side_panel.jsx`).
- * @param {boolean} [props.mountWhenClosed] - Builds `children` right away
- *   instead of waiting for the first open (see popup_content_mount.js). For
- *   content something depends on while the popup is still closed: a value read
- *   off it, fields a surrounding form collects on submit, a size measured from
- *   outside.
- * @param {boolean} [props.unmountWhenClosed] - Throws `children` away once the
- *   popup has finished closing (see popup_content_mount.js). For content whose
- *   fresh state is its initial state: an uncontrolled field seeded from a
- *   `defaultValue` that changed while the popup was closed. Ignored when
- *   `mountWhenClosed` is set.
+ * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ *   `children` are built and thrown away (see popup_content_mount.js).
+ *   `"from-first-open"` (the default) builds them on the first open and keeps
+ *   them afterwards. `"always"` builds them right away, for content something
+ *   depends on while the popup is still closed: a value read off it, fields a
+ *   surrounding form collects on submit, a size measured from outside.
+ *   `"while-opened"` throws them away once the popup has finished closing, for
+ *   content whose fresh state is its initial state: an uncontrolled field
+ *   seeded from a `defaultValue` that changed while the popup was closed.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {
@@ -763,8 +762,7 @@ const usePopoverProps = (props) => {
     // openController.onOpen below).
     onOpen,
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount,
     ...rest
   } = props;
   // Assigned on every render, like openEffect below, so it always closes over
@@ -773,8 +771,7 @@ const usePopoverProps = (props) => {
   openController.onOpen = onOpen || null;
   const children = usePopupContentMount(openController, props.ref, {
     children: childrenProp,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount,
   });
   const isTopLayer = layer === "top";
   const ref = props.ref;

@@ -219,6 +219,49 @@ const walk = (name, options) => {
   };
 };
 
+// A rushed back races the single frame where rendering is held, and which side
+// of that race a cycle lands on belongs to the machine's load, not to navi: a
+// busy run pushes `goBack` past the frame, a quiet one keeps it inside, and
+// any mix of the two is a legitimate draw. A snapshot holding the
+// digit-by-digit sequence would hold the draw. What navi owes — and what the
+// snapshot holds — is the law every cycle must obey whichever side it lands
+// on: a list that never left is the same element and asks nothing; one that
+// truly came back is remounted and asks exactly once. Ten lawful cycles
+// collapse to one fixed sentence; a cycle that breaks the law (an ask without
+// a remount, a remount without an ask, a double ask) surfaces the raw
+// sequences so the snapshot diff shows the evidence.
+const summarizeRushedRevisits = (walkResult) => {
+  const {
+    range_asked_on_each_revisit,
+    same_node_on_each_revisit,
+    ...stableFields
+  } = walkResult;
+  const unlawfulCycles = [];
+  for (let cycle = 0; cycle < CYCLES; cycle++) {
+    const asked = range_asked_on_each_revisit[cycle];
+    const sameNode = same_node_on_each_revisit[cycle];
+    const neverLeft = sameNode === "S" && asked === "0";
+    const trulyCameBack = sameNode === "-" && asked === "1";
+    if (!neverLeft && !trulyCameBack) {
+      unlawfulCycles.push(cycle);
+    }
+  }
+  if (unlawfulCycles.length > 0) {
+    return {
+      ...stableFields,
+      revisits: {
+        range_asked_on_each_revisit,
+        same_node_on_each_revisit,
+        unlawful_cycles: unlawfulCycles,
+      },
+    };
+  }
+  return {
+    ...stableFields,
+    revisits: `${CYCLES}/${CYCLES} lawful: never left (same node, no ask) or truly came back (remounted, one ask)`,
+  };
+};
+
 try {
   // The rushed pair is not in this batch: a rushed back is a race against the
   // single frame where rendering is held, and the load of six pages cooking
@@ -278,7 +321,10 @@ try {
         openAndComeBack("plain_wm", { rushBack: true }),
         openAndComeBack("animated_wm", { rushBack: true }),
       ]);
-      return { without_transition, with_transition };
+      return {
+        without_transition: summarizeRushedRevisits(without_transition),
+        with_transition: summarizeRushedRevisits(with_transition),
+      };
     });
   });
 } finally {

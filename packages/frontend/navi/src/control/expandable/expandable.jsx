@@ -38,10 +38,9 @@
  *   events.
  *
  * Content is not built until the first expansion and stays built afterwards —
- * same policy, same prop names as popups (see popup_content_mount.js):
- * `mountWhenClosed` builds it right away, `unmountWhenClosed` throws it away
- * once the collapse settles (so a closing animation still plays on real
- * content).
+ * same policy, same `mount` prop as popups (see popup_content_mount.js):
+ * `"always"` builds it right away, `"while-opened"` throws it away once the
+ * collapse settles (so a closing animation still plays on real content).
  *
  * The animation is a REVEAL, not a resize: the expandable's own footprint
  * grows/shrinks progressively (the content's grid track interpolates
@@ -73,6 +72,7 @@ import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { useAction } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { Box } from "../../box/box.jsx";
+import { MOUNT_DEFAULT } from "../../layout/popup_content_mount.js";
 import { whenTransitionSettles } from "../../layout/popup_shared.js";
 import { onNaviCommand } from "../commands.js";
 import { warnSignalCollision } from "../control_value.js";
@@ -187,7 +187,7 @@ const css = /* css */ `
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
       }
-      /* mountWhenClosed: the content is built and width-frozen while closed
+      /* mount="always": the content is built and width-frozen while closed
          (see the component), so it can size the height at all times — the
          expandable then keeps one stable height and only the width reveals. */
       &[data-closed-content-sized] > .navi_expandable_content_container {
@@ -260,8 +260,7 @@ const useExpandableContext = (partName) => {
  *   layout?: "row" | "column",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
- *   mountWhenClosed?: boolean,
- *   unmountWhenClosed?: boolean,
+ *   mount?: "always" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
  *   openKeyShortcut?: string,
  *   closeKeyShortcut?: string,
@@ -298,13 +297,15 @@ const useExpandableContext = (partName) => {
  *   the UI part (it would otherwise be lost to the closed, inert content).
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
- * @param mountWhenClosed - Builds the content right away instead of on first
- *   expansion. In layout="column" it also gives the closed expandable its
- *   content's height (the content is kept laid out at its open width), so
- *   opening only reveals the width instead of changing the height too.
- * @param unmountWhenClosed - Throws the content away once the collapse
- *   settles — after the closing animation, so it still plays on real content —
- *   and rebuilds it from scratch on every expansion.
+ * @param mount - When the content is built and thrown away, same three values
+ *   as a popup's (see popup_content_mount.js). `"from-first-open"` (the
+ *   default) builds it on the first expansion and keeps it afterwards.
+ *   `"always"` builds it right away; in layout="column" it also gives the
+ *   closed expandable its content's height (the content is kept laid out at
+ *   its open width), so opening only reveals the width instead of changing the
+ *   height too. `"while-opened"` throws the content away once the collapse
+ *   settles — after the closing animation, so it still plays on real
+ *   content — and rebuilds it from scratch on every expansion.
  */
 export const Expandable = (props) => {
   import.meta.css = css;
@@ -320,8 +321,7 @@ export const Expandable = (props) => {
     layout,
     autoFocus,
     maxContentHeight,
-    mountWhenClosed,
-    unmountWhenClosed,
+    mount = MOUNT_DEFAULT,
     arrowKeyShortcuts = true,
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
@@ -335,7 +335,9 @@ export const Expandable = (props) => {
   const contentContainerRef = useRef();
   const contentId = useId();
   const isColumn = layout === "column";
-  const closedContentSized = Boolean(isColumn && mountWhenClosed);
+  const mountedAlways = mount === "always";
+  const mountedWhileOpened = mount === "while-opened";
+  const closedContentSized = isColumn && mountedAlways;
 
   if (signal) {
     warnSignalCollision(props, "expandable", "open");
@@ -353,14 +355,11 @@ export const Expandable = (props) => {
   const { loading: actionLoading } = useActionStatus(effectiveAction);
 
   const [contentMounted, setContentMounted] = useState(
-    () => Boolean(mountWhenClosed) || opened,
+    () => mountedAlways || opened,
   );
-  // Same exclusion as popup_content_mount.js: content that must exist while
-  // closed cannot also be thrown away on close.
-  const effectiveUnmountWhenClosed = unmountWhenClosed && !mountWhenClosed;
 
   // Fully open and no longer moving — what allows overflow to become visible
-  // (see the CSS) and what unmountWhenClosed waits for before emptying.
+  // (see the CSS) and what mount="while-opened" waits for before emptying.
   const [settled, setSettled] = useState(true);
 
   // Read before the close touches the DOM: flipping the content to inert can
@@ -435,7 +434,7 @@ export const Expandable = (props) => {
     focusedAtPointerDownRef.current = null;
     setOpened(nextOpen);
     // Flipped here, before the closing/opening commit, so effects of that very
-    // commit already see the movement as started — unmountWhenClosed must not
+    // commit already see the movement as started — mount="while-opened" must not
     // read a stale "settled" and empty the content under a closing animation.
     setSettled(!animation);
     if (signal) {
@@ -573,17 +572,17 @@ export const Expandable = (props) => {
   }, [opened]);
 
   useLayoutEffect(() => {
-    if (settled && !opened && effectiveUnmountWhenClosed) {
+    if (settled && !opened && mountedWhileOpened) {
       setContentMounted(false);
     }
-  }, [settled, opened, effectiveUnmountWhenClosed]);
+  }, [settled, opened, mountedWhileOpened]);
   useLayoutEffect(() => {
-    if (mountWhenClosed) {
+    if (mountedAlways) {
       setContentMounted(true);
     }
-  }, [mountWhenClosed]);
+  }, [mountedAlways]);
 
-  // closedContentSized (column + mountWhenClosed): the closed content sizes
+  // closedContentSized (column + mount="always"): the closed content sizes
   // the height (see the CSS), which is only right if it lies at its OPEN
   // width — at its natural closed width (a 0-wide track) it would wrap
   // against nothing and stack word by word. So while closed, its width is
