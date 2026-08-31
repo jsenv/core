@@ -294,7 +294,7 @@
 
       const WidthDemo = () => (
         <div class="demo-section">
-          <Heading id="width">Largeur</Heading>
+          <Heading id="width">Largeur et hauteur</Heading>
           <Box flex="y" spacing="m">
             <Variant caption="320px">
               <div class="phone">
@@ -315,6 +315,17 @@
             <Variant caption="fontSize 24px">
               <div class="phone" style="font-size: 24px">
                 <ControlSwap spacing="xs">
+                  {whereSide()}
+                  {whatSide()}
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="--navi-control-swap-size: 40px">
+              <div class="phone">
+                <ControlSwap
+                  spacing="xs"
+                  style={{ "--navi-control-swap-size": "40px" }}
+                >
                   {whereSide()}
                   {whatSide()}
                 </ControlSwap>

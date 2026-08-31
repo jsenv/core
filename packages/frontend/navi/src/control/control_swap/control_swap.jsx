@@ -7,13 +7,12 @@
  * Four boxes on a row that is never wide enough for both controls — a phone
  * answering "what do I search IN" then "what am I looking for". The two end
  * caps are fixed: same place, same size, in both states, and either of them
- * hands the floor to the other side. That is the whole reason the caps are
- * OUTSIDE
- * the controls rather than drawn inside them (a picker's façade yields a zone
- * with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon that lives
- * inside its control while open and becomes a pill once closed is a switch
- * that moves when you flip it, and the finger that opened the search has to
- * travel to close it again. Out here, the same pixel opens and closes.
+ * hands the floor to the other side. That is the whole reason the caps sit
+ * OUTSIDE the controls rather than being drawn inside them (a picker's façade
+ * yields a zone with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon
+ * that lives inside its control while open and becomes a pill once closed is
+ * a switch that moves when you flip it: the finger that opened the search has
+ * to travel to close it again. Out here, the same pixel does both.
  *
  * Nothing is unmounted. Two elements that never coexist have nothing to
  * interpolate between, so both sides stay mounted at all times and only their
@@ -28,11 +27,14 @@
  * mid-swap, and a collapsed control is not a zero-width column of stacked
  * words silently setting the row's height.
  *
- * The square end cap cannot be had from CSS: on a flex item whose height comes
- * from `align-self: stretch`, `aspect-ratio: 1` does not read that height (the
- * main size is resolved from content first, measured the same in chromium,
- * webkit and firefox). The row's height is whatever the controls in it happen
- * to be, so a cap is measured and given its own height as a width.
+ * The row has ONE height, and everything in it is that tall: the caps because
+ * they are squares of it, the two controls because they are stretched to it.
+ * Nothing is measured — a height read off the controls could only come back
+ * through a resize observer, and a cap made square with `aspect-ratio` never
+ * reads it anyway (on a flex item stretched to its line, the main size is
+ * resolved from content first). It is a length, `--navi-control-swap-size`,
+ * defaulting to the height of a navi control at its default padding; a row of
+ * roomier controls says so once, there.
  */
 
 import { elementIsFocusable, findAfter } from "@jsenv/dom";
@@ -47,14 +49,25 @@ import { Button } from "../input/button.jsx";
 
 const css = /* css */ `
   .navi_control_swap {
+    /* One navi control tall, and a caller with roomier controls than that
+       overrides the length rather than every box that has to match it. */
+    --x-control-swap-size: var(
+      --navi-control-swap-size,
+      calc(
+        var(--navi-control-line-height) + 2 *
+          var(--navi-control-padding-y-default) + 2 *
+          var(--navi-control-border-width)
+      )
+    );
+
+    height: var(--x-control-swap-size);
     align-items: stretch;
 
     > .navi_control_swap_cap {
       position: relative;
-      /* Its own height, measured (see the top comment). Unset until the first
-         measurement, where the cap is simply as wide as its icon. */
-      width: var(--navi-control-swap-cap-size);
-      flex: 0 0 auto;
+      /* Square on the row: the same length gives the width, the height comes
+         from the stretch. */
+      flex: 0 0 var(--x-control-swap-size);
       align-items: center;
       align-self: stretch;
       justify-content: center;
@@ -96,6 +109,14 @@ const css = /* css */ `
           flex: 0 0 auto;
           flex-direction: column;
           justify-content: center;
+
+          /* A control is as wide as its content on its own (a navi one is
+             literally width: fit-content), and here the one holding the floor
+             has the whole middle to fill — so it is told to, rather than left
+             to stretch, which an explicit width would win against anyway. */
+          > * {
+            width: 100%;
+          }
         }
 
         &[data-collapsed] {
@@ -153,6 +174,10 @@ const css = /* css */ `
  * @param animation - On by default: the two slots trade their share of the
  *   middle over `--navi-control-swap-animation-duration` (0.22s). `false`
  *   swaps them in one frame; `prefers-reduced-motion` does too.
+ *
+ * The row is one length tall — `--navi-control-swap-size`, the height of a navi
+ * control at its default padding — and the caps are squares of it. Controls
+ * with a padding of their own need that length said once, here.
  */
 export const ControlSwap = (props) => {
   import.meta.css = css;
@@ -246,8 +271,6 @@ export const ControlSwap = (props) => {
     });
   }, [activeSide.name]);
 
-  useCapSizeEffect(capRefs);
-
   // Both caps do the same thing, and it is the reason they sit outside the
   // controls: whichever one the finger lands on, the floor goes to the other
   // side. The same pixel opens the search and closes it.
@@ -336,7 +359,9 @@ const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
       aria-controls={slotId}
       onClick={onPress}
     >
-      <Icon fillLine>{icon}</Icon>
+      <Icon width="60%" square>
+        {icon}
+      </Icon>
       {badge ? (
         <span className="navi_control_swap_badge" aria-hidden="true">
           {badge === true ? null : badge}
@@ -387,45 +412,4 @@ const findElementToFocus = (slot) => {
     return autofocusElement;
   }
   return findAfter(slot, elementIsFocusable, { root: slot });
-};
-
-// A cap is square on the row's height, and the row's height is whatever the
-// controls in it happen to be — so it is watched rather than computed. Written
-// on the cap itself: what it reads back is what it just measured, and a change
-// too small to see is dropped so the observer cannot chase itself (the width it
-// sets takes room away from the controls, which could in principle change the
-// height it reads).
-const CAP_SIZE_EPSILON = 0.5;
-const useCapSizeEffect = (capRefs) => {
-  useLayoutEffect(() => {
-    const sizeWritten = new WeakMap();
-    const syncCapSize = (capElement) => {
-      const { height } = capElement.getBoundingClientRect();
-      const previousHeight = sizeWritten.get(capElement);
-      if (
-        previousHeight !== undefined &&
-        Math.abs(previousHeight - height) < CAP_SIZE_EPSILON
-      ) {
-        return;
-      }
-      sizeWritten.set(capElement, height);
-      capElement.style.setProperty(
-        "--navi-control-swap-cap-size",
-        `${height}px`,
-      );
-    };
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        syncCapSize(entry.target);
-      }
-    });
-    for (const capRef of capRefs) {
-      const capElement = capRef.current;
-      syncCapSize(capElement);
-      resizeObserver.observe(capElement);
-    }
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
 };
