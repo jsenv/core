@@ -1,15 +1,9 @@
+"jsenv:allocate 90s";
+
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
-import {
-  chromium,
-  execute,
-  firefox,
-  requestAllocatedMs,
-  webkit,
-} from "@jsenv/test";
-
-requestAllocatedMs(90_000);
+import { chromium, execute, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({

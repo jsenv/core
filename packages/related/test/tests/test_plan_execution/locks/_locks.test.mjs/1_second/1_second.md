@@ -1,10 +1,10 @@
-# [second](../../uses_port.test.mjs)
+# [second](../../locks.test.mjs)
 
 ```js
 run({
-  a: { uses: ["port:4"] },
-  b: { uses: ["port:4"] },
-  c: { uses: ["port:5"] },
+  a: { locks: ["port:4"] },
+  b: { locks: ["port:4"] },
+  c: { locks: ["port:5"] },
 })
 ```
 

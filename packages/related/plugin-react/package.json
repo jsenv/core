@@ -36,7 +36,6 @@
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../plugin-explorer",
     "@jsenv/plugin-react": "./",
-    "@jsenv/test": "../test",
     "playwright": "1.62.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"

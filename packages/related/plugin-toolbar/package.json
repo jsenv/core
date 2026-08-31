@@ -34,7 +34,6 @@
     "@jsenv/core": "../../",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
-    "@jsenv/test": "../test",
     "@jsenv/utils": "../../tooling/utils",
     "@preact/signals": "2.11.1",
     "playwright": "1.62.1"

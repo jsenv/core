@@ -1,14 +1,8 @@
-import { startDevServer } from "@jsenv/core";
-import {
-  chromium,
-  execute,
-  firefox,
-  requestAllocatedMs,
-  webkit,
-} from "@jsenv/test";
-import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
+"jsenv:allocate 90s";
 
-requestAllocatedMs(90_000);
+import { startDevServer } from "@jsenv/core";
+import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 if (process.platform === "win32") {
   process.exit(0);

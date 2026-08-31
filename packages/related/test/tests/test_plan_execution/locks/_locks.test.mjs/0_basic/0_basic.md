@@ -1,10 +1,10 @@
-# [basic](../../uses_port.test.mjs)
+# [basic](../../locks.test.mjs)
 
 ```js
 run({
-  a: { uses: ["port:4"] },
-  b: { uses: ["port:5"] },
-  c: { uses: ["port:6"] },
+  a: { locks: ["port:4"] },
+  b: { locks: ["port:5"] },
+  c: { locks: ["port:6"] },
 })
 ```
 

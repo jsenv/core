@@ -1,9 +1,8 @@
+"jsenv:allocate 180s";
+
 import { writeFileSync } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
 import { chromium, firefox, webkit } from "playwright";
-import { requestAllocatedMs } from "@jsenv/test";
-
-requestAllocatedMs(180_000);
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)

@@ -1,9 +1,10 @@
 /*
- * Called from a test file to tell the test runner how much time this file needs:
+ * Asks the test runner for more time from a test file, when the amount is
+ * computed rather than known in advance (it depends on the platform, on how
+ * many fixtures were found...). A fixed amount belongs in a directive instead,
+ * which the runner reads without executing the file:
  *
- *   import { requestAllocatedMs } from "@jsenv/test";
- *
- *   requestAllocatedMs(90_000);
+ *   "jsenv:allocate 90s";
  *
  * The request is sent to the process running the test plan, which restarts the
  * timeout with the requested duration and remembers it: a file asking for more

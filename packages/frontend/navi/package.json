@@ -40,7 +40,6 @@
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/terminal-table": "../../tooling/terminal-table",
-    "@jsenv/test": "../../related/test",
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.11.1",
     "playwright": "1.62.1",

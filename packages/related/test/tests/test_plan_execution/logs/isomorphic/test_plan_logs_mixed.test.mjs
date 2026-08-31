@@ -1,3 +1,5 @@
+"jsenv:allocate 90s";
+
 import { startDevServer } from "@jsenv/core";
 import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
@@ -11,12 +13,9 @@ import {
   nodeWorkerThread,
   reportAsJunitXml,
   reporterList,
-  requestAllocatedMs,
   webkit,
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
-
-requestAllocatedMs(90_000);
 
 if (process.env.CI) {
   process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999

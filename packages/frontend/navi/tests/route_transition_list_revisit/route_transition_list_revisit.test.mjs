@@ -23,15 +23,14 @@
  * Both numbers must be the same with and without the movement.
  */
 
+// ten revisits per page, each waiting for a transition to have played
+// and a revalidation to have had time to ask
+"jsenv:allocate 90s";
+
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
 import { chromium } from "playwright";
-import { requestAllocatedMs } from "@jsenv/test";
-
-// ten revisits per page, each waiting for a transition to have played
-// and a revalidation to have had time to ask
-requestAllocatedMs(90_000);
 
 const clientDirectoryUrl = import.meta.resolve("./client/");
 // Every url the app routes to is served the app's html, the way a real server

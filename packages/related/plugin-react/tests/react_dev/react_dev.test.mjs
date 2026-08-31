@@ -1,11 +1,10 @@
+"jsenv:allocate 90s";
+
 import { startDevServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 import { chromium, firefox } from "playwright";
-import { requestAllocatedMs } from "@jsenv/test";
-
-requestAllocatedMs(90_000);
 
 // if (process.platform === "win32") {
 process.exit(0);

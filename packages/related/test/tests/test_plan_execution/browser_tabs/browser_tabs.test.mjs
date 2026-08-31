@@ -2,16 +2,11 @@
  * The goal is to ensure test plan execution in browser tabs works without errors
  */
 
-import { startDevServer } from "@jsenv/core";
-import {
-  chromium,
-  executeTestPlan,
-  reportAsJson,
-  requestAllocatedMs,
-} from "@jsenv/test";
-import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
+"jsenv:allocate 60s";
 
-requestAllocatedMs(60_000);
+import { startDevServer } from "@jsenv/core";
+import { chromium, executeTestPlan, reportAsJson } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 await snapshotTestPlanSideEffects(import.meta.url, async ({ test }) => {
   const run = async ({ testPlan }) => {

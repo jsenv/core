@@ -1,11 +1,10 @@
+"jsenv:allocate 90s";
+
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { requestAllocatedMs } from "@jsenv/test";
-
-requestAllocatedMs(90_000);
 
 if (process.platform === "win32") {
   process.exit(0);

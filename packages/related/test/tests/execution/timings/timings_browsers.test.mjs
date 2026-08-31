@@ -1,14 +1,13 @@
+"jsenv:allocate 90s";
+
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import {
   chromiumIsolatedTab,
   execute,
   firefoxIsolatedTab,
-  requestAllocatedMs,
   webkitIsolatedTab,
 } from "@jsenv/test";
-
-requestAllocatedMs(90_000);
 
 const test = async (params) => {
   const devServer = await startDevServer({

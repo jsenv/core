@@ -7,7 +7,7 @@ const run = async (inlineExec) => {
   for (const key of Object.keys(inlineExec)) {
     const desc = inlineExec[key];
     inlineExecutions[key] = {
-      uses: desc.uses,
+      locks: desc.locks,
       runtime: inlineRuntime(async () => {
         callOrder.push(`${key}_start`);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -21,7 +21,7 @@ const run = async (inlineExec) => {
     },
     rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
-      "./uses_port.test.mjs": inlineExecutions,
+      "./locks.test.mjs": inlineExecutions,
     },
     parallel: {
       max: 4,
@@ -34,15 +34,15 @@ const run = async (inlineExec) => {
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
   test("basic", () =>
     run({
-      a: { uses: ["port:4"] },
-      b: { uses: ["port:5"] },
-      c: { uses: ["port:6"] },
+      a: { locks: ["port:4"] },
+      b: { locks: ["port:5"] },
+      c: { locks: ["port:6"] },
     }));
 
   test("second", () =>
     run({
-      a: { uses: ["port:4"] },
-      b: { uses: ["port:4"] },
-      c: { uses: ["port:5"] },
+      a: { locks: ["port:4"] },
+      b: { locks: ["port:4"] },
+      c: { locks: ["port:5"] },
     }));
 });

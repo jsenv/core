@@ -34,6 +34,7 @@ import stripAnsi from "strip-ansi";
 import { generateCoverage } from "../coverage/generate_coverage.js";
 import { createExecutionTimings } from "./execution_timings.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
+import { readJsenvDirectives } from "./jsenv_directives.js";
 import { createIsInsideFragment } from "./is_inside_fragment.js";
 import { renderOutroContent, reporterList } from "./reporters/reporter_list.js";
 import { run } from "./run.js";
@@ -745,6 +746,9 @@ To fix this warning:
           }
         }
         const filePlan = meta.testPlan;
+        const directives = readJsenvDirectives(
+          new URL(relativeUrl, rootDirectoryUrl),
+        );
         for (const groupName of Object.keys(filePlan)) {
           const stepConfig = filePlan[groupName];
           if (stepConfig === null || stepConfig === undefined) {
@@ -766,7 +770,7 @@ To fix this warning:
             runtime,
             runtimeParams,
             allocatedMs = defaultMsAllocatedPerExecution,
-            uses,
+            locks,
           } = stepConfig;
           const params = {
             measureMemoryUsage: true,
@@ -774,7 +778,7 @@ To fix this warning:
             collectPerformance: false,
             collectConsole: true,
             allocatedMs,
-            uses,
+            locks,
             runtime,
             runtimeParams: {
               rootDirectoryUrl,
@@ -834,9 +838,22 @@ To fix this warning:
                 ? defaultMsAllocatedPerExecution
                 : allocatedMsResult;
           }
-          if (typeof params.uses === "function") {
-            const usesResult = params.uses(execution);
-            params.uses = usesResult;
+          if (typeof params.locks === "function") {
+            const locksResult = params.locks(execution);
+            params.locks = locksResult;
+          }
+          // what the file declares about itself wins over the plan: it is
+          // closer to the reason
+          if (
+            directives.allocatedMs !== undefined &&
+            directives.allocatedMs > params.allocatedMs
+          ) {
+            params.allocatedMs = directives.allocatedMs;
+          }
+          if (directives.lockArray.length > 0) {
+            params.locks = params.locks
+              ? [...new Set([...params.locks, ...directives.lockArray])]
+              : directives.lockArray;
           }
 
           lastExecution = execution;
@@ -1032,7 +1049,7 @@ To fix this warning:
 
       const executionRemainingSet = new Set(executionStartOrderArray);
       const executionExecutingSet = new Set();
-      const usedTagSet = new Set();
+      const lockedResourceSet = new Set();
       const start = async (execution) => {
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
@@ -1046,9 +1063,9 @@ To fix this warning:
           execution.result.status = "skipped";
           execution.result.value = execution.skipReason;
         } else {
-          if (execution.params.uses) {
-            for (const tagThatWillBeUsed of execution.params.uses) {
-              usedTagSet.add(tagThatWillBeUsed);
+          if (execution.params.locks) {
+            for (const resourceToLock of execution.params.locks) {
+              lockedResourceSet.add(resourceToLock);
             }
           }
           execution.status = "executing";
@@ -1066,9 +1083,9 @@ To fix this warning:
           });
           Object.assign(execution.result, executionResult);
           execution.status = "executed";
-          if (execution.params.uses) {
-            for (const tagNoLongerInUse of execution.params.uses) {
-              usedTagSet.delete(tagNoLongerInUse);
+          if (execution.params.locks) {
+            for (const resourceToRelease of execution.params.locks) {
+              lockedResourceSet.delete(resourceToRelease);
             }
           }
           if (timingsMemory) {
@@ -1144,13 +1161,14 @@ To fix this warning:
                 continue;
               }
             }
-            if (executionCandidate.params.uses) {
-              const nonAvailableTag = executionCandidate.params.uses.find(
-                (tagToUse) => usedTagSet.has(tagToUse),
-              );
-              if (nonAvailableTag) {
+            if (executionCandidate.params.locks) {
+              const resourceLockedByAnother =
+                executionCandidate.params.locks.find((resourceToLock) =>
+                  lockedResourceSet.has(resourceToLock),
+                );
+              if (resourceLockedByAnother) {
                 logger.debug(
-                  `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+                  `"${resourceLockedByAnother}" is locked, ${executionCandidate.name} will wait until it is released by a previous execution`,
                 );
                 continue;
               }

@@ -53,19 +53,6 @@ await executeTestPlan({
     "./packages/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
-        uses: ({ fileRelativeUrl }) => {
-          if (
-            fileRelativeUrl.endsWith(
-              "service-worker/tests/errors/errors_snapshots.test.mjs",
-            ) ||
-            fileRelativeUrl.endsWith(
-              "service-worker/tests/update/update_snapshots.test.mjs",
-            )
-          ) {
-            return ["service-worker"];
-          }
-          return undefined;
-        },
       },
     },
     "./packages/**/*.test.js": {
