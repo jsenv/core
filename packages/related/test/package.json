@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.7.37",
+  "version": "3.7.38",
   "type": "module",
   "repository": {
     "type": "git",
@@ -32,8 +32,8 @@
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
     "@jsenv/ast": "6.9.3",
-    "@jsenv/plugin-supervisor": "1.8.14",
-    "@jsenv/sourcemap": "1.4.2",
+    "@jsenv/plugin-supervisor": "1.8.15",
+    "@jsenv/sourcemap": "1.4.3",
     "he": "1.2.0",
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.3",
