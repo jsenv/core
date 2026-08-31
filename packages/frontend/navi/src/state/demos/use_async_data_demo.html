@@ -149,6 +149,8 @@
 
             <ManagesErrorDemo />
 
+            <OwnsRequestDemo />
+
             <ManagesLoadingDemo />
           </ErrorBoundary>
         </div>
@@ -567,6 +569,101 @@
             />
             {user && loading && <RefreshingIndicator />}
           </>
+        );
+      };
+
+      // ─── Owns its request (run: true) ─────────────────────────────────────────
+      const USERS = {
+        alice: { name: "Alice", email: "alice@example.com" },
+        bob: { name: "Bob", email: "bob@example.com" },
+      };
+      const ownedShouldFail = signal(false);
+      const fetchUserById = createAction(
+        async ({ userId }) => {
+          await delay(800);
+          if (ownedShouldFail.peek()) {
+            throw new Error("Network error: failed to fetch user");
+          }
+          return USERS[userId];
+        },
+        { name: "fetchUserById" },
+      );
+
+      const OwnsRequestDemo = () => {
+        const [mounted, setMounted] = useState(false);
+        return (
+          <DemoSection
+            title="Owns its request — run: true"
+            description="Nobody else asks for this data: the panel runs the action itself, never suspends, and the user it is about is chosen inside it."
+          >
+            <div class="buttons">
+              <Button onClick={() => setMounted((m) => !m)}>
+                {mounted ? "Unmount panel" : "Mount panel"}
+              </Button>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "0.9em",
+                  color: "#555",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={ownedShouldFail.value}
+                  onChange={(e) => {
+                    ownedShouldFail.value = e.target.checked;
+                  }}
+                />
+                Simulate server error
+              </label>
+            </div>
+            {mounted ? <OwnedUserPanel /> : null}
+          </DemoSection>
+        );
+      };
+
+      const OwnedUserPanel = () => {
+        const [userId, setUserId] = useState("alice");
+        const action = fetchUserById.bindParams({ userId });
+        const [user, loading, error] = useAsyncData(action, {
+          run: true,
+          loading: true,
+          error: true,
+        });
+        return (
+          <div>
+            <div class="buttons">
+              {Object.keys(USERS).map((id) => (
+                <Button
+                  key={id}
+                  disabled={id === userId}
+                  onClick={() => setUserId(id)}
+                >
+                  {id}
+                </Button>
+              ))}
+            </div>
+            {error ? (
+              <div class="card-error">
+                <div style={{ fontFamily: "monospace", marginBottom: "12px" }}>
+                  {error.message}
+                </div>
+                <Button
+                  actionErrorEffect="ignore"
+                  action={() => action.rerun()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : loading || !user ? (
+              <UserCardSkeleton />
+            ) : (
+              <UserCardFields name={user.name} email={user.email} count={0} />
+            )}
+          </div>
         );
       };
 

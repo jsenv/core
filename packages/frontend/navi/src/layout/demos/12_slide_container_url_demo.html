@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>SlideContainer & url</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 0.95rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #555;
+        font-size: 13px;
+      }
+      /* L'adresse, telle quelle: c'est elle qu'on regarde sur cette page. */
+      .address {
+        padding: 6px 10px;
+        color: #1a237e;
+        font-size: 13px;
+        font-family: ui-monospace, monospace;
+        white-space: nowrap;
+        background: #eaf2fd;
+        border-radius: 6px;
+        overflow-x: auto;
+      }
+      .slides {
+        border: 1px solid #d5dbe6;
+        border-radius: 8px;
+      }
+      .slide {
+        padding: 20px;
+      }
+      .slide h4 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+      .photo {
+        display: flex;
+        height: 140px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Link,
+        route,
+        setupRoutes,
+        Slide,
+        SlideContainer,
+        stateSignal,
+        useDocumentUrl,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const stepSignal = stateSignal("quand", {
+        id: "step",
+        oneOf: ["quand", "ou", "qui", "recap", "fini"],
+        weak: true,
+      });
+      const lockedStepSignal = stateSignal("un", {
+        id: "locked_step",
+        oneOf: ["un", "deux", "trois"],
+        weak: true,
+      });
+      const photoSignal = stateSignal("a", {
+        id: "photo",
+        oneOf: ["a", "b", "c"],
+        history: "push",
+      });
+
+      const CREATE_ROUTE = route("/", {
+        searchParams: {
+          step: stepSignal,
+          locked_step: lockedStepSignal,
+          photo: photoSignal,
+        },
+      });
+      const EDIT_ROUTE = route("/edit", {
+        searchParams: { step: { signal: stepSignal, default: "recap" } },
+      });
+      setupRoutes([CREATE_ROUTE, EDIT_ROUTE]);
+
+      const Address = () => {
+        const url = useDocumentUrl();
+        const { pathname, search } = new URL(url);
+        return (
+          <div className="address" data-testid="address">
+            {pathname}
+            {search}
+          </div>
+        );
+      };
+
+      const WIZARD_STEPS = [
+        { area: "quand", label: "Quand" },
+        { area: "ou", label: "Où" },
+        { area: "qui", label: "Qui" },
+        { area: "recap", label: "Récapitulatif" },
+      ];
+
+      const WizardSlides = ({ signal, id, testid }) => (
+        <Box flex="y" spacing="s">
+          <Box flex spacing="s" data-slide-container-follows={id}>
+            {WIZARD_STEPS.map(({ area, label }) => (
+              <Button
+                key={area}
+                command={`--navi-go-to-slide:${area}`}
+                commandFor={id}
+                data-testid={`${testid}_to_${area}`}
+                paddingY="xxs"
+                paddingX="s"
+              >
+                {label}
+              </Button>
+            ))}
+          </Box>
+          <SlideContainer
+            id={id}
+            className="slides"
+            signal={signal}
+            data-testid={testid}
+            height="120px"
+          >
+            {WIZARD_STEPS.map(({ area, label }) => (
+              <Slide key={area} area={area} overflow="auto">
+                <div className="slide">
+                  <h4>{label}</h4>
+                </div>
+              </Slide>
+            ))}
+          </SlideContainer>
+        </Box>
+      );
+
+      const NominalDemo = () => (
+        <div className="demo-section">
+          <h2 id="nominal">
+            <a href="#nominal">#</a> Cas nominal
+          </h2>
+          <p className="caption">
+            L'étape est un search param de la route, et le conteneur est bindé
+            dessus: <code>signal={"{stepSignal}"}</code>.
+          </p>
+          <Box flex="y" spacing="s">
+            <Address />
+            <WizardSlides signal={stepSignal} id="wizard" testid="wizard" />
+          </Box>
+        </div>
+      );
+
+      const LockedDemo = () => (
+        <div className="demo-section">
+          <h2 id="verrous">
+            <a href="#verrous">#</a> Une adresse ne saute pas les verrous
+          </h2>
+          <p className="caption">
+            L'étape « deux » retient (<code>preventNavNext</code>) tant que rien
+            n'est envoyé.
+          </p>
+          <Box flex="y" spacing="s">
+            <Address />
+            <Box flex spacing="s">
+              <Button
+                onClick={() => {
+                  lockedStepSignal.value = "trois";
+                }}
+                data-testid="ask_trois"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Écrire l'état: « trois »
+              </Button>
+              <Button
+                onClick={() => {
+                  lockedStepSignal.value = "un";
+                }}
+                data-testid="ask_un"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Écrire l'état: « un »
+              </Button>
+              <Button
+                command="--navi-right"
+                commandFor="locked"
+                data-testid="locked_next"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Suivant
+              </Button>
+            </Box>
+            <SlideContainer
+              id="locked"
+              className="slides"
+              signal={lockedStepSignal}
+              data-testid="locked"
+              height="140px"
+            >
+              <Slide area="un">
+                <div className="slide">
+                  <h4>Un</h4>
+                </div>
+              </Slide>
+              <Slide area="deux" preventNavNext>
+                <div className="slide">
+                  <h4>Deux</h4>
+                  <p className="caption">Rien ne mène plus loin.</p>
+                </div>
+              </Slide>
+              <Slide area="trois">
+                <div className="slide">
+                  <h4>Trois</h4>
+                </div>
+              </Slide>
+            </SlideContainer>
+          </Box>
+        </div>
+      );
+
+      const PerRouteDefaultDemo = () => (
+        <div className="demo-section">
+          <h2 id="defaut_par_route">
+            <a href="#defaut_par_route">#</a> Le départ dépend de la page
+          </h2>
+          <p className="caption">
+            Un seul <code>stepSignal</code>, deux routes:{" "}
+            <code>{'{ signal, default: "recap" }'}</code> sur /edit.
+          </p>
+          <Box flex="y" spacing="s">
+            <Address />
+            <Box flex spacing="s">
+              <Link
+                route={CREATE_ROUTE}
+                variant="tab"
+                padding="s"
+                currentIndicator
+                data-testid="go_create"
+              >
+                Créer
+              </Link>
+              <Link
+                route={EDIT_ROUTE}
+                variant="tab"
+                padding="s"
+                currentIndicator
+                data-testid="go_edit"
+              >
+                Modifier
+              </Link>
+            </Box>
+            <WizardSlides signal={stepSignal} id="wizard2" testid="wizard2" />
+          </Box>
+        </div>
+      );
+
+      const PHOTOS = [
+        { area: "a", color: "#3949ab" },
+        { area: "b", color: "#00897b" },
+        { area: "c", color: "#c62828" },
+      ];
+
+      const PushDemo = () => (
+        <div className="demo-section">
+          <h2 id="push">
+            <a href="#push">#</a> Des valeurs qui SONT des lieux
+          </h2>
+          <p className="caption">
+            <code>history: "push"</code> sur l'état: chaque photo est une entrée
+            d'historique. Au doigt, non.
+          </p>
+          <Box flex="y" spacing="s">
+            <Address />
+            <Box flex spacing="s">
+              <Button
+                command="--navi-left"
+                commandFor="gallery"
+                data-testid="photo_prev"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                ◀
+              </Button>
+              <Button
+                command="--navi-right"
+                commandFor="gallery"
+                data-testid="photo_next"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                ▶
+              </Button>
+            </Box>
+            <SlideContainer
+              id="gallery"
+              className="slides"
+              signal={photoSignal}
+              data-testid="gallery"
+            >
+              {PHOTOS.map(({ area, color }) => (
+                <Slide key={area} area={area}>
+                  <div
+                    className="photo"
+                    style={{ background: color }}
+                  >{`Photo ${area.toUpperCase()}`}</div>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </Box>
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="SlideContainer & url" />
+          <div className="demo-section">
+            <DocumentToc />
+            <Button
+              onClick={() => {
+                stepSignal.value = undefined;
+                lockedStepSignal.value = undefined;
+                photoSignal.value = undefined;
+              }}
+              data-testid="reset_all"
+              paddingY="xxs"
+              paddingX="s"
+            >
+              Tout remettre à zéro
+            </Button>
+          </div>
+          <NominalDemo />
+          <LockedDemo />
+          <PerRouteDefaultDemo />
+          <PushDemo />
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

@@ -687,23 +687,28 @@ A container remembers nothing across a reload, so a step whose `required` the ap
 knows is already satisfied says so itself (`required={!alreadyFilled}`); the same
 holds for a hold that a finished job lifts (`preventNavNext={!published}`).
 
-**A start that depends on where one is** — a wizard creating something opens on
-its first question, the same wizard editing something opens on its summary — is
-not a prop on the container either: a `stateSignal` takes a SIGNAL as its default
-and follows it as long as nobody has answered otherwise.
+**A start that depends on the page one is on** — a wizard creating something
+opens on its first question, the same wizard editing something opens on its
+summary — is said by the ROUTE, not by the state and not by the container:
 
 ```js
-const stepDefaultSignal = computed(() =>
-  // `matchingSignal`, not `matching`: the plain property is a mirror, the
-  // signal is what a computed can follow
-  ALERT_EDIT_ROUTE.matchingSignal.value ? "recap" : "when",
-);
-const stepSignal = stateSignal(stepDefaultSignal, { id: "step", weak: true });
+const stepSignal = stateSignal("when", { id: "step", weak: true });
+route("/alerts/create", { searchParams: { step: stepSignal } });
+route("/alerts/:alertId/edit", {
+  searchParams: { step: { signal: stepSignal, default: "recap" } },
+});
 ```
 
-The pruning follows it too, so both addresses stay clean on the step they open
-on — `/alerts/create` on "when", `/alerts/W-123/edit` on "recap" — and a step
-someone actually chose survives the default moving under it.
+Everything that asks "is this the default" then asks the route one is on: both
+addresses stay clean on the step they open on — `/alerts/create` on "when",
+`/alerts/W-123/edit` on "recap" — an address naming no step puts the state back
+on that page's own, and going from one to the other moves the step with it.
+
+Not a `computed` over the route's `matchingSignal`: a state and the route that
+declares it cannot name each other — whichever is written first, the other is
+not initialised yet, and a dynamic default is read while `stateSignal` is being
+built. The route is the right place regardless; it is the thing that knows which
+page one is on.
 
 Two containers on one screen are two signals, and that is the whole answer to
 "which one owns the param": the one holding the route's signal. A gallery of

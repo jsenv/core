@@ -28,11 +28,17 @@ let isUpdatingRoutesFromUrl = false;
  * @param {string} pattern - The url pattern, where `:name` is a path param and
  *   `:name=${signal}` binds that param to a signal.
  * @param {object} [options]
- * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
+ * @param {Object<string, import("@preact/signals").Signal | {signal: import("@preact/signals").Signal, default?: any}>} [options.searchParams]
  *   Search params this route two-way syncs with, by name. The signal and the url
  *   are the same state: writing the signal rewrites the address, an address
  *   arriving from outside writes the signal, and the param disappears from the
  *   url while the signal holds its default.
+ *   `{ signal, default }` says what that state is worth ON THIS ROUTE: the same
+ *   step opens a creation wizard on its first question and an edition one on
+ *   its summary, each address staying clean on the step its page opens on. One
+ *   state, and the page one is on decides where it starts — which is why this
+ *   is said here rather than as a dynamic default on the signal: a signal and
+ *   the route declaring it cannot name each other.
  *   Writing one AMENDS the history entry one is on — a param qualifies the
  *   screen, it is not a place, and one entry per write turns a single
  *   back-press into as many as the user moved. A state whose values ARE places
@@ -772,6 +778,7 @@ This prevents cross-test pollution and ensures clean state.`,
             if (!newMatching) {
               // Route doesn't match - check if any matching route extracts this parameter
               let parameterExtractedByMatchingRoute = false;
+              let parameterDeclaredByMatchingRoute = false;
               let matchingRouteInSameFamily = false;
 
               for (const otherRoute of routeSet) {
@@ -785,11 +792,21 @@ This prevents cross-test pollution and ensures clean state.`,
                   parameterExtractedByMatchingRoute = true;
                 }
 
+                // Same param, on the page one is arriving at: what it is worth
+                // there is that page's business, url or no url — it may open on
+                // a default of its own (see searchParams' `{ signal, default }`).
+                const otherPattern =
+                  getRoutePrivateProperties(otherRoute).routePattern;
+                if (
+                  otherPattern.queryConnectionMap.has(paramName) ||
+                  otherPattern.pathConnectionMap.has(paramName)
+                ) {
+                  parameterDeclaredByMatchingRoute = true;
+                }
+
                 // Same family = same topmost ancestor
                 // (familyRoot, computed in setupRoutePatterns)
-                const otherPatternObj =
-                  getRoutePrivateProperties(otherRoute).routePattern;
-                if (otherPatternObj.familyRoot === routePattern.familyRoot) {
+                if (otherPattern.familyRoot === routePattern.familyRoot) {
                   matchingRouteInSameFamily = true;
                 }
               }
@@ -798,7 +815,10 @@ This prevents cross-test pollution and ensures clean state.`,
               // whatever the family and whatever the default. Coming back by a
               // url that does not carry the param comes back to a blank screen.
               if (connection.weak) {
-                if (!parameterExtractedByMatchingRoute) {
+                if (
+                  !parameterExtractedByMatchingRoute &&
+                  !parameterDeclaredByMatchingRoute
+                ) {
                   const defaultValue = connection.getDefaultValue();
                   if (debug) {
                     console.debug(

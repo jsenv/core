@@ -521,12 +521,13 @@ const readArea = (slideElement) =>
  *   docs/control_object.md#a-settings-sheet) or move them by writing it.
  *   Excludes `current`; `onCurrentChange` still fires, for the `cause` and for
  *   the right to refuse.
- *   An area written from outside is WALKED to, not jumped to: every slide
- *   between here and there is asked to let go the way a key going that way
- *   would ask it, and the first one that holds (`preventNav`, a `required` step
- *   still unanswered) is where one stops — after which the signal is written
- *   with the area actually shown, so it says where one IS and never where one
- *   asked to be.
+ *   An area written from outside is WALKED to, not jumped to — the first one
+ *   included, which is the one an address arrives as: every slide between here
+ *   and there is asked to let go the way a key going that way would ask it, and
+ *   the first one that holds (`preventNav`, a `required` step still unanswered)
+ *   is where one stops — after which the signal is written with the area
+ *   actually shown, so it says where one IS and never where one asked to be.
+ *   The walk starts from where the state itself opens (see `defaultCurrent`).
  *   PUTTING THE AREA IN THE URL is that binding and nothing more: hand it a
  *   `stateSignal` a route declares as a search param, and `?step=<area>` is
  *   written on every travel, read on a load, a bookmark, a link, a traversal —
@@ -539,12 +540,13 @@ const readArea = (slideElement) =>
  *   ```jsx
  *   <SlideContainer signal={stepSignal}>
  *   ```
- *   Where it opens is the state's own default (`stateSignal`'s first argument —
- *   a signal there, for a start that depends on where one is), and the param
- *   stays out of the address while the area IS that default. `weak` keeps the
- *   step from being inherited by links built to that route. Written by
- *   replacement unless the state says `history: "push"`, and even then a slide
- *   reached by DRAGGING replaces — see docs/navigation.md.
+ *   Where it opens is the state's own default (`stateSignal`'s first argument,
+ *   or the route's own `{ signal, default }` where the same state starts
+ *   elsewhere depending on the page), and the param stays out of the address
+ *   while the area IS that default. `weak` keeps the step from being inherited
+ *   by links built to that route. Written by replacement unless the state says
+ *   `history: "push"`, and even then a slide reached by DRAGGING replaces — see
+ *   docs/navigation.md.
  * @param {string} [props.defaultCurrent] - which slide to open on, for a
  *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -656,11 +658,14 @@ export const SlideContainer = ({
   // moment a slide appears before it, and there is nothing to renumber here.
   // This is where the container's own answer lives, and it is the only one the
   // picture is drawn from — an area coming from outside is a REQUEST that has
-  // to be walked to first (see the effect reading currentFromCaller). At mount
-  // there is no road to walk yet, so what the caller holds is taken as it is.
+  // to be walked to (see the effect reading currentFromCaller), and THE FIRST
+  // ONE TOO: an address typed, shared, or kept from a session that has moved on
+  // only ever arrives as the first value, so taking it as it is would be
+  // walking past every lock in exactly the case the locks are there for.
+  // So the picture starts where the state itself would open (a stateSignal's
+  // own default), or on `defaultCurrent`, and the walk goes from there.
   const [currentAreaState, setCurrentAreaState] = useState(
-    () =>
-      (currentSignal ? currentSignal.peek() : currentProp) ?? defaultCurrent,
+    () => currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent,
   );
   // The slide this container is travelling to while its controller has not been
   // told yet (commit="rest"): for the length of that travel the container is
@@ -752,9 +757,9 @@ export const SlideContainer = ({
   // what this container put there is not news. Without it, a container ahead of
   // its own state (commit="rest", where the picture arrives before the change
   // is told) would read its own lateness as an order to go back.
-  const areaAskedSeenRef = useRef(
-    currentSignal ? currentSignal.peek() : currentProp,
-  );
+  // Undefined at mount on purpose: the first area held outside is news like any
+  // other, and it is walked to rather than opened on.
+  const areaAskedSeenRef = useRef(undefined);
   // Where the container stands, said where the caller holds it.
   //
   // Whether a slide is a place one came from is the STATE's own business (see
@@ -1524,6 +1529,11 @@ export const SlideContainer = ({
   // `?step=done` cannot open a confirmation screen for something nobody sent.
   // Whatever comes of it, the state is then written with the area actually
   // shown: it says where one IS, never where one asked to be.
+  //
+  // Read on every render rather than subscribed to a dependency: the slides are
+  // not always there when the request is (a screen whose content arrives a
+  // request later), and what nothing has answered yet must still be answered
+  // once it can be.
   useLayoutEffect(() => {
     if (currentFromCaller === undefined) {
       return;
@@ -1533,14 +1543,20 @@ export const SlideContainer = ({
       // it wrote itself.
       return;
     }
-    areaAskedSeenRef.current = currentFromCaller;
     // Where the box IS, read off the DOM: `current` is undefined until someone
     // names a slide, and the container standing on its first one is a fact only
     // the map knows (see the layout effect that paints it).
     const areaOnScreen = containerRef.current?.getAttribute(
       SLIDE_CURRENT_ATTRIBUTE,
     );
-    if (!areaOnScreen || currentFromCaller === areaOnScreen) {
+    if (!areaOnScreen) {
+      // There are no slides yet, so there is no road to walk and nothing to
+      // refuse. Nothing is remembered either: this request has not been
+      // answered, and the render that brings the slides asks it again.
+      return;
+    }
+    areaAskedSeenRef.current = currentFromCaller;
+    if (currentFromCaller === areaOnScreen) {
       return;
     }
     const reached = reachableTowards(areaOnScreen, currentFromCaller);
@@ -1563,7 +1579,7 @@ export const SlideContainer = ({
       return;
     }
     onCurrentChange?.(areaOnScreen, { cause: "state", event: null });
-  }, [currentFromCaller]);
+  });
 
   // The press kept during a roll, taken once the window rests and the travel is
   // given back (noTravel off): by direction when there was one, so it is read

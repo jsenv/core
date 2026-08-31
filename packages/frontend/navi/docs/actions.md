@@ -107,14 +107,34 @@ obvious fix does not work — a `useEffect` in that same component that would
 run it was about to start is exactly what the suspension waits for. So either
 the action is started **before** anything reads it — bound where the screen is
 decided: a `routeAction`, a `<Button action>`, the `action` of the `<Link>` one
-came in by — or the component owns its request and does not suspend on it: a
-folding panel, a slice a button asks for. That one reads `action.dataSignal` and
-`action.errorSignal` (or `useActionStatus`) directly, `run()`s the action from an
-effect, and draws its own skeleton until the data is there. When what it owns is
-a signal rather than a prop, that run is declared once instead of written by
-hand: `actionRunEffect(action, () => …)` runs on the first truthy params, reruns
-when they change and aborts when they go false — the very machinery
-`routeAction` is built on.
+came in by — or the component owns its request: a folding panel, a slice a
+button asks for. That second one is `{ run: true }`, said in the same line that
+reads the data:
+
+```jsx
+// asks for it if nobody did, from the render that reads it
+const [members] = useAsyncData(membersAction, { run: true });
+```
+
+It starts the action from the render rather than from an effect, which is what
+makes it work at all: a suspended component has no effects, so a `run()` written
+in one would be waiting for itself. Everything else is unchanged — `loading` and
+`error` mean what they mean everywhere, delegated by default, handled inline
+when asked for — and running an action twice costs nothing, so nothing has to
+be guarded.
+
+**`{ run: true }` is the fallback, not the shape to reach for.** A route action
+is asked for when the ADDRESS changes, with everything else that address needs;
+this one cannot start before the component that draws it exists, which is a
+render late at best and a gesture late in a popup. So it is for data nothing
+else can ask for — a parameter chosen inside the component and dying with it —
+and it says so at the call site, where a hand-written `useEffect` + `run()` said
+nothing at all.
+
+Outside a component — a request the app owns rather than a component —
+`actionRunEffect(action, () => …)` is that same run declared once: it runs on
+the first truthy params, reruns when they change, aborts when they go false. It
+is the very machinery `routeAction` is built on.
 
 **Which of the two it is, is decided by the parameter, not by what draws it.**
 If the parameter is in the address — a path param, a search param bound to a

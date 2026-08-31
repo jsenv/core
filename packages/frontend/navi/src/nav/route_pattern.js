@@ -67,12 +67,34 @@ export const createRoutePattern = (
 
   // Build queryConnectionMap directly from searchParams
   const queryConnectionMap = new Map();
-  for (const [paramName, paramSignal] of Object.entries(searchParams)) {
+  for (const [paramName, searchParam] of Object.entries(searchParams)) {
+    // A search param is the signal it syncs with, or that signal plus what the
+    // state is worth ON THIS ROUTE: `{ signal, default }`. One state can start
+    // somewhere else depending on the page it is read on — a wizard's step
+    // opens on the first question where one is created and on the summary where
+    // one is edited — without the state having to know which routes exist, and
+    // without a route and a signal having to name each other.
+    const paramSignal = searchParam.signal || searchParam;
+    const routeDefaultValue = searchParam.signal
+      ? searchParam.default
+      : undefined;
     const signalId = paramSignal.__signalId;
     const registryEntry = globalSignalRegistry.get(signalId);
     if (registryEntry) {
       const { signal, options } = registryEntry;
       const connection = { paramName, signal, paramType: "query", ...options };
+      if (routeDefaultValue !== undefined) {
+        // Everything that asks "is this the default" asks this route, so the
+        // param stays out of the address on the step this page opens on, and
+        // an address that names none puts the state back on it.
+        connection.staticDefaultValue = routeDefaultValue;
+        connection.dynamicDefaultSignal = null;
+        connection.getDefaultValue = () => routeDefaultValue;
+        connection.isDefaultValue = (value) =>
+          compareTwoJsValues(value, routeDefaultValue);
+        connection.isCustomValue = (value) =>
+          value !== undefined && !compareTwoJsValues(value, routeDefaultValue);
+      }
       queryConnectionMap.set(paramName, connection);
     }
   }
@@ -935,8 +957,41 @@ export const createRoutePattern = (
     return paramsWithWeak;
   };
 
+  // A path param nothing answers for is READ from the url being amended. The
+  // url is the truth about where one stands; rebuilding the pattern without it
+  // would drop the segment and move the page — writing one search param must
+  // never do that. A param a signal is bound to is left alone: the signal
+  // answers for it, and buildMostPreciseUrl reads it.
+  const carryOverPathParams = (currentUrl, params) => {
+    let paramsWithPath = params;
+    let currentParams;
+    for (const segment of parsedPattern.segments) {
+      if (segment.type !== "param") {
+        continue;
+      }
+      const paramName = segment.name;
+      if (paramName in paramsWithPath || pathConnectionMap.has(paramName)) {
+        continue;
+      }
+      if (currentParams === undefined) {
+        currentParams = applyOn(currentUrl) || null;
+      }
+      if (!currentParams || currentParams[paramName] === undefined) {
+        continue;
+      }
+      if (paramsWithPath === params) {
+        paramsWithPath = { ...params };
+      }
+      paramsWithPath[paramName] = currentParams[paramName];
+    }
+    return paramsWithPath;
+  };
+
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
     params = carryOverWeakParams(currentUrl, params);
+    if (currentUrl) {
+      params = carryOverPathParams(currentUrl, params);
+    }
     const relativeBuiltUrl = buildMostPreciseUrl(params);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);

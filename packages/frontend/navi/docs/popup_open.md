@@ -567,13 +567,15 @@ What the popup gains is everything a page has:
 - and the routes keep saying what an address needs, which is why they declare
   it.
 
-The shape this replaces looks harmless, which is the problem: `bindParams`
-inside the component, `run()` from a `useEffect`, `data === undefined` as the
-loading flag. That is the owned request, and it is right only when the parameter
-is chosen inside the popup and dies with it — a filter the sheet itself holds
-and nothing else remembers. When the parameter is one the address holds, those
-same lines have quietly turned screen data into a popup's private request, asked
-for late and asked for alone.
+The fallback — the popup owning its request, `useAsyncData(action, { run: true })`
+— is for the parameter chosen inside the popup and dying with it: a filter the
+sheet itself holds and nothing else remembers. It cannot do better than the
+gesture that opened the popup, since it starts with the component that draws it;
+a route action left with the screen. Hand-written (`bindParams` in the component,
+`run()` from a `useEffect`, `data === undefined` as the loading flag) it looks
+harmless, and that is the problem: nothing at the call site says which of the two
+it is, so the day the parameter comes from the address, screen data has quietly
+become a popup's private request — asked for late, and asked for alone.
 
 ## What the popup holds while it is closed
 

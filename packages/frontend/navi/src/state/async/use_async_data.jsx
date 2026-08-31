@@ -15,7 +15,12 @@ import {
   markErrorAsDisplayedBy,
   markErrorAsTakenByRender,
 } from "../../action/action_error_report.js";
-import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
+import {
+  COMPLETED,
+  FAILED,
+  IDLE,
+  RUNNING,
+} from "../../action/action_run_states.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
 import { publishRouteRender } from "../../nav/route_render.js";
@@ -47,7 +52,20 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * to throw, so `error` is always `undefined` when the component renders.
  *
  * @param {import("../../action/actions.js").Action} action
- * @param {{ loading?: true, error?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
+ * @param {{ loading?: true, error?: true, run?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
+ * @param {true} [options.run] - The fallback for data nothing else can ask for:
+ *   this component owns the request and starts it, from the render that reads
+ *   it. `loading` and `error` keep their meaning — delegated by default,
+ *   handled inline when asked for — so a run started here suspends into
+ *   `<Loading>` like any other.
+ *
+ *   Prefer a `routeAction` wherever the parameter is one the address holds (a
+ *   path param, a search param bound to a `stateSignal`), popup included: it is
+ *   asked for when the address changes, with everything else that address
+ *   needs, whereas this one cannot start before the component that draws it
+ *   exists — one render late, and behind whatever gesture mounted it. What is
+ *   left for `run` is the parameter chosen inside the component and dying with
+ *   it (see docs/actions.md and docs/popup_open.md).
  * @param {(data: any, context: {params: any}) => void} [options.onLoad] - what
  *   this screen does with the data ONCE, when it becomes known: seed the fields
  *   someone is about to edit, remember where a list was, focus something.
@@ -79,7 +97,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  */
 export const useAsyncData = (
   promiseOrAction,
-  { loading = "delegate", error = "delegate", onLoad } = {},
+  { loading = "delegate", error = "delegate", run, onLoad } = {},
 ) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (loading === true) {
@@ -92,6 +110,7 @@ export const useAsyncData = (
     return useActionAsyncData(promiseOrAction, {
       loadingEffect: loading,
       errorEffect: error,
+      run,
       onLoad,
     });
   }
@@ -108,12 +127,36 @@ const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
-const useActionAsyncData = (action, { loadingEffect, errorEffect, onLoad }) => {
+const useActionAsyncData = (
+  action,
+  { loadingEffect, errorEffect, run, onLoad },
+) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
     throw new Error("Missing <Loading>");
   }
   useOnLoad(action, onLoad);
+
+  // `run: true` — this component owns the request, so it is what starts it, and
+  // it starts it from the render rather than from an effect: a component that
+  // suspends has no effects, so a run written in one would be waiting for
+  // itself. Asking twice costs nothing — a running or completed action is a
+  // no-op — which is what makes starting it while rendering sound. From there
+  // the wait is the ordinary one: suspended into <Loading>, or drawn by the
+  // component under `loading: true`, exactly as for data someone else ran.
+  if (
+    run &&
+    action.runningStateSignal.peek() === IDLE &&
+    action.paramsSignal.peek() !== undefined
+  ) {
+    const runResult = action.run({ reason: "useAsyncData({ run: true })" });
+    // Nobody awaits this run, and a rejection nobody awaits is an unhandled
+    // one — in dev, an overlay over a component already saying what failed.
+    // The failure is held by the action, and this hook is what reads it.
+    if (runResult && typeof runResult.catch === "function") {
+      runResult.catch(() => {});
+    }
+  }
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -152,7 +195,10 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect, onLoad }) => {
       unsubscribeFromRunningState();
       unsubscribeFromData();
     };
-  }, []);
+    // Bound to the action, not to the mount: params given as a plain object
+    // make another action instance, and the component would otherwise stay
+    // subscribed to the state of the one it no longer reads.
+  }, [action]);
 
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
