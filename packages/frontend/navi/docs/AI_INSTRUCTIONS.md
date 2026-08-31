@@ -139,13 +139,18 @@ consistency across the app, not from any single call site.
   `expandX={false}` to stop a dialog sprawling, and before writing CSS to make a
   dialog fit the screen.
 - `docs/autofocus.md` — who gets the keyboard when a popup opens or a slide
-  arrives: the ladder navi walks, what `autoFocus` means on a surface (`true`
-  = the surface takes it, for a popup that is READ before it is filled) versus
-  on a field, why a docked dialog keeps the keyboard down on a phone, and what
-  happens when the opening finds nothing to focus. Read it before wondering
-  where the focus went when a popup opened, and before removing `autoFocus`
-  from fields to stop a virtual keyboard rising — the surface is what decides,
-  not the absence of a field asking.
+  arrives, and whether a ring shows on it: the ladder navi walks, what
+  `autoFocus` means on a surface (`true` = the surface takes it, for a popup
+  that is READ before it is filled) versus on a field, why a docked dialog
+  keeps the keyboard down on a phone, what happens when the opening finds
+  nothing to focus, and the rule deciding the focus ring — the modality of what
+  asked for the transfer, an editable target ringing whatever asked. Read it
+  before wondering where the focus went when a popup opened, before removing
+  `autoFocus` from fields to stop a virtual keyboard rising (the surface is
+  what decides, not the absence of a field asking), and before calling
+  `element.focus()` anywhere — `moveFocusTo(element)` is the exported helper
+  that applies both decisions, and a bare `focus()` leaves the ring to the
+  browser.
 - `docs/scroll.md` — where scrolling happens: what turns `Box`
   `header`/`body`/`footer` on, `FixedBar` space, `List`'s `scroller`, scroll
   inside a `Dialog`/`Popover`, and what a scroll does to hover

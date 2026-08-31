@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.10.18",
+  "version": "2.10.19",
   "type": "module",
   "repository": {
     "type": "git",

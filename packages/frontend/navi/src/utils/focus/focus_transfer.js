@@ -433,8 +433,44 @@ const retryWhenPlaceable = (
   };
 };
 
+/**
+ * Focuses `element` the way navi focuses anything: without the browser's
+ * scroll-into-view, and showing a ring only when the user is on the keyboard.
+ *
+ * Both are decisions, not details. The scroll reads geometry a layout effect
+ * may still be deciding. And whether a ring shows belongs to the modality of
+ * what asked for this — a press with a finger or a mouse must not leave an
+ * outline nobody asked for, a movement asked for with a key must — never to
+ * the fact that the call came from code, which is all the browser can see. An
+ * editable target outranks the modality: someone about to type has to see
+ * where.
+ *
+ * So a bare `element.focus()` is the thing to avoid, in navi and in an app
+ * using it: it answers "who" and leaves "is this visible" to the browser.
+ *
+ * @param {HTMLElement} element
+ * @param {object} [options]
+ * @param {boolean} [options.focusVisible] Decides the ring instead of the
+ *   modality — for a caller that knows better than the last interaction does
+ *   (a transfer speaking for the gesture that opened a container, say).
+ * @param {boolean} [options.preventScroll=true] Pass false to let the browser
+ *   scroll the element into view.
+ */
+export const moveFocusTo = (
+  element,
+  { focusVisible, preventScroll = true } = {},
+) => {
+  element.focus({
+    preventScroll,
+    focusVisible:
+      focusVisible === undefined
+        ? isKeyboardModality() || isEditableTarget(element)
+        : focusVisible,
+  });
+};
+
 const focusTransferTarget = (target, focusVisible) => {
-  target.focus({ preventScroll: true, focusVisible });
+  moveFocusTo(target, { focusVisible });
   if (target.hasAttribute("navi-autofocus-select")) {
     target.select();
     // Keep the beginning of the text visible instead of scrolling to the end

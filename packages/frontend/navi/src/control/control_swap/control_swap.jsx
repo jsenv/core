@@ -39,12 +39,11 @@ import { toChildArray } from "preact";
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import {
-  isEditableTarget,
-  isKeyboardModality,
-} from "../../box/pseudo_styles.js";
 import { Icon } from "../../text/text.jsx";
-import { findFocusTarget } from "../../utils/focus/focus_transfer.js";
+import {
+  findFocusTarget,
+  moveFocusTo,
+} from "../../utils/focus/focus_transfer.js";
 import { warnSignalCollision } from "../control_value.js";
 import { Button } from "../input/button.jsx";
 
@@ -417,7 +416,7 @@ const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
   if (arrivingSide.autoFocus !== false) {
     const found = findFocusTarget(arrivingSlot);
     if (found) {
-      focusOnTheFloor(found.target);
+      moveFocusTo(found.target);
       return;
     }
   }
@@ -426,19 +425,6 @@ const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
   // and the cap of the side taking over is where the gesture was.
   const { activeElement } = document;
   if (!activeElement || activeElement === document.body) {
-    focusOnTheFloor(arrivingCap);
+    moveFocusTo(arrivingCap);
   }
-};
-
-// Whether a ring shows is the modality of what asked for the swap, not the fact
-// that this focus comes from code — a cap pressed with the mouse must not leave
-// a ring on the field. An editable target draws its ring on any focus, so the
-// native :focus-visible is told the same. preventScroll because the control is
-// off the window until the track arrives, and a browser revealing it would take
-// the page with it. (The rules are focus_transfer.js's; so is the reasoning.)
-const focusOnTheFloor = (target) => {
-  target.focus({
-    preventScroll: true,
-    focusVisible: isKeyboardModality() || isEditableTarget(target),
-  });
 };

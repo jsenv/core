@@ -50,10 +50,9 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [         `
-  body {
-    background-color: red;
-  }
+installImportMetaCssBuild(import.meta);import.meta.css = [         `body {
+  background-color: red;
+}
 `, "@jsenv/plugin-preact/tests/jsx_import_meta_css/client/foo.jsx"];
 const Foo = () => {
   return u("div", {

@@ -1,8 +1,10 @@
-# Where the keyboard goes when something opens
+# Where the keyboard goes, and when a ring shows
 
 A dialog, a popover, a slide arriving: one of them opens and something inside
 has to hold the keyboard. `autoFocus` is how each element takes part in that
-decision.
+decision. Handing the focus over answers a second question at the same time —
+whether what receives it shows a focus ring — and navi answers that one too,
+at the end of this page.
 
 - [What we want](#what-we-want)
 - [The ladder](#the-ladder)
@@ -12,6 +14,8 @@ decision.
   - [Opting a field back in](#opting-a-field-back-in)
 - [What a field says about itself](#what-a-field-says-about-itself)
 - [When the opening places nothing](#when-the-opening-places-nothing)
+- [The ring is decided too](#the-ring-is-decided-too)
+- [Moving the focus yourself](#moving-the-focus-yourself)
 
 ## What we want
 
@@ -162,3 +166,65 @@ That debt is settled two ways, whichever comes first:
 Without this, the same popup would land the focus in a different place — or
 nowhere — depending on whether it was opened by a click or by the page loading,
 which is the same popup behaving differently for no reason the user can see.
+
+## The ring is decided too
+
+Handing the focus over answers a second question: does what receives it show a
+focus ring? The browser's own answer is unusable here — it reads the last thing
+that touched the DOM, and a focus that came from code touched it last. So navi
+answers instead, and the answer is the **modality of what asked**:
+
+- the user was on the keyboard when this was asked for — a Tab, an Enter, an
+  arrow key: a ring;
+- a finger or a mouse asked: no ring, whatever the code did in between;
+- the element receiving it is **editable** — a text input, a textarea, a
+  contenteditable: a ring anyway. Someone about to type has to see where.
+
+That last one is why opening a search field with a mouse click still rings: the
+field is where you are about to type, not somewhere you merely landed.
+
+Nothing to pass, and nothing to opt into: it is how every navi component moves
+the focus.
+
+### In your CSS
+
+`:focus-visible` and `[data-focus-visible]` — the standard selectors, nothing
+navi-specific. navi implements them with a wider meaning than the browser's: an
+element also counts as focused while a **proxy** holds the focus (a read-only
+range delegating to a sibling) or while an element **controlling** it does (a
+combobox input with `aria-controls` on its listbox — the listbox reads as
+focused while the input is). Style the standard name and you get that for free.
+
+```css
+.my_row:focus-visible {
+  outline: 2px solid var(--navi-focus-outline-color);
+}
+```
+
+## Moving the focus yourself
+
+Prefer saying where the focus belongs over moving it: `autoFocus` on the field
+or the surface (the ladder above), and navi places it at the right moment, with
+the right ring, without scrolling anything.
+
+When you really do have to move it — a control of your own handing over to
+another — use `moveFocusTo` rather than `element.focus()`:
+
+```js
+import { moveFocusTo } from "@jsenv/navi";
+
+moveFocusTo(searchInputElement);
+```
+
+That is the whole call. It applies the two decisions above for you: no
+scroll-into-view, and a ring only where the user is on the keyboard (an
+editable target ringing anyway). A bare `element.focus()` answers "who" and
+leaves "is this visible" to the browser, and the browser reads the last thing
+that touched the DOM — which was your own call.
+
+Pass `focusVisible` when you know better than the last interaction does, and
+`preventScroll: false` when the element really has to be brought into view:
+
+```js
+moveFocusTo(element, { focusVisible: true });
+```

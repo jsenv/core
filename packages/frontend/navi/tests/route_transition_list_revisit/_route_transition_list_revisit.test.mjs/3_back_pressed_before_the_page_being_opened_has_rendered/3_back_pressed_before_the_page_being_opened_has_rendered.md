@@ -28,10 +28,10 @@ return { without_transition, with_transition };
       "range_asks": 1,
       "many_asks": 0
     },
-    "range_asked_on_each_revisit": "1000000000",
+    "range_asked_on_each_revisit": "0000100000",
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
-    "same_node_on_each_revisit": "-SSSSSSSSS",
+    "same_node_on_each_revisit": "SSSS-SSSSS",
     "transitions_played": 30,
     "transition_left_on_root": false,
     "errors": []

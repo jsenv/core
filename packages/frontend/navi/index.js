@@ -343,6 +343,9 @@ export { disableVirtualKeyboardOverlay } from "./src/layout/virtual_keyboard.js"
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
+// Moving the focus by hand, the way navi moves it: no scroll, and a ring only
+// where the user is on the keyboard (see docs/autofocus.md).
+export { moveFocusTo } from "./src/utils/focus/focus_transfer.js";
 
 // Interactions
 export { startDragTo } from "@jsenv/dom";

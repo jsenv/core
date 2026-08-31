@@ -310,6 +310,14 @@ lets the value change without rebuilding a stylesheet.
 
 ## @jsenv/navi Specifics
 
+### Focus
+
+Who holds the keyboard, and whether a ring shows, are decided in one place and
+answered the same way by every component — read
+[.agents/skills/focus/SKILL.md](skills/focus/SKILL.md) before writing anything
+that moves the focus. A bare `element.focus()` is a bug there even when it lands
+on the right element.
+
 ### Actions System
 
 ```js
