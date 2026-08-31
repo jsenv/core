@@ -133,7 +133,9 @@ const useActionAsyncData = (
 ) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
-    throw new Error("Missing <Loading>");
+    throw new Error(
+      `Missing <Loading>: useAsyncData delegates the wait, so it needs a <Loading> boundary above it — or "loading: true" to draw that wait here.`,
+    );
   }
   useOnLoad(action, onLoad);
 

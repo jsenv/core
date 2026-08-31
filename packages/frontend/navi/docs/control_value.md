@@ -6,6 +6,7 @@ somewhere else in the app.
 
 - [The three answers](#the-three-answers)
 - [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
+- [A picker fills its popup: the control inside already knows](#a-picker-fills-its-popup-the-control-inside-already-knows)
 - [A button that proposes a value is `--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
   - [`--navi-update:smooth`: the control is seen answering](#--navi-updatesmooth-the-control-is-seen-answering)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
@@ -73,6 +74,37 @@ re-aggregate when its signal is written, and the form above sees the new value.
 A value pushed in from anywhere is an answer like any other: the wheels roll,
 and the submit lights up. Which is why a **button** offering such a value is not
 a hand-written signal write — see the next section.
+
+## A picker fills its popup: the control inside already knows
+
+A picker mirrors the control in its popup, both ways
+([popup_open.md](./popup_open.md#composing-a-value-or-doing-work)) — and the
+first half of that mirroring happens **at open**: the picker fills the control
+with the value it holds, before anything is shown.
+
+```jsx
+// the row matching the picker's value is already selected, painted and
+// announced — nothing here says which one it is
+<Picker id="channel" signal={channelSignal}>
+  <List selectable>
+    {CHANNELS.map((channel) => (
+      <List.Item key={channel.id} value={channel.id}>
+        {channel.label}
+      </List.Item>
+    ))}
+  </List>
+</Picker>
+```
+
+So a `current`, a `selected` per row, or a `value` computed from what the picker
+holds is not "being explicit": it is a second answer to a question already
+answered, and it is the one that goes stale — the picker's value moves on a
+cancel, on a `--navi-update`, on a signal written elsewhere, and none of those
+pass through the prop the app is computing.
+
+What is left for the app is what to make of the selection, not what it is:
+a row is marked (`aria-selected`) and painted by the list itself, so anything
+extra hangs off that marker in CSS rather than off a prop.
 
 ## A button that proposes a value is `--navi-update`
 

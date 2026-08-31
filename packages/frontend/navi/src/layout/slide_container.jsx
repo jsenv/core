@@ -2583,6 +2583,25 @@ export const SlideContainer = ({
   );
 };
 
+// An area is written into the DOM and read back from it (see readArea), so what
+// the container hands to `onCurrentChange` and writes into a bound signal is the
+// STRING the attribute holds. A number travels there and comes back as "2",
+// which no `===` against the app's own key matches any more — and the only
+// symptom is downstream, in whatever that comparison feeds.
+const nonStringAreasWarned = new Set();
+const warnOnNonStringArea = (area) => {
+  if (area === undefined || typeof area === "string") {
+    return;
+  }
+  if (nonStringAreasWarned.has(area)) {
+    return;
+  }
+  nonStringAreasWarned.add(area);
+  console.warn(
+    `[navi] <Slide area={${String(area)}}> is a ${typeof area}. An area is read back from the DOM, so this container answers with the string "${String(area)}" — a signal bound to it holds that string, and a comparison against ${String(area)} fails. Name the area with a string (String(${String(area)})).`,
+  );
+};
+
 /**
  * One slide, and its own place on the map: it renders the element the container
  * moves, so anything can put one there — a fragment, a .map(), a component of
@@ -2622,6 +2641,9 @@ export const Slide = ({
 }) => {
   const container = useContext(SlideContainerContext);
   const slideArea = area ?? rest.id;
+  if (import.meta.dev) {
+    warnOnNonStringArea(slideArea);
+  }
   const answered = Boolean(container?.answeredAreas.includes(slideArea));
   const holdsUntilAnswered = Boolean(required) && !answered;
   const nextIsLocked = Boolean(preventNavNext) || holdsUntilAnswered;

@@ -17086,7 +17086,7 @@ const useActionAsyncData = (action, {
 }) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
-    throw new Error("Missing <Loading>");
+    throw new Error(`Missing <Loading>: useAsyncData delegates the wait, so it needs a <Loading> boundary above it — or "loading: true" to draw that wait here.`);
   }
   useOnLoad(action, onLoad);
 
@@ -31606,8 +31606,44 @@ const retryWhenPlaceable = (
   };
 };
 
+/**
+ * Focuses `element` the way navi focuses anything: without the browser's
+ * scroll-into-view, and showing a ring only when the user is on the keyboard.
+ *
+ * Both are decisions, not details. The scroll reads geometry a layout effect
+ * may still be deciding. And whether a ring shows belongs to the modality of
+ * what asked for this — a press with a finger or a mouse must not leave an
+ * outline nobody asked for, a movement asked for with a key must — never to
+ * the fact that the call came from code, which is all the browser can see. An
+ * editable target outranks the modality: someone about to type has to see
+ * where.
+ *
+ * So a bare `element.focus()` is the thing to avoid, in navi and in an app
+ * using it: it answers "who" and leaves "is this visible" to the browser.
+ *
+ * @param {HTMLElement} element
+ * @param {object} [options]
+ * @param {boolean} [options.focusVisible] Decides the ring instead of the
+ *   modality — for a caller that knows better than the last interaction does
+ *   (a transfer speaking for the gesture that opened a container, say).
+ * @param {boolean} [options.preventScroll=true] Pass false to let the browser
+ *   scroll the element into view.
+ */
+const moveFocusTo = (
+  element,
+  { focusVisible, preventScroll = true } = {},
+) => {
+  element.focus({
+    preventScroll,
+    focusVisible:
+      focusVisible === undefined
+        ? isKeyboardModality() || isEditableTarget(element)
+        : focusVisible,
+  });
+};
+
 const focusTransferTarget = (target, focusVisible) => {
-  target.focus({ preventScroll: true, focusVisible });
+  moveFocusTo(target, { focusVisible });
   if (target.hasAttribute("navi-autofocus-select")) {
     target.select();
     // Keep the beginning of the text visible instead of scrolling to the end
@@ -44889,7 +44925,7 @@ const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
   if (arrivingSide.autoFocus !== false) {
     const found = findFocusTarget(arrivingSlot);
     if (found) {
-      focusOnTheFloor(found.target);
+      moveFocusTo(found.target);
       return;
     }
   }
@@ -44900,21 +44936,8 @@ const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
     activeElement
   } = document;
   if (!activeElement || activeElement === document.body) {
-    focusOnTheFloor(arrivingCap);
+    moveFocusTo(arrivingCap);
   }
-};
-
-// Whether a ring shows is the modality of what asked for the swap, not the fact
-// that this focus comes from code — a cap pressed with the mouse must not leave
-// a ring on the field. An editable target draws its ring on any focus, so the
-// native :focus-visible is told the same. preventScroll because the control is
-// off the window until the track arrives, and a browser revealing it would take
-// the page with it. (The rules are focus_transfer.js's; so is the reasoning.)
-const focusOnTheFloor = target => {
-  target.focus({
-    preventScroll: true,
-    focusVisible: isKeyboardModality() || isEditableTarget(target)
-  });
 };
 
 const DEFAULT_VALIDITY_STATE = { valid: true, reported: null };
@@ -79526,5 +79549,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

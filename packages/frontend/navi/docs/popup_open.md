@@ -552,6 +552,24 @@ const GroupMembers = () => {
 };
 ```
 
+**A popup that waits holds its own `<Loading>`**, like every other part of a
+screen that can wait — it is not built into `Dialog`/`Popover`, because only the
+code inside knows whether anything in there loads at all:
+
+```jsx
+<Dialog signal={groupSheetOpenSignal}>
+  <Loading fallback={<GroupMembersSkeleton />}>
+    <GroupMembers />
+  </Loading>
+</Dialog>
+```
+
+Without it the nearest boundary is the one at the root of the app, and a
+suspension there empties the whole page — taking with it the popup element the
+browser is in the middle of animating. The alternative is the component drawing
+its own wait (`useAsyncData(action, { loading: true })`), which needs no
+boundary; what is not an option is neither of the two.
+
 What the popup gains is everything a page has:
 
 - the request leaves **with the screen**, in parallel with the rest of what the

@@ -11,6 +11,7 @@ then on there are two owners for one truth.
 - [Why it is not merely shorter](#why-it-is-not-merely-shorter)
 - [What is left for the callback](#what-is-left-for-the-callback)
 - [What binds itself](#what-binds-itself)
+- [A control that shows part of a bigger answer](#a-control-that-shows-part-of-a-bigger-answer)
 - [When there is no binding](#when-there-is-no-binding)
 
 ## The three shapes
@@ -118,6 +119,39 @@ Binding the state does not remove the callback — it removes one job from it:
 | where the user is                 | route + search-param signals                                | [navigation.md](./navigation.md)                                                                                     |
 | a value proposed to a control     | `command="--navi-update"`                                   | [control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)                               |
 | the state of an async run         | an `action`, read by `useAsyncData`                         | [actions.md](./actions.md)                                                                                           |
+
+## A control that shows part of a bigger answer
+
+"Who writes the score" has three answers — a player of the game, the organizer
+alone, nobody — and only two of them are rows: "nobody" is a switch under the
+list. So the state holds a value the list cannot show, and binding the list to
+that state leaves it showing nothing whenever the switch is on.
+
+The reflex is to fall back on `value` + `uiAction` and remember the row by hand.
+The finding is elsewhere: **the list is not asking that question**. It asks
+"which of these two", the switch asks "anybody at all", and the answer the
+screen sends is made of both:
+
+```jsx
+const scorerSignal = signal("player"); // what the list asks: one of ITS rows
+const nobodySignal = signal(false); // what the switch asks
+// what the screen answers, made of the two
+const whoWritesSignal = computed(() =>
+  nobodySignal.value ? "nobody" : scorerSignal.value,
+);
+
+<List selectable signal={scorerSignal}>…</List>
+<Input type="checkbox" signal={nobodySignal} />
+```
+
+Each control binds the state it is about, and the value that spans them is
+computed from those — never held a second time. It also gives back for free what
+the hand-written version had to arrange: the row chosen before the switch went
+on is still chosen when it goes off, because nothing ever cleared it.
+
+The rule underneath: a control shows values, so the state it binds is the one
+whose values it can show. A state holding more than that is more than one
+question.
 
 ## When there is no binding
 

@@ -123,6 +123,10 @@ in one would be waiting for itself. Everything else is unchanged — `loading` a
 when asked for — and running an action twice costs nothing, so nothing has to
 be guarded.
 
+Where that wait is caught is the caller's business, and a popup is no exception
+— see [popup_open.md](./popup_open.md#a-popup-that-loads-data) for what that
+costs when it is forgotten.
+
 **`{ run: true }` is the fallback, not the shape to reach for.** A route action
 is asked for when the ADDRESS changes, with everything else that address needs;
 this one cannot start before the component that draws it exists, which is a
