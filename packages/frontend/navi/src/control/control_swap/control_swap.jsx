@@ -49,8 +49,15 @@ import { Button } from "../input/button.jsx";
 
 const css = /* css */ `
   .navi_control_swap {
-    /* A line of text between two s paddings and two borders — a control sized
-       for a finger rather than for a form. Everything in the row is this tall,
+    /* The row is measured in the size of what it HOLDS rather than in the
+       page's: it holds controls, a control carries a font of its own, and the
+       length below is written in em. Without this a row of 16px text gives an
+       18px field a box built for a smaller line, and the same field is roomier
+       everywhere else in the app. */
+    font-size: var(--navi-control-font-size);
+
+    /* A line of that text between two s paddings and two borders — a control
+       sized for a finger rather than for a form. Everything in the row is this tall,
        so a caller wanting a thinner or thicker one says it here, once, instead
        of on each box that has to match. */
     --x-control-swap-size: var(
@@ -71,6 +78,12 @@ const css = /* css */ `
     gap: var(--x-control-swap-gap);
 
     > .navi_control_swap_cap {
+      /* The paper of the field beside it, not a button's: a cap is one of the
+         boxes of a control row, and a row whose whole job is to be quiet must
+         not read as two grey ends around a white middle. The rest of its look
+         is the caller's — a Side spreads what it is given onto it. */
+      --button-background-color: var(--navi-surface-color);
+
       position: relative;
       aspect-ratio: 1;
       /* Square on the row's height, which the row makes definite above — so
@@ -313,7 +326,7 @@ export const ControlSwap = (props) => {
               className="navi_control_swap_slot"
               inert={index === activeIndex ? undefined : true}
             >
-              {side.children}
+              {side.control}
             </div>
           ))}
         </div>
@@ -331,7 +344,8 @@ export const ControlSwap = (props) => {
 
 /**
  * One of the two controls, and the cap that speaks for it. Declarative: the row
- * reads these and draws the caps at its ends, the controls between them.
+ * reads these and draws the caps at its ends, the controls between them. The
+ * props below say what the side IS; every other prop describes its cap.
  *
  * @type {import("preact").FunctionComponent<{
  *   name?: string,
@@ -340,6 +354,7 @@ export const ControlSwap = (props) => {
  *   badge?: boolean | import("preact").ComponentChildren,
  *   autoFocus?: boolean,
  *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
  * }>}
  * @param name - How `value`/`signal`/`onChange` name this side. Its position
  *   ("0" or "1") by default.
@@ -356,18 +371,31 @@ export const ControlSwap = (props) => {
  *   that was pressed, for a control one reads before writing in (and, on a
  *   phone, for a keyboard that must not rise). Never on mount, whatever the
  *   setting.
+ *
+ * Anything else — `data-testid`, `variant`, `backgroundColor`, `color`, an
+ * `aria-describedby` — goes to the cap, which is a `<Button>`. It is the one
+ * element of the row an application does not render, so nothing else can name
+ * it or dress it; the control it stands for is a vnode of the caller's own and
+ * takes its props directly.
  */
 const ControlSwapSide = () => null;
 
 const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
-  const { icon, label, badge } = side;
+  const { icon, label, badge, ...capProps } = side.capProps;
   return (
     <Button
-      ref={ref}
-      className="navi_control_swap_cap"
       icon
       pressEffect="none"
       aria-label={label}
+      {...capProps}
+      ref={ref}
+      // After the caller's props, all of them: the class is what the row's own
+      // CSS reaches for, and the rest is the wiring that makes the cap a cap.
+      className={
+        capProps.className
+          ? `navi_control_swap_cap ${capProps.className}`
+          : "navi_control_swap_cap"
+      }
       aria-expanded={active}
       aria-controls={slotId}
       onClick={onPress}
@@ -392,10 +420,15 @@ const readSides = (children) => {
     if (!child || child.type !== ControlSwapSide) {
       continue;
     }
-    const { name, ...rest } = child.props;
+    // What is left over once the side's own vocabulary is taken out describes
+    // the cap: the control is a vnode the caller wrote and dresses itself, so
+    // the cap is the only thing in the row left to describe.
+    const { name, autoFocus, children: control, ...capProps } = child.props;
     sides.push({
       name: name === undefined ? String(sides.length) : name,
-      ...rest,
+      autoFocus,
+      control,
+      capProps,
     });
   }
   return sides;
@@ -407,14 +440,20 @@ const readSides = (children) => {
 //
 // WHERE inside is navi's own ladder (findFocusTarget): an `autoFocus` in the
 // control's own content first, the first focusable otherwise, a last resort
-// after that. Unlike an arriving popup it keeps the first focusable even where
-// the pointer is coarse (see docs/autofocus.md): a cap is pressed to reach the
-// control it names, so a keyboard rising is the answer to that gesture rather
-// than a cost imposed on a screen that merely appeared. A side one reads before
-// writing in says `autoFocus={false}`.
+// after that. Two of the ladder's reflexes are turned off here, and it is the
+// same reason both times — they are about a surface APPEARING, and this is a
+// press aimed at the control being handed the focus:
+// - the first focusable is kept even where the pointer is coarse (an arriving
+//   popup drops it so a virtual keyboard does not rise over what it just
+//   showed, see docs/autofocus.md); pressing a cap to reach a field is asking
+//   for that keyboard;
+// - `autoFocus="restore"` may claim it, though it means "never on a fresh
+//   open". A field marked that way so its sheet opens quietly would otherwise
+//   leave the focus on the magnifier that was pressed to reach it.
+// A side one reads before writing in says `autoFocus={false}`.
 const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
   if (arrivingSide.autoFocus !== false) {
-    const found = findFocusTarget(arrivingSlot);
+    const found = findFocusTarget(arrivingSlot, { restoreMayClaim: true });
     if (found) {
       moveFocusTo(found.target);
       return;

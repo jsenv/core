@@ -99,6 +99,11 @@ and is the better name for a test that reads or clicks the content. Reach for
 `popupTestId` when the frame IS what the test looks at: a screenshot of the
 popup's surface, its position, its size, its backdrop.
 
+`<ControlSwap.Side>` answers the same situation the other way: the cap at the
+end of the row is drawn by navi, and every prop the side does not use for
+itself lands on it — so `data-testid` on the side names the cap, while what the
+side holds is a vnode of yours that takes its own.
+
 ## What not to target
 
 Navi's own attributes are implementation, not a contract: `data-header`,

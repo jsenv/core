@@ -143,6 +143,7 @@
           <BasicsDemo />
           <StatesDemo />
           <BadgeDemo />
+          <CapDemo />
           <AutoFocusDemo />
           <AnimationDemo />
           <WidthDemo />
@@ -220,6 +221,36 @@
           </div>
         );
       };
+
+      // ── la pastille ───────────────────────────────────────────────────────
+
+      const CapDemo = () => (
+        <div class="demo-section">
+          <Heading id="cap">Habiller la pastille</Heading>
+          <Box flex="y" spacing="m">
+            <Variant caption="par défaut">
+              <div class="phone">
+                <ControlSwap>
+                  {whereSide()}
+                  {whatSide()}
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption='variant="discrete" + color, data-testid="search_cap"'>
+              <div class="phone">
+                <ControlSwap>
+                  {whereSide({ variant: "discrete" })}
+                  {whatSide({
+                    "variant": "discrete",
+                    "color": "#6b7280",
+                    "data-testid": "search_cap",
+                  })}
+                </ControlSwap>
+              </div>
+            </Variant>
+          </Box>
+        </div>
+      );
 
       // ── autoFocus ─────────────────────────────────────────────────────────
 

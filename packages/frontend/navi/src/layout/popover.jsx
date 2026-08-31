@@ -84,6 +84,7 @@ import {
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
+  warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
 
@@ -860,6 +861,9 @@ const usePopoverProps = (props) => {
     // the backdrop isn't rendered at all in that case.
     const backdropEl = backdropRef.current;
     if (!popoverEl) {
+      if (import.meta.dev) {
+        warnPopupHasNoElementToOpen("popover");
+      }
       return undefined;
     }
 

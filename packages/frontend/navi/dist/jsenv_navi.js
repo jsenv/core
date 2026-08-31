@@ -31192,7 +31192,9 @@ const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
  * 5. The element focused before the container opened
  *
  * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
- * a fresh open, it only gets it back.
+ * a fresh open, it only gets it back. Unless a caller says the arrival is not a
+ * fresh open but the answer to a press aimed at that very control — see
+ * findFocusTarget's `restoreMayClaim`.
  *
  * A ladder that comes back empty — a container holding nothing focusable yet —
  * places no focus, and says so on the container ([navi-autofocus-unplaced]),
@@ -31340,9 +31342,19 @@ const markAutofocusRestoreOnClose = (
  *   it, so landing there scrolls whatever comes before it out of sight.
  *   transferFocus turns this on by itself wherever the keyboard is a virtual
  *   one — see the reasoning there.
+ * @param {boolean} [options.restoreMayClaim]
+ *   Lets `navi-autofocus="restore"` claim the focus like a plain `autoFocus`.
+ *   Its "never on a fresh open" is about a surface APPEARING — a sheet whose
+ *   field must not raise a phone's keyboard by opening. A press aimed at the
+ *   very control being handed the focus is not that: it IS the ask, and
+ *   refusing it leaves the focus on the button that was pressed. Only
+ *   "restore" is freed; "last-resort" still waits its turn.
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
+const findFocusTarget = (
+  containerEl,
+  { skipFirstFocusable, restoreMayClaim } = {},
+) => {
   // Not while there is anything else: what takes the focus only for want of
   // anything better ("last-resort") and what only takes it back ("restore").
   // Neither is dropped, both are simply tried later — step 3 below for the
@@ -31359,8 +31371,15 @@ const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
   const isHiddenFromAssistiveTech = (element) =>
     Boolean(element.closest?.(`[aria-hidden="true"]`));
 
-  const skip = (element) =>
-    isRestorableAutofocus(element) || isHiddenFromAssistiveTech(element);
+  const skip = (element) => {
+    if (isHiddenFromAssistiveTech(element)) {
+      return true;
+    }
+    if (restoreMayClaim) {
+      return element.getAttribute("navi-autofocus") === "last-resort";
+    }
+    return isRestorableAutofocus(element);
+  };
 
   // Every mark, not just the first: a mark is only worth stopping at if it
   // leads somewhere focusable. One inside a screen waiting its turn (an inert
@@ -44619,6 +44638,7 @@ installImportMetaCssBuild(import.meta);/**
  * make the row thinner or thicker.
  */
 const css$O = /* css */`.navi_control_swap {
+  font-size: var(--navi-control-font-size);
   --x-control-swap-size: var(--navi-control-swap-size, calc(var(--navi-control-line-height) + 2 * var(--navi-s) + 2 *
           var(--navi-control-border-width)));
   --x-control-swap-gap: var(--navi-control-swap-gap, var(--navi-xs));
@@ -44627,6 +44647,7 @@ const css$O = /* css */`.navi_control_swap {
   gap: var(--x-control-swap-gap);
 
   & > .navi_control_swap_cap {
+    --button-background-color: var(--navi-surface-color);
     aspect-ratio: 1;
     flex: none;
     justify-content: center;
@@ -44817,7 +44838,7 @@ const ControlSwap = props => {
           id: `${slotIdPrefix}_${index}`,
           className: "navi_control_swap_slot",
           inert: index === activeIndex ? undefined : true,
-          children: side.children
+          children: side.control
         }, side.name))
       })
     }), jsx(ControlSwapCap, {
@@ -44832,7 +44853,8 @@ const ControlSwap = props => {
 
 /**
  * One of the two controls, and the cap that speaks for it. Declarative: the row
- * reads these and draws the caps at its ends, the controls between them.
+ * reads these and draws the caps at its ends, the controls between them. The
+ * props below say what the side IS; every other prop describes its cap.
  *
  * @type {import("ignore:preact").FunctionComponent<{
  *   name?: string,
@@ -44841,6 +44863,7 @@ const ControlSwap = props => {
  *   badge?: boolean | import("ignore:preact").ComponentChildren,
  *   autoFocus?: boolean,
  *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
  * }>}
  * @param name - How `value`/`signal`/`onChange` name this side. Its position
  *   ("0" or "1") by default.
@@ -44857,6 +44880,12 @@ const ControlSwap = props => {
  *   that was pressed, for a control one reads before writing in (and, on a
  *   phone, for a keyboard that must not rise). Never on mount, whatever the
  *   setting.
+ *
+ * Anything else — `data-testid`, `variant`, `backgroundColor`, `color`, an
+ * `aria-describedby` — goes to the cap, which is a `<Button>`. It is the one
+ * element of the row an application does not render, so nothing else can name
+ * it or dress it; the control it stands for is a vnode of the caller's own and
+ * takes its props directly.
  */
 const ControlSwapSide = () => null;
 const ControlSwapCap = ({
@@ -44869,14 +44898,20 @@ const ControlSwapCap = ({
   const {
     icon,
     label,
-    badge
-  } = side;
+    badge,
+    ...capProps
+  } = side.capProps;
   return jsxs(Button, {
-    ref: ref,
-    className: "navi_control_swap_cap",
     icon: true,
     pressEffect: "none",
     "aria-label": label,
+    ...capProps,
+    ref: ref
+    // After the caller's props, all of them: the class is what the row's own
+    // CSS reaches for, and the rest is the wiring that makes the cap a cap.
+    ,
+
+    className: capProps.className ? `navi_control_swap_cap ${capProps.className}` : "navi_control_swap_cap",
     "aria-expanded": active,
     "aria-controls": slotId,
     onClick: onPress,
@@ -44898,13 +44933,20 @@ const readSides = children => {
     if (!child || child.type !== ControlSwapSide) {
       continue;
     }
+    // What is left over once the side's own vocabulary is taken out describes
+    // the cap: the control is a vnode the caller wrote and dresses itself, so
+    // the cap is the only thing in the row left to describe.
     const {
       name,
-      ...rest
+      autoFocus,
+      children: control,
+      ...capProps
     } = child.props;
     sides.push({
       name: name === undefined ? String(sides.length) : name,
-      ...rest
+      autoFocus,
+      control,
+      capProps
     });
   }
   return sides;
@@ -44916,14 +44958,22 @@ const readSides = children => {
 //
 // WHERE inside is navi's own ladder (findFocusTarget): an `autoFocus` in the
 // control's own content first, the first focusable otherwise, a last resort
-// after that. Unlike an arriving popup it keeps the first focusable even where
-// the pointer is coarse (see docs/autofocus.md): a cap is pressed to reach the
-// control it names, so a keyboard rising is the answer to that gesture rather
-// than a cost imposed on a screen that merely appeared. A side one reads before
-// writing in says `autoFocus={false}`.
+// after that. Two of the ladder's reflexes are turned off here, and it is the
+// same reason both times — they are about a surface APPEARING, and this is a
+// press aimed at the control being handed the focus:
+// - the first focusable is kept even where the pointer is coarse (an arriving
+//   popup drops it so a virtual keyboard does not rise over what it just
+//   showed, see docs/autofocus.md); pressing a cap to reach a field is asking
+//   for that keyboard;
+// - `autoFocus="restore"` may claim it, though it means "never on a fresh
+//   open". A field marked that way so its sheet opens quietly would otherwise
+//   leave the focus on the magnifier that was pressed to reach it.
+// A side one reads before writing in says `autoFocus={false}`.
 const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
   if (arrivingSide.autoFocus !== false) {
-    const found = findFocusTarget(arrivingSlot);
+    const found = findFocusTarget(arrivingSlot, {
+      restoreMayClaim: true
+    });
     if (found) {
       moveFocusTo(found.target);
       return;

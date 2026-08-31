@@ -215,3 +215,19 @@ export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
     parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
   return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
 };
+
+/**
+ * An opening that reaches a popup with no element of its own to show.
+ *
+ * The one cause seen so far, and it is silent: something inside the popup
+ * suspended while its content was being built, and the `<Loading>` that caught
+ * it sits ABOVE the popup. A boundary suspending on an update keeps the page as
+ * it was, as a copy, so what is opened here belongs to a copy nobody owns any
+ * more — and once the data arrives the subtree is rebuilt from scratch, closed
+ * and empty. Nothing is thrown, nothing is drawn, and the press is lost.
+ */
+export const warnPopupHasNoElementToOpen = (popupKind) => {
+  console.warn(
+    `[navi] a "${popupKind}" was asked to open and has no element to open. What usually did it: content inside it suspended, and the <Loading> that caught the wait is above the popup rather than inside it — the popup was set aside with the rest of what that boundary holds, and this opening is lost (the next one works). Put a <Loading> inside the popup, or draw the wait in the component itself with useAsyncData(action, { loading: true }).`,
+  );
+};

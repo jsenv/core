@@ -231,9 +231,11 @@ const FAKE_BACKEND_MODES = {
 // particular page means. Having to set it again on each reload is what makes it
 // go unused.
 const MODE_STORAGE_KEY = "navi_fake_backend_mode";
-const readStoredMode = () => {
+const readStoredMode = (modeDefault) => {
   const stored = localStorage.getItem(MODE_STORAGE_KEY);
-  return stored && FAKE_BACKEND_MODES[stored] !== undefined ? stored : "manuel";
+  return stored && FAKE_BACKEND_MODES[stored] !== undefined
+    ? stored
+    : modeDefault;
 };
 
 const FakeBackendModeSelect = ({ mode, onChange }) => (
@@ -256,8 +258,8 @@ const FakeBackendModeSelect = ({ mode, onChange }) => (
  * of "manuel" releases what is already waiting — otherwise a page left holding
  * a call would need one last press to get out of the mode it just left.
  */
-const useFakeBackendMode = (calls, { answer, fail, cancel }) => {
-  const [mode, setMode] = useState(readStoredMode);
+const useFakeBackendMode = (calls, { answer, fail, cancel }, modeDefault) => {
+  const [mode, setMode] = useState(() => readStoredMode(modeDefault));
   useEffect(() => {
     const automatic = FAKE_BACKEND_MODES[mode];
     if (!automatic || calls.length === 0) {
@@ -455,6 +457,12 @@ export const FakeBackend = ({
   value: valueInitial,
   persist,
   newRow,
+  // Which way the backend answers before anyone has picked one. "manuel" is
+  // what a demo wants — a call held for as long as one likes is the whole point
+  // — but a page whose calls happen behind a MODAL popup cannot be answered by
+  // hand: the buttons on the frontier are under the dialog. Such a page says so
+  // here, and the picker still wins as soon as it is used.
+  defaultMode = "manuel",
   children,
 }) => {
   import.meta.css = css;
@@ -465,7 +473,7 @@ export const FakeBackend = ({
   const backend = backendFromProps || ownBackendRef.current;
   const value = backend.valueSignal.value;
   const calls = backend.callsSignal.value;
-  const [mode, setMode] = useFakeBackendMode(calls, backend);
+  const [mode, setMode] = useFakeBackendMode(calls, backend, defaultMode);
 
   // The backend changing on its own — someone else's edit, a job, a push. No
   // call is in flight for these: the value simply becomes something else and

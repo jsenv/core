@@ -19,7 +19,9 @@ import { coarsePointerSignal } from "@jsenv/navi/src/layout/responsive.js";
  * 5. The element focused before the container opened
  *
  * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
- * a fresh open, it only gets it back.
+ * a fresh open, it only gets it back. Unless a caller says the arrival is not a
+ * fresh open but the answer to a press aimed at that very control — see
+ * findFocusTarget's `restoreMayClaim`.
  *
  * A ladder that comes back empty — a container holding nothing focusable yet —
  * places no focus, and says so on the container ([navi-autofocus-unplaced]),
@@ -167,9 +169,19 @@ export const markAutofocusRestoreOnClose = (
  *   it, so landing there scrolls whatever comes before it out of sight.
  *   transferFocus turns this on by itself wherever the keyboard is a virtual
  *   one — see the reasoning there.
+ * @param {boolean} [options.restoreMayClaim]
+ *   Lets `navi-autofocus="restore"` claim the focus like a plain `autoFocus`.
+ *   Its "never on a fresh open" is about a surface APPEARING — a sheet whose
+ *   field must not raise a phone's keyboard by opening. A press aimed at the
+ *   very control being handed the focus is not that: it IS the ask, and
+ *   refusing it leaves the focus on the button that was pressed. Only
+ *   "restore" is freed; "last-resort" still waits its turn.
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-export const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
+export const findFocusTarget = (
+  containerEl,
+  { skipFirstFocusable, restoreMayClaim } = {},
+) => {
   // Not while there is anything else: what takes the focus only for want of
   // anything better ("last-resort") and what only takes it back ("restore").
   // Neither is dropped, both are simply tried later — step 3 below for the
@@ -186,8 +198,15 @@ export const findFocusTarget = (containerEl, { skipFirstFocusable } = {}) => {
   const isHiddenFromAssistiveTech = (element) =>
     Boolean(element.closest?.(`[aria-hidden="true"]`));
 
-  const skip = (element) =>
-    isRestorableAutofocus(element) || isHiddenFromAssistiveTech(element);
+  const skip = (element) => {
+    if (isHiddenFromAssistiveTech(element)) {
+      return true;
+    }
+    if (restoreMayClaim) {
+      return element.getAttribute("navi-autofocus") === "last-resort";
+    }
+    return isRestorableAutofocus(element);
+  };
 
   // Every mark, not just the first: a mark is only worth stopping at if it
   // leads somewhere focusable. One inside a screen waiting its turn (an inert

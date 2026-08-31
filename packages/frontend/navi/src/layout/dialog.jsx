@@ -95,6 +95,7 @@ import {
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
+  warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
 
@@ -1096,6 +1097,9 @@ const useDialogProps = (props) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
     if (!dialogEl) {
+      if (import.meta.dev) {
+        warnPopupHasNoElementToOpen("dialog");
+      }
       return undefined;
     }
 

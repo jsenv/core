@@ -564,11 +564,19 @@ code inside knows whether anything in there loads at all:
 </Dialog>
 ```
 
-Without it the nearest boundary is the one at the root of the app, and a
-suspension there empties the whole page — taking with it the popup element the
-browser is in the middle of animating. The alternative is the component drawing
-its own wait (`useAsyncData(action, { loading: true })`), which needs no
-boundary; what is not an option is neither of the two.
+Without it the nearest boundary is one that holds the popup itself, and what
+happens then is worth knowing because nothing says it: the request goes out and
+**the popup does not open at all** — no fallback drawn, no error raised. A
+boundary waiting on an update keeps the page as it was, as a copy; the popup
+being opened is part of that copy, so `showModal()` reaches a node the app no
+longer owns, and once the data is there the subtree is rebuilt from scratch —
+closed, and empty. The press is simply lost, and the next one works. In dev the popup says so
+rather than leaving it to be guessed. The alternative is the component drawing its
+own wait (`useAsyncData(action, { loading: true })`), which needs no boundary of
+its own; what is not an option is neither of the two.
+
+Both, and what each one looks like, are on
+`src/layout/demos/13_popup_loading_demo.html`.
 
 What the popup gains is everything a page has:
 

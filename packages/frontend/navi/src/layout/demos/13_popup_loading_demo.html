@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Popup & chargement</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 0.95rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #555;
+        font-size: 13px;
+      }
+      .members {
+        display: flex;
+        min-width: 220px;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .member {
+        padding: 8px 10px;
+        background: #eef3fb;
+        border-radius: 6px;
+      }
+      .member_ghost {
+        height: 33px;
+        background: linear-gradient(90deg, #eceff1, #f7f9fa, #eceff1);
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        createAction,
+        Dialog,
+        Loading,
+        Popover,
+        Text,
+        useAsyncData,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import {
+        createFakeBackend,
+        FakeBackend,
+      } from "../../internal/fake_backend.jsx";
+
+      // One group per section: an action holds what it ran with, so two sections
+      // asking for the same one would have the second answered before it is
+      // opened — and every section here is about the wait.
+      const MEMBERS_BY_GROUP = {
+        bleu: ["Ana", "Bilal", "Chloé"],
+        rouge: ["Dan", "Elsa"],
+        vert: ["Farid", "Gaby", "Hana", "Ilan"],
+        jaune: ["Jo", "Kim", "Lila"],
+        lundi: ["Manu", "Nour"],
+        mardi: ["Omar", "Prune", "Quentin"],
+        mercredi: ["Rita", "Sam"],
+        orange: ["Théo", "Uma"],
+      };
+
+      const backend = createFakeBackend({ value: MEMBERS_BY_GROUP });
+      const GET_MEMBERS = createAction(
+        ({ group }) =>
+          backend.call(
+            `GET /members?group=${group}`,
+            () => MEMBERS_BY_GROUP[group],
+          ),
+        { name: "get_members" },
+      );
+
+      const Members = ({ group }) => {
+        const [members] = useAsyncData(GET_MEMBERS.bindParams({ group }), {
+          run: true,
+        });
+        return <MemberRows members={members} group={group} />;
+      };
+
+      const MembersDrawingItsOwnWait = ({ group }) => {
+        const [members, loading] = useAsyncData(
+          GET_MEMBERS.bindParams({ group }),
+          { run: true, loading: true },
+        );
+        if (loading || !members) {
+          return <MembersSkeleton />;
+        }
+        return <MemberRows members={members} group={group} />;
+      };
+
+      const MemberRows = ({ members, group }) => (
+        <div className="members" data-testid={`members-${group}`}>
+          {members.map((member) => (
+            <div className="member" key={member}>
+              {member}
+            </div>
+          ))}
+        </div>
+      );
+
+      const MembersSkeleton = () => (
+        <div className="members" data-testid="members-skeleton">
+          <div className="member_ghost" />
+          <div className="member_ghost" />
+          <div className="member_ghost" />
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Popup & chargement"
+            previous={{
+              href: "./12_slide_container_url_demo.html",
+              label: "SlideContainer & url",
+            }}
+          />
+          <div className="demo-section">
+            <DocumentToc />
+          </div>
+          <FakeBackend backend={backend} defaultMode="500 ms">
+            {() => (
+              <Box flex="y" spacing="l">
+                <NominalDemo />
+                <OwnWaitDemo />
+                <OutsideDemo />
+                <PopoverDemo />
+                <MountedWhenClosedDemo />
+                <ReopenDemo />
+              </Box>
+            )}
+          </FakeBackend>
+        </Box>
+      );
+
+      const NominalDemo = () => (
+        <div className="demo-section">
+          <h2 id="nominal">Le dialog porte son propre &lt;Loading&gt;</h2>
+          <p className="caption">
+            L'attente reste dans le corps du dialog, le reste de la page ne
+            bouge pas.
+          </p>
+          <Button
+            command="--navi-open"
+            commandfor="nominal-dialog"
+            data-testid="open-nominal"
+          >
+            Membres du groupe bleu
+          </Button>
+          <Dialog id="nominal-dialog" data-testid="nominal-dialog">
+            <Loading fallback={<MembersSkeleton />}>
+              <Members group="bleu" />
+            </Loading>
+          </Dialog>
+        </div>
+      );
+
+      const OwnWaitDemo = () => (
+        <div className="demo-section">
+          <h2 id="own_wait">Le composant dessine son attente</h2>
+          <p className="caption">
+            <code>useAsyncData(action, {"{ run: true, loading: true }"})</code>,
+            aucune boundary dans le dialog.
+          </p>
+          <Button
+            command="--navi-open"
+            commandfor="own-wait-dialog"
+            data-testid="open-own-wait"
+          >
+            Membres du groupe vert
+          </Button>
+          <Dialog id="own-wait-dialog" data-testid="own-wait-dialog">
+            <MembersDrawingItsOwnWait group="vert" />
+          </Dialog>
+        </div>
+      );
+
+      const OutsideDemo = () => (
+        <div className="demo-section">
+          <h2 id="outside">La boundary est hors du popup</h2>
+          <p className="caption">
+            Le même dialog, sans &lt;Loading&gt; dedans : la boundary la plus
+            proche tient le dialog lui-même. La requête part, le dialog ne
+            s'ouvre pas, et la console dit pourquoi.
+          </p>
+          <Loading
+            fallback={
+              <Text data-testid="outside-fallback">
+                (l'attente est attrapée ici)
+              </Text>
+            }
+          >
+            <Box flex="y" spacing="s" alignX="start">
+              <Button
+                command="--navi-open"
+                commandfor="outside-dialog"
+                data-testid="open-outside"
+              >
+                Membres du groupe rouge
+              </Button>
+              <Dialog id="outside-dialog" data-testid="outside-dialog">
+                <Members group="rouge" />
+              </Dialog>
+            </Box>
+          </Loading>
+        </div>
+      );
+
+      const PopoverDemo = () => (
+        <div className="demo-section">
+          <h2 id="popover">Un popover, positionné pendant l'attente</h2>
+          <Button
+            command="--navi-open"
+            commandfor="popover-loading"
+            data-testid="open-popover"
+          >
+            Membres du groupe jaune
+          </Button>
+          <Popover id="popover-loading" data-testid="loading-popover">
+            <Loading fallback={<MembersSkeleton />}>
+              <Members group="jaune" />
+            </Loading>
+          </Popover>
+        </div>
+      );
+
+      const MountedWhenClosedDemo = () => (
+        <div className="demo-section">
+          <h2 id="mount_when_closed">Construit avant la première ouverture</h2>
+          <p className="caption">
+            <code>mountWhenClosed</code> : la requête part au chargement de la
+            page, l'attente se passe dans un dialog fermé.
+          </p>
+          <Button
+            command="--navi-open"
+            commandfor="mounted-dialog"
+            data-testid="open-mounted"
+          >
+            Membres du groupe orange
+          </Button>
+          <Dialog
+            id="mounted-dialog"
+            data-testid="mounted-dialog"
+            mountWhenClosed
+          >
+            <Loading fallback={<MembersSkeleton />}>
+              <Members group="orange" />
+            </Loading>
+          </Dialog>
+        </div>
+      );
+
+      const ReopenDemo = () => {
+        const [group, setGroup] = useState(undefined);
+        return (
+          <div className="demo-section">
+            <h2 id="reopen">Rouvert sur autre chose (unmountWhenClosed)</h2>
+            <p className="caption">
+              Le contenu est reconstruit à chaque ouverture, sur le groupe que
+              le bouton porte.
+            </p>
+            <Box flex="x" spacing="s">
+              {["lundi", "mardi", "mercredi"].map((candidate) => (
+                <Button
+                  key={candidate}
+                  value={candidate}
+                  command="--navi-open"
+                  commandfor="reopen-dialog"
+                  data-testid={`open-reopen-${candidate}`}
+                >
+                  {candidate}
+                </Button>
+              ))}
+            </Box>
+            <Dialog
+              id="reopen-dialog"
+              data-testid="reopen-dialog"
+              unmountWhenClosed
+              onOpen={(e) => {
+                setGroup(e.detail.value);
+              }}
+            >
+              <Loading fallback={<MembersSkeleton />}>
+                {group ? <Members group={group} /> : null}
+              </Loading>
+            </Dialog>
+          </div>
+        );
+      };
+
+      render(
+        <Loading>
+          <App />
+        </Loading>,
+        document.querySelector("#app"),
+      );
+    </script>
+  </body>
+</html>
