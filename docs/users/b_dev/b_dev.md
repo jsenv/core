@@ -191,19 +191,25 @@ _Figure: The development server in action, showing the served files and URLs_
 
 ## 2.1 Browser support
 
-The dev server automatically serves the most compatible version of your code for the browser being used.
+The dev server serves the most compatible version of your code for the browser
+being used.
 
-**Supported browsers during development:**
+Which runtimes that means is decided exactly as the build decides it — the same
+default, the same `browserslist`, the same `runtimeCompat` — so a page cannot
+work here and break once built. The list, and how to aim lower or higher, are in
+[browser support](../c_build/c_build.md#21-browser-support); the dev server takes
+`runtimeCompat` as its own parameter too:
 
-- Chrome 64+
-- Safari 11.3+
-- Edge 79+
-- Firefox 67+
-- Opera 51+
-- Safari on IOS 12+
-- Samsung Internet 9.2+
+```js
+import { startDevServer } from "@jsenv/core";
 
-**Note**: The browser support after the build process is broader, see [browser support after build](../c_build/c_build.md#211-maximal-browser-support).
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  runtimeCompat: { chrome: "100", firefox: "115", safari: "16.4" },
+});
+```
+
+**Note**: the browser support after the build process is broader, see [maximal browser support](../c_build/c_build.md#211-maximal-browser-support).
 
 ## 2.2 Directory structure agnostic
 

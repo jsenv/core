@@ -4863,6 +4863,424 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+// The floor a browser project targets when it says nothing: high enough that
+// the css jsenv and its components write is shipped as written — nesting,
+// light-dark(), and the module features that keep <script type="module">,
+// importmap and top-level await intact. light-dark() is the last gate to
+// close, and Safari 17.5 is where it does, so it sets the line; the other
+// runtimes are their releases of that same moment.
+//
+// Raising it further is a matter of moving that line, not of adding runtimes:
+// a project needing a lower one declares "browserslist" in its package.json or
+// passes runtimeCompat, and both dev and build read it.
+const browserDefaultRuntimeCompat = {
+  chrome: "125",
+  edge: "125",
+  firefox: "126",
+  ios_safari: "17.5",
+  opera: "110",
+  safari: "17.5",
+  samsung: "25",
+};
+
+const versionFromValue = (value) => {
+  if (typeof value === "number") {
+    return numberToVersion(value);
+  }
+  if (typeof value === "string") {
+    return stringToVersion(value);
+  }
+  throw new TypeError(`version must be a number or a string, got ${value}`);
+};
+
+const numberToVersion = (number) => {
+  return {
+    major: number,
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const stringToVersion = (string) => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
+    return {
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0,
+    };
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0,
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const compareTwoVersions = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue(versionA);
+  const semanticVersionB = versionFromValue(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+  if (majorDiff > 0) {
+    return majorDiff;
+  }
+  if (majorDiff < 0) {
+    return majorDiff;
+  }
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+  if (minorDiff > 0) {
+    return minorDiff;
+  }
+  if (minorDiff < 0) {
+    return minorDiff;
+  }
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+  if (patchDiff > 0) {
+    return patchDiff;
+  }
+  if (patchDiff < 0) {
+    return patchDiff;
+  }
+  return 0;
+};
+
+const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
+};
+
+const findHighestVersion = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow(highestVersion, value)) {
+      return value;
+    }
+    return highestVersion;
+  });
+};
+
+const featuresCompatMap = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios_safari: "10.3",
+    android: "61",
+    samsung: "8.2",
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
+  // https://caniuse.com/?search=import.meta
+  import_meta: {
+    android: "9",
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    ios_safari: "12",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
+    edge: "105",
+    firefox: "106",
+    node: "20.0.0",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios_safari: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2",
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios_safari: "15",
+    node: "14.8",
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15",
+    firefox: "108",
+    safari: "16.4",
+  },
+  import_type_json: {
+    chrome: "123",
+    safari: "17.2",
+  },
+  import_type_css: {
+    chrome: "123",
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73",
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios_safari: "5",
+    android: "4.4",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios_safari: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  service_worker_importmap: {},
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
+  shared_worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios_safari: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios_safari: "12",
+    samsung: "8",
+    electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios_safari: "9",
+    android: "4",
+    node: "4",
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios_safari: "10",
+    samsung: "5",
+    electron: "0.36",
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios_safari: "10",
+    samsung: "3.4",
+    electron: "0.22",
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios_safari: "9",
+    samsung: "4",
+    electron: "0.28",
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios_safari: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20",
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios_safari: "9",
+    samsung: "4",
+    node: "0.12",
+  },
+};
+
+const RUNTIME_COMPAT = {
+  featuresCompatMap,
+
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeCompat = {
+      ...originalRuntimeCompat,
+    };
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion(
+          firstVersion,
+          secondVersion,
+        );
+      }
+    });
+    return runtimeCompat;
+  },
+
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat(feature),
+  ) => {
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion(
+        runtimeVersion,
+        runtimeVersionCompatible,
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  },
+};
+
+const getFeatureCompat = (feature) => {
+  if (typeof feature === "string") {
+    const compat = featuresCompatMap[feature];
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+    return compat;
+  }
+  if (typeof feature !== "object") {
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
+  }
+  return feature;
+};
+
+const inferRuntimeCompatFromClosestPackage = async (
+  sourceUrl,
+  { runtimeType },
+) => {
+  const packageDirectoryUrl = lookupPackageDirectory(sourceUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+
+  {
+    const browserslistQuery = packageJSON.browserslist;
+    if (!browserslistQuery) {
+      return null;
+    }
+    const namespace = await import("./browserslist_index/browserslist_index.js");
+    const browserslist = namespace.default;
+    const browserslistResult = browserslist(browserslistQuery);
+    const runtimeCompat = {};
+    for (const browserNameAndVersion of browserslistResult) {
+      let [name, version] = browserNameAndVersion.split(" ");
+      if (name === "ios_saf") {
+        name = "ios_safari";
+      }
+      if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
+        runtimeCompat[name] = version;
+      }
+    }
+    return runtimeCompat;
+  }
+};
+
 const assertImportMap = (value) => {
   if (value === null) {
     throw new TypeError(`an importMap must be an object, got null`);
@@ -6867,369 +7285,6 @@ const getExtensionsToTry = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
-const versionFromValue = (value) => {
-  if (typeof value === "number") {
-    return numberToVersion(value);
-  }
-  if (typeof value === "string") {
-    return stringToVersion(value);
-  }
-  throw new TypeError(`version must be a number or a string, got ${value}`);
-};
-
-const numberToVersion = (number) => {
-  return {
-    major: number,
-    minor: 0,
-    patch: 0,
-  };
-};
-
-const stringToVersion = (string) => {
-  if (string.indexOf(".") > -1) {
-    const parts = string.split(".");
-    return {
-      major: Number(parts[0]),
-      minor: parts[1] ? Number(parts[1]) : 0,
-      patch: parts[2] ? Number(parts[2]) : 0,
-    };
-  }
-
-  if (isNaN(string)) {
-    return {
-      major: 0,
-      minor: 0,
-      patch: 0,
-    };
-  }
-
-  return {
-    major: Number(string),
-    minor: 0,
-    patch: 0,
-  };
-};
-
-const compareTwoVersions = (versionA, versionB) => {
-  const semanticVersionA = versionFromValue(versionA);
-  const semanticVersionB = versionFromValue(versionB);
-  const majorDiff = semanticVersionA.major - semanticVersionB.major;
-  if (majorDiff > 0) {
-    return majorDiff;
-  }
-  if (majorDiff < 0) {
-    return majorDiff;
-  }
-  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-  if (minorDiff > 0) {
-    return minorDiff;
-  }
-  if (minorDiff < 0) {
-    return minorDiff;
-  }
-  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-  if (patchDiff > 0) {
-    return patchDiff;
-  }
-  if (patchDiff < 0) {
-    return patchDiff;
-  }
-  return 0;
-};
-
-const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
-  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
-};
-
-const findHighestVersion = (...values) => {
-  if (values.length === 0) throw new Error(`missing argument`);
-  return values.reduce((highestVersion, value) => {
-    if (versionIsBelow(highestVersion, value)) {
-      return value;
-    }
-    return highestVersion;
-  });
-};
-
-const featuresCompatMap = {
-  script_type_module: {
-    edge: "16",
-    firefox: "60",
-    chrome: "61",
-    safari: "10.1",
-    opera: "48",
-    ios_safari: "10.3",
-    android: "61",
-    samsung: "8.2",
-  },
-  document_current_script: {
-    edge: "12",
-    firefox: "4",
-    chrome: "29",
-    safari: "8",
-    opera: "16",
-    android: "4.4",
-    samsung: "4",
-  },
-  // https://caniuse.com/?search=import.meta
-  import_meta: {
-    android: "9",
-    chrome: "64",
-    edge: "79",
-    firefox: "62",
-    ios_safari: "12",
-    opera: "51",
-    safari: "11.1",
-    samsung: "9.2",
-  },
-  import_meta_resolve: {
-    chrome: "107",
-    edge: "105",
-    firefox: "106",
-    node: "20.0.0",
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
-  import_dynamic: {
-    android: "8",
-    chrome: "63",
-    edge: "79",
-    firefox: "67",
-    ios_safari: "11.3",
-    opera: "50",
-    safari: "11.3",
-    samsung: "8.0",
-    node: "13.2",
-  },
-  top_level_await: {
-    edge: "89",
-    chrome: "89",
-    firefox: "89",
-    opera: "75",
-    safari: "15",
-    samsung: "15",
-    ios_safari: "15",
-    node: "14.8",
-  },
-  // https://caniuse.com/import-maps
-  importmap: {
-    edge: "89",
-    chrome: "89",
-    opera: "76",
-    samsung: "15",
-    firefox: "108",
-    safari: "16.4",
-  },
-  import_type_json: {
-    chrome: "123",
-    safari: "17.2",
-  },
-  import_type_css: {
-    chrome: "123",
-  },
-  import_type_text: {},
-  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
-  new_stylesheet: {
-    chrome: "73",
-    edge: "79",
-    opera: "53",
-    android: "73",
-  },
-  // https://caniuse.com/?search=worker
-  worker: {
-    ie: "10",
-    edge: "12",
-    firefox: "3.5",
-    chrome: "4",
-    opera: "11.5",
-    safari: "4",
-    ios_safari: "5",
-    android: "4.4",
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
-  worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-    android: "80",
-  },
-  worker_importmap: {},
-  service_worker: {
-    edge: "17",
-    firefox: "44",
-    chrome: "40",
-    safari: "11.1",
-    opera: "27",
-    ios_safari: "11.3",
-    android: "12.12",
-  },
-  service_worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-    android: "80",
-  },
-  service_worker_importmap: {},
-  shared_worker: {
-    chrome: "4",
-    edge: "79",
-    firefox: "29",
-    opera: "10.6",
-  },
-  shared_worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-  },
-  shared_worker_importmap: {},
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
-  global_this: {
-    edge: "79",
-    firefox: "65",
-    chrome: "71",
-    safari: "12.1",
-    opera: "58",
-    ios_safari: "12.2",
-    android: "94",
-    node: "12",
-  },
-  async_generator_function: {
-    chrome: "63",
-    opera: "50",
-    edge: "79",
-    firefox: "57",
-    safari: "12",
-    node: "10",
-    ios_safari: "12",
-    samsung: "8",
-    electron: "3",
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
-  template_literals: {
-    chrome: "41",
-    edge: "12",
-    firefox: "34",
-    opera: "28",
-    safari: "9",
-    ios_safari: "9",
-    android: "4",
-    node: "4",
-  },
-  arrow_function: {
-    chrome: "47",
-    opera: "34",
-    edge: "13",
-    firefox: "45",
-    safari: "10",
-    node: "6",
-    ios_safari: "10",
-    samsung: "5",
-    electron: "0.36",
-  },
-  const_bindings: {
-    chrome: "41",
-    opera: "28",
-    edge: "12",
-    firefox: "46",
-    safari: "10",
-    node: "4",
-    ie: "11",
-    ios_safari: "10",
-    samsung: "3.4",
-    electron: "0.22",
-  },
-  object_properties_shorthand: {
-    chrome: "43",
-    opera: "30",
-    edge: "12",
-    firefox: "33",
-    safari: "9",
-    node: "4",
-    ios_safari: "9",
-    samsung: "4",
-    electron: "0.28",
-  },
-  reserved_words: {
-    chrome: "13",
-    opera: "10.50",
-    edge: "12",
-    firefox: "2",
-    safari: "3.1",
-    node: "0.10",
-    ie: "9",
-    android: "4.4",
-    ios_safari: "6",
-    phantom: "2",
-    samsung: "1",
-    electron: "0.20",
-  },
-  symbols: {
-    chrome: "38",
-    opera: "25",
-    edge: "12",
-    firefox: "36",
-    safari: "9",
-    ios_safari: "9",
-    samsung: "4",
-    node: "0.12",
-  },
-};
-
-const RUNTIME_COMPAT = {
-  featuresCompatMap,
-
-  add: (originalRuntimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature);
-    const runtimeCompat = {
-      ...originalRuntimeCompat,
-    };
-    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
-      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
-      if (secondVersion) {
-        const firstVersion = originalRuntimeCompat[runtimeName];
-        runtimeCompat[runtimeName] = findHighestVersion(
-          firstVersion,
-          secondVersion,
-        );
-      }
-    });
-    return runtimeCompat;
-  },
-
-  isSupported: (
-    runtimeCompat,
-    feature,
-    featureCompat = getFeatureCompat(feature),
-  ) => {
-    const runtimeNames = Object.keys(runtimeCompat);
-    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
-      const runtimeVersion = runtimeCompat[runtimeName];
-      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
-      const highestVersion = findHighestVersion(
-        runtimeVersion,
-        runtimeVersionCompatible,
-      );
-      return highestVersion !== runtimeVersion;
-    });
-    return !runtimeWithoutCompat;
-  },
-};
-
-const getFeatureCompat = (feature) => {
-  if (typeof feature === "string") {
-    const compat = featuresCompatMap[feature];
-    if (!compat) {
-      throw new Error(`"${feature}" feature is unknown`);
-    }
-    return compat;
-  }
-  if (typeof feature !== "object") {
-    throw new TypeError(
-      `feature must be a string or an object, got ${feature}`,
-    );
-  }
-  return feature;
-};
-
 const isSupportedAlgorithm = (algo) => {
   return SUPPORTED_ALGORITHMS.includes(algo);
 };
@@ -7348,4 +7403,4 @@ const isResponseEligibleForIntegrityValidation = (response) => {
   return ["basic", "cors", "default"].includes(response.type);
 };
 
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, collectFiles, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, bufferToEtag, collectFiles, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, inferRuntimeCompatFromClosestPackage, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

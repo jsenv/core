@@ -217,14 +217,33 @@ before splitting. In navi, `popup_css.js` and `surface_text_css.js` overlap
 `.navi_dialog` and `.navi_popover` with dialog's and popover's own css, which is
 why they are still concatenated.
 
-### The build target has to match the css
+### Browser support: navi's css and your target
 
-The css is transpiled for the runtimes the build targets, so a target older than
-what the css uses is silently lowered. `light-dark()` under a target below Chrome
-123 becomes `var(--lightningcss-light, …) var(--lightningcss-dark, …)`, an
-invalid declaration — the color is simply not applied. navi's own build targets
-Chrome 123 because navi's css uses `light-dark()`; an app targeting older
-browsers must not use css newer than its target.
+**navi does not require recent browsers.** Its css is written with modern
+features — css nesting, `light-dark()`, `color-mix()` — and it ships that way:
+navi's own build targets a runtime where all of it is native, so what lands in
+`dist/` is what was authored, unrewritten.
+
+The runtime that decides is **yours**. An app's build reads navi's stylesheets
+out of `node_modules` like any other css and lowers them to the target the app
+declares. Targeting Chrome 89, everything above comes out as nesting-free rules
+and a pair of custom properties standing in for `light-dark()`; targeting the
+default, nothing is touched.
+
+Which is the part worth knowing: **jsenv's default target is recent**, and by
+default it assumes the modern form is fine. An app that must support older
+browsers says so, once, and both its dev server and its build follow — the
+declaration and what each step down costs are in
+[jsenv's browser support](https://github.com/jsenv/core/blob/main/docs/users/c_build/c_build.md#21-browser-support).
+Nothing in the app's own css has to change either: it is lowered by the same
+pass.
+
+One thing is NOT lowered, and it is the trap the section above already names: a
+stylesheet the build cannot parse. A `${}` outside a value position makes the
+whole template opaque, and an opaque template is shipped verbatim — nesting
+included, `light-dark()` included, whatever the target. Such a stylesheet
+silently requires the browsers its own css requires, and no declaration can
+lower it. That is the strongest reason not to write one.
 
 ---
 

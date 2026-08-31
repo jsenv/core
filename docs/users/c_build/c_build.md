@@ -218,17 +218,41 @@ You should see the following output in the terminal:
 
 ## 2.1 Browser support
 
-By default, the build generates code compatible with the following browsers:
+Declaring nothing, the build targets:
 
-- Chrome 64+
-- Safari 11.3+
-- Edge 79+
-- Firefox 67+
-- Opera 51+
-- Safari on IOS 12+
-- Samsung Internet 9.2+
+- Chrome 125+
+- Edge 125+
+- Firefox 126+
+- Safari 17.5+
+- Safari on IOS 17.5+
+- Opera 110+
+- Samsung Internet 25+
 
-You can adjust browser support using `runtimeCompat`:
+That floor is recent on purpose: it is the point where the CSS modern code
+writes — nesting, `light-dark()` — is native, so a stylesheet reaches the
+browser as it was authored instead of being rewritten into an older form of
+itself. Safari 17.5 sets the line, being where `light-dark()` landed; the other
+runtimes are their releases of that same moment.
+
+**The dev server reads the same value.** `startDevServer` and `build` resolve
+their target identically, so a page cannot work in development and break once
+built — the two never disagree about what they are aiming at.
+
+**Declaring your own target.**
+
+Two ways, and both are read by the build **and** by the dev server.
+
+`browserslist` in `package.json` is the usual one, and is shared with the rest
+of the ecosystem:
+
+```json
+{
+  "browserslist": ["chrome >= 100", "firefox >= 115", "safari >= 16.4"]
+}
+```
+
+`runtimeCompat` on an entry point is the explicit one, and wins over
+`browserslist`:
 
 ```diff
 import { build } from "@jsenv/core";
@@ -239,18 +263,40 @@ await build({
   entryPoints: {
     "./index.html": {
 +     runtimeCompat: {
-+       chrome: "55",
-+       edge: "15",
-+       firefox: "52",
-+       safari: "11",
++       chrome: "100",
++       edge: "100",
++       firefox: "115",
++       safari: "16.4",
 +     },
     },
   },
 });
 ```
 
-The build ensures transformations are performed based on the browser support specified.
-For example, if `<script type="module">` can be preserved, it will be.
+The build then performs exactly the transformations that target needs, and no
+others. If `<script type="module">` can be preserved, it is.
+
+**Supporting older browsers.**
+
+Nothing in the source has to change: jsenv lowers what it must, including the
+CSS of the packages you depend on. What a lower target costs is output size and
+a few guarantees, as it crosses each of these lines:
+
+| below                                  | what stops being native                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Chrome 123 / Safari 17.5 / Firefox 120 | `light-dark()`                                                                                |
+| Chrome 112 / Safari 16.5 / Firefox 117 | CSS nesting                                                                                   |
+| Chrome 89 / Safari 16.4 / Firefox 108  | `<script type="importmap">`                                                                   |
+| Chrome 89 / Safari 15 / Firefox 89     | top-level `await`                                                                             |
+| Chrome 63 / Safari 11.3 / Firefox 67   | `<script type="module">` with dynamic `import()` — below this the page falls back to SystemJS |
+
+**Targeting more recent browsers.**
+
+Raising the floor is the same declaration, pointing higher — `"chrome >= 140"`,
+or a `runtimeCompat` naming only the runtimes you actually ship to (an internal
+tool, an Electron app, a Chrome extension). Nothing is transpiled that the
+target already understands, so a higher floor means smaller output and code that
+reads in devtools like the code you wrote.
 
 ### 2.1.1 Maximal browser support
 

@@ -115,6 +115,10 @@ consistency across the app, not from any single call site.
   Read its first section before writing any `import.meta.css`: the build parses
   that css, and a `${}` the build cannot read costs the whole stylesheet its
   comments, its transpilation, its `url()` assets and its minification.
+  It also answers "which browsers does navi require": none in particular — its
+  css is written modern and lowered to whatever the CONSUMING app targets, so
+  supporting older browsers is one declaration in the app and nothing in navi.
+  The exception is the opaque `${}` template above, which no target can lower.
 - `docs/safe_area.md` — where the app is in the window and what covers it:
   the two inset families (`--navi-app-inset-*` for what is pinned to an edge,
   `--navi-safe-area-inset-*` for what flows inside), how an app declares itself

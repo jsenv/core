@@ -120,6 +120,16 @@ await build({
 
 ## Building for Browser
 
+A package's target is not a floor imposed on the apps that consume it. Whatever
+it is built with, the consuming app reads the published files and lowers them to
+the target IT declares — so a package built for recent browsers is still usable
+by an app supporting older ones, and pays nothing for browsers it never meets.
+Aim it at what the package's own code needs, not at the widest audience you can
+imagine. See [browser support](../c_build/c_build.md#21-browser-support).
+
+The one exception is css a build cannot parse, which ships verbatim and can be
+lowered by nobody — see `import.meta.css` in the package you are building.
+
 ### Basic Browser Package Build
 
 ```js
@@ -134,10 +144,10 @@ await build({
       buildRelativeUrl: "./browser.js",
       mode: "package",
       runtimeCompat: {
-        chrome: "64",
-        edge: "79",
-        firefox: "67",
-        safari: "11.3",
+        chrome: "125",
+        edge: "125",
+        firefox: "126",
+        safari: "17.5",
       },
       ignore: {
         "file://**/node_modules/": true,
@@ -190,10 +200,10 @@ await build({
       buildRelativeUrl: "./index.js",
       mode: "package",
       runtimeCompat: {
-        chrome: "64",
-        edge: "79",
-        firefox: "67",
-        safari: "11.3",
+        chrome: "125",
+        edge: "125",
+        firefox: "126",
+        safari: "17.5",
       },
       ignore: {
         "file://**/node_modules/": true,

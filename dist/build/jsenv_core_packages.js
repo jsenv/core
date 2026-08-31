@@ -6611,18 +6611,24 @@ const startMonitoringMemoryUsage = () => {
   return result;
 };
 
-// default runtimeCompat corresponds to
-// "we can keep <script type="module"> intact":
-// so script_type_module + dynamic_import + import_meta
+// The floor a browser project targets when it says nothing: high enough that
+// the css jsenv and its components write is shipped as written — nesting,
+// light-dark(), and the module features that keep <script type="module">,
+// importmap and top-level await intact. light-dark() is the last gate to
+// close, and Safari 17.5 is where it does, so it sets the line; the other
+// runtimes are their releases of that same moment.
+//
+// Raising it further is a matter of moving that line, not of adding runtimes:
+// a project needing a lower one declares "browserslist" in its package.json or
+// passes runtimeCompat, and both dev and build read it.
 const browserDefaultRuntimeCompat = {
-  // android: "8",
-  chrome: "64",
-  edge: "79",
-  firefox: "67",
-  ios_safari: "12",
-  opera: "51",
-  safari: "11.3",
-  samsung: "9.2",
+  chrome: "125",
+  edge: "125",
+  firefox: "126",
+  ios_safari: "17.5",
+  opera: "110",
+  safari: "17.5",
+  samsung: "25",
 };
 
 const nodeDefaultRuntimeCompat = {
@@ -7010,7 +7016,7 @@ const inferRuntimeCompatFromClosestPackage = async (
     if (!browserslistQuery) {
       return null;
     }
-    const namespace = await import("./browserslist_index/browserslist_index.js");
+    const namespace = await import("./browserslist_index_1/browserslist_index2.js");
     const browserslist = namespace.default;
     const browserslistResult = browserslist(browserslistQuery);
     const runtimeCompat = {};

@@ -1,7 +1,7 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, fetchDirectory, composeTwoResponses, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
 import { existsSync, readFileSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
+import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, inferRuntimeCompatFromClosestPackage, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, renderCssTemplateLiteral, applyBabelPlugins, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
@@ -16,20 +16,6 @@ import "node:os";
 import "node:tty";
 import "node:util";
 import "node:path";
-
-// default runtimeCompat corresponds to
-// "we can keep <script type="module"> intact":
-// so script_type_module + dynamic_import + import_meta
-const defaultRuntimeCompat = {
-  // android: "8",
-  chrome: "64",
-  edge: "79",
-  firefox: "67",
-  ios: "12",
-  opera: "51",
-  safari: "11.3",
-  samsung: "9.2",
-};
 
 const createEventEmitter = () => {
   const callbackSet = new Set();
@@ -12121,10 +12107,11 @@ const startDevServer = async ({
   // a test wants them all, hence 0 there.
   serverTiming = { minDuration: EXECUTED_BY_TEST_PLAN ? 0 : 0.5 },
 
-  // runtimeCompat is the runtimeCompat for the build
-  // when specified, dev server use it to warn in case
-  // code would be supported during dev but not after build
-  runtimeCompat = defaultRuntimeCompat,
+  // The runtimeCompat the build will use: the dev server warns when code works
+  // in dev but would not survive that build, and transpiles what those runtimes
+  // lack. Left out, it is inferred exactly as build() infers it, so the two
+  // never disagree on what they target.
+  runtimeCompat,
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -12195,6 +12182,12 @@ const startDevServer = async ({
   }
   // params normalization
   {
+    if (runtimeCompat === undefined) {
+      runtimeCompat =
+        (await inferRuntimeCompatFromClosestPackage(sourceDirectoryUrl, {
+          runtimeType: "browser",
+        })) || browserDefaultRuntimeCompat;
+    }
     if (clientAutoreload === true) {
       clientAutoreload = {};
     }
