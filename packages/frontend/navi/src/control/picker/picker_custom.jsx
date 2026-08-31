@@ -86,7 +86,7 @@ const css = /* css */ `
              longhands back to one curve and square nothing. */
           --list-border-radius: max(
             0px,
-            var(--picker-border-radius) - var(--picker-border-width)
+            var(--popover-border-radius) - var(--popover-border-width)
           );
           overscroll-behavior: none;
 
@@ -160,22 +160,20 @@ const css = /* css */ `
         &[open] {
           flex-direction: column;
         }
-      }
 
-      .navi_list_container {
-        width: 100%;
-        /* See the popover block above: the var, not the shorthand, so the
-           corner claims survive. */
-        --list-border-radius: max(
-          0px,
-          var(--picker-border-radius) - var(--picker-border-width)
-        );
-        overscroll-behavior: none;
+        /* The list scrolls inside the dialog — same as the popover branch
+           above, including why this is the var and not the shorthand. */
+        .navi_list_container {
+          width: 100%;
+          --list-border-radius: max(
+            0px,
+            var(--dialog-border-radius) - var(--dialog-border-width)
+          );
+          overscroll-behavior: none;
 
-        /* See the popover block above: overflow="visible" on the list must not
-           be overridden back into a scroll by this rule. */
-        &:not([data-overflow-visible]) {
-          overflow: auto;
+          &:not([data-overflow-visible]) {
+            overflow: auto;
+          }
         }
       }
     }

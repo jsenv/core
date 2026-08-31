@@ -1,4 +1,4 @@
-import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, renderCssTemplateLiteral, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { bundleJsModules, jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -5689,9 +5689,17 @@ const parseAndTransformJsReferences = async (
 
     sequentialActions.push(async () => {
       await inlineUrlInfo.cook();
-      const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
-        quote,
-      });
+      const { substitutions } = inlineReferenceInfo;
+      const replacement = substitutions
+        ? // the expressions the template holds take their placeholder's place
+          // back; a template literal is written whatever the runtime supports,
+          // transpilation runs after and lowers it when it has to
+          renderCssTemplateLiteral(inlineUrlInfo.content, substitutions)
+        : JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, { quote });
+      if (replacement === null) {
+        // a placeholder did not survive: the source stays as it was written
+        return;
+      }
       magicSource.replace({
         start: inlineReferenceInfo.start,
         end: inlineReferenceInfo.end,
@@ -8313,6 +8321,12 @@ const jsenvPluginNodeRuntime = ({ runtimeCompat }) => {
  * const css = `body { color: red; }`;
  * import.meta.css = css;
  * ```
+ *
+ * "jsenv:js_reference_analysis" reads the css assigned here as an inline css and
+ * sends it through the css pipeline: transpilation, url() resolution, minification,
+ * comments. A "${}" standing where a css value stands is swapped for a placeholder
+ * and put back afterwards; anywhere else it makes the template unreadable and the
+ * css is shipped exactly as written, with everything the pipeline does lost.
  *
  */
 

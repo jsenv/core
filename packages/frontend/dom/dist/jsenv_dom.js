@@ -8426,26 +8426,16 @@ installImportMetaCssBuild(import.meta);/**
  * donc juste x/y ca seras surement mieux
  *
  */
-const css$5 = /* css */`
-  .navi_drag_gesture_backdrop {
-    position: fixed;
-    inset: 0;
-    /* A finger dragging must not also pan the page under it. The backdrop is
-       the only element the finger can be over once the gesture is running. */
-    touch-action: none;
-    user-select: none;
-  }
-  /* Chrome matches :focus-visible on a programmatic focus, so focusing what the
-     gesture holds draws a ring around an object the user already has under the
-     pointer — a frame blinking for the length of the gesture, saying something
-     the finger knows. The ring stays whole where it earns its place: at the
-     keyboard, outside any gesture.
-     focus({ focusVisible: false }) would say the intent better but does not
-     hold — Chrome's heuristic does not always obey the option (see
-     isMatchingFocusVisible). */
-  [data-drag-focus]:focus-visible {
-    outline: none;
-  }
+const css$5 = /* css */`.navi_drag_gesture_backdrop {
+  touch-action: none;
+  user-select: none;
+  position: fixed;
+  inset: 0;
+}
+
+[data-drag-focus]:focus-visible {
+  outline: none;
+}
 `;
 import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
 
@@ -9472,45 +9462,30 @@ installImportMetaCssBuild(import.meta);/**
    lets the page scroll and still makes the refusal effective — provided the
    listener that will refuse is already known too, which is markDragSource's
    half of the same rule. */
-const css$4 = /* css */`
-  [data-drag-handle],
-  [data-drag-source] {
-    -webkit-touch-callout: none;
-  }
-  [data-drag-handle] {
-    /* A dedicated handle has nothing to share: it takes the gesture on contact. */
-    touch-action: none;
-  }
-  [data-drag-source] {
-    /* A source taken by long press must let the scroll through until the grab —
-       which is exactly what the long press is there to tell apart. Zoom has
-       nothing to do with the gesture and nobody should lose it by resting a
-       finger on a word.
+const css$4 = /* css */`[data-drag-handle], [data-drag-source] {
+  -webkit-touch-callout: none;
+}
 
-       Vertical, because that is the way the page and the lists in it go: a
-       source dragged along one axis is surrounded by something scrolling along
-       that same axis (a row of a list runs the way the list scrolls), and a
-       source dragged both ways sits on the usual vertical page. */
-    touch-action: pan-y pinch-zoom;
-  }
-  [data-drag-source="x"] {
-    /* …and the sideways one, for the same reason read the other way. */
-    touch-action: pan-x pinch-zoom;
-  }
-  [data-drag-on-contact] [data-drag-source],
-  [data-drag-source][data-drag-on-contact] {
-    /* Nothing scrolls here, so there is no pan to leave to anyone — the finger
-       may travel from the first pixel. Zoom is kept: it belongs to the reader,
-       not to the gesture, and two fingers are never a drag. */
-    touch-action: pinch-zoom;
-  }
-  [data-drag-ignore],
-  [data-own-target],
-  [data-drag-source] [popover],
-  [data-drag-source] dialog {
-    -webkit-touch-callout: default;
-    touch-action: auto;
-  }
+[data-drag-handle] {
+  touch-action: none;
+}
+
+[data-drag-source] {
+  touch-action: pan-y pinch-zoom;
+}
+
+[data-drag-source="x"] {
+  touch-action: pan-x pinch-zoom;
+}
+
+[data-drag-on-contact] [data-drag-source], [data-drag-source][data-drag-on-contact] {
+  touch-action: pinch-zoom;
+}
+
+[data-drag-ignore], [data-own-target], [data-drag-source] [popover], [data-drag-source] dialog {
+  -webkit-touch-callout: default;
+  touch-action: auto;
+}
 `;
 import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_after_intent.js"];
 
@@ -10223,20 +10198,19 @@ const getDragCoordinates = (
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-installImportMetaCssBuild(import.meta);const css$3 = /* css */`
-  .navi_constraint_feedback_line {
-    position: fixed;
-    z-index: 9998;
-    border-top: 2px dotted rgba(59, 130, 246, 0.7);
-    visibility: hidden;
-    transform-origin: left center;
-    transition: opacity 0.15s ease;
-    pointer-events: none;
-  }
+installImportMetaCssBuild(import.meta);const css$3 = /* css */`.navi_constraint_feedback_line {
+  z-index: 9998;
+  visibility: hidden;
+  transform-origin: 0;
+  pointer-events: none;
+  border-top: 2px dotted #3b82f6b3;
+  transition: opacity .15s;
+  position: fixed;
+}
 
-  .navi_constraint_feedback_line[data-visible] {
-    visibility: visible;
-  }
+.navi_constraint_feedback_line[data-visible] {
+  visibility: visible;
+}
 `;
 const setupConstraintFeedbackLine = () => {
   import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
@@ -10319,191 +10293,172 @@ let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-const css$2 = /* css */`
-  .navi_debug_markers_container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 999998;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    overflow: hidden;
-    --marker-size: ${MARKER_SIZE}px;
-  }
+const css$2 = /* css */`.navi_debug_markers_container {
+  z-index: 999998;
+  pointer-events: none;
+  --marker-size: ${MARKER_SIZE}px;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
 
-  .navi_debug_marker {
-    position: absolute;
-    pointer-events: none;
-  }
+.navi_debug_marker {
+  pointer-events: none;
+  position: absolute;
+}
 
-  /* Markers based on side rather than orientation */
-  .navi_debug_marker[data-left],
-  .navi_debug_marker[data-right] {
-    width: var(--marker-size);
-    height: 100vh;
-  }
+.navi_debug_marker[data-left], .navi_debug_marker[data-right] {
+  width: var(--marker-size);
+  height: 100vh;
+}
 
-  .navi_debug_marker[data-top],
-  .navi_debug_marker[data-bottom] {
-    width: 100vw;
-    height: var(--marker-size);
-  }
+.navi_debug_marker[data-top], .navi_debug_marker[data-bottom] {
+  width: 100vw;
+  height: var(--marker-size);
+}
 
-  /* Gradient directions based on side, using CSS custom properties for color */
-  .navi_debug_marker[data-left] {
-    background: linear-gradient(
-      to right,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
+.navi_debug_marker[data-left] {
+  background: linear-gradient(to right,
+      rgba(from var(--marker-color) r g b / .9) 0%,
+      rgba(from var(--marker-color) r g b / .7) 30%,
+      rgba(from var(--marker-color) r g b / .3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%);
+}
 
-  .navi_debug_marker[data-right] {
-    background: linear-gradient(
-      to left,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
+.navi_debug_marker[data-right] {
+  background: linear-gradient(to left,
+      rgba(from var(--marker-color) r g b / .9) 0%,
+      rgba(from var(--marker-color) r g b / .7) 30%,
+      rgba(from var(--marker-color) r g b / .3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%);
+}
 
-  .navi_debug_marker[data-top] {
-    background: linear-gradient(
-      to bottom,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
+.navi_debug_marker[data-top] {
+  background: linear-gradient(to bottom,
+      rgba(from var(--marker-color) r g b / .9) 0%,
+      rgba(from var(--marker-color) r g b / .7) 30%,
+      rgba(from var(--marker-color) r g b / .3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%);
+}
 
-  .navi_debug_marker[data-bottom] {
-    background: linear-gradient(
-      to top,
-      rgba(from var(--marker-color) r g b / 0.9) 0%,
-      rgba(from var(--marker-color) r g b / 0.7) 30%,
-      rgba(from var(--marker-color) r g b / 0.3) 70%,
-      rgba(from var(--marker-color) r g b / 0) 100%
-    );
-  }
+.navi_debug_marker[data-bottom] {
+  background: linear-gradient(to top,
+      rgba(from var(--marker-color) r g b / .9) 0%,
+      rgba(from var(--marker-color) r g b / .7) 30%,
+      rgba(from var(--marker-color) r g b / .3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%);
+}
 
-  .navi_debug_marker_label {
-    position: absolute;
-    padding: 2px 6px;
-    color: rgb(from var(--marker-color) r g b / 1);
-    font-weight: bold;
-    font-size: 12px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid;
-    border-color: rgb(from var(--marker-color) r g b / 1);
-    border-radius: 3px;
-    pointer-events: none;
-  }
+.navi_debug_marker_label {
+  color: rgb(from var(--marker-color) r g b / 1);
+  white-space: nowrap;
+  border: 1px solid;
+  border-color: rgb(from var(--marker-color) r g b / 1);
+  pointer-events: none;
+  background: #ffffffe6;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  position: absolute;
+}
 
-  /* Label positioning based on side data attributes */
+.navi_debug_marker[data-left] .navi_debug_marker_label {
+  transform-origin: 0;
+  top: 20px;
+  left: 10px;
+  transform: rotate(90deg);
+}
 
-  /* Left side markers - vertical with 90° rotation */
-  .navi_debug_marker[data-left] .navi_debug_marker_label {
-    top: 20px;
-    left: 10px;
-    transform: rotate(90deg);
-    transform-origin: left center;
-  }
+.navi_debug_marker[data-right] .navi_debug_marker_label {
+  transform-origin: 100%;
+  top: 20px;
+  left: auto;
+  right: 10px;
+  transform: rotate(-90deg);
+}
 
-  /* Right side markers - vertical with -90° rotation */
-  .navi_debug_marker[data-right] .navi_debug_marker_label {
-    top: 20px;
-    right: 10px;
-    left: auto;
-    transform: rotate(-90deg);
-    transform-origin: right center;
-  }
+.navi_debug_marker[data-top] .navi_debug_marker_label {
+  top: 0;
+  left: 20px;
+}
 
-  /* Top side markers - horizontal, label on the line */
-  .navi_debug_marker[data-top] .navi_debug_marker_label {
-    top: 0px;
-    left: 20px;
-  }
+.navi_debug_marker[data-bottom] .navi_debug_marker_label {
+  top: auto;
+  bottom: 0;
+  left: 20px;
+}
 
-  /* Bottom side markers - horizontal, label on the line */
-  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
-    top: auto;
-    bottom: 0px;
-    left: 20px;
-  }
+.navi_obstacle_marker {
+  z-index: 9999;
+  opacity: .6;
+  pointer-events: none;
+  background-color: orange;
+  position: absolute;
+}
 
-  .navi_obstacle_marker {
-    position: absolute;
-    z-index: 9999;
-    background-color: orange;
-    opacity: 0.6;
-    pointer-events: none;
-  }
+.navi_obstacle_marker_label {
+  color: #fff;
+  text-shadow: 1px 1px 1px #000c;
+  pointer-events: none;
+  font-size: 12px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 
-  .navi_obstacle_marker_label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    color: white;
-    font-weight: bold;
-    font-size: 12px;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
+.navi_element_marker {
+  z-index: 9997;
+  background-color: var(--element-color-alpha, #ff00964d);
+  border: 2px solid var(--element-color, #ff0096);
+  opacity: .9;
+  pointer-events: none;
+  position: absolute;
+}
 
-  .navi_element_marker {
-    position: absolute;
-    z-index: 9997;
-    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
-    border: 2px solid var(--element-color, rgb(255, 0, 150));
-    opacity: 0.9;
-    pointer-events: none;
-  }
+.navi_element_marker_label {
+  color: var(--element-color, #ff0096);
+  white-space: nowrap;
+  border: 1px solid var(--element-color, #ff0096);
+  pointer-events: none;
+  background: #ffffffe6;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  position: absolute;
+  top: -25px;
+  right: 0;
+}
 
-  .navi_element_marker_label {
-    position: absolute;
-    top: -25px;
-    right: 0;
-    padding: 2px 6px;
-    color: var(--element-color, rgb(255, 0, 150));
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--element-color, rgb(255, 0, 150));
-    border-radius: 3px;
-    pointer-events: none;
-  }
+.navi_reference_element_marker {
+  z-index: 9998;
+  opacity: .8;
+  pointer-events: none;
+  background-color: #0096ff4d;
+  border: 2px dashed #0096ffb3;
+  position: absolute;
+}
 
-  .navi_reference_element_marker {
-    position: absolute;
-    z-index: 9998;
-    background-color: rgba(0, 150, 255, 0.3);
-    border: 2px dashed rgba(0, 150, 255, 0.7);
-    opacity: 0.8;
-    pointer-events: none;
-  }
-
-  .navi_reference_element_marker_label {
-    position: absolute;
-    top: -25px;
-    left: 0;
-    padding: 2px 6px;
-    color: rgba(0, 150, 255, 1);
-    font-weight: bold;
-    font-size: 11px;
-    white-space: nowrap;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 150, 255, 0.7);
-    border-radius: 3px;
-    pointer-events: none;
-  }
+.navi_reference_element_marker_label {
+  color: #0096ff;
+  white-space: nowrap;
+  pointer-events: none;
+  background: #ffffffe6;
+  border: 1px solid #0096ffb3;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  position: absolute;
+  top: -25px;
+  left: 0;
+}
 `;
 const setupDragDebugMarkers = (dragGesture, {
   referenceElement
@@ -11839,222 +11794,151 @@ const dragStyleController = createStyleController("drag_to_move");
 const TOSS_DURATION_MS = 320;
 // Far enough to be off any screen, in the direction the hand was going.
 const TOSS_DISTANCE = 900;
-const css$1 = /* css */`
-  /* IT COSTS THE LIST NOTHING: the hint lands on the edge of a row, which for
-     the last one is the very bottom of the scroll area — a line taking up room
-     there would push the scrollable area a few pixels further and make a
-     scrollbar appear (or hide the hint under it) exactly when one is trying to
-     drop at the end. Being fixed is what avoids it: a fixed box has the
-     viewport as containing block, so it is left out of the scrollable overflow
-     of every ancestor and can overhang the list freely. Same for the clone it
-     accompanies. */
-  .navi_drop_hint {
-    /* A popover, so it lands in the top layer: no z-index to bid against the
-       page, and nothing it can be hidden behind. Shown BEFORE the clone, which
-       is what puts the clone above it — the top layer stacks in the order
-       things are shown, and the item being carried should pass over the line
-       rather than under it. The UA styles for [popover] have to be undone:
-       inset:0, margin:auto, a border and a background of its own. */
-    position: fixed;
-    inset: auto;
-    top: var(--drop-hint-y);
-    left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    display: none;
-    box-sizing: border-box;
-    width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
-    height: var(--drop-hint-size, 3px);
-    margin: 0;
-    padding: 0;
-    color: inherit;
-    background: var(--drop-hint-background-color, #4476ff);
-    border: none;
-    border-radius: var(--drop-hint-border-radius, 2px);
-    transform: translateY(-50%);
-    pointer-events: none;
-    overflow: visible;
-  }
-  .navi_drop_hint[data-drop-edge]:popover-open {
-    display: block;
-  }
-  .navi_drop_hint[data-drop-edge="top"] {
-    --drop-hint-y: calc(
-      var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
-    );
-  }
-  .navi_drop_hint[data-drop-edge="bottom"] {
-    --drop-hint-y: calc(
-      var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
-    );
-  }
-  /* A chevron at each end, pointing in: the line alone is easy to lose against
-     a list of borders and separators, two arrows read as "here" at a glance
-     (same idea as the table's column drop preview). They overhang the line,
-     which costs nothing to a box left out of the scrollable area — and the more
-     they stick out, the easier they are to spot. */
-  .navi_drop_hint_cap {
-    position: absolute;
-    top: 50%;
-    display: flex;
-    color: var(--drop-hint-background-color, #4476ff);
-    translate: 0 -50%;
-  }
-  .navi_drop_hint_cap svg {
-    width: var(--drop-hint-arrow-size, 11px);
-    height: var(--drop-hint-arrow-size, 11px);
-  }
-  .navi_drop_hint_cap[data-side="start"] {
-    left: calc(-1 * var(--drop-hint-arrow-size, 11px));
-    rotate: -90deg;
-  }
-  .navi_drop_hint_cap[data-side="end"] {
-    right: calc(-1 * var(--drop-hint-arrow-size, 11px));
-    rotate: 90deg;
-  }
+const css$1 = /* css */`.navi_drop_hint {
+  inset: auto;
+  top: var(--drop-hint-y);
+  left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
+  box-sizing: border-box;
+  width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
+  height: var(--drop-hint-size, 3px);
+  color: inherit;
+  background: var(--drop-hint-background-color, #4476ff);
+  border-radius: var(--drop-hint-border-radius, 2px);
+  pointer-events: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: none;
+  position: fixed;
+  overflow: visible;
+  transform: translateY(-50%);
+}
 
-  /* WHERE IT LANDS, when landing is ON a thing rather than between two: the
-     place itself is lit up, because there is no gap to draw a line in. Fixed
-     and in the top layer for the same reasons as the line above. */
-  .navi_drop_surface {
-    position: fixed;
-    inset: auto;
-    top: var(--drop-target-top);
-    left: var(--drop-target-left);
-    display: none;
-    box-sizing: border-box;
-    width: var(--drop-target-width);
-    height: var(--drop-target-height);
-    margin: 0;
-    padding: 0;
-    color: inherit;
-    background: var(--drop-surface-background-color, rgba(68, 118, 255, 0.16));
-    border: var(--drop-surface-border-width, 2px) solid
+.navi_drop_hint[data-drop-edge]:popover-open {
+  display: block;
+}
+
+.navi_drop_hint[data-drop-edge="top"] {
+  --drop-hint-y: calc(var(--drop-target-top) - var(--drop-hint-margin-y, 0px));
+}
+
+.navi_drop_hint[data-drop-edge="bottom"] {
+  --drop-hint-y: calc(var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px));
+}
+
+.navi_drop_hint_cap {
+  color: var(--drop-hint-background-color, #4476ff);
+  display: flex;
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.navi_drop_hint_cap svg {
+  width: var(--drop-hint-arrow-size, 11px);
+  height: var(--drop-hint-arrow-size, 11px);
+}
+
+.navi_drop_hint_cap[data-side="start"] {
+  left: calc(-1 * var(--drop-hint-arrow-size, 11px));
+  rotate: -90deg;
+}
+
+.navi_drop_hint_cap[data-side="end"] {
+  right: calc(-1 * var(--drop-hint-arrow-size, 11px));
+  rotate: 90deg;
+}
+
+.navi_drop_surface {
+  inset: auto;
+  top: var(--drop-target-top);
+  left: var(--drop-target-left);
+  box-sizing: border-box;
+  width: var(--drop-target-width);
+  height: var(--drop-target-height);
+  color: inherit;
+  background: var(--drop-surface-background-color, #4476ff29);
+  border: var(--drop-surface-border-width, 2px) solid
       var(--drop-surface-border-color, #4476ff);
-    border-radius: var(--drop-surface-border-radius, 6px);
-    pointer-events: none;
-    overflow: visible;
-  }
-  .navi_drop_surface[data-drop-over]:popover-open {
-    display: block;
-  }
+  border-radius: var(--drop-surface-border-radius, 6px);
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  display: none;
+  position: fixed;
+  overflow: visible;
+}
 
-  /* WHO CAN START A DRAG, said in the cursor.
-     A handle exists only to drag, so it shows the hand. A source does not, and
-     the gesture must not claim its cursor: it drags only once the intent shows
-     (a few pixels of travel, or a long press), a plain click on it stays a
-     click, and it is usually something else FIRST — a link, a card one opens.
-     The cursor says what the element is, and a hand insisting on the one thing
-     it can also be would talk over that. So it is left alone — default, and not
-     an I-beam, because dragging across the text does not select it (the gesture
-     takes the pointer; see the selectstart refused in drag_gesture.js) — and
-     whoever puts the drag there asks for the hand when a grab really is the
-     first thing the element offers.
-     An opted-out area keeps both its cursor and its selection, and never starts
-     a drag (see the check in startDragTo); a popover or a dialog anchored in a
-     source is one without having to say so.
-     Controls inside a source keep their own cursor: cursor is inherited, and
-     anything setting its own (a button's pointer) wins on itself.
-     Only the resting cursor is set here: what it becomes once a drag is under
-     way belongs to the gesture (see the backdrop in drag_gesture.js), the only
-     thing that knows a drag actually started. */
-  [data-drag-handle] {
-    cursor: grab;
-  }
-  [data-drag-source] {
-    cursor: default;
-  }
-  [data-drag-ignore],
-  [data-own-target],
-  [data-drag-source] [popover],
-  [data-drag-source] dialog {
-    cursor: auto;
-  }
+.navi_drop_surface[data-drop-over]:popover-open {
+  display: block;
+}
 
-  [navi-drag-clone-source] {
-    visibility: hidden;
-  }
+[data-drag-handle] {
+  cursor: grab;
+}
 
-  [navi-drag-clone-wrapper] {
-    /* Also a popover (see .navi_drop_hint): in the top layer it is over the
-       page whatever the page's own stacking is, and the coordinates it is
-       given are viewport ones — which is what the pointer carrying it works
-       in. Same UA-style reset as the hint. */
-    position: fixed;
-    inset: auto;
-    top: var(--clone-top);
-    left: var(--clone-left);
-    box-sizing: border-box;
-    width: var(--clone-width);
-    height: var(--clone-height);
-    margin: 0;
-    padding: 0;
-    color: inherit;
-    background: transparent;
-    border: none;
-    /* Carries the chain down to the copy, for an item whose own radius is an
-       "inherit" from the list around it. */
-    border-radius: inherit;
-    opacity: 0.95;
-    pointer-events: none;
-    /* Nothing in a copy being carried by a pointer is text to select: the
-       selection belongs to the original, which is still in the page. This is the
-       one place the rule is unconditional — an element that can be dragged is
-       usually selectable too (a link is both), and forcing it there would take
-       away a selection made from outside the element.  */
-    user-select: none;
-    overflow: visible;
-  }
+[data-drag-source] {
+  cursor: default;
+}
 
-  /* On its way home and still the object: the hand can reach for it there, so
-     there it takes the pointer — which it must not do at any other moment of the
-     gesture, or it would hide what it is being dropped on. */
-  [navi-drag-clone-wrapper][data-catchable] {
-    pointer-events: auto;
-  }
+[data-drag-ignore], [data-own-target], [data-drag-source] [popover], [data-drag-source] dialog {
+  cursor: auto;
+}
 
-  /* …and a FINGER reaching for it does not land on it: the pictures of the
-     transition cover the page, so as far as the browser is concerned the touch
-     began on the document root. What a touch may do is decided there and at that
-     moment, so the root says it for as long as the copy can be caught — the pan
-     is ours (nothing should scroll while something is landing), zoom stays the
-     reader's. Half of a pair: without the non-passive listener put down at the
-     same moment (see letCopyBeCaught) every touchmove arrives already
-     non-cancelable and refusing it does nothing. */
-  [data-drag-catchable] {
-    touch-action: pinch-zoom;
-  }
+[navi-drag-clone-source] {
+  visibility: hidden;
+}
 
-  /* Ce qui a été lancé: il continue dans la direction du geste jusqu'à sortir de
-     l'écran, et revient par le même chemin si la réponse refuse. */
-  [navi-drag-clone-wrapper][data-tossed] {
-    transition:
-      translate ${TOSS_DURATION_MS}ms ease-out,
+[navi-drag-clone-wrapper] {
+  inset: auto;
+  top: var(--clone-top);
+  left: var(--clone-left);
+  box-sizing: border-box;
+  width: var(--clone-width);
+  height: var(--clone-height);
+  color: inherit;
+  border-radius: inherit;
+  opacity: .95;
+  pointer-events: none;
+  user-select: none;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  overflow: visible;
+}
+
+[navi-drag-clone-wrapper][data-catchable] {
+  pointer-events: auto;
+}
+
+[data-drag-catchable] {
+  touch-action: pinch-zoom;
+}
+
+[navi-drag-clone-wrapper][data-tossed] {
+  transition: translate ${TOSS_DURATION_MS}ms ease-out,
       opacity ${TOSS_DURATION_MS}ms ease-out;
-  }
-  [navi-drag-clone-wrapper][data-tossed="away"] {
-    opacity: 0;
-  }
+}
 
+[navi-drag-clone-wrapper][data-tossed="away"] {
+  opacity: 0;
+}
+
+[navi-drag-clone] {
+  box-shadow: var(--drag-clone-shadow, 0 12px 28px #00000038);
+  transform: scale(var(--drag-clone-scale, 1.03));
+  transform-origin: var(--drag-origin);
+  transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), box-shadow .15s;
+}
+
+@starting-style {
   [navi-drag-clone] {
-    /* Cast by the copy itself rather than by the box around it, so it takes the
-       shape of the thing — a rounded row throws a rounded shadow. Its value is a
-       var read on the copy, which IS the dragged element: what being carried
-       looks like belongs to whoever owns the thing — a row lifted off a list
-       wants this shadow, a sheet of paper leaving a board wants none, and its
-       shade is a theme's business either way. */
-    box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
-    transform: scale(var(--drag-clone-scale, 1.03));
-    transform-origin: var(--drag-origin);
-    transition:
-      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-      box-shadow 0.15s ease;
+    box-shadow: none;
+    transform: scale(1);
   }
-
-  @starting-style {
-    [navi-drag-clone] {
-      box-shadow: none;
-      transform: scale(1);
-    }
-  }
+}
 `;
 // At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
@@ -14540,13 +14424,12 @@ installImportMetaCssBuild(import.meta);/**
  *
  * The element should have a CSS "top" value specified (e.g., top: 10px).
  */
-const css = /* css */`
-  [data-position-sticky-placeholder] {
-    position: static !important;
-    width: auto !important;
-    height: auto !important;
-    opacity: 0 !important;
-  }
+const css = /* css */`[data-position-sticky-placeholder] {
+  opacity: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
 `;
 const initPositionSticky = element => {
   import.meta.css = [css, "@jsenv/dom/src/position/position_sticky.js"];

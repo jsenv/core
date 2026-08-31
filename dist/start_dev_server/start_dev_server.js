@@ -3,7 +3,7 @@ import { existsSync, readFileSync, realpathSync, readdirSync, lstatSync, statSyn
 import { pathToFileURL } from "node:url";
 import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
-import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
+import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, renderCssTemplateLiteral, applyBabelPlugins, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -2369,9 +2369,17 @@ const parseAndTransformJsReferences = async (
 
     sequentialActions.push(async () => {
       await inlineUrlInfo.cook();
-      const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
-        quote,
-      });
+      const { substitutions } = inlineReferenceInfo;
+      const replacement = substitutions
+        ? // the expressions the template holds take their placeholder's place
+          // back; a template literal is written whatever the runtime supports,
+          // transpilation runs after and lowers it when it has to
+          renderCssTemplateLiteral(inlineUrlInfo.content, substitutions)
+        : JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, { quote });
+      if (replacement === null) {
+        // a placeholder did not survive: the source stays as it was written
+        return;
+      }
       magicSource.replace({
         start: inlineReferenceInfo.start,
         end: inlineReferenceInfo.end,
@@ -6132,6 +6140,12 @@ const jsenvPluginNodeRuntime = ({ runtimeCompat }) => {
  * const css = `body { color: red; }`;
  * import.meta.css = css;
  * ```
+ *
+ * "jsenv:js_reference_analysis" reads the css assigned here as an inline css and
+ * sends it through the css pipeline: transpilation, url() resolution, minification,
+ * comments. A "${}" standing where a css value stands is swapped for a placeholder
+ * and put back afterwards; anywhere else it makes the template unreadable and the
+ * css is shipped exactly as written, with everything the pipeline does lost.
  *
  */
 
@@ -11660,7 +11674,17 @@ const devServerPluginServeSourceFiles = ({
             // so it is derived from the url and cooked first.
             const inlineParentUrl = getInlineContentParentUrl(requestedUrl);
             if (inlineParentUrl) {
-              if (!kitchen.graph.getUrlInfo(inlineParentUrl)) {
+              const inlineParentUrlInfo =
+                kitchen.graph.getUrlInfo(inlineParentUrl);
+              // A parent cooked before the file changed still holds the
+              // references it had then; the inline content is as fresh as its
+              // parent, so the parent is cooked again before being asked.
+              if (
+                !inlineParentUrlInfo ||
+                inlineParentUrlInfo.content === undefined ||
+                !inlineParentUrlInfo.contentFinalized ||
+                !inlineParentUrlInfo.isValid()
+              ) {
                 const rootUrlInfo = kitchen.graph.rootUrlInfo;
                 const inlineParentWebUrl = WEB_URL_CONVERTER.asWebUrl(
                   inlineParentUrl,
@@ -11684,6 +11708,16 @@ const devServerPluginServeSourceFiles = ({
                 request.resource,
                 inlineParentUrl,
               );
+              if (!reference) {
+                // The parent does not hold that inline content: the script was
+                // edited out of the html. What the graph kept under this url is
+                // what the parent used to say, it must not be served.
+                return {
+                  url: requestedUrl,
+                  status: 404,
+                  statusText: "no inline content at this position",
+                };
+              }
             }
           }
           if (reference) {

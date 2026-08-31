@@ -57839,7 +57839,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`.navi_picker {
 
       & .navi_list_container {
         --list-border-radius: max(0px,
-            var(--picker-border-radius) - var(--picker-border-width));
+            var(--popover-border-radius) - var(--popover-border-width));
         overscroll-behavior: none;
         width: 100%;
 
@@ -57878,16 +57878,16 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`.navi_picker {
       &[open] {
         flex-direction: column;
       }
-    }
 
-    & .navi_list_container {
-      --list-border-radius: max(0px,
-          var(--picker-border-radius) - var(--picker-border-width));
-      overscroll-behavior: none;
-      width: 100%;
+      & .navi_list_container {
+        --list-border-radius: max(0px,
+            var(--dialog-border-radius) - var(--dialog-border-width));
+        overscroll-behavior: none;
+        width: 100%;
 
-      &:not([data-overflow-visible]) {
-        overflow: auto;
+        &:not([data-overflow-visible]) {
+          overflow: auto;
+        }
       }
     }
   }
