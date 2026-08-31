@@ -29,7 +29,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/dom": "0.17.35",
+    "@jsenv/dom": "0.17.36",
     "@jsenv/humanize": "1.7.8",
     "@jsenv/validity": "0.4.3"
   },

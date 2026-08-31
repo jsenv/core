@@ -9482,7 +9482,7 @@ const css$4 = /* css */`[data-drag-handle], [data-drag-source] {
   touch-action: pinch-zoom;
 }
 
-[data-drag-ignore], [data-own-target], [data-drag-source] [popover], [data-drag-source] dialog {
+[data-drag-ignore], [data-self-interactions~="drag"], [data-self-interactions~="*"], [data-drag-source] [popover], [data-drag-source] dialog {
   -webkit-touch-callout: default;
   touch-action: auto;
 }
@@ -11881,7 +11881,7 @@ const css$1 = /* css */`.navi_drop_hint {
   cursor: default;
 }
 
-[data-drag-ignore], [data-own-target], [data-drag-source] [popover], [data-drag-source] dialog {
+[data-drag-ignore], [data-self-interactions~="drag"], [data-self-interactions~="*"], [data-drag-source] [popover], [data-drag-source] dialog {
   cursor: auto;
 }
 
@@ -11946,15 +11946,19 @@ import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
 
 // What a press must not be read from at all. `data-drag-ignore` is said by
 // something whose press is its own business — a text one wants to select, a
-// control that reads the pointer itself. `data-own-target` is the same fact said
-// once for every gesture there is: an element declaring that a press landing on
-// it is aimed AT it, whatever it happens to sit inside (see also
-// DRAG_EXCLUDED_SELECTOR in drag_to_travel.js). A popover or a dialog says it
-// without being asked: it is a layer OVER the surface, so a press in it is aimed
-// at the layer — yet it stays a descendant of whatever it is anchored in (a
-// callout next to a button, in the card that carries both), and the press
-// bubbles through the surface as if it had landed on it.
-const DRAG_IGNORED_SELECTOR = "[data-drag-ignore],[data-own-target],[popover],dialog";
+// control that reads the pointer itself — and it means every gesture at once.
+// `data-self-interactions` says a narrower thing, and says which: an element
+// declaring the interactions that are ITS own, whatever it happens to sit
+// inside, the rest being left to what it sits in. Only the ones naming `drag`
+// take the grab away from the surface (see also DRAG_EXCLUDED_SELECTOR in
+// drag_to_travel.js) — an affordance that took the click alone is one a finger
+// may still pick the object up by, which is what it is for when it covers a real
+// part of that object. A popover or a dialog says it without being asked: it is
+// a layer OVER the surface, so a press in it is aimed at the layer — yet it
+// stays a descendant of whatever it is anchored in (a callout next to a button,
+// in the card that carries both), and the press bubbles through the surface as
+// if it had landed on it.
+const DRAG_IGNORED_SELECTOR = '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -13403,12 +13407,12 @@ const DRAG_RESISTANCE = 0.3;
 // out. A drag SOURCE is not either: it says which way it goes and only takes
 // that (see DRAG_SOURCE_AXES_ATTRIBUTE) — but a dedicated handle is, being a
 // place whose only purpose is to be taken hold of, from the first pixel. And so
-// is an OWN TARGET: an element saying a press landing on it is aimed at IT,
-// which is the same sentence said to every gesture at once rather than to this
-// one (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
-// dialog: a layer OVER the box, whose press only bubbles through the box because
-// the layer is anchored in it.
-const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", "[data-own-target]", "[popover]", "dialog"].join(",");
+// is an element naming `drag` among its own interactions: it said the grab is
+// ITS, here, rather than the box's — and one that named only the click said
+// nothing to this gesture and is passed through (see DRAG_IGNORED_SELECTOR in
+// drag_to.js). And so is a popover or a dialog: a layer OVER the box, whose
+// press only bubbles through the box because the layer is anchored in it.
+const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", '[data-self-interactions~="drag"]', '[data-self-interactions~="*"]', "[popover]", "dialog"].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
 // whoever owns the box: it is what a box ABOVE another reads to know the

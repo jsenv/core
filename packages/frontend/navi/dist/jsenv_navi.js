@@ -3108,6 +3108,14 @@ const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
  *
  * An action run never throws: failures land in errorSignal and are reported
  * once, by one rule, in action_error_report.js (see the comment in onRunError).
+ *
+ * Blast radius: this file is the substrate of routing (route_action.js,
+ * action_run_effect.js), resources (state/rest) and every control's `action`
+ * prop. Its own unit tests cover almost none of that, so a change here is
+ * verified against the consumers' nets: tests/route_tabs and
+ * tests/route_transition_list_revisit (browser), src/state/rest/tests and
+ * src/nav/tests (node) — src/action/*.test.js alone proves nothing about
+ * routing or lists.
  */
 
 let DEBUG$2 = false;
@@ -3554,6 +3562,14 @@ ${lines.join("\n")}`);
 
 const NO_PARAMS = { __no_params__: true };
 const mergeActionParams = (currentParams, newParams) => {
+  // The order of these two checks is load-bearing. Checking `undefined` first
+  // looks symmetric — "no new params, keep whatever is there, NO_PARAMS
+  // included" — and breaks routing: merge(NO_PARAMS, undefined) must yield
+  // `undefined` so the proxy targets a runnable child, because NO_PARAMS means
+  // "no params yet, nothing to run" to _updateTarget and the run-effect
+  // machinery. With NO_PARAMS kept, a route action bound to a not-yet-matching
+  // route resolves to no target and the page renders nothing
+  // (tests/route_tabs is the net that catches it).
   if (currentParams === NO_PARAMS) {
     return newParams;
   }
@@ -3719,6 +3735,16 @@ const createAction = (callback, rootOptions = {}) => {
             });
           }
           const combinedParams = mergeActionParams(params, newParamsOrSignal);
+          if (combinedParams === params) {
+            // Binding added nothing (mergeTwoJsValues returns the current
+            // params by reference when the new ones change no key): equal
+            // params must give the same instance, and the instance holding
+            // these exact params is this action. A separate child here would
+            // run with its own signals, invisible to whoever holds this one —
+            // a <Button action={A}> runs through this path (its UI state
+            // contributes no params), and useActionStatus(A) must see that run.
+            return action;
+          }
           return createChildAction({
             ...options,
             params: combinedParams,
@@ -3758,7 +3784,13 @@ const createAction = (callback, rootOptions = {}) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
-      childActionWeakSet.add(childAction);
+      if (childAction !== action) {
+        // binding that added nothing resolves to the action itself; it must
+        // not enter its own child set or matchAllSelfOrDescendant would
+        // traverse it forever (the cache above may still hold it: a plain
+        // lookup, never traversed)
+        childActionWeakSet.add(childAction);
+      }
 
       return childAction;
     };
@@ -5395,9 +5427,11 @@ const CONTROL_PROP_SET = new Set([
   // same thing for every control at once.
   "constraints",
 
-  // A real target inside a zone that belongs to another control — see
-  // own_target.js.
-  "ownTarget",
+  // The interactions this element takes for itself inside a zone that belongs
+  // to another control, and what becomes of it where they are blocked — see
+  // self_interactions.js.
+  "selfInteractions",
+  "whenSelfInteractionsBlocked",
 
   "autoFocus",
   "autoFocusVisible",
@@ -5459,35 +5493,55 @@ const ActionContext = createContext();
 const ActionRequesterContext = createContext();
 
 /**
- * A target of its own inside a zone that belongs to another control.
+ * The interactions an element takes for itself inside a zone that belongs to
+ * another control.
  *
  * A pressable row, a picker's façade, a slide that travels under the finger:
- * each of them answers a press that lands anywhere in its box. An affordance an
- * application draws in there — a chip's cross, an eye that opens a profile, a
- * diskette that saves a guest — is aimed AT, not merely inside, and the press
- * belongs to it alone.
+ * each of them answers a gesture that lands anywhere in its box. An affordance
+ * an application draws in there — a chip's cross, an eye that opens a profile, a
+ * diskette that saves a guest — is aimed AT, not merely inside.
  *
- * Saying that by hand takes three guards, one per moment of the same press: the
- * pointerdown where gestures are arbitrated, the mousedown where a picker opens,
- * the click where it opens too when a gesture disputed the press. All three are
- * navi's own knowledge of navi's own event flow, and an application that gets
- * one wrong finds out by opening a popup it meant to keep shut. `ownTarget` is
- * that knowledge, said once.
+ * But aimed at for WHAT. A press is not a drag: a drag announces itself (a few
+ * pixels of travel with a mouse, a long hold with a finger), a click is the
+ * absence of both, and the DOM tells them apart without anyone guessing at
+ * pointerdown. So an affordance drawn against the edge of a card can take the
+ * click and leave the grab: the finger that carries the card is allowed to start
+ * on it. A claim over every gesture at once would be a hole in the card, at
+ * precisely the place one grabs.
  *
- * The other half is interactivity, and the question that settles it is: **does
- * this affordance write to the control it sits in?**
+ * Hence a list, and hence it is required: what is named belongs to this element,
+ * what is not stays the zone's.
+ *
+ *     selfInteractions="click"        the press is mine, the grab is the card's
+ *     selfInteractions="click drag"   both — an affordance carried on its own
+ *     selfInteractions="*"            everything; say it only when it is true
+ *
+ * Saying "the press is mine" by hand takes three guards, one per moment of the
+ * same press: the pointerdown where gestures are arbitrated, the mousedown where
+ * a picker opens, the click where it opens too when a gesture disputed the
+ * press. All three are navi's own knowledge of navi's own event flow, and an
+ * application that gets one wrong finds out by opening a popup it meant to keep
+ * shut. `selfInteractions` is that knowledge, said once.
+ *
+ * The other half is `whenSelfInteractionsBlocked`: what becomes of the
+ * affordance where the zone around it is disabled or read-only. The question
+ * that settles it is **does this affordance write to the control it sits in?**
  *
  * - it does, and once the value cannot be changed it has nothing left to offer:
- *   it GOES. A remove cross that still removes is worse than no cross, and one
- *   that refuses politely still says "there is something to remove here" on a
- *   row that is only being read. That is the default.
+ *   it GOES (`"hide"`, the default). A remove cross that still removes is worse
+ *   than no cross, and one that refuses politely still says "there is something
+ *   to remove here" on a row that is only being read.
  * - it does, but its presence is information in itself: `"refuse"` keeps it and
  *   refuses in its own words, like every other navi control.
  * - it does NOT — a diskette saving a row into the reader's own address book, a
- *   badge explaining why a placement is odd. The read-only around it is about a
- *   value it never touches, so `"always"` ignores it: the affordance stays lit
- *   and stays pressable. It is on the caller to use it only for a gesture that
- *   genuinely writes nothing to the control around it.
+ *   badge explaining why a placement is odd. The block is about a value it never
+ *   touches, so `"ignore"` lets it through: the affordance stays lit and stays
+ *   pressable. It is on the caller to use it only for a gesture that genuinely
+ *   writes nothing to the control around it.
+ *
+ * That question is scoped to the claimed interactions and to them alone — the
+ * ones left to the zone were never this element's to block, and are arbitrated
+ * by the zone's own state.
  *
  * Whichever mode, the affordance's own handler runs from inside its own gate
  * rather than from the DOM: a caller's `onClick` fires before any of this, and
@@ -5500,65 +5554,100 @@ const ActionRequesterContext = createContext();
  * draws itself as much as a navi control. It is read from the outside and
  * nowhere else: by the controls above (below), and by the gesture readers
  * (@jsenv/dom's DRAG_EXCLUDED_SELECTOR and DRAG_IGNORED_SELECTOR), which is why
- * one attribute is enough and the `ownTarget` prop only writes it.
+ * one attribute is enough and the `selfInteractions` prop only writes it.
  *
- * Its value is the mode, when there is one to say: `data-own-target="always"`.
+ * A space-separated list, so every reader picks its own word out of it with the
+ * attribute selector the DOM already has for that: `[data-self-interactions~=
+ * "drag"]`. Nobody parses anything, and a reader that knows nothing of the other
+ * words is unaffected by them.
  */
-const OWN_TARGET_ATTRIBUTE = "data-own-target";
+const SELF_INTERACTIONS_ATTRIBUTE = "data-self-interactions";
+const ALL_SELF_INTERACTIONS = "*";
 
 /**
- * Whether `event` was aimed at an own target sitting below this control — in
- * which case the control is not what the press was for and must not answer it.
+ * The value to write in the DOM, and the one place a malformed claim is caught:
+ * a word nobody reads is silent forever otherwise, which is exactly the trap
+ * this API exists to remove.
+ */
+const selfInteractionsAttributeValue = (selfInteractions) => {
+  return typeof selfInteractions === "string"
+    ? selfInteractions
+    : ALL_SELF_INTERACTIONS;
+};
+
+const selfInteractionSelector = (interaction) =>
+  `[${SELF_INTERACTIONS_ATTRIBUTE}~="${interaction}"],[${SELF_INTERACTIONS_ATTRIBUTE}~="${ALL_SELF_INTERACTIONS}"]`;
+
+// What navi's own interaction gate answers to. The press-to-act chain is one
+// thing said at three moments (pointerdown, mousedown, click), and a keyboard
+// activation is a click too — so one word covers the lot.
+const CLICK_SELECTOR = selfInteractionSelector("click");
+
+/**
+ * Whether `event` was aimed at an element below this control that claims the
+ * press — in which case the control is not what the press was for and must not
+ * answer it.
  *
  * Read from the event's target rather than from a mark left by a handler: the
  * question is "who is this press for", and the DOM between the pointer and the
- * control is the whole answer. Nothing is asked of the own target itself, which
- * is what lets it be anything — a button, a link, a field, a bare element.
+ * control is the whole answer. Nothing is asked of the element itself, which is
+ * what lets it be anything — a button, a link, a field, a bare element.
+ *
+ * The closest element CLAIMING THE PRESS wins, not the closest one claiming
+ * anything: an affordance that took only the drag is transparent here, exactly
+ * as it is to the drag readers when it took only the click.
  */
-const isAimedAtOwnTargetBelow = (event, controlHost) => {
+const isAimedAtSelfInteractionsBelow = (event, controlHost) => {
   const target = event?.target;
   if (!target || typeof target.closest !== "function") {
     return false;
   }
-  const ownTarget = target.closest(`[${OWN_TARGET_ATTRIBUTE}]`);
-  if (!ownTarget) {
+  const claimer = target.closest(CLICK_SELECTOR);
+  if (!claimer) {
     return false;
   }
-  // The claim is against what is ABOVE it: the control that IS the own target,
-  // and any control living inside it, are being aimed at like anything else.
-  if (ownTarget === controlHost || ownTarget.contains(controlHost)) {
+  // The claim is against what is ABOVE it: the control that IS the claimer, and
+  // any control living inside it, are being aimed at like anything else.
+  if (claimer === controlHost || claimer.contains(controlHost)) {
     return false;
   }
   // From the root rather than the host: a layered control (a picker holding an
   // input) has its gate on the input, and what the application drew sits beside
   // it, not in it.
   const controlRoot = controlHost.closest("[navi-control]") || controlHost;
-  return controlRoot.contains(ownTarget);
+  return controlRoot.contains(claimer);
 };
 
 /**
- * Whether the read-only, disabled and busy of the zone around this own target
- * are about it at all — see the modes at the top of this file.
+ * Whether the disabled and read-only of the zone around this element are about
+ * its own interactions at all — see the modes at the top of this file.
  */
-const ownTargetIgnoresZoneState = (ownTarget) => ownTarget === "always";
+const selfInteractionsIgnoreBlock = (props) =>
+  props.whenSelfInteractionsBlocked === "ignore";
 
 /**
- * Whether an own target has nothing to offer where it sits: it writes to the
- * control around it, and that control cannot be changed, so the affordance goes.
+ * Whether the affordance has nothing left to offer where it sits: it writes to
+ * the control around it, and that control cannot be written to, so it goes.
+ *
+ * Read from disabled and read-only alone. Busy is not a block — it is read-only
+ * that blocks, which a running action sets on its way (see readOnlyBase in
+ * control_hooks.jsx); a zone busy without being read-only is a zone whose
+ * interactions still work.
  */
-const useOwnTargetHidden = (props) => {
+const useSelfInteractionsHidden = (props) => {
   const disabled = useContext(DisabledContext);
   const readOnly = useContext(ReadOnlyContext);
-  const loading = useContext(LoadingContext$1);
-  const { ownTarget } = props;
+  const { selfInteractions, whenSelfInteractionsBlocked } = props;
+  if (!selfInteractions) {
+    return false;
+  }
   if (
-    !ownTarget ||
-    ownTarget === "refuse" ||
-    ownTargetIgnoresZoneState(ownTarget)
+    whenSelfInteractionsBlocked &&
+    whenSelfInteractionsBlocked !== "hide" // "refuse" stays and says why, "ignore" is not concerned
   ) {
     return false;
   }
-  return Boolean(disabled || readOnly || loading);
+  return Boolean(disabled || readOnly);
 };
 
 /**
@@ -9766,14 +9855,18 @@ const onRequestInteraction = (
   const controlHost = findControlHost(currentTarget) || currentTarget;
 
   // Aimed at something else that lives in this control's box: a chip's cross, an
-  // eye, a diskette. The press is that affordance's alone (see own_target.js),
-  // and stepping back here — rather than stopping the propagation over there —
-  // is what leaves the event whole for everything that is not a navi
-  // interaction. Stepping back, not refusing: the reaction never happened, so
-  // its `prevented`/`always` (an `e.preventDefault()`, for most of them) have
-  // nothing to undo and would take the press from the affordance itself.
-  if (isAimedAtOwnTargetBelow(event, controlHost)) {
-    debugInteraction(event, `"${name}" is for an own target below`);
+  // eye, a diskette, claiming the press for itself (see self_interactions.js).
+  // The press is that element's alone, and stepping back here — rather than
+  // stopping the propagation over there — is what leaves the event whole for
+  // everything that is not a navi interaction. Stepping back, not refusing: the
+  // reaction never happened, so its `prevented`/`always` (an
+  // `e.preventDefault()`, for most of them) have nothing to undo and would take
+  // the press from the affordance itself.
+  if (isAimedAtSelfInteractionsBelow(event, controlHost)) {
+    debugInteraction(
+      event,
+      `"${name}" is for a self-interactions element below`,
+    );
     requestInteractionCustomEvent.preventDefault();
     return false;
   }
@@ -20402,7 +20495,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   childPropSet?: Set<string>,
  *   preventInitialTransition?: boolean,
  *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
- *   ownTarget?: boolean | "refuse" | "always",
+ *   selfInteractions?: string,
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -20536,13 +20629,13 @@ const computeBox = (props, parentBoxFlow) => {
     // cross an application draws in a card's corner, a badge on a row that
     // travels. Writing the attribute is the whole of it here: it is read off
     // the DOM by the controls above and by the gesture readers, and what an
-    // affordance makes of the read-only around it is a question only a control
-    // can answer (see own_target.js).
-    ownTarget,
+    // affordance makes of the block around it is a question only a control can
+    // answer (see self_interactions.js).
+    selfInteractions,
     ...rest
   } = props;
-  if (ownTarget) {
-    rest[OWN_TARGET_ATTRIBUTE] = typeof ownTarget === "string" ? ownTarget : "";
+  if (selfInteractions) {
+    rest[SELF_INTERACTIONS_ATTRIBUTE] = selfInteractionsAttributeValue(selfInteractions);
   }
   let as = asProp;
 
@@ -35212,10 +35305,11 @@ const useControlProps = (props, {
       return dispatched;
     };
 
-    // What the caller wrote runs from inside the gate when this control is an
-    // own target: a plain `onClick` is DOM, and it would fire from a cross drawn
-    // greyed by the read-only control the affordance sits in (see own_target.js).
-    const callerHandlerIsGated = Boolean(props.ownTarget);
+    // What the caller wrote runs from inside the gate when this control claims
+    // the press: a plain `onClick` is DOM, and it would fire from a cross drawn
+    // greyed by the read-only control the affordance sits in (see
+    // self_interactions.js).
+    const callerHandlerIsGated = Boolean(props.selfInteractions);
     const gateCallerHandler = (handler, e) => {
       if (!handler) {
         return undefined;
@@ -35792,12 +35886,13 @@ const useInteractiveProps = (props, {
   } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props);
   controlRootProps["navi-control"] = controlInfo.controlType;
-  if (props.ownTarget) {
+  if (props.selfInteractions) {
     // One attribute, in the DOM, because that is where the claim is read from —
     // by the controls above and by the gesture readers below (see
-    // own_target.js). The prop is the ergonomic form of it and nothing more: an
-    // element an application draws itself writes the same attribute by hand.
-    controlRootProps[OWN_TARGET_ATTRIBUTE] = typeof props.ownTarget === "string" ? props.ownTarget : "";
+    // self_interactions.js). The prop is the ergonomic form of it and nothing
+    // more: an element an application draws itself writes the same attribute by
+    // hand.
+    controlRootProps[SELF_INTERACTIONS_ATTRIBUTE] = selfInteractionsAttributeValue(props.selfInteractions);
   }
   const {
     "navi-control-proxy-for": naviProxyFor
@@ -35849,12 +35944,12 @@ const useInteractiveProps = (props, {
       optimistic
     } = props;
 
-    // `ownTarget="always"`: an affordance that writes nothing to the control it
-    // sits in has no business inheriting that control's state — a diskette
-    // saving a row into the reader's own address book stays pressable on a game
-    // nobody may edit. Its own props still hold; only what came from above is
-    // dropped (see own_target.js for the three modes).
-    const zoneStateApplies = !ownTargetIgnoresZoneState(props.ownTarget);
+    // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
+    // to the control it sits in has no business inheriting that control's state
+    // — a diskette saving a row into the reader's own address book stays
+    // pressable on a game nobody may edit. Its own props still hold; only what
+    // came from above is dropped (see self_interactions.js for the three modes).
+    const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
     const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
     const controlReadOnly = zoneStateApplies && controlReadOnlyFromAbove;
     const controlLoading = zoneStateApplies && controlLoadingFromAbove;
@@ -44477,8 +44572,8 @@ const ButtonFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const ownTargetHidden = useOwnTargetHidden(props);
-  if (ownTargetHidden) {
+  const selfInteractionsHidden = useSelfInteractionsHidden(props);
+  if (selfInteractionsHidden) {
     return null;
   }
   return jsx(Next, {
@@ -44578,7 +44673,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
 
 /**
  * @type {import("ignore:preact").FunctionComponent<{
- *   ownTarget?: boolean | "refuse" | "always",
+ *   selfInteractions?: string,
+ *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
  *   [key: string]: any,
  * }>}
@@ -44589,15 +44685,20 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).
- * @param {boolean|"refuse"|"always"} [ownTarget] A real target inside a zone
- *   that belongs to another control — a chip's cross on a picker's façade, an
- *   eye on a pressable row, a diskette inside a slide that travels. The press is
- *   this button's alone (no travel starts, no popup opens, no navi control above
- *   answers) and its `onClick` waits for its own interaction gate instead of
- *   firing from the DOM. What it does where the zone is read-only, disabled or
- *   busy depends on whether it WRITES to the control it sits in: it goes by
- *   default, `"refuse"` keeps it and refuses with a callout, `"always"` ignores
- *   the zone's state entirely — for a gesture that never touched that control.
+ * @param {string} [selfInteractions] The interactions this button takes for
+ *   itself inside a zone that belongs to another control — a chip's cross on a
+ *   picker's façade, an eye on a pressable row, a badge against the edge of a
+ *   card one carries. A required list, because a press is not a drag:
+ *   `"click"` makes the press this button's alone (no popup opens, no navi
+ *   control above answers) and leaves the grab to whatever it sits in,
+ *   `"click drag"` takes both, `"*"` takes every gesture there is. Whatever is
+ *   claimed, the button's `onClick` waits for its own interaction gate instead
+ *   of firing from the DOM.
+ * @param {"hide"|"refuse"|"ignore"} [whenSelfInteractionsBlocked] What becomes
+ *   of it where the zone around it is disabled or read-only, which is settled
+ *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
+ *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
+ *   it through untouched — for an affordance that never wrote to that control.
  */
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
@@ -44612,7 +44713,7 @@ installImportMetaCssBuild(import.meta);/**
  * caps are fixed: same place, same size, in both states, and either of them
  * hands the floor to the other side. That is the whole reason the caps sit
  * OUTSIDE the controls rather than being drawn inside them (a picker's façade
- * yields a zone with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon
+ * yields a zone with `selfInteractions`, a field has `Input.UI.LeftSlot`): an icon
  * that lives inside its control while open and becomes a pill once closed is
  * a switch that moves when you flip it: the finger that opened the search has
  * to travel to close it again. Out here, the same pixel does both.
@@ -44871,9 +44972,12 @@ const ControlSwap = props => {
  * @param label - What the cap is called — it holds no text, so this is its
  *   accessible name. Say what pressing it reveals ("Rechercher"), not what it
  *   currently shows: the cap wears `aria-expanded` for the state.
- * @param badge - A mark on the cap saying this collapsed control is still
- *   doing something (a filter set, a search typed). `true` draws a dot;
- *   anything else is drawn as given (a `<BadgeCount>`, say).
+ * @param badge - A mark on the cap saying the control behind it is still doing
+ *   something (a filter set, a search typed). `true` draws a dot; anything else
+ *   is drawn as given (a `<BadgeCount>`, say). Drawn only while this side is
+ *   the collapsed one — the side holding the floor spells out in full what a
+ *   dot could only hint at — so it is read straight off the state
+ *   (`badge={Boolean(groupId)}`), with no "and this side is hidden" to add.
  * @param autoFocus - On by default: the focus goes into this control when it
  *   takes the floor, where navi's ladder puts it — an `autoFocus` inside the
  *   control first, its first focusable otherwise. `false` leaves it on the cap
@@ -44901,6 +45005,9 @@ const ControlSwapCap = ({
     badge,
     ...capProps
   } = side.capProps;
+  // A badge on a cap can only say one thing: the control you are NOT looking at
+  // holds something. The one holding the floor is on the row saying it itself.
+  const badgeToDraw = active ? null : badge;
   return jsxs(Button, {
     icon: true,
     pressEffect: "none",
@@ -44911,7 +45018,7 @@ const ControlSwapCap = ({
     // CSS reaches for, and the rest is the wiring that makes the cap a cap.
     ,
 
-    className: capProps.className ? `navi_control_swap_cap ${capProps.className}` : "navi_control_swap_cap",
+    className: withPropsClassName("navi_control_swap_cap", capProps.className),
     "aria-expanded": active,
     "aria-controls": slotId,
     onClick: onPress,
@@ -44919,10 +45026,10 @@ const ControlSwapCap = ({
       width: "50%",
       square: true,
       children: icon
-    }), badge ? jsx("span", {
+    }), badgeToDraw ? jsx("span", {
       className: "navi_control_swap_badge",
       "aria-hidden": "true",
-      children: badge === true ? null : badge
+      children: badgeToDraw === true ? null : badgeToDraw
     }) : null]
   });
 };
@@ -65556,8 +65663,8 @@ const BadgeStyleCSSVars = {
   fontSize: "--font-size"
 };
 const BadgeButton = props => {
-  const ownTargetHidden = useOwnTargetHidden(props);
-  if (ownTargetHidden) {
+  const selfInteractionsHidden = useSelfInteractionsHidden(props);
+  if (selfInteractionsHidden) {
     return null;
   }
   return jsx(BadgeButtonUI, {
@@ -66317,7 +66424,7 @@ const PickerArrayUI = asPickerOwnUI(() => {
  * around the chip. `commandFor` is for a chip that stands outside the picker it
  * speaks for.
  *
- * The cross is an own target (see own_target.js), so the press belongs to it
+ * The cross claims the press (see self_interactions.js), so it belongs to it
  * and not to the picker underneath, and it goes when the picker turns read-only
  * — a row being read still says what was picked, it just no longer offers to
  * unpick it.
@@ -66344,7 +66451,7 @@ const PickerChip = ({
     flex: true,
     ...rest,
     children: [children, jsx(Badge.Button, {
-      ownTarget: true,
+      selfInteractions: "click",
       command: "--navi-unselect",
       commandFor: commandFor,
       value: value,
@@ -66721,7 +66828,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
       overflow: visible !important;
     }
 
-    & [data-own-target] {
+    & [data-self-interactions~="click"], & [data-self-interactions~="*"] {
       pointer-events: auto;
       position: relative;
     }
@@ -66992,6 +67099,9 @@ const PickerButton = props => {
     // Adds a clear button to the right slot, the same one type="search" puts at
     // the end of an input: a picker holds a value the user chose, and unsetting
     // it should not require reopening the popup to hunt for a "none" entry.
+    // Where navi puts it, which needs a slot to put it in: a variant without
+    // one (bare above all) holds a <Picker.Clear /> in its own drawing instead
+    // — the same cross, placed by whoever draws around it.
     clearable,
     // "Are you sure?" before the cross clears anything. A cross of three
     // millimetres at the edge of a touch screen, right where the chevron is
@@ -67012,6 +67122,17 @@ const PickerButton = props => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
+  // Which variants get the right slot — the chevron saying "this opens", and
+  // the cross replacing it once there is something to clear.
+  // Not the ones that draw no value beside it: an icon picker IS its icon, a
+  // headless one draws nothing, a button says what it opens with its label, a
+  // word in a sentence has no room for furniture. Nor a picker rendering the
+  // browser's own control ("default").
+  // Nor a bare one: the picker is that drawing's box to the pixel, so anything
+  // navi adds beside it either grows the box or covers what the caller drew.
+  // The pieces are the caller's to place there instead — a <Picker.Clear /> in
+  // their own layout (see warnOnClearableWithoutSlot).
+  const hasRightSlot = variant !== "icon" && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -67040,6 +67161,17 @@ const PickerButton = props => {
   // clearing being a modification like any other.
   const interactive = !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
+  // What the picker knows about itself, for the pieces it does not place: the
+  // drawings of its value (Picker.UI.*), and the affordances a caller may put
+  // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
+  const pickerContext = {
+    value,
+    placeholder,
+    maxLines,
+    id: inputProps.id,
+    interactive,
+    clearConfirm
+  };
   return (
     /* Read-only crosses into everything the picker is made of: what it really
        holds is drawn by controls of their own — in the popup, and on the façade
@@ -67113,112 +67245,108 @@ const PickerButton = props => {
         onnavi_request_unselect: e => {
           requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
         },
-        children: [jsxs("span", {
+        children: [jsx("span", {
           className: "navi_picker_box",
-          children: [variant === "headless" ? null : jsx(LoadingOutline, {
-            loading: loading,
-            color: "var(--picker-loader-color)",
-            inset: -2
-          }), jsx(PickerInput, {
-            tabIndex: variant === "headless" ? -1 : undefined,
-            "aria-hidden": variant === "headless" ? "true" : undefined,
-            ...inputProps,
-            // eslint-disable-next-line react/no-children-prop
-            children: undefined // we will render children into the div
-            ,
+          children: jsxs(PickerContext.Provider, {
+            value: pickerContext,
+            children: [variant === "headless" ? null : jsx(LoadingOutline, {
+              loading: loading,
+              color: "var(--picker-loader-color)",
+              inset: -2
+            }), jsx(PickerInput, {
+              tabIndex: variant === "headless" ? -1 : undefined,
+              "aria-hidden": variant === "headless" ? "true" : undefined,
+              ...inputProps,
+              // eslint-disable-next-line react/no-children-prop
+              children: undefined // we will render children into the div
+              ,
 
-            ui: ui,
-            onCopy: e => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                return;
-              }
-              const uiState = uiStateController.uiState;
-              if (uiState === undefined) {
-                return;
-              }
-              e.preventDefault();
-              const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-              e.clipboardData.setData("text/plain", displayText);
-              e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-            },
-            onCut: e => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                return;
-              }
-              const uiState = uiStateController.uiState;
-              if (uiState === undefined) {
-                return;
-              }
-              // the copy part don't need control to be interactable
-              const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-              e.clipboardData.setData("text/plain", displayText);
-              e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-              // the clear ui state part need control to be interactable
-              dispatchRequestInteraction(pickerEl, {
-                event: e,
-                name: "cut",
-                allowed: () => {
-                  dispatchRequestClearUIState(inputRef.current, e);
+              ui: ui,
+              onCopy: e => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  return;
                 }
-              });
-              e.preventDefault();
-            },
-            onPaste: e => {
-              const pickerEl = ref.current;
-              if (isWithinPickerContent(e.target, pickerEl)) {
-                // Don't intercept inside the picker popup content.
-                return;
-              }
-              const naviData = e.clipboardData.getData("application/x-navi");
-              let pasteValue;
-              if (naviData) {
-                try {
-                  pasteValue = JSON.parse(naviData);
-                } catch {
-                  pasteValue = naviData;
+                const uiState = uiStateController.uiState;
+                if (uiState === undefined) {
+                  return;
                 }
-              } else {
-                pasteValue = e.clipboardData.getData("text/plain");
-              }
-              dispatchRequestInteraction(pickerEl, {
-                event: e,
-                name: "paste",
-                allowed: () => {
-                  dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                    event: e
-                  });
+                e.preventDefault();
+                const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+                e.clipboardData.setData("text/plain", displayText);
+                e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+              },
+              onCut: e => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  return;
                 }
-              });
-              e.preventDefault();
-            }
-          }), variant === "headless" || ui === "default" ? null : jsx(Text, {
-            className: "navi_picker_value"
-            // Tells the caller's own drawing of the control from the value
-            // the picker draws itself, so each is written on its own line
-            // (see .navi_picker_value in the CSS above).
-            ,
+                const uiState = uiStateController.uiState;
+                if (uiState === undefined) {
+                  return;
+                }
+                // the copy part don't need control to be interactable
+                const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+                e.clipboardData.setData("text/plain", displayText);
+                e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+                // the clear ui state part need control to be interactable
+                dispatchRequestInteraction(pickerEl, {
+                  event: e,
+                  name: "cut",
+                  allowed: () => {
+                    dispatchRequestClearUIState(inputRef.current, e);
+                  }
+                });
+                e.preventDefault();
+              },
+              onPaste: e => {
+                const pickerEl = ref.current;
+                if (isWithinPickerContent(e.target, pickerEl)) {
+                  // Don't intercept inside the picker popup content.
+                  return;
+                }
+                const naviData = e.clipboardData.getData("application/x-navi");
+                let pasteValue;
+                if (naviData) {
+                  try {
+                    pasteValue = JSON.parse(naviData);
+                  } catch {
+                    pasteValue = naviData;
+                  }
+                } else {
+                  pasteValue = e.clipboardData.getData("text/plain");
+                }
+                dispatchRequestInteraction(pickerEl, {
+                  event: e,
+                  name: "paste",
+                  allowed: () => {
+                    dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                      event: e
+                    });
+                  }
+                });
+                e.preventDefault();
+              }
+            }), variant === "headless" || ui === "default" ? null : jsx(Text, {
+              className: "navi_picker_value"
+              // Tells the caller's own drawing of the control from the value
+              // the picker draws itself, so each is written on its own line
+              // (see .navi_picker_value in the CSS above).
+              ,
 
-            "data-picker-facade": ui === undefined ? undefined : ""
-            // A placeholder is the picker saying "nothing here yet" about
-            // the value navi draws — the default rendering, or the one a
-            // typed picker installs for itself. A button's label is not
-            // that, however empty the picker behind it is, and neither is a
-            // caller's own "ui": an empty value may be exactly what the
-            // caller is drawing there ("no filter", "anywhere"), so how it
-            // looks empty stays theirs (documented on the ui prop below).
-            ,
+              "data-picker-facade": ui === undefined ? undefined : ""
+              // A placeholder is the picker saying "nothing here yet" about
+              // the value navi draws — the default rendering, or the one a
+              // typed picker installs for itself. A button's label is not
+              // that, however empty the picker behind it is, and neither is a
+              // caller's own "ui": an empty value may be exactly what the
+              // caller is drawing there ("no filter", "anywhere"), so how it
+              // looks empty stays theirs (documented on the ui prop below).
+              ,
 
-            "navi-placeholder": (ui === undefined || pickerUIIsNaviOwn(ui)) && variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
-            maxLines: maxLines,
-            children: jsx(PickerOwnContent, {
-              children: jsx(PickerContext.Provider, {
-                value: {
-                  value,
-                  placeholder,
-                  maxLines
-                },
+              "navi-placeholder": (ui === undefined || pickerUIIsNaviOwn(ui)) && variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
+              maxLines: maxLines,
+              children: jsx(PickerOwnContent, {
                 children: jsx(MaxLinesContext.Provider, {
                   value: maxLines,
                   children: ui === undefined ? variant === "icon" ?
@@ -67233,71 +67361,23 @@ const PickerButton = props => {
                   }) : jsx(PickerDefaultUI, {}) : ui
                 })
               })
-            })
-          }), variant === "icon" || variant === "headless" || variant === "button" || variant === "text" || variant === "bare" || ui === "default" ? null : jsx("span", {
-            className: "navi_picker_right_slot",
-            children: jsx(PickerOwnContent, {
-              children: clearable && interactive && value !== undefined && value !== "" && clearConfirm !== undefined ?
-              // A picker on the façade of a picker: the cross opens the
-              // question, and yes sends the clear to this picker's input.
-              // A door only (allowNameless): the form around does not see
-              // a field in it.
-              jsx(Picker, {
-                type: "confirm",
-                variant: "icon",
-                ui: jsx(Icon, {
+            }), hasRightSlot ? jsx("span", {
+              className: "navi_picker_right_slot",
+              children: jsx(PickerOwnContent, {
+                children: clearable && pickerHasSomethingToClear(pickerContext) ? jsx(PickerClear, {
+                  size: rightSlotIconSize
+                }) : rightSlot === undefined ?
+                // lineOverflow: what sits in the slot is an affordance, not a
+                // character — a caller asking for a bigger one wants it bigger,
+                // not capped at the height of the line it sits on
+                jsx(Icon, {
                   size: rightSlotIconSize,
                   lineOverflow: "allow",
-                  children: jsx(CloseSvg, {})
-                }),
-                message: clearConfirm,
-                command: "--navi-clear",
-                commandFor: inputProps.id,
-                tabIndex: "-1"
-              }) : clearable && interactive && value !== undefined && value !== "" ? jsx(Button, {
-                command: "--navi-clear",
-                commandFor: inputProps.id,
-                tabIndex: "-1"
-                // No navi-focus-delegate, unlike the identical button inside an
-                // input: handing focus back to the picker's own input is what
-                // opens the popup, and clearing is the opposite intention.
-                ,
-
-                icon: true,
-                variant: "discrete"
-                // What is busy once the clear is sent is the picker — the value
-                // being removed is the whole field's, and the picker already
-                // draws the wait around all of it. Two outlines for one wait is
-                // one too many.
-                ,
-
-                loadingOutline: false
-                // preventDefault, not just tabIndex="-1": a mousedown focuses
-                // its target before any click happens, and this button should
-                // never hold focus at all — the field keeps it.
-                ,
-
-                onMouseDown: e => {
-                  e.preventDefault();
-                },
-                flex: true,
-                align: "center",
-                children: jsx(Icon, {
-                  size: rightSlotIconSize,
-                  lineOverflow: "allow",
-                  children: jsx(CloseSvg, {})
-                })
-              }) : rightSlot === undefined ?
-              // lineOverflow: what sits in the slot is an affordance, not a
-              // character — a caller asking for a bigger one wants it bigger,
-              // not capped at the height of the line it sits on
-              jsx(Icon, {
-                size: rightSlotIconSize,
-                lineOverflow: "allow",
-                children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
-              }) : rightSlot
-            })
-          })]
+                  children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
+                }) : rightSlot
+              })
+            }) : null]
+          })
         }), jsx(ControlFacadeChildrenWrapper, {
           ...facadeChildrenProps,
           children: jsx(ContentTag, {
@@ -67310,6 +67390,123 @@ const PickerButton = props => {
     })
   );
 };
+/**
+ * The cross that empties the picker it sits in — reached as `<Picker.Clear />`.
+ *
+ * It is the very cross `clearable` puts in the right slot — the same button,
+ * wired the same way — for the drawings navi has no slot to put it in:
+ * `variant="bare"` above all, where the drawing is the caller's and so is the
+ * place the cross belongs in it, after a name or over a corner, at a size and
+ * with an icon of its own.
+ *
+ * It goes when there is nothing to take out and when nothing can be changed, so
+ * a caller places it once and never asks whether to draw it.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   size?: number | string,
+ *   children?: import("ignore:preact").ComponentChildren,
+ * } & Record<string, any>>}
+ * @param {number|string} [size="inherit"] How big the cross is drawn, as
+ *   `<Icon size>` reads it — "inherit" takes the size of the text around it.
+ * @param {import("ignore:preact").ComponentChildren} [children] The icon, in place of
+ *   the cross. Anything else goes to the `<Button>` underneath (`variant`,
+ *   `paddingX`, `aria-label`, …).
+ */
+const PickerClear = ({
+  size = "inherit",
+  children,
+  ...rest
+}) => {
+  const pickerContext = useContext(PickerContext);
+  if (!pickerContext) {
+    return null;
+  }
+  if (!pickerHasSomethingToClear(pickerContext)) {
+    return null;
+  }
+  const {
+    id,
+    clearConfirm
+  } = pickerContext;
+  const icon =
+  // lineOverflow: the cross is an affordance, not a character — a caller
+  // asking for a bigger one wants it bigger, not capped at the height of the
+  // line it sits on.
+  jsx(Icon, {
+    size: size,
+    lineOverflow: "allow",
+    children: children === undefined ? jsx(CloseSvg, {}) : children
+  });
+  // The press is aimed AT the cross: clearing is the opposite intention to
+  // opening, and the picker's box answers a press landing anywhere in it (see
+  // self_interactions.js). Only the press: a picker drawn inside something one
+  // carries is still carried by its cross.
+  if (clearConfirm !== undefined) {
+    return (
+      // A picker on the façade of a picker: the cross opens the question, and
+      // yes sends the clear to this picker's input.
+      jsx(Picker, {
+        type: "confirm",
+        variant: "icon",
+        selfInteractions: "click",
+        ui: icon,
+        message: clearConfirm,
+        command: "--navi-clear",
+        commandFor: id,
+        tabIndex: "-1",
+        "aria-label": naviI18n("button.clear"),
+        ...rest
+      })
+    );
+  }
+  return jsx(Button, {
+    command: "--navi-clear",
+    commandFor: id,
+    selfInteractions: "click",
+    tabIndex: "-1"
+    // No navi-focus-delegate, unlike the identical button inside an input:
+    // handing focus back to the picker's own input is what opens the popup,
+    // and clearing is the opposite intention.
+    ,
+
+    icon: true,
+    variant: "discrete"
+    // What is busy once the clear is sent is the picker — the value being
+    // removed is the whole field's, and the picker already draws the wait
+    // around all of it. Two outlines for one wait is one too many.
+    ,
+
+    loadingOutline: false
+    // preventDefault, not just tabIndex="-1": a mousedown focuses its target
+    // before any click happens, and this button should never hold focus at
+    // all — the field keeps it.
+    ,
+
+    onMouseDown: e => {
+      e.preventDefault();
+    },
+    flex: true,
+    align: "center",
+    "aria-label": naviI18n("button.clear"),
+    ...rest,
+    children: icon
+  });
+};
+// Clearing is a modification: nothing to offer on a picker whose value cannot
+// be changed. Said here rather than left to the cross's own gate — the cross is
+// a control of its own, so the picker's interaction gate finds IT and would let
+// the press through: the tap aimed where the chevron sits would empty a field
+// nothing else can touch.
+const pickerHasSomethingToClear = ({
+  interactive,
+  value
+}) => {
+  if (!interactive) {
+    return false;
+  }
+  return value !== undefined && value !== "";
+};
+
 // What the picker draws itself — the value it shows, the furniture in its slot,
 // and whatever a caller puts in either — is not another control of the field
 // around it: none of it may take the id (nor the name) a <Field> hands down,
@@ -67500,6 +67697,7 @@ const PickerFirstResolver = props => {
 };
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerConfirmResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.Chip = PickerChip;
+Picker.Clear = PickerClear;
 Picker.UI = PickerDefaultUI;
 Picker.UI.Date = PickerDateUI;
 Picker.UI.Time = PickerTimeUI;

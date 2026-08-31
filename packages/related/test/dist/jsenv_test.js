@@ -15,7 +15,7 @@ import { availableParallelism, cpus, totalmem, release, freemem } from "node:os"
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { pidtree } from "pidtree";
-import { Worker } from "node:worker_threads";
+import { Worker, parentPort } from "node:worker_threads";
 import he from "he";
 import "node:tty";
 
@@ -5704,6 +5704,130 @@ const getCoverageFromTestPlanResults = async (
 
 const isV8Coverage = (coverage) => Boolean(coverage.result);
 
+/*
+ * Remembers, from one run to the next, how long each execution took and how much
+ * time it asked for (see requestAllocatedMs).
+ *
+ * What it is for: with a fixed number of parallel slots, the moment a long
+ * execution starts decides when the whole run ends. Started last it keeps one
+ * slot busy while every other one is idle; started first it runs while the short
+ * ones fill the slots around it. Knowing the durations of the previous run is
+ * what allows to start the long ones first.
+ *
+ * Only the start order is affected: executions keep the index they got from the
+ * filesystem, so they are still reported in that order.
+ */
+
+
+const MS_IN_A_DAY = 24 * 60 * 60 * 1000;
+// an execution not seen for that long is likely a file that no longer exists
+const ENTRY_MAX_AGE_MS = 30 * MS_IN_A_DAY;
+
+const createExecutionTimings = ({ fileUrl }) => {
+  const previousEntryMap = readEntries(fileUrl);
+  const entryMap = new Map();
+
+  return {
+    getAllocatedMsRequested: (executionName) => {
+      const previousEntry = previousEntryMap.get(executionName);
+      if (!previousEntry) {
+        return undefined;
+      }
+      return previousEntry.allocatedMsRequested;
+    },
+    sortByLongestFirst: (executionArray) => {
+      const durationMsMap = new Map();
+      const durationMsArray = [];
+      for (const execution of executionArray) {
+        const previousEntry = previousEntryMap.get(execution.name);
+        if (previousEntry) {
+          durationMsMap.set(execution, previousEntry.durationMs);
+          durationMsArray.push(previousEntry.durationMs);
+        }
+      }
+      if (durationMsArray.length === 0) {
+        return executionArray;
+      }
+      // an execution never seen before is assumed to last as long as the median:
+      // being new is not a reason to be pushed at the end of the run
+      durationMsArray.sort((a, b) => a - b);
+      const medianDurationMs =
+        durationMsArray[Math.floor(durationMsArray.length / 2)];
+      // sort is stable: executions with the same estimation stay in the order
+      // they were found on the filesystem
+      return [...executionArray].sort((leftExecution, rightExecution) => {
+        const leftDurationMs =
+          durationMsMap.get(leftExecution) ?? medianDurationMs;
+        const rightDurationMs =
+          durationMsMap.get(rightExecution) ?? medianDurationMs;
+        return rightDurationMs - leftDurationMs;
+      });
+    },
+    record: (execution) => {
+      const { status, timings } = execution.result;
+      if (
+        status !== "completed" &&
+        status !== "failed" &&
+        status !== "timedout"
+      ) {
+        // an execution that was skipped, aborted or cancelled says nothing
+        // about how long the file needs
+        return;
+      }
+      const entry = {
+        durationMs: timings.end,
+        updatedAt: Date.now(),
+      };
+      if (execution.allocatedMsRequested !== undefined) {
+        entry.allocatedMsRequested = execution.allocatedMsRequested;
+      }
+      entryMap.set(execution.name, entry);
+    },
+    write: () => {
+      const nowMs = Date.now();
+      const executions = {};
+      // executions not part of this run keep what was known about them
+      for (const [executionName, entry] of previousEntryMap) {
+        if (nowMs - entry.updatedAt < ENTRY_MAX_AGE_MS) {
+          executions[executionName] = entry;
+        }
+      }
+      for (const [executionName, entry] of entryMap) {
+        executions[executionName] = entry;
+      }
+      writeFileSync(fileUrl, JSON.stringify({ executions }, null, "  "));
+    },
+  };
+};
+
+const readEntries = (fileUrl) => {
+  const entryMap = new Map();
+  let fileContent;
+  try {
+    fileContent = readFileSync(new URL(fileUrl), "utf8");
+  } catch {
+    // no memory of a previous run: every execution is an unknown
+    return entryMap;
+  }
+  let executions;
+  try {
+    ({ executions } = JSON.parse(fileContent));
+  } catch {
+    // file was truncated by a run killed while writing it
+    return entryMap;
+  }
+  if (!executions) {
+    return entryMap;
+  }
+  for (const executionName of Object.keys(executions)) {
+    const entry = executions[executionName];
+    if (typeof entry.durationMs === "number") {
+      entryMap.set(executionName, entry);
+    }
+  }
+  return entryMap;
+};
+
 const githubAnnotationFromError = (
   error,
   { rootDirectoryUrl, execution },
@@ -6980,6 +7104,7 @@ const run = async ({
   signal = new AbortController().signal,
   logger,
   allocatedMs,
+  onAllocatedMsRequested = () => {},
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
@@ -7030,6 +7155,22 @@ const run = async ({
   if (allocatedMs) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
+  // the file being executed can ask for more time, see requestAllocatedMs
+  const handleAllocatedMsRequest = (ms) => {
+    onAllocatedMsRequested(ms);
+    if (!timeoutAbortSource) {
+      // nothing to extend: execution has no time limit
+      return;
+    }
+    if (ms <= allocatedMs) {
+      return;
+    }
+    allocatedMs = ms;
+    // the request arrives once execution has started, what is left of the
+    // requested duration is what the file can still use
+    timeoutAbortSource.remove();
+    timeoutAbortSource = runOperation.timeout(ms - takeTiming());
+  };
   const consoleCalls = [];
   onConsoleRef.current = ({ type, text }) => {
     if (mirrorConsole) {
@@ -7082,6 +7223,7 @@ const run = async ({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
+                onAllocatedMsRequested: handleAllocatedMsRequest,
                 collectConsole,
                 measureMemoryUsage,
                 onMeasureMemoryAvailable,
@@ -7536,6 +7678,7 @@ const ensureWebServerIsStarted = async (
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
+ * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took to start the longest ones first on the next run
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -7594,6 +7737,12 @@ const parallelDefault = {
   max: "80%", // percentage resolved against the available cpus
   maxCpu: "80%",
   maxMemory: "50%",
+  // percentage resolved against parallel.max; an execution is heavy when it is
+  // allocated more time than the others (see defaultMsAllocatedPerExecution)
+  maxHeavy: "75%",
+};
+const executionTimingsDefault = {
+  fileUrl: undefined,
 };
 
 const executeTestPlan = async ({
@@ -7609,6 +7758,9 @@ const executeTestPlan = async ({
   handleSIGTERM = true,
   updateProcessExitCode = true,
   parallel = parallelDefault,
+  // opt-in: it makes the start order depend on a file written by a previous run,
+  // which a test plan snapshotting its own execution order cannot afford
+  executionTimings = false,
   // https://github.com/avajs/ava/blob/main/docs/recipes/splitting-tests-ci.md
   // https://playwright.dev/docs/test-sharding
   fragment,
@@ -7782,6 +7934,7 @@ const executeTestPlan = async ({
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
   let finalizeCoverage;
+  let timingsMemory;
 
   try {
     let logger;
@@ -7908,6 +8061,51 @@ const executeTestPlan = async ({
           throw new TypeError(
             `parallel.maxCpu must be a number or a percentage, got ${maxCpu}`,
           );
+        }
+
+        const maxHeavy = parallel.maxHeavy;
+        if (typeof maxHeavy === "string") {
+          const maxHeavyAsRatio = assertPercentageAndConvertToRatio(maxHeavy);
+          parallel.maxHeavy = Math.round(maxHeavyAsRatio * parallel.max) || 1;
+        } else if (typeof maxHeavy === "number") {
+          if (maxHeavy < 1) {
+            parallel.maxHeavy = 1;
+          }
+        } else {
+          throw new TypeError(
+            `parallel.maxHeavy must be a number or a percentage, got ${maxHeavy}`,
+          );
+        }
+      }
+      // executionTimings
+      {
+        if (executionTimings === true) {
+          executionTimings = {};
+        }
+        if (executionTimings) {
+          if (typeof executionTimings !== "object") {
+            throw new TypeError(
+              `executionTimings must be an object, got ${executionTimings}`,
+            );
+          }
+          const unexpectedExecutionTimingsKeys = Object.keys(
+            executionTimings,
+          ).filter((key) => !Object.hasOwn(executionTimingsDefault, key));
+          if (unexpectedExecutionTimingsKeys.length > 0) {
+            throw new TypeError(
+              `${unexpectedExecutionTimingsKeys.join(",")}: no such key on executionTimings`,
+            );
+          }
+          executionTimings = {
+            ...executionTimingsDefault,
+            ...executionTimings,
+          };
+          timingsMemory = createExecutionTimings({
+            fileUrl:
+              executionTimings.fileUrl === undefined
+                ? new URL("./.jsenv/jsenv_tests_timings.json", rootDirectoryUrl)
+                : executionTimings.fileUrl,
+          });
         }
       }
       // fragment/fragmentByRuntime
@@ -8254,6 +8452,8 @@ To fix this warning:
             params,
             skipped: false,
             skipReason: "",
+            // set when the file calls requestAllocatedMs
+            allocatedMsRequested: undefined,
 
             // will be set by run()
             status: "planified",
@@ -8438,7 +8638,31 @@ To fix this warning:
 
       const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-      const executionRemainingSet = new Set(executionPlanifiedArray);
+      // an execution allowed more time than the others is a heavy one: it is
+      // both worth starting early and worth not having too many of at once
+      const heavyExecutionSet = new Set();
+      for (const execution of executionPlanifiedArray) {
+        if (execution.skipped) {
+          continue;
+        }
+        if (execution.params.allocatedMs > defaultMsAllocatedPerExecution) {
+          heavyExecutionSet.add(execution);
+          continue;
+        }
+        if (timingsMemory) {
+          const allocatedMsRequested = timingsMemory.getAllocatedMsRequested(
+            execution.name,
+          );
+          if (allocatedMsRequested > defaultMsAllocatedPerExecution) {
+            heavyExecutionSet.add(execution);
+          }
+        }
+      }
+      const executionStartOrderArray = timingsMemory
+        ? timingsMemory.sortByLongestFirst(executionPlanifiedArray)
+        : executionPlanifiedArray;
+
+      const executionRemainingSet = new Set(executionStartOrderArray);
       const executionExecutingSet = new Set();
       const usedTagSet = new Set();
       const start = async (execution) => {
@@ -8462,6 +8686,9 @@ To fix this warning:
           execution.status = "executing";
           const executionResult = await run({
             ...execution.params,
+            onAllocatedMsRequested: (ms) => {
+              execution.allocatedMsRequested = ms;
+            },
             signal: operation.signal,
             logger,
             keepRunning,
@@ -8475,6 +8702,9 @@ To fix this warning:
             for (const tagNoLongerInUse of execution.params.uses) {
               usedTagSet.delete(tagNoLongerInUse);
             }
+          }
+          if (timingsMemory) {
+            timingsMemory.record(execution);
           }
           if (execution.result.status !== "completed") {
             testPlanResult.failed = true;
@@ -8506,6 +8736,12 @@ To fix this warning:
       };
       const startAsMuchAsPossible = async () => {
         operation.throwIfAborted();
+        let heavyExecutingCount = 0;
+        for (const executionExecuting of executionExecutingSet) {
+          if (heavyExecutionSet.has(executionExecuting)) {
+            heavyExecutingCount++;
+          }
+        }
         const promises = [];
         for (const executionCandidate of executionRemainingSet) {
           if (executionExecutingSet.size >= parallel.max) {
@@ -8533,6 +8769,13 @@ To fix this warning:
               promises.push(promise);
               break;
             }
+            if (heavyExecutionSet.has(executionCandidate)) {
+              if (heavyExecutingCount >= parallel.maxHeavy) {
+                // leave this slot to a lighter execution: filling every slot
+                // with the heavy ones makes them fight for cpu and memory
+                continue;
+              }
+            }
             if (executionCandidate.params.uses) {
               const nonAvailableTag = executionCandidate.params.uses.find(
                 (tagToUse) => usedTagSet.has(tagToUse),
@@ -8544,6 +8787,9 @@ To fix this warning:
                 continue;
               }
             }
+          }
+          if (heavyExecutionSet.has(executionCandidate)) {
+            heavyExecutingCount++;
           }
           const promise = (async () => {
             await start(executionCandidate);
@@ -8626,6 +8872,10 @@ To fix this warning:
       teardownCallbackSet.clear();
     }
     timings.teardownEnd = takeTiming();
+
+    if (timingsMemory) {
+      timingsMemory.write();
+    }
 
     if (finalizeCoverage) {
       await finalizeCoverage();
@@ -8904,6 +9154,7 @@ const createRuntimeUsingPlaywright = ({
     onConsole,
     onRuntimeStarted,
     onRuntimeStopped,
+    onAllocatedMsRequested = () => {},
     teardownCallbackSet,
     isTestPlan,
 
@@ -9025,6 +9276,11 @@ ${webServer.rootDirectoryUrl}`);
     }
 
     const page = await browserContext.newPage();
+    // the only thing the page can tell node before it is done executing;
+    // see runtime_browsers/client/request_allocated_ms.js
+    await page.exposeFunction("__jsenv_request_allocated_ms__", (ms) => {
+      onAllocatedMsRequested(ms);
+    });
     if (!isBrowserDedicatedToExecution) {
       page.on("close", () => {
         onRuntimeStopped();
@@ -10046,6 +10302,7 @@ const nodeChildProcess = ({
       onConsole,
       onRuntimeStarted,
       onRuntimeStopped,
+      onAllocatedMsRequested = () => {},
 
       measureMemoryUsage,
       onMeasureMemoryAvailable,
@@ -10152,6 +10409,15 @@ const nodeChildProcess = ({
         onceChildProcessEvent(childProcess, "exit", () => {
           onRuntimeStopped();
         }),
+      );
+      cleanupCallbackSet.add(
+        onChildProcessMessage(
+          childProcess,
+          "allocated-ms-request",
+          ({ ms }) => {
+            onAllocatedMsRequested(ms);
+          },
+        ),
       );
 
       const removeOutputListener = installChildProcessOutputListener(
@@ -10534,6 +10800,7 @@ const nodeWorkerThread = ({
       onConsole,
       onRuntimeStarted,
       onRuntimeStopped,
+      onAllocatedMsRequested = () => {},
 
       measureMemoryUsage,
       onMeasureMemoryAvailable,
@@ -10619,6 +10886,15 @@ const nodeWorkerThread = ({
         onceWorkerThreadEvent(workerThread, "exit", () => {
           onRuntimeStopped();
         }),
+      );
+      cleanupCallbackSet.add(
+        onWorkerThreadMessage(
+          workerThread,
+          "allocated-ms-request",
+          ({ ms }) => {
+            onAllocatedMsRequested(ms);
+          },
+        ),
       );
 
       const stop = memoize(async () => {
@@ -10869,6 +11145,41 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
   return () => {
     worker.removeListener(type, callback);
   };
+};
+
+/*
+ * Called from a test file to tell the test runner how much time this file needs:
+ *
+ *   import { requestAllocatedMs } from "@jsenv/test";
+ *
+ *   requestAllocatedMs(90_000);
+ *
+ * The request is sent to the process running the test plan, which restarts the
+ * timeout with the requested duration and remembers it: a file asking for more
+ * time than the others is also a file worth starting early when parallelizing.
+ *
+ * Node.js runtimes only; a browser has no channel to reach the test plan while
+ * the file is executing.
+ */
+
+
+const requestAllocatedMs = (ms) => {
+  if (typeof ms !== "number") {
+    throw new TypeError(`requestAllocatedMs expects a number, got ${ms}`);
+  }
+  const message = {
+    __jsenv__: "allocated-ms-request",
+    data: JSON.stringify({ ms }),
+  };
+  if (parentPort) {
+    parentPort.postMessage(message);
+    return;
+  }
+  if (process.send && process.connected) {
+    process.send(message);
+    return;
+  }
+  // file executed on its own (node ./file.test.mjs): there is no allocated time
 };
 
 const istanbulCoverageMapFromCoverage = (coverage) => {
@@ -11553,4 +11864,4 @@ const inlineRuntime = (fn) => {
   };
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, inlineRuntime, nodeChildProcess, nodeWorkerThread, reportAsJson, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, inlineRuntime, nodeChildProcess, nodeWorkerThread, reportAsJson, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, requestAllocatedMs, webkit, webkitIsolatedTab };
