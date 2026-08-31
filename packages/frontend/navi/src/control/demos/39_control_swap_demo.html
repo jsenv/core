@@ -99,7 +99,9 @@
         </>
       );
 
-      const WhereSide = (props) => (
+      // Called, not rendered: <ControlSwap> reads its <ControlSwap.Side>
+      // children, so a side may not hide behind a component of its own.
+      const whereSide = (props) => (
         <ControlSwap.Side
           name="where"
           icon={<UserSvg />}
@@ -112,7 +114,7 @@
         </ControlSwap.Side>
       );
 
-      const WhatSide = (props) => (
+      const whatSide = (props) => (
         <ControlSwap.Side
           name="what"
           icon={<SearchSvg />}
@@ -154,8 +156,8 @@
           <Heading id="nominal">Cas nominal</Heading>
           <div class="phone">
             <ControlSwap spacing="xs">
-              <WhereSide />
-              <WhatSide />
+              {whereSide()}
+              {whatSide()}
             </ControlSwap>
           </div>
         </div>
@@ -170,16 +172,16 @@
             <Variant caption="defaultValue absent : la première side">
               <div class="phone">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption='defaultValue="what"'>
               <div class="phone">
                 <ControlSwap spacing="xs" defaultValue="what">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
@@ -196,7 +198,7 @@
             <Heading id="badge">badge</Heading>
             <div class="phone">
               <ControlSwap spacing="xs">
-                <WhereSide />
+                {whereSide()}
                 <ControlSwap.Side
                   name="what"
                   icon={<SearchSvg />}
@@ -226,24 +228,24 @@
             <Variant caption="sans">
               <div class="phone">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption="autoFocus sur la side de recherche">
               <div class="phone">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide autoFocus />
+                  {whereSide()}
+                  {whatSide({ autoFocus: true })}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption='autoFocus + defaultValue="what"'>
               <div class="phone">
                 <ControlSwap spacing="xs" defaultValue="what">
-                  <WhereSide />
-                  <WhatSide autoFocus />
+                  {whereSide()}
+                  {whatSide({ autoFocus: true })}
                 </ControlSwap>
               </div>
             </Variant>
@@ -260,16 +262,16 @@
             <Variant caption="par défaut">
               <div class="phone">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption="animation={false}">
               <div class="phone">
                 <ControlSwap spacing="xs" animation={false}>
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
@@ -279,8 +281,8 @@
                   spacing="xs"
                   style={{ "--navi-control-swap-animation-duration": "1s" }}
                 >
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
@@ -297,24 +299,24 @@
             <Variant caption="320px">
               <div class="phone">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption="640px">
               <div class="wide">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
             <Variant caption="fontSize 24px">
               <div class="phone" style="font-size: 24px">
                 <ControlSwap spacing="xs">
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
             </Variant>
@@ -344,8 +346,8 @@
                     addCall("onChange", name, event);
                   }}
                 >
-                  <WhereSide />
-                  <WhatSide />
+                  {whereSide()}
+                  {whatSide()}
                 </ControlSwap>
               </div>
               <CallLog entries={callLogEntries} onClear={clearCallLog} />
@@ -364,8 +366,8 @@
           <Box flex="y" spacing="m">
             <div class="phone">
               <ControlSwap spacing="xs" signal={sideSignal}>
-                <WhereSide />
-                <WhatSide />
+                {whereSide()}
+                {whatSide()}
               </ControlSwap>
             </div>
             <Text size="s" color="#666">

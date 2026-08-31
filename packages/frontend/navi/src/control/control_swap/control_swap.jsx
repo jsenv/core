@@ -6,8 +6,9 @@
  *
  * Four boxes on a row that is never wide enough for both controls — a phone
  * answering "what do I search IN" then "what am I looking for". The two end
- * caps are fixed: same place, same size, in both states, and each one gives
- * the floor to its own side. That is the whole reason the caps are OUTSIDE
+ * caps are fixed: same place, same size, in both states, and either of them
+ * hands the floor to the other side. That is the whole reason the caps are
+ * OUTSIDE
  * the controls rather than drawn inside them (a picker's façade yields a zone
  * with `ownTarget`, a field has `Input.UI.LeftSlot`): an icon that lives
  * inside its control while open and becomes a pill once closed is a switch
@@ -168,7 +169,7 @@ export const ControlSwap = (props) => {
   const sides = readSides(children);
   if (sides.length !== 2) {
     throw new Error(
-      `<ControlSwap> takes exactly two <ControlSwap.Side>, got ${sides.length}`,
+      `<ControlSwap> takes exactly two <ControlSwap.Side> as direct children, got ${sides.length}`,
     );
   }
 
