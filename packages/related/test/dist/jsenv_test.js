@@ -1,6 +1,6 @@
 import { createSupportsColor, isUnicodeSupported, stripAnsi, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_test_node_modules.js";
 import { URL_META, createException } from "./exception.js";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync, realpathSync, readSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -5959,6 +5959,176 @@ const replaceUrls$1 = (source, replace) => {
   });
 };
 
+/*
+ * Reads what a test file declares about its own execution, from the directive
+ * prologue — the string literals a module may open with, as in "use strict" or
+ * "use client":
+ *
+ *   "jsenv:allocate 90s";
+ *   "jsenv:lock service-worker";
+ *
+ * They are read without running the file, which is what allows a lock to be
+ * honored: an execution must not have started before we know what it takes.
+ * Being grammar rather than convention, a directive cannot be built at runtime
+ * and cannot move: it is the first statement or it is nothing.
+ *
+ * A "jsenv:" directive that cannot be read throws. Everything ignores an
+ * unknown directive silently, so a typo would silently give the file back the
+ * default budget; the only way it stays useful is to be loud.
+ */
+
+
+const DIRECTIVE_PREFIX = "jsenv:";
+const DIRECTIVE_NAMES = `"jsenv:allocate <duration>", "jsenv:lock <resource>"`;
+const DURATION_REGEX = /^(\d+)(ms|s|m)$/;
+const MS_PER_UNIT = { ms: 1, s: 1_000, m: 60_000 };
+// a directive prologue sits at the top of the file; comments can precede it but
+// rarely for more than a few lines, and the whole file is read when they do
+const HEAD_BYTE_COUNT = 4096;
+
+const readJsenvDirectives = (fileUrl) => {
+  const head = readHead(fileUrl);
+  let scanResult = scanDirectivePrologue(head.text);
+  if (head.partial && !scanResult.complete) {
+    scanResult = scanDirectivePrologue(readFileSync(new URL(fileUrl), "utf8"));
+  }
+
+  let allocatedMs;
+  const lockArray = [];
+  for (const directiveText of scanResult.directiveTextArray) {
+    if (!directiveText.startsWith(DIRECTIVE_PREFIX)) {
+      continue;
+    }
+    const body = directiveText.slice(DIRECTIVE_PREFIX.length);
+    const spaceIndex = body.indexOf(" ");
+    const name = spaceIndex === -1 ? body : body.slice(0, spaceIndex);
+    const argument = spaceIndex === -1 ? "" : body.slice(spaceIndex + 1).trim();
+    const fail = (reason, details = {}) => {
+      throw new Error(
+        createDetailedMessage(reason, {
+          directive: `"${directiveText}"`,
+          file: fileURLToPath(fileUrl),
+          ...details,
+        }),
+      );
+    };
+
+    if (name === "allocate") {
+      const match = DURATION_REGEX.exec(argument);
+      if (!match) {
+        fail(`"jsenv:allocate" expects a duration, got "${argument}"`, {
+          ["durations accepted"]: `"500ms", "90s", "2m"`,
+        });
+      }
+      allocatedMs = Number(match[1]) * MS_PER_UNIT[match[2]];
+      continue;
+    }
+    if (name === "lock") {
+      if (argument === "") {
+        fail(`"jsenv:lock" expects the name of a resource`);
+      }
+      lockArray.push(argument);
+      continue;
+    }
+    fail(`unknown jsenv directive "${name}"`, {
+      ["directives available"]: DIRECTIVE_NAMES,
+    });
+  }
+  return { allocatedMs, lockArray };
+};
+
+const readHead = (fileUrl) => {
+  const fileDescriptor = openSync(fileURLToPath(fileUrl), "r");
+  try {
+    const buffer = Buffer.allocUnsafe(HEAD_BYTE_COUNT);
+    const byteCount = readSync(fileDescriptor, buffer, 0, HEAD_BYTE_COUNT, 0);
+    return {
+      text: buffer.toString("utf8", 0, byteCount),
+      partial: byteCount === HEAD_BYTE_COUNT,
+    };
+  } finally {
+    closeSync(fileDescriptor);
+  }
+};
+
+/*
+ * Collects the string literals opening the module, stopping at the first token
+ * that is neither a comment nor one of them. "complete" tells whether that
+ * token was reached: when it was not, the source given was cut short and the
+ * caller must read further before trusting the result.
+ */
+const scanDirectivePrologue = (source) => {
+  const directiveTextArray = [];
+  const length = source.length;
+  let index = 0;
+  if (source.startsWith("#!")) {
+    const lineEndIndex = source.indexOf("\n");
+    if (lineEndIndex === -1) {
+      return { directiveTextArray, complete: false };
+    }
+    index = lineEndIndex + 1;
+  }
+  while (index < length) {
+    const char = source[index];
+    if (
+      char === " " ||
+      char === "\t" ||
+      char === "\n" ||
+      char === "\r" ||
+      char === ";"
+    ) {
+      index++;
+      continue;
+    }
+    if (char === "/" && source[index + 1] === "/") {
+      const lineEndIndex = source.indexOf("\n", index);
+      if (lineEndIndex === -1) {
+        return { directiveTextArray, complete: false };
+      }
+      index = lineEndIndex + 1;
+      continue;
+    }
+    if (char === "/" && source[index + 1] === "*") {
+      const commentEndIndex = source.indexOf("*/", index + 2);
+      if (commentEndIndex === -1) {
+        return { directiveTextArray, complete: false };
+      }
+      index = commentEndIndex + 2;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const quote = char;
+      let stringIndex = index + 1;
+      let text = "";
+      while (stringIndex < length) {
+        const stringChar = source[stringIndex];
+        if (stringChar === "\\") {
+          text += source[stringIndex + 1];
+          stringIndex += 2;
+          continue;
+        }
+        if (stringChar === quote) {
+          break;
+        }
+        if (stringChar === "\n") {
+          // an unterminated string is not a directive, and not our problem
+          return { directiveTextArray, complete: true };
+        }
+        text += stringChar;
+        stringIndex++;
+      }
+      if (stringIndex >= length) {
+        return { directiveTextArray, complete: false };
+      }
+      directiveTextArray.push(text);
+      index = stringIndex + 1;
+      continue;
+    }
+    return { directiveTextArray, complete: true };
+  }
+  return { directiveTextArray, complete: false };
+};
+
 const createIsInsideFragment = (fragment, total) => {
   let [dividend, divisor] = fragment.split("/");
   dividend = parseInt(dividend);
@@ -8377,6 +8547,9 @@ To fix this warning:
           }
         }
         const filePlan = meta.testPlan;
+        const directives = readJsenvDirectives(
+          new URL(relativeUrl, rootDirectoryUrl),
+        );
         for (const groupName of Object.keys(filePlan)) {
           const stepConfig = filePlan[groupName];
           if (stepConfig === null || stepConfig === undefined) {
@@ -8398,7 +8571,7 @@ To fix this warning:
             runtime,
             runtimeParams,
             allocatedMs = defaultMsAllocatedPerExecution,
-            uses,
+            locks,
           } = stepConfig;
           const params = {
             measureMemoryUsage: true,
@@ -8406,7 +8579,7 @@ To fix this warning:
             collectPerformance: false,
             collectConsole: true,
             allocatedMs,
-            uses,
+            locks,
             runtime,
             runtimeParams: {
               rootDirectoryUrl,
@@ -8466,9 +8639,22 @@ To fix this warning:
                 ? defaultMsAllocatedPerExecution
                 : allocatedMsResult;
           }
-          if (typeof params.uses === "function") {
-            const usesResult = params.uses(execution);
-            params.uses = usesResult;
+          if (typeof params.locks === "function") {
+            const locksResult = params.locks(execution);
+            params.locks = locksResult;
+          }
+          // what the file declares about itself wins over the plan: it is
+          // closer to the reason
+          if (
+            directives.allocatedMs !== undefined &&
+            directives.allocatedMs > params.allocatedMs
+          ) {
+            params.allocatedMs = directives.allocatedMs;
+          }
+          if (directives.lockArray.length > 0) {
+            params.locks = params.locks
+              ? [...new Set([...params.locks, ...directives.lockArray])]
+              : directives.lockArray;
           }
 
           lastExecution = execution;
@@ -8664,7 +8850,7 @@ To fix this warning:
 
       const executionRemainingSet = new Set(executionStartOrderArray);
       const executionExecutingSet = new Set();
-      const usedTagSet = new Set();
+      const lockedResourceSet = new Set();
       const start = async (execution) => {
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
@@ -8678,9 +8864,9 @@ To fix this warning:
           execution.result.status = "skipped";
           execution.result.value = execution.skipReason;
         } else {
-          if (execution.params.uses) {
-            for (const tagThatWillBeUsed of execution.params.uses) {
-              usedTagSet.add(tagThatWillBeUsed);
+          if (execution.params.locks) {
+            for (const resourceToLock of execution.params.locks) {
+              lockedResourceSet.add(resourceToLock);
             }
           }
           execution.status = "executing";
@@ -8698,9 +8884,9 @@ To fix this warning:
           });
           Object.assign(execution.result, executionResult);
           execution.status = "executed";
-          if (execution.params.uses) {
-            for (const tagNoLongerInUse of execution.params.uses) {
-              usedTagSet.delete(tagNoLongerInUse);
+          if (execution.params.locks) {
+            for (const resourceToRelease of execution.params.locks) {
+              lockedResourceSet.delete(resourceToRelease);
             }
           }
           if (timingsMemory) {
@@ -8776,13 +8962,14 @@ To fix this warning:
                 continue;
               }
             }
-            if (executionCandidate.params.uses) {
-              const nonAvailableTag = executionCandidate.params.uses.find(
-                (tagToUse) => usedTagSet.has(tagToUse),
-              );
-              if (nonAvailableTag) {
+            if (executionCandidate.params.locks) {
+              const resourceLockedByAnother =
+                executionCandidate.params.locks.find((resourceToLock) =>
+                  lockedResourceSet.has(resourceToLock),
+                );
+              if (resourceLockedByAnother) {
                 logger.debug(
-                  `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+                  `"${resourceLockedByAnother}" is locked, ${executionCandidate.name} will wait until it is released by a previous execution`,
                 );
                 continue;
               }
@@ -11148,11 +11335,12 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
 };
 
 /*
- * Called from a test file to tell the test runner how much time this file needs:
+ * Asks the test runner for more time from a test file, when the amount is
+ * computed rather than known in advance (it depends on the platform, on how
+ * many fixtures were found...). A fixed amount belongs in a directive instead,
+ * which the runner reads without executing the file:
  *
- *   import { requestAllocatedMs } from "@jsenv/test";
- *
- *   requestAllocatedMs(90_000);
+ *   "jsenv:allocate 90s";
  *
  * The request is sent to the process running the test plan, which restarts the
  * timeout with the requested duration and remembers it: a file asking for more
