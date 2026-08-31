@@ -601,6 +601,25 @@ So: an affordance that acts on what it sits in (a chip's cross, a stepper, an
 eye on a row) belongs inside, and takes its press back with `ownTarget`. One
 that swaps what is being shown belongs outside it, where it can stay put.
 
+Whichever side of the frame it ends up on, the control must be told, because a
+control draws affordances of its own and will otherwise draw a second one:
+
+- **inside** — a field has slots for it, `Input.UI.LeftSlot`,
+  `Input.UI.RightSlot`, `Input.UI.IconSlot` (an icon sized on the line rather
+  than on a character) and `Input.UI.UnitSlot`. They label the field, so a
+  press lands on it rather than blurring it — except when the field is not
+  focused yet, where the slot may take the focus itself, which is what a clear
+  cross or a reveal-password eye needs.
+- **outside** — the icon the type would have drawn has to go, or it sits two
+  centimetres from yours: `icon={null}`. It is the same prop that replaces it
+  (`icon={<MySvg />}`) and that leaves it alone (left out). A `search` field
+  still swaps that slot for its clear cross once it holds a value, whatever
+  `icon` says — the cross is about the value, not about the decoration.
+
+```jsx
+<Input type="search" icon={null} /> // the row draws the magnifier
+```
+
 #### navi steps back; a plain `onClick` does not
 
 What `ownTarget` stops is navi answering: the controls above it, and the
