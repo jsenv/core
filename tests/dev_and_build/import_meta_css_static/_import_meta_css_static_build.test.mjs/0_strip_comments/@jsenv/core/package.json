@@ -1,0 +1,160 @@
+{
+  "name": "@jsenv/core",
+  "version": "41.4.26",
+  "type": "module",
+  "description": "Tool to develop, test and build js projects",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "license": "MIT",
+  "workspaces": [
+    "./packages/backend/*",
+    "./packages/frontend/*",
+    "./packages/internal/*",
+    "./packages/private/*",
+    "./packages/private/oto/packages/*",
+    "./packages/related/*",
+    "./packages/related/cli/*",
+    "./packages/tooling/*"
+  ],
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=20.8.0"
+  },
+  "main": "./src/main.js",
+  "imports": {},
+  "exports": {
+    ".": {
+      "import": {
+        "dev:jsenv": "./src/main.js",
+        "default": "./dist/jsenv_core.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "scripts": {
+    "build": "node --conditions=dev:jsenv ./scripts/build/build.mjs",
+    "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
+    "build:packages": "npm run build --workspaces --if-present --conditions=developement",
+    "database:install": "npx @jsenv/database install",
+    "database:manage": "node --conditions=dev:jsenv ./packages/backend/database/src/cli/manage.js",
+    "database:setup": "npm run database:setup --workspaces --if-present --conditions=dev:jsenv",
+    "database:start": "npx @jsenv/database start",
+    "database:stop": "npx @jsenv/database stop",
+    "dev": "node --watch --conditions=dev:jsenv ./scripts/dev/dev.mjs",
+    "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/backend/server/tests/route_inspector/start_server.js",
+    "dev:webkit": "node ./scripts/dev/webkit.mjs",
+    "eslint": "npx eslint .",
+    "https:setup": "npx @jsenv/https-local setup",
+    "md:build": "node ./docs/build.js",
+    "monorepo:node_modules_clear": "npx @jsenv/filesystem clear **/node_modules/",
+    "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:sync_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
+    "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
+    "oto:start": "npm run start -w oto",
+    "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
+    "playwright:install": "npx playwright install-deps && npx playwright install",
+    "prepublishOnly": "npm run build",
+    "prettier": "prettier --write .",
+    "test": "node --conditions=dev:jsenv ./scripts/test/test.mjs",
+    "test:ci": "CI=1 npm run test",
+    "test:only_dev_server_errors": "node --conditions=dev:jsenv ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
+    "test:packages": "npm run test -- ./packages/",
+    "test:packages:ci": "CI=1 npm run workspace:test",
+    "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
+  },
+  "dependencies": {
+    "@jsenv/ast": "6.9.3",
+    "@jsenv/js-module-fallback": "1.5.2",
+    "@jsenv/plugin-bundling": "2.10.18",
+    "@jsenv/plugin-minification": "1.7.11",
+    "@jsenv/plugin-supervisor": "1.8.14",
+    "@jsenv/plugin-transpilation": "1.6.3",
+    "@jsenv/server": "17.6.3",
+    "@jsenv/sourcemap": "1.4.2",
+    "react-table": "7.8.0"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "7.29.7",
+    "@babel/plugin-syntax-decorators": "7.29.7",
+    "@babel/plugin-syntax-import-attributes": "7.29.7",
+    "@babel/plugin-syntax-optional-chaining-assign": "7.29.7",
+    "@jsenv/abort": "workspace:*",
+    "@jsenv/assert": "workspace:*",
+    "@jsenv/cli": "workspace:*",
+    "@jsenv/core": "./",
+    "@jsenv/custom-elements-redefine": "workspace:*",
+    "@jsenv/database-manager": "workspace:*",
+    "@jsenv/eslint-config-relax": "workspace:*",
+    "@jsenv/file-size-impact": "workspace:*",
+    "@jsenv/filesystem": "workspace:*",
+    "@jsenv/https-local": "workspace:*",
+    "@jsenv/humanize": "workspace:*",
+    "@jsenv/importmap": "workspace:*",
+    "@jsenv/integrity": "workspace:*",
+    "@jsenv/md-up": "workspace:*",
+    "@jsenv/monorepo": "workspace:*",
+    "@jsenv/navi": "workspace:*",
+    "@jsenv/node-esm-resolution": "workspace:*",
+    "@jsenv/os-metrics": "workspace:*",
+    "@jsenv/performance-impact": "workspace:*",
+    "@jsenv/plugin-as-js-classic": "workspace:*",
+    "@jsenv/runtime-compat": "workspace:*",
+    "@jsenv/snapshot": "workspace:*",
+    "@jsenv/terminal-table": "workspace:*",
+    "@jsenv/test": "workspace:*",
+    "@jsenv/url-meta": "workspace:*",
+    "@jsenv/urls": "workspace:*",
+    "@jsenv/utils": "workspace:*",
+    "@playwright/browser-chromium": "1.62.1",
+    "@playwright/browser-firefox": "1.62.1",
+    "@playwright/browser-webkit": "1.62.1",
+    "babel-plugin-transform-async-to-promises": "0.8.18",
+    "eslint": "9.39.2",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-regexp": "3.2.0",
+    "globals": "17.11.0",
+    "open": "11.0.1",
+    "playwright": "1.62.1",
+    "preact": "11.0.0-beta.2",
+    "prettier": "3.9.6",
+    "prettier-plugin-css-order": "git+https://github.com/dmail-fork/prettier-plugin-css-order.git",
+    "prettier-plugin-embed": "0.5.1",
+    "prettier-plugin-organize-imports": "4.3.0",
+    "prettier-plugin-pkg": "0.22.1",
+    "prettier-plugin-sql": "0.20.0",
+    "source-map": "0.8.0",
+    "strip-ansi": "7.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": [
+    "./src/kitchen/client/inline_content.js",
+    "./dist/client/new_stylesheet/new_stylesheet.js",
+    "./dist/client/inline_content/inline_content.js",
+    "./dist/client/directory_listing/jsenv_core_node_modules.js",
+    "./tests/dev_and_build/import_meta_css_static/build/js/main.js",
+    "./tests/dev_and_build/import_meta_css_static/build/js/constant.js"
+  ],
+  "allowScripts": {
+    "unrs-resolver": true,
+    "@playwright/browser-chromium": true,
+    "@playwright/browser-firefox": true,
+    "@playwright/browser-webkit": true
+  },
+  "volta": {
+    "node": "26.5.0",
+    "npm": "11.17.0"
+  }
+}

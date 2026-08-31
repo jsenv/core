@@ -4,9 +4,9 @@
 run({ minification: true })
 ```
 
-# 1/2 write 5 files into "./build/"
+# 1/2 write 6 files into "../../../"
 
-see [./build/](./build/)
+see [./@jsenv/core/](./@jsenv/core/)
 
 # 2/2 resolve
 

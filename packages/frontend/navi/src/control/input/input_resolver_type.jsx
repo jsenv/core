@@ -90,32 +90,31 @@ const InputSearchUI = ({ icon }) => {
 const InputEmail = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<InputEmailUI icon={props.icon} />} {...props} />;
-};
-const InputEmailUI = ({ icon }) => {
-  if (icon !== undefined) {
-    return null;
-  }
   return (
-    <InputIconSlot>
-      <EmailSvg />
-    </InputIconSlot>
+    <Next
+      ui={<InputTypeIconUI icon={props.icon} typeIcon={<EmailSvg />} />}
+      {...props}
+    />
   );
 };
 const InputTel = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<InputTelUI icon={props.icon} />} {...props} />;
+  return (
+    <Next
+      ui={<InputTypeIconUI icon={props.icon} typeIcon={<PhoneSvg />} />}
+      {...props}
+    />
+  );
 };
-const InputTelUI = ({ icon }) => {
-  if (icon !== undefined) {
+// The type draws its own icon; `icon` replaces it, and `icon={null}` leaves the
+// slot empty — for a caller drawing something of its own beside the field.
+const InputTypeIconUI = ({ icon, typeIcon }) => {
+  const iconToDraw = icon === undefined ? typeIcon : icon;
+  if (!iconToDraw) {
     return null;
   }
-  return (
-    <InputIconSlot>
-      <PhoneSvg />
-    </InputIconSlot>
-  );
+  return <InputIconSlot>{iconToDraw}</InputIconSlot>;
 };
 const InputNumber = (props) => {
   const Next = useNextResolver();

@@ -154,6 +154,7 @@ export { chainEvent } from "@jsenv/dom";
 export { Details } from "./src/control/details/details.jsx";
 export { SummaryMarker } from "./src/control/details/summary_marker.jsx";
 export { Expandable } from "./src/control/expandable/expandable.jsx";
+export { ControlSwap } from "./src/control/control_swap/control_swap.jsx";
 
 // Form
 // Validation

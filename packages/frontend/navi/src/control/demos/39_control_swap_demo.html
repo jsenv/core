@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ControlSwap demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 16px 0 4px;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .phone {
+        width: 320px;
+        padding: 8px;
+        background: #eceff4;
+        border-radius: 10px;
+      }
+      .wide {
+        width: 640px;
+        padding: 8px;
+        background: #eceff4;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { signal } from "@preact/signals";
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        ControlSwap,
+        Input,
+        Link,
+        Select,
+        Text,
+      } from "@jsenv/navi";
+      import { SearchSvg } from "../../graphic/icons/search_svg.jsx";
+      import { UserSvg } from "../../graphic/icons/user_svg.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const GroupOptions = () => (
+        <>
+          <option value="">Tout le monde</option>
+          <option value="sunday">Le dimanche matin</option>
+          <option value="regulars">Les habitués</option>
+        </>
+      );
+
+      const WhereSide = (props) => (
+        <ControlSwap.Side
+          name="where"
+          icon={<UserSvg />}
+          label="Où chercher"
+          {...props}
+        >
+          <Select defaultValue="sunday">
+            <GroupOptions />
+          </Select>
+        </ControlSwap.Side>
+      );
+
+      const WhatSide = (props) => (
+        <ControlSwap.Side
+          name="what"
+          icon={<SearchSvg />}
+          label="Rechercher"
+          {...props}
+        >
+          <Input type="search" icon={null} placeholder="Rechercher…" />
+        </ControlSwap.Side>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="ControlSwap"
+            previous={{
+              href: "./38_interactions_demo.html",
+              label: "Interactions",
+            }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <BasicsDemo />
+          <StatesDemo />
+          <BadgeDemo />
+          <AutoFocusDemo />
+          <AnimationDemo />
+          <WidthDemo />
+          <ValueDemo />
+          <SignalDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <div class="phone">
+            <ControlSwap spacing="xs">
+              <WhereSide />
+              <WhatSide />
+            </ControlSwap>
+          </div>
+        </div>
+      );
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="m">
+            <Variant caption="defaultValue absent : la première side">
+              <div class="phone">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption='defaultValue="what"'>
+              <div class="phone">
+                <ControlSwap spacing="xs" defaultValue="what">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── badge ─────────────────────────────────────────────────────────────
+
+      const BadgeDemo = () => {
+        const [text, setText] = useState("padel");
+        return (
+          <div class="demo-section">
+            <Heading id="badge">badge</Heading>
+            <div class="phone">
+              <ControlSwap spacing="xs">
+                <WhereSide />
+                <ControlSwap.Side
+                  name="what"
+                  icon={<SearchSvg />}
+                  label="Rechercher"
+                  badge={text !== ""}
+                >
+                  <Input
+                    type="search"
+                    icon={null}
+                    placeholder="Rechercher…"
+                    value={text}
+                    onInput={(e) => setText(e.target.value)}
+                  />
+                </ControlSwap.Side>
+              </ControlSwap>
+            </div>
+          </div>
+        );
+      };
+
+      // ── autoFocus ─────────────────────────────────────────────────────────
+
+      const AutoFocusDemo = () => (
+        <div class="demo-section">
+          <Heading id="autofocus">autoFocus</Heading>
+          <Box flex="y" spacing="m">
+            <Variant caption="sans">
+              <div class="phone">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="autoFocus sur la side de recherche">
+              <div class="phone">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide autoFocus />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption='autoFocus + defaultValue="what"'>
+              <div class="phone">
+                <ControlSwap spacing="xs" defaultValue="what">
+                  <WhereSide />
+                  <WhatSide autoFocus />
+                </ControlSwap>
+              </div>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── animation ─────────────────────────────────────────────────────────
+
+      const AnimationDemo = () => (
+        <div class="demo-section">
+          <Heading id="animation">animation</Heading>
+          <Box flex="y" spacing="m">
+            <Variant caption="par défaut">
+              <div class="phone">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="animation={false}">
+              <div class="phone">
+                <ControlSwap spacing="xs" animation={false}>
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="--navi-control-swap-animation-duration: 1s">
+              <div class="phone">
+                <ControlSwap
+                  spacing="xs"
+                  style={{ "--navi-control-swap-animation-duration": "1s" }}
+                >
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Largeur ───────────────────────────────────────────────────────────
+
+      const WidthDemo = () => (
+        <div class="demo-section">
+          <Heading id="width">Largeur</Heading>
+          <Box flex="y" spacing="m">
+            <Variant caption="320px">
+              <div class="phone">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="640px">
+              <div class="wide">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+            <Variant caption="fontSize 24px">
+              <div class="phone" style="font-size: 24px">
+                <ControlSwap spacing="xs">
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── value / onChange ──────────────────────────────────────────────────
+
+      const ValueDemo = () => {
+        const [value, setValue] = useState("where");
+        const [callLogEntries, addCall, clearCallLog] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="value">value / onChange</Heading>
+            <Box flex="y" spacing="m">
+              <Box flex="x" spacing="xs">
+                <Button onClick={() => setValue("where")}>where</Button>
+                <Button onClick={() => setValue("what")}>what</Button>
+              </Box>
+              <div class="phone">
+                <ControlSwap
+                  spacing="xs"
+                  value={value}
+                  onChange={(name, event) => {
+                    setValue(name);
+                    addCall("onChange", name, event);
+                  }}
+                >
+                  <WhereSide />
+                  <WhatSide />
+                </ControlSwap>
+              </div>
+              <CallLog entries={callLogEntries} onClear={clearCallLog} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── signal ────────────────────────────────────────────────────────────
+
+      const sideSignal = signal("where");
+
+      const SignalDemo = () => (
+        <div class="demo-section">
+          <Heading id="signal">signal</Heading>
+          <Box flex="y" spacing="m">
+            <div class="phone">
+              <ControlSwap spacing="xs" signal={sideSignal}>
+                <WhereSide />
+                <WhatSide />
+              </ControlSwap>
+            </div>
+            <Text size="s" color="#666">
+              signal.value : {sideSignal}
+            </Text>
+          </Box>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

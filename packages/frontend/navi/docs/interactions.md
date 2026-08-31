@@ -585,6 +585,22 @@ a gate, a callout and a control's own read-only, none of which a box has. A box
 claims the press and nothing more; put the affordance on a control when what it
 does about a held zone matters.
 
+#### When the affordance should sit OUTSIDE instead
+
+`ownTarget` says a façade CAN yield a zone; it does not say it should. What
+decides is whether the affordance stays where the finger left it.
+
+An icon that lives inside its control while that control is showing, and
+becomes a pill of its own once it is not, is a switch that moves when you flip
+it: the finger that opened the search has to travel somewhere else to close it.
+Draw it outside both controls, at a fixed place, and the same pixel does both —
+which is the whole gesture on a phone. `<ControlSwap>` is that row: two
+controls taking turns in the middle, a fixed cap at each end.
+
+So: an affordance that acts on what it sits in (a chip's cross, a stepper, an
+eye on a row) belongs inside, and takes its press back with `ownTarget`. One
+that swaps what is being shown belongs outside it, where it can stay put.
+
 #### navi steps back; a plain `onClick` does not
 
 What `ownTarget` stops is navi answering: the controls above it, and the
