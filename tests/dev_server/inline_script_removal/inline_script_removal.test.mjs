@@ -63,9 +63,11 @@ try {
   const outputDirectorySnapshot = takeDirectorySnapshot(outputDirectoryUrl);
   await takeScreenshot("0_at_start");
   const responseAtStart = await getResponseForInlineScript();
+  // the inline script has no file of its own: it is served from the html,
+  // which the dev server cooks to answer a request having no usable referer
   assert({
     actual: responseAtStart.status,
-    expect: 404,
+    expect: 200,
   });
   await testScenario("1_inline_removed");
   const responseAfterRemoval = await getResponseForInlineScript();

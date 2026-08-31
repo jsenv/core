@@ -287,7 +287,17 @@ export const devServerPluginServeSourceFiles = ({
             // so it is derived from the url and cooked first.
             const inlineParentUrl = getInlineContentParentUrl(requestedUrl);
             if (inlineParentUrl) {
-              if (!kitchen.graph.getUrlInfo(inlineParentUrl)) {
+              const inlineParentUrlInfo =
+                kitchen.graph.getUrlInfo(inlineParentUrl);
+              // A parent cooked before the file changed still holds the
+              // references it had then; the inline content is as fresh as its
+              // parent, so the parent is cooked again before being asked.
+              if (
+                !inlineParentUrlInfo ||
+                inlineParentUrlInfo.content === undefined ||
+                !inlineParentUrlInfo.contentFinalized ||
+                !inlineParentUrlInfo.isValid()
+              ) {
                 const rootUrlInfo = kitchen.graph.rootUrlInfo;
                 const inlineParentWebUrl = WEB_URL_CONVERTER.asWebUrl(
                   inlineParentUrl,
@@ -311,6 +321,16 @@ export const devServerPluginServeSourceFiles = ({
                 request.resource,
                 inlineParentUrl,
               );
+              if (!reference) {
+                // The parent does not hold that inline content: the script was
+                // edited out of the html. What the graph kept under this url is
+                // what the parent used to say, it must not be served.
+                return {
+                  url: requestedUrl,
+                  status: 404,
+                  statusText: "no inline content at this position",
+                };
+              }
             }
           }
           if (reference) {
